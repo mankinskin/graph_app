@@ -7,7 +7,7 @@ use petgraph::graph::DiGraph;
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "persistence", serde(default))] // if we add new fields, give them default values when deserializing old state
-pub struct TemplateApp {
+pub struct App {
     label: String,
 
     #[allow(unused)]
@@ -16,10 +16,11 @@ pub struct TemplateApp {
     #[cfg_attr(feature = "persistence", serde(skip))]
     graph: Arc<RwLock<Option<String>>>,
     open: bool,
+    #[allow(unused)]
     test: DiGraph<(), ()>,
 }
 
-impl Default for TemplateApp {
+impl Default for App {
     fn default() -> Self {
         Self {
             label: "Hello World!".to_owned(),
@@ -30,7 +31,7 @@ impl Default for TemplateApp {
         }
     }
 }
-impl TemplateApp {
+impl App {
     async fn read_graph_file(graph: Arc<RwLock<Option<String>>>, file: &rfd::FileHandle) {
         let content = file.read().await;
         match std::str::from_utf8(&content[..]) {
@@ -44,7 +45,7 @@ impl TemplateApp {
         }
     }
 }
-impl epi::App for TemplateApp {
+impl epi::App for App {
     fn name(&self) -> &str {
         "egui template"
     }
@@ -112,11 +113,11 @@ impl epi::App for TemplateApp {
             if let Some(graph) = &*self.graph.read().unwrap() {
                 egui::Window::new("code")
                     .open(&mut self.open)
+                    .default_pos((0.0, 0.0))
+                    .default_height(600.0)
                     .scroll(true)
                     .resizable(true)
-                    //.default_pos((0.0, 0.0))
-                    .default_height(10.0)
-                    //.default_width(10.0)
+                    //.default_width(1.0)
                     .show(ctx, |ui| {
                         ui.label(
                             "This window is resizable and has a scroll area. You can shrink it to any size",
