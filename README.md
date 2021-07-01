@@ -1,13 +1,5 @@
-# egui template
+# Graph App
 
-[![dependency status](https://deps.rs/repo/github/emilk/egui_template/status.svg)](https://deps.rs/repo/github/emilk/egui_template)
-[![Build Status](https://github.com/emilk/egui_template/workflows/CI/badge.svg)](https://github.com/emilk/egui_template/actions?workflow=CI)
-
-This is a template repo for [egui](https://github.com/emilk/egui/).
-
-The goal is for this to be the simplest way to get started writing a GUI app in Rust.
-
-You can compile your app natively or for the web, and share it using Github Pages.
 
 ## Getting started
 
@@ -46,7 +38,3 @@ The finished web app is found in the `docs/` folder (this is so that you can eas
 * `your_crate.js`: Auto-generated binding between Rust and JS.
 
 You can test the template app at <https://emilk.github.io/egui_template/>.
-
-## Updating egui
-
-As of 2021, egui is in active development with frequent releases with breaking changes. [egui_template](https://github.com/emilk/egui_template/) will be updated in lock-step to always use the latest version of egui.
