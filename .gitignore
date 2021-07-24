@@ -2,3 +2,5 @@
 Cargo.lock
 docs/*.js
 docs/*.wasm
+.vscode
+workspace.code-workspace
