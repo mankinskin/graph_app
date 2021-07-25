@@ -205,7 +205,7 @@ use std::future::Future;
 #[cfg(not(target_arch = "wasm32"))]
 fn execute<F: Future<Output = ()> + Send + 'static>(f: F) {
     // this is stupid... use any executor of your choice instead
-    std::thread::spawn(move || futures::executor::block_on(f));
+    tokio::spawn(f);
 }
 #[allow(unused)]
 #[cfg(target_arch = "wasm32")]
