@@ -14,7 +14,7 @@ export RUSTFLAGS=--cfg=web_sys_unstable_apis
 
 echo "Building rust…"
 BUILD=release
-cargo build --release -p ${CRATE_NAME} --lib --target=wasm32-unknown-unknown
+cargo build --${BUILD} -p ${CRATE_NAME} --lib --target=wasm32-unknown-unknown
 
 echo "Generating JS bindings for wasm…"
 # Clear output from old stuff:
