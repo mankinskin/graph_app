@@ -4,6 +4,7 @@
 
 mod app;
 pub use app::App;
+mod graph;
 
 // ----------------------------------------------------------------------------
 // When compiling for web:

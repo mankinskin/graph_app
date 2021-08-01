@@ -3,7 +3,8 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
 mod app;
-// When compiling natively:
+mod graph;
+
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() {

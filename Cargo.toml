@@ -10,16 +10,21 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 eframe = { path="../egui/eframe" }
 rfd = "0.4"
-petgraph = { version = "0.5", features=["serde-1"] }
 serde = { version = "1", features = ["derive"], optional = true }
 wasm-bindgen-futures = "0.4"
 futures = "0.3"
+
 [dependencies.tokio]
 version = "^1"
 features = [
   "macros",
   "rt-multi-thread",
 ]
+
+[dependencies.petgraph]
+#version = "^0.5"
+path = "../petgraph"
+features=["serde-1"]
 
 [dependencies.seqraph]
 path = "../web-app/seqraph"
