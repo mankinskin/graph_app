@@ -1,5 +1,5 @@
 use eframe::{
-    egui::{self, context_menu::MenuState, Ui},
+    egui::{self, Ui},
     epi,
 };
 #[cfg(feature = "persistence")]
@@ -54,15 +54,12 @@ impl App {
     }
     fn top_panel(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            // The top panel is often a good place for a menu bar:
-            egui::menu::bar(ui, |ui| {
-                egui::menu::menu(ui, "File", |ui| {
-                    if ui.button("Open...").clicked() {
-                        self.open_file_dialog();
-                    } else if ui.button("Quit").clicked() {
-                        frame.quit();
-                    }
-                });
+            ui.menu("File", |ui| {
+                if ui.button("Open...").clicked() {
+                    self.open_file_dialog();
+                } else if ui.button("Quit").clicked() {
+                    frame.quit();
+                }
             });
         });
     }
@@ -70,14 +67,13 @@ impl App {
         egui::SidePanel::left("side_panel")
             .show(ctx, |ui| {
                 ui.heading("Side Panel");
-
                 ui.horizontal(|ui| {
                     ui.label("Write something: ");
                     ui.text_edit_singleline(&mut self.label);
                 });
             })
             .response
-            .context_menu(|ui, menu_state| self.context_menu(ui, menu_state));
+            .context_menu(|ui| self.context_menu(ui));
     }
     fn central_panel(&mut self, ctx: &egui::CtxRef) {
         egui::CentralPanel::default()
@@ -86,23 +82,27 @@ impl App {
                 egui::warn_if_debug_build(ui);
             })
             .response
-            .context_menu(|ui, menu| self.context_menu(ui, menu));
+            .context_menu(|ui| self.context_menu(ui));
     }
-    fn context_menu(&mut self, ui: &mut Ui, menu: &mut MenuState) {
-        menu.submenu("Layout").show(ui, |ui, menu| {
+    fn context_menu(&mut self, ui: &mut Ui) {
+        if ui.button("Split").clicked() {
+            self.graph.split();
+            ui.close();
+        }
+        ui.menu("Layout", |ui| {
             if ui.radio_value(
-                &mut self.graph.layout,
+                self.graph.get_layout_mut(),
                 Layout::Graph, "Graph"
                 )
                 .clicked() {
-                menu.close();
+                ui.close();
             }
             if ui.radio_value(
-                &mut self.graph.layout,
+                self.graph.get_layout_mut(),
                 Layout::Nested, "Nested"
                 )
                 .clicked() {
-                menu.close();
+                ui.close();
             }
         });
     }
