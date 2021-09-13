@@ -1,5 +1,4 @@
-use eframe::egui::{self, pos2, vec2, Frame, Pos2, Response, Shape, Stroke, Style, Ui, Vec2, Window, Area, Rect, Grid};
-use petgraph::visit::IntoNodeReferences;
+use eframe::egui::{self, pos2, vec2, Frame, Pos2, Response, Shape, Stroke, Style, Ui, Vec2, Window, Rect};
 #[allow(unused)]
 use petgraph::{
     visit::EdgeRef,
@@ -9,7 +8,7 @@ use petgraph::{
     },
 };
 use seqraph::{
-    hypergraph::{Child, Hypergraph, VertexData, VertexIndex, VertexKey, *},
+    hypergraph::{Child, Hypergraph, VertexData, VertexKey, *},
     token::{Token, Tokenize},
 };
 use std::collections::{
@@ -96,8 +95,6 @@ impl Graph {
                 [bc, d],
                 [b, cd],
             ]);
-            //let abcd = graph.insert_pattern(&[abc, d]);
-            //graph.insert_to_pattern(abcd, &[a, bcd]);
             let abcd = graph.insert_patterns([
                 [abc, d],
                 [a, bcd],
@@ -210,6 +207,7 @@ impl GraphVis {
         ));
         Self::edge_tip(ui, source, target, 10.0);
     }
+    #[allow(clippy::many_single_char_names)]
     fn border_intersection_point(rect: &Rect, p: &Pos2) -> Pos2 {
         let p = *p;
         let c = rect.center();
@@ -390,7 +388,7 @@ impl Node {
             .response
     }
     pub fn show(self, ui: &mut Ui, graph: &GraphVis) -> Option<Response> {
-        Window::new(&self.name)
+        Window::new(&format!("{}({})", self.name, self.idx.index()))
             .vscroll(true)
             .default_width(80.0)
             .show(ui.ctx(), |ui| {
