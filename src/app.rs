@@ -1,10 +1,10 @@
-use eframe::{
-    egui::{self, Ui},
-    epi,
-};
+use eframe::{egui::{self, DragValue, Ui}, epi};
 #[cfg(feature = "persistence")]
 use serde::*;
-use std::sync::{Arc, RwLock};
+use std::{
+    sync::{Arc, RwLock},
+    num::NonZeroUsize,
+};
 
 #[allow(unused)]
 use crate::graph::*;
@@ -18,6 +18,8 @@ pub struct App {
     graph_file: Option<std::path::PathBuf>,
     // this how you opt-out of serialization of a member
     graph: Graph,
+    split_lower: usize,
+    split_upper: usize,
 }
 
 impl Default for App {
@@ -26,6 +28,8 @@ impl Default for App {
             label: "Hello World!".to_owned(),
             graph_file: None,
             graph: Graph::new(),
+            split_lower: 1,
+            split_upper: 7,
         }
     }
 }
@@ -85,8 +89,22 @@ impl App {
             .context_menu(|ui| self.context_menu(ui));
     }
     fn context_menu(&mut self, ui: &mut Ui) {
-        if ui.button("Split").clicked() {
-            self.graph.split();
+        ui.horizontal(|ui| {
+            ui.add(DragValue::new(&mut self.split_lower));
+            ui.add(DragValue::new(&mut self.split_upper));
+            self.split_upper = self.split_lower.max(self.split_upper);
+            if ui.button("Split").clicked() {
+                match (NonZeroUsize::new(self.split_lower), NonZeroUsize::new(self.split_upper)) {
+                    (Some(lower), Some(upper)) => self.graph.split_range(lower, upper),
+                    (None, Some(single)) |
+                    (Some(single), None) => self.graph.split(single),
+                    (None, None) => {},
+                }
+                ui.close();
+            }
+        });
+        if ui.button("Reset").clicked() {
+            self.graph.reset();
             ui.close();
         }
         ui.menu("Layout", |ui| {

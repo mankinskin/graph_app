@@ -122,8 +122,9 @@ impl Graph {
                 [abab, cd],
             ]);
             let ababababcd = graph.insert_patterns([
-                [ababab, abcd],
-                [abab, ababcd],
+                vec![ababab, abcd],
+                vec![abab, ababcd],
+                vec![ab, ababab, cd],
             ]);
             let ababcdefghi = graph.insert_patterns([
                 [ab, abcdefghi],
@@ -132,17 +133,30 @@ impl Graph {
             let _ababababcdefghi = graph.insert_patterns([
                 [ababababcd, efghi],
                 [abab, ababcdefghi],
-                [ababab, abcdefghi]
+                [ababab, abcdefghi],
             ]);
         } else {
             panic!("Inserting tokens failed!");
         }
         graph
     }
-    pub fn split(&mut self) {
-        let (ababababcdefghi, _, _) = self.graph.find_sequence("ababababcdefghi".chars()).expect("not found");
-        let (left, right) = self.graph.split_index_at_pos(ababababcdefghi, NonZeroUsize::new(7).unwrap());
+    pub fn split_range(&mut self, lower: NonZeroUsize, upper: NonZeroUsize) {
+        let s = "ababababcdefghi";
+        let lower = lower.get();
+        let upper = upper.get();
+        let (ababababcdefghi, _, _) = self.graph.find_sequence(s.chars()).expect("not found");
+        let res = self.graph.index_subrange(ababababcdefghi, lower..upper);
+        //let res = self.graph.split_index_at_pos(ababababcdefghi, pos);
         self.vis = GraphVis::new(&self.graph);
+    }
+    pub fn split(&mut self, pos: NonZeroUsize) {
+        let s = "ababababcdefghi";
+        let (ababababcdefghi, _, _) = self.graph.find_sequence(s.chars()).expect("not found");
+        let res = self.graph.split_index(ababababcdefghi, pos);
+        self.vis = GraphVis::new(&self.graph);
+    }
+    pub fn reset(&mut self) {
+        *self = Self::new();
     }
     pub fn new() -> Self {
         let graph = Self::build_hypergraph();
@@ -389,6 +403,7 @@ impl Node {
     }
     pub fn show(self, ui: &mut Ui, graph: &GraphVis) -> Option<Response> {
         Window::new(&format!("{}({})", self.name, self.idx.index()))
+        //Window::new(&self.name)
             .vscroll(true)
             .default_width(80.0)
             .show(ui.ctx(), |ui| {
