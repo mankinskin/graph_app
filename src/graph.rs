@@ -380,7 +380,6 @@ impl Node {
     }
     fn pattern(&self, ui: &mut Ui, pat: &PatternVis, graph: &GraphVis, height: Option<f32>) -> Response {
         ui.horizontal(|ui| {
-            //ui.spacing_mut().item_spacing = Vec2::splat(0.0);
             if let Some(height) = height {
                 ui.set_min_height(height);
             }

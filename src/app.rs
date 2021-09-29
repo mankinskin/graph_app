@@ -60,7 +60,7 @@ impl App {
     }
     fn top_panel(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            ui.menu("File", |ui| {
+            ui.menu_button("File", |ui| {
                 if ui.button("Open...").clicked() {
                     self.open_file_dialog();
                 } else if ui.button("Quit").clicked() {
@@ -111,27 +111,27 @@ impl App {
                     (Some(single), None) => self.graph.split(single),
                     (None, None) => {},
                 }
-                ui.close();
+                ui.close_menu();
             }
         });
         if ui.button("Reset").clicked() {
             self.graph.reset();
-            ui.close();
+            ui.close_menu();
         }
-        ui.menu("Layout", |ui| {
+        ui.menu_button("Layout", |ui| {
             if ui.radio_value(
                 self.graph.get_layout_mut(),
                 Layout::Graph, "Graph"
                 )
                 .clicked() {
-                ui.close();
+                ui.close_menu();
             }
             if ui.radio_value(
                 self.graph.get_layout_mut(),
                 Layout::Nested, "Nested"
-                )
-                .clicked() {
-                ui.close();
+            )
+            .clicked() {
+                ui.close_menu();
             }
         });
     }
