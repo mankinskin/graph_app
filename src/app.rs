@@ -20,6 +20,7 @@ pub struct App {
     graph: Graph,
     split_lower: usize,
     split_upper: usize,
+    insert_text: String,
 }
 
 impl Default for App {
@@ -30,6 +31,7 @@ impl Default for App {
             graph: Graph::new(),
             split_lower: 1,
             split_upper: 7,
+            insert_text: Default::default(),
         }
     }
 }
@@ -89,6 +91,15 @@ impl App {
             .context_menu(|ui| self.context_menu(ui));
     }
     fn context_menu(&mut self, ui: &mut Ui) {
+        //ui.horizontal(|ui| {
+        //    ui.label("Insert:");
+        //    ui.text_edit_singleline(self.insert_text);
+        //    if ui.button("Go").clicked() {
+        //        self.graph.read(self.insert_text);
+        //        self.insert_text = String::new();
+        //        ui.close();
+        //    }
+        //});
         ui.horizontal(|ui| {
             ui.add(DragValue::new(&mut self.split_lower));
             ui.add(DragValue::new(&mut self.split_upper));

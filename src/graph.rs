@@ -8,7 +8,7 @@ use petgraph::{
     },
 };
 use seqraph::{
-    hypergraph::{Child, Hypergraph, VertexData, VertexKey, *},
+    hypergraph::*,
     token::{Token, Tokenize},
 };
 use std::collections::{
@@ -144,14 +144,20 @@ impl Graph {
         let s = "ababababcdefghi";
         let lower = lower.get();
         let upper = upper.get();
-        let (ababababcdefghi, _, _) = self.graph.find_sequence(s.chars()).expect("not found");
+        let SearchFound {
+            index:ababababcdefghi,
+            ..
+        } = self.graph.find_sequence(s.chars()).unwrap();
         let res = self.graph.index_subrange(ababababcdefghi, lower..upper);
         //let res = self.graph.split_index_at_pos(ababababcdefghi, pos);
         self.vis = GraphVis::new(&self.graph);
     }
     pub fn split(&mut self, pos: NonZeroUsize) {
         let s = "ababababcdefghi";
-        let (ababababcdefghi, _, _) = self.graph.find_sequence(s.chars()).expect("not found");
+        let SearchFound {
+            index:ababababcdefghi,
+            ..
+        } = self.graph.find_sequence(s.chars()).unwrap();
         let res = self.graph.split_index(ababababcdefghi, pos);
         self.vis = GraphVis::new(&self.graph);
     }
