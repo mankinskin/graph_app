@@ -1,9 +1,8 @@
-use eframe::{egui::{self, DragValue, Ui}, epi};
+use eframe::{egui::{self, Ui}, epi};
 #[cfg(feature = "persistence")]
 use serde::*;
 use std::{
     sync::{Arc, RwLock},
-    num::NonZeroUsize,
 };
 
 #[allow(unused)]
@@ -16,10 +15,8 @@ pub struct App {
 
     #[allow(unused)]
     graph_file: Option<std::path::PathBuf>,
-    // this how you opt-out of serialization of a member
+    #[cfg_attr(feature = "persistence", serde(skip))]
     graph: Graph,
-    split_lower: usize,
-    split_upper: usize,
     insert_text: String,
 }
 
@@ -29,9 +26,7 @@ impl Default for App {
             label: "Hello World!".to_owned(),
             graph_file: None,
             graph: Graph::new(),
-            split_lower: 1,
-            split_upper: 7,
-            insert_text: Default::default(),
+            insert_text: String::from("heldldo"),
         }
     }
 }
@@ -69,18 +64,6 @@ impl App {
             });
         });
     }
-    fn side_panel(&mut self, ctx: &egui::CtxRef) {
-        egui::SidePanel::left("side_panel")
-            .show(ctx, |ui| {
-                ui.heading("Side Panel");
-                ui.horizontal(|ui| {
-                    ui.label("Write something: ");
-                    ui.text_edit_singleline(&mut self.label);
-                });
-            })
-            .response
-            .context_menu(|ui| self.context_menu(ui));
-    }
     fn central_panel(&mut self, ctx: &egui::CtxRef) {
         egui::CentralPanel::default()
             .show(ctx, |ui| {
@@ -91,26 +74,13 @@ impl App {
             .context_menu(|ui| self.context_menu(ui));
     }
     fn context_menu(&mut self, ui: &mut Ui) {
-        //ui.horizontal(|ui| {
-        //    ui.label("Insert:");
-        //    ui.text_edit_singleline(self.insert_text);
-        //    if ui.button("Go").clicked() {
-        //        self.graph.read(self.insert_text);
-        //        self.insert_text = String::new();
-        //        ui.close();
-        //    }
-        //});
         ui.horizontal(|ui| {
-            ui.add(DragValue::new(&mut self.split_lower));
-            ui.add(DragValue::new(&mut self.split_upper));
-            self.split_upper = self.split_lower.max(self.split_upper);
-            if ui.button("Split").clicked() {
-                match (NonZeroUsize::new(self.split_lower), NonZeroUsize::new(self.split_upper)) {
-                    (Some(lower), Some(upper)) => self.graph.split_range(lower, upper),
-                    (None, Some(single)) |
-                    (Some(single), None) => self.graph.split(single),
-                    (None, None) => {},
-                }
+            ui.label("Insert:");
+            ui.text_edit_singleline(&mut self.insert_text);
+            if ui.button("Go").clicked() {
+                let insert_text = self.insert_text.clone();
+                self.graph.read(insert_text);
+                self.insert_text = String::new();
                 ui.close_menu();
             }
         });
@@ -119,19 +89,20 @@ impl App {
             ui.close_menu();
         }
         ui.menu_button("Layout", |ui| {
+            let mut vis = self.graph.vis_mut();
             if ui.radio_value(
-                self.graph.get_layout_mut(),
+                &mut vis.layout,
                 Layout::Graph, "Graph"
                 )
                 .clicked() {
-                ui.close_menu();
+                //ui.close_menu();
             }
             if ui.radio_value(
-                self.graph.get_layout_mut(),
+                &mut vis.layout,
                 Layout::Nested, "Nested"
             )
             .clicked() {
-                ui.close_menu();
+                //ui.close_menu();
             }
         });
     }
@@ -164,7 +135,6 @@ impl epi::App for App {
     }
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
         self.top_panel(ctx, frame);
-        //self.side_panel(ctx);
         self.central_panel(ctx);
     }
 }

@@ -1,4 +1,4 @@
-use eframe::egui::{self, pos2, vec2, Frame, Pos2, Response, Shape, Stroke, Style, Ui, Vec2, Window, Rect};
+use eframe::{egui::{self, vec2, DragValue, Frame, Pos2, Response, Shape, Stroke, Style, Ui, Vec2, Window, Rect}, epi};
 #[allow(unused)]
 use petgraph::{
     visit::EdgeRef,
@@ -16,6 +16,10 @@ use std::collections::{
 };
 use std::f32::consts::PI;
 use std::num::NonZeroUsize;
+use std::sync::{
+    Arc,
+    RwLock,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Layout {
@@ -25,16 +29,10 @@ pub enum Layout {
 }
 impl Layout {
     pub fn is_graph(&self) -> bool {
-        match self {
-            Self::Graph | Self::GraphAndNested => true,
-            _ => false,
-        }
+        matches!(self, Self::Graph | Self::GraphAndNested)
     }
     pub fn is_nested(&self) -> bool {
-        match self {
-            Self::Nested | Self::GraphAndNested => true,
-            _ => false,
-        }
+        matches!(self, Self::Nested | Self::GraphAndNested)
     }
 }
 impl Default for Layout {
@@ -42,13 +40,36 @@ impl Default for Layout {
         Self::Graph
     }
 }
+#[derive(Clone)]
 pub struct Graph {
-    #[allow(unused)]
-    #[cfg_attr(feature = "persistence", serde(skip))]
-    graph: Hypergraph<char>,
-    vis: GraphVis,
+    graph: Arc<RwLock<Hypergraph<char>>>,
+    vis: Arc<RwLock<GraphVis>>,
 }
 impl Graph {
+    pub fn new() -> Self {
+        //let graph = Self::build_hypergraph();
+        let graph = Arc::new(RwLock::new(Default::default()));
+        let vis = Arc::new(RwLock::new(GraphVis::default()));
+        let new = Self {
+            graph,
+            vis,
+        };
+        let g = new.clone();
+        new.vis_mut().set_graph(g);
+        new
+    }
+    pub(crate) fn graph(&self) -> std::sync::RwLockReadGuard<'_, Hypergraph<char>> {
+        self.graph.read().unwrap()
+    }
+    pub(crate) fn graph_mut(&self) -> std::sync::RwLockWriteGuard<'_, Hypergraph<char>> {
+        self.graph.write().unwrap()
+    }
+    pub(crate) fn vis(&self) -> std::sync::RwLockReadGuard<'_, GraphVis> {
+        self.vis.read().unwrap()
+    }
+    pub(crate) fn vis_mut(&self) -> std::sync::RwLockWriteGuard<'_, GraphVis> {
+        self.vis.write().unwrap()
+    }
     fn build_hypergraph() -> Hypergraph<char> {
         let mut graph = Hypergraph::default();
         if let [a, b, c, d, e, f, g, h, i] = graph.insert_tokens(
@@ -103,105 +124,108 @@ impl Graph {
                 [efgh, i],
                 [ef, ghi],
             ]);
-            let abcdefghi = graph.insert_patterns([
-                vec![abcd, efghi],
-                vec![ab, cdef, ghi],
-            ]);
-            let aba = graph.insert_pattern([ab, a]);
-            let abab = graph.insert_patterns([
-                [aba, b],
-                [ab, ab],
-            ]);
-            let ababab = graph.insert_patterns([
-                [abab, ab],
-                [ab, abab],
-            ]);
-            let ababcd = graph.insert_patterns([
-                [ab, abcd],
-                [aba, bcd],
-                [abab, cd],
-            ]);
-            let ababababcd = graph.insert_patterns([
-                vec![ababab, abcd],
-                vec![abab, ababcd],
-                vec![ab, ababab, cd],
-            ]);
-            let ababcdefghi = graph.insert_patterns([
-                [ab, abcdefghi],
-                [ababcd, efghi],
-            ]);
-            let _ababababcdefghi = graph.insert_patterns([
-                [ababababcd, efghi],
-                [abab, ababcdefghi],
-                [ababab, abcdefghi],
-            ]);
+            //let abcdefghi = graph.insert_patterns([
+            //    vec![abcd, efghi],
+            //    vec![ab, cdef, ghi],
+            //]);
+            //let aba = graph.insert_pattern([ab, a]);
+            //let abab = graph.insert_patterns([
+            //    [aba, b],
+            //    [ab, ab],
+            //]);
+            //let ababab = graph.insert_patterns([
+            //    [abab, ab],
+            //    [ab, abab],
+            //]);
+            //let ababcd = graph.insert_patterns([
+            //    [ab, abcd],
+            //    [aba, bcd],
+            //    [abab, cd],
+            //]);
+            //let ababababcd = graph.insert_patterns([
+            //    vec![ababab, abcd],
+            //    vec![abab, ababcd],
+            //    vec![ab, ababab, cd],
+            //]);
+            //let ababcdefghi = graph.insert_patterns([
+            //    [ab, abcdefghi],
+            //    [ababcd, efghi],
+            //]);
+            //let _ababababcdefghi = graph.insert_patterns([
+            //    [ababababcd, efghi],
+            //    [abab, ababcdefghi],
+            //    [ababab, abcdefghi],
+            //]);
         } else {
             panic!("Inserting tokens failed!");
         }
         graph
     }
-    pub fn split_range(&mut self, lower: NonZeroUsize, upper: NonZeroUsize) {
-        let s = "ababababcdefghi";
+    pub fn split_range(&self, index: VertexIndex, lower: NonZeroUsize, upper: NonZeroUsize) {
         let lower = lower.get();
         let upper = upper.get();
-        let SearchFound {
-            index:ababababcdefghi,
-            ..
-        } = self.graph.find_sequence(s.chars()).unwrap();
-        let res = self.graph.index_subrange(ababababcdefghi, lower..upper);
-        //let res = self.graph.split_index_at_pos(ababababcdefghi, pos);
-        self.vis = GraphVis::new(&self.graph);
+        let _res = self.graph_mut().index_subrange(index, lower..upper);
     }
-    pub fn split(&mut self, pos: NonZeroUsize) {
-        let s = "ababababcdefghi";
-        let SearchFound {
-            index:ababababcdefghi,
-            ..
-        } = self.graph.find_sequence(s.chars()).unwrap();
-        let res = self.graph.split_index(ababababcdefghi, pos);
-        self.vis = GraphVis::new(&self.graph);
+    pub fn split(&self, index: VertexIndex, pos: NonZeroUsize) {
+        let _res = self.graph_mut().split_index(index, pos);
     }
     pub fn reset(&mut self) {
         *self = Self::new();
     }
-    pub fn new() -> Self {
-        let graph = Self::build_hypergraph();
-        Self {
-            vis: GraphVis::new(&graph),
-            graph,
-        }
+    pub fn read(&self, text: impl ToString) {
+        self.graph_mut().read_sequence(text.to_string().chars());
     }
-    pub fn get_layout_mut(&mut self) -> &mut Layout {
-        &mut self.vis.layout
-    }
-    pub fn show(&mut self, ui: &mut Ui) {
-        self.vis.show(ui)
+    pub fn show(&self, ui: &mut Ui) {
+        self.vis_mut().update();
+        self.vis_mut().show(ui);
     }
 }
+#[derive(Default)]
 pub struct GraphVis {
-    #[cfg_attr(feature = "persistence", serde(skip))]
-    graph: DiGraph<Node, ()>,
+    graph: DiGraph<NodeVis, ()>,
     pub layout: Layout,
+    handle: Option<Graph>,
 }
-impl std::ops::Deref for GraphVis {
-    type Target = DiGraph<Node, ()>;
-    fn deref(&self) -> &Self::Target {
-        &self.graph
-    }
-}
+//impl std::ops::Deref for GraphVis {
+//    type Target = DiGraph<NodeVis, ()>;
+//    fn deref(&self) -> &Self::Target {
+//        &self.graph
+//    }
+//}
 impl GraphVis {
-    pub fn new(g: &Hypergraph<char>) -> Self {
+    pub fn set_graph(&mut self, graph: Graph) {
+        self.handle = Some(graph);
+        self.update();
+    }
+    fn handle(&self) -> Graph {
+        self.handle.clone().expect("GraphVis not yet initialized!")
+    }
+    pub fn update(&mut self) {
         // todo reuse names in nodes
-        let pg = g.to_petgraph();
-        let node_indices: HashMap<_, _> = pg.nodes().map(|(idx, (key, _))| (*key, idx)).collect();
-        let graph =
-            pg.map(|idx, (key, node)| Node::new(g, &node_indices, idx, &key, node),
+        let pg = self.handle().graph().to_petgraph();
+        let node_indices: HashMap<_, _> = pg.nodes().map(|(idx, (key, _node))| (*key, idx)).collect();
+        let old_node_indices: HashMap<_, _> = self.graph.nodes().map(|(idx, node)| (node.key, idx)).collect();
+        let new = pg.map(|idx, (key, node)|
+                    if let Some(oid) = old_node_indices.get(key) {
+                        let old = self.graph.node_weight(*oid).unwrap();
+                        NodeVis::from_old(
+                            old,
+                            &node_indices,
+                            idx,
+                            node,
+                        )
+                    } else {
+                        NodeVis::new(
+                            self.handle(),
+                            &node_indices,
+                            idx,
+                            key,
+                            node,
+                        )
+                    },
                 |_idx, _p| ()
             );
-        Self {
-            graph,
-            layout: Default::default()
-        }
+        self.graph = new;
     }
     pub fn edge_tip(ui: &mut Ui, source: &Pos2, target: &Pos2, size: f32) {
         let angle = (*target - *source).angle();
@@ -255,7 +279,7 @@ impl GraphVis {
             .graph
             .nodes()
             .map(|(idx, node)| {
-                let response = node.clone().show(ui, &self).unwrap();
+                let response = node.show(ui, self).unwrap();
                 (idx, response.rect)
             })
             .collect();
@@ -264,9 +288,199 @@ impl GraphVis {
                 let a_pos = rects.get(&edge.source()).expect("No position for edge endpoint.").center();
                 let b = rects.get(&edge.target()).expect("No position for edge endpoint.");
 
-                let p = Self::border_intersection_point(&b, &a_pos);
+                let p = Self::border_intersection_point(b, &a_pos);
                 Self::edge(ui, &a_pos, &p);
             });
+    }
+}
+#[allow(unused)]
+#[derive(Clone)]
+pub struct NodeVis {
+    key: VertexKey<char>,
+    idx: NodeIndex,
+    name: String,
+    data: VertexData,
+    child_patterns: ChildPatternsVis,
+    state: Arc<RwLock<NodeState>>,
+    graph: Graph,
+}
+pub struct NodeState {
+    split_lower: usize,
+    split_upper: usize,
+}
+impl NodeState {
+    pub fn new() -> Self {
+        Self {
+            split_lower: 1,
+            split_upper: 7,
+        }
+    }
+}
+impl std::ops::Deref for NodeVis {
+    type Target = VertexData;
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+impl NodeVis {
+    pub fn new(
+        graph: Graph,
+        node_indices: &HashMap<VertexKey<char>, NodeIndex>,
+        idx: NodeIndex,
+        key: &VertexKey<char>,
+        data: &VertexData,
+    ) -> Self {
+        Self::new_impl(
+            graph,
+            node_indices,
+            idx,
+            key,
+            data,
+            Arc::new(RwLock::new(NodeState::new())),
+        )
+    }
+    pub fn from_old(
+        old: &NodeVis,
+        node_indices: &HashMap<VertexKey<char>, NodeIndex>,
+        idx: NodeIndex,
+        data: &VertexData,
+    ) -> Self {
+        Self::new_impl(
+            old.graph.clone(),
+            node_indices,
+            idx,
+            &old.key,
+            data,
+            old.state.clone(),
+        )
+    }
+    pub fn new_impl(
+        graph: Graph,
+        node_indices: &HashMap<VertexKey<char>, NodeIndex>,
+        idx: NodeIndex,
+        key: &VertexKey<char>,
+        data: &VertexData,
+        state: Arc<RwLock<NodeState>>,
+    ) -> Self {
+        let (name, child_patterns) = {
+            let graph = &*graph.graph();
+            let name = graph.key_data_string(key, data);
+            let child_patterns = Self::child_patterns_vis(graph, node_indices, data);
+            (name, child_patterns)
+        };
+        Self {
+            key: *key,
+            graph,
+            idx,
+            name,
+            data: data.clone(),
+            child_patterns,
+            state,
+        }
+    }
+    fn state(&self) -> std::sync::RwLockReadGuard<'_, NodeState>{
+        self.state.read().unwrap()
+    }
+    fn state_mut(&self) -> std::sync::RwLockWriteGuard<'_, NodeState>{
+        self.state.write().unwrap()
+    }
+    fn child_patterns_vis<T: Tokenize + std::fmt::Display>(
+        graph: &Hypergraph<T>,
+        node_indices: &HashMap<VertexKey<T>, NodeIndex>,
+        data: &VertexData,
+    ) -> ChildPatternsVis {
+        data.get_children()
+            .iter()
+            .map(|(&id, pat)| {
+                (
+                    id,
+                    PatternVis::new(
+                        pat.iter()
+                            .map(|c| ChildVis::new(graph, node_indices, *c))
+                            .collect(),
+                    ),
+                )
+            })
+            .collect()
+    }
+    pub fn child_patterns(&self, ui: &mut Ui, gvis: &GraphVis) -> Response {
+        ui.vertical(
+            |ui| {
+            ui.spacing_mut().item_spacing = Vec2::splat(0.0);
+            self.child_patterns
+                .iter()
+                .for_each(|(_pid, cpat)| {
+                    let r = self.measure_pattern(ui, cpat, gvis);
+                    let height = r.rect.height();
+                    self.pattern(ui, cpat, Some(height), gvis);
+                })
+        })
+        .response
+    }
+    fn measure_pattern(&self, ui: &mut Ui, pat: &PatternVis, gvis: &GraphVis) -> Response {
+        let old_clip_rect = ui.clip_rect();
+        let old_cursor = ui.cursor();
+        ui.set_clip_rect(Rect::NOTHING);
+        let r = self.pattern(ui, pat, None, gvis);
+        ui.set_clip_rect(old_clip_rect);
+        ui.set_cursor(old_cursor);
+        r
+    }
+    fn pattern(&self, ui: &mut Ui, pat: &PatternVis, height: Option<f32>, gvis: &GraphVis) -> Response {
+        ui.horizontal(|ui| {
+            if let Some(height) = height {
+                ui.set_min_height(height);
+            }
+            pat.pattern
+                .iter()
+                .for_each(|child| {
+                    self.child_index(ui, child, gvis);
+                })
+        })
+        .response
+    }
+    fn child_index(&self, ui: &mut Ui, child: &ChildVis, gvis: &GraphVis) -> Response {
+        Frame::group(&Style::default())
+            .margin((3.0, 3.0))
+            .show(ui, |ui| {
+                ui.spacing_mut().item_spacing = Vec2::splat(0.0);
+                //ui.set_min_width(UNIT_WIDTH * child.width as f32);
+                if gvis.layout.is_nested() && child.child.width > 1 {
+                    let node = gvis.graph.node_weight(child.idx).expect("Invalid NodeIndex in ChildVis!");
+                    node.child_patterns(ui, gvis)
+                } else {
+                    ui.monospace(&child.name)
+                }
+            })
+            .response
+    }
+    pub fn context_menu(&self, ui: &mut Ui) {
+        ui.horizontal(|ui| {
+            let mut state = self.state_mut();
+            ui.add(DragValue::new(&mut state.split_lower));
+            ui.add(DragValue::new(&mut state.split_upper));
+            state.split_upper = state.split_lower.max(state.split_upper);
+            if ui.button("Split").clicked() {
+                match (NonZeroUsize::new(state.split_lower), NonZeroUsize::new(state.split_upper)) {
+                    (Some(lower), Some(upper)) => self.graph.split_range(self.index, lower, upper),
+                    (None, Some(single)) |
+                    (Some(single), None) => self.graph.split(self.index, single),
+                    (None, None) => {},
+                }
+                ui.close_menu();
+            }
+        });
+    }
+    pub fn show(&self, ui: &mut Ui, gvis: &GraphVis) -> Option<Response> {
+        Window::new(&format!("{}({})", self.name, self.idx.index()))
+        //Window::new(&self.name)
+            .vscroll(true)
+            .default_width(80.0)
+            .show(ui.ctx(), |ui| {
+                ui.spacing_mut().item_spacing = Vec2::splat(0.0);
+                self.child_patterns(ui, gvis)
+            })
+            .map(|ir| ir.response.context_menu(|ui| self.context_menu(ui)))
     }
 }
 #[derive(Clone)]
@@ -289,7 +503,7 @@ impl ChildVis {
         ) -> Self {
         let key = graph.expect_vertex_key(child.index);
         let name = graph.index_string(child.get_index());
-        let idx = node_indices.get(key).expect("Missing NodeIndex for VertexKey!").clone();
+        let idx = *node_indices.get(key).expect("Missing NodeIndex for VertexKey!");
         Self { name, child, idx}
     }
 }
@@ -305,116 +519,3 @@ impl PatternVis {
     }
 }
 type ChildPatternsVis = Vec<(PatternId, PatternVis)>;
-#[allow(unused)]
-#[derive(Clone)]
-pub struct Node {
-    idx: NodeIndex,
-    name: String,
-    data: VertexData,
-    child_patterns: ChildPatternsVis,
-}
-impl std::ops::Deref for Node {
-    type Target = VertexData;
-    fn deref(&self) -> &Self::Target {
-        &self.data
-    }
-}
-impl Node {
-    pub fn new<T: Tokenize + std::fmt::Display>(
-        graph: &Hypergraph<T>,
-        node_indices: &HashMap<VertexKey<T>, NodeIndex>,
-        idx: NodeIndex,
-        key: &VertexKey<T>,
-        data: &VertexData,
-    ) -> Self {
-        let name = graph.key_data_string(key, data);
-        let child_patterns = Self::child_patterns_vis(graph, node_indices, data);
-        Self {
-            idx,
-            name,
-            data: data.clone(),
-            child_patterns,
-        }
-    }
-    fn child_patterns_vis<T: Tokenize + std::fmt::Display>(
-        graph: &Hypergraph<T>,
-        node_indices: &HashMap<VertexKey<T>, NodeIndex>,
-        data: &VertexData,
-    ) -> ChildPatternsVis {
-        data.get_children()
-            .iter()
-            .map(|(&id, pat)| {
-                (
-                    id,
-                    PatternVis::new(
-                        pat.iter()
-                            .map(|c| ChildVis::new(graph, node_indices, c.clone()))
-                            .collect(),
-                    ),
-                )
-            })
-            .collect()
-    }
-    pub fn child_patterns(&self, ui: &mut Ui, graph: &GraphVis) -> Response {
-        ui.vertical(
-            |ui| {
-            ui.spacing_mut().item_spacing = Vec2::splat(0.0);
-            self.child_patterns
-                .iter()
-                .for_each(|(_pid, cpat)| {
-                    let r = self.measure_pattern(ui, cpat, graph);
-                    let height = r.rect.height();
-                    self.pattern(ui, cpat, graph, Some(height));
-                })
-        })
-        .response
-    }
-    fn measure_pattern(&self, ui: &mut Ui, pat: &PatternVis, graph: &GraphVis) -> Response {
-        let old_clip_rect = ui.clip_rect();
-        let old_cursor = ui.cursor();
-        ui.set_clip_rect(Rect::NOTHING);
-        let r = self.pattern(ui, pat, graph, None);
-        ui.set_clip_rect(old_clip_rect);
-        ui.set_cursor(old_cursor);
-        r
-    }
-    fn pattern(&self, ui: &mut Ui, pat: &PatternVis, graph: &GraphVis, height: Option<f32>) -> Response {
-        ui.horizontal(|ui| {
-            if let Some(height) = height {
-                ui.set_min_height(height);
-            }
-            pat.pattern
-                .iter()
-                .for_each(|child| {
-                    self.child_index(ui, child, graph);
-                })
-        })
-        .response
-    }
-    fn child_index(&self, ui: &mut Ui, child: &ChildVis, graph: &GraphVis) -> Response {
-        Frame::group(&Style::default())
-            .margin((3.0, 3.0))
-            .show(ui, |ui| {
-                ui.spacing_mut().item_spacing = Vec2::splat(0.0);
-                //ui.set_min_width(UNIT_WIDTH * child.width as f32);
-                if graph.layout.is_nested() && child.child.width > 1 {
-                    let node = graph.node_weight(child.idx).expect("Invalid NodeIndex in ChildVis!");
-                    node.child_patterns(ui, graph)
-                } else {
-                    ui.monospace(format!("{}", child.name))
-                }
-            })
-            .response
-    }
-    pub fn show(self, ui: &mut Ui, graph: &GraphVis) -> Option<Response> {
-        Window::new(&format!("{}({})", self.name, self.idx.index()))
-        //Window::new(&self.name)
-            .vscroll(true)
-            .default_width(80.0)
-            .show(ui.ctx(), |ui| {
-                ui.spacing_mut().item_spacing = Vec2::splat(0.0);
-                self.child_patterns(ui, graph)
-            })
-            .map(|ir| ir.response)
-    }
-}
