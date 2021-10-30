@@ -6,7 +6,7 @@ set -eu
 FOLDER_NAME=${PWD##*/}
 CRATE_NAME=$FOLDER_NAME # assume crate name is the same as the folder name
 CRATE_NAME_SNAKE_CASE="${CRATE_NAME//-/_}" # for those who name crates with-kebab-case
-OUT_DIR=static
+OUT_DIR=docs
 BUILD=release
 TARGET_NAME="${CRATE_NAME_SNAKE_CASE}.wasm"
 TARGET_PATH="${OUT_DIR}/${TARGET_NAME}"
