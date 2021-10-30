@@ -1,8 +1,10 @@
 {
     "name": "Graph App",
-    "short_name": "graph-app-pwa",
+    "manifest_version": 2,
+    "version": "1",
+    "short_name": "graph-app",
     "icons": [{
-      "src": "./icon-256.png",
+      "src": "./favicon.png",
         "sizes": "256x256",
         "type": "image/png"
       }],
