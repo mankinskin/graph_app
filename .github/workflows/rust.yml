@@ -9,6 +9,40 @@ env:
   RUSTFLAGS: --cfg=web_sys_unstable_apis
 
 jobs:
+  build_wasm:
+    name: Build Wasm
+    runs-on: ubuntu-latest
+    env:
+      BUILD: release
+      TARGET_NAME: graph_app
+      OUT_DIR: docs
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          token: ${{ github.token }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+      - run: rustup target add wasm32-unknown-unknown
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --${{ env.BUILD }} --lib --target wasm32-unknown-unknown
+      - uses: jetli/wasm-bindgen-action@v0.1.0
+        with:
+          version: 'latest'
+      - name: Run wasm-bindgen
+        run: |
+          wasm-bindgen "./target/wasm32-unknown-unknown/$BUILD/$TARGET_NAME.wasm" --out-dir ${{ env.OUT_DIR }} --no-modules --no-typescript
+      - name: Commit docs
+        run: |
+          git config --global user.email "mankinskin@users.noreply.github.com"
+          git config --global user.name "mankinskin-github-actions"
+          git add ${{ env.OUT_DIR }}
+          git commit -m 'Build Wasm'
+          git push
   check:
     name: Check
     runs-on: ubuntu-latest
@@ -17,7 +51,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: nightly
           override: true
       - uses: actions-rs/cargo@v1
         with:
@@ -31,7 +65,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: nightly
           override: true
       - run: rustup target add wasm32-unknown-unknown
       - uses: actions-rs/cargo@v1
@@ -47,7 +81,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: nightly
           override: true
       - run: sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev # egui_glium dependencies
       - uses: actions-rs/cargo@v1
@@ -63,7 +97,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: nightly
           override: true
       - run: rustup component add rustfmt
       - uses: actions-rs/cargo@v1
@@ -79,7 +113,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: nightly
           override: true
       - run: rustup component add clippy
       - uses: actions-rs/cargo@v1
