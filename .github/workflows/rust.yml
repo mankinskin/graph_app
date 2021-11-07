@@ -1,4 +1,8 @@
-on: [push, pull_request]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 name: CI
 
@@ -19,6 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
+          ref: deployment
           token: ${{ github.token }}
       - uses: actions-rs/toolchain@v1
         with:
@@ -26,6 +31,11 @@ jobs:
           toolchain: nightly
           override: true
       - run: rustup target add wasm32-unknown-unknown
+      - name: Update deployment branch
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name github-actions
+          git pull -r origin main
       - uses: actions-rs/cargo@v1
         with:
           command: build
@@ -36,12 +46,10 @@ jobs:
       - name: Run wasm-bindgen
         run: |
           wasm-bindgen "./target/wasm32-unknown-unknown/$BUILD/$TARGET_NAME.wasm" --out-dir ${{ env.OUT_DIR }} --no-modules --no-typescript
-      - name: Commit docs
+      - name: Deploy
         run: |
-          git config --global user.email "mankinskin@users.noreply.github.com"
-          git config --global user.name "mankinskin-github-actions"
           git add ${{ env.OUT_DIR }}
-          git commit -m 'Build Wasm'
+          git commit -m 'Deploy'
           git push
   check:
     name: Check
