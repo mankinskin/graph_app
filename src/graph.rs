@@ -1,25 +1,19 @@
-use eframe::egui::{self, vec2, DragValue, Frame, Pos2, Response, Shape, Stroke, Style, Ui, Vec2, Window, Rect};
+use eframe::egui::{
+    self, vec2, DragValue, Frame, Pos2, Rect, Response, Shape, Stroke, Style, Ui, Vec2, Window,
+};
 #[allow(unused)]
 use petgraph::{
+    graph::{DiGraph, NodeIndex},
     visit::EdgeRef,
-    graph::{
-        NodeIndex,
-        DiGraph,
-    },
 };
 use seqraph::{
     hypergraph::*,
     token::{Token, Tokenize},
 };
-use std::collections::{
-    HashMap,
-};
+use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::num::NonZeroUsize;
-use std::sync::{
-    Arc,
-    RwLock,
-};
+use std::sync::{Arc, RwLock};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Layout {
@@ -48,7 +42,7 @@ pub struct Graph {
 }
 impl Graph {
     pub fn new() -> Self {
-        let graph = Default::default();
+        let graph = build_graph1();
         let graph = Arc::new(RwLock::new(graph));
         let vis = Arc::new(RwLock::new(GraphVis::default()));
         let new = Self {
@@ -111,29 +105,17 @@ impl Graph {
         }
         ui.menu_button("Layout", |ui| {
             let mut vis = self.vis_mut();
-            ui.radio_value(
-                &mut vis.layout,
-                Layout::Graph, "Graph"
-                )
+            ui.radio_value(&mut vis.layout, Layout::Graph, "Graph")
                 .clicked();
-            ui.radio_value(
-                &mut vis.layout,
-                Layout::Nested, "Nested"
-            )
-            .clicked();
+            ui.radio_value(&mut vis.layout, Layout::Nested, "Nested")
+                .clicked();
         });
         ui.menu_button("Load preset...", |ui| {
-            if ui.button(
-                "Graph 1"
-            )
-            .clicked() {
+            if ui.button("Graph 1").clicked() {
                 self.set_graph(build_graph1());
                 ui.close_menu();
             }
-            if ui.button(
-                "Graph 2"
-            )
-            .clicked() {
+            if ui.button("Graph 2").clicked() {
                 self.set_graph(build_graph2());
                 ui.close_menu();
             }
@@ -142,32 +124,22 @@ impl Graph {
 }
 fn build_graph1() -> Hypergraph<char> {
     let mut graph = Hypergraph::default();
-    if let [a, b, w, x, y, z] = graph.insert_tokens(
-        [
-            Token::Element('a'),
-            Token::Element('b'),
-            Token::Element('w'),
-            Token::Element('x'),
-            Token::Element('y'),
-            Token::Element('z'),
-        ])[..] {
-
+    if let [a, b, w, x, y, z] = graph.insert_tokens([
+        Token::Element('a'),
+        Token::Element('b'),
+        Token::Element('w'),
+        Token::Element('x'),
+        Token::Element('y'),
+        Token::Element('z'),
+    ])[..]
+    {
         let ab = graph.insert_pattern([a, b]);
         let by = graph.insert_pattern([b, y]);
         let yz = graph.insert_pattern([y, z]);
         let xa = graph.insert_pattern([x, a]);
-        let xab = graph.insert_patterns([
-            vec![x, ab],
-            vec![xa, b],
-        ]);
-        let xaby = graph.insert_patterns([
-            vec![xab, y],
-            vec![xa, by]
-        ]);
-        let xabyz = graph.insert_patterns([
-            vec![xaby, z],
-            vec![xab, yz]
-        ]);
+        let xab = graph.insert_patterns([vec![x, ab], vec![xa, b]]);
+        let xaby = graph.insert_patterns([vec![xab, y], vec![xa, by]]);
+        let xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
         let _wxabyzabbyxabyz = graph.insert_pattern([w, xabyz, ab, by, xabyz]);
     } else {
         panic!("Inserting tokens failed!");
@@ -176,18 +148,18 @@ fn build_graph1() -> Hypergraph<char> {
 }
 fn build_graph2() -> Hypergraph<char> {
     let mut graph = Hypergraph::default();
-    if let [a, b, c, d, e, f, g, h, i] = graph.insert_tokens(
-        [
-            Token::Element('a'),
-            Token::Element('b'),
-            Token::Element('c'),
-            Token::Element('d'),
-            Token::Element('e'),
-            Token::Element('f'),
-            Token::Element('g'),
-            Token::Element('h'),
-            Token::Element('i'),
-        ])[..] {
+    if let [a, b, c, d, e, f, g, h, i] = graph.insert_tokens([
+        Token::Element('a'),
+        Token::Element('b'),
+        Token::Element('c'),
+        Token::Element('d'),
+        Token::Element('e'),
+        Token::Element('f'),
+        Token::Element('g'),
+        Token::Element('h'),
+        Token::Element('i'),
+    ])[..]
+    {
         let ab = graph.insert_pattern([a, b]);
         let bc = graph.insert_pattern([b, c]);
         let ef = graph.insert_pattern([e, f]);
@@ -196,50 +168,19 @@ fn build_graph2() -> Hypergraph<char> {
         let gh = graph.insert_pattern([g, h]);
         let efgh = graph.insert_pattern([ef, gh]);
         let ghi = graph.insert_pattern([gh, i]);
-        let abc = graph.insert_patterns([
-            [ab, c],
-            [a, bc],
-        ]);
+        let abc = graph.insert_patterns([[ab, c], [a, bc]]);
         let cd = graph.insert_pattern([c, d]);
-        let bcd = graph.insert_patterns([
-            [bc, d],
-            [b, cd],
-        ]);
-        let abcd = graph.insert_patterns([
-            [abc, d],
-            [a, bcd],
-        ]);
-        let efghi = graph.insert_patterns([
-            [efgh, i],
-            [ef, ghi],
-        ]);
-        let abcdefghi = graph.insert_patterns([
-            vec![abcd, efghi],
-            vec![ab, cdef, ghi],
-        ]);
+        let bcd = graph.insert_patterns([[bc, d], [b, cd]]);
+        let abcd = graph.insert_patterns([[abc, d], [a, bcd]]);
+        let efghi = graph.insert_patterns([[efgh, i], [ef, ghi]]);
+        let abcdefghi = graph.insert_patterns([vec![abcd, efghi], vec![ab, cdef, ghi]]);
         let aba = graph.insert_pattern([ab, a]);
-        let abab = graph.insert_patterns([
-            [aba, b],
-            [ab, ab],
-        ]);
-        let ababab = graph.insert_patterns([
-            [abab, ab],
-            [ab, abab],
-        ]);
-        let ababcd = graph.insert_patterns([
-            [ab, abcd],
-            [aba, bcd],
-            [abab, cd],
-        ]);
-        let ababababcd = graph.insert_patterns([
-            vec![ababab, abcd],
-            vec![abab, ababcd],
-            vec![ab, ababab, cd],
-        ]);
-        let ababcdefghi = graph.insert_patterns([
-            [ab, abcdefghi],
-            [ababcd, efghi],
-        ]);
+        let abab = graph.insert_patterns([[aba, b], [ab, ab]]);
+        let ababab = graph.insert_patterns([[abab, ab], [ab, abab]]);
+        let ababcd = graph.insert_patterns([[ab, abcd], [aba, bcd], [abab, cd]]);
+        let ababababcd =
+            graph.insert_patterns([vec![ababab, abcd], vec![abab, ababcd], vec![ab, ababab, cd]]);
+        let ababcdefghi = graph.insert_patterns([[ab, abcdefghi], [ababcd, efghi]]);
         let _ababababcdefghi = graph.insert_patterns([
             [ababababcd, efghi],
             [abab, ababcdefghi],
@@ -267,44 +208,39 @@ impl GraphVis {
     pub fn update(&mut self) {
         // todo reuse names in nodes
         let pg = self.handle().graph().to_petgraph();
-        let node_indices: HashMap<_, _> = pg.nodes().map(|(idx, (key, _node))| (*key, idx)).collect();
-        let old_node_indices: HashMap<_, _> = self.graph.nodes().map(|(idx, node)| (node.key, idx)).collect();
-        let new = pg.map(|idx, (key, node)|
-                    if let Some(oid) = old_node_indices.get(key) {
-                        let old = self.graph.node_weight(*oid).unwrap();
-                        NodeVis::from_old(
-                            old,
-                            &node_indices,
-                            idx,
-                            node,
-                        )
-                    } else {
-                        NodeVis::new(
-                            self.handle(),
-                            &node_indices,
-                            idx,
-                            key,
-                            node,
-                        )
-                    },
-                |_idx, _p| ()
-            );
+        let node_indices: HashMap<_, _> =
+            pg.nodes().map(|(idx, (key, _node))| (*key, idx)).collect();
+        let old_node_indices: HashMap<_, _> = self
+            .graph
+            .nodes()
+            .map(|(idx, node)| (node.key, idx))
+            .collect();
+        let new = pg.map(
+            |idx, (key, node)| {
+                if let Some(oid) = old_node_indices.get(key) {
+                    let old = self.graph.node_weight(*oid).unwrap();
+                    NodeVis::from_old(old, &node_indices, idx, node)
+                } else {
+                    NodeVis::new(self.handle(), &node_indices, idx, key, node)
+                }
+            },
+            |_idx, _p| (),
+        );
         self.graph = new;
     }
     pub fn edge_tip(ui: &mut Ui, source: &Pos2, target: &Pos2, size: f32) {
         let angle = (*target - *source).angle();
-        let points = IntoIterator::into_iter(
-            [
-                Vec2::new(0.0, 0.0),
-                Vec2::angled(angle - 0.25*PI),
-                Vec2::angled(angle + 0.25*PI)
-            ])
-            .map(|p| *target - p * size)
-            .collect();
+        let points = IntoIterator::into_iter([
+            Vec2::new(0.0, 0.0),
+            Vec2::angled(angle - 0.25 * PI),
+            Vec2::angled(angle + 0.25 * PI),
+        ])
+        .map(|p| *target - p * size)
+        .collect();
         ui.painter().add(Shape::convex_polygon(
             points,
-        egui::Color32::WHITE,
-        Stroke::new(1.0, egui::Color32::WHITE),
+            egui::Color32::WHITE,
+            Stroke::new(1.0, egui::Color32::WHITE),
         ));
     }
     #[allow(unused)]
@@ -320,20 +256,26 @@ impl GraphVis {
         let p = *p;
         let c = rect.center();
         let v = p - c;
-        let s = v.y/v.x;
+        let s = v.y / v.x;
         let h = rect.height();
         let w = rect.width();
-        c + if -h/2.0 <= s*w/2.0 && s*w/2.0 <= h/2.0 { // intersects side
-            if p.x > c.x { // right
-                vec2(w/2.0, w/2.0*s)
-            } else { // left
-                vec2(-w/2.0, -w/2.0*s)
+        c + if -h / 2.0 <= s * w / 2.0 && s * w / 2.0 <= h / 2.0 {
+            // intersects side
+            if p.x > c.x {
+                // right
+                vec2(w / 2.0, w / 2.0 * s)
+            } else {
+                // left
+                vec2(-w / 2.0, -w / 2.0 * s)
             }
-        } else { // intersects top or bottom
-            if p.y > c.y { // top
-                vec2(h/(2.0*s), h/2.0)
-            } else { // bottom
-                vec2(-h/(2.0*s), -h/2.0)
+        } else {
+            // intersects top or bottom
+            if p.y > c.y {
+                // top
+                vec2(h / (2.0 * s), h / 2.0)
+            } else {
+                // bottom
+                vec2(-h / (2.0 * s), -h / 2.0)
             }
         }
     }
@@ -347,14 +289,18 @@ impl GraphVis {
                 (idx, response.rect)
             })
             .collect();
-        self.graph.edge_references()
-            .for_each(|edge| {
-                let a_pos = rects.get(&edge.source()).expect("No position for edge endpoint.").center();
-                let b = rects.get(&edge.target()).expect("No position for edge endpoint.");
+        self.graph.edge_references().for_each(|edge| {
+            let a_pos = rects
+                .get(&edge.source())
+                .expect("No position for edge endpoint.")
+                .center();
+            let b = rects
+                .get(&edge.target())
+                .expect("No position for edge endpoint.");
 
-                let p = Self::border_intersection_point(b, &a_pos);
-                Self::edge(ui, &a_pos, &p);
-            });
+            let p = Self::border_intersection_point(b, &a_pos);
+            Self::edge(ui, &a_pos, &p);
+        });
     }
 }
 #[allow(unused)]
@@ -443,10 +389,10 @@ impl NodeVis {
         }
     }
     #[allow(unused)]
-    fn state(&self) -> std::sync::RwLockReadGuard<'_, NodeState>{
+    fn state(&self) -> std::sync::RwLockReadGuard<'_, NodeState> {
         self.state.read().unwrap()
     }
-    fn state_mut(&self) -> std::sync::RwLockWriteGuard<'_, NodeState>{
+    fn state_mut(&self) -> std::sync::RwLockWriteGuard<'_, NodeState> {
         self.state.write().unwrap()
     }
     fn child_patterns_vis<T: Tokenize + std::fmt::Display>(
@@ -469,16 +415,13 @@ impl NodeVis {
             .collect()
     }
     pub fn child_patterns(&self, ui: &mut Ui, gvis: &GraphVis) -> Response {
-        ui.vertical(
-            |ui| {
+        ui.vertical(|ui| {
             ui.spacing_mut().item_spacing = Vec2::splat(0.0);
-            self.child_patterns
-                .iter()
-                .for_each(|(_pid, cpat)| {
-                    let r = self.measure_pattern(ui, cpat, gvis);
-                    let height = r.rect.height();
-                    self.pattern(ui, cpat, Some(height), gvis);
-                })
+            self.child_patterns.iter().for_each(|(_pid, cpat)| {
+                let r = self.measure_pattern(ui, cpat, gvis);
+                let height = r.rect.height();
+                self.pattern(ui, cpat, Some(height), gvis);
+            })
         })
         .response
     }
@@ -491,16 +434,20 @@ impl NodeVis {
         ui.set_cursor(old_cursor);
         r
     }
-    fn pattern(&self, ui: &mut Ui, pat: &PatternVis, height: Option<f32>, gvis: &GraphVis) -> Response {
+    fn pattern(
+        &self,
+        ui: &mut Ui,
+        pat: &PatternVis,
+        height: Option<f32>,
+        gvis: &GraphVis,
+    ) -> Response {
         ui.horizontal(|ui| {
             if let Some(height) = height {
                 ui.set_min_height(height);
             }
-            pat.pattern
-                .iter()
-                .for_each(|child| {
-                    self.child_index(ui, child, gvis);
-                })
+            pat.pattern.iter().for_each(|child| {
+                self.child_index(ui, child, gvis);
+            })
         })
         .response
     }
@@ -511,7 +458,10 @@ impl NodeVis {
                 ui.spacing_mut().item_spacing = Vec2::splat(0.0);
                 //ui.set_min_width(UNIT_WIDTH * child.width as f32);
                 if gvis.layout.is_nested() && child.child.width > 1 {
-                    let node = gvis.graph.node_weight(child.idx).expect("Invalid NodeIndex in ChildVis!");
+                    let node = gvis
+                        .graph
+                        .node_weight(child.idx)
+                        .expect("Invalid NodeIndex in ChildVis!");
                     node.child_patterns(ui, gvis)
                 } else {
                     ui.monospace(&child.name)
@@ -526,11 +476,15 @@ impl NodeVis {
             ui.add(DragValue::new(&mut state.split_upper));
             state.split_upper = state.split_lower.max(state.split_upper);
             if ui.button("Split").clicked() {
-                match (NonZeroUsize::new(state.split_lower), NonZeroUsize::new(state.split_upper)) {
+                match (
+                    NonZeroUsize::new(state.split_lower),
+                    NonZeroUsize::new(state.split_upper),
+                ) {
                     (Some(lower), Some(upper)) => self.graph.split_range(self.index, lower, upper),
-                    (None, Some(single)) |
-                    (Some(single), None) => self.graph.split(self.index, single),
-                    (None, None) => {},
+                    (None, Some(single)) | (Some(single), None) => {
+                        self.graph.split(self.index, single)
+                    }
+                    (None, None) => {}
                 }
                 ui.close_menu();
             }
@@ -538,7 +492,7 @@ impl NodeVis {
     }
     pub fn show(&self, ui: &mut Ui, gvis: &GraphVis) -> Option<Response> {
         Window::new(&format!("{}({})", self.name, self.idx.index()))
-        //Window::new(&self.name)
+            //Window::new(&self.name)
             .vscroll(true)
             .default_width(80.0)
             .show(ui.ctx(), |ui| {
@@ -565,11 +519,13 @@ impl ChildVis {
         graph: &Hypergraph<T>,
         node_indices: &HashMap<VertexKey<T>, NodeIndex>,
         child: Child,
-        ) -> Self {
+    ) -> Self {
         let key = graph.expect_vertex_key(child.index);
         let name = graph.index_string(child.get_index());
-        let idx = *node_indices.get(key).expect("Missing NodeIndex for VertexKey!");
-        Self { name, child, idx}
+        let idx = *node_indices
+            .get(key)
+            .expect("Missing NodeIndex for VertexKey!");
+        Self { name, child, idx }
     }
 }
 #[derive(Clone)]

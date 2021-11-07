@@ -1,9 +1,7 @@
 use eframe::{egui, epi};
 #[cfg(feature = "persistence")]
 use serde::*;
-use std::{
-    sync::{Arc, RwLock},
-};
+use std::sync::{Arc, RwLock};
 
 #[allow(unused)]
 use crate::graph::*;
@@ -11,7 +9,6 @@ use crate::graph::*;
 #[cfg_attr(feature = "persistence", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "persistence", serde(default))] // if we add new fields, give them default values when deserializing old state
 pub struct App {
-    label: String,
     #[allow(unused)]
     graph_file: Option<std::path::PathBuf>,
     #[cfg_attr(feature = "persistence", serde(skip))]
@@ -21,7 +18,6 @@ pub struct App {
 impl Default for App {
     fn default() -> Self {
         Self {
-            label: "Hello World!".to_owned(),
             graph_file: None,
             graph: Graph::new(),
         }
