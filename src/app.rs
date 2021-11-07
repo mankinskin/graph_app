@@ -1,4 +1,4 @@
-use eframe::{egui::{self, Ui}, epi};
+use eframe::{egui, epi};
 #[cfg(feature = "persistence")]
 use serde::*;
 use std::{
@@ -12,12 +12,10 @@ use crate::graph::*;
 #[cfg_attr(feature = "persistence", serde(default))] // if we add new fields, give them default values when deserializing old state
 pub struct App {
     label: String,
-
     #[allow(unused)]
     graph_file: Option<std::path::PathBuf>,
     #[cfg_attr(feature = "persistence", serde(skip))]
     graph: Graph,
-    insert_text: String,
 }
 
 impl Default for App {
@@ -26,7 +24,6 @@ impl Default for App {
             label: "Hello World!".to_owned(),
             graph_file: None,
             graph: Graph::new(),
-            insert_text: String::from("heldldo"),
         }
     }
 }
@@ -71,40 +68,7 @@ impl App {
                 egui::warn_if_debug_build(ui);
             })
             .response
-            .context_menu(|ui| self.context_menu(ui));
-    }
-    fn context_menu(&mut self, ui: &mut Ui) {
-        ui.horizontal(|ui| {
-            ui.label("Insert:");
-            ui.text_edit_singleline(&mut self.insert_text);
-            if ui.button("Go").clicked() {
-                let insert_text = self.insert_text.clone();
-                self.graph.read(insert_text);
-                self.insert_text = String::new();
-                ui.close_menu();
-            }
-        });
-        if ui.button("Reset").clicked() {
-            self.graph.reset();
-            ui.close_menu();
-        }
-        ui.menu_button("Layout", |ui| {
-            let mut vis = self.graph.vis_mut();
-            if ui.radio_value(
-                &mut vis.layout,
-                Layout::Graph, "Graph"
-                )
-                .clicked() {
-                //ui.close_menu();
-            }
-            if ui.radio_value(
-                &mut vis.layout,
-                Layout::Nested, "Nested"
-            )
-            .clicked() {
-                //ui.close_menu();
-            }
-        });
+            .context_menu(|ui| self.graph.context_menu(ui));
     }
 }
 impl epi::App for App {

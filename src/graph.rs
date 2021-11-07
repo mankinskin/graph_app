@@ -1,4 +1,4 @@
-use eframe::{egui::{self, vec2, DragValue, Frame, Pos2, Response, Shape, Stroke, Style, Ui, Vec2, Window, Rect}, epi};
+use eframe::egui::{self, vec2, DragValue, Frame, Pos2, Response, Shape, Stroke, Style, Ui, Vec2, Window, Rect};
 #[allow(unused)]
 use petgraph::{
     visit::EdgeRef,
@@ -25,14 +25,14 @@ use std::sync::{
 pub enum Layout {
     Graph,
     Nested,
-    GraphAndNested,
 }
 impl Layout {
+    #[allow(unused)]
     pub fn is_graph(&self) -> bool {
-        matches!(self, Self::Graph | Self::GraphAndNested)
+        matches!(self, Self::Graph)
     }
     pub fn is_nested(&self) -> bool {
-        matches!(self, Self::Nested | Self::GraphAndNested)
+        matches!(self, Self::Nested)
     }
 }
 impl Default for Layout {
@@ -44,15 +44,17 @@ impl Default for Layout {
 pub struct Graph {
     graph: Arc<RwLock<Hypergraph<char>>>,
     vis: Arc<RwLock<GraphVis>>,
+    insert_text: String,
 }
 impl Graph {
     pub fn new() -> Self {
-        //let graph = Self::build_hypergraph();
-        let graph = Arc::new(RwLock::new(Default::default()));
+        let graph = Default::default();
+        let graph = Arc::new(RwLock::new(graph));
         let vis = Arc::new(RwLock::new(GraphVis::default()));
         let new = Self {
             graph,
             vis,
+            insert_text: String::from("heldldo"),
         };
         let g = new.clone();
         new.vis_mut().set_graph(g);
@@ -64,102 +66,12 @@ impl Graph {
     pub(crate) fn graph_mut(&self) -> std::sync::RwLockWriteGuard<'_, Hypergraph<char>> {
         self.graph.write().unwrap()
     }
+    #[allow(unused)]
     pub(crate) fn vis(&self) -> std::sync::RwLockReadGuard<'_, GraphVis> {
         self.vis.read().unwrap()
     }
     pub(crate) fn vis_mut(&self) -> std::sync::RwLockWriteGuard<'_, GraphVis> {
         self.vis.write().unwrap()
-    }
-    fn build_hypergraph() -> Hypergraph<char> {
-        let mut graph = Hypergraph::default();
-        if let [a, b, c, d, e, f, g, h, i] = graph.insert_tokens(
-            [
-                Token::Element('a'),
-                Token::Element('b'),
-                Token::Element('c'),
-                Token::Element('d'),
-                Token::Element('e'),
-                Token::Element('f'),
-                Token::Element('g'),
-                Token::Element('h'),
-                Token::Element('i'),
-            ])[..] {
-            // abcdefghi
-            // ababababcdbcdefdefcdefefghefghghi
-            // ->
-            // abab ab abcdbcdefdefcdefefghefghghi
-            // ab abab abcdbcdefdefcdefefghefghghi
-
-            // abcdbcdef def cdef efgh efgh ghi
-
-            // abcd b cdef
-            // abcd bcd ef
-
-            // ab cd
-            // abc d
-            // a bcd
-
-            let ab = graph.insert_pattern([a, b]);
-            let bc = graph.insert_pattern([b, c]);
-            let ef = graph.insert_pattern([e, f]);
-            let def = graph.insert_pattern([d, ef]);
-            let cdef = graph.insert_pattern([c, def]);
-            let gh = graph.insert_pattern([g, h]);
-            let efgh = graph.insert_pattern([ef, gh]);
-            let ghi = graph.insert_pattern([gh, i]);
-            let abc = graph.insert_patterns([
-                [ab, c],
-                [a, bc],
-            ]);
-            let cd = graph.insert_pattern([c, d]);
-            let bcd = graph.insert_patterns([
-                [bc, d],
-                [b, cd],
-            ]);
-            let abcd = graph.insert_patterns([
-                [abc, d],
-                [a, bcd],
-            ]);
-            let efghi = graph.insert_patterns([
-                [efgh, i],
-                [ef, ghi],
-            ]);
-            //let abcdefghi = graph.insert_patterns([
-            //    vec![abcd, efghi],
-            //    vec![ab, cdef, ghi],
-            //]);
-            //let aba = graph.insert_pattern([ab, a]);
-            //let abab = graph.insert_patterns([
-            //    [aba, b],
-            //    [ab, ab],
-            //]);
-            //let ababab = graph.insert_patterns([
-            //    [abab, ab],
-            //    [ab, abab],
-            //]);
-            //let ababcd = graph.insert_patterns([
-            //    [ab, abcd],
-            //    [aba, bcd],
-            //    [abab, cd],
-            //]);
-            //let ababababcd = graph.insert_patterns([
-            //    vec![ababab, abcd],
-            //    vec![abab, ababcd],
-            //    vec![ab, ababab, cd],
-            //]);
-            //let ababcdefghi = graph.insert_patterns([
-            //    [ab, abcdefghi],
-            //    [ababcd, efghi],
-            //]);
-            //let _ababababcdefghi = graph.insert_patterns([
-            //    [ababababcd, efghi],
-            //    [abab, ababcdefghi],
-            //    [ababab, abcdefghi],
-            //]);
-        } else {
-            panic!("Inserting tokens failed!");
-        }
-        graph
     }
     pub fn split_range(&self, index: VertexIndex, lower: NonZeroUsize, upper: NonZeroUsize) {
         let lower = lower.get();
@@ -168,6 +80,9 @@ impl Graph {
     }
     pub fn split(&self, index: VertexIndex, pos: NonZeroUsize) {
         let _res = self.graph_mut().split_index(index, pos);
+    }
+    pub fn set_graph(&self, graph: Hypergraph<char>) {
+        *self.graph_mut() = graph;
     }
     pub fn reset(&mut self) {
         *self = Self::new();
@@ -179,6 +94,161 @@ impl Graph {
         self.vis_mut().update();
         self.vis_mut().show(ui);
     }
+    pub fn context_menu(&mut self, ui: &mut Ui) {
+        ui.horizontal(|ui| {
+            ui.label("Insert:");
+            ui.text_edit_singleline(&mut self.insert_text);
+            if ui.button("Go").clicked() {
+                let insert_text = self.insert_text.clone();
+                self.read(insert_text);
+                self.insert_text = String::new();
+                ui.close_menu();
+            }
+        });
+        if ui.button("Reset").clicked() {
+            self.reset();
+            ui.close_menu();
+        }
+        ui.menu_button("Layout", |ui| {
+            let mut vis = self.vis_mut();
+            ui.radio_value(
+                &mut vis.layout,
+                Layout::Graph, "Graph"
+                )
+                .clicked();
+            ui.radio_value(
+                &mut vis.layout,
+                Layout::Nested, "Nested"
+            )
+            .clicked();
+        });
+        ui.menu_button("Load preset...", |ui| {
+            if ui.button(
+                "Graph 1"
+            )
+            .clicked() {
+                self.set_graph(build_graph1());
+                ui.close_menu();
+            }
+            if ui.button(
+                "Graph 2"
+            )
+            .clicked() {
+                self.set_graph(build_graph2());
+                ui.close_menu();
+            }
+        });
+    }
+}
+fn build_graph1() -> Hypergraph<char> {
+    let mut graph = Hypergraph::default();
+    if let [a, b, w, x, y, z] = graph.insert_tokens(
+        [
+            Token::Element('a'),
+            Token::Element('b'),
+            Token::Element('w'),
+            Token::Element('x'),
+            Token::Element('y'),
+            Token::Element('z'),
+        ])[..] {
+
+        let ab = graph.insert_pattern([a, b]);
+        let by = graph.insert_pattern([b, y]);
+        let yz = graph.insert_pattern([y, z]);
+        let xa = graph.insert_pattern([x, a]);
+        let xab = graph.insert_patterns([
+            vec![x, ab],
+            vec![xa, b],
+        ]);
+        let xaby = graph.insert_patterns([
+            vec![xab, y],
+            vec![xa, by]
+        ]);
+        let xabyz = graph.insert_patterns([
+            vec![xaby, z],
+            vec![xab, yz]
+        ]);
+        let _wxabyzabbyxabyz = graph.insert_pattern([w, xabyz, ab, by, xabyz]);
+    } else {
+        panic!("Inserting tokens failed!");
+    }
+    graph
+}
+fn build_graph2() -> Hypergraph<char> {
+    let mut graph = Hypergraph::default();
+    if let [a, b, c, d, e, f, g, h, i] = graph.insert_tokens(
+        [
+            Token::Element('a'),
+            Token::Element('b'),
+            Token::Element('c'),
+            Token::Element('d'),
+            Token::Element('e'),
+            Token::Element('f'),
+            Token::Element('g'),
+            Token::Element('h'),
+            Token::Element('i'),
+        ])[..] {
+        let ab = graph.insert_pattern([a, b]);
+        let bc = graph.insert_pattern([b, c]);
+        let ef = graph.insert_pattern([e, f]);
+        let def = graph.insert_pattern([d, ef]);
+        let cdef = graph.insert_pattern([c, def]);
+        let gh = graph.insert_pattern([g, h]);
+        let efgh = graph.insert_pattern([ef, gh]);
+        let ghi = graph.insert_pattern([gh, i]);
+        let abc = graph.insert_patterns([
+            [ab, c],
+            [a, bc],
+        ]);
+        let cd = graph.insert_pattern([c, d]);
+        let bcd = graph.insert_patterns([
+            [bc, d],
+            [b, cd],
+        ]);
+        let abcd = graph.insert_patterns([
+            [abc, d],
+            [a, bcd],
+        ]);
+        let efghi = graph.insert_patterns([
+            [efgh, i],
+            [ef, ghi],
+        ]);
+        let abcdefghi = graph.insert_patterns([
+            vec![abcd, efghi],
+            vec![ab, cdef, ghi],
+        ]);
+        let aba = graph.insert_pattern([ab, a]);
+        let abab = graph.insert_patterns([
+            [aba, b],
+            [ab, ab],
+        ]);
+        let ababab = graph.insert_patterns([
+            [abab, ab],
+            [ab, abab],
+        ]);
+        let ababcd = graph.insert_patterns([
+            [ab, abcd],
+            [aba, bcd],
+            [abab, cd],
+        ]);
+        let ababababcd = graph.insert_patterns([
+            vec![ababab, abcd],
+            vec![abab, ababcd],
+            vec![ab, ababab, cd],
+        ]);
+        let ababcdefghi = graph.insert_patterns([
+            [ab, abcdefghi],
+            [ababcd, efghi],
+        ]);
+        let _ababababcdefghi = graph.insert_patterns([
+            [ababababcd, efghi],
+            [abab, ababcdefghi],
+            [ababab, abcdefghi],
+        ]);
+    } else {
+        panic!("Inserting tokens failed!");
+    }
+    graph
 }
 #[derive(Default)]
 pub struct GraphVis {
@@ -186,12 +256,6 @@ pub struct GraphVis {
     pub layout: Layout,
     handle: Option<Graph>,
 }
-//impl std::ops::Deref for GraphVis {
-//    type Target = DiGraph<NodeVis, ()>;
-//    fn deref(&self) -> &Self::Target {
-//        &self.graph
-//    }
-//}
 impl GraphVis {
     pub fn set_graph(&mut self, graph: Graph) {
         self.handle = Some(graph);
@@ -378,6 +442,7 @@ impl NodeVis {
             state,
         }
     }
+    #[allow(unused)]
     fn state(&self) -> std::sync::RwLockReadGuard<'_, NodeState>{
         self.state.read().unwrap()
     }
@@ -509,13 +574,11 @@ impl ChildVis {
 }
 #[derive(Clone)]
 struct PatternVis {
-    width: TokenPosition,
     pattern: Vec<ChildVis>,
 }
 impl PatternVis {
     fn new(pattern: Vec<ChildVis>) -> Self {
-        let width = pattern_width((&pattern).iter().map(|c| &c.child).collect::<Vec<_>>());
-        Self { width, pattern }
+        Self { pattern }
     }
 }
 type ChildPatternsVis = Vec<(PatternId, PatternVis)>;
