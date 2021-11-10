@@ -1,3 +1,4 @@
 # Table of contents
 
-* [Page 1](README.md)
+* [Tokens and Text](README.md)
+* [Hypergraph Model Overview](hypergraph-model-overview.md)
