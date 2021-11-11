@@ -316,7 +316,7 @@ pub(crate) mod tests {
             panic!();
         }
         let pg = graph.to_petgraph();
-        pg.write_to_file("test_graph1.dot")
-            .expect("Failed to write test_graph1.dot file!");
+        pg.write_to_file("assets/test_graph1.dot")
+            .expect("Failed to write assets/test_graph1.dot file!");
     }
 }
