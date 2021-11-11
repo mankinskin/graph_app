@@ -47,18 +47,16 @@ impl App {
         }
     }
     fn top_panel(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui|
+        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.menu_button("Actions...", |ui| {
-                    self.graph.context_menu(ui)
-                });
-                ui.with_layout(egui::Layout::right_to_left(), |ui|
+                ui.menu_button("Actions...", |ui| self.graph.context_menu(ui));
+                ui.with_layout(egui::Layout::right_to_left(), |ui| {
                     if ui.button("Quit").clicked() {
                         frame.quit()
                     }
-                )
+                })
             })
-        );
+        });
     }
     fn central_panel(&mut self, ctx: &egui::CtxRef) {
         egui::CentralPanel::default()
