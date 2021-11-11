@@ -1,0 +1,67 @@
+[env]
+CRATE_NAME = { script = ["echo ${PWD##*/}"] }
+CRATE_NAME_SNAKE_CASE = { script = ["echo ${CRATE_NAME//-/_}"] }
+TARGET_DIR="docs/"
+BUILD="release"
+TARGET_NAME="${CRATE_NAME_SNAKE_CASE}.wasm"
+TARGET_PATH="${TARGET_DIR}/${TARGET_NAME}"
+
+[tasks.install-wasm]
+command = "rustup"
+args = [
+  "target",
+  "add",
+  "wasm32-unknown-unknown",
+]
+
+[tasks.build-wasm]
+command = "cargo"
+args = [
+  "build",
+  "--lib",
+  "--${BUILD}",
+  "-p",
+  "${CRATE_NAME}",
+  "--target=wasm32-unknown-unknown",
+]
+
+[tasks.wasm-bindgen]
+install_crate = { crate_name = "wasm-bindgen-cli", binary = "wasm-bindgen", test_arg = "--help" }
+command = "wasm-bindgen"
+args = [
+  "target/wasm32-unknown-unknown/${BUILD}/${TARGET_NAME}",
+  "--out-dir",
+  "${TARGET_DIR}",
+  "--no-modules",
+  "--no-typescript",
+]
+
+[tasks.build-web]
+dependencies = [
+  "clean-web",
+  "install-wasm",
+  "build-wasm",
+  "wasm-bindgen",
+]
+script = '''
+cargo build --${BUILD} -p ${CRATE_NAME} \
+--lib --target=wasm32-unknown-unknown
+
+'''
+
+[tasks.clean-web]
+script = [
+  "rm -f ${TARGET_PATH}",
+]
+
+[tasks.run-web]
+dependencies = [
+  "build-web",
+]
+install_crate = { crate_name = "basic-http-server", binary = "basic-http-server", test_arg = "--help" }
+command = "basic-http-server"
+args = [
+  "--addr",
+  "127.0.0.1:8080",
+  "${TARGET_DIR}"
+]
