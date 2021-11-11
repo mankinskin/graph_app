@@ -32,8 +32,8 @@ git = "https://github.com/mankinskin/petgraph"
 features=["serde-1"]
 
 [dependencies.seqraph]
-#path = "../web-app/seqraph"
-git = "https://github.com/mankinskin/web-app"
+path = "./seqraph"
+#git = "https://github.com/mankinskin/web-app"
 
 [features]
 default = []
