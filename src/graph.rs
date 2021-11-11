@@ -6,10 +6,7 @@ use petgraph::{
     graph::{DiGraph, NodeIndex},
     visit::EdgeRef,
 };
-use seqraph::{
-    hypergraph::*,
-    token::{Token, Tokenize},
-};
+use seqraph::*;
 use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::num::NonZeroUsize;
