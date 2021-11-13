@@ -1,7 +1,13 @@
-use eframe::{egui, epi};
+use eframe::{
+    egui,
+    epi,
+};
 #[cfg(feature = "persistence")]
 use serde::*;
-use std::sync::{Arc, RwLock};
+use std::sync::{
+    Arc,
+    RwLock,
+};
 
 #[allow(unused)]
 use crate::graph::*;

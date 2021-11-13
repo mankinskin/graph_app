@@ -1,16 +1,34 @@
 use eframe::egui::{
-    self, vec2, DragValue, Frame, Pos2, Rect, Response, Shape, Stroke, Style, Ui, Vec2, Window,
+    self,
+    vec2,
+    DragValue,
+    Frame,
+    Pos2,
+    Rect,
+    Response,
+    Shape,
+    Stroke,
+    Style,
+    Ui,
+    Vec2,
+    Window,
 };
 #[allow(unused)]
 use petgraph::{
-    graph::{DiGraph, NodeIndex},
+    graph::{
+        DiGraph,
+        NodeIndex,
+    },
     visit::EdgeRef,
 };
 use seqraph::*;
 use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::num::NonZeroUsize;
-use std::sync::{Arc, RwLock};
+use std::sync::{
+    Arc,
+    RwLock,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Layout {
