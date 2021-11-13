@@ -145,7 +145,9 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
                         },
                     )
                     .map_err(
-                        |ind @ IndexInParent {
+                        |ind
+                         @
+                         IndexInParent {
                              replaced_index: split_index,
                              ..
                          }| {
