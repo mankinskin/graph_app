@@ -8,16 +8,6 @@ pub use searcher::*;
 //mod async_searcher;
 //pub use async_searcher::*;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum NotFound {
-    EmptyPatterns,
-    Mismatch(PatternMismatch),
-    NoChildPatterns,
-    NoMatchingParent(VertexIndex),
-    SingleIndex,
-    UnknownKey,
-    UnknownIndex,
-}
 
 impl<'t, 'a, T> Hypergraph<T>
 where
@@ -122,7 +112,7 @@ pub(crate) mod tests {
         let b_c_pattern = vec![Child::new(b, 1), Child::new(c, 1)];
         let bc_pattern = vec![Child::new(bc, 2)];
         let a_b_c_pattern = vec![Child::new(a, 1), Child::new(b, 1), Child::new(c, 1)];
-        assert_match!(graph.find_pattern(&bc_pattern), Err(NotFound::SingleIndex));
+        assert_match!(graph.find_pattern(&bc_pattern), Err(NoMatch::SingleIndex));
         assert_match!(
             graph.find_pattern(&b_c_pattern),
             Ok((bc, FoundRange::Complete))
@@ -152,7 +142,7 @@ pub(crate) mod tests {
         let a_b_c_c_pattern = [&a_b_c_pattern[..], &[Child::new(c, 1)]].concat();
         assert_matches!(
             graph.find_pattern(a_b_c_c_pattern),
-            Err(NotFound::NoMatchingParent(_))
+            Err(NoMatch::NoMatchingParent(_))
         );
     }
     #[test]
@@ -221,7 +211,7 @@ pub(crate) mod tests {
         ) = &*context();
         assert_match!(
             graph.find_sequence("a".chars()),
-            Err(NotFound::SingleIndex),
+            Err(NoMatch::SingleIndex),
             "a"
         );
 

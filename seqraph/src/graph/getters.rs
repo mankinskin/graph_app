@@ -1,5 +1,5 @@
 use crate::{
-    search::*,
+    r#match::*,
     vertex::*,
     *,
 };
@@ -16,18 +16,18 @@ where
     pub fn get_vertex(
         &self,
         index: impl Indexed,
-    ) -> Result<(&VertexKey<T>, &VertexData), NotFound> {
+    ) -> Result<(&VertexKey<T>, &VertexData), NoMatch> {
         self.graph
             .get_index(*index.index())
-            .ok_or(NotFound::UnknownIndex)
+            .ok_or(NoMatch::UnknownIndex)
     }
     pub fn get_vertex_mut(
         &mut self,
         index: impl Indexed,
-    ) -> Result<(&mut VertexKey<T>, &mut VertexData), NotFound> {
+    ) -> Result<(&mut VertexKey<T>, &mut VertexData), NoMatch> {
         self.graph
             .get_index_mut(*index.index())
-            .ok_or(NotFound::UnknownIndex)
+            .ok_or(NoMatch::UnknownIndex)
     }
     pub fn expect_vertex(&self, index: impl Indexed) -> (&VertexKey<T>, &VertexData) {
         let index = *index.index();
@@ -42,19 +42,19 @@ where
         self.get_vertex_mut(index)
             .unwrap_or_else(|_| panic!("Index {} does not exist!", index))
     }
-    pub fn get_vertex_key(&self, index: impl Indexed) -> Result<&VertexKey<T>, NotFound> {
+    pub fn get_vertex_key(&self, index: impl Indexed) -> Result<&VertexKey<T>, NoMatch> {
         self.get_vertex(index).map(|entry| entry.0)
     }
     pub fn expect_vertex_key(&self, index: impl Indexed) -> &VertexKey<T> {
         self.expect_vertex(index).0
     }
-    pub fn get_vertex_data(&self, index: impl Indexed) -> Result<&VertexData, NotFound> {
+    pub fn get_vertex_data(&self, index: impl Indexed) -> Result<&VertexData, NoMatch> {
         self.get_vertex(index).map(|(_, v)| v)
     }
     pub fn get_vertex_data_mut(
         &mut self,
         index: impl Indexed,
-    ) -> Result<&mut VertexData, NotFound> {
+    ) -> Result<&mut VertexData, NoMatch> {
         self.get_vertex_mut(index).map(|(_, v)| v)
     }
     pub fn expect_vertex_data(&self, index: impl Indexed) -> &VertexData {
@@ -63,14 +63,14 @@ where
     pub fn expect_vertex_data_mut(&mut self, index: impl Indexed) -> &mut VertexData {
         self.expect_vertex_mut(index).1
     }
-    pub fn get_vertex_data_by_key(&self, key: &VertexKey<T>) -> Result<&VertexData, NotFound> {
-        self.graph.get(key).ok_or(NotFound::UnknownKey)
+    pub fn get_vertex_data_by_key(&self, key: &VertexKey<T>) -> Result<&VertexData, NoMatch> {
+        self.graph.get(key).ok_or(NoMatch::UnknownKey)
     }
     pub fn get_vertex_data_by_key_mut(
         &mut self,
         key: &VertexKey<T>,
-    ) -> Result<&mut VertexData, NotFound> {
-        self.graph.get_mut(key).ok_or(NotFound::UnknownKey)
+    ) -> Result<&mut VertexData, NoMatch> {
+        self.graph.get_mut(key).ok_or(NoMatch::UnknownKey)
     }
     pub fn expect_vertex_data_by_key(&self, key: &VertexKey<T>) -> &VertexData {
         self.graph.get(key).expect("Key does not exist")
@@ -104,30 +104,30 @@ where
     pub fn get_vertices(
         &self,
         indices: impl Iterator<Item = impl Indexed>,
-    ) -> Result<VertexPatternView<'_>, NotFound> {
+    ) -> Result<VertexPatternView<'_>, NoMatch> {
         indices
             .map(move |index| self.get_vertex_data(index))
             .collect()
     }
-    pub fn get_token_data(&self, token: &Token<T>) -> Result<&VertexData, NotFound> {
+    pub fn get_token_data(&self, token: &Token<T>) -> Result<&VertexData, NoMatch> {
         self.get_vertex_data_by_key(&VertexKey::Token(*token))
     }
-    pub fn get_token_data_mut(&mut self, token: &Token<T>) -> Result<&mut VertexData, NotFound> {
+    pub fn get_token_data_mut(&mut self, token: &Token<T>) -> Result<&mut VertexData, NoMatch> {
         self.get_vertex_data_by_key_mut(&VertexKey::Token(*token))
     }
-    pub fn get_index_by_key(&self, key: &VertexKey<T>) -> Result<VertexIndex, NotFound> {
-        self.graph.get_index_of(key).ok_or(NotFound::UnknownKey)
+    pub fn get_index_by_key(&self, key: &VertexKey<T>) -> Result<VertexIndex, NoMatch> {
+        self.graph.get_index_of(key).ok_or(NoMatch::UnknownKey)
     }
     pub fn expect_index_by_key(&self, key: &VertexKey<T>) -> VertexIndex {
         self.graph.get_index_of(key).expect("Key does not exist")
     }
-    pub fn get_token_index(&self, token: &Token<T>) -> Result<VertexIndex, NotFound> {
+    pub fn get_token_index(&self, token: &Token<T>) -> Result<VertexIndex, NoMatch> {
         self.get_index_by_key(&VertexKey::Token(*token))
     }
     pub fn to_token_indices_iter(
         &'a self,
         tokens: impl IntoIterator<Item = Token<T>> + 'a,
-    ) -> impl Iterator<Item = Result<VertexIndex, NotFound>> + 'a {
+    ) -> impl Iterator<Item = Result<VertexIndex, NoMatch>> + 'a {
         tokens
             .into_iter()
             .map(move |token| self.get_token_index(&token))
@@ -135,7 +135,7 @@ where
     pub fn to_token_indices(
         &self,
         tokens: impl IntoIterator<Item = Token<T>>,
-    ) -> Result<IndexPattern, NotFound> {
+    ) -> Result<IndexPattern, NoMatch> {
         tokens
             .into_iter()
             .map(|token| self.get_token_index(&token))
@@ -144,21 +144,21 @@ where
     pub fn to_token_children_iter(
         &'a self,
         tokens: impl IntoIterator<Item = Token<T>> + 'a,
-    ) -> impl Iterator<Item = Result<Child, NotFound>> + 'a {
+    ) -> impl Iterator<Item = Result<Child, NoMatch>> + 'a {
         self.to_token_indices_iter(tokens)
             .map(move |index| index.map(|index| Child::new(index, 1)))
     }
     pub fn to_token_children(
         &self,
         tokens: impl IntoIterator<Item = Token<T>>,
-    ) -> Result<impl IntoPattern<Item = Child>, NotFound> {
+    ) -> Result<impl IntoPattern<Item = Child>, NoMatch> {
         self.to_token_children_iter(tokens)
             .collect::<Result<Pattern, _>>()
     }
     pub fn get_token_indices(
         &self,
         tokens: impl Iterator<Item = &'t Token<T>>,
-    ) -> Result<IndexPattern, NotFound> {
+    ) -> Result<IndexPattern, NoMatch> {
         let mut v = IndexPattern::with_capacity(tokens.size_hint().0);
         for token in tokens {
             let index = self.get_token_index(token)?;
@@ -176,7 +176,7 @@ where
         &self,
         pattern: impl IntoIterator<Item = impl Indexed>,
         parent: impl Indexed,
-    ) -> Result<Vec<Parent>, NotFound> {
+    ) -> Result<Vec<Parent>, NoMatch> {
         pattern
             .into_iter()
             .map(|index| {
@@ -189,7 +189,7 @@ where
         &self,
         pattern: impl IntoIterator<Item = impl Indexed>,
         parent: impl Indexed,
-    ) -> Result<(PatternId, usize), NotFound> {
+    ) -> Result<(PatternId, usize), NoMatch> {
         let mut parents = self
             .get_pattern_parents(pattern, parent)?
             .into_iter()
@@ -205,7 +205,7 @@ where
                     })
                     .cloned()
             })
-            .ok_or(NotFound::NoChildPatterns)
+            .ok_or(NoMatch::NoChildPatterns)
     }
     pub fn expect_common_pattern_in_parent(
         &self,

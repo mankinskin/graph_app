@@ -39,8 +39,8 @@ pub struct AsyncParentMatch<T: Tokenize> {
     pub parent_range: FoundRange,
     pub remainder: Option<Box<dyn ReturnedPatternStream<T>>>,
 }
-pub type AsyncParentMatchResult<T> = Result<AsyncParentMatch<T>, PatternMismatch>;
-pub type AsyncPatternMatchResult<T> = Result<AsyncPatternMatch<T>, PatternMismatch>;
+pub type AsyncParentMatchResult<T> = Result<AsyncParentMatch<T>, NoMatch>;
+pub type AsyncPatternMatchResult<T> = Result<AsyncPatternMatch<T>, NoMatch>;
 
 #[derive(Clone, Debug)]
 pub struct AsyncMatcher<T: Tokenize + Send, D: AsyncMatchDirection<T>> {
@@ -111,7 +111,7 @@ impl<'t, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncMatcher<T
         // remember if sub and sup were switched
         let rotate = match a.width.cmp(&b.width) {
             // relatives can not have same sizes
-            Ordering::Equal => return Box::new(Err(PatternMismatch::Mismatch)),
+            Ordering::Equal => return Box::new(Err(NoMatch::Mismatch)),
             Ordering::Less => {
                 //println!("right super");
                 sub_context = a_pattern;
@@ -178,7 +178,7 @@ impl<'t, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncMatcher<T
         }
         let vertex = self.graph.read().await.expect_vertex_data(sub).clone();
         if vertex.get_parents().is_empty() {
-            return Box::new(Err(PatternMismatch::NoParents));
+            return Box::new(Err(NoMatch::NoParents));
         }
         // get parent where vertex is at relevant position (prefix or postfix)
         if let Some(parent) = D::get_match_parent(&vertex, sup) {
@@ -212,10 +212,10 @@ impl<'t, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncMatcher<T
                             ).await
                         },
                         // parent not matching at beginning
-                        (false, _) => Box::new(Err(PatternMismatch::NoParents)),
+                        (false, _) => Box::new(Err(NoMatch::NoParents)),
                     }
                 } else {
-                    Box::new(Err(PatternMismatch::NoMatchingParent))
+                    Box::new(Err(NoMatch::NoMatchingParent))
                 }
         }
     }
@@ -225,7 +225,7 @@ impl<'t, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncMatcher<T
         context: impl PatternStream<Child, Token<T>>,
         parent_index: impl Indexed,
         parent: &Parent,
-    ) -> Box<Result<(AsyncParentMatch<T>, PatternId, usize), PatternMismatch>> {
+    ) -> Box<Result<(AsyncParentMatch<T>, PatternId, usize), NoMatch>> {
         //println!("compare_parent_context");
         let vertex = self.graph.read().await.expect_vertex_data(parent_index).clone();
         let child_patterns = vertex.get_children();
@@ -251,7 +251,7 @@ impl<'t, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncMatcher<T
                 Err(err) => Err(err),
             }
         } else {
-            Err(PatternMismatch::NoChildPatterns)
+            Err(NoMatch::NoChildPatterns)
         })
     }
     /// comparison on child pattern and context

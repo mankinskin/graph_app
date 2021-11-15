@@ -61,7 +61,7 @@ impl FoundRange {
         }
     }
 }
-pub type SearchResult = Result<SearchFound, NotFound>;
+pub type SearchResult = Result<SearchFound, NoMatch>;
 
 pub struct Searcher<'g, T: Tokenize, D: MatchDirection> {
     graph: &'g Hypergraph<T>,
@@ -91,12 +91,12 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
     #[allow(unused)]
     pub(crate) fn find_pattern_iter(
         &self,
-        pattern: impl IntoIterator<Item = Result<impl Into<Child> + Tokenize, NotFound>>,
+        pattern: impl IntoIterator<Item = Result<impl Into<Child> + Tokenize, NoMatch>>,
     ) -> SearchResult {
         let pattern: Pattern = pattern
             .into_iter()
             .map(|r| r.map(Into::into))
-            .collect::<Result<Pattern, NotFound>>()?;
+            .collect::<Result<Pattern, NoMatch>>()?;
         self.find_pattern(pattern)
     }
     pub(crate) fn find_pattern(
@@ -105,11 +105,11 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
     ) -> SearchResult {
         let pattern: Pattern = pattern.into_iter().map(Into::into).collect();
         MatchRight::split_head_tail(&pattern)
-            .ok_or(NotFound::EmptyPatterns)
+            .ok_or(NoMatch::EmptyPatterns)
             .and_then(|(head, tail)| {
                 if tail.is_empty() {
                     // single index is not a pattern
-                    Err(NotFound::SingleIndex)
+                    Err(NoMatch::SingleIndex)
                 } else {
                     self.find_largest_matching_parent(head, tail.to_vec())
                 }
@@ -136,19 +136,23 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
         {
             // direct matching parent
             self.matcher()
-                .compare_child_pattern_at_offset(child_patterns, context, pattern_id, sub_index)
+                .compare_child_pattern_at_offset(
+                    child_patterns,
+                    context,
+                    pattern_id,
+                    sub_index,
+                )
                 .map(|parent_match| SearchFound {
                     index: Child::new(index, parent.width),
                     pattern_id,
                     sub_index,
                     parent_match,
                 })
-                .map_err(NotFound::Mismatch)
         } else {
             // no direct matching parent
             // compare all parent's children
             self.find_indirect_matching_parent(parents, context)
-                .ok_or(NotFound::NoMatchingParent(vertex_index))
+                .ok_or(NoMatch::NoMatchingParent(vertex_index))
         }
         .and_then(|search_found| {
             if let Some(rem) = &search_found.parent_match.remainder {
@@ -221,7 +225,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                         .iter()
                         .next()
                         .cloned()
-                        .ok_or(PatternMismatch::NoParents)
+                        .ok_or(NoMatch::NoParents)
                         .and_then(|(pattern_index, sub_index)| {
                             let vert = self.expect_vertex_data(index);
                             let child_patterns = vert.get_children();

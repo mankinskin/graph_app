@@ -40,15 +40,15 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
     }
     pub(crate) async fn find_pattern_iter(
         &self,
-        pattern: impl IntoIterator<Item=Result<impl Into<Child>, NotFound>>,
+        pattern: impl IntoIterator<Item=Result<impl Into<Child>, NoMatch>>,
     ) -> SearchResult {
-        let pattern: Pattern = pattern.into_iter().map(|r| r.map(Into::into)).collect::<Result<Pattern, NotFound>>()?;
+        let pattern: Pattern = pattern.into_iter().map(|r| r.map(Into::into)).collect::<Result<Pattern, NoMatch>>()?;
         MatchRight::split_head_tail(&pattern)
-            .ok_or(NotFound::EmptyPatterns)
+            .ok_or(NoMatch::EmptyPatterns)
             .and_then(|(head, tail)| {
                 if tail.is_empty() {
                     // single index is not a pattern
-                    Err(NotFound::SingleIndex)
+                    Err(NoMatch::SingleIndex)
                 } else {
                     async_std::task::block_on(
                         self.find_largest_matching_parent(head, tokio_stream::iter(tail.to_vec()))
@@ -62,11 +62,11 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
     ) -> SearchResult {
         let pattern: Pattern = pattern.into_iter().map(Into::into).collect();
         MatchRight::split_head_tail(&pattern)
-            .ok_or(NotFound::EmptyPatterns)
+            .ok_or(NoMatch::EmptyPatterns)
             .and_then(|(head, tail)| {
                 if tail.is_empty() {
                     // single index is not a pattern
-                    Err(NotFound::SingleIndex)
+                    Err(NoMatch::SingleIndex)
                 } else {
                     async_std::task::block_on(
                         self.find_largest_matching_parent(head, tokio_stream::iter(tail.to_vec()))
@@ -106,7 +106,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
                     sub_index,
                     parent_match,
                 })
-                .map_err(NotFound::Mismatch)
+                .map_err(NoMatch::Mismatch)
         } else {
             // compare all parent's children
             parents
@@ -125,7 +125,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
                             .ok()
                     })
                 })
-                .ok_or(NotFound::NoMatchingParent)
+                .ok_or(NoMatch::NoMatchingParent)
         }?;
         match search_found.parent_match.remainder {
             Some(post) => {
@@ -195,7 +195,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
         child_patterns: &'a ChildPatterns,
         candidates: impl Iterator<Item = (usize, PatternId)>,
         sub_context: impl PatternStream<Child, Token<T>>,
-    ) -> Result<(PatternId, usize), NotFound> {
+    ) -> Result<(PatternId, usize), NoMatch> {
         candidates
             .find_or_first(|(pattern_index, sub_index)| {
                 async_std::task::block_on(
@@ -207,6 +207,6 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
                     )
                 )
             })
-            .ok_or(NotFound::NoChildPatterns)
+            .ok_or(NoMatch::NoChildPatterns)
     }
 }

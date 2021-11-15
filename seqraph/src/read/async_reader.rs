@@ -75,7 +75,7 @@ impl<T: Tokenize + Send + Sync + 'static, D: AsyncMatchDirection<T> + Clone> Asy
         // take first known token
         let head = pattern.next().await
             .map(|r| r.into_inner().unwrap())
-            .ok_or(NotFound::EmptyPatterns)?;
+            .ok_or(NoMatch::EmptyPatterns)?;
         self.right_searcher().find_largest_matching_parent(head, pattern).await
     }
 }

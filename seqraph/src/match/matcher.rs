@@ -51,8 +51,8 @@ impl ParentMatch {
         }
     }
 }
-pub type PatternMatchResult = Result<PatternMatch, PatternMismatch>;
-pub type ParentMatchResult = Result<ParentMatch, PatternMismatch>;
+pub type PatternMatchResult = Result<PatternMatch, NoMatch>;
+pub type ParentMatchResult = Result<ParentMatch, NoMatch>;
 
 #[derive(Clone, Debug)]
 pub struct Matcher<'g, T: Tokenize, D: MatchDirection> {
@@ -117,11 +117,11 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         a_context: A,
         b: Child,
         b_context: A,
-    ) -> Result<(bool, Child, A, Child, A), PatternMismatch> {
+    ) -> Result<(bool, Child, A, Child, A), NoMatch> {
         // remember if sub and sup were switched
         match a.width.cmp(&b.width) {
             // relatives can not have same sizes
-            Ordering::Equal => Err(PatternMismatch::Mismatch),
+            Ordering::Equal => Err(NoMatch::Mismatch),
             Ordering::Less => {
                 //println!("right super");
                 Ok((false, a, a_context, b, b_context))
@@ -234,6 +234,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
         sup: Child,
     ) -> ParentMatchResult {
+        let sub_index = *sub.index();
         let vertex = self.expect_vertex_data(sub);
         self.match_sub_vertex_and_context_with_index(
             vertex,
@@ -248,7 +249,6 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
                 context,
                 Some(sup.width),
             )
-            .or(Err(PatternMismatch::NoMatchingParent))
             .and_then(
                 |SearchFound {
                      index: parent_index,
@@ -260,7 +260,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
                 }|
                 D::found_at_start(parent_range)
                     .then(|| remainder.unwrap_or_default())
-                    .ok_or(PatternMismatch::NoMatchingParent)
+                    .ok_or(NoMatch::NoMatchingParent(sub_index))
                     .and_then(|new_context|
                         self.find_matching_ancestor(
                             parent_index,
@@ -292,11 +292,10 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         sup: Child,
     ) -> ParentMatchResult {
         if vertex.get_parents().is_empty() {
-            return Err(PatternMismatch::NoParents);
+            return Err(NoMatch::NoParents);
         }
         // get parent where vertex is at relevant position (prefix or postfix)
         D::get_match_parent_to(vertex, sup)
-            .map_err(|_| PatternMismatch::NoMatchingParent)
             .and_then(|parent|
                 // found vertex in sup at relevant position
                 //println!("sup found in parents");
@@ -306,8 +305,8 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
                     sup,
                     parent,
                 )
-                .map(|(parent_match, _, _)| parent_match))
-            .or(Err(PatternMismatch::NoMatchingParent))
+                .map(|(parent_match, _, _)| parent_match)
+            )
     }
     /// match context against child context in parent.
     pub fn match_context_with_parent_children(
@@ -315,7 +314,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
         parent_index: impl Indexed,
         parent: &Parent,
-    ) -> Result<(ParentMatch, PatternId, usize), PatternMismatch> {
+    ) -> Result<(ParentMatch, PatternId, usize), NoMatch> {
         //println!("compare_parent_context");
         let vert = self.expect_vertex_data(parent_index);
         let child_patterns = vert.get_children();
@@ -324,21 +323,21 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         let candidates = D::filter_parent_pattern_indices(parent, child_patterns);
         //println!("with successors \"{}\"", self.pattern_string(post_pattern));
         // try to find child pattern with same next index
-        Self::get_best_child_pattern(child_patterns, candidates.iter(), context.as_pattern_view())
-            // todo: check if this is always correct
-            // todo: skip tail comparison for non-candidates (they always point to sub-index at end in parent)
-            //.or_else(|| parent.pattern_indices.iter().next().cloned())
-            //
-            .ok_or(PatternMismatch::NoMatchingParent)
-            .and_then(|(pattern_index, sub_index)| {
-                self.compare_child_pattern_at_offset(
-                    child_patterns,
-                    context,
-                    pattern_index,
-                    sub_index,
-                )
-                .map(|parent_match| (parent_match, pattern_index, sub_index))
-            })
+        Self::get_best_child_pattern(
+            child_patterns,
+            candidates.iter(),
+            context.as_pattern_view()
+        )
+        .ok_or(NoMatch::NoChildPatterns)
+        .and_then(|(pattern_index, sub_index)|
+            self.compare_child_pattern_at_offset(
+                child_patterns,
+                context,
+                pattern_index,
+                sub_index,
+            )
+            .map(|parent_match| (parent_match, pattern_index, sub_index))
+        )
     }
     /// try to find child pattern with context matching sub_context
     pub(crate) fn get_best_child_pattern(

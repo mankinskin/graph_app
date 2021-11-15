@@ -1,7 +1,7 @@
 use crate::{
     graph::*,
     read::*,
-    search::*,
+    r#match::*,
 };
 use either::Either;
 use std::{
@@ -65,11 +65,11 @@ impl VertexData {
     pub fn get_width(&self) -> TokenPosition {
         self.width
     }
-    pub fn get_parent(&self, index: impl Indexed) -> Result<&Parent, NotFound> {
+    pub fn get_parent(&self, index: impl Indexed) -> Result<&Parent, NoMatch> {
         let index = index.index();
         self.parents
             .get(index)
-            .ok_or(NotFound::NoMatchingParent(*index))
+            .ok_or(NoMatch::NoMatchingParent(*index))
     }
     pub fn get_parents(&self) -> &VertexParents {
         &self.parents
@@ -78,27 +78,27 @@ impl VertexData {
         &self,
         id: &PatternId,
         range: R,
-    ) -> Result<&<R as SliceIndex<[Child]>>::Output, NotFound> {
+    ) -> Result<&<R as SliceIndex<[Child]>>::Output, NoMatch> {
         self.children
             .get(id)
             .and_then(|p| p.get(range))
-            .ok_or(NotFound::NoChildPatterns)
+            .ok_or(NoMatch::NoChildPatterns)
     }
     pub fn get_child_pattern_position(
         &self,
         id: &PatternId,
         pos: IndexPosition,
-    ) -> Result<&Child, NotFound> {
+    ) -> Result<&Child, NoMatch> {
         self.children
             .get(id)
             .and_then(|p| p.get(pos))
-            .ok_or(NotFound::NoChildPatterns)
+            .ok_or(NoMatch::NoChildPatterns)
     }
     pub fn get_child_pattern(&self, id: &PatternId) -> Option<&Pattern> {
         self.children.get(id)
     }
-    pub fn get_child_pattern_mut(&mut self, id: &PatternId) -> Result<&mut Pattern, NotFound> {
-        self.children.get_mut(id).ok_or(NotFound::NoChildPatterns)
+    pub fn get_child_pattern_mut(&mut self, id: &PatternId) -> Result<&mut Pattern, NoMatch> {
+        self.children.get_mut(id).ok_or(NoMatch::NoChildPatterns)
     }
     pub fn expect_any_pattern(&self) -> &Pattern {
         self.children
@@ -179,25 +179,25 @@ impl VertexData {
         &self,
         parent_index: impl Indexed,
         cond: impl Fn(&&Parent) -> bool,
-    ) -> Result<&'_ Parent, NotFound> {
+    ) -> Result<&'_ Parent, NoMatch> {
         let index = parent_index.index();
         self.get_parent(index)
             .ok()
             .filter(cond)
-            .ok_or(NotFound::NoMatchingParent(*index))
+            .ok_or(NoMatch::NoMatchingParent(*index))
     }
     pub fn get_parent_to_starting_at(
         &self,
         parent_index: impl Indexed,
         offset: PatternId,
-    ) -> Result<&'_ Parent, NotFound> {
+    ) -> Result<&'_ Parent, NoMatch> {
         self.filter_parent_to(parent_index, |parent| parent.exists_at_pos(offset))
     }
     pub fn get_parent_to_ending_at(
         &self,
         parent_index: impl Indexed,
         offset: PatternId,
-    ) -> Result<&'_ Parent, NotFound> {
+    ) -> Result<&'_ Parent, NoMatch> {
         self.filter_parent_to(parent_index, |parent| {
             offset
                 .checked_sub(self.width)
@@ -205,10 +205,10 @@ impl VertexData {
                 .unwrap_or(false)
         })
     }
-    pub fn get_parent_at_prefix_of(&self, index: impl Indexed) -> Result<&'_ Parent, NotFound> {
+    pub fn get_parent_at_prefix_of(&self, index: impl Indexed) -> Result<&'_ Parent, NoMatch> {
         self.get_parent_to_starting_at(index, 0)
     }
-    pub fn get_parent_at_postfix_of(&self, index: impl Indexed) -> Result<&'_ Parent, NotFound> {
+    pub fn get_parent_at_postfix_of(&self, index: impl Indexed) -> Result<&'_ Parent, NoMatch> {
         self.filter_parent_to(index, |parent| {
             parent
                 .width
@@ -221,7 +221,7 @@ impl VertexData {
         &self,
         half: Pattern,
         range: impl PatternRangeIndex + Clone,
-    ) -> Result<PatternId, NotFound> {
+    ) -> Result<PatternId, NoMatch> {
         self.children
             .iter()
             .find_map(|(id, pat)| {
@@ -231,7 +231,7 @@ impl VertexData {
                     None
                 }
             })
-            .ok_or(NotFound::NoChildPatterns)
+            .ok_or(NoMatch::NoChildPatterns)
     }
     /// replace indices in sub pattern and returns old indices
     /// doesn't modify parents of sub-patterns!

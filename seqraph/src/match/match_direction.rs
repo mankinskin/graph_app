@@ -1,7 +1,4 @@
-use crate::{
-    search::*,
-    vertex::*,
-};
+use crate::r#match::*;
 use itertools::{
     EitherOrBoth,
     Itertools,
@@ -24,7 +21,7 @@ fn to_matching_iterator<'a, I: Indexed + 'a, J: Indexed + 'a>(
 }
 pub trait MatchDirection {
     /// get the parent where vertex is at the relevant position
-    fn get_match_parent_to(vertex: &VertexData, sup: impl Indexed) -> Result<&'_ Parent, NotFound>;
+    fn get_match_parent_to(vertex: &VertexData, sup: impl Indexed) -> Result<&'_ Parent, NoMatch>;
     fn skip_equal_indices<'a, I: Indexed, J: Indexed>(
         a: impl DoubleEndedIterator<Item = &'a I>,
         b: impl DoubleEndedIterator<Item = &'a J>,
@@ -77,7 +74,7 @@ pub trait MatchDirection {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MatchRight;
 impl MatchDirection for MatchRight {
-    fn get_match_parent_to(vertex: &VertexData, sup: impl Indexed) -> Result<&'_ Parent, NotFound> {
+    fn get_match_parent_to(vertex: &VertexData, sup: impl Indexed) -> Result<&'_ Parent, NoMatch> {
         vertex.get_parent_at_prefix_of(sup)
     }
     fn skip_equal_indices<'a, I: Indexed, J: Indexed>(
@@ -148,7 +145,7 @@ impl MatchDirection for MatchRight {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MatchLeft;
 impl MatchDirection for MatchLeft {
-    fn get_match_parent_to(vertex: &VertexData, sup: impl Indexed) -> Result<&'_ Parent, NotFound> {
+    fn get_match_parent_to(vertex: &VertexData, sup: impl Indexed) -> Result<&'_ Parent, NoMatch> {
         vertex.get_parent_at_postfix_of(sup)
     }
     fn skip_equal_indices<'a, I: Indexed, J: Indexed>(

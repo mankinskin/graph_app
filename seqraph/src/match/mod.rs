@@ -14,15 +14,16 @@ pub use match_direction::*;
 //pub use async_match_direction::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum PatternMismatch {
+pub enum NoMatch {
     EmptyPatterns,
-    Mismatch,
     NoParents,
+    Mismatch,
     NoChildPatterns,
-    NoMatchingParent,
-    ParentMatchingPartially,
+    NoMatchingParent(VertexIndex),
     SingleIndex,
-    UnknownTokens,
+    ParentMatchingPartially,
+    UnknownKey,
+    UnknownIndex,
 }
 
 impl<'t, 'a, T> Hypergraph<T>
@@ -57,7 +58,10 @@ mod tests {
         graph::tests::context,
         Child,
     };
-    use pretty_assertions::assert_eq;
+    use pretty_assertions::{
+        assert_eq,
+        assert_matches,
+    };
     #[test]
     fn compare_pattern_prefix() {
         let (
@@ -139,17 +143,17 @@ mod tests {
             graph.compare_pattern_prefix(&abc_d_pattern, &a_bc_d_pattern),
             Ok(PatternMatch(None, None))
         );
-        assert_eq!(
+        assert_matches!(
             graph.compare_pattern_prefix(&bc_pattern, &abcd_pattern),
-            Err(PatternMismatch::NoMatchingParent)
+            Err(NoMatch::NoMatchingParent(_))
         );
         assert_eq!(
             graph.compare_pattern_prefix(&b_c_pattern, &a_bc_pattern),
-            Err(PatternMismatch::Mismatch)
+            Err(NoMatch::Mismatch)
         );
         assert_eq!(
             graph.compare_pattern_prefix(&b_c_pattern, &a_d_c_pattern),
-            Err(PatternMismatch::Mismatch)
+            Err(NoMatch::Mismatch)
         );
 
         assert_eq!(
@@ -252,9 +256,9 @@ mod tests {
             graph.compare_pattern_postfix(&abc_d_pattern, &a_bc_d_pattern),
             Ok(PatternMatch(None, None))
         );
-        assert_eq!(
+        assert_matches!(
             graph.compare_pattern_postfix(&bc_pattern, &abcd_pattern),
-            Err(PatternMismatch::NoMatchingParent)
+            Err(NoMatch::NoMatchingParent(_))
         );
         assert_eq!(
             graph.compare_pattern_postfix(&b_c_pattern, &a_bc_pattern),
@@ -262,7 +266,7 @@ mod tests {
         );
         assert_eq!(
             graph.compare_pattern_postfix(&b_c_pattern, &a_d_c_pattern),
-            Err(PatternMismatch::Mismatch)
+            Err(NoMatch::Mismatch)
         );
         assert_eq!(
             graph.compare_pattern_postfix(&a_bc_d_pattern, &abc_d_pattern),
@@ -278,17 +282,17 @@ mod tests {
             Ok(PatternMatch(None, None))
         );
 
-        assert_eq!(
+        assert_matches!(
             graph.compare_pattern_postfix(&a_b_c_pattern, &abcd_pattern),
-            Err(PatternMismatch::NoMatchingParent)
+            Err(NoMatch::NoMatchingParent(_))
         );
-        assert_eq!(
+        assert_matches!(
             graph.compare_pattern_postfix(&ab_c_d_pattern, &a_bc_pattern),
-            Err(PatternMismatch::NoMatchingParent)
+            Err(NoMatch::NoMatchingParent(_))
         );
-        assert_eq!(
+        assert_matches!(
             graph.compare_pattern_postfix(&a_bc_pattern, &ab_c_d_pattern),
-            Err(PatternMismatch::NoMatchingParent)
+            Err(NoMatch::NoMatchingParent(_))
         );
         assert_eq!(
             graph.compare_pattern_postfix(&bc_d_pattern, &ab_c_d_pattern),
