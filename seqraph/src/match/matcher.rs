@@ -207,20 +207,26 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         })
     }
     /// match sub index and context with sup index with max width
+    #[allow(unused)]
     fn match_sub_and_context_with_index(
         &self,
         sub: impl Indexed,
         context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
         sup: Child,
     ) -> ParentMatchResult {
-        //println!("match_sub_pattern_to_super");
-        // search parent of sub
-        Self::match_exactly(sub.index(), context.as_pattern_view(), sup)
-            .map(Ok)
-            .unwrap_or_else(|| {
-                let vertex = self.expect_vertex_data(sub);
-                self.match_sub_vertex_and_context_with_index(vertex, context, sup)
-            })
+        Self::match_exactly(
+            sub.index(),
+            context.as_pattern_view(),
+            sup,
+        )
+        .map(Ok)
+        .unwrap_or_else(||
+            self.match_sub_vertex_and_context_with_index(
+                self.expect_vertex_data(sub),
+                context,
+                sup,
+            )
+        )
     }
     fn find_unequal_matching_ancestor(
         &self,
@@ -229,41 +235,41 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         sup: Child,
     ) -> ParentMatchResult {
         let vertex = self.expect_vertex_data(sub);
-        self.match_sub_vertex_and_context_with_index(vertex, context.as_pattern_view(), sup)
-            .or_else(|_|
-            // sup is no direct parent, search upwards
-            //println!("matching available parents");
-            // search sup in parents
-            self.searcher()
-                .find_largest_matching_parent_below_width(vertex, context, Some(sup.width))
-                .or(Err(PatternMismatch::NoMatchingParent))
-                .and_then(
-                    |SearchFound {
-                         index: parent_index,
-                         parent_match,
-                         ..
-                     }| {
-                        match (
-                            D::found_at_start(parent_match.parent_range),
-                            parent_match.remainder,
-                        ) {
-                            (true, rem) => Ok(rem.unwrap_or_default()),
-                            // parent not matching at beginning
-                            (false, _) => {
-                                //println!("Found index {} not matching at beginning", parent_index.index);
-                                Err(PatternMismatch::NoMatchingParent)
-                            }
-                        }
-                        // search next parent
-                        .and_then(|new_context|
-                            self.match_sub_and_context_with_index(
-                                parent_index,
-                                new_context,
-                                sup,
-                            )
+        self.match_sub_vertex_and_context_with_index(
+            vertex,
+            context.as_pattern_view(),
+            sup,
+        )
+        .or_else(|_|
+            self
+            .searcher()
+            .find_largest_matching_parent_below_width(
+                vertex,
+                context,
+                Some(sup.width),
+            )
+            .or(Err(PatternMismatch::NoMatchingParent))
+            .and_then(
+                |SearchFound {
+                     index: parent_index,
+                     parent_match: ParentMatch {
+                         parent_range,
+                         remainder,
+                     },
+                     ..
+                }|
+                D::found_at_start(parent_range)
+                    .then(|| remainder.unwrap_or_default())
+                    .ok_or(PatternMismatch::NoMatchingParent)
+                    .and_then(|new_context|
+                        self.find_matching_ancestor(
+                            parent_index,
+                            new_context,
+                            sup,
                         )
-                    },
-                ))
+                    )
+            )
+        )
     }
     #[allow(unused)]
     fn find_matching_ancestor(
