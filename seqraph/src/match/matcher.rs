@@ -171,7 +171,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         // search larger in parents of smaller
         let (rotate, sub, sub_context, sup, sup_context) =
             Self::decide_sub_and_sup_indicies(a, a_context, b, b_context)?;
-        self.match_unequal_sub_and_context_with_index(sub, sub_context, sup)
+        self.find_unequal_matching_ancestor(sub, sub_context, sup)
             .and_then(|parent_match| {
                 let rem = parent_match.remainder;
                 match parent_match.parent_range {
@@ -196,46 +196,46 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
                 }
             })
     }
+    fn match_exactly(
+        sub: impl Indexed,
+        context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        sup: Child,
+    ) -> Option<ParentMatch> {
+        (*sub.index() == *sup.index()).then(|| ParentMatch {
+            parent_range: FoundRange::Complete,
+            remainder: (!context.is_empty()).then(|| context.into_pattern()),
+        })
+    }
+    /// match sub index and context with sup index with max width
     fn match_sub_and_context_with_index(
         &self,
         sub: impl Indexed,
-        sub_context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
-        sup: Child,
-    ) -> ParentMatchResult {
-        if sub.index() == sup.index() {
-            Ok(ParentMatch {
-                parent_range: FoundRange::Complete,
-                remainder: (!sub_context.is_empty()).then(|| sub_context.into_pattern()),
-            })
-        } else {
-            self.match_unequal_sub_and_context_with_index(sub, sub_context, sup)
-        }
-    }
-    fn match_unequal_sub_and_context_with_index(
-        &self,
-        sub: impl Indexed,
-        sub_context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
         sup: Child,
     ) -> ParentMatchResult {
         //println!("match_sub_pattern_to_super");
         // search parent of sub
+        Self::match_exactly(sub.index(), context.as_pattern_view(), sup)
+            .map(Ok)
+            .unwrap_or_else(|| {
+                let vertex = self.expect_vertex_data(sub);
+                self.match_sub_vertex_and_context_with_index(vertex, context, sup)
+            })
+    }
+    fn find_unequal_matching_ancestor(
+        &self,
+        sub: impl Indexed,
+        context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        sup: Child,
+    ) -> ParentMatchResult {
         let vertex = self.expect_vertex_data(sub);
-        if vertex.get_parents().is_empty() {
-            return Err(PatternMismatch::NoParents);
-        }
-        // get parent where vertex is at relevant position (prefix or postfix)
-        if let Some(parent) = D::get_match_parent(vertex, sup) {
-            // found vertex in sup at relevant position
-            //println!("sup found in parents");
-            // compare context after vertex in parent
-            self.match_context_with_parent_children(sub_context, sup, parent)
-                .map(|(parent_match, _, _)| parent_match)
-        } else {
+        self.match_sub_vertex_and_context_with_index(vertex, context.as_pattern_view(), sup)
+            .or_else(|_|
             // sup is no direct parent, search upwards
             //println!("matching available parents");
             // search sup in parents
             self.searcher()
-                .find_largest_matching_parent_below_width(vertex, sub_context, Some(sup.width))
+                .find_largest_matching_parent_below_width(vertex, context, Some(sup.width))
                 .or(Err(PatternMismatch::NoMatchingParent))
                 .and_then(
                     |SearchFound {
@@ -255,12 +255,53 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
                             }
                         }
                         // search next parent
-                        .and_then(|new_context| {
-                            self.match_sub_and_context_with_index(parent_index, new_context, sup)
-                        })
+                        .and_then(|new_context|
+                            self.match_sub_and_context_with_index(
+                                parent_index,
+                                new_context,
+                                sup,
+                            )
+                        )
                     },
-                )
+                ))
+    }
+    #[allow(unused)]
+    fn find_matching_ancestor(
+        &self,
+        sub: impl Indexed,
+        context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        sup: Child,
+    ) -> ParentMatchResult {
+        // sup is no direct parent, search upwards
+        //println!("matching available parents");
+        // search sup in parents
+        Self::match_exactly(sub.index(), context.as_pattern_view(), sup)
+            .map(Ok)
+            .unwrap_or_else(|| self.find_unequal_matching_ancestor(sub, context, sup))
+    }
+    fn match_sub_vertex_and_context_with_index(
+        &self,
+        vertex: &VertexData,
+        sub_context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        sup: Child,
+    ) -> ParentMatchResult {
+        if vertex.get_parents().is_empty() {
+            return Err(PatternMismatch::NoParents);
         }
+        // get parent where vertex is at relevant position (prefix or postfix)
+        D::get_match_parent_to(vertex, sup)
+            .map_err(|_| PatternMismatch::NoMatchingParent)
+            .and_then(|parent|
+                // found vertex in sup at relevant position
+                //println!("sup found in parents");
+                // compare context after vertex in parent
+                self.match_context_with_parent_children(
+                    sub_context,
+                    sup,
+                    parent,
+                )
+                .map(|(parent_match, _, _)| parent_match))
+            .or(Err(PatternMismatch::NoMatchingParent))
     }
     /// match context against child context in parent.
     pub fn match_context_with_parent_children(

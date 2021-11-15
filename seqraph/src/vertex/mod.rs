@@ -175,29 +175,30 @@ impl VertexData {
             })
             .collect::<Vec<_>>()
     }
-    pub fn filter_parent(
+    pub fn filter_parent_to(
         &self,
         parent_index: impl Indexed,
         cond: impl Fn(&&Parent) -> bool,
     ) -> Result<&'_ Parent, NotFound> {
         let index = parent_index.index();
-        Some(self.get_parent(index)?)
+        self.get_parent(index)
+            .ok()
             .filter(cond)
             .ok_or(NotFound::NoMatchingParent(*index))
     }
-    pub fn get_parent_starting_at(
+    pub fn get_parent_to_starting_at(
         &self,
         parent_index: impl Indexed,
         offset: PatternId,
     ) -> Result<&'_ Parent, NotFound> {
-        self.filter_parent(parent_index, |parent| parent.exists_at_pos(offset))
+        self.filter_parent_to(parent_index, |parent| parent.exists_at_pos(offset))
     }
-    pub fn get_parent_ending_at(
+    pub fn get_parent_to_ending_at(
         &self,
         parent_index: impl Indexed,
         offset: PatternId,
     ) -> Result<&'_ Parent, NotFound> {
-        self.filter_parent(parent_index, |parent| {
+        self.filter_parent_to(parent_index, |parent| {
             offset
                 .checked_sub(self.width)
                 .map(|p| parent.exists_at_pos(p))
@@ -205,10 +206,10 @@ impl VertexData {
         })
     }
     pub fn get_parent_at_prefix_of(&self, index: impl Indexed) -> Result<&'_ Parent, NotFound> {
-        self.get_parent_starting_at(index, 0)
+        self.get_parent_to_starting_at(index, 0)
     }
     pub fn get_parent_at_postfix_of(&self, index: impl Indexed) -> Result<&'_ Parent, NotFound> {
-        self.filter_parent(index, |parent| {
+        self.filter_parent_to(index, |parent| {
             parent
                 .width
                 .checked_sub(self.width)
