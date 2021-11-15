@@ -29,7 +29,10 @@ where
             .get_index_mut(*index.index())
             .ok_or(NoMatch::UnknownIndex)
     }
-    pub fn expect_vertex(&self, index: impl Indexed) -> (&VertexKey<T>, &VertexData) {
+    pub fn expect_vertex(
+        &self,
+        index: impl Indexed,
+    ) -> (&VertexKey<T>, &VertexData) {
         let index = *index.index();
         self.get_vertex(index)
             .unwrap_or_else(|_| panic!("Index {} does not exist!", index))
@@ -42,13 +45,22 @@ where
         self.get_vertex_mut(index)
             .unwrap_or_else(|_| panic!("Index {} does not exist!", index))
     }
-    pub fn get_vertex_key(&self, index: impl Indexed) -> Result<&VertexKey<T>, NoMatch> {
+    pub fn get_vertex_key(
+        &self,
+        index: impl Indexed,
+    ) -> Result<&VertexKey<T>, NoMatch> {
         self.get_vertex(index).map(|entry| entry.0)
     }
-    pub fn expect_vertex_key(&self, index: impl Indexed) -> &VertexKey<T> {
+    pub fn expect_vertex_key(
+        &self,
+        index: impl Indexed,
+    ) -> &VertexKey<T> {
         self.expect_vertex(index).0
     }
-    pub fn get_vertex_data(&self, index: impl Indexed) -> Result<&VertexData, NoMatch> {
+    pub fn get_vertex_data(
+        &self,
+        index: impl Indexed,
+    ) -> Result<&VertexData, NoMatch> {
         self.get_vertex(index).map(|(_, v)| v)
     }
     pub fn get_vertex_data_mut(
@@ -57,13 +69,22 @@ where
     ) -> Result<&mut VertexData, NoMatch> {
         self.get_vertex_mut(index).map(|(_, v)| v)
     }
-    pub fn expect_vertex_data(&self, index: impl Indexed) -> &VertexData {
+    pub fn expect_vertex_data(
+        &self,
+        index: impl Indexed,
+    ) -> &VertexData {
         self.expect_vertex(index).1
     }
-    pub fn expect_vertex_data_mut(&mut self, index: impl Indexed) -> &mut VertexData {
+    pub fn expect_vertex_data_mut(
+        &mut self,
+        index: impl Indexed,
+    ) -> &mut VertexData {
         self.expect_vertex_mut(index).1
     }
-    pub fn get_vertex_data_by_key(&self, key: &VertexKey<T>) -> Result<&VertexData, NoMatch> {
+    pub fn get_vertex_data_by_key(
+        &self,
+        key: &VertexKey<T>,
+    ) -> Result<&VertexData, NoMatch> {
         self.graph.get(key).ok_or(NoMatch::UnknownKey)
     }
     pub fn get_vertex_data_by_key_mut(
@@ -72,10 +93,16 @@ where
     ) -> Result<&mut VertexData, NoMatch> {
         self.graph.get_mut(key).ok_or(NoMatch::UnknownKey)
     }
-    pub fn expect_vertex_data_by_key(&self, key: &VertexKey<T>) -> &VertexData {
+    pub fn expect_vertex_data_by_key(
+        &self,
+        key: &VertexKey<T>,
+    ) -> &VertexData {
         self.graph.get(key).expect("Key does not exist")
     }
-    pub fn expect_vertex_data_by_key_mut(&mut self, key: &VertexKey<T>) -> &mut VertexData {
+    pub fn expect_vertex_data_by_key_mut(
+        &mut self,
+        key: &VertexKey<T>,
+    ) -> &mut VertexData {
         self.graph.get_mut(key).expect("Key does not exist")
     }
     pub fn vertex_iter(&self) -> impl Iterator<Item = (&VertexKey<T>, &VertexData)> {
@@ -109,19 +136,34 @@ where
             .map(move |index| self.get_vertex_data(index))
             .collect()
     }
-    pub fn get_token_data(&self, token: &Token<T>) -> Result<&VertexData, NoMatch> {
+    pub fn get_token_data(
+        &self,
+        token: &Token<T>,
+    ) -> Result<&VertexData, NoMatch> {
         self.get_vertex_data_by_key(&VertexKey::Token(*token))
     }
-    pub fn get_token_data_mut(&mut self, token: &Token<T>) -> Result<&mut VertexData, NoMatch> {
+    pub fn get_token_data_mut(
+        &mut self,
+        token: &Token<T>,
+    ) -> Result<&mut VertexData, NoMatch> {
         self.get_vertex_data_by_key_mut(&VertexKey::Token(*token))
     }
-    pub fn get_index_by_key(&self, key: &VertexKey<T>) -> Result<VertexIndex, NoMatch> {
+    pub fn get_index_by_key(
+        &self,
+        key: &VertexKey<T>,
+    ) -> Result<VertexIndex, NoMatch> {
         self.graph.get_index_of(key).ok_or(NoMatch::UnknownKey)
     }
-    pub fn expect_index_by_key(&self, key: &VertexKey<T>) -> VertexIndex {
+    pub fn expect_index_by_key(
+        &self,
+        key: &VertexKey<T>,
+    ) -> VertexIndex {
         self.graph.get_index_of(key).expect("Key does not exist")
     }
-    pub fn get_token_index(&self, token: &Token<T>) -> Result<VertexIndex, NoMatch> {
+    pub fn get_token_index(
+        &self,
+        token: &Token<T>,
+    ) -> Result<VertexIndex, NoMatch> {
         self.get_index_by_key(&VertexKey::Token(*token))
     }
     pub fn to_token_indices_iter(
@@ -166,10 +208,16 @@ where
         }
         Ok(v)
     }
-    pub fn to_child(&self, index: impl Indexed) -> Child {
+    pub fn to_child(
+        &self,
+        index: impl Indexed,
+    ) -> Child {
         Child::new(*index.index(), self.index_width(&index))
     }
-    pub fn to_children(&self, indices: impl IntoIterator<Item = impl Indexed>) -> Pattern {
+    pub fn to_children(
+        &self,
+        indices: impl IntoIterator<Item = impl Indexed>,
+    ) -> Pattern {
         indices.into_iter().map(|i| self.to_child(i)).collect()
     }
     pub fn get_pattern_parents(

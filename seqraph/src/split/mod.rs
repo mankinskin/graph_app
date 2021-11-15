@@ -15,7 +15,11 @@ where
     T: Tokenize + 't,
 {
     /// Split an index the specified position
-    pub fn split_index(&mut self, root: impl Indexed, pos: NonZeroUsize) -> SingleSplitResult {
+    pub fn split_index(
+        &mut self,
+        root: impl Indexed,
+        pos: NonZeroUsize,
+    ) -> SingleSplitResult {
         IndexSplitter::new(self).split_index(root, pos)
     }
     // create index from token position range in index
@@ -26,7 +30,11 @@ where
     ) -> RangeSplitResult {
         IndexSplitter::new(self).index_subrange(root, range)
     }
-    pub fn index_prefix(&mut self, root: impl Indexed, pos: NonZeroUsize) -> (Child, SplitSegment) {
+    pub fn index_prefix(
+        &mut self,
+        root: impl Indexed,
+        pos: NonZeroUsize,
+    ) -> (Child, SplitSegment) {
         IndexSplitter::new(self).index_prefix(root, pos)
     }
     pub fn index_postfix(
@@ -41,12 +49,18 @@ impl<'t, 'a, T> Hypergraph<T>
 where
     T: Tokenize + 't + std::fmt::Display,
 {
-    fn pattern_split_string_width(&self, split: &PatternSplit) -> usize {
+    fn pattern_split_string_width(
+        &self,
+        split: &PatternSplit,
+    ) -> usize {
         let left = self.pattern_string_with_separator(&split.prefix, ".");
         let right = self.pattern_string_with_separator(&split.postfix, ".");
         left.len() + self.index_split_string_width(&split.inner) + right.len()
     }
-    fn index_split_string_width(&self, split: &IndexSplit) -> usize {
+    fn index_split_string_width(
+        &self,
+        split: &IndexSplit,
+    ) -> usize {
         split
             .splits
             .first()
@@ -82,7 +96,10 @@ where
             inner,
         )
     }
-    fn index_split_string(&self, split: &IndexSplit) -> String {
+    fn index_split_string(
+        &self,
+        split: &IndexSplit,
+    ) -> String {
         let width = self.index_split_string_width(split);
         split.splits.iter().fold(String::new(), |acc, split| {
             format!(
@@ -92,7 +109,10 @@ where
             )
         })
     }
-    pub fn print_index_split(&self, split: &IndexSplit) {
+    pub fn print_index_split(
+        &self,
+        split: &IndexSplit,
+    ) {
         print!("{}", self.index_split_string(split));
     }
 }

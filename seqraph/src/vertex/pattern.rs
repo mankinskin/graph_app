@@ -76,13 +76,23 @@ pub fn pattern_width<T: Borrow<Child>>(pat: impl IntoIterator<Item = T>) -> Toke
     pat.into_iter()
         .fold(0, |acc, child| acc + child.borrow().get_width())
 }
-pub fn prefix<T: Tokenize>(pattern: &'_ [T], index: PatternId) -> Vec<T> {
+pub fn prefix<T: Tokenize>(
+    pattern: &'_ [T],
+    index: PatternId,
+) -> Vec<T> {
     pattern.get(..index).unwrap_or(pattern).to_vec()
 }
-pub fn infix<T: Tokenize>(pattern: &'_ [T], start: PatternId, end: PatternId) -> Vec<T> {
+pub fn infix<T: Tokenize>(
+    pattern: &'_ [T],
+    start: PatternId,
+    end: PatternId,
+) -> Vec<T> {
     pattern.get(start..end).unwrap_or(&[]).to_vec()
 }
-pub fn postfix<T: Tokenize>(pattern: &'_ [T], index: PatternId) -> Vec<T> {
+pub fn postfix<T: Tokenize>(
+    pattern: &'_ [T],
+    index: PatternId,
+) -> Vec<T> {
     pattern.get(index..).unwrap_or(&[]).to_vec()
 }
 pub fn replace_in_pattern(
@@ -107,10 +117,16 @@ pub fn single_child_pattern(half: Pattern) -> Result<Child, Pattern> {
     }
 }
 /// Split a pattern before the specified index
-pub fn split_pattern_at_index<T: Tokenize>(pattern: &'_ [T], index: PatternId) -> (Vec<T>, Vec<T>) {
+pub fn split_pattern_at_index<T: Tokenize>(
+    pattern: &'_ [T],
+    index: PatternId,
+) -> (Vec<T>, Vec<T>) {
     (prefix(pattern, index), postfix(pattern, index))
 }
-pub fn split_context<T: Tokenize>(pattern: &'_ [T], index: PatternId) -> (Vec<T>, Vec<T>) {
+pub fn split_context<T: Tokenize>(
+    pattern: &'_ [T],
+    index: PatternId,
+) -> (Vec<T>, Vec<T>) {
     (prefix(pattern, index), postfix(pattern, index + 1))
 }
 pub fn double_split_context(

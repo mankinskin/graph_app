@@ -63,7 +63,10 @@ impl<'a, T: Tokenize + std::fmt::Display, D: MatchDirection> Reader<'a, T, D> {
     pub(crate) fn right_searcher(&self) -> Searcher<T, MatchRight> {
         Searcher::new(self.graph)
     }
-    fn index_tokens(&mut self, sequence: impl IntoIterator<Item = T>) -> NewTokenIndices {
+    fn index_tokens(
+        &mut self,
+        sequence: impl IntoIterator<Item = T>,
+    ) -> NewTokenIndices {
         sequence
             .into_iter()
             .map(|t| Token::Element(t))
@@ -94,7 +97,10 @@ impl<'a, T: Tokenize + std::fmt::Display, D: MatchDirection> Reader<'a, T, D> {
         let known = Self::take_block(&mut seq_iter, |t| t.is_known());
         (cache, known, seq_iter.collect())
     }
-    fn update_cache_index(&mut self, new: impl IntoIterator<Item = Child>) {
+    fn update_cache_index(
+        &mut self,
+        new: impl IntoIterator<Item = Child>,
+    ) {
         if let Some(cache) = &mut self.cache {
             cache.update_index(self.graph, new)
         } else {
@@ -108,11 +114,17 @@ impl<'a, T: Tokenize + std::fmt::Display, D: MatchDirection> Reader<'a, T, D> {
                 .unwrap_or_default()
         );
     }
-    pub(crate) fn read_sequence(&mut self, sequence: impl IntoIterator<Item = T>) -> Child {
+    pub(crate) fn read_sequence(
+        &mut self,
+        sequence: impl IntoIterator<Item = T>,
+    ) -> Child {
         let sequence: NewTokenIndices = self.index_tokens(sequence);
         self.try_read_sequence(sequence).expect("Empty sequence")
     }
-    fn try_read_sequence(&mut self, sequence: NewTokenIndices) -> Option<Child> {
+    fn try_read_sequence(
+        &mut self,
+        sequence: NewTokenIndices,
+    ) -> Option<Child> {
         if sequence.is_empty() {
             return None;
         }

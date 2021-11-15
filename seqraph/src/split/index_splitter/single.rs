@@ -25,7 +25,11 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
     ) -> SingleSplitResult {
         self.split_index_with_pid(root, pos).1
     }
-    pub fn index_prefix(&mut self, root: impl Indexed, pos: NonZeroUsize) -> (Child, SplitSegment) {
+    pub fn index_prefix(
+        &mut self,
+        root: impl Indexed,
+        pos: NonZeroUsize,
+    ) -> (Child, SplitSegment) {
         let (pid, (l, r)) = self.split_index_with_pid(root.index(), pos);
         match l {
             SplitSegment::Child(c) => (c, r),
@@ -172,7 +176,10 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
             .map(|offset| (SplitKey::new(index, offset), index_in_parent.clone()))
             .ok_or(index_in_parent)
     }
-    pub(crate) fn build_child_splits(&mut self, child_splits: Vec<SplitContext>) -> ChildSplits {
+    pub(crate) fn build_child_splits(
+        &mut self,
+        child_splits: Vec<SplitContext>,
+    ) -> ChildSplits {
         child_splits
             .into_iter()
             .map(

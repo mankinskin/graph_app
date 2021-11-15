@@ -21,7 +21,10 @@ fn to_matching_iterator<'a, I: Indexed + 'a, J: Indexed + 'a>(
 }
 pub trait MatchDirection {
     /// get the parent where vertex is at the relevant position
-    fn get_match_parent_to(vertex: &VertexData, sup: impl Indexed) -> Result<&'_ Parent, NoMatch>;
+    fn get_match_parent_to(
+        vertex: &VertexData,
+        sup: impl Indexed,
+    ) -> Result<&'_ Parent, NoMatch>;
     fn skip_equal_indices<'a, I: Indexed, J: Indexed>(
         a: impl DoubleEndedIterator<Item = &'a I>,
         b: impl DoubleEndedIterator<Item = &'a J>,
@@ -30,23 +33,44 @@ pub trait MatchDirection {
         Self::pattern_head(pattern).map(|head| (*head, Self::pattern_tail(pattern)))
     }
     /// get remaining pattern in matching direction including index
-    fn split_end<T: Tokenize>(pattern: &'_ [T], index: PatternId) -> Vec<T>;
-    fn split_end_normalized<T: Tokenize>(pattern: &'_ [T], index: PatternId) -> Vec<T> {
+    fn split_end<T: Tokenize>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T>;
+    fn split_end_normalized<T: Tokenize>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T> {
         Self::split_end(pattern, Self::normalize_index(pattern, index))
     }
     /// get remaining pattern in matching direction excluding index
-    fn front_context<T: Tokenize>(pattern: &'_ [T], index: PatternId) -> Vec<T>;
-    fn front_context_normalized<T: Tokenize>(pattern: &'_ [T], index: PatternId) -> Vec<T> {
+    fn front_context<T: Tokenize>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T>;
+    fn front_context_normalized<T: Tokenize>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T> {
         Self::front_context(pattern, Self::normalize_index(pattern, index))
     }
     /// get remaining pattern agains matching direction excluding index
-    fn back_context<T: Tokenize>(pattern: &'_ [T], index: PatternId) -> Vec<T>;
-    fn back_context_normalized<T: Tokenize>(pattern: &'_ [T], index: PatternId) -> Vec<T> {
+    fn back_context<T: Tokenize>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T>;
+    fn back_context_normalized<T: Tokenize>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T> {
         Self::back_context(pattern, Self::normalize_index(pattern, index))
     }
     fn pattern_tail<T: Tokenize>(pattern: &'_ [T]) -> &'_ [T];
     fn pattern_head<T: Tokenize>(pattern: &'_ [T]) -> Option<&T>;
-    fn normalize_index<T: Tokenize>(pattern: &'_ [T], index: usize) -> usize;
+    fn normalize_index<T: Tokenize>(
+        pattern: &'_ [T],
+        index: usize,
+    ) -> usize;
     fn merge_remainder_with_context<
         T: Into<Child> + Tokenize,
         A: IntoPattern<Item = impl Into<Child> + Tokenize, Token = T>,
@@ -61,10 +85,16 @@ pub trait MatchDirection {
         parent: &Parent,
         child_patterns: &HashMap<PatternId, Pattern>,
     ) -> HashSet<(PatternId, usize)>;
-    fn to_found_range(p: Option<Pattern>, context: Pattern) -> FoundRange;
+    fn to_found_range(
+        p: Option<Pattern>,
+        context: Pattern,
+    ) -> FoundRange;
     fn found_at_start(fr: FoundRange) -> bool;
     fn get_remainder(found_range: FoundRange) -> Option<Pattern>;
-    fn directed_pattern_split<T: Tokenize>(pattern: &'_ [T], index: usize) -> (Vec<T>, Vec<T>) {
+    fn directed_pattern_split<T: Tokenize>(
+        pattern: &'_ [T],
+        index: usize,
+    ) -> (Vec<T>, Vec<T>) {
         (
             Self::back_context(pattern, index),
             Self::split_end(pattern, index),
@@ -74,7 +104,10 @@ pub trait MatchDirection {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MatchRight;
 impl MatchDirection for MatchRight {
-    fn get_match_parent_to(vertex: &VertexData, sup: impl Indexed) -> Result<&'_ Parent, NoMatch> {
+    fn get_match_parent_to(
+        vertex: &VertexData,
+        sup: impl Indexed,
+    ) -> Result<&'_ Parent, NoMatch> {
         vertex.get_parent_at_prefix_of(sup)
     }
     fn skip_equal_indices<'a, I: Indexed, J: Indexed>(
@@ -83,13 +116,22 @@ impl MatchDirection for MatchRight {
     ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)> {
         to_matching_iterator(a, b).next()
     }
-    fn split_end<T: Tokenize>(pattern: &'_ [T], index: PatternId) -> Vec<T> {
+    fn split_end<T: Tokenize>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T> {
         postfix(pattern, index)
     }
-    fn front_context<T: Tokenize>(pattern: &'_ [T], index: PatternId) -> Vec<T> {
+    fn front_context<T: Tokenize>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T> {
         postfix(pattern, index + 1)
     }
-    fn back_context<T: Tokenize>(pattern: &'_ [T], index: PatternId) -> Vec<T> {
+    fn back_context<T: Tokenize>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T> {
         prefix(pattern, index)
     }
     fn pattern_tail<T: Tokenize>(pattern: &'_ [T]) -> &'_ [T] {
@@ -101,7 +143,10 @@ impl MatchDirection for MatchRight {
     fn index_next(index: usize) -> Option<usize> {
         index.checked_add(1)
     }
-    fn normalize_index<T: Tokenize>(_pattern: &'_ [T], index: usize) -> usize {
+    fn normalize_index<T: Tokenize>(
+        _pattern: &'_ [T],
+        index: usize,
+    ) -> usize {
         index
     }
     fn merge_remainder_with_context<
@@ -123,7 +168,10 @@ impl MatchDirection for MatchRight {
             .cloned()
             .collect()
     }
-    fn to_found_range(p: Option<Pattern>, context: Pattern) -> FoundRange {
+    fn to_found_range(
+        p: Option<Pattern>,
+        context: Pattern,
+    ) -> FoundRange {
         match (context.is_empty(), p) {
             (false, Some(rem)) => FoundRange::Infix(context, rem),
             (true, Some(rem)) => FoundRange::Prefix(rem),
@@ -145,7 +193,10 @@ impl MatchDirection for MatchRight {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MatchLeft;
 impl MatchDirection for MatchLeft {
-    fn get_match_parent_to(vertex: &VertexData, sup: impl Indexed) -> Result<&'_ Parent, NoMatch> {
+    fn get_match_parent_to(
+        vertex: &VertexData,
+        sup: impl Indexed,
+    ) -> Result<&'_ Parent, NoMatch> {
         vertex.get_parent_at_postfix_of(sup)
     }
     fn skip_equal_indices<'a, I: Indexed, J: Indexed>(
@@ -154,13 +205,22 @@ impl MatchDirection for MatchLeft {
     ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)> {
         to_matching_iterator(a.rev(), b.rev()).next()
     }
-    fn split_end<T: Tokenize>(pattern: &'_ [T], index: PatternId) -> Vec<T> {
+    fn split_end<T: Tokenize>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T> {
         prefix(pattern, index + 1)
     }
-    fn front_context<T: Tokenize>(pattern: &'_ [T], index: PatternId) -> Vec<T> {
+    fn front_context<T: Tokenize>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T> {
         prefix(pattern, index)
     }
-    fn back_context<T: Tokenize>(pattern: &'_ [T], index: PatternId) -> Vec<T> {
+    fn back_context<T: Tokenize>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T> {
         postfix(pattern, index + 1)
     }
     fn pattern_tail<T: Tokenize>(pattern: &'_ [T]) -> &'_ [T] {
@@ -172,7 +232,10 @@ impl MatchDirection for MatchLeft {
     fn index_next(index: usize) -> Option<usize> {
         index.checked_sub(1)
     }
-    fn normalize_index<T: Tokenize>(pattern: &'_ [T], index: usize) -> usize {
+    fn normalize_index<T: Tokenize>(
+        pattern: &'_ [T],
+        index: usize,
+    ) -> usize {
         pattern.len() - index - 1
     }
     fn merge_remainder_with_context<
@@ -194,7 +257,10 @@ impl MatchDirection for MatchLeft {
             .cloned()
             .collect()
     }
-    fn to_found_range(p: Option<Pattern>, context: Pattern) -> FoundRange {
+    fn to_found_range(
+        p: Option<Pattern>,
+        context: Pattern,
+    ) -> FoundRange {
         match (context.is_empty(), p) {
             (false, Some(rem)) => FoundRange::Infix(rem, context),
             (true, Some(rem)) => FoundRange::Postfix(rem),

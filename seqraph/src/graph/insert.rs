@@ -13,7 +13,11 @@ where
         VERTEX_ID_COUNTER.fetch_add(1, Ordering::Relaxed)
     }
     /// insert single token node
-    pub fn insert_vertex(&mut self, key: VertexKey<T>, mut data: VertexData) -> Child {
+    pub fn insert_vertex(
+        &mut self,
+        key: VertexKey<T>,
+        mut data: VertexData,
+    ) -> Child {
         // TODO: return error if exists (don't overwrite by default)
         //let index = insert_full(key, data).0;
         let entry = self.graph.entry(key);
@@ -23,11 +27,17 @@ where
         c
     }
     /// insert single token node
-    pub fn insert_token(&mut self, token: Token<T>) -> Child {
+    pub fn insert_token(
+        &mut self,
+        token: Token<T>,
+    ) -> Child {
         self.insert_vertex(VertexKey::Token(token), VertexData::new(0, 1))
     }
     /// insert multiple token nodes
-    pub fn insert_tokens(&mut self, tokens: impl IntoIterator<Item = Token<T>>) -> Vec<Child> {
+    pub fn insert_tokens(
+        &mut self,
+        tokens: impl IntoIterator<Item = Token<T>>,
+    ) -> Vec<Child> {
         tokens
             .into_iter()
             .map(|token| self.insert_vertex(VertexKey::Token(token), VertexData::new(0, 1)))
@@ -108,7 +118,10 @@ where
         }
     }
     /// create new node from a pattern
-    pub fn insert_pattern(&mut self, indices: impl IntoIterator<Item = impl Indexed>) -> Child {
+    pub fn insert_pattern(
+        &mut self,
+        indices: impl IntoIterator<Item = impl Indexed>,
+    ) -> Child {
         self.insert_pattern_with_id(indices).0
     }
     /// create new node from multiple patterns

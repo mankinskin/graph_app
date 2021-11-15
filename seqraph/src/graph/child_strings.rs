@@ -12,7 +12,7 @@ impl ChildStrings {
                 impl ToString,
                 impl IntoIterator<Item = impl IntoIterator<Item = impl ToString>>,
             ),
-        >,
+        >
     ) -> Self {
         let mut g = Self::new();
         g.add_nodes(nodes);

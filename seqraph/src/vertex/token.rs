@@ -13,7 +13,7 @@ use std::{
 };
 
 pub fn tokenizing_iter<T: Tokenize, C: Into<T>>(
-    seq: impl Iterator<Item = C>,
+    seq: impl Iterator<Item = C>
 ) -> impl Iterator<Item = Token<T>> {
     seq.map(|c| c.into().into_token())
 }
@@ -124,7 +124,7 @@ pub trait TokenContext<T: Tokenize, E: ContextLink>: Sized {
     //}
 }
 pub fn groups_to_string<T: Tokenize, E: ContextLink, C: TokenContext<T, E> + Display>(
-    groups: Vec<Vec<C>>,
+    groups: Vec<Vec<C>>
 ) -> String {
     let mut lines = Vec::new();
     let max = groups.iter().map(Vec::len).max().unwrap_or(0);
@@ -154,7 +154,10 @@ pub enum Token<T: Tokenize> {
     End,
 }
 impl<T: Tokenize + Display> Display for Token<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter,
+    ) -> fmt::Result {
         write!(
             f,
             "{}",
@@ -186,7 +189,10 @@ impl<T: Tokenize> From<T> for Token<T> {
 //    }
 //}
 impl<T: Tokenize> PartialEq<T> for Token<T> {
-    fn eq(&self, rhs: &T) -> bool {
+    fn eq(
+        &self,
+        rhs: &T,
+    ) -> bool {
         match self {
             Token::Element(e) => *e == *rhs,
             _ => false,
@@ -199,7 +205,10 @@ impl<T: Tokenize> PartialEq<T> for Token<T> {
 //    }
 //}
 impl PartialEq<Token<char>> for char {
-    fn eq(&self, rhs: &Token<char>) -> bool {
+    fn eq(
+        &self,
+        rhs: &Token<char>,
+    ) -> bool {
         *rhs == *self
     }
 }

@@ -1,7 +1,7 @@
 use crate::{
     graph::*,
-    read::*,
     r#match::*,
+    read::*,
 };
 use either::Either;
 use std::{
@@ -54,7 +54,10 @@ impl VertexData {
         static PATTERN_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
         PATTERN_ID_COUNTER.fetch_add(1, Ordering::Relaxed)
     }
-    pub fn new(index: VertexIndex, width: TokenPosition) -> Self {
+    pub fn new(
+        index: VertexIndex,
+        width: TokenPosition,
+    ) -> Self {
         Self {
             index,
             width,
@@ -65,7 +68,10 @@ impl VertexData {
     pub fn get_width(&self) -> TokenPosition {
         self.width
     }
-    pub fn get_parent(&self, index: impl Indexed) -> Result<&Parent, NoMatch> {
+    pub fn get_parent(
+        &self,
+        index: impl Indexed,
+    ) -> Result<&Parent, NoMatch> {
         let index = index.index();
         self.parents
             .get(index)
@@ -94,10 +100,16 @@ impl VertexData {
             .and_then(|p| p.get(pos))
             .ok_or(NoMatch::NoChildPatterns)
     }
-    pub fn get_child_pattern(&self, id: &PatternId) -> Option<&Pattern> {
+    pub fn get_child_pattern(
+        &self,
+        id: &PatternId,
+    ) -> Option<&Pattern> {
         self.children.get(id)
     }
-    pub fn get_child_pattern_mut(&mut self, id: &PatternId) -> Result<&mut Pattern, NoMatch> {
+    pub fn get_child_pattern_mut(
+        &mut self,
+        id: &PatternId,
+    ) -> Result<&mut Pattern, NoMatch> {
         self.children.get_mut(id).ok_or(NoMatch::NoChildPatterns)
     }
     pub fn expect_any_pattern(&self) -> &Pattern {
@@ -106,7 +118,10 @@ impl VertexData {
             .next()
             .unwrap_or_else(|| panic!("Pattern vertex has no children {:#?}", self,))
     }
-    pub fn expect_child_pattern(&self, id: &PatternId) -> &Pattern {
+    pub fn expect_child_pattern(
+        &self,
+        id: &PatternId,
+    ) -> &Pattern {
         self.get_child_pattern(id).unwrap_or_else(|| {
             panic!(
                 "Child pattern with id {} does not exist in in vertex {:#?}",
@@ -114,21 +129,32 @@ impl VertexData {
             )
         })
     }
-    pub fn expect_child_pattern_mut(&mut self, id: &PatternId) -> &mut Pattern {
+    pub fn expect_child_pattern_mut(
+        &mut self,
+        id: &PatternId,
+    ) -> &mut Pattern {
         self.get_child_pattern_mut(id)
             .unwrap_or_else(|_| panic!("Child pattern with id {} does not exist in in vertex", id,))
     }
     pub fn get_children(&self) -> &ChildPatterns {
         &self.children
     }
-    pub fn add_pattern<P: IntoIterator<Item = impl Into<Child>>>(&mut self, pat: P) -> PatternId {
+    pub fn add_pattern<P: IntoIterator<Item = impl Into<Child>>>(
+        &mut self,
+        pat: P,
+    ) -> PatternId {
         // TODO: detect unmatching pattern
         let id = Self::next_child_pattern_id();
         let pat = pat.into_iter().map(Into::into).collect();
         self.children.insert(id, pat);
         id
     }
-    pub fn add_parent(&mut self, parent: impl ToChild, pattern: usize, index: PatternId) {
+    pub fn add_parent(
+        &mut self,
+        parent: impl ToChild,
+        pattern: usize,
+        index: PatternId,
+    ) {
         if let Some(parent) = self.parents.get_mut(parent.index()) {
             parent.add_pattern_index(pattern, index);
         } else {
@@ -137,7 +163,12 @@ impl VertexData {
             self.parents.insert(*parent.index(), parent_rel);
         }
     }
-    pub fn remove_parent(&mut self, vertex: impl Indexed, pattern: usize, index: PatternId) {
+    pub fn remove_parent(
+        &mut self,
+        vertex: impl Indexed,
+        pattern: usize,
+        index: PatternId,
+    ) {
         if let Some(parent) = self.parents.get_mut(vertex.index()) {
             if parent.pattern_indices.len() > 1 {
                 parent.remove_pattern_index(pattern, index);
@@ -205,10 +236,16 @@ impl VertexData {
                 .unwrap_or(false)
         })
     }
-    pub fn get_parent_at_prefix_of(&self, index: impl Indexed) -> Result<&'_ Parent, NoMatch> {
+    pub fn get_parent_at_prefix_of(
+        &self,
+        index: impl Indexed,
+    ) -> Result<&'_ Parent, NoMatch> {
         self.get_parent_to_starting_at(index, 0)
     }
-    pub fn get_parent_at_postfix_of(&self, index: impl Indexed) -> Result<&'_ Parent, NoMatch> {
+    pub fn get_parent_at_postfix_of(
+        &self,
+        index: impl Indexed,
+    ) -> Result<&'_ Parent, NoMatch> {
         self.filter_parent_to(index, |parent| {
             parent
                 .width
@@ -255,7 +292,10 @@ impl Indexed for VertexData {
     fn index(&self) -> &VertexIndex {
         &self.index
     }
-    fn vertex<'g, T: Tokenize>(&'g self, _graph: &'g Hypergraph<T>) -> &'g VertexData {
+    fn vertex<'g, T: Tokenize>(
+        &'g self,
+        _graph: &'g Hypergraph<T>,
+    ) -> &'g VertexData {
         self
     }
 }

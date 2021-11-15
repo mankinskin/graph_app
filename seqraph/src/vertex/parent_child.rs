@@ -26,16 +26,31 @@ impl Parent {
     pub fn get_width(&self) -> TokenPosition {
         self.width
     }
-    pub fn add_pattern_index(&mut self, pattern: usize, index: PatternId) {
+    pub fn add_pattern_index(
+        &mut self,
+        pattern: usize,
+        index: PatternId,
+    ) {
         self.pattern_indices.insert((pattern, index));
     }
-    pub fn remove_pattern_index(&mut self, pattern: usize, index: PatternId) {
+    pub fn remove_pattern_index(
+        &mut self,
+        pattern: usize,
+        index: PatternId,
+    ) {
         self.pattern_indices.remove(&(pattern, index));
     }
-    pub fn exists_at_pos(&self, p: usize) -> bool {
+    pub fn exists_at_pos(
+        &self,
+        p: usize,
+    ) -> bool {
         self.pattern_indices.iter().any(|(_, pos)| *pos == p)
     }
-    pub fn exists_at_pos_in_pattern(&self, pat: PatternId, pos: usize) -> bool {
+    pub fn exists_at_pos_in_pattern(
+        &self,
+        pat: PatternId,
+        pos: usize,
+    ) -> bool {
         self.pattern_indices.contains(&(pat, pos))
     }
     /// filter for pattern indices which occur at start of their patterns
@@ -83,7 +98,10 @@ pub struct Child {
 impl Child {
     #[allow(unused)]
     pub(crate) const INVALID: Child = Child { index: 0, width: 0 };
-    pub fn new(index: impl Indexed, width: TokenPosition) -> Self {
+    pub fn new(
+        index: impl Indexed,
+        width: TokenPosition,
+    ) -> Self {
         Self {
             index: *index.index(),
             width,
@@ -97,7 +115,10 @@ impl Child {
     }
 }
 impl std::cmp::PartialOrd for Child {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(
+        &self,
+        other: &Self,
+    ) -> Option<std::cmp::Ordering> {
         self.index.partial_cmp(&other.index)
     }
 }
@@ -107,32 +128,50 @@ impl Wide for Child {
     }
 }
 impl std::hash::Hash for Child {
-    fn hash<H: Hasher>(&self, h: &mut H) {
+    fn hash<H: Hasher>(
+        &self,
+        h: &mut H,
+    ) {
         self.index.hash(h);
     }
 }
 impl std::cmp::Ord for Child {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(
+        &self,
+        other: &Self,
+    ) -> std::cmp::Ordering {
         self.index.cmp(&other.index)
     }
 }
 impl PartialEq for Child {
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(
+        &self,
+        other: &Self,
+    ) -> bool {
         self.index == other.index
     }
 }
 impl PartialEq<VertexIndex> for Child {
-    fn eq(&self, other: &VertexIndex) -> bool {
+    fn eq(
+        &self,
+        other: &VertexIndex,
+    ) -> bool {
         self.index == *other
     }
 }
 impl PartialEq<VertexIndex> for &'_ Child {
-    fn eq(&self, other: &VertexIndex) -> bool {
+    fn eq(
+        &self,
+        other: &VertexIndex,
+    ) -> bool {
         self.index == *other
     }
 }
 impl PartialEq<VertexIndex> for &'_ mut Child {
-    fn eq(&self, other: &VertexIndex) -> bool {
+    fn eq(
+        &self,
+        other: &VertexIndex,
+    ) -> bool {
         self.index == *other
     }
 }

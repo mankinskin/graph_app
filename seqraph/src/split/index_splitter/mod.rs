@@ -39,7 +39,11 @@ pub struct PatternSplit {
     pub(crate) postfix: Pattern,
 }
 impl PatternSplit {
-    pub fn new(prefix: Pattern, inner: impl Into<IndexSplit>, postfix: Pattern) -> Self {
+    pub fn new(
+        prefix: Pattern,
+        inner: impl Into<IndexSplit>,
+        postfix: Pattern,
+    ) -> Self {
         Self {
             prefix,
             inner: inner.into(),
@@ -60,12 +64,18 @@ impl IndexSplit {
     pub fn is_empty(&self) -> bool {
         self.splits.is_empty()
     }
-    pub fn add_split<T: Into<PatternSplit>>(&mut self, split: T) {
+    pub fn add_split<T: Into<PatternSplit>>(
+        &mut self,
+        split: T,
+    ) {
         self.splits.push(split.into());
     }
 }
 impl PartialEq for IndexSplit {
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(
+        &self,
+        other: &Self,
+    ) -> bool {
         let a: BTreeSet<_> = self.splits.iter().collect();
         let b: BTreeSet<_> = other.splits.iter().collect();
         a == b
@@ -104,7 +114,10 @@ pub struct SplitKey {
     pub offset: NonZeroUsize,
 }
 impl SplitKey {
-    pub fn new(index: impl Indexed, offset: NonZeroUsize) -> Self {
+    pub fn new(
+        index: impl Indexed,
+        offset: NonZeroUsize,
+    ) -> Self {
         Self {
             index: *index.index(),
             offset,
@@ -137,13 +150,19 @@ impl SplitSegment {
             Self::Child(c) => Some(c),
         }
     }
-    pub fn map_pattern(self, f: impl FnOnce(Pattern) -> Pattern) -> Self {
+    pub fn map_pattern(
+        self,
+        f: impl FnOnce(Pattern) -> Pattern,
+    ) -> Self {
         match self {
             Self::Pattern(p) => Self::Pattern(f(p)),
             _ => self,
         }
     }
-    pub fn map_child(self, f: impl FnOnce(Child) -> Child) -> Self {
+    pub fn map_child(
+        self,
+        f: impl FnOnce(Child) -> Child,
+    ) -> Self {
         match self {
             Self::Child(c) => Self::Child(f(c)),
             _ => self,

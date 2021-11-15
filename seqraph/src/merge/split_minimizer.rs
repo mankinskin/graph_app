@@ -17,7 +17,11 @@ impl<'g, T: Tokenize> SplitMinimizer<'g, T> {
         Self { graph }
     }
     /// minimize a pattern which has been merged at pos
-    pub fn resolve_common_parent(&mut self, left: Child, right: Child) -> Result<Child, Pattern> {
+    pub fn resolve_common_parent(
+        &mut self,
+        left: Child,
+        right: Child,
+    ) -> Result<Child, Pattern> {
         //println!("pos: {}, len: {}", pos, pattern.len());
         let p = vec![left, right];
         // find pattern over merge position
@@ -53,10 +57,16 @@ impl<'g, T: Tokenize> SplitMinimizer<'g, T> {
     /// minimal means:
     /// - no two indicies are adjacient more than once
     /// - no two patterns of the same index share an index border
-    pub fn merge_left_splits(&mut self, splits: Vec<(Pattern, SplitSegment)>) -> SplitSegment {
+    pub fn merge_left_splits(
+        &mut self,
+        splits: Vec<(Pattern, SplitSegment)>,
+    ) -> SplitSegment {
         MergeLeft::merge_splits(self.graph, splits)
     }
-    pub fn merge_right_splits(&mut self, splits: Vec<(Pattern, SplitSegment)>) -> SplitSegment {
+    pub fn merge_right_splits(
+        &mut self,
+        splits: Vec<(Pattern, SplitSegment)>,
+    ) -> SplitSegment {
         MergeRight::merge_splits(self.graph, splits)
     }
     pub fn merge_left_optional_splits(

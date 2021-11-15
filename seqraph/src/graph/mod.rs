@@ -24,7 +24,10 @@ impl<'t, 'a, T> Hypergraph<T>
 where
     T: Tokenize + 't,
 {
-    pub fn index_width(&self, index: &impl Indexed) -> TokenPosition {
+    pub fn index_width(
+        &self,
+        index: &impl Indexed,
+    ) -> TokenPosition {
         self.expect_vertex_data(index.index()).width
     }
     pub fn vertex_count(&self) -> usize {
@@ -74,7 +77,10 @@ where
         });
         ChildStrings::from_nodes(nodes)
     }
-    pub fn pattern_child_strings(&self, pattern: impl IntoPattern<Item = Child>) -> ChildStrings {
+    pub fn pattern_child_strings(
+        &self,
+        pattern: impl IntoPattern<Item = Child>,
+    ) -> ChildStrings {
         let nodes = pattern.into_iter().map(|child| {
             (
                 self.index_string(child.index),
@@ -101,10 +107,17 @@ where
     ) -> String {
         self.pattern_string_with_separator(pattern, "_")
     }
-    pub fn pattern_string(&'a self, pattern: impl IntoIterator<Item = impl Indexed>) -> String {
+    pub fn pattern_string(
+        &'a self,
+        pattern: impl IntoIterator<Item = impl Indexed>,
+    ) -> String {
         self.pattern_string_with_separator(pattern, "")
     }
-    pub fn key_data_string(&self, key: &VertexKey<T>, data: &VertexData) -> String {
+    pub fn key_data_string(
+        &self,
+        key: &VertexKey<T>,
+        data: &VertexData,
+    ) -> String {
         self.key_data_string_impl(key, data, |t| t.to_string())
     }
     pub fn key_data_string_impl(
@@ -118,11 +131,17 @@ where
             VertexKey::Pattern(_) => self.pattern_string(data.expect_any_pattern()),
         }
     }
-    pub fn index_string(&self, index: impl Indexed) -> String {
+    pub fn index_string(
+        &self,
+        index: impl Indexed,
+    ) -> String {
         let (key, data) = self.expect_vertex(index);
         self.key_data_string(key, data)
     }
-    pub fn key_string(&self, key: &VertexKey<T>) -> String {
+    pub fn key_string(
+        &self,
+        key: &VertexKey<T>,
+    ) -> String {
         let data = self.expect_vertex_data_by_key(key);
         self.key_data_string(key, data)
     }

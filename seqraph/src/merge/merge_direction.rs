@@ -13,7 +13,10 @@ pub trait MergeDirection {
         inner: Pattern,
         outer_context: Pattern,
     ) -> Pattern;
-    fn merge_order(inner: Child, head: Child) -> (Child, Child);
+    fn merge_order(
+        inner: Child,
+        head: Child,
+    ) -> (Child, Child);
     fn minimize_split<T: Tokenize>(
         hypergraph: &mut Hypergraph<T>,
         context: SplitSegment,
@@ -98,7 +101,10 @@ impl MergeDirection for MergeLeft {
     fn split_inner_head(context: SplitSegment) -> Option<(Child, Pattern)> {
         MergeRight::split_context_head(context)
     }
-    fn merge_order(inner: Child, head: Child) -> (Child, Child) {
+    fn merge_order(
+        inner: Child,
+        head: Child,
+    ) -> (Child, Child) {
         (head, inner)
     }
     fn concat_inner_and_context(
@@ -125,7 +131,10 @@ impl MergeDirection for MergeRight {
     fn split_inner_head(context: SplitSegment) -> Option<(Child, Pattern)> {
         MergeLeft::split_context_head(context)
     }
-    fn merge_order(inner: Child, head: Child) -> (Child, Child) {
+    fn merge_order(
+        inner: Child,
+        head: Child,
+    ) -> (Child, Child) {
         (inner, head)
     }
     fn concat_inner_and_context(

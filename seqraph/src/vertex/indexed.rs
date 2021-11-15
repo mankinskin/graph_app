@@ -2,7 +2,10 @@ use super::*;
 
 pub trait Indexed {
     fn index(&self) -> &VertexIndex;
-    fn vertex<'g, T: Tokenize>(&'g self, graph: &'g Hypergraph<T>) -> &'g VertexData {
+    fn vertex<'g, T: Tokenize>(
+        &'g self,
+        graph: &'g Hypergraph<T>,
+    ) -> &'g VertexData {
         graph.expect_vertex_data(self.index())
     }
 }

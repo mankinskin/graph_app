@@ -53,7 +53,10 @@ impl<T: Tokenize + Send + std::fmt::Display> Hypergraph<T> {
     pub fn left_reader(&mut self) -> Reader<'_, T, MatchLeft> {
         Reader::new(self)
     }
-    pub fn read_sequence(&mut self, sequence: impl IntoIterator<Item = T>) -> Child {
+    pub fn read_sequence(
+        &mut self,
+        sequence: impl IntoIterator<Item = T>,
+    ) -> Child {
         self.right_reader().read_sequence(sequence)
     }
 }

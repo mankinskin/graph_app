@@ -35,7 +35,10 @@ impl FoundRange {
             Self::Infix(pre, post) => Self::Infix(post, pre),
         }
     }
-    pub fn embed_in_super(self, other: Self) -> Self {
+    pub fn embed_in_super(
+        self,
+        other: Self,
+    ) -> Self {
         match (self, other) {
             (Self::Complete, outer) => outer,
             (inner, Self::Complete) => inner,
@@ -83,7 +86,10 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
     pub(crate) fn matcher(&self) -> Matcher<'g, T, D> {
         Matcher::new(self.graph)
     }
-    pub fn find_sequence(&self, pattern: impl IntoIterator<Item = impl Into<T>>) -> SearchResult {
+    pub fn find_sequence(
+        &self,
+        pattern: impl IntoIterator<Item = impl Into<T>>,
+    ) -> SearchResult {
         let iter = tokenizing_iter(pattern.into_iter());
         let pattern = self.to_token_children(iter)?;
         self.find_pattern(pattern)
@@ -136,12 +142,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
         {
             // direct matching parent
             self.matcher()
-                .compare_child_pattern_at_offset(
-                    child_patterns,
-                    context,
-                    pattern_id,
-                    sub_index,
-                )
+                .compare_child_pattern_at_offset(child_patterns, context, pattern_id, sub_index)
                 .map(|parent_match| SearchFound {
                     index: Child::new(index, parent.width),
                     pattern_id,

@@ -8,7 +8,6 @@ pub use searcher::*;
 //mod async_searcher;
 //pub use async_searcher::*;
 
-
 impl<'t, 'a, T> Hypergraph<T>
 where
     T: Tokenize + 't,
@@ -26,7 +25,10 @@ where
     ) -> SearchResult {
         self.right_searcher().find_pattern(pattern)
     }
-    pub fn find_sequence(&self, pattern: impl IntoIterator<Item = impl Into<T>>) -> SearchResult {
+    pub fn find_sequence(
+        &self,
+        pattern: impl IntoIterator<Item = impl Into<T>>,
+    ) -> SearchResult {
         self.right_searcher().find_sequence(pattern)
     }
 }
