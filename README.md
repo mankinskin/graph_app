@@ -1,3 +1,3 @@
-# Tokens and Text
+# Hypergraph Context Model
 
-A text is a sequence of tokens. A token can be any piece of data implementing Tokenize (link needed). A text is indexed by reading (link needed).
+![](<.gitbook/assets/133164477-8d7237d0-2f24-4b6e-9ddb-ceb7a70da43e (1).png>)
