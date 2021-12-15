@@ -16,6 +16,12 @@ impl<'g, T: Tokenize> SplitMinimizer<'g, T> {
     pub fn new(graph: &'g mut Hypergraph<T>) -> Self {
         Self { graph }
     }
+    //pub fn try_merge_indices(
+    //    left: Child,
+    //    right: Child,
+    //) -> Result<Child, Pattern> {
+
+    //}
     /// minimize a pattern which has been merged at pos
     pub fn resolve_common_parent(
         &mut self,

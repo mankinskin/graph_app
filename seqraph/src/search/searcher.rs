@@ -117,18 +117,18 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                     // single index is not a pattern
                     Err(NoMatch::SingleIndex)
                 } else {
-                    self.find_largest_matching_parent(head, tail.to_vec())
+                    self.find_largest_matching_ancestor(head, tail.to_vec())
                 }
             })
     }
-    pub fn find_largest_matching_parent(
+    pub fn find_largest_matching_ancestor(
         &self,
         index: impl Indexed,
         context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
     ) -> SearchResult {
-        self.find_largest_matching_parent_below_width(index, context, None)
+        self.find_largest_matching_ancestor_below_width(index, context, None)
     }
-    pub fn find_largest_matching_parent_below_width(
+    pub fn find_largest_matching_ancestor_below_width(
         &self,
         index: impl Indexed,
         context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
@@ -137,8 +137,10 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
         let vertex_index = *index.index();
         let vertex = self.expect_vertex_data(index);
         let parents = vertex.get_parents_below_width(width_ceiling);
+
+        // search parents for matching parents
         if let Some((&index, child_patterns, parent, pattern_id, sub_index)) =
-            self.find_direct_matching_parent(parents.clone(), context.as_pattern_view())
+            self.find_matching_parent(parents.clone(), context.as_pattern_view())
         {
             // direct matching parent
             self.matcher()
@@ -151,13 +153,13 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                 })
         } else {
             // no direct matching parent
-            // compare all parent's children
-            self.find_indirect_matching_parent(parents, context)
+            // search possible parents for matching ancestor
+            self.find_next_matching_ancestor(parents, context)
                 .ok_or(NoMatch::NoMatchingParent(vertex_index))
         }
         .and_then(|search_found| {
             if let Some(rem) = &search_found.parent_match.remainder {
-                self.find_largest_matching_parent(search_found.index, rem)
+                self.find_largest_matching_ancestor(search_found.index, rem)
                     .map(|super_found| SearchFound {
                         parent_match: search_found
                             .parent_match
@@ -172,7 +174,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
         })
     }
     /// find parent with a child pattern matching context
-    pub fn find_direct_matching_parent(
+    pub fn find_matching_parent(
         &'g self,
         mut parents: impl Iterator<Item = (&'g VertexIndex, &'g Parent)>,
         context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
@@ -205,8 +207,8 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                 })
         })
     }
-    /// find parent with a child pattern matching context
-    pub fn find_indirect_matching_parent(
+    /// find next ancestor with a child pattern matching context
+    pub fn find_next_matching_ancestor(
         &'g self,
         mut parents: impl Iterator<Item = (&'g VertexIndex, &'g Parent)>,
         context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
@@ -216,8 +218,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
         parents
             .find_map(|(index, parent)| {
                 first.get_or_insert((index, parent));
-                self.matcher()
-                    .match_indirect_parent(*index, parent, context)
+                self.matcher().match_parent(*index, parent, context)
             })
             .or_else(|| {
                 first.and_then(|(index, parent)| {
@@ -248,5 +249,50 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                         .ok()
                 })
             })
+    }
+    pub fn find_unequal_matching_ancestor(
+        &self,
+        sub: impl Indexed,
+        context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        sup: Child,
+    ) -> ParentMatchResult {
+        let sub_index = *sub.index();
+        let vertex = self.expect_vertex_data(sub);
+        self.matcher().match_sub_vertex_and_context_with_index(vertex, context.as_pattern_view(), sup)
+            .or_else(|_| {
+                self.find_largest_matching_ancestor_below_width(vertex, context, Some(sup.width))
+                    .and_then(
+                        |SearchFound {
+                             index: parent_index,
+                             parent_match:
+                                 ParentMatch {
+                                     parent_range,
+                                     remainder,
+                                 },
+                             ..
+                         }| {
+                            D::found_at_start(parent_range)
+                                .then(|| remainder.unwrap_or_default())
+                                .ok_or(NoMatch::NoMatchingParent(sub_index))
+                                .and_then(|new_context| {
+                                    self.find_matching_ancestor(parent_index, new_context, sup)
+                                })
+                        },
+                    )
+            })
+    }
+    #[allow(unused)]
+    fn find_matching_ancestor(
+        &self,
+        sub: impl Indexed,
+        context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        sup: Child,
+    ) -> ParentMatchResult {
+        // sup is no direct parent, search upwards
+        //println!("matching available parents");
+        // search sup in parents
+        Matcher::<T, D>::match_exactly(sub.index(), context.as_pattern_view(), sup)
+            .map(Ok)
+            .unwrap_or_else(|| self.find_unequal_matching_ancestor(sub, context, sup))
     }
 }
