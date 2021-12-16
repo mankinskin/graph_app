@@ -86,6 +86,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
     pub(crate) fn matcher(&self) -> Matcher<'g, T, D> {
         Matcher::new(self.graph)
     }
+    /// search by sequence of tokens
     pub fn find_sequence(
         &self,
         pattern: impl IntoIterator<Item = impl Into<T>>,
@@ -94,22 +95,12 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
         let pattern = self.to_token_children(iter)?;
         self.find_pattern(pattern)
     }
-    #[allow(unused)]
-    pub(crate) fn find_pattern_iter(
-        &self,
-        pattern: impl IntoIterator<Item = Result<impl Into<Child> + Tokenize, NoMatch>>,
-    ) -> SearchResult {
-        let pattern: Pattern = pattern
-            .into_iter()
-            .map(|r| r.map(Into::into))
-            .collect::<Result<Pattern, NoMatch>>()?;
-        self.find_pattern(pattern)
-    }
+    /// search by sequence of indicies
     pub(crate) fn find_pattern(
         &self,
-        pattern: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        pattern: impl IntoPattern<Item = impl AsChild>,
     ) -> SearchResult {
-        let pattern: Pattern = pattern.into_iter().map(Into::into).collect();
+        let pattern: Pattern = pattern.into_iter().map(ToChild::to_child).collect();
         MatchRight::split_head_tail(&pattern)
             .ok_or(NoMatch::EmptyPatterns)
             .and_then(|(head, tail)| {
@@ -121,17 +112,28 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                 }
             })
     }
+    #[allow(unused)]
+    pub(crate) fn find_pattern_iter(
+        &self,
+        pattern: impl IntoIterator<Item = Result<impl ToChild + Tokenize, NoMatch>>,
+    ) -> SearchResult {
+        let pattern: Pattern = pattern
+            .into_iter()
+            .map(|r| r.map(ToChild::to_child))
+            .collect::<Result<Pattern, NoMatch>>()?;
+        self.find_pattern(pattern)
+    }
     pub fn find_largest_matching_ancestor(
         &self,
         index: impl Indexed,
-        context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        context: impl IntoPattern<Item = impl AsChild>,
     ) -> SearchResult {
         self.find_largest_matching_ancestor_below_width(index, context, None)
     }
     pub fn find_largest_matching_ancestor_below_width(
         &self,
         index: impl Indexed,
-        context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        context: impl IntoPattern<Item = impl AsChild>,
         width_ceiling: Option<TokenPosition>,
     ) -> SearchResult {
         let vertex_index = *index.index();
@@ -177,7 +179,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
     pub fn find_matching_parent(
         &'g self,
         mut parents: impl Iterator<Item = (&'g VertexIndex, &'g Parent)>,
-        context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        context: impl IntoPattern<Item = impl AsChild>,
     ) -> Option<(
         &'g VertexIndex,
         &'g ChildPatterns,
@@ -211,7 +213,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
     pub fn find_next_matching_ancestor(
         &'g self,
         mut parents: impl Iterator<Item = (&'g VertexIndex, &'g Parent)>,
-        context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        context: impl IntoPattern<Item = impl AsChild>,
     ) -> Option<SearchFound> {
         let context = context.as_pattern_view();
         let mut first = None;
@@ -253,7 +255,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
     pub fn find_unequal_matching_ancestor(
         &self,
         sub: impl Indexed,
-        context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        context: impl IntoPattern<Item = impl AsChild>,
         sup: Child,
     ) -> ParentMatchResult {
         let sub_index = *sub.index();
@@ -285,7 +287,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
     fn find_matching_ancestor(
         &self,
         sub: impl Indexed,
-        context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        context: impl IntoPattern<Item = impl AsChild>,
         sup: Child,
     ) -> ParentMatchResult {
         // sup is no direct parent, search upwards

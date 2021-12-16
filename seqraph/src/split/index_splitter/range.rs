@@ -53,7 +53,7 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
     pub(crate) fn resolve_perfect_split_range(
         &mut self,
         pat: Pattern,
-        parent: impl Indexed,
+        parent: impl Vertexed,
         pattern_index: PatternId,
         range: impl PatternRangeIndex + Clone,
     ) -> SplitSegment {
@@ -64,7 +64,7 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
         } else {
             let c = self.graph.insert_pattern(pat);
             self.graph
-                .replace_in_pattern(parent, pattern_index, range, [c]);
+                .replace_in_pattern(parent, pattern_index, range, vec![c]);
             SplitSegment::Child(c)
         }
     }

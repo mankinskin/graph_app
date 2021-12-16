@@ -36,7 +36,7 @@ where
     pub fn left_matcher(&'a self) -> Matcher<'a, T, MatchLeft> {
         Matcher::new(self)
     }
-    pub fn compare_pattern_postfix<C: Into<Child> + Tokenize>(
+    pub fn compare_pattern_postfix<C: AsChild>(
         &self,
         a: impl IntoPattern<Item = C>,
         b: impl IntoPattern<Item = C>,
@@ -45,8 +45,8 @@ where
     }
     pub fn compare_pattern_prefix(
         &self,
-        a: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
-        b: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        a: impl IntoPattern<Item = impl AsChild>,
+        b: impl IntoPattern<Item = impl AsChild>,
     ) -> PatternMatchResult {
         self.right_matcher().compare(a, b)
     }

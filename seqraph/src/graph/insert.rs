@@ -64,12 +64,12 @@ where
     fn add_parents_to_pattern_nodes(
         &mut self,
         pattern: Vec<VertexIndex>,
-        parent: impl ToChild,
+        parent: impl AsChild,
         pattern_id: PatternId,
     ) {
         for (i, child_index) in pattern.into_iter().enumerate() {
             let node = self.expect_vertex_data_mut(child_index);
-            node.add_parent(parent.to_child(), pattern_id, i);
+            node.add_parent(parent.as_child(), pattern_id, i);
         }
     }
     /// add pattern to existing node
@@ -143,7 +143,7 @@ where
         parent: impl Indexed,
         pat: PatternId,
         mut range: impl PatternRangeIndex + Clone,
-        replace: impl IntoIterator<Item = Child> + Clone,
+        replace: impl IntoPattern<Item = impl AsChild> + Clone,
     ) {
         let mut peek_range = range.clone().peekable();
         if peek_range.peek().is_none() {
@@ -166,22 +166,22 @@ where
     }
     pub(crate) fn add_pattern_parent(
         &mut self,
-        parent: impl ToChild,
-        pattern: impl IntoIterator<Item = impl ToChild>,
+        parent: impl AsChild,
+        pattern: impl IntoPattern<Item = impl AsChild>,
         pattern_id: PatternId,
         start: usize,
     ) {
         pattern.into_iter().enumerate().for_each(|(pos, c)| {
             let pos = start + pos;
             let c = self.expect_vertex_data_mut(c);
-            c.add_parent(parent.to_child(), pattern_id, pos);
+            c.add_parent(parent.as_child(), pattern_id, pos);
         });
     }
     pub(crate) fn append_to_pattern(
         &mut self,
-        parent: impl ToChild,
+        parent: impl AsChild,
         pattern_id: PatternId,
-        new: impl IntoIterator<Item = impl ToChild>,
+        new: impl IntoIterator<Item = impl AsChild>,
     ) -> Child {
         let new: Vec<_> = new.into_iter().map(|c| c.to_child()).collect();
         let (offset, width) = {

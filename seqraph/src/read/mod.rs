@@ -27,8 +27,8 @@ impl Wide for NewTokenIndex {
         1
     }
 }
-impl Borrow<VertexIndex> for NewTokenIndex {
-    fn borrow(&self) -> &VertexIndex {
+impl Indexed for NewTokenIndex {
+    fn index(&self) -> &VertexIndex {
         match self {
             Self::New(i) => i,
             Self::Known(i) => i,

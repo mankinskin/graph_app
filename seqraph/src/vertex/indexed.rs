@@ -1,7 +1,12 @@
 use super::*;
 
-pub trait Indexed {
-    fn index(&self) -> &VertexIndex;
+pub trait Vertexed: Indexed {
+    fn vertex<'g, T: Tokenize>(
+        &'g self,
+        graph: &'g Hypergraph<T>,
+    ) -> &'g VertexData;
+}
+impl Vertexed for VertexIndex {
     fn vertex<'g, T: Tokenize>(
         &'g self,
         graph: &'g Hypergraph<T>,
@@ -9,18 +14,54 @@ pub trait Indexed {
         graph.expect_vertex_data(self.index())
     }
 }
-impl<I: Borrow<VertexIndex>> Indexed for I {
+impl<V: Vertexed> Vertexed for &'_ V {
+    fn vertex<'g, T: Tokenize>(
+        &'g self,
+        graph: &'g Hypergraph<T>,
+    ) -> &'g VertexData {
+        (**self).vertex(graph)
+    }
+}
+impl<V: Vertexed> Vertexed for &'_ mut V {
+    fn vertex<'g, T: Tokenize>(
+        &'g self,
+        graph: &'g Hypergraph<T>,
+    ) -> &'g VertexData {
+        (**self).vertex(graph)
+    }
+}
+pub trait Indexed {
+    fn index(&self) -> &VertexIndex;
+}
+impl<I: Indexed> Indexed for &'_ I {
     fn index(&self) -> &VertexIndex {
-        (*self).borrow()
+        (**self).index()
+    }
+}
+impl<I: Indexed> Indexed for &'_ mut I {
+    fn index(&self) -> &VertexIndex {
+        (**self).index()
+    }
+}
+impl Indexed for VertexIndex {
+    fn index(&self) -> &VertexIndex {
+        &self
     }
 }
 
-pub trait ToChild: Indexed + Wide {
-    fn to_child(&self) -> Child {
+pub trait AsChild: Indexed + Wide {
+    fn as_child(&self) -> Child {
         Child::new(self.index(), self.width())
     }
 }
-impl<T: Indexed + Wide> ToChild for T {}
+impl<T: Indexed + Wide> AsChild for T {}
+
+pub trait ToChild: AsChild + Sized {
+    fn to_child(self) -> Child {
+        self.as_child()
+    }
+}
+impl<T: AsChild> ToChild for T {}
 
 pub trait MaybeIndexed<T: Tokenize> {
     type Inner: Indexed;

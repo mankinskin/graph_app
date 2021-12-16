@@ -22,6 +22,7 @@ impl<'g, T: Tokenize> SplitMinimizer<'g, T> {
     //) -> Result<Child, Pattern> {
 
     //}
+
     /// minimize a pattern which has been merged at pos
     pub fn resolve_common_parent(
         &mut self,
@@ -50,7 +51,7 @@ impl<'g, T: Tokenize> SplitMinimizer<'g, T> {
                                 found,
                                 pattern_id,
                                 sub_index..sub_index + 2,
-                                [partial],
+                                vec![partial],
                             );
                             partial
                         }

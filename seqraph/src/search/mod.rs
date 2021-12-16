@@ -21,7 +21,7 @@ where
     }
     pub(crate) fn find_pattern(
         &self,
-        pattern: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        pattern: impl IntoPattern<Item = impl AsChild>,
     ) -> SearchResult {
         self.right_searcher().find_pattern(pattern)
     }

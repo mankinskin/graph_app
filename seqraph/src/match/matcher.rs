@@ -86,8 +86,8 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
     // - search for larger in parents of smaller
     // - otherwise: try to find parent with best matching children
     pub fn compare<
-        A: IntoPattern<Item = impl Into<Child> + Tokenize>,
-        B: IntoPattern<Item = impl Into<Child> + Tokenize>,
+        A: IntoPattern<Item = impl AsChild>,
+        B: IntoPattern<Item = impl AsChild>,
     >(
         &self,
         a: A,
@@ -114,7 +114,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         }
     }
     fn decide_sub_and_sup_indicies<
-        A: IntoPattern<Item = impl Into<Child> + Tokenize, Token = impl Into<Child> + Tokenize>,
+        A: IntoPattern<Item = impl AsChild, Token = impl AsChild>,
     >(
         a: Child,
         a_context: A,
@@ -147,9 +147,9 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         self.match_unequal_indices_in_context(a, &[] as &[Child], b, &[])
     }
     fn match_unequal_indices_with_remainders<
-        C: Into<Child> + Tokenize,
-        A: IntoPattern<Item = impl Into<Child> + Tokenize, Token = C>,
-        B: IntoPattern<Item = impl Into<Child> + Tokenize, Token = C>,
+        C: AsChild + Clone,
+        A: IntoPattern<Item = impl AsChild, Token = C>,
+        B: IntoPattern<Item = impl AsChild, Token = C>,
     >(
         &self,
         a: Child,
@@ -163,8 +163,8 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         self.match_unequal_indices_in_context(a, a_context, b, b_context)
     }
     fn match_unequal_indices_in_context<
-        C: Into<Child> + Tokenize,
-        A: IntoPattern<Item = impl Into<Child> + Tokenize, Token = C>,
+        C: AsChild,
+        A: IntoPattern<Item = impl AsChild, Token = C>,
     >(
         &self,
         a: Child,
@@ -205,7 +205,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
     }
     pub fn match_exactly(
         sub: impl Indexed,
-        context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        context: impl IntoPattern<Item = impl AsChild>,
         sup: Child,
     ) -> Option<ParentMatch> {
         (*sub.index() == *sup.index()).then(|| ParentMatch {
@@ -218,7 +218,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
     fn match_sub_and_context_with_index(
         &self,
         sub: impl Indexed,
-        context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        context: impl IntoPattern<Item = impl AsChild + Clone>,
         sup: Child,
     ) -> ParentMatchResult {
         Self::match_exactly(sub.index(), context.as_pattern_view(), sup)
@@ -234,7 +234,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
     pub fn match_sub_vertex_and_context_with_index(
         &self,
         vertex: &VertexData,
-        sub_context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        sub_context: impl IntoPattern<Item = impl AsChild + Clone>,
         sup: Child,
     ) -> ParentMatchResult {
         if vertex.get_parents().is_empty() {
@@ -257,7 +257,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         &'g self,
         index: VertexIndex,
         parent: &Parent,
-        context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        context: impl IntoPattern<Item = impl AsChild + Clone>,
     ) -> Option<SearchFound> {
         self.match_context_with_parent_children(context.as_pattern_view(), index, parent)
             .map(|(parent_match, pattern_id, sub_index)| SearchFound {
@@ -271,7 +271,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
     /// match context against child context in parent.
     pub fn match_context_with_parent_children(
         &'g self,
-        context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        context: impl IntoPattern<Item = impl AsChild>,
         parent_index: impl Indexed,
         parent: &Parent,
     ) -> Result<(ParentMatch, PatternId, usize), NoMatch> {
@@ -299,7 +299,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
     pub(crate) fn get_best_child_pattern(
         child_patterns: &'_ ChildPatterns,
         candidates: impl Iterator<Item = impl Borrow<(usize, PatternId)>>,
-        sub_context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        sub_context: impl IntoPattern<Item = impl AsChild>,
     ) -> Option<(PatternId, usize)> {
         candidates
             .map(|c| *c.borrow())
@@ -314,13 +314,13 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
     }
     pub(crate) fn compare_next_index_in_child_pattern(
         child_patterns: &'_ ChildPatterns,
-        context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        context: impl IntoPattern<Item = impl AsChild>,
         pattern_index: &PatternId,
         sub_index: usize,
     ) -> bool {
         D::pattern_head(context.as_pattern_view())
             .and_then(|next_sub| {
-                let next_sub: Child = (*next_sub).into();
+                let next_sub: Child = next_sub.to_child();
                 D::index_next(sub_index).and_then(|i| {
                     child_patterns
                         .get(pattern_index)
@@ -333,7 +333,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
     pub fn compare_child_pattern_at_offset(
         &'g self,
         child_patterns: &'g ChildPatterns,
-        context: impl IntoPattern<Item = impl Into<Child> + Tokenize>,
+        context: impl IntoPattern<Item = impl AsChild>,
         pattern_index: PatternId,
         sub_index: usize,
     ) -> ParentMatchResult {

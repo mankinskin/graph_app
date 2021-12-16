@@ -40,7 +40,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
     }
     pub(crate) async fn find_pattern_iter(
         &self,
-        pattern: impl IntoIterator<Item=Result<impl Into<Child>, NoMatch>>,
+        pattern: impl IntoIterator<Item=Result<impl AsChild, NoMatch>>,
     ) -> SearchResult {
         let pattern: Pattern = pattern.into_iter().map(|r| r.map(Into::into)).collect::<Result<Pattern, NoMatch>>()?;
         MatchRight::split_head_tail(&pattern)
@@ -58,9 +58,9 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
     }
     pub(crate) async fn find_pattern(
         &self,
-        pattern: impl IntoPattern<Item=impl Into<Child>>,
+        pattern: impl IntoPattern<Item=impl AsChild>,
     ) -> SearchResult {
-        let pattern: Pattern = pattern.into_iter().map(Into::into).collect();
+        let pattern: Pattern = pattern.into_pattern();
         MatchRight::split_head_tail(&pattern)
             .ok_or(NoMatch::EmptyPatterns)
             .and_then(|(head, tail)| {

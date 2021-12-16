@@ -5,7 +5,6 @@ use crate::{
 };
 use either::Either;
 use std::{
-    borrow::Borrow,
     collections::HashMap,
     fmt::Debug,
     slice::SliceIndex,
@@ -139,19 +138,18 @@ impl VertexData {
     pub fn get_children(&self) -> &ChildPatterns {
         &self.children
     }
-    pub fn add_pattern<P: IntoIterator<Item = impl Into<Child>>>(
+    pub fn add_pattern<P: IntoPattern<Item = impl AsChild>>(
         &mut self,
         pat: P,
     ) -> PatternId {
         // TODO: detect unmatching pattern
         let id = Self::next_child_pattern_id();
-        let pat = pat.into_iter().map(Into::into).collect();
-        self.children.insert(id, pat);
+        self.children.insert(id, pat.into_pattern());
         id
     }
     pub fn add_parent(
         &mut self,
-        parent: impl ToChild,
+        parent: impl AsChild,
         pattern: usize,
         index: PatternId,
     ) {
@@ -276,22 +274,19 @@ impl VertexData {
         &mut self,
         pat: PatternId,
         range: impl PatternRangeIndex + Clone,
-        replace: impl IntoIterator<Item = Child>,
+        replace: impl IntoPattern<Item = impl AsChild>,
     ) -> Pattern {
         let pattern = self.expect_child_pattern_mut(&pat);
         let old = pattern
             .get(range.clone())
             .expect("Replace range out of range of pattern!")
             .to_vec();
-        *pattern = replace_in_pattern(pattern.iter().cloned(), range, replace);
+        *pattern = replace_in_pattern(pattern.as_pattern_view(), range, replace);
         old
     }
 }
 
-impl Indexed for VertexData {
-    fn index(&self) -> &VertexIndex {
-        &self.index
-    }
+impl Vertexed for VertexData {
     fn vertex<'g, T: Tokenize>(
         &'g self,
         _graph: &'g Hypergraph<T>,
@@ -299,13 +294,8 @@ impl Indexed for VertexData {
         self
     }
 }
-//impl Borrow<VertexIndex> for VertexData {
-//    fn borrow(&self) -> &VertexIndex {
-//        &self.index
-//    }
-//}
-impl Borrow<VertexIndex> for &VertexData {
-    fn borrow(&self) -> &VertexIndex {
+impl Indexed for VertexData {
+    fn index(&self) -> &VertexIndex {
         &self.index
     }
 }

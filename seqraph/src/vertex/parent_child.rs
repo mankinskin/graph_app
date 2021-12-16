@@ -1,6 +1,5 @@
 use super::*;
 use std::{
-    borrow::Borrow,
     collections::{
         HashMap,
         HashSet,
@@ -175,18 +174,8 @@ impl PartialEq<VertexIndex> for &'_ mut Child {
         self.index == *other
     }
 }
-impl Borrow<VertexIndex> for Child {
-    fn borrow(&self) -> &VertexIndex {
-        &self.index
-    }
-}
-impl Borrow<VertexIndex> for &'_ Child {
-    fn borrow(&self) -> &VertexIndex {
-        &self.index
-    }
-}
-impl Borrow<VertexIndex> for &'_ mut Child {
-    fn borrow(&self) -> &VertexIndex {
+impl Indexed for Child {
+    fn index(&self) -> &VertexIndex {
         &self.index
     }
 }
