@@ -4,16 +4,12 @@ pub trait Vertexed: Indexed {
     fn vertex<'g, T: Tokenize>(
         &'g self,
         graph: &'g Hypergraph<T>,
-    ) -> &'g VertexData;
-}
-impl Vertexed for VertexIndex {
-    fn vertex<'g, T: Tokenize>(
-        &'g self,
-        graph: &'g Hypergraph<T>,
     ) -> &'g VertexData {
         graph.expect_vertex_data(self.index())
     }
 }
+impl Vertexed for VertexIndex {}
+impl Vertexed for Child {}
 impl<V: Vertexed> Vertexed for &'_ V {
     fn vertex<'g, T: Tokenize>(
         &'g self,
