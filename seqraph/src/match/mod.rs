@@ -26,6 +26,35 @@ pub enum NoMatch {
     UnknownIndex,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct PatternMatch(pub Option<Pattern>, pub Option<Pattern>);
+
+impl PatternMatch {
+    pub fn left(&self) -> &Option<Pattern> {
+        &self.0
+    }
+    pub fn right(&self) -> &Option<Pattern> {
+        &self.1
+    }
+    pub fn flip_remainder(self) -> Self {
+        Self(self.1, self.0)
+    }
+    pub fn is_matching(&self) -> bool {
+        self.left().is_none() && self.right().is_none()
+    }
+}
+impl From<Either<Pattern, Pattern>> for PatternMatch {
+    fn from(e: Either<Pattern, Pattern>) -> Self {
+        match e {
+            Either::Left(p) => Self(Some(p), None),
+            Either::Right(p) => Self(None, Some(p)),
+        }
+    }
+}
+
+pub type PatternMatchResult = Result<PatternMatch, NoMatch>;
+
+
 impl<'t, 'a, T> Hypergraph<T>
 where
     T: Tokenize + 't,

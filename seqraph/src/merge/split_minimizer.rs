@@ -16,15 +16,8 @@ impl<'g, T: Tokenize> SplitMinimizer<'g, T> {
     pub fn new(graph: &'g mut Hypergraph<T>) -> Self {
         Self { graph }
     }
-    //pub fn try_merge_indices(
-    //    left: Child,
-    //    right: Child,
-    //) -> Result<Child, Pattern> {
-
-    //}
-
     /// minimize a pattern which has been merged at pos
-    pub fn resolve_common_parent(
+    pub fn try_merge_indices(
         &mut self,
         left: Child,
         right: Child,
@@ -41,28 +34,25 @@ impl<'g, T: Tokenize> SplitMinimizer<'g, T> {
                      sub_index,
                      parent_match,
                  }| {
-                    match parent_match.parent_range {
-                        FoundRange::Postfix(_)
-                        | FoundRange::Prefix(_)
-                        | FoundRange::Infix(_, _) => {
-                            // create new index and replace in parent
-                            let partial = self.graph.insert_pattern(p.clone());
-                            self.graph.replace_in_pattern(
-                                found,
-                                pattern_id,
-                                sub_index..sub_index + 2,
-                                vec![partial],
-                            );
-                            partial
-                        }
-                        FoundRange::Complete => found,
+                    if parent_match.parent_range.matches_completely() {
+                        found
+                    } else {
+                        // create new index and replace in parent
+                        let new = self.graph.insert_pattern(p.clone());
+                        self.graph.replace_in_pattern(
+                            found,
+                            pattern_id,
+                            sub_index..=sub_index + 1,
+                            new,
+                        );
+                        new
                     }
                 },
             )
             .map_err(|_| p.into_pattern())
     }
     /// minimal means:
-    /// - no two indicies are adjacient more than once
+    /// - no two indices are adjacient more than once
     /// - no two patterns of the same index share an index border
     pub fn merge_left_splits(
         &mut self,
@@ -151,7 +141,7 @@ impl<'g, T: Tokenize> SplitMinimizer<'g, T> {
             0 => {
                 let (l, _ltail) = MergeLeft::split_context_head(left).unwrap();
                 let (r, _rtail) = MergeRight::split_context_head(right).unwrap();
-                match self.resolve_common_parent(l, r).into() {
+                match self.try_merge_indices(l, r).into() {
                     SplitSegment::Child(c) => Err(c),
                     SplitSegment::Pattern(pat) => {
                         acc.insert(pat);
@@ -163,11 +153,11 @@ impl<'g, T: Tokenize> SplitMinimizer<'g, T> {
                 let (l, _) = MergeLeft::split_context_head(left.clone()).unwrap();
                 let (i, _) = MergeRight::split_context_head(infix).unwrap();
                 let (r, _) = MergeRight::split_context_head(right.clone()).unwrap();
-                match self.resolve_common_parent(l, i).into() {
-                    SplitSegment::Child(lc) => match self.resolve_common_parent(lc, r).into() {
+                match self.try_merge_indices(l, i).into() {
+                    SplitSegment::Child(lc) => match self.try_merge_indices(lc, r).into() {
                         SplitSegment::Child(c) => Err(c),
                         SplitSegment::Pattern(_) => {
-                            match self.resolve_common_parent(i, r).into() {
+                            match self.try_merge_indices(i, r).into() {
                                 SplitSegment::Child(rc) => {
                                     acc.insert(lc.into_iter().chain(right).collect());
                                     acc.insert(left.into_iter().chain(rc).collect());
@@ -180,7 +170,7 @@ impl<'g, T: Tokenize> SplitMinimizer<'g, T> {
                         }
                     },
                     SplitSegment::Pattern(_) => {
-                        match self.resolve_common_parent(i, r).into() {
+                        match self.try_merge_indices(i, r).into() {
                             SplitSegment::Child(c) => {
                                 acc.insert(left.into_iter().chain(c).collect());
                             }

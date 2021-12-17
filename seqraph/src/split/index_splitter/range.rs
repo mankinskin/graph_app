@@ -15,153 +15,53 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
         let vertex = self.graph.expect_vertex_data(root).clone();
         // range is a subrange of the index
         let patterns = vertex.get_children().clone();
-        match Self::verify_range_split_indices(vertex.width, range) {
-            DoubleSplitPositions::Double(lower, higher) => {
-                // both positions in position in pattern
-                let (left, inner, right) =
-                    match Self::build_double_split_kinds(&vertex, patterns, lower, higher) {
-                        Ok((pattern_id, pre, left, inner, right, post)) => {
-                            // perfect split
-                            (
-                                self.resolve_perfect_split_range(pre, root, pattern_id, 0..left),
-                                self.resolve_perfect_split_range(
-                                    inner,
-                                    root,
-                                    pattern_id,
-                                    left..right,
-                                ),
-                                self.resolve_perfect_split_range(post, root, pattern_id, right..),
-                            )
-                        }
-                        Err(indices) => {
-                            // unperfect splits
-                            let (left, inner, right) =
-                                self.double_split_from_indices(root, indices);
-                            (left, SplitSegment::Child(inner), right)
-                        }
-                    };
-                RangeSplitResult::Double(left, inner, right)
-            }
+        match SplitIndices::verify_range_split_indices(vertex.width, range) {
+            DoubleSplitPositions::Double(lower, higher) => 
+                self.process_double_splits(root, vertex, patterns, lower, higher),
             DoubleSplitPositions::Single(single) => {
-                // only a single position in pattern
-                let single = Self::find_single_split_indices(patterns, single);
-                self.process_single_splits(&vertex, root, single)
-            }
+                let (_, (left, right)) = self.process_single_splits(vertex, root, patterns, single);
+                RangeSplitResult::Single(left, right)
+            },
             DoubleSplitPositions::None => RangeSplitResult::Full(Child::new(root, vertex.width)),
         }
     }
-    pub(crate) fn resolve_perfect_split_range(
+    fn process_double_splits(
         &mut self,
-        pat: Pattern,
-        parent: impl Vertexed,
-        pattern_index: PatternId,
-        range: impl PatternRangeIndex + Clone,
-    ) -> SplitSegment {
-        if pat.len() <= 1 {
-            SplitSegment::Child(*pat.first().expect("Empty perfect split half!"))
-        } else if parent.vertex(self.graph).children.len() == 1 {
-            SplitSegment::Pattern(pat)
-        } else {
-            let c = self.graph.insert_pattern(pat);
-            self.graph
-                .replace_in_pattern(parent, pattern_index, range, vec![c]);
-            SplitSegment::Child(c)
-        }
-    }
-    // build intermediate split kind for multiple patterns
-    fn build_double_split_kinds(
-        current_node: &VertexData,
-        patterns: impl IntoIterator<Item = (PatternId, impl IntoIterator<Item = Child> + Clone)>,
-        left: NonZeroUsize,
-        right: NonZeroUsize,
-    ) -> DoubleSplitIndices {
-        match patterns
-            .into_iter()
-            .try_fold(vec![], move |mut acc, (pattern_index, pattern)| {
-                let left_split = Self::find_pattern_split_index(pattern.clone(), left)
-                    .expect("left split not in pattern");
-                let right_split = Self::find_pattern_split_index(pattern, right)
-                    .expect("right split not in pattern");
-                let left = Self::separate_pattern_split(pattern_index, left_split);
-                let right = Self::separate_pattern_split(pattern_index, right_split);
-                let pattern = current_node.get_child_pattern(&pattern_index).unwrap();
-                match (left, right) {
-                    (Ok((left, left_ind)), Ok((right, right_ind))) => {
-                        // both unperfect
-                        let left_index = left_ind.replaced_index;
-                        let right_index = right_ind.replaced_index;
-                        let new = match right_index - left_index {
-                            0 => {
-                                let (prefix, postfix) = split_pattern_at_index(pattern, left_index);
-                                (
-                                    pattern_index,
-                                    DoubleSplitIndex::Inner(
-                                        prefix,
-                                        (left.index, left.offset, right.offset),
-                                        postfix,
-                                    ),
-                                )
-                            }
-                            _ => {
-                                let (prefix, infix, postfix) =
-                                    double_split_context(pattern, left_index, right_index);
-                                (
-                                    pattern_index,
-                                    DoubleSplitIndex::Infix(prefix, left, infix, right, postfix),
-                                )
-                            }
-                        };
-                        acc.push(new);
-                        Ok(acc)
-                    }
-                    (Ok((left, left_ind)), Err(right_ind)) => {
-                        // only right perfect
-                        let left_index = left_ind.replaced_index;
-                        let right_index = right_ind.replaced_index;
-                        let (prefix, rem) = split_context(pattern, left_index);
-                        let (infix, postfix) =
-                            split_pattern_at_index(&rem, right_index - left_index);
-                        let new = (
-                            pattern_index,
-                            DoubleSplitIndex::Right(prefix, left, infix, right_index, postfix),
-                        );
-                        acc.push(new);
-                        Ok(acc)
-                    }
-                    (Err(left_ind), Ok((right, right_ind))) => {
-                        // only left perfect
-                        let left_index = left_ind.replaced_index;
-                        let right_index = right_ind.replaced_index;
-                        let (prefix, rem) = split_pattern_at_index(pattern, left_index);
-                        let (infix, postfix) = split_context(&rem, right_index - left_index);
-                        let new = (
-                            pattern_index,
-                            DoubleSplitIndex::Left(prefix, left_index, infix, right, postfix),
-                        );
-                        acc.push(new);
-                        Ok(acc)
-                    }
-                    (Err(left_ind), Err(right_ind)) => {
-                        // both perfect
-                        let left_index = left_ind.replaced_index;
-                        let right_index = right_ind.replaced_index;
-                        let (prefix, rem) = split_pattern_at_index(pattern, left_index);
-                        let (infix, postfix) =
-                            split_pattern_at_index(&rem, right_index - left_index);
-                        Err((
-                            pattern_index,
-                            prefix,
-                            left_index,
-                            infix,
-                            right_index,
-                            postfix,
-                        ))
-                    }
+        root: impl Indexed,
+        vertex: VertexData,
+        patterns: ChildPatterns,
+        lower: NonZeroUsize,
+        higher: NonZeroUsize,
+    ) -> RangeSplitResult {
+        // both positions in position in pattern
+        let (left, inner, right) =
+            match SplitIndices::build_double(&vertex, patterns, lower, higher) {
+                Ok((_pattern_id, pre, _left, inner, _right, post)) => {
+                    // perfect split
+                    //(
+                    //    self.resolve_perfect_split_range(pre, root, pattern_id, 0..left),
+                    //    self.resolve_perfect_split_range(
+                    //        inner,
+                    //        root,
+                    //        pattern_id,
+                    //        left..right,
+                    //    ),
+                    //    self.resolve_perfect_split_range(post, root, pattern_id, right..),
+                    //)
+                    (
+                        self.resolve_perfect_split_segment(pre),
+                        self.resolve_perfect_split_segment(inner),
+                        self.resolve_perfect_split_segment(post),
+                    )
                 }
-            }) {
-            Ok(indices) => Err(indices),
-            Err(split) => Ok(split),
-        }
+                Err(indices) => {
+                    // unperfect splits
+                    let (left, inner, right) =
+                        self.double_split_from_indices(root, indices);
+                    (left, SplitSegment::Child(inner), right)
+                }
+            };
+        RangeSplitResult::Double(left, inner, right)
     }
     fn double_split_from_indices(
         &mut self,
@@ -236,45 +136,6 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
             left.clone().into_iter().chain(inner).chain(right.clone()),
         );
         (left, inner, right)
-    }
-    fn verify_range_split_indices(
-        width: usize,
-        range: impl PatternRangeIndex,
-    ) -> DoubleSplitPositions {
-        if range.contains(&0) && range.contains(&width) {
-            return DoubleSplitPositions::None;
-        }
-        let lower = if let Bound::Included(&lo) = range.start_bound() {
-            lo
-        } else if let Bound::Excluded(&lo) = range.start_bound() {
-            lo.checked_sub(1).unwrap_or_default()
-        } else {
-            0
-        };
-        let higher = if let Bound::Included(&hi) = range.end_bound() {
-            hi.checked_add(1).unwrap_or(width)
-        } else if let Bound::Excluded(&hi) = range.end_bound() {
-            hi
-        } else {
-            width
-        };
-        if let Some(lower) = NonZeroUsize::new(lower) {
-            match NonZeroUsize::new(higher).ok_or(lower) {
-                Ok(higher) => {
-                    if higher.get() < width {
-                        DoubleSplitPositions::Double(lower, higher)
-                    } else {
-                        DoubleSplitPositions::Single(lower)
-                    }
-                }
-                Err(lower) => DoubleSplitPositions::Single(lower),
-            }
-        } else {
-            // lower bound out
-            DoubleSplitPositions::Single(
-                NonZeroUsize::new(higher).expect("upper bound is zero dispite check"),
-            )
-        }
     }
 }
 

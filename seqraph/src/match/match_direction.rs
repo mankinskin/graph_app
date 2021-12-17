@@ -164,7 +164,7 @@ impl MatchDirection for MatchRight {
         _patterns: &HashMap<PatternId, Pattern>,
     ) -> HashSet<(PatternId, usize)> {
         parent
-            .filter_pattern_indicies_at_prefix()
+            .filter_pattern_indices_at_prefix()
             .cloned()
             .collect()
     }
@@ -253,7 +253,7 @@ impl MatchDirection for MatchLeft {
         child_patterns: &HashMap<PatternId, Pattern>,
     ) -> HashSet<(PatternId, usize)> {
         parent
-            .filter_pattern_indicies_at_end_in_patterns(child_patterns)
+            .filter_pattern_indices_at_end_in_patterns(child_patterns)
             .cloned()
             .collect()
     }

@@ -28,7 +28,7 @@ pub trait MergeDirection {
             let (left, right) = Self::merge_order(inner_head, outer_head);
             // try to find parent matching both
             SplitMinimizer::new(hypergraph)
-                .resolve_common_parent(left, right)
+                .try_merge_indices(left, right)
                 .map_err(|pat| Self::concat_inner_and_context(inner_tail, pat, outer_tail))
                 .into()
         } else {

@@ -9,6 +9,8 @@ use std::{
 };
 mod index_splitter;
 pub use index_splitter::*;
+mod split_indices;
+pub use split_indices::*;
 
 impl<'t, 'a, T> Hypergraph<T>
 where
@@ -126,99 +128,92 @@ mod tests {
     use maplit::hashset;
     use pretty_assertions::assert_eq;
     use std::collections::HashSet;
+    use itertools::*;
     #[test]
     fn build_child_splits_1() {
         let mut graph = Hypergraph::default();
-        if let [a, b, c, d] = graph.insert_tokens([
+        let (a, b, c, d) = graph.insert_tokens([
             Token::Element('a'),
             Token::Element('b'),
             Token::Element('c'),
             Token::Element('d'),
-        ])[..]
-        {
-            // wxabyzabbyxabyz
-            let ab = graph.insert_pattern([a, b]);
-            let bc = graph.insert_pattern([b, c]);
-            let cd = graph.insert_pattern([c, d]);
-            let abc = graph.insert_patterns([vec![ab, c], vec![a, bc]]);
-            let bcd = graph.insert_patterns([vec![bc, d], vec![b, cd]]);
-            let abcd = graph.insert_patterns([vec![abc, d], vec![a, bcd]]);
+        ]).into_iter().next_tuple().unwrap();
+        // wxabyzabbyxabyz
+        let ab = graph.insert_pattern([a, b]);
+        let bc = graph.insert_pattern([b, c]);
+        let cd = graph.insert_pattern([c, d]);
+        let abc = graph.insert_patterns([vec![ab, c], vec![a, bc]]);
+        let bcd = graph.insert_patterns([vec![bc, d], vec![b, cd]]);
+        let abcd = graph.insert_patterns([vec![abc, d], vec![a, bcd]]);
 
-            let expleft = hashset![
-                (vec![a], SplitSegment::Child(b)),
-                (vec![], SplitSegment::Child(ab)),
-            ];
-            let expright = hashset![
-                (vec![d], SplitSegment::Child(c)),
-                (vec![], SplitSegment::Child(cd)),
-            ];
-            let mut splitter = IndexSplitter::new(&mut graph);
-            let (ps, child_splits) =
-                splitter.separate_perfect_split(abcd, NonZeroUsize::new(2).unwrap());
-            assert_eq!(ps, None);
-            let (left, right) = splitter.build_child_splits(child_splits);
-            let (left, right): (HashSet<_>, HashSet<_>) =
-                (left.into_iter().collect(), right.into_iter().collect());
-            assert_eq!(left, expleft, "left");
-            assert_eq!(right, expright, "right");
-        } else {
-            panic!();
-        }
+        let expleft = hashset![
+            (vec![a], SplitSegment::Child(b)),
+            (vec![], SplitSegment::Child(ab)),
+        ];
+        let expright = hashset![
+            (vec![d], SplitSegment::Child(c)),
+            (vec![], SplitSegment::Child(cd)),
+        ];
+        let mut splitter = IndexSplitter::new(&mut graph);
+        let (ps, child_splits) =
+            splitter.get_perfect_split_separation(abcd, NonZeroUsize::new(2).unwrap());
+        assert_eq!(ps, None);
+        let (left, right) = splitter.build_child_splits(child_splits);
+        let (left, right): (HashSet<_>, HashSet<_>) =
+            (left.into_iter().collect(), right.into_iter().collect());
+        assert_eq!(left, expleft, "left");
+        assert_eq!(right, expright, "right");
     }
     #[test]
     fn build_child_splits_2() {
         let mut graph = Hypergraph::default();
-        if let [a, b, _w, x, y, z] = graph.insert_tokens([
+        let (a, b, w, x, y, z) = graph.insert_tokens([
             Token::Element('a'),
             Token::Element('b'),
             Token::Element('w'),
             Token::Element('x'),
             Token::Element('y'),
             Token::Element('z'),
-        ])[..]
-        {
-            // wxabyzabbyxabyz
-            let ab = graph.insert_pattern([a, b]);
-            let by = graph.insert_pattern([b, y]);
-            let yz = graph.insert_pattern([y, z]);
-            let xab = graph.insert_pattern([x, ab]);
-            let xaby = graph.insert_patterns([vec![xab, y], vec![x, a, by]]);
-            let xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
+        ]).into_iter().next_tuple().unwrap();
+        // wxabyzabbyxabyz
+        let ab = graph.insert_pattern([a, b]);
+        let by = graph.insert_pattern([b, y]);
+        let yz = graph.insert_pattern([y, z]);
+        let xab = graph.insert_pattern([x, ab]);
+        let xaby = graph.insert_patterns([vec![xab, y], vec![x, a, by]]);
+        let xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
 
-            let mut splitter = IndexSplitter::new(&mut graph);
-            let (ps, child_splits) =
-                splitter.separate_perfect_split(xabyz, NonZeroUsize::new(2).unwrap());
-            assert_eq!(ps, None);
-            let (left, right) = splitter.build_child_splits(child_splits);
-            let xa_found = graph.find_pattern(vec![x, a]);
-            let xa = if let SearchFound {
-                index: xa,
-                parent_match:
-                    ParentMatch {
-                        parent_range: FoundRange::Complete,
-                        ..
-                    },
-                ..
-            } = xa_found.expect("xa not found")
-            {
-                Some(xa)
-            } else {
-                None
-            }
-            .unwrap();
+        let mut splitter = IndexSplitter::new(&mut graph);
+        let (ps, child_splits) =
+            splitter.get_perfect_split_separation(xabyz, NonZeroUsize::new(2).unwrap());
+        assert_eq!(ps, None);
+        let (left, right) = splitter.build_child_splits(child_splits);
+        //let xa_found = graph.find_pattern(vec![x, a]);
+        //let xa = if let SearchFound {
+        //    index: xa,
+        //    parent_match:
+        //        ParentMatch {
+        //            parent_range: FoundRange::Complete,
+        //            ..
+        //        },
+        //    ..
+        //} = xa_found.expect("xa not found")
+        //{
+        //    Some(xa)
+        //} else {
+        //    None
+        //}
+        //.unwrap();
 
-            let expleft = hashset![(vec![], SplitSegment::Child(xa)),];
-            let expright = hashset![
-                (vec![yz], SplitSegment::Child(b)),
-                (vec![z], SplitSegment::Child(by)),
-            ];
+        let expleft = hashset![(vec![], SplitSegment::Pattern(vec![x, a])),];
+        let expright = hashset![
+            (vec![yz], SplitSegment::Child(b)),
+            (vec![z], SplitSegment::Child(by)),
+        ];
 
-            let (left, right): (HashSet<_>, HashSet<_>) =
-                (left.into_iter().collect(), right.into_iter().collect());
-            assert_eq!(left, expleft, "left");
-            assert_eq!(right, expright, "right");
-        } else {
-            panic!();
-        }
+        let (left, right): (HashSet<_>, HashSet<_>) =
+            (left.into_iter().collect(), right.into_iter().collect());
+        assert_eq!(left, expleft, "left");
+        assert_eq!(right, expright, "right");
     }
 }

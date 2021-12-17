@@ -75,7 +75,7 @@ mod tests {
 
             let mut splitter = IndexSplitter::new(&mut graph);
             let (ps, child_splits) =
-                splitter.separate_perfect_split(xabyz, NonZeroUsize::new(2).unwrap());
+                splitter.get_perfect_split_separation(xabyz, NonZeroUsize::new(2).unwrap());
             assert_eq!(ps, None);
             let (left, right) = splitter.build_child_splits(child_splits);
 

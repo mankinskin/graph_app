@@ -20,17 +20,27 @@ pub struct SplitContext {
     pub key: SplitKey,
     pub postfix: Pattern,
 }
+#[derive(Debug, PartialEq, Eq, Clone, Hash, Copy)]
+pub struct SplitKey {
+    pub index: VertexIndex, // index in hypergraph
+    pub offset: NonZeroUsize,
+}
+impl SplitKey {
+    pub fn new(
+        index: impl Indexed,
+        offset: NonZeroUsize,
+    ) -> Self {
+        Self {
+            index: *index.index(),
+            offset,
+        }
+    }
+}
 /// refers to an index in a hypergraph node
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct IndexInParent {
     pub pattern_index: usize,  // index of pattern in parent
     pub replaced_index: usize, // replaced index in pattern
-}
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct SplitIndex {
-    pos: TokenPosition,
-    index: VertexIndex,
-    index_pos: IndexPosition,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
 pub struct PatternSplit {
@@ -108,22 +118,6 @@ impl<T: Into<PatternSplit>> From<T> for IndexSplit {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash, Copy)]
-pub struct SplitKey {
-    pub index: VertexIndex, // index in hypergraph
-    pub offset: NonZeroUsize,
-}
-impl SplitKey {
-    pub fn new(
-        index: impl Indexed,
-        offset: NonZeroUsize,
-    ) -> Self {
-        Self {
-            index: *index.index(),
-            offset,
-        }
-    }
-}
 pub enum RangeSplitResult {
     Full(Child),
     Single(SplitSegment, SplitSegment),
@@ -252,7 +246,6 @@ pub enum DoubleSplitIndex {
     Inner(Pattern, (VertexIndex, NonZeroUsize, NonZeroUsize), Pattern),
 }
 pub type DoubleSplitIndices = Result<DoublePerfectSplitIndex, Vec<(PatternId, DoubleSplitIndex)>>;
-pub type SingleSplitIndices = Vec<(PatternId, SplitIndex)>;
 
 #[derive(Debug)]
 pub struct IndexSplitter<'g, T: Tokenize> {
@@ -262,18 +255,68 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
     pub fn new(graph: &'g mut Hypergraph<T>) -> Self {
         Self { graph }
     }
-    /// Get perfect split if it exists and remaining pattern split contexts
-    pub(crate) fn separate_perfect_split(
-        &'g self,
+    pub(crate) fn split_index(
+        &mut self,
         root: impl Indexed,
         pos: NonZeroUsize,
-    ) -> (Option<(Split, IndexInParent)>, Vec<SplitContext>) {
-        let current_node = self.graph.expect_vertex_data(root);
-        let children = current_node.get_children().clone();
-        let child_slices = children.into_iter().map(|(i, p)| (i, p.into_iter()));
-        let split_indices = Self::find_single_split_indices(child_slices, pos);
-        Self::separate_single_split_indices(current_node, split_indices)
+    ) -> SingleSplitResult {
+        self.split_index_with_pid(root, pos).1
     }
+    pub fn index_prefix(
+        &mut self,
+        root: impl Indexed,
+        pos: NonZeroUsize,
+    ) -> (Child, SplitSegment) {
+        let (pid, (l, r)) = self.split_index_with_pid(root.index(), pos);
+        match l {
+            SplitSegment::Child(c) => (c, r),
+            SplitSegment::Pattern(p) => {
+                let len = p.len();
+                let c = self.graph.insert_pattern(p);
+                if let Some(pid) = pid {
+                    self.graph.replace_in_pattern(root, pid, 0..len, c);
+                }
+                (c, r)
+            }
+        }
+    }
+    pub fn index_postfix(
+        &mut self,
+        root: impl Indexed,
+        pos: NonZeroUsize,
+    ) -> (SplitSegment, Child) {
+        let (pid, (l, r)) = self.split_index_with_pid(root.index(), pos);
+        match r {
+            SplitSegment::Child(c) => (l, c),
+            SplitSegment::Pattern(p) => {
+                let c = self.graph.insert_pattern(p);
+                if let Some(pid) = pid {
+                    self.graph.replace_in_pattern(root, pid, l.len().., c);
+                }
+                (l, c)
+            }
+        }
+    }
+    // TODO: maybe move into merger
+    //pub(crate) fn resolve_perfect_split_range(
+    //    &mut self,
+    //    pat: Pattern,
+    //    parent: impl Vertexed,
+    //    //pattern_index: PatternId,
+    //    //range: impl PatternRangeIndex + Clone,
+    //) -> SplitSegment {
+    //    if pat.len() <= 1 {
+    //        SplitSegment::Child(*pat.first().expect("Empty perfect split half!"))
+    //    //} else if parent.vertex(self.graph).children.len() == 1 {
+    //    //    SplitSegment::Pattern(pat)
+    //    } else {
+    //        //let c = self.graph.insert_pattern(pat);
+    //        //self.graph
+    //        //    .replace_in_pattern(parent, pattern_index, range, vec![c]);
+    //        //SplitSegment::Child(c)
+    //        SplitSegment::Pattern(pat)
+    //    }
+    //}
     // Get perfect split or pattern split contexts
     //pub(crate) fn try_perfect_split(
     //    &self,

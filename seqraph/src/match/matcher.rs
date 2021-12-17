@@ -12,51 +12,6 @@ use itertools::*;
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct PatternMatch(pub Option<Pattern>, pub Option<Pattern>);
-
-impl PatternMatch {
-    pub fn left(&self) -> &Option<Pattern> {
-        &self.0
-    }
-    pub fn right(&self) -> &Option<Pattern> {
-        &self.1
-    }
-    pub fn flip_remainder(self) -> Self {
-        Self(self.1, self.0)
-    }
-    pub fn is_matching(&self) -> bool {
-        self.left().is_none() && self.right().is_none()
-    }
-}
-impl From<Either<Pattern, Pattern>> for PatternMatch {
-    fn from(e: Either<Pattern, Pattern>) -> Self {
-        match e {
-            Either::Left(p) => Self(Some(p), None),
-            Either::Right(p) => Self(None, Some(p)),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct ParentMatch {
-    pub parent_range: FoundRange,
-    pub remainder: Option<Pattern>,
-}
-impl ParentMatch {
-    pub fn embed_in_super(
-        self,
-        other: Self,
-    ) -> Self {
-        Self {
-            parent_range: self.parent_range.embed_in_super(other.parent_range),
-            remainder: other.remainder,
-        }
-    }
-}
-pub type PatternMatchResult = Result<PatternMatch, NoMatch>;
-pub type ParentMatchResult = Result<ParentMatch, NoMatch>;
-
 #[derive(Clone, Debug)]
 pub struct Matcher<'g, T: Tokenize, D: MatchDirection> {
     graph: &'g Hypergraph<T>,
@@ -261,7 +216,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         })
         // returns result of matching sub with parent's children
     }
-    fn decide_sub_and_sup_indicies<
+    fn decide_sub_and_sup_indices<
         A: IntoPattern<Item = impl AsChild, Token = impl AsChild>,
     >(
         a: Child,
@@ -314,7 +269,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         // small patterns have less children
         // search larger in parents of smaller
         let (rotate, sub, sub_context, sup, sup_context) =
-            Self::decide_sub_and_sup_indicies(a, a_context, b, b_context)?;
+            Self::decide_sub_and_sup_indices(a, a_context, b, b_context)?;
         self.searcher().find_unequal_matching_ancestor(sub, sub_context, sup)
             .and_then(|parent_match| {
                 let rem = parent_match.remainder;

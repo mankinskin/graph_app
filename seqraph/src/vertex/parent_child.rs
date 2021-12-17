@@ -53,13 +53,13 @@ impl Parent {
         self.pattern_indices.contains(&(pat, pos))
     }
     /// filter for pattern indices which occur at start of their patterns
-    pub fn filter_pattern_indicies_at_prefix(&self) -> impl Iterator<Item = &(PatternId, usize)> {
+    pub fn filter_pattern_indices_at_prefix(&self) -> impl Iterator<Item = &(PatternId, usize)> {
         self.pattern_indices
             .iter()
             .filter(move |(_pattern_index, sub_index)| *sub_index == 0)
     }
     /// filter for pattern indices which occur at end of given patterns
-    pub fn filter_pattern_indicies_at_end_in_patterns<'a>(
+    pub fn filter_pattern_indices_at_end_in_patterns<'a>(
         &'a self,
         patterns: &'a HashMap<PatternId, Pattern>,
     ) -> impl Iterator<Item = &'a (PatternId, usize)> {
@@ -74,7 +74,7 @@ impl Parent {
             })
     }
     // filter for pattern indices which occur in given patterns
-    //pub fn filter_pattern_indicies_in_patterns<'a>(
+    //pub fn filter_pattern_indices_in_patterns<'a>(
     //    &'a self,
     //    patterns: &'a HashMap<PatternId, Pattern>,
     //) -> impl Iterator<Item = &'a (PatternId, usize)> {
