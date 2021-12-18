@@ -13,50 +13,94 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
         pos: NonZeroUsize,
     ) -> (Option<PatternId>, SingleSplitResult) {
         let root = root.index();
-        let vertex = self.graph.expect_vertex_data(root).clone();
+        let vertex = self.graph.expect_vertex_data(root);
         let patterns = vertex.get_children().clone();
         //println!("splitting {} at {}", self.index_string(root), pos);
-        self.process_single_splits(vertex, root, patterns, pos)
+        self.single_split_patterns(root, patterns, pos)
     }
-    pub(crate) fn process_single_splits(
+    pub(crate) fn with_perfect_split(
+        p: Pattern,
+        splits: Vec<(Pattern, SplitSegment)>
+    ) -> Vec<(Pattern, Option<SplitSegment>)> {
+        splits
+            .into_iter()
+            .map(|(c, i)| (c, Some(i)))
+            .chain(Some((p, None)))
+            .collect()
+    }
+    pub(crate) fn single_split_patterns(
         &mut self,
-        vertex: VertexData,
-        root: impl Indexed + Clone,
+        root: impl Indexed,
         patterns: ChildPatterns,
         pos: NonZeroUsize,
     ) -> (Option<PatternId>, SingleSplitResult) {
         let (perfect_split, remaining_splits)
-            = SplitIndices::find_perfect_split(&vertex, patterns, pos);
-        if let Some(((pl, pr), ind)) = perfect_split {
-            (
-                Some(ind.pattern_index),
-                (
-                    self.resolve_perfect_split_segment(pl),
-                    self.resolve_perfect_split_segment(pr),
-                ),
-            )
+            = SplitIndices::find_perfect_split(patterns, pos);
+
+        // check if any perfect split segment is a single child 
+        let (left, right) = if let Some(((pl, pr), ind)) = perfect_split {
+            let (pl, pr): (SplitSegment, SplitSegment) = (pl.into(), pr.into());
+            match (pl, pr) {
+                // early return when complete split present
+                (lc@SplitSegment::Child(_), rc@SplitSegment::Child(_)) => (lc, rc),
+                // at least one side not complete child
+                (SplitSegment::Pattern(pl), SplitSegment::Pattern(pr)) => {
+                    let (left, right)
+                        = self.split_inner_indices(remaining_splits);
+
+                    let mut minimizer = SplitMinimizer::new(self.graph);
+                    let left = Self::with_perfect_split(pl, left);
+                    let left = minimizer.merge_left_optional_splits(left);
+                    let right = Self::with_perfect_split(pr, right);
+                    let right = minimizer.merge_right_optional_splits(right);
+
+                    self.graph
+                        .add_pattern_to_node(root, left.clone().into_iter().chain(right.clone()));
+                    (left, right)
+                },
+                (lc@SplitSegment::Child(_), SplitSegment::Pattern(pr)) => {
+                    let (_, right)
+                        = self.split_inner_indices(remaining_splits);
+
+                    let mut minimizer = SplitMinimizer::new(self.graph);
+                    let right = Self::with_perfect_split(pr, right);
+                    let right = minimizer.merge_right_optional_splits(right);
+
+                    self.graph
+                        .replace_in_pattern(root, ind.pattern_index, 1.., right.clone());
+                    (lc, right)
+                }
+                (SplitSegment::Pattern(pl), rc@SplitSegment::Child(_)) => {
+                    let (left, _)
+                        = self.split_inner_indices(remaining_splits);
+
+                    let mut minimizer = SplitMinimizer::new(self.graph);
+                    let left = Self::with_perfect_split(pl, left);
+                    let left = minimizer.merge_right_optional_splits(left);
+
+                    let end = self.graph
+                        .expect_vertex_data(&root).expect_child_pattern(&ind.pattern_index).len();
+                    self.graph
+                        .replace_in_pattern(root, ind.pattern_index, 0..end-1, left.clone());
+                    (left, rc)
+                }
+            }
         } else {
+            // no perfect split
             let (left, right)
-                = self.build_child_splits(remaining_splits);
+                = self.split_inner_indices(remaining_splits);
             let mut minimizer = SplitMinimizer::new(self.graph);
-            let left = minimizer.merge_left_splits(left);
-            let right = minimizer.merge_right_splits(right);
+            let (left, right ) = (
+                minimizer.merge_left_splits(left),
+                minimizer.merge_right_splits(right),
+            );
             self.graph
                 .add_pattern_to_node(root, left.clone().into_iter().chain(right.clone()));
-            (None, (left, right))
-        }
+            (left, right)
+        };
+        (None, (left, right))
     }
-    pub(crate) fn resolve_perfect_split_segment(
-        &mut self,
-        pat: Pattern,
-    ) -> SplitSegment {
-        if pat.len() <= 1 {
-            SplitSegment::Child(*pat.first().expect("Empty perfect split half!"))
-        } else {
-            SplitSegment::Pattern(pat)
-        }
-    }
-    pub(crate) fn build_child_splits(
+    pub(crate) fn split_inner_indices(
         &mut self,
         child_splits: Vec<SplitContext>,
     ) -> ChildSplits {
@@ -85,7 +129,7 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
         let vertex = self.graph.expect_vertex_data(root).clone();
         let patterns = vertex.get_children().clone();
         //println!("splitting {} at {}", self.index_string(root), pos);
-        SplitIndices::find_perfect_split(&vertex, patterns, pos)
+        SplitIndices::find_perfect_split(patterns, pos)
     }
 }
 #[cfg(test)]
@@ -93,7 +137,6 @@ mod tests {
     use super::*;
     use crate::{
         graph::tests::*,
-        r#match::*,
         search::*,
     };
     use pretty_assertions::assert_eq;

@@ -19,7 +19,7 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
             DoubleSplitPositions::Double(lower, higher) => 
                 self.process_double_splits(root, vertex, patterns, lower, higher),
             DoubleSplitPositions::Single(single) => {
-                let (_, (left, right)) = self.process_single_splits(vertex, root, patterns, single);
+                let (_, (left, right)) = self.single_split_patterns(root, patterns, single);
                 RangeSplitResult::Single(left, right)
             },
             DoubleSplitPositions::None => RangeSplitResult::Full(Child::new(root, vertex.width)),
@@ -48,11 +48,7 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
                     //    ),
                     //    self.resolve_perfect_split_range(post, root, pattern_id, right..),
                     //)
-                    (
-                        self.resolve_perfect_split_segment(pre),
-                        self.resolve_perfect_split_segment(inner),
-                        self.resolve_perfect_split_segment(post),
-                    )
+                    (pre.into(), inner.into(), post.into())
                 }
                 Err(indices) => {
                     // unperfect splits

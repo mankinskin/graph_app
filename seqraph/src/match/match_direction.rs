@@ -100,6 +100,23 @@ pub trait MatchDirection {
             Self::split_end(pattern, index),
         )
     }
+    fn compare_next_index_in_child_pattern(
+        child_patterns: &'_ ChildPatterns,
+        context: impl IntoPattern<Item = impl AsChild>,
+        pattern_index: &PatternId,
+        sub_index: usize,
+    ) -> bool {
+        Self::pattern_head(context.as_pattern_view())
+            .and_then(|next_sub| {
+                let next_sub: Child = next_sub.to_child();
+                Self::index_next(sub_index).and_then(|i| {
+                    child_patterns
+                        .get(pattern_index)
+                        .and_then(|pattern| pattern.get(i).map(|next_sup| next_sub == *next_sup))
+                })
+            })
+            .unwrap_or(false)
+    }
 }
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MatchRight;

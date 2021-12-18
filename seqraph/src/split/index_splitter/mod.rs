@@ -144,6 +144,12 @@ impl SplitSegment {
             Self::Child(c) => Some(c),
         }
     }
+    pub fn is_pattern(&self) -> bool {
+        matches!(self, Self::Pattern(_))
+    }
+    pub fn is_child(&self) -> bool {
+        matches!(self, Self::Child(_))
+    }
     pub fn map_pattern(
         self,
         f: impl FnOnce(Pattern) -> Pattern,

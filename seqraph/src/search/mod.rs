@@ -100,13 +100,20 @@ where
         &self,
         pattern: impl IntoPattern<Item = impl AsChild>,
     ) -> SearchResult {
-        self.right_searcher().find_pattern(pattern)
+        let pattern: Pattern = pattern.into_iter().map(ToChild::to_child).collect();
+        MatchRight::split_head_tail(&pattern)
+            .ok_or(NoMatch::EmptyPatterns)
+            .and_then(|(head, tail)|
+                self.right_searcher().find_largest_matching_ancestor(head, tail.to_vec(), None)
+            )
     }
     pub fn find_sequence(
         &self,
         pattern: impl IntoIterator<Item = impl Into<T>>,
     ) -> SearchResult {
-        self.right_searcher().find_sequence(pattern)
+        let iter = tokenizing_iter(pattern.into_iter());
+        let pattern = self.to_token_children(iter)?;
+        self.find_pattern(pattern)
     }
 }
 #[macro_use]
@@ -122,6 +129,8 @@ pub(crate) mod tests {
         assert_eq,
         assert_matches,
     };
+    use itertools::*;
+
     macro_rules! assert_match {
         ($in:expr, $exp:expr) => {
             assert_match!($in, $exp, "")
@@ -191,7 +200,7 @@ pub(crate) mod tests {
         let b_c_pattern = vec![Child::new(b, 1), Child::new(c, 1)];
         let bc_pattern = vec![Child::new(bc, 2)];
         let a_b_c_pattern = vec![Child::new(a, 1), Child::new(b, 1), Child::new(c, 1)];
-        assert_match!(graph.find_pattern(&bc_pattern), Err(NoMatch::SingleIndex));
+        assert_match!(graph.find_pattern(&bc_pattern), Ok((bc, FoundRange::Complete)));
         assert_match!(
             graph.find_pattern(&b_c_pattern),
             Ok((bc, FoundRange::Complete))
@@ -227,40 +236,36 @@ pub(crate) mod tests {
     #[test]
     fn find_pattern_2() {
         let mut graph = Hypergraph::default();
-        if let [a, b, _w, x, y, z] = graph.insert_tokens([
+        let (a, b, _w, x, y, z) = graph.insert_tokens([
             Token::Element('a'),
             Token::Element('b'),
             Token::Element('w'),
             Token::Element('x'),
             Token::Element('y'),
             Token::Element('z'),
-        ])[..]
-        {
-            // wxabyzabbyxabyz
-            let ab = graph.insert_pattern([a, b]);
-            let by = graph.insert_pattern([b, y]);
-            let yz = graph.insert_pattern([y, z]);
-            let xab = graph.insert_pattern([x, ab]);
-            let xaby = graph.insert_patterns([vec![xab, y], vec![x, a, by]]);
-            let _xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
-            let byz_found = graph.find_pattern(vec![by, z]);
-            let x_a_pattern = vec![x, a];
-            assert_matches!(
-                byz_found,
-                Ok(SearchFound {
-                    index: Child { width: 5, .. },
-                    parent_match: ParentMatch {
-                        parent_range: FoundRange::Postfix(_),
-                        ..
-                    },
+        ]).into_iter().next_tuple().unwrap();
+        // wxabyzabbyxabyz
+        let ab = graph.insert_pattern([a, b]);
+        let by = graph.insert_pattern([b, y]);
+        let yz = graph.insert_pattern([y, z]);
+        let xab = graph.insert_pattern([x, ab]);
+        let xaby = graph.insert_patterns([vec![xab, y], vec![x, a, by]]);
+        let _xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
+        let byz_found = graph.find_pattern(vec![by, z]);
+        let x_a_pattern = vec![x, a];
+        assert_matches!(
+            byz_found,
+            Ok(SearchFound {
+                index: Child { width: 5, .. },
+                parent_match: ParentMatch {
+                    parent_range: FoundRange::Postfix(_),
                     ..
-                })
-            );
-            let post = byz_found.unwrap().parent_match.parent_range;
-            assert_eq!(post, FoundRange::Postfix(x_a_pattern));
-        } else {
-            panic!();
-        }
+                },
+                ..
+            })
+        );
+        let post = byz_found.unwrap().parent_match.parent_range;
+        assert_eq!(post, FoundRange::Postfix(x_a_pattern));
     }
     #[test]
     fn find_sequence() {

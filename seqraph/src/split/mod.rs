@@ -121,16 +121,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        r#match::*,
-        search::*,
-    };
     use maplit::hashset;
     use pretty_assertions::assert_eq;
     use std::collections::HashSet;
     use itertools::*;
     #[test]
-    fn build_child_splits_1() {
+    fn split_inner_indices_1() {
         let mut graph = Hypergraph::default();
         let (a, b, c, d) = graph.insert_tokens([
             Token::Element('a'),
@@ -158,19 +154,18 @@ mod tests {
         let (ps, child_splits) =
             splitter.get_perfect_split_separation(abcd, NonZeroUsize::new(2).unwrap());
         assert_eq!(ps, None);
-        let (left, right) = splitter.build_child_splits(child_splits);
+        let (left, right) = splitter.split_inner_indices(child_splits);
         let (left, right): (HashSet<_>, HashSet<_>) =
             (left.into_iter().collect(), right.into_iter().collect());
         assert_eq!(left, expleft, "left");
         assert_eq!(right, expright, "right");
     }
     #[test]
-    fn build_child_splits_2() {
+    fn split_inner_indices_2() {
         let mut graph = Hypergraph::default();
-        let (a, b, w, x, y, z) = graph.insert_tokens([
+        let (a, b, x, y, z) = graph.insert_tokens([
             Token::Element('a'),
             Token::Element('b'),
-            Token::Element('w'),
             Token::Element('x'),
             Token::Element('y'),
             Token::Element('z'),
@@ -187,7 +182,7 @@ mod tests {
         let (ps, child_splits) =
             splitter.get_perfect_split_separation(xabyz, NonZeroUsize::new(2).unwrap());
         assert_eq!(ps, None);
-        let (left, right) = splitter.build_child_splits(child_splits);
+        let (left, right) = splitter.split_inner_indices(child_splits);
         //let xa_found = graph.find_pattern(vec![x, a]);
         //let xa = if let SearchFound {
         //    index: xa,

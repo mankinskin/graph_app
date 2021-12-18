@@ -6,9 +6,9 @@ extern crate test;
 
 mod graph;
 mod r#match;
-mod merge;
-mod read;
 mod search;
+mod read;
+mod merge;
 mod split;
 mod vertex;
 
@@ -16,7 +16,8 @@ mod vertex;
 pub use graph::tests::*;
 pub use graph::*;
 pub(crate) use merge::*;
-pub(crate) use read::*;
-pub use search::*;
 pub use split::*;
+pub(crate) use read::*;
+pub use r#match::*;
+pub use search::*;
 pub use vertex::*;

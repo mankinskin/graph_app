@@ -18,16 +18,15 @@ pub(crate) struct SplitIndices;
 impl<'g> SplitIndices {
     /// Get perfect split if it exists and remaining pattern split contexts
     pub(crate) fn find_perfect_split(
-        vertex: &VertexData,
         patterns: ChildPatterns,
         pos: NonZeroUsize,
     ) -> (Option<(Split, IndexInParent)>, Vec<SplitContext>) {
-        let split_indices = SplitIndices::build_single(patterns, pos);
-        SplitIndices::separate_perfect_single_split(vertex, split_indices)
+        let split_indices = Self::build_single(&patterns, pos);
+        Self::separate_perfect_single_split(patterns, split_indices)
     }
     /// Find single split indices and positions of multiple patterns
     pub(crate) fn build_single(
-        patterns: impl IntoIterator<Item = (PatternId, impl IntoIterator<Item = Child>)>,
+        patterns: impl IntoIterator<Item = (impl Borrow<PatternId>, impl IntoPattern<Item = impl AsChild>)>,
         pos: NonZeroUsize,
     ) -> SingleSplitIndices {
         patterns
@@ -35,17 +34,17 @@ impl<'g> SplitIndices {
             .map(move |(i, pattern)| {
                 let split =
                     Self::find_pattern_split_index(pattern, pos).expect("Split not in pattern");
-                (i, split)
+                (*i.borrow(), split)
             })
             .collect()
     }
     /// separate perfect and remaining split indices
     pub(crate) fn separate_perfect_single_split(
-        current_node: &VertexData,
+        patterns: ChildPatterns,
         split_indices: impl IntoIterator<Item = (PatternId, SplitIndex)> + 'g,
     ) -> (Option<(Split, IndexInParent)>, Vec<SplitContext>) {
-        let len = current_node.get_children().len();
-        Self::perfect_split_search(current_node, split_indices)
+        let len = patterns.len();
+        Self::perfect_split_search(patterns, split_indices)
             .into_iter()
             .fold((None, Vec::with_capacity(len)), |(pa, mut sa), r| match r {
                 Ok(s) => {
@@ -57,13 +56,13 @@ impl<'g> SplitIndices {
     }
     /// search for a perfect split in the split indices (offset = 0)
     pub(crate) fn perfect_split_search<'a>(
-        current_node: &'a VertexData,
+        patterns: ChildPatterns,
         split_indices: impl IntoIterator<Item = (PatternId, SplitIndex)> + 'a,
     ) -> impl IntoIterator<Item = Result<SplitContext, (Split, IndexInParent)>> + 'a {
         split_indices
             .into_iter()
             .map(move |(pattern_index, split_index)| {
-                let pattern = current_node.get_child_pattern(&pattern_index).unwrap();
+                let pattern = patterns.get(&pattern_index).unwrap();
                 Self::separate_pattern_split(pattern_index, split_index)
                     .map(
                         move |(
@@ -111,16 +110,16 @@ impl<'g> SplitIndices {
     }
     /// find split position in index in pattern
     pub(crate) fn find_pattern_split_index(
-        pattern: impl IntoIterator<Item = impl Borrow<Child>>,
+        pattern: impl IntoPattern<Item = impl AsChild>,
         pos: NonZeroUsize,
     ) -> Option<SplitIndex> {
         let mut skipped = 0;
         let pos: TokenPosition = pos.into();
         // find child overlapping with cut pos or
         pattern.into_iter().enumerate().find_map(|(i, child)| {
-            let child = child.borrow();
-            if skipped + child.get_width() <= pos {
-                skipped += child.get_width();
+            let child = child.as_child();
+            if skipped + child.width() <= pos {
+                skipped += child.width();
                 None
             } else {
                 Some(SplitIndex {
@@ -134,13 +133,14 @@ impl<'g> SplitIndices {
     // build intermediate split kind for multiple patterns
     pub(crate) fn build_double(
         current_node: &VertexData,
-        patterns: impl IntoIterator<Item = (PatternId, impl IntoIterator<Item = Child> + Clone)>,
+        patterns: impl IntoIterator<Item = (impl Borrow<PatternId>, impl IntoPattern<Item = impl AsChild> + Clone)>,
         left: NonZeroUsize,
         right: NonZeroUsize,
     ) -> DoubleSplitIndices {
         match patterns
             .into_iter()
             .try_fold(vec![], move |mut acc, (pattern_index, pattern)| {
+                let pattern_index = *pattern_index.borrow();
                 let left_split = SplitIndices::find_pattern_split_index(pattern.clone(), left)
                     .expect("left split not in pattern");
                 let right_split = SplitIndices::find_pattern_split_index(pattern, right)
