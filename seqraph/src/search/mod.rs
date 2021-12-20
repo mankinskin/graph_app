@@ -100,12 +100,24 @@ where
         &self,
         pattern: impl IntoPattern<Item = impl AsChild>,
     ) -> SearchResult {
-        let pattern: Pattern = pattern.into_iter().map(ToChild::to_child).collect();
+        let pattern: Pattern = pattern.into_pattern();
         MatchRight::split_head_tail(&pattern)
             .ok_or(NoMatch::EmptyPatterns)
             .and_then(|(head, tail)|
-                self.right_searcher().find_largest_matching_ancestor(head, tail.to_vec(), None)
+                if tail.is_empty() {
+                    // Todo: positive type to return when single index is passed
+                    Err(NoMatch::SingleIndex)
+                } else {
+                    self.right_searcher()
+                        .find_largest_matching_ancestor(head, tail.to_vec(), None)
+                }
             )
+    }
+    pub(crate) fn find_parent(
+        &self,
+        pattern: impl IntoPattern<Item = impl AsChild, Token=Child>,
+    ) -> SearchResult {
+        self.right_searcher().find_parent(pattern)
     }
     pub fn find_sequence(
         &self,
@@ -200,7 +212,8 @@ pub(crate) mod tests {
         let b_c_pattern = vec![Child::new(b, 1), Child::new(c, 1)];
         let bc_pattern = vec![Child::new(bc, 2)];
         let a_b_c_pattern = vec![Child::new(a, 1), Child::new(b, 1), Child::new(c, 1)];
-        assert_match!(graph.find_pattern(&bc_pattern), Ok((bc, FoundRange::Complete)));
+        //assert_match!(graph.find_pattern(&bc_pattern), Ok((bc, FoundRange::Complete)));
+        assert_match!(graph.find_pattern(&bc_pattern), Err(NoMatch::SingleIndex));
         assert_match!(
             graph.find_pattern(&b_c_pattern),
             Ok((bc, FoundRange::Complete))

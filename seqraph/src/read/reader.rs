@@ -166,7 +166,6 @@ impl<'a, T: Tokenize + std::fmt::Display, D: MatchDirection> Reader<'a, T, D> {
                             RangeSplitResult::Full(c) => SplitSegment::Child(c),
                             RangeSplitResult::Single(_, r) => r,
                             RangeSplitResult::Double(_, c, _) => c,
-                            RangeSplitResult::None => panic!("range not in index"),
                         }
                     }
                 }

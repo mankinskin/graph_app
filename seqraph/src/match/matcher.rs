@@ -49,7 +49,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         //println!("compare_pattern_prefix(\"{}\", \"{}\")", self.pattern_string(pattern_a), self.pattern_string(pattern_b));
         let a: Pattern = a.into_pattern();
         let b: Pattern = b.into_pattern();
-        if let Some((pos, eob)) = D::skip_equal_indices(a.clone().iter(), b.clone().iter()) {
+        if let Some((pos, eob)) = D::skip_equal_indices(a.iter(), b.iter()) {
             match eob {
                 // different elements on both sides
                 EitherOrBoth::Both(&ai, &bi) => {

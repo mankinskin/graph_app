@@ -1,5 +1,4 @@
 use crate::{
-    merge::*,
     split::*,
     Indexed,
 };
@@ -16,12 +15,10 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
         // range is a subrange of the index
         let patterns = vertex.get_children().clone();
         match SplitIndices::verify_range_split_indices(vertex.width, range) {
-            DoubleSplitPositions::Double(lower, higher) => 
+            DoubleSplitPositions::Double(lower, higher) =>
                 self.process_double_splits(root, vertex, patterns, lower, higher),
-            DoubleSplitPositions::Single(single) => {
-                let (_, (left, right)) = self.single_split_patterns(root, patterns, single);
-                RangeSplitResult::Single(left, right)
-            },
+            DoubleSplitPositions::Single(single) =>
+                self.single_split_patterns(root, patterns, single).1.into(),
             DoubleSplitPositions::None => RangeSplitResult::Full(Child::new(root, vertex.width)),
         }
     }
@@ -34,104 +31,70 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
         higher: NonZeroUsize,
     ) -> RangeSplitResult {
         // both positions in position in pattern
-        let (left, inner, right) =
-            match SplitIndices::build_double(&vertex, patterns, lower, higher) {
-                Ok((_pattern_id, pre, _left, inner, _right, post)) => {
-                    // perfect split
-                    //(
-                    //    self.resolve_perfect_split_range(pre, root, pattern_id, 0..left),
-                    //    self.resolve_perfect_split_range(
-                    //        inner,
-                    //        root,
-                    //        pattern_id,
-                    //        left..right,
-                    //    ),
-                    //    self.resolve_perfect_split_range(post, root, pattern_id, right..),
-                    //)
-                    (pre.into(), inner.into(), post.into())
-                }
-                Err(indices) => {
-                    // unperfect splits
-                    let (left, inner, right) =
-                        self.double_split_from_indices(root, indices);
-                    (left, SplitSegment::Child(inner), right)
-                }
-            };
-        RangeSplitResult::Double(left, inner, right)
-    }
-    fn double_split_from_indices(
-        &mut self,
-        parent: impl Indexed,
-        indices: Vec<(PatternId, DoubleSplitIndex)>,
-    ) -> (SplitSegment, Child, SplitSegment) {
-        let parent = parent.index();
-        // for every child split
-        let (left, inner, right) = indices.into_iter().fold(
-            (vec![], vec![], vec![]),
-            |(mut la, mut ia, mut ra), (_pattern_id, split_index)| {
-                match split_index {
-                    DoubleSplitIndex::Left(pre, _, infix, single, post) => {
-                        let (l, r) = self.split_index(single.index, single.offset);
-                        la.push((pre, None));
-                        ia.push((None, SplitSegment::Pattern(infix), Some(l)));
-                        ra.push((post, Some(r)));
-                    }
-                    DoubleSplitIndex::Right(pre, single, infix, _, post) => {
-                        let (l, r) = self.split_index(single.index, single.offset);
-                        la.push((pre, Some(l)));
-                        ia.push((Some(r), SplitSegment::Pattern(infix), None));
-                        ra.push((post, None));
-                    }
-                    DoubleSplitIndex::Infix(pre, left, infix, right, post) => {
-                        let (ll, lr) = self.split_index(left.index, left.offset);
-                        let (rl, rr) = self.split_index(right.index, right.offset);
-                        la.push((pre, Some(ll)));
-                        ia.push((Some(lr), SplitSegment::Pattern(infix), Some(rl)));
-                        ra.push((post, Some(rr)));
-                    }
-                    DoubleSplitIndex::Inner(pre, (index, left, right), post) => {
-                        match self.index_subrange(index, left.get()..right.get()) {
-                            RangeSplitResult::Double(l, i, r) => {
-                                la.push((pre, Some(l)));
-                                ia.push((None, i, None));
-                                ra.push((post, Some(r)));
+        match SplitIndices::build_double(&vertex, patterns, lower, higher) {
+            Ok((_pattern_id, pre, _left, inner, _right, post)) => {
+                (pre.into(), inner.into(), post.into())
+            }
+            Err(indices) => {
+                // unperfect splits
+                let cap = indices.len();
+                let (left, inner, right) = indices
+                    .into_iter()
+                    .fold(
+                        (Vec::with_capacity(cap), Vec::with_capacity(cap), Vec::with_capacity(cap)),
+                        |(mut la, mut ia, mut ra), (_pattern_id, split_index)| {
+                            match split_index {
+                                DoubleSplitIndex::Left(pre, _, infix, single, post) => {
+                                    let (l, r) = self.split_index(single.index, single.offset);
+                                    la.push((pre, None));
+                                    ia.push((None, SplitSegment::Pattern(infix), Some(l)));
+                                    ra.push((post, Some(r)));
+                                }
+                                DoubleSplitIndex::Right(pre, single, infix, _, post) => {
+                                    let (l, r) = self.split_index(single.index, single.offset);
+                                    la.push((pre, Some(l)));
+                                    ia.push((Some(r), SplitSegment::Pattern(infix), None));
+                                    ra.push((post, None));
+                                }
+                                DoubleSplitIndex::Infix(pre, left, infix, right, post) => {
+                                    let (ll, lr) = self.split_index(left.index, left.offset);
+                                    let (rl, rr) = self.split_index(right.index, right.offset);
+                                    la.push((pre, Some(ll)));
+                                    ia.push((Some(lr), SplitSegment::Pattern(infix), Some(rl)));
+                                    ra.push((post, Some(rr)));
+                                }
+                                DoubleSplitIndex::Inner(pre, (index, left, right), post) => {
+                                    match self.index_subrange(index, left.get()..right.get()) {
+                                        RangeSplitResult::Double(l, i, r) => {
+                                            la.push((pre, Some(l)));
+                                            ia.push((None, i, None));
+                                            ra.push((post, Some(r)));
+                                        }
+                                        RangeSplitResult::Single(l, r) => {
+                                            la.push((pre, Some(l)));
+                                            ra.push((post, Some(r)));
+                                        }
+                                        RangeSplitResult::Full(c) => {
+                                            la.push((pre, None));
+                                            ia.push((None, SplitSegment::Child(c), None));
+                                            ra.push((post, None));
+                                        }
+                                    }
+                                }
                             }
-                            RangeSplitResult::Single(l, r) => {
-                                la.push((pre, Some(l)));
-                                ra.push((post, Some(r)));
-                            }
-                            RangeSplitResult::Full(c) => {
-                                la.push((pre, None));
-                                ia.push((None, SplitSegment::Child(c), None));
-                                ra.push((post, None));
-                            }
-                            RangeSplitResult::None => {
-                                la.push((pre, None));
-                                ra.push((post, None));
-                            }
-                        }
-                    }
-                }
-                (la, ia, ra)
-            },
-        );
-        let mut minimizer = SplitMinimizer::new(self.graph);
-        let left = minimizer.merge_left_optional_splits(left);
-        let inner = minimizer.merge_inner_optional_splits(inner);
-        let right = minimizer.merge_right_optional_splits(right);
-        // split all children and resolve
-        //println!(
-        //    "adding ({}, {}, {}) to {}",
-        //    hypergraph.index_string(left),
-        //    hypergraph.index_string(inner),
-        //    hypergraph.index_string(right),
-        //    hypergraph.index_string(parent),
-        //);
-        self.graph.add_pattern_to_node(
-            parent,
-            left.clone().into_iter().chain(inner).chain(right.clone()),
-        );
-        (left, inner, right)
+                            (la, ia, ra)
+                        },
+                    );
+                let left = self.graph.merge_left_optional_splits(left);
+                let inner = self.graph.merge_inner_optional_splits(inner);
+                let right = self.graph.merge_right_optional_splits(right);
+                self.graph.add_pattern_to_node(
+                    root,
+                    left.clone().into_iter().chain(inner).chain(right.clone()),
+                );
+                (left, SplitSegment::Child(inner), right)
+            }
+        }.into()
     }
 }
 

@@ -122,9 +122,19 @@ pub enum RangeSplitResult {
     Full(Child),
     Single(SplitSegment, SplitSegment),
     Double(SplitSegment, SplitSegment, SplitSegment),
-    None,
+}
+impl From<SingleSplitResult> for RangeSplitResult {
+    fn from((l, r): SingleSplitResult) -> Self {
+        Self::Single(l, r)
+    }
+}
+impl From<DoubleSplitResult> for RangeSplitResult {
+    fn from((l, i, r): DoubleSplitResult) -> Self {
+        Self::Double(l, i, r)
+    }
 }
 pub type SingleSplitResult = (SplitSegment, SplitSegment);
+pub type DoubleSplitResult = (SplitSegment, SplitSegment, SplitSegment);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SplitSegment {

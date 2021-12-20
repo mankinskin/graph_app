@@ -41,7 +41,7 @@ impl<I: Indexed> Indexed for &'_ mut I {
 }
 impl Indexed for VertexIndex {
     fn index(&self) -> &VertexIndex {
-        &self
+        self
     }
 }
 

@@ -22,7 +22,7 @@ where
 {
     type Token: AsChild;
     fn into_pattern(self) -> Pattern {
-        self.into_iter().map(|x| x.as_child().clone()).collect()
+        self.into_iter().map(|x| x.as_child()).collect()
     }
     fn as_pattern_view(&'_ self) -> &'_ [Self::Token];
     fn is_empty(&self) -> bool;

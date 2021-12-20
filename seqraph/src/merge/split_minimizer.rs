@@ -9,12 +9,13 @@ use crate::{
 
 use std::collections::HashSet;
 #[derive(Debug)]
-pub struct SplitMinimizer<'g, T: Tokenize> {
+pub struct SplitMinimizer<'g, T: Tokenize, D: MergeDirection> {
     graph: &'g mut Hypergraph<T>,
+    _ty: std::marker::PhantomData<D>
 }
-impl<'g, T: Tokenize> SplitMinimizer<'g, T> {
+impl<'g, T: Tokenize, D: MergeDirection> SplitMinimizer<'g, T, D> {
     pub fn new(graph: &'g mut Hypergraph<T>) -> Self {
-        Self { graph }
+        Self { graph, _ty: Default::default() }
     }
     /// minimize a pattern which has been merged at pos
     pub fn try_merge_indices(
@@ -26,7 +27,7 @@ impl<'g, T: Tokenize> SplitMinimizer<'g, T> {
         let p = vec![left, right];
         // find pattern over merge position
         self.graph
-            .find_pattern(p.as_pattern_view())
+            .find_parent(p.as_pattern_view())
             .map(
                 |SearchFound {
                      index: found,
@@ -51,36 +52,79 @@ impl<'g, T: Tokenize> SplitMinimizer<'g, T> {
             )
             .map_err(|_| p.into_pattern())
     }
-    /// minimal means:
-    /// - no two indices are adjacient more than once
-    /// - no two patterns of the same index share an index border
-    pub fn merge_left_splits(
+    fn merge_split(
         &mut self,
-        splits: Vec<(Pattern, SplitSegment)>,
+        context: SplitSegment,
+        inner: SplitSegment,
     ) -> SplitSegment {
-        MergeLeft::merge_splits(self.graph, splits)
-    }
-    pub fn merge_right_splits(
-        &mut self,
-        splits: Vec<(Pattern, SplitSegment)>,
-    ) -> SplitSegment {
-        MergeRight::merge_splits(self.graph, splits)
-    }
-    pub fn merge_left_optional_splits(
-        &mut self,
-        splits: Vec<(Pattern, Option<SplitSegment>)>,
-    ) -> SplitSegment {
-        MergeLeft::merge_optional_splits(self.graph, splits)
-    }
-    pub fn merge_right_optional_splits(
-        &mut self,
-        splits: Vec<(Pattern, Option<SplitSegment>)>,
-    ) -> SplitSegment {
-        MergeRight::merge_optional_splits(self.graph, splits)
+        if let Some((outer_head, outer_tail)) = D::split_context_head(context) {
+            let (inner_head, inner_tail) = D::split_inner_head(inner);
+            let (left, right) = D::merge_order(inner_head, outer_head);
+            // try to find parent matching both
+            self.try_merge_indices(left, right)
+                .map_err(|pat| D::concat_inner_and_context(inner_tail, pat, outer_tail))
+                .into()
+        } else {
+            inner
+        }
     }
     /// returns minimal patterns of pattern split
     /// i.e. no duplicate subsequences with respect to entire index
-    pub fn merge_inner_optional_splits(
+    pub(crate) fn merge_splits(
+        &mut self,
+        splits: Vec<(Pattern, SplitSegment)>,
+    ) -> SplitSegment {
+        self.merge_optional_splits(splits.into_iter().map(|(p, c)| (p, Some(c))))
+    }
+    /// returns minimal patterns of pattern split
+    /// i.e. no duplicate subsequences with respect to entire index
+    pub(crate) fn merge_optional_splits(
+        &mut self,
+        splits: impl IntoIterator<Item = (Pattern, Option<SplitSegment>)>,
+    ) -> SplitSegment {
+        splits
+            .into_iter()
+            .try_fold(
+                HashSet::new(),
+                |mut acc, (context, inner)|
+                if let Some(inner) = inner {
+                    match self.merge_split(context.into(), inner) {
+                        SplitSegment::Pattern(pat) => {
+                            acc.insert(pat);
+                            Ok(acc)
+                        }
+                        // stop when single child is found
+                        SplitSegment::Child(c) => Err(c),
+                    }
+                } else {
+                    if !context.is_empty() {
+                        acc.insert(context);
+                    }
+                    Ok(acc)
+                }
+            )
+            .map(|patterns|
+                match patterns.len() {
+                    0 => panic!("No patterns after merge!"),
+                    1 => {
+                        let pattern = patterns.into_iter().next().unwrap();
+                        match pattern.len() {
+                            0 => panic!("Empty pattern after merge!"),
+                            1 => pattern.into_iter().next().unwrap().into(),
+                            _ => pattern.into()
+                        }
+                    }
+                    _ => self.graph.insert_patterns(patterns).into()
+                }
+            )
+            .unwrap_or_else(SplitSegment::Child)
+    }
+    /// minimal means:
+    /// - no two indices are adjacient more than once
+    /// - no two patterns of the same index share an index border
+    /// returns minimal patterns of pattern split
+    /// i.e. no duplicate subsequences with respect to entire index
+    pub(crate) fn merge_inner_optional_splits(
         &mut self,
         splits: Vec<(Option<SplitSegment>, SplitSegment, Option<SplitSegment>)>,
     ) -> Child {
@@ -90,7 +134,7 @@ impl<'g, T: Tokenize> SplitMinimizer<'g, T> {
                 match (left, right) {
                     (Some(left), Some(right)) => self.add_inner_split(acc, left, infix, right),
                     (Some(left), None) => {
-                        match MergeRight::minimize_split(self.graph, infix, left) {
+                        match self.graph.right_merger().merge_split(infix, left) {
                             SplitSegment::Child(c) => Err(c),
                             SplitSegment::Pattern(pat) => {
                                 acc.insert(pat);
@@ -99,7 +143,7 @@ impl<'g, T: Tokenize> SplitMinimizer<'g, T> {
                         }
                     }
                     (None, Some(right)) => {
-                        match MergeLeft::minimize_split(self.graph, infix, right) {
+                        match self.graph.left_merger().merge_split(infix, right) {
                             SplitSegment::Child(c) => Err(c),
                             SplitSegment::Pattern(pat) => {
                                 acc.insert(pat);
@@ -183,8 +227,8 @@ impl<'g, T: Tokenize> SplitMinimizer<'g, T> {
                 }
             }
             _ => {
-                let left = MergeRight::minimize_split(self.graph, infix, left);
-                let right = MergeLeft::minimize_split(self.graph, left, right).unwrap_pattern();
+                let left = self.graph.right_merger().merge_split(infix, left);
+                let right = self.graph.left_merger().merge_split(left, right).unwrap_pattern();
                 acc.insert(right);
                 Ok(acc)
             }

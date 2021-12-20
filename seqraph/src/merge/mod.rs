@@ -4,6 +4,56 @@ pub use {
     merge_direction::*,
     split_minimizer::*,
 };
+use crate::{
+    graph::*,
+    split::*,
+    vertex::*,
+};
+impl<'t, 'a, T> Hypergraph<T>
+where
+    T: Tokenize + 't,
+{
+    pub fn left_merger(
+        &mut self,
+    ) -> SplitMinimizer<T, MergeLeft> {
+        SplitMinimizer::new(self)
+    }
+    pub fn right_merger(
+        &mut self,
+    ) -> SplitMinimizer<T, MergeRight> {
+        SplitMinimizer::new(self)
+    }
+    pub fn merge_left_splits(
+        &mut self,
+        splits: Vec<(Pattern, SplitSegment)>,
+    ) -> SplitSegment {
+        self.left_merger().merge_splits(splits)
+    }
+    pub fn merge_right_splits(
+        &mut self,
+        splits: Vec<(Pattern, SplitSegment)>,
+    ) -> SplitSegment {
+        self.right_merger().merge_splits(splits)
+    }
+    pub fn merge_left_optional_splits(
+        &mut self,
+        splits: Vec<(Pattern, Option<SplitSegment>)>,
+    ) -> SplitSegment {
+        self.left_merger().merge_optional_splits(splits)
+    }
+    pub fn merge_right_optional_splits(
+        &mut self,
+        splits: Vec<(Pattern, Option<SplitSegment>)>,
+    ) -> SplitSegment {
+        self.right_merger().merge_optional_splits(splits)
+    }
+    pub fn merge_inner_optional_splits(
+        &mut self,
+        splits: Vec<(Option<SplitSegment>, SplitSegment, Option<SplitSegment>)>,
+    ) -> Child {
+        self.left_merger().merge_inner_optional_splits(splits)
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -43,9 +93,8 @@ mod tests {
             (vec![d], SplitSegment::Child(c)),
             (vec![], SplitSegment::Child(cd)),
         ];
-        let mut minimizer = SplitMinimizer::new(&mut graph);
-        let left = minimizer.merge_left_splits(left);
-        let right = minimizer.merge_right_splits(right);
+        let left = graph.merge_left_splits(left);
+        let right = graph.merge_right_splits(right);
         assert_eq!(left, SplitSegment::Child(ab), "left");
         assert_eq!(right, SplitSegment::Child(cd), "right");
     }
@@ -64,8 +113,9 @@ mod tests {
         let ab = graph.insert_pattern([a, b]);
         let by = graph.insert_pattern([b, y]);
         let yz = graph.insert_pattern([y, z]);
-        let xab = graph.insert_pattern([x, ab]);
-        let xaby = graph.insert_patterns([vec![xab, y], vec![x, a, by]]);
+        let xa = graph.insert_pattern([x, a]);
+        let xab = graph.insert_patterns([[x, ab], [xa, b]]);
+        let xaby = graph.insert_patterns([vec![xab, y], vec![xa, by]]);
         let xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
 
         let mut splitter = IndexSplitter::new(&mut graph);
@@ -73,23 +123,6 @@ mod tests {
             splitter.get_perfect_split_separation(xabyz, NonZeroUsize::new(2).unwrap());
         assert_eq!(ps, None);
         let (left, right) = splitter.split_inner_indices(child_splits);
-
-        let xa_found = graph.find_pattern(vec![x, a]);
-        let xa = if let SearchFound {
-            index: xa,
-            parent_match:
-                ParentMatch {
-                    parent_range: FoundRange::Complete,
-                    ..
-                },
-            ..
-        } = xa_found.expect("xa not found")
-        {
-            Some(xa)
-        } else {
-            None
-        }
-        .expect("xa");
 
         let expleft = hashset![(vec![], SplitSegment::Child(xa)),];
         let expright = hashset![
@@ -104,9 +137,8 @@ mod tests {
         assert_eq!(sleft, expleft, "left");
         assert_eq!(sright, expright, "right");
 
-        let mut minimizer = SplitMinimizer::new(&mut graph);
-        let left = minimizer.merge_left_splits(left);
-        let right = minimizer.merge_right_splits(right);
+        let left = graph.merge_left_splits(left);
+        let right = graph.merge_right_splits(right);
         println!("{:#?}", graph);
         println!("left = {:#?}", left);
         println!("right = {:#?}", right);

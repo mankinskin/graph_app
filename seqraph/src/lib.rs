@@ -15,7 +15,6 @@ mod vertex;
 #[cfg(test)]
 pub use graph::tests::*;
 pub use graph::*;
-pub(crate) use merge::*;
 pub use split::*;
 pub(crate) use read::*;
 pub use r#match::*;

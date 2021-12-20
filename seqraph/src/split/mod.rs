@@ -174,8 +174,9 @@ mod tests {
         let ab = graph.insert_pattern([a, b]);
         let by = graph.insert_pattern([b, y]);
         let yz = graph.insert_pattern([y, z]);
-        let xab = graph.insert_pattern([x, ab]);
-        let xaby = graph.insert_patterns([vec![xab, y], vec![x, a, by]]);
+        let xa = graph.insert_pattern([x, a]);
+        let xab = graph.insert_patterns([[x, ab], [xa, b]]);
+        let xaby = graph.insert_patterns([vec![xab, y], vec![xa, by]]);
         let xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
 
         let mut splitter = IndexSplitter::new(&mut graph);
@@ -183,24 +184,8 @@ mod tests {
             splitter.get_perfect_split_separation(xabyz, NonZeroUsize::new(2).unwrap());
         assert_eq!(ps, None);
         let (left, right) = splitter.split_inner_indices(child_splits);
-        //let xa_found = graph.find_pattern(vec![x, a]);
-        //let xa = if let SearchFound {
-        //    index: xa,
-        //    parent_match:
-        //        ParentMatch {
-        //            parent_range: FoundRange::Complete,
-        //            ..
-        //        },
-        //    ..
-        //} = xa_found.expect("xa not found")
-        //{
-        //    Some(xa)
-        //} else {
-        //    None
-        //}
-        //.unwrap();
 
-        let expleft = hashset![(vec![], SplitSegment::Pattern(vec![x, a])),];
+        let expleft = hashset![(vec![], SplitSegment::Child(xa)),];
         let expright = hashset![
             (vec![yz], SplitSegment::Child(b)),
             (vec![z], SplitSegment::Child(by)),

@@ -1,5 +1,4 @@
 use crate::{
-    merge::*,
     split::*,
 };
 use std::{
@@ -37,7 +36,7 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
         let (perfect_split, remaining_splits)
             = SplitIndices::find_perfect_split(patterns, pos);
 
-        // check if any perfect split segment is a single child 
+        // check if any perfect split segment is a single child
         let (left, right) = if let Some(((pl, pr), ind)) = perfect_split {
             let (pl, pr): (SplitSegment, SplitSegment) = (pl.into(), pr.into());
             match (pl, pr) {
@@ -48,11 +47,10 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
                     let (left, right)
                         = self.split_inner_indices(remaining_splits);
 
-                    let mut minimizer = SplitMinimizer::new(self.graph);
                     let left = Self::with_perfect_split(pl, left);
-                    let left = minimizer.merge_left_optional_splits(left);
+                    let left = self.graph.merge_left_optional_splits(left);
                     let right = Self::with_perfect_split(pr, right);
-                    let right = minimizer.merge_right_optional_splits(right);
+                    let right = self.graph.merge_right_optional_splits(right);
 
                     self.graph
                         .add_pattern_to_node(root, left.clone().into_iter().chain(right.clone()));
@@ -62,9 +60,8 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
                     let (_, right)
                         = self.split_inner_indices(remaining_splits);
 
-                    let mut minimizer = SplitMinimizer::new(self.graph);
                     let right = Self::with_perfect_split(pr, right);
-                    let right = minimizer.merge_right_optional_splits(right);
+                    let right = self.graph.merge_right_optional_splits(right);
 
                     self.graph
                         .replace_in_pattern(root, ind.pattern_index, 1.., right.clone());
@@ -74,9 +71,8 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
                     let (left, _)
                         = self.split_inner_indices(remaining_splits);
 
-                    let mut minimizer = SplitMinimizer::new(self.graph);
                     let left = Self::with_perfect_split(pl, left);
-                    let left = minimizer.merge_right_optional_splits(left);
+                    let left = self.graph.merge_right_optional_splits(left);
 
                     let end = self.graph
                         .expect_vertex_data(&root).expect_child_pattern(&ind.pattern_index).len();
@@ -89,10 +85,9 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
             // no perfect split
             let (left, right)
                 = self.split_inner_indices(remaining_splits);
-            let mut minimizer = SplitMinimizer::new(self.graph);
-            let (left, right ) = (
-                minimizer.merge_left_splits(left),
-                minimizer.merge_right_splits(right),
+            let (left, right) = (
+                self.graph.merge_left_splits(left),
+                self.graph.merge_right_splits(right),
             );
             self.graph
                 .add_pattern_to_node(root, left.clone().into_iter().chain(right.clone()));
@@ -245,28 +240,13 @@ mod tests {
             let ab = graph.insert_pattern([a, b]);
             let by = graph.insert_pattern([b, y]);
             let yz = graph.insert_pattern([y, z]);
-            let xab = graph.insert_pattern([x, ab]);
-            let xaby = graph.insert_patterns([vec![xab, y], vec![x, a, by]]);
+            let xa = graph.insert_pattern([x, a]);
+            let xab = graph.insert_patterns([[x, ab], [xa, b]]);
+            let xaby = graph.insert_patterns([vec![xab, y], vec![xa, by]]);
             let xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
 
             let (left, right) = graph.split_index(xabyz, NonZeroUsize::new(2).unwrap());
             println!("{:#?}", graph);
-            let xa_found = graph.find_pattern(vec![x, a]);
-            let xa = if let SearchFound {
-                index: xa,
-                parent_match:
-                    ParentMatch {
-                        parent_range: FoundRange::Complete,
-                        ..
-                    },
-                ..
-            } = xa_found.expect("xa not found")
-            {
-                Some(xa)
-            } else {
-                None
-            }
-            .expect("xa");
 
             let byz_found = graph.find_pattern(vec![b, y, z]);
             let byz = if let SearchFound {
@@ -285,7 +265,7 @@ mod tests {
             }
             .expect("byz");
             assert_eq!(left, SplitSegment::Child(xa), "left");
-            assert_eq!(right, SplitSegment::Child(byz), "left");
+            assert_eq!(right, SplitSegment::Child(byz), "right");
         } else {
             panic!();
         }
@@ -315,42 +295,27 @@ mod tests {
             // split wxabyzabbyxabyz at 3
             let (left, right) = graph.split_index(wxabyzabbyxabyz, NonZeroUsize::new(3).unwrap());
 
-            let xa_found = graph.find_pattern(vec![w, xa]);
-            let wxa = if let SearchFound {
-                index: wxa,
+            assert_eq!(left, SplitSegment::Pattern(vec![w, xa]), "left");
+
+            println!("{:#?}", right);
+            let byz_found = graph.find_pattern(vec![by, z]);
+            let byz = if let SearchFound {
+                index: byz,
                 parent_match:
                     ParentMatch {
                         parent_range: FoundRange::Complete,
                         ..
                     },
                 ..
-            } = xa_found.expect("wxa not found")
+            } = byz_found.expect("byz not found")
             {
-                Some(wxa)
+                Some(byz)
             } else {
                 None
             }
-            .unwrap();
-            assert_eq!(left, SplitSegment::Child(wxa), "left");
+            .expect("byz");
 
-            let byzabbyxabyz_found = graph.find_pattern(vec![by, z, ab, by, xabyz]);
-            let byzabbyxabyz = if let SearchFound {
-                index: byzabbyxabyz,
-                parent_match:
-                    ParentMatch {
-                        parent_range: FoundRange::Complete,
-                        ..
-                    },
-                ..
-            } = byzabbyxabyz_found.expect("byzabbyxabyz not found")
-            {
-                Some(byzabbyxabyz)
-            } else {
-                None
-            }
-            .expect("byzabbyxabyz");
-
-            assert_eq!(right, SplitSegment::Child(byzabbyxabyz), "left");
+            assert_eq!(right, SplitSegment::Pattern(vec![byz, ab, by, xabyz]), "left");
         } else {
             panic!();
         }
