@@ -8,10 +8,11 @@ pub use searcher::*;
 //mod async_searcher;
 //pub use async_searcher::*;
 
+// TODO: rename to something with context
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ParentMatch {
-    pub parent_range: FoundRange,
-    pub remainder: Option<Pattern>,
+    pub parent_range: FoundRange, // context in parent
+    pub remainder: Option<Pattern>, // remainder of query
 }
 impl ParentMatch {
     pub fn embed_in_super(
@@ -27,6 +28,7 @@ impl ParentMatch {
 pub type ParentMatchResult = Result<ParentMatch, NoMatch>;
 
 // found range of search pattern in vertex at index
+// TODO: actually a context
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum FoundRange {
     Complete,                // Full index found
@@ -78,10 +80,10 @@ impl FoundRange {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SearchFound {
-    pub index: Child,
-    pub parent_match: ParentMatch,
-    pub pattern_id: PatternId,
-    pub sub_index: usize,
+    pub index: Child, // index in which we found the query
+    pub parent_match: ParentMatch, // match ranges
+    pub pattern_id: PatternId, // pattern
+    pub sub_index: usize, // starting index in pattern
 }
 pub type SearchResult = Result<SearchFound, NoMatch>;
 
@@ -89,19 +91,19 @@ impl<'t, 'a, T> Hypergraph<T>
 where
     T: Tokenize + 't,
 {
-    pub(crate) fn right_searcher(&'a self) -> Searcher<'a, T, MatchRight> {
+    pub(crate) fn right_searcher(&'a self) -> Searcher<'a, T, Right> {
         Searcher::new(self)
     }
     #[allow(unused)]
-    pub(crate) fn left_searcher(&'a self) -> Searcher<'a, T, MatchLeft> {
+    pub(crate) fn left_searcher(&'a self) -> Searcher<'a, T, Left> {
         Searcher::new(self)
     }
-    pub(crate) fn find_pattern(
+    pub(crate) fn find_ancestor(
         &self,
-        pattern: impl IntoPattern<Item = impl AsChild>,
+        pattern: impl IntoIterator<Item = impl Indexed>,
     ) -> SearchResult {
-        let pattern: Pattern = pattern.into_pattern();
-        MatchRight::split_head_tail(&pattern)
+        let pattern = self.to_children(pattern);
+        Right::split_head_tail(&pattern)
             .ok_or(NoMatch::EmptyPatterns)
             .and_then(|(head, tail)|
                 if tail.is_empty() {
@@ -115,8 +117,9 @@ where
     }
     pub(crate) fn find_parent(
         &self,
-        pattern: impl IntoPattern<Item = impl AsChild, Token=Child>,
+        pattern: impl IntoIterator<Item = impl Indexed>,
     ) -> SearchResult {
+        let pattern = self.to_children(pattern);
         self.right_searcher().find_parent(pattern)
     }
     pub fn find_sequence(
@@ -125,7 +128,7 @@ where
     ) -> SearchResult {
         let iter = tokenizing_iter(pattern.into_iter());
         let pattern = self.to_token_children(iter)?;
-        self.find_pattern(pattern)
+        self.find_ancestor(pattern)
     }
 }
 #[macro_use]
@@ -181,7 +184,7 @@ pub(crate) mod tests {
     }
     pub(crate) use assert_match;
     #[test]
-    fn find_pattern_1() {
+    fn find_ancestor_1() {
         let (
             graph,
             a,
@@ -212,42 +215,42 @@ pub(crate) mod tests {
         let b_c_pattern = vec![Child::new(b, 1), Child::new(c, 1)];
         let bc_pattern = vec![Child::new(bc, 2)];
         let a_b_c_pattern = vec![Child::new(a, 1), Child::new(b, 1), Child::new(c, 1)];
-        //assert_match!(graph.find_pattern(&bc_pattern), Ok((bc, FoundRange::Complete)));
-        assert_match!(graph.find_pattern(&bc_pattern), Err(NoMatch::SingleIndex));
+        //assert_match!(graph.find_ancestor(&bc_pattern), Ok((bc, FoundRange::Complete)));
+        assert_match!(graph.find_ancestor(&bc_pattern), Err(NoMatch::SingleIndex));
         assert_match!(
-            graph.find_pattern(&b_c_pattern),
+            graph.find_ancestor(&b_c_pattern),
             Ok((bc, FoundRange::Complete))
         );
         assert_match!(
-            graph.find_pattern(&a_bc_pattern),
+            graph.find_ancestor(&a_bc_pattern),
             Ok((abc, FoundRange::Complete))
         );
         assert_match!(
-            graph.find_pattern(&ab_c_pattern),
+            graph.find_ancestor(&ab_c_pattern),
             Ok((abc, FoundRange::Complete))
         );
         assert_match!(
-            graph.find_pattern(&a_bc_d_pattern),
+            graph.find_ancestor(&a_bc_d_pattern),
             Ok((abcd, FoundRange::Complete))
         );
         assert_match!(
-            graph.find_pattern(&a_b_c_pattern),
+            graph.find_ancestor(&a_b_c_pattern),
             Ok((abc, FoundRange::Complete))
         );
         let a_b_a_b_a_b_a_b_c_d_e_f_g_h_i_pattern =
             vec![*a, *b, *a, *b, *a, *b, *a, *b, *c, *d, *e, *f, *g, *h, *i];
         assert_match!(
-            graph.find_pattern(&a_b_a_b_a_b_a_b_c_d_e_f_g_h_i_pattern),
+            graph.find_ancestor(&a_b_a_b_a_b_a_b_c_d_e_f_g_h_i_pattern),
             Ok((ababababcdefghi, FoundRange::Complete))
         );
         let a_b_c_c_pattern = [&a_b_c_pattern[..], &[Child::new(c, 1)]].concat();
         assert_matches!(
-            graph.find_pattern(a_b_c_c_pattern),
+            graph.find_ancestor(a_b_c_c_pattern),
             Err(NoMatch::NoMatchingParent(_))
         );
     }
     #[test]
-    fn find_pattern_2() {
+    fn find_ancestor_2() {
         let mut graph = Hypergraph::default();
         let (a, b, _w, x, y, z) = graph.insert_tokens([
             Token::Element('a'),
@@ -257,15 +260,14 @@ pub(crate) mod tests {
             Token::Element('y'),
             Token::Element('z'),
         ]).into_iter().next_tuple().unwrap();
-        // wxabyzabbyxabyz
         let ab = graph.insert_pattern([a, b]);
         let by = graph.insert_pattern([b, y]);
         let yz = graph.insert_pattern([y, z]);
-        let xab = graph.insert_pattern([x, ab]);
-        let xaby = graph.insert_patterns([vec![xab, y], vec![x, a, by]]);
+        let xa = graph.insert_pattern([x, a]);
+        let xab = graph.insert_patterns([[x, ab], [xa, b]]);
+        let xaby = graph.insert_patterns([vec![xab, y], vec![xa, by]]);
         let _xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
-        let byz_found = graph.find_pattern(vec![by, z]);
-        let x_a_pattern = vec![x, a];
+        let byz_found = graph.find_ancestor(vec![by, z]);
         assert_matches!(
             byz_found,
             Ok(SearchFound {
@@ -278,7 +280,7 @@ pub(crate) mod tests {
             })
         );
         let post = byz_found.unwrap().parent_match.parent_range;
-        assert_eq!(post, FoundRange::Postfix(x_a_pattern));
+        assert_eq!(post, FoundRange::Postfix(vec![xa]));
     }
     #[test]
     fn find_sequence() {

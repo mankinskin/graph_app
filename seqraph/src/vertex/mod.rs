@@ -36,6 +36,9 @@ pub type IndexPosition = usize;
 pub type IndexPattern = Vec<VertexIndex>;
 pub type VertexPatternView<'a> = Vec<&'a VertexData>;
 
+pub(crate) fn clone_child_patterns(children: &ChildPatterns) -> Vec<Pattern> {
+    children.iter().map(|(_, p)| p.clone()).collect()
+}
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum VertexKey<T: Tokenize> {
     Token(Token<T>),
@@ -137,6 +140,9 @@ impl VertexData {
     }
     pub fn get_children(&self) -> &ChildPatterns {
         &self.children
+    }
+    pub fn get_child_patterns(&self) -> Vec<Pattern> {
+        clone_child_patterns(&self.children)
     }
     pub fn add_pattern<P: IntoPattern<Item = impl AsChild>>(
         &mut self,
@@ -252,7 +258,7 @@ impl VertexData {
                 .unwrap_or(false)
         })
     }
-    pub fn find_pattern_with_range<T: Tokenize + std::fmt::Display>(
+    pub fn find_ancestor_with_range<T: Tokenize + std::fmt::Display>(
         &self,
         half: Pattern,
         range: impl PatternRangeIndex + Clone,
@@ -286,12 +292,18 @@ impl VertexData {
     }
 }
 
-impl Vertexed for VertexData {
-    fn vertex<'g, T: Tokenize>(
-        &'g self,
+impl<'g> Vertexed<'g, 'g> for &'g VertexData {
+    fn vertex<T: Tokenize>(
+        self,
         _graph: &'g Hypergraph<T>,
     ) -> &'g VertexData {
         self
+    }
+    fn vertex_ref<T: Tokenize>(
+        &'g self,
+        _graph: &'g Hypergraph<T>,
+    ) -> &'g VertexData {
+        *self
     }
 }
 impl Indexed for VertexData {

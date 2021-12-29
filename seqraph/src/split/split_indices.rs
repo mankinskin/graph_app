@@ -33,7 +33,7 @@ impl<'g> SplitIndices {
             .into_iter()
             .map(move |(i, pattern)| {
                 let split =
-                    Self::find_pattern_split_index(pattern, pos).expect("Split not in pattern");
+                    Self::find_ancestor_split_index(pattern, pos).expect("Split not in pattern");
                 (*i.borrow(), split)
             })
             .collect()
@@ -109,7 +109,7 @@ impl<'g> SplitIndices {
             .ok_or(index_in_parent)
     }
     /// find split position in index in pattern
-    pub(crate) fn find_pattern_split_index(
+    pub(crate) fn find_ancestor_split_index(
         pattern: impl IntoPattern<Item = impl AsChild>,
         pos: NonZeroUsize,
     ) -> Option<SplitIndex> {
@@ -141,9 +141,9 @@ impl<'g> SplitIndices {
             .into_iter()
             .try_fold(vec![], move |mut acc, (pattern_index, pattern)| {
                 let pattern_index = *pattern_index.borrow();
-                let left_split = SplitIndices::find_pattern_split_index(pattern.clone(), left)
+                let left_split = SplitIndices::find_ancestor_split_index(pattern.clone(), left)
                     .expect("left split not in pattern");
-                let right_split = SplitIndices::find_pattern_split_index(pattern, right)
+                let right_split = SplitIndices::find_ancestor_split_index(pattern, right)
                     .expect("right split not in pattern");
                 let left = SplitIndices::separate_pattern_split(pattern_index, left_split);
                 let right = SplitIndices::separate_pattern_split(pattern_index, right_split);
@@ -248,19 +248,17 @@ impl<'g> SplitIndices {
             width
         };
         if let Some(lower) = NonZeroUsize::new(lower) {
-            match NonZeroUsize::new(higher).ok_or(lower) {
-                Ok(higher) => {
-                    if higher.get() < width {
-                        DoubleSplitPositions::Double(lower, higher)
-                    } else {
-                        DoubleSplitPositions::Single(lower)
-                    }
-                }
-                Err(lower) => DoubleSplitPositions::Single(lower),
+            let higher = NonZeroUsize::new(higher)
+                .filter(|higher| higher.get() > lower.get())
+                .expect("PatternRangeIndex with higher <= lower bound!");
+            if higher.get() < width {
+                DoubleSplitPositions::Double(lower, higher)
+            } else {
+                DoubleSplitPositions::SinglePostfix(lower)
             }
         } else {
             // lower bound out
-            DoubleSplitPositions::Single(
+            DoubleSplitPositions::SinglePrefix(
                 NonZeroUsize::new(higher).expect("upper bound is zero dispite check"),
             )
         }

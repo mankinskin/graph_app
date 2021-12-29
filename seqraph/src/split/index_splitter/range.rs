@@ -1,10 +1,31 @@
 use crate::{
     split::*,
+    direction::*,
     Indexed,
 };
 use std::num::NonZeroUsize;
 impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
     pub(crate) fn index_subrange(
+        &mut self,
+        root: impl Indexed + Clone,
+        range: impl PatternRangeIndex,
+    ) -> Child {
+        let root = root.index();
+        //println!("splitting {} at {:?}", hypergraph.index_string(root), range);
+        let vertex = self.graph.expect_vertex_data(root).clone();
+        // range is a subrange of the index
+        let patterns = vertex.get_children().clone();
+        match SplitIndices::verify_range_split_indices(vertex.width, range) {
+            DoubleSplitPositions::Double(lower, higher) =>
+                self.process_double_splits(root, vertex, patterns, lower, higher).1,
+            DoubleSplitPositions::SinglePrefix(single) =>
+                self.index_single_split_patterns::<Left, _>(root, patterns, single).unwrap_prefix().0,
+            DoubleSplitPositions::SinglePostfix(single) =>
+                self.index_single_split_patterns::<Right, _>(root, patterns, single).unwrap_postfix().1,
+            DoubleSplitPositions::None => Child::new(root, vertex.width),
+        }
+    }
+    pub(crate) fn split_subrange(
         &mut self,
         root: impl Indexed + Clone,
         range: impl PatternRangeIndex,
@@ -16,9 +37,11 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
         let patterns = vertex.get_children().clone();
         match SplitIndices::verify_range_split_indices(vertex.width, range) {
             DoubleSplitPositions::Double(lower, higher) =>
-                self.process_double_splits(root, vertex, patterns, lower, higher),
-            DoubleSplitPositions::Single(single) =>
-                self.single_split_patterns(root, patterns, single).1.into(),
+                self.process_double_splits(root, vertex, patterns, lower, higher).into(),
+            DoubleSplitPositions::SinglePrefix(single) =>
+                self.single_split_patterns(root, patterns, single).into(),
+            DoubleSplitPositions::SinglePostfix(single) =>
+                self.single_split_patterns(root, patterns, single).into(),
             DoubleSplitPositions::None => RangeSplitResult::Full(Child::new(root, vertex.width)),
         }
     }
@@ -29,11 +52,12 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
         patterns: ChildPatterns,
         lower: NonZeroUsize,
         higher: NonZeroUsize,
-    ) -> RangeSplitResult {
+    ) -> IndexRangeResult {
         // both positions in position in pattern
         match SplitIndices::build_double(&vertex, patterns, lower, higher) {
-            Ok((_pattern_id, pre, _left, inner, _right, post)) => {
-                (pre.into(), inner.into(), post.into())
+            Ok((pid, pre, left, inner, right, post)) => {
+                let inner = self.graph.parent_range_index(root, pid, left..right, inner);
+                (pre.into(), inner, post.into())
             }
             Err(indices) => {
                 // unperfect splits
@@ -64,7 +88,7 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
                                     ra.push((post, Some(rr)));
                                 }
                                 DoubleSplitIndex::Inner(pre, (index, left, right), post) => {
-                                    match self.index_subrange(index, left.get()..right.get()) {
+                                    match self.split_subrange(index, left.get()..right.get()) {
                                         RangeSplitResult::Double(l, i, r) => {
                                             la.push((pre, Some(l)));
                                             ia.push((None, i, None));
@@ -92,9 +116,9 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
                     root,
                     left.clone().into_iter().chain(inner).chain(right.clone()),
                 );
-                (left, SplitSegment::Child(inner), right)
+                (left, inner, right)
             }
-        }.into()
+        }
     }
 }
 

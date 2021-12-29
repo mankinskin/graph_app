@@ -1,29 +1,47 @@
 use super::*;
 
-pub trait Vertexed: Indexed {
-    fn vertex<'g, T: Tokenize>(
-        &'g self,
+pub trait Vertexed<'a, 'g>: Indexed + 'a + Sized {
+    fn vertex<T: Tokenize>(
+        self,
+        graph: &'g Hypergraph<T>,
+    ) -> &'g VertexData {
+        graph.expect_vertex_data(self.index())
+    }
+    fn vertex_ref<T: Tokenize>(
+        &'a self,
         graph: &'g Hypergraph<T>,
     ) -> &'g VertexData {
         graph.expect_vertex_data(self.index())
     }
 }
-impl Vertexed for VertexIndex {}
-impl Vertexed for Child {}
-impl<V: Vertexed> Vertexed for &'_ V {
-    fn vertex<'g, T: Tokenize>(
-        &'g self,
+impl<'a, 'g> Vertexed<'a, 'g> for VertexIndex {}
+impl<'a, 'g> Vertexed<'a, 'g> for Child {}
+impl<'a, 'g, V: Vertexed<'a, 'g>> Vertexed<'a, 'g> for &'a V {
+    fn vertex<T: Tokenize>(
+        self,
         graph: &'g Hypergraph<T>,
     ) -> &'g VertexData {
-        (**self).vertex(graph)
+        V::vertex_ref(self, graph)
+    }
+    fn vertex_ref<T: Tokenize>(
+        &'a self,
+        graph: &'g Hypergraph<T>,
+    ) -> &'g VertexData {
+        V::vertex_ref(*self, graph)
     }
 }
-impl<V: Vertexed> Vertexed for &'_ mut V {
-    fn vertex<'g, T: Tokenize>(
-        &'g self,
+impl<'a, 'g, V: Vertexed<'a, 'g>> Vertexed<'a, 'g> for &'a mut V {
+    fn vertex<T: Tokenize>(
+        self,
         graph: &'g Hypergraph<T>,
     ) -> &'g VertexData {
-        (**self).vertex(graph)
+        V::vertex_ref(self, graph)
+    }
+    fn vertex_ref<T: Tokenize>(
+        &'a self,
+        graph: &'g Hypergraph<T>,
+    ) -> &'g VertexData {
+        V::vertex_ref(*self, graph)
     }
 }
 pub trait Indexed {

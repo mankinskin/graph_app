@@ -1,5 +1,6 @@
 use crate::{
     split::*,
+    direction::*,
     Indexed,
     VertexIndex,
 };
@@ -8,7 +9,6 @@ use std::{
     num::NonZeroUsize,
 };
 mod single;
-pub use single::*;
 mod range;
 pub use range::*;
 
@@ -128,13 +128,41 @@ impl From<SingleSplitResult> for RangeSplitResult {
         Self::Single(l, r)
     }
 }
-impl From<DoubleSplitResult> for RangeSplitResult {
-    fn from((l, i, r): DoubleSplitResult) -> Self {
-        Self::Double(l, i, r)
+impl From<IndexRangeResult> for RangeSplitResult {
+    fn from((l, i, r): IndexRangeResult) -> Self {
+        Self::Double(l, i.into(), r)
     }
 }
 pub type SingleSplitResult = (SplitSegment, SplitSegment);
-pub type DoubleSplitResult = (SplitSegment, SplitSegment, SplitSegment);
+pub type IndexRangeResult = (SplitSegment, Child, SplitSegment);
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum IndexSplitResult {
+    Prefix(Child, SplitSegment),
+    Postfix(SplitSegment, Child),
+}
+impl IndexSplitResult {
+    pub fn prefix(self) -> Option<(Child, SplitSegment)> {
+        match self {
+            Self::Prefix(c, s) => Some((c, s)),
+            Self::Postfix(_, _) => None,
+        }
+    }
+    pub fn postfix(self) -> Option<(SplitSegment, Child)> {
+        match self {
+            Self::Prefix(_, _) => None,
+            Self::Postfix(c, s) => Some((c, s)),
+        }
+    }
+    pub fn unwrap_prefix(self) -> (Child, SplitSegment) {
+        self.prefix()
+            .expect("called IndexSplitResult::unwrap_prefix on a `Postfix` value")
+    }
+    pub fn unwrap_postfix(self) -> (SplitSegment, Child) {
+        self.postfix()
+            .expect("called IndexSplitResult::unwrap_postfix on a `Prefix` value")
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SplitSegment {
@@ -252,7 +280,8 @@ pub type DoublePerfectSplitIndex = (PatternId, Pattern, usize, Pattern, usize, P
 
 pub enum DoubleSplitPositions {
     None,
-    Single(NonZeroUsize),
+    SinglePrefix(NonZeroUsize),
+    SinglePostfix(NonZeroUsize),
     Double(NonZeroUsize, NonZeroUsize),
 }
 pub enum DoubleSplitIndex {
@@ -276,42 +305,23 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
         root: impl Indexed,
         pos: NonZeroUsize,
     ) -> SingleSplitResult {
-        self.split_index_with_pid(root, pos).1
+        let vertex = self.graph.expect_vertex_data(&root);
+        let patterns = vertex.get_children().clone();
+        self.single_split_patterns(root, patterns, pos)
     }
     pub fn index_prefix(
         &mut self,
         root: impl Indexed,
         pos: NonZeroUsize,
     ) -> (Child, SplitSegment) {
-        let (pid, (l, r)) = self.split_index_with_pid(root.index(), pos);
-        match l {
-            SplitSegment::Child(c) => (c, r),
-            SplitSegment::Pattern(p) => {
-                let len = p.len();
-                let c = self.graph.insert_pattern(p);
-                if let Some(pid) = pid {
-                    self.graph.replace_in_pattern(root, pid, 0..len, c);
-                }
-                (c, r)
-            }
-        }
+        self.index_single_split::<Left, _>(root, pos).unwrap_prefix()
     }
     pub fn index_postfix(
         &mut self,
         root: impl Indexed,
         pos: NonZeroUsize,
     ) -> (SplitSegment, Child) {
-        let (pid, (l, r)) = self.split_index_with_pid(root.index(), pos);
-        match r {
-            SplitSegment::Child(c) => (l, c),
-            SplitSegment::Pattern(p) => {
-                let c = self.graph.insert_pattern(p);
-                if let Some(pid) = pid {
-                    self.graph.replace_in_pattern(root, pid, l.len().., c);
-                }
-                (l, c)
-            }
-        }
+        self.index_single_split::<Right, _>(root, pos).unwrap_postfix()
     }
     // TODO: maybe move into merger
     //pub(crate) fn resolve_perfect_split_range(

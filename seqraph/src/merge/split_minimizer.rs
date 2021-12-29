@@ -1,6 +1,5 @@
 use crate::{
     merge::merge_direction::*,
-    search::*,
     split::*,
     vertex::*,
     Child,
@@ -17,42 +16,20 @@ impl<'g, T: Tokenize, D: MergeDirection> SplitMinimizer<'g, T, D> {
     pub fn new(graph: &'g mut Hypergraph<T>) -> Self {
         Self { graph, _ty: Default::default() }
     }
-    /// minimize a pattern which has been merged at pos
     pub fn try_merge_indices(
         &mut self,
         left: Child,
         right: Child,
     ) -> Result<Child, Pattern> {
         //println!("pos: {}, len: {}", pos, pattern.len());
-        let p = vec![left, right];
+        let p = &[left, right][..];
         // find pattern over merge position
         self.graph
             .find_parent(p.as_pattern_view())
-            .map(
-                |SearchFound {
-                     index: found,
-                     pattern_id,
-                     sub_index,
-                     parent_match,
-                 }| {
-                    if parent_match.parent_range.matches_completely() {
-                        found
-                    } else {
-                        // create new index and replace in parent
-                        let new = self.graph.insert_pattern(p.clone());
-                        self.graph.replace_in_pattern(
-                            found,
-                            pattern_id,
-                            sub_index..=sub_index + 1,
-                            new,
-                        );
-                        new
-                    }
-                },
-            )
+            .map(|found| self.graph.index_found(p, found))
             .map_err(|_| p.into_pattern())
     }
-    fn merge_split(
+    pub(crate) fn merge_split(
         &mut self,
         context: SplitSegment,
         inner: SplitSegment,
@@ -183,8 +160,8 @@ impl<'g, T: Tokenize, D: MergeDirection> SplitMinimizer<'g, T, D> {
     ) -> Result<HashSet<Pattern>, Child> {
         match infix.len() {
             0 => {
-                let (l, _ltail) = MergeLeft::split_context_head(left).unwrap();
-                let (r, _rtail) = MergeRight::split_context_head(right).unwrap();
+                let (l, _ltail) = Left::split_context_head(left).unwrap();
+                let (r, _rtail) = Right::split_context_head(right).unwrap();
                 match self.try_merge_indices(l, r).into() {
                     SplitSegment::Child(c) => Err(c),
                     SplitSegment::Pattern(pat) => {
@@ -194,9 +171,9 @@ impl<'g, T: Tokenize, D: MergeDirection> SplitMinimizer<'g, T, D> {
                 }
             }
             1 => {
-                let (l, _) = MergeLeft::split_context_head(left.clone()).unwrap();
-                let (i, _) = MergeRight::split_context_head(infix).unwrap();
-                let (r, _) = MergeRight::split_context_head(right.clone()).unwrap();
+                let (l, _) = Left::split_context_head(left.clone()).unwrap();
+                let (i, _) = Right::split_context_head(infix).unwrap();
+                let (r, _) = Right::split_context_head(right.clone()).unwrap();
                 match self.try_merge_indices(l, i).into() {
                     SplitSegment::Child(lc) => match self.try_merge_indices(lc, r).into() {
                         SplitSegment::Child(c) => Err(c),

@@ -118,9 +118,7 @@ pub trait MatchDirection {
             .unwrap_or(false)
     }
 }
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct MatchRight;
-impl MatchDirection for MatchRight {
+impl MatchDirection for Right {
     fn get_match_parent_to(
         vertex: &VertexData,
         sup: impl Indexed,
@@ -207,9 +205,7 @@ impl MatchDirection for MatchRight {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct MatchLeft;
-impl MatchDirection for MatchLeft {
+impl MatchDirection for Left {
     fn get_match_parent_to(
         vertex: &VertexData,
         sup: impl Indexed,

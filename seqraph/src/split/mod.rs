@@ -17,27 +17,25 @@ where
     T: Tokenize + 't,
 {
     /// Split an index the specified position
-    pub fn split_index(
+    pub fn index_splitter(
         &mut self,
-        root: impl Indexed,
-        pos: NonZeroUsize,
-    ) -> SingleSplitResult {
-        IndexSplitter::new(self).split_index(root, pos)
+    ) -> IndexSplitter<T> {
+        IndexSplitter::new(self)
     }
     // create index from token position range in index
     pub fn index_subrange(
         &mut self,
         root: impl Indexed + Clone,
         range: impl PatternRangeIndex,
-    ) -> RangeSplitResult {
-        IndexSplitter::new(self).index_subrange(root, range)
+    ) -> Child {
+        self.index_splitter().index_subrange(root, range)
     }
     pub fn index_prefix(
         &mut self,
         root: impl Indexed,
         pos: NonZeroUsize,
     ) -> (Child, SplitSegment) {
-        IndexSplitter::new(self).index_prefix(root, pos)
+        self.index_splitter().index_prefix(root, pos)
     }
     pub fn index_postfix(
         &mut self,
@@ -126,7 +124,7 @@ mod tests {
     use std::collections::HashSet;
     use itertools::*;
     #[test]
-    fn split_inner_indices_1() {
+    fn split_child_indices_1() {
         let mut graph = Hypergraph::default();
         let (a, b, c, d) = graph.insert_tokens([
             Token::Element('a'),
@@ -154,14 +152,14 @@ mod tests {
         let (ps, child_splits) =
             splitter.get_perfect_split_separation(abcd, NonZeroUsize::new(2).unwrap());
         assert_eq!(ps, None);
-        let (left, right) = splitter.split_inner_indices(child_splits);
+        let (left, right) = splitter.split_child_indices(child_splits);
         let (left, right): (HashSet<_>, HashSet<_>) =
             (left.into_iter().collect(), right.into_iter().collect());
         assert_eq!(left, expleft, "left");
         assert_eq!(right, expright, "right");
     }
     #[test]
-    fn split_inner_indices_2() {
+    fn split_child_indices_2() {
         let mut graph = Hypergraph::default();
         let (a, b, x, y, z) = graph.insert_tokens([
             Token::Element('a'),
@@ -183,7 +181,7 @@ mod tests {
         let (ps, child_splits) =
             splitter.get_perfect_split_separation(xabyz, NonZeroUsize::new(2).unwrap());
         assert_eq!(ps, None);
-        let (left, right) = splitter.split_inner_indices(child_splits);
+        let (left, right) = splitter.split_child_indices(child_splits);
 
         let expleft = hashset![(vec![], SplitSegment::Child(xa)),];
         let expright = hashset![

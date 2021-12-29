@@ -39,7 +39,7 @@ pub struct AsyncReader<T: Tokenize + Send + Sync, D: AsyncMatchDirection<T> + Cl
     _ty: std::marker::PhantomData<D>,
 }
 impl<T: Tokenize + Send + Sync + 'static, D: AsyncMatchDirection<T> + Clone> AsyncReader<T, D> {
-    pub(crate) fn right_searcher(&self) -> AsyncSearcher<T, MatchRight> {
+    pub(crate) fn right_searcher(&self) -> AsyncSearcher<T, Right> {
         AsyncSearcher::new(self.graph)
     }
     pub async fn read_sequence_stream(&mut self, stream: impl TokenStream<T>) -> SearchResult {

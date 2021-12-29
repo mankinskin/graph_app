@@ -15,13 +15,27 @@ where
 {
     pub fn left_merger(
         &mut self,
-    ) -> SplitMinimizer<T, MergeLeft> {
+    ) -> SplitMinimizer<T, Left> {
         SplitMinimizer::new(self)
     }
     pub fn right_merger(
         &mut self,
-    ) -> SplitMinimizer<T, MergeRight> {
+    ) -> SplitMinimizer<T, Right> {
         SplitMinimizer::new(self)
+    }
+    pub fn merge_left_split(
+        &mut self,
+        context: Pattern,
+        inner: SplitSegment,
+    ) -> SplitSegment {
+        self.left_merger().merge_split(context.into(), inner)
+    }
+    pub fn merge_right_split(
+        &mut self,
+        context: Pattern,
+        inner: SplitSegment,
+    ) -> SplitSegment {
+        self.right_merger().merge_split(context.into(), inner)
     }
     pub fn merge_left_splits(
         &mut self,
@@ -122,7 +136,7 @@ mod tests {
         let (ps, child_splits) =
             splitter.get_perfect_split_separation(xabyz, NonZeroUsize::new(2).unwrap());
         assert_eq!(ps, None);
-        let (left, right) = splitter.split_inner_indices(child_splits);
+        let (left, right) = splitter.split_child_indices(child_splits);
 
         let expleft = hashset![(vec![], SplitSegment::Child(xa)),];
         let expright = hashset![
@@ -142,7 +156,7 @@ mod tests {
         println!("{:#?}", graph);
         println!("left = {:#?}", left);
         println!("right = {:#?}", right);
-        let byz_found = graph.find_pattern(vec![b, y, z]);
+        let byz_found = graph.find_ancestor(vec![b, y, z]);
         let byz = if let SearchFound {
             index: byz,
             parent_match:

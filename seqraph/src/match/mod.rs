@@ -59,10 +59,10 @@ impl<'t, 'a, T> Hypergraph<T>
 where
     T: Tokenize + 't,
 {
-    pub fn right_matcher(&'a self) -> Matcher<'a, T, MatchRight> {
+    pub fn right_matcher(&'a self) -> Matcher<'a, T, Right> {
         Matcher::new(self)
     }
-    pub fn left_matcher(&'a self) -> Matcher<'a, T, MatchLeft> {
+    pub fn left_matcher(&'a self) -> Matcher<'a, T, Left> {
         Matcher::new(self)
     }
     pub fn compare_pattern_postfix<C: AsChild>(

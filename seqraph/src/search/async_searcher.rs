@@ -18,7 +18,7 @@ pub struct AsyncSearcher<T: Tokenize + Send, D: AsyncMatchDirection<T>> {
     graph: HypergraphHandle<T>,
     _ty: std::marker::PhantomData<D>,
 }
-impl<T: Tokenize + Send + 'static> AsyncSearcher<T, MatchRight> {
+impl<T: Tokenize + Send + 'static> AsyncSearcher<T, Right> {
     pub fn search_right(graph: HypergraphHandle<T>) -> Self {
         Self::new(graph)
     }
@@ -36,14 +36,14 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
     pub async fn find_sequence(&self, pattern: impl IntoIterator<Item = impl Into<T>>) -> SearchResult {
         let iter = tokenizing_iter(pattern.into_iter());
         let pattern = self.graph.read().await.to_token_children(iter)?;
-        self.find_pattern(pattern).await
+        self.find_ancestor(pattern).await
     }
-    pub(crate) async fn find_pattern_iter(
+    pub(crate) async fn find_ancestor_iter(
         &self,
         pattern: impl IntoIterator<Item=Result<impl AsChild, NoMatch>>,
     ) -> SearchResult {
         let pattern: Pattern = pattern.into_iter().map(|r| r.map(Into::into)).collect::<Result<Pattern, NoMatch>>()?;
-        MatchRight::split_head_tail(&pattern)
+        Right::split_head_tail(&pattern)
             .ok_or(NoMatch::EmptyPatterns)
             .and_then(|(head, tail)| {
                 if tail.is_empty() {
@@ -56,12 +56,12 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
                 }
             })
     }
-    pub(crate) async fn find_pattern(
+    pub(crate) async fn find_ancestor(
         &self,
         pattern: impl IntoPattern<Item=impl AsChild>,
     ) -> SearchResult {
         let pattern: Pattern = pattern.into_pattern();
-        MatchRight::split_head_tail(&pattern)
+        Right::split_head_tail(&pattern)
             .ok_or(NoMatch::EmptyPatterns)
             .and_then(|(head, tail)| {
                 if tail.is_empty() {

@@ -121,11 +121,6 @@ impl std::cmp::PartialOrd for Child {
         self.index.partial_cmp(&other.index)
     }
 }
-impl Wide for Child {
-    fn width(&self) -> usize {
-        self.width
-    }
-}
 impl std::hash::Hash for Child {
     fn hash<H: Hasher>(
         &self,
@@ -174,11 +169,6 @@ impl PartialEq<VertexIndex> for &'_ mut Child {
         self.index == *other
     }
 }
-impl Indexed for Child {
-    fn index(&self) -> &VertexIndex {
-        &self.index
-    }
-}
 impl<T: Into<Child> + Clone> From<&'_ T> for Child {
     fn from(o: &'_ T) -> Self {
         (*o).clone().into()
@@ -194,5 +184,16 @@ impl IntoIterator for Child {
     type IntoIter = std::iter::Once<Child>;
     fn into_iter(self) -> Self::IntoIter {
         std::iter::once(self)
+    }
+}
+
+impl Indexed for Child {
+    fn index(&self) -> &VertexIndex {
+        &self.index
+    }
+}
+impl Wide for Child {
+    fn width(&self) -> usize {
+        self.width
     }
 }

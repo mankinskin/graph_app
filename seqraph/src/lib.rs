@@ -1,9 +1,11 @@
 #![feature(test)]
 #![feature(async_closure)]
 #![feature(assert_matches)]
+#![feature(try_blocks)]
 
 extern crate test;
 
+mod direction;
 mod graph;
 mod r#match;
 mod search;
@@ -12,6 +14,7 @@ mod merge;
 mod split;
 mod vertex;
 
+pub use direction::*;
 #[cfg(test)]
 pub use graph::tests::*;
 pub use graph::*;

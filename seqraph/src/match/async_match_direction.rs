@@ -161,7 +161,7 @@ pub trait AsyncMatchDirection<T: Tokenize + Send> : MatchDirection {
 }
 
 #[async_trait::async_trait]
-impl<T: Tokenize + Send> AsyncMatchDirection<T> for MatchRight {
+impl<T: Tokenize + Send> AsyncMatchDirection<T> for Right {
     /// get the parent where vertex is at the relevant position
     async fn skip_equal_indices<'a, A: ReturnedPatternStream<T> + 'a, B: ReturnedPatternStream<T> + 'a>(
         a: A,

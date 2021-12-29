@@ -24,11 +24,11 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
     pub(crate) fn matcher(&self) -> Matcher<'g, T, D> {
         Matcher::new(self.graph)
     }
-    pub(crate) fn find_parent(
-        &self,
-        pattern: impl IntoPattern<Item = impl AsChild, Token=Child>,
+    pub(crate) fn find_parent<'a>(
+        &'g self,
+        pattern: impl IntoPattern<Item = impl AsChild, Token=impl AsChild + Clone + Vertexed<'a, 'g>>,
     ) -> SearchResult {
-        MatchRight::split_head_tail(pattern.as_pattern_view())
+        Right::split_head_tail(pattern.as_pattern_view())
             .ok_or(NoMatch::EmptyPatterns)
             .and_then(|(head, tail)|
                 self.vertex_find_common_parent(
@@ -38,9 +38,9 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                 )
             )
     }
-    fn vertex_find_common_parent(
-        &self,
-        start: impl Vertexed,
+    fn vertex_find_common_parent<'a>(
+        &'g self,
+        start: impl Vertexed<'a, 'g>,
         context: impl IntoPattern<Item = impl AsChild>,
         width_ceiling: Option<TokenPosition>,
     ) -> SearchResult {
@@ -86,9 +86,9 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
         .ok_or(NoMatch::NoParents)
     }
     /// find largest matching ancestor with width < width_ceiling
-    pub(crate) fn find_largest_matching_ancestor(
-        &self,
-        start: impl Vertexed,
+    pub(crate) fn find_largest_matching_ancestor<'a>(
+        &'g self,
+        start: impl Vertexed<'a, 'g>,
         context: impl IntoPattern<Item = impl AsChild>,
         width_ceiling: Option<TokenPosition>,
     ) -> SearchResult {
@@ -170,7 +170,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
     }
     //#[allow(unused)]
     ///// find by pattern by iterator of possibly new tokens
-    //pub(crate) fn find_pattern_try_iter(
+    //pub(crate) fn find_ancestor_try_iter(
     //    &self,
     //    pattern: impl IntoIterator<Item = Result<impl ToChild + Tokenize, NoMatch>>,
     //) -> SearchResult {
@@ -178,6 +178,6 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
     //        .into_iter()
     //        .map(|r| r.map(ToChild::to_child))
     //        .collect::<Result<Pattern, NoMatch>>()?;
-    //    self.find_pattern(pattern)
+    //    self.find_ancestor(pattern)
     //}
 }

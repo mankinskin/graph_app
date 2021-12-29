@@ -1,6 +1,6 @@
 use super::VertexIndex;
 use crate::{
-    r#match::*,
+    direction::*,
     vertex::*,
     Hypergraph,
 };
@@ -47,10 +47,10 @@ impl Borrow<VertexIndex> for &'_ mut NewTokenIndex {
 }
 pub(crate) type NewTokenIndices = Vec<NewTokenIndex>;
 impl<T: Tokenize + Send + std::fmt::Display> Hypergraph<T> {
-    pub fn right_reader(&mut self) -> Reader<'_, T, MatchRight> {
+    pub fn right_reader(&mut self) -> Reader<'_, T, Right> {
         Reader::new(self)
     }
-    pub fn left_reader(&mut self) -> Reader<'_, T, MatchLeft> {
+    pub fn left_reader(&mut self) -> Reader<'_, T, Left> {
         Reader::new(self)
     }
     pub fn read_sequence(

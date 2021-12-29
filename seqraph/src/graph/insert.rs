@@ -196,9 +196,40 @@ where
         self.add_pattern_parent(parent, new, pattern_id, offset);
         Child::new(parent.index, width)
     }
-    //pub fn read_sequence(&mut self, sequence: impl IntoIterator<Item = T>) -> Child {
-    //    IndexReader::new(self).read_sequence(sequence)
-    //}
+    pub(crate) fn parent_range_index(
+        &mut self,
+        root: impl Indexed,
+        pid: PatternId,
+        range: impl PatternRangeIndex + Clone,
+        pattern: Pattern,
+    ) -> Child {
+        let c = self.insert_pattern(pattern);
+        self.replace_in_pattern(root, pid, range, c);
+        c
+    }
+    pub fn index_found(&mut self, p: impl IntoPattern<Item=impl AsChild>, found: SearchFound) -> Child {
+        let SearchFound {
+                index: found,
+                pattern_id,
+                sub_index,
+                parent_match,
+            } = found;
+        if parent_match.parent_range.matches_completely() {
+            found
+        } else {
+            // create new index and replace in parent
+            let p = p.into_pattern();
+            let w = p.len();
+            let new = self.insert_pattern(p);
+            self.replace_in_pattern(
+                found,
+                pattern_id,
+                sub_index..sub_index + w,
+                new,
+            );
+            new
+        }
+    }
 }
 
 #[cfg(test)]
