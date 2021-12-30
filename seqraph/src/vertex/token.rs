@@ -12,14 +12,14 @@ use std::{
     hash::Hash,
 };
 
-pub fn tokenizing_iter<T: Tokenize, C: Into<T>>(
+pub fn tokenizing_iter<T: Tokenize, C: AsToken<T>>(
     seq: impl Iterator<Item = C>
 ) -> impl Iterator<Item = Token<T>> {
-    seq.map(|c| c.into().into_token())
+    seq.map(|c| c.as_token())
 }
 /// Trait for token that can be mapped in a sequence
 pub trait Tokenize: TokenData + Wide + Hash + Eq + Copy + Debug {
-    fn tokenize<T: Into<Self>, I: Iterator<Item = T>>(seq: I) -> Vec<Token<Self>> {
+    fn tokenize<T: AsToken<Self>, I: Iterator<Item = T>>(seq: I) -> Vec<Token<Self>> {
         let mut v = vec![];
         v.extend(tokenizing_iter(seq));
         //v.push(Token::End);
@@ -59,6 +59,20 @@ pub struct NoToken;
 impl Wide for NoToken {
     fn width(&self) -> usize {
         0
+    }
+}
+
+pub trait AsToken<T: Tokenize> {
+    fn as_token(&self) -> Token<T>;
+}
+impl<T: Tokenize> AsToken<T> for Token<T> {
+    fn as_token(&self) -> Token<T> {
+        self.clone()
+    }
+}
+impl<T: Tokenize> AsToken<T> for T {
+    fn as_token(&self) -> Token<T> {
+        Token::Element(self.clone())
     }
 }
 

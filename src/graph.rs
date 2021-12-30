@@ -56,8 +56,7 @@ pub struct Graph {
     insert_text: String,
 }
 impl Graph {
-    pub fn new() -> Self {
-        let graph = build_graph1();
+    pub fn new_with_graph(graph: Hypergraph<char>) -> Self {
         let graph = Arc::new(RwLock::new(graph));
         let vis = Arc::new(RwLock::new(GraphVis::default()));
         let new = Self {
@@ -68,6 +67,14 @@ impl Graph {
         let g = new.clone();
         new.vis_mut().set_graph(g);
         new
+    }
+    pub fn new_empty() -> Self {
+        let graph = Hypergraph::default();
+        Self::new_with_graph(graph)
+    }
+    pub fn new() -> Self {
+        let graph = build_graph1();
+        Self::new_with_graph(graph)
     }
     pub(crate) fn graph(&self) -> std::sync::RwLockReadGuard<'_, Hypergraph<char>> {
         self.graph.read().unwrap()
@@ -88,13 +95,16 @@ impl Graph {
         let _res = self.graph_mut().index_subrange(index, lower..upper);
     }
     pub fn split(&self, index: VertexIndex, pos: NonZeroUsize) {
-        let _res = self.graph_mut().split_index(index, pos);
+        let _res = self.graph_mut().index_prefix(index, pos);
     }
     pub fn set_graph(&self, graph: Hypergraph<char>) {
         *self.graph_mut() = graph;
     }
     pub fn reset(&mut self) {
         *self = Self::new();
+    }
+    pub fn clear(&mut self) {
+        *self = Self::new_empty();
     }
     pub fn read(&self, text: impl ToString) {
         self.graph_mut().read_sequence(text.to_string().chars());
@@ -135,6 +145,10 @@ impl Graph {
                 ui.close_menu();
             }
         });
+        if ui.button("Clear").clicked() {
+            self.clear();
+            ui.close_menu();
+        }
     }
 }
 fn build_graph1() -> Hypergraph<char> {

@@ -162,25 +162,43 @@ where
     }
     pub fn get_token_index(
         &self,
-        token: &Token<T>,
+        token: impl AsToken<T>,
     ) -> Result<VertexIndex, NoMatch> {
-        self.get_index_by_key(&VertexKey::Token(*token))
+        self.get_index_by_key(&VertexKey::Token(token.as_token()))
+    }
+    pub fn get_token_child(
+        &self,
+        token: impl AsToken<T>,
+    ) -> Result<Child, NoMatch> {
+        self.get_token_index(token).map(|i| Child::new(i, 1))
+    }
+    pub fn expect_token_index(
+        &self,
+        token: impl AsToken<T>,
+    ) -> VertexIndex {
+        self.expect_index_by_key(&VertexKey::Token(token.as_token()))
+    }
+    pub fn expect_token_child(
+        &self,
+        token: impl AsToken<T>,
+    ) -> Child {
+        Child::new(self.expect_token_index(token), 1)
     }
     pub fn to_token_indices_iter(
         &'a self,
-        tokens: impl IntoIterator<Item = Token<T>> + 'a,
+        tokens: impl IntoIterator<Item = impl AsToken<T>> + 'a,
     ) -> impl Iterator<Item = Result<VertexIndex, NoMatch>> + 'a {
         tokens
             .into_iter()
-            .map(move |token| self.get_token_index(&token))
+            .map(move |token| self.get_token_index(token))
     }
     pub fn to_token_indices(
         &self,
-        tokens: impl IntoIterator<Item = Token<T>>,
+        tokens: impl IntoIterator<Item = impl AsToken<T>>,
     ) -> Result<IndexPattern, NoMatch> {
         tokens
             .into_iter()
-            .map(|token| self.get_token_index(&token))
+            .map(|token| self.get_token_index(token))
             .collect()
     }
     pub fn to_token_children_iter(
@@ -199,7 +217,7 @@ where
     }
     pub fn get_token_indices(
         &self,
-        tokens: impl Iterator<Item = &'t Token<T>>,
+        tokens: impl Iterator<Item = impl AsToken<T>>,
     ) -> Result<IndexPattern, NoMatch> {
         let mut v = IndexPattern::with_capacity(tokens.size_hint().0);
         for token in tokens {
@@ -276,7 +294,7 @@ where
         tokens.map(move |token|
             // is this slow?
             handle.block_on(async {
-                arc.read().await.get_token_index(&token.into_token())
+                arc.read().await.get_token_index(token.as_token())
                     .map_err(|_| Token::Element(token))
             }))
     }
@@ -293,7 +311,7 @@ where
         tokens: impl TokenStream<T> + 'a,
     ) -> impl PatternStream<VertexIndex, Token<T>> + 'a {
         tokens.map(move |token| {
-            self.get_token_index(&token.into_token())
+            self.get_token_index(token.as_token())
                 .map_err(|_| Token::Element(token))
         })
     }

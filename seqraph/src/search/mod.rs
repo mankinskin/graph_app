@@ -124,7 +124,7 @@ where
     }
     pub fn find_sequence(
         &self,
-        pattern: impl IntoIterator<Item = impl Into<T>>,
+        pattern: impl IntoIterator<Item = impl AsToken<T>>,
     ) -> SearchResult {
         let iter = tokenizing_iter(pattern.into_iter());
         let pattern = self.to_token_children(iter)?;

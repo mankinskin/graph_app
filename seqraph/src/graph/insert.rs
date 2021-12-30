@@ -184,6 +184,9 @@ where
         new: impl IntoIterator<Item = impl AsChild>,
     ) -> Child {
         let new: Vec<_> = new.into_iter().map(|c| c.to_child()).collect();
+        if new.is_empty() {
+            return parent.to_child();
+        }
         let (offset, width) = {
             let vertex = self.expect_vertex_data_mut(parent.index());
             let pattern = vertex.expect_child_pattern_mut(&pattern_id);

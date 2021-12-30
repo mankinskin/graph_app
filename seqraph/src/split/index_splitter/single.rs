@@ -8,13 +8,37 @@ use std::{
 type ChildSplits = (Vec<(Pattern, SplitSegment)>, Vec<(Pattern, SplitSegment)>);
 pub(crate) trait IndexSide {
     fn trivial(lc: Child, rc: Child) -> IndexSplitResult;
-    fn insert_index_to_root<T: Tokenize>(graph: &mut Hypergraph<T>, root: impl Indexed, l: SplitSegment, r: SplitSegment) -> IndexSplitResult {
+    fn insert_index_to_root<T: Tokenize>(
+        graph: &mut Hypergraph<T>,
+        root: impl Indexed,
+        l: SplitSegment,
+        r: SplitSegment,
+    ) -> IndexSplitResult {
         let (i, c) = Self::pick_index_side(l, r);
         let i = match i {
             SplitSegment::Child(i) => i,
             SplitSegment::Pattern(p) => graph.insert_pattern(p),
         };
         graph.add_pattern_to_node(root, Self::concat_index_and_context(i, c.clone()));
+        Self::build_result(i, c)
+    }
+    fn replace_index_in_root<T: Tokenize>(
+        graph: &mut Hypergraph<T>,
+        root: impl Indexed,
+        pid: PatternId,
+        l: SplitSegment,
+        r: SplitSegment,
+    ) -> IndexSplitResult {
+        let range = Self::replace_range(&l, &r);
+        let (i, c) = Self::pick_index_side(l, r);
+        let i = match i {
+            SplitSegment::Child(i) => i,
+            SplitSegment::Pattern(p) => {
+                let i = graph.insert_pattern(p);
+                graph.replace_in_pattern(root, pid, range, i.clone());
+                i
+            },
+        };
         Self::build_result(i, c)
     }
     fn replace_index_prefix_ready<T: Tokenize>(
@@ -64,6 +88,7 @@ pub(crate) trait IndexSide {
     fn pick_index_side(l: SplitSegment, r: SplitSegment) -> (SplitSegment, SplitSegment);
     fn concat_index_and_context(i: Child, c: SplitSegment) -> Pattern;
     fn build_result(i: Child, c: SplitSegment) -> IndexSplitResult;
+    fn replace_range(l: &SplitSegment, r: &SplitSegment) -> std::ops::Range<usize>;
 }
 impl IndexSide for Left {
     fn build_result(i: Child, c: SplitSegment) -> IndexSplitResult {
@@ -78,6 +103,9 @@ impl IndexSide for Left {
     fn concat_index_and_context(i: Child, c: SplitSegment) -> Pattern {
         i.clone().into_iter().chain(c.clone()).collect()
     }
+    fn replace_range(l: &SplitSegment, _: &SplitSegment) -> std::ops::Range<usize> {
+        0..l.len()
+    }
 }
 impl IndexSide for Right {
     fn build_result(i: Child, c: SplitSegment) -> IndexSplitResult {
@@ -91,6 +119,10 @@ impl IndexSide for Right {
     }
     fn concat_index_and_context(i: Child, c: SplitSegment) -> Pattern {
         c.clone().into_iter().chain(i.clone()).collect()
+    }
+    fn replace_range(l: &SplitSegment, r: &SplitSegment) -> std::ops::Range<usize> {
+        let l = l.len();
+        l..l + r.len()
     }
 }
 
@@ -129,7 +161,7 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
                     let left = self.graph.merge_left_optional_splits(left);
                     let right = Self::append_perfect_split(pr, right);
                     let right = self.graph.merge_right_optional_splits(right);
-                    D::insert_index_to_root(self.graph, root, left, right)
+                    D::replace_index_in_root(self.graph, root, ind.pattern_index, left, right)
                 },
                 (SplitSegment::Child(lc), SplitSegment::Pattern(pr)) => {
                     // perform inner splits

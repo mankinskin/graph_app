@@ -66,13 +66,29 @@ mod tests {
     use crate::*;
     //use tokio::sync::mpsc;
     //use tokio_stream::wrappers::*;
-
+    use maplit::hashset;
+    use std::collections::HashSet;
+    use pretty_assertions::assert_eq;
     #[test]
     fn sync_read_text() {
         let text = "Heldldo world!";
         let mut g: Hypergraph<char> = Hypergraph::default();
         let result = g.read_sequence(text.chars());
-        assert_eq!(result.width, text.len());
+        let cap_h = g.expect_token_child('H');
+        let e = g.expect_token_child('e');
+        let l = g.expect_token_child('l');
+        let d = g.expect_token_child('d');
+        let o = g.expect_token_child('o');
+        let space = g.expect_token_child(' ');
+        let w = g.expect_token_child('w');
+        let r = g.expect_token_child('r');
+        let exclam = g.expect_token_child('!');
+        let ld = g.find_sequence("ld".chars()).unwrap().index;
+        let res_pats: HashSet<_> = result.vertex(&g).get_child_patterns().into_iter().collect();
+        let res_exp = hashset![
+            vec![cap_h, e, ld, ld, o, space, w, o, r, ld, exclam],
+        ];
+        assert_eq!(res_pats, res_exp);
     }
     //#[tokio::test]
     //async fn async_read_text() {
