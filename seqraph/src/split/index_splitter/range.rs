@@ -55,8 +55,8 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
     ) -> IndexRangeResult {
         // both positions in position in pattern
         match SplitIndices::build_double(&vertex, patterns, lower, higher) {
-            Ok((pid, pre, left, inner, right, post)) => {
-                let inner = self.graph.parent_range_index(root, pid, left..right, inner);
+            Ok((pid, pre, left, _inner, right, post)) => {
+                let inner = self.graph.index_range_in(root, pid, left..right);
                 (pre.into(), inner, post.into())
             }
             Err(indices) => {

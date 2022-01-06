@@ -19,8 +19,8 @@ impl ReaderCache {
         new: impl IntoPattern<Item = impl AsChild>,
     ) {
         let new = new.into_pattern();
-        if let Some((index, pid)) = self.index {
-            graph.append_to_pattern(index, pid, new);
+        if let Some((index, pid)) = self.index.as_mut() {
+            *index = graph.append_to_pattern(index.clone(), *pid, new);
         } else {
             match new.len() {
                 0 => {},
@@ -50,12 +50,12 @@ impl ReaderCache {
     }
 }
 #[derive(Debug)]
-pub struct Reader<'a, T: Tokenize, D: MatchDirection> {
+pub struct Reader<'a, T: Tokenize, D: MergeDirection> {
     graph: &'a mut Hypergraph<T>,
     cache: ReaderCache,
     _ty: std::marker::PhantomData<D>,
 }
-impl<'a, T: Tokenize, D: MatchDirection> std::ops::Deref for Reader<'a, T, D> {
+impl<'a, T: Tokenize, D: MergeDirection> std::ops::Deref for Reader<'a, T, D> {
     type Target = Hypergraph<T>;
     fn deref(&self) -> &Self::Target {
         self.graph
@@ -136,50 +136,126 @@ impl<'a, T: Tokenize + std::fmt::Display, D: MatchDirection> Reader<'a, T, D> {
         self.cache.append(self.graph, new);
         // read indicies in known
         let mut patterns: Vec<Pattern> = Vec::new();
+        // - single index added to patterns
+        // |   *   |
+        // 2. next index added
+        // |       |    *    |
+        // - find overlaps with previous patterns
+        // - index context on left side of overlap
+        // - get 2 or 3 children back per overlap
+        // |       |         |
+        // | * |        |    | no full match with right index
+        // |  *  |           | full match with right index
+        // - (recognize shared borders in pat #1 and #3 -> create new index)
+        // - find next index (go to step 2)
+        // |       |         |     *    |
+        // |   |        |    |
+        // |     |           |
+        // - find overlaps with previous patterns and new index
+        // - index context on left side of overlap
+        // |       |         |          |
+        // |    *       |        |      | right index of prev overlap continues to match
+        // |     |           |            not here
+        // - recognize shared borders in pat #1 and #3 -> create new index
+        // |       *         |          |
+        // |   |        |        |      | right index of prev overlap continues to match
+        // - continue at step 2.
+
+        let mut group = None;
+        let mut buffer = None;
         while !known.is_empty() {
             let (next, rem) = self.read_prefix(known);
-            if patterns.is_empty() {
-                patterns.push(vec![next]);
+            if let Some(group) = group {
+
             } else {
-                patterns = self.find_overlaps(patterns, next);
+                // first or second index
+                if let Some(buffer) = buffer.take() {
+                    // second index
+                    group = Some(PatternGroup::new(buffer, next));
+                } else {
+                    // first index
+                    buffer = Some(next);
+                }
             }
             known = rem;
+            //match patterns.len() {
+            //    // add first index
+            //    0 => patterns.push(vec![next]),
+            //    // find overlaps with single pattern
+            //    1 => {
+            //        // prevent multiple indicies in single pattern
+            //        let p = patterns.pop().unwrap();
+            //        // split last
+            //        let (rem, last) = D::split_last(p).unwrap();
+            //        self.cache.append(self.graph, rem);
+            //        let overlaps = self.find_overlaps(last, next);
+            //        if overlaps.is_empty() {
+            //            self.cache.append(self.graph, last);
+            //            patterns.push(vec![next]);
+            //        } else {
+            //            patterns.push(vec![last, next]);
+            //            patterns.extend(overlaps);
+            //        }
+            //    },
+            //    _ => {
+            //        let overlaps = self.find_overlaps(Left::sort_by_inner(patterns.clone()), next);
+            //        if overlaps.is_empty() {
+            //            let new = self.insert_patterns(patterns);
+            //            patterns = vec![vec![new, next]];
+            //        } else {
+            //            // Todo: separate overlap patterns and non overlap patterns
+            //            patterns[0].push(next);
+            //            patterns = vec![patterns.swap_remove(0)];
+            //            patterns.extend(overlaps);
+            //        }
+            //    }
+            //}
         }
-        if patterns.len() > 0 {
-            let pattern = if patterns.len() > 1 {
-                self.insert_patterns(patterns).into_pattern()
-            } else {
-                patterns.into_iter().next().expect("Empty patterns")
-            };
-            self.cache.append(self.graph, pattern);
-        }
+        //match patterns.len() {
+        //    0 => {},
+        //    1 => {
+        //        let pattern = patterns.into_iter().next().unwrap();
+        //        self.cache.append(self.graph, pattern);
+        //    }
+        //    _ => {
+        //        let pattern = self.insert_patterns(patterns).into_pattern();
+        //        self.cache.append(self.graph, pattern);
+        //    }
+        //}
         self.try_read_sequence(remainder)
     }
-    fn read_prefix(
+    fn read_search_found(
         &mut self,
-        pattern: Vec<Child>,
+        search_found: SearchFound,
     ) -> (Child, Pattern) {
-        let _pat_str = self.graph.pattern_string(&pattern);
-        match self.find_ancestor(&pattern) {
-            Ok(SearchFound {
-                index,
+        let SearchFound {
+                location: PatternLocation {
+                    parent: index,
+                    ..
+                },
                 parent_match,
                 ..
-            }) => (match parent_match.parent_range {
+            } = search_found;
+        (match parent_match.parent_range {
                 FoundRange::Complete => {
-                    println!("Found full index");
+                    //println!("Found full index {}", self.graph.index_string(&index));
                     index
                 }
                 FoundRange::Prefix(post) => {
-                    println!("Found prefix");
-                    let width = index.width - pattern_width(post);
+                    //println!("Found prefix of {} width {}", self.graph.index_string(&index), index.width);
+                    let width = pattern_width(&post);
+                    //println!("postfix {} width {}", self.graph.pattern_string(&post), width);
+                    //println!("{:#?}", &post);
+                    let width = index.width - width;
                     let pos = NonZeroUsize::new(width)
                         .expect("returned full length postfix remainder");
+                    //println!("prefix width {}", pos.get());
                     let (l, _) = self.index_prefix(index, pos);
                     l
                 }
                 FoundRange::Postfix(pre) => {
-                    println!("Found postfix");
+                    //println!("Found postfix of {}", self.graph.index_string(&index));
+                    //println!("prefix {}", self.graph.pattern_string(&pre));
                     let width = pattern_width(pre);
                     let pos = NonZeroUsize::new(width)
                         .expect("returned zero length prefix remainder");
@@ -187,56 +263,113 @@ impl<'a, T: Tokenize + std::fmt::Display, D: MatchDirection> Reader<'a, T, D> {
                     r
                 }
                 FoundRange::Infix(pre, post) => {
-                    println!("Found infix");
+                    //println!("Found infix of {}", self.graph.index_string(&index));
+                    //println!("postfix {}", self.graph.pattern_string(&post));
+                    //println!("prefix {}", self.graph.pattern_string(&pre));
                     let pre_width = pattern_width(pre);
                     let post_width = pattern_width(post);
+                    //println!("{}, {}, {}", pre_width, post_width, index.width);
+                    //println!("{}", self.index_string(index));
                     self.index_subrange(index, pre_width..index.width - post_width)
                 }
-            }, parent_match.remainder.unwrap_or_default()),
+            }, parent_match.remainder.unwrap_or_default())
+    }
+    fn read_prefix(
+        &mut self,
+        pattern: Vec<Child>,
+    ) -> (Child, Pattern) {
+        let _pat_str = self.graph.pattern_string(&pattern);
+        match self.find_ancestor(&pattern) {
+            Ok(search_found) => self.read_search_found(search_found),
             Err(_not_found) => {
-                let (c, rem) = Left::split_context_head(pattern).unwrap();
+                let (c, rem) = Right::split_context_head(pattern).unwrap();
                 (c, rem)
             },
-            //match not_found {
-            //    NoMatch::NoMatchingParent(index) => {
-            //        // create new index for this known block
-            //        let index_str = self.graph.index_string(index);
-            //        println!("No matching parents for {}", pat_str);
-            //        println!("At index \'{}\'", index_str);
-            //        println!("Inserting new pattern");
-            //        let c = self.graph.insert_pattern(pattern);
-            //        SplitSegment::Child(c)
-            //    }
-            //    _ => panic!("Not found {:?}", not_found),
-            //},
         }
     }
-    /// find overlap of non-neighboring children (no common parent)
+    // child child: go into left children, match with right and right children
+    //      use left to update parent
+    // patterns child: run without left parent, find overlaps for each pattern with id
+    // child patterns: go into left children, match with right patterns
+    // patterns patterns: run without left parent
+    /// get largest overlap 
+    fn overlap_largest(
+        &mut self,
+        left_parent: Option<Child>,
+        left_id: PatternId,
+        left_ctx: Pattern,
+        left: Child,
+        right: Child,
+        right_ctx: Pattern,
+    ) -> Option<PatternLocation> {
+        let largest = vec![left, right];
+        self.right_searcher().find_parent(&largest)
+            .map(|search_found| {
+                // largest overlap matches
+                // index overlap
+                // index contexts in left and right
+                let (index, _rem) = self.read_search_found(search_found);
+                let pre = if left_ctx.len() > 1 {
+                    if let Some(lpar) = left_parent {
+                        let lctx = self.index_range_in(lpar, left_id, 0..left_ctx.len());
+                        lctx.into_pattern()
+                    } else {
+                        left_ctx
+                    }
+                } else {
+                    left_ctx
+                };
+                (left_id, [&pre[..], &[index][..], &right_ctx[..]].concat())
+            })
+            .ok()
+    }
+    // - left complete must not match with any right prefix
+    // - match largest left postfix with complete right
+    //     - if match, index left context and return resulting pattern
+    // - otherwise call find overlaps on right children
     fn find_overlaps(
         &mut self,
         left: impl PatternSource,
         right: impl PatternSource,
-    ) -> Vec<Pattern> {
+    ) -> Overlaps {
         let mut overlaps = Vec::new();
-        let rfull = right.full_index();
-        let lps = left.back_sorted_patterns(self);
-        let rps = right.front_sorted_patterns(self);
-        let flp = lps.first().unwrap();
-        let fl = Left::get_ordering_element(&flp);
-        let fr = Right::get_ordering_element(&rps.first().unwrap());
-
-        let largest = vec![*fl, *fr];
-        if let Ok(_) = self.left_searcher().find_parent(&largest) {
-            // largest overlap matches
-            overlaps.push(largest);
-            overlaps
+        let lps = left.sorted_patterns(self);
+        // left pattern with largest child
+        let (flp_id, flp) =
+            if let Some(l) = lps.first() {
+                l
+            } else {
+                return vec![];
+            };
+        let lparent = left.get_parent();
+        // split off largest match child
+        let (fl, fl_rem) = Left::split_ordering_element(flp);
+        let (rlargest, rctx) = if let Some(rlargest) = right.get_parent() {
+            (rlargest, &[][..])
         } else {
+            let rps = right.sorted_patterns(self);
+            let (frp_id, frp) =
+                if let Some(r) = rps.first() {
+                    r
+                } else {
+                    return vec![];
+                };
+            Right::split_ordering_element(frp)
+        };
+
+        // todo handle right child pattern ids
+        if let Some(pattern) = self.overlap_largest(
+            lparent, *flp_id, fl_rem.into_pattern(), fl, rlargest, rctx.into_pattern(),
+        ) {
+            vec![pattern]
+        } else {
+            // largest doesn't match
             // try smallest
-            let slp = lps.last().unwrap();
-            let srp = rps.last().unwrap();
-            let sl = Left::get_ordering_element(&slp);
-            let (sr, srctx) = Right::split_context_head(srp.clone()).unwrap();
-            if self.find_parent(&[sl, &sr][..]).is_err() {
+            let (slp_id, slp) = lps.last().unwrap();
+            let (srp_id, srp) = rps.last().unwrap();
+            let (sl, slctx) = Left::split_ordering_element(slp);
+            let (sr, srctx) = Right::split_ordering_element(srp);
+            if self.find_parent(&[sl, sr][..]).is_err() {
                 // smallest is not an overlap
                 if sl.width() == 1 {
                     if sr.width() == 1 {
@@ -244,25 +377,26 @@ impl<'a, T: Tokenize + std::fmt::Display, D: MatchDirection> Reader<'a, T, D> {
                         overlaps
                     } else {
                         // move down into right smallest
-                        self.find_overlaps(vec![*sl], sr)
+                        self.find_overlaps((left.get_parent(), *slp_id, *slp), sr)
                     }
                 } else {
                     // move down into left smallest
-                    self.find_overlaps(*sl, srp.clone())
+                    self.find_overlaps(sl, right)
                 }
             } else {
                 // smallest works, largest doesn't
                 // search through left largest to smallest
                 // for each right smallest to largest
                 // Todo: use current result if number of patterns is 1
-                for (i, lp) in lps.iter().enumerate() {
+                for (i, (lpid, lp)) in lps.iter().enumerate() {
                     let (l, lctx) = Left::split_context_head(lp.clone()).unwrap();
                     // find largest overlap with 
                     match rps.iter()
-                        // skip largest right if we are largest left
-                        .skip(usize::from(i == 0))
+                        .map(|(pid, p)| (Some(pid), p))
                         .rev()
-                        .try_fold(None, |rm, rp| {
+                        // add largest right if we are not largest left
+                        .chain((i != 0).then(|| (None, &right.into_pattern())))
+                        .try_fold(None, |rm, (rpid, rp)| {
                             let (r, rctx) = Right::split_context_head(rp.clone()).unwrap();
                             match self.find_parent([l, r].as_slice()) {
                                 Ok(f) => Ok(Some(((r, rctx), f))),
@@ -290,7 +424,7 @@ impl<'a, T: Tokenize + std::fmt::Display, D: MatchDirection> Reader<'a, T, D> {
                                 let overlap = self.index_overlap(&[l, r][..], found, lctx, rctx);
                                 overlaps.push(overlap);
                             } else {
-                                let children = miss.vertex(self.graph).get_child_patterns();
+                                let children = miss.vertex(self.graph).get_child_pattern_vec();
                                 let candidates =
                                     Right::sort_filter_above_width(children, r.width());
                                 let olps = self.find_overlaps(l, candidates);
@@ -302,7 +436,7 @@ impl<'a, T: Tokenize + std::fmt::Display, D: MatchDirection> Reader<'a, T, D> {
                                 }
                             }
                         }
-                        // some left with smallest right doesn't match
+                        // this left with smallest right doesn't match
                         Ok(None) | Err(None) => {
                             let olps = self.find_overlaps(vec![l], sr);
                             overlaps.extend(olps.into_iter().map(|olp| {
@@ -326,96 +460,162 @@ impl<'a, T: Tokenize + std::fmt::Display, D: MatchDirection> Reader<'a, T, D> {
         let new = self.index_found(pattern, found);
         Right::concat_inner_and_context(lctx, vec![new], rctx)
     }
+    fn new_pattern_group(
+        &self,
+        first: Child,
+        second: Child,
+    ) -> PatternGroup {
+        let overlaps = self.find_overlaps(first, second);
+        PatternGroup::overlapped(first, second, overlaps)
+    }
 }
-type SortedPatterns = Vec<Pattern>;
+struct PatternGroup {
+    prefix: Pattern,
+    overlapped: Vec<PatternGroup>,
+    overlaps: Overlaps,
+}
+type Overlaps = Vec<Overlap>;
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct PatternLocation {
+    pub parent: Child,
+    pub pattern_id: PatternId,
+    pub range: std::ops::Range<usize>,
+}
+enum Overlap {
+    Expandable(PatternLocation, PatternLocation, PatternLocation),
+    EndPiece(PatternLocation, PatternLocation),
+}
+impl PatternGroup {
+    pub fn single(first: Child) -> Self {
+        Self {
+            prefix: vec![first],
+            overlapped: vec![],
+            overlaps: vec![],
+        }
+    }
+    pub fn overlapped(first: Child, second: Child, overlaps: Overlaps) -> Self {
+        Self {
+            prefix: vec![],
+            overlapped: vec![Self::single(first), Self::single(second)],
+            overlaps,
+        }
+    }
+}
+// - has parent if patterns are stored in other index
+// - patterns have id if they are stored in other index
+type SortedPatterns = Vec<(PatternId, Pattern)>;
 trait PatternSource: Sized {
-    fn full_index(&self) -> Option<Child>;
     fn sorted_patterns<T: Tokenize, D: OverlapSide>(self, graph: &Hypergraph<T>) -> SortedPatterns;
-    fn back_sorted_patterns<T: Tokenize>(self, graph: &Hypergraph<T>) -> SortedPatterns {
-        self.sorted_patterns::<T, Left>(graph)
-    }
-    fn front_sorted_patterns<T: Tokenize>(self, graph: &Hypergraph<T>) -> SortedPatterns {
-        self.full_index()
-            .into_iter()
-            .map(|c| c.into_pattern())
-            .chain(
-                self.sorted_patterns::<T, Right>(graph)
-                    .into_iter()
-                )
-            .collect()
-    }
+    fn get_parent(&self) -> Option<Child>;
 }
+//trait LeftPatternSource: Sized + PatternSource {
+//    fn get_parent(&self) -> Option<Child>;
+//}
 impl PatternSource for Child {
     fn sorted_patterns<T: Tokenize, D: OverlapSide>(self, graph: &Hypergraph<T>) -> SortedPatterns {
-        D::sort_by_inner(self.vertex(graph).get_child_patterns())
+        if self.width > 1 {
+            D::sort_by_inner(self.vertex(graph).get_children())
+        } else {
+            vec![]
+        }
     }
-    fn full_index(&self) -> Option<Child> {
-        Some(self.clone())
+    //fn full_index(&self) -> Option<Child> {
+    //    Some(self.clone())
+    //}
+    fn get_parent(&self) -> Option<Child> {
+        Some(*self)
     }
 }
 impl PatternSource for SortedPatterns {
     fn sorted_patterns<T: Tokenize, D: OverlapSide>(self, _graph: &Hypergraph<T>) -> SortedPatterns {
         self
     }
-    fn full_index(&self) -> Option<Child> {
+    fn get_parent(&self) -> Option<Child> {
         None
     }
+    //fn full_index(&self) -> Option<Child> {
+    //    self.first().and_then(|p| p.full_index())
+    //}
 }
-impl PatternSource for ChildPatterns {
-    fn sorted_patterns<T: Tokenize, D: OverlapSide>(self, _graph: &Hypergraph<T>) -> SortedPatterns {
-        D::sort_by_inner(clone_child_patterns(&self))
-    }
-    fn full_index(&self) -> Option<Child> {
-        None
-    }
-}
-impl PatternSource for Pattern {
-    fn sorted_patterns<T: Tokenize, D: OverlapSide>(self, _graph: &Hypergraph<T>) -> SortedPatterns {
-        vec![self]
-    }
-    fn full_index(&self) -> Option<Child> {
-        None
-    }
-}
-trait OverlapSide {
+//impl PatternSource for Pattern {
+//    fn sorted_patterns<T: Tokenize, D: OverlapSide>(self, _graph: &Hypergraph<T>) -> SortedPatterns {
+//        vec![self]
+//    }
+//    fn full_front_index(&self) -> Option<Child> {
+//        if self.len() == 1 {
+//            self.first().cloned()
+//        } else {
+//            None
+//        }
+//    }
+//    fn full_back_index(&self) -> Option<Child> {
+//        if self.len() == 1 {
+//            self.first().cloned()
+//        } else {
+//            None
+//        }
+//    }
+//}
+//impl PatternSource for ChildPatterns {
+//    fn sorted_patterns<T: Tokenize, D: OverlapSide>(self, graph: &Hypergraph<T>) -> SortedPatterns {
+//        D::sort_by_inner(clone_child_patterns(&self).into_iter().collect()).sorted_patterns::<T, D>(graph)
+//    }
+//    fn full_front_index(&self) -> Option<Child> {
+//        if self.len() == 1 {
+//            self.into_iter().next().and_then(|p| p.1.full_front_index())
+//        } else {
+//            None
+//        }
+//    }
+//    fn full_back_index(&self) -> Option<Child> {
+//        if self.len() == 1 {
+//            self.into_iter().next().and_then(|p| p.1.full_back_index())
+//        } else {
+//            None
+//        }
+//    }
+//}
+trait OverlapSide : MatchDirection {
+    type Opposite: OverlapSide;
     /// sorts child patterns by decending width of their most inner child
     fn sort_by_inner(
-        mut children: Vec<Pattern>,
+        children: &ChildPatterns,
     ) -> SortedPatterns {
+        let mut children = children.clone().into_iter().collect_vec();
         children.sort_unstable_by(|a, b|
-            Self::get_ordering_element(b).cmp(Self::get_ordering_element(a))
+            Self::get_ordering_element(&b.1).cmp(Self::get_ordering_element(&a.1))
         );
         children
     }
     fn sort_filter_above_width(
-        children: Vec<Pattern>,
+        children: &ChildPatterns,
         min_width: usize,
-    ) -> Vec<Pattern> {
+    ) -> SortedPatterns {
         Self::sort_by_inner(children)
             .into_iter()
             .take_while(|p|
-                Self::get_ordering_element(p).width() > min_width
+                Self::get_ordering_element(&p.1).width() > min_width
             )
             .collect()
     }
     fn get_ordering_element(
         pattern: &Pattern,
-    ) -> &Child;
+    ) -> &Child {
+        <Self as MatchDirection>::pattern_head(pattern).expect("Empty pattern in overlap check!")
+    }
+    fn split_ordering_element(
+        pattern: &Pattern,
+    ) -> (Child, PatternView<'_>) {
+        <Self as MatchDirection>::split_head_tail(pattern).expect("Empty pattern in overlap check!")
+    }
 }
 impl OverlapSide for Left {
-    fn get_ordering_element(
-        pattern: &Pattern,
-    ) -> &Child {
-        pattern.last().unwrap()
-    }
+    type Opposite = Right;
 }
 
 impl OverlapSide for Right {
-    fn get_ordering_element(
-        pattern: &Pattern,
-    ) -> &Child {
-        pattern.first().unwrap()
-    }
+    type Opposite = Left;
 }
 #[cfg(test)]
 mod tests {
@@ -424,7 +624,7 @@ mod tests {
     use maplit::hashset;
     use std::collections::HashSet;
     #[test]
-    fn find_overlaps_1() {
+    fn find_overlaps1() {
         let mut graph = Hypergraph::default();
         let (a, b, x, y, z, w) = graph.insert_tokens([
             Token::Element('a'),
@@ -444,15 +644,55 @@ mod tests {
         let yzw = graph.insert_pattern([yz, w]);
         //let xaby = graph.insert_patterns([[xab, y], [xa, by]]);
         //let _xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
-        assert!(graph.find_parent([b,y]).is_ok());
+        assert!(graph.find_parent([b, y]).is_ok());
         assert!(graph.find_parent([b, yz]).is_ok());
         assert!(graph.find_parent([ab, y]).is_ok());
-        let overlaps: HashSet<_> = graph.left_reader().find_overlaps(xab, yzw).into_iter().collect();
+        let overlaps: HashSet<_> = graph.right_reader().find_overlaps(xab, yzw).into_iter().collect();
         assert_eq!(
             overlaps,
             hashset![
                 vec![x, aby, z, w],
                 vec![xa, byz, w],
+            ]
+        )
+    }
+    #[test]
+    fn find_overlaps2() {
+        let mut graph = Hypergraph::default();
+        let (v, i, s, u, b)= graph.insert_tokens([
+            Token::Element('v'),
+            Token::Element('i'),
+            Token::Element('s'),
+            Token::Element('u'),
+            Token::Element('b'),
+        ]).into_iter().next_tuple().unwrap();
+        let vis = graph.insert_pattern([v, i, s]);
+        let sub = graph.insert_pattern([s, u, b]);
+        assert!(graph.find_parent([s, u]).is_ok());
+        assert!(graph.find_parent([v, i]).is_ok());
+        let overlaps: HashSet<_> = graph.right_reader().find_overlaps(vis, u).into_iter().collect();
+        let vi = graph.find_sequence("vi".chars()).unwrap().expect_complete("vi");
+        let pats = vi.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![v, i],
+        ]);
+        let su = graph.find_sequence("su".chars()).unwrap().expect_complete("su");
+        let pats = su.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![s, u],
+        ]);
+        let pats = vis.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![vi, s],
+        ]);
+        let pats = sub.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![su, b],
+        ]);
+        assert_eq!(
+            overlaps,
+            hashset![
+                vec![vi, su],
             ]
         )
     }

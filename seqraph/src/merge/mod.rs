@@ -153,12 +153,15 @@ mod tests {
 
         let left = graph.merge_left_splits(left);
         let right = graph.merge_right_splits(right);
-        println!("{:#?}", graph);
-        println!("left = {:#?}", left);
-        println!("right = {:#?}", right);
+        //println!("{:#?}", graph);
+        //println!("left = {:#?}", left);
+        //println!("right = {:#?}", right);
         let byz_found = graph.find_ancestor(vec![b, y, z]);
         let byz = if let SearchFound {
-            index: byz,
+            location: PatternLocation {
+                parent: byz,
+                ..
+            },
             parent_match:
                 ParentMatch {
                     parent_range: FoundRange::Complete,

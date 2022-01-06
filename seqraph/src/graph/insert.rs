@@ -1,7 +1,10 @@
 use crate::*;
-use std::sync::atomic::{
-    AtomicUsize,
-    Ordering,
+use std::{
+    collections::HashSet,
+    sync::atomic::{
+        AtomicUsize,
+        Ordering,
+    },
 };
 
 impl<'t, 'a, T> Hypergraph<T>
@@ -138,31 +141,76 @@ where
         }
         node
     }
+    pub(crate) fn index_range_in(
+        &mut self,
+        parent: impl Indexed,
+        pid: PatternId,
+        range: impl PatternRangeIndex + Clone,
+    ) -> Child {
+        let vertex = self.expect_vertex_data_mut(parent);
+        let pattern = vertex.get_child_pattern_range(&pid, range).unwrap();
+        let c = self.insert_pattern(pattern);
+        self.vertex_replace_in_pattern(vertex, pid, range, c);
+        c
+    }
+    pub fn vertex_replace_in_pattern(
+        &'a mut self,
+        parent: impl Vertexed<'a, 'a>,
+        pat: PatternId,
+        range: impl PatternRangeIndex + Clone,
+        rep: impl IntoPattern<Item = impl AsChild> + Clone,
+    ) {
+        if range.start_bound() == range.end_bound() {
+            // empty range
+            return;
+        }
+        let vertex = parent.vertex(self);
+        let parent = parent.index();
+        let replace: Pattern = rep.into_pattern();
+        let (old, width, start, rem) = {
+            let width = vertex.width;
+            let pattern = vertex.expect_child_pattern_mut(&pat);
+            let old = pattern
+                .get(range.clone())
+                .expect("Replace range out of range of pattern!")
+                .to_vec();
+            *pattern = replace_in_pattern(pattern.as_pattern_view(), range.clone(), replace.clone());
+            let start = range.clone().next().unwrap();
+            (
+                old,
+                width,
+                start,
+                pattern.iter().skip(start + replace.len()).cloned().collect::<Pattern>(),
+            )
+        };
+        let old_end = start + old.len();
+        range.clone().zip(old.into_iter()).for_each(|(pos, c)| {
+            let c = self.expect_vertex_data_mut(c);
+            c.remove_parent(parent.index(), pat, pos);
+        });
+        let new_end = start + replace.len();
+        for (i, c) in rem.into_iter().enumerate() {
+            let indices = &mut self.expect_parent_mut(c, parent.index()).pattern_indices;
+            //println!("before {:#?}", indices);
+            let drained: Vec<_> = indices.drain_filter(|(pid, idx)| *pid == pat && idx >= &old_end)
+                .map(|(pid, _)| (pid, new_end + i))
+                .collect();
+            //println!("drained {:#?}", drained);
+            indices.extend(drained);
+            //println!("res {:#?}", indices);
+            //println!("##########");
+        }
+        self.add_pattern_parent(Child::new(parent.index(), width), replace, pat, start);
+    }
     pub fn replace_in_pattern(
         &mut self,
         parent: impl Indexed,
         pat: PatternId,
-        mut range: impl PatternRangeIndex + Clone,
-        replace: impl IntoPattern<Item = impl AsChild> + Clone,
+        range: impl PatternRangeIndex + Clone,
+        rep: impl IntoPattern<Item = impl AsChild> + Clone,
     ) {
-        let mut peek_range = range.clone().peekable();
-        if peek_range.peek().is_none() {
-            return;
-        }
-        let parent = parent.index();
-        let (old, width) = {
-            let vertex = self.expect_vertex_data_mut(parent);
-            (
-                vertex.replace_in_pattern(pat, range.clone(), replace.clone()),
-                vertex.width,
-            )
-        };
-        range.clone().zip(old.iter()).for_each(|(pos, c)| {
-            let c = self.expect_vertex_data_mut(c);
-            c.remove_parent(parent, pat, pos);
-        });
-        let start = range.next().unwrap();
-        self.add_pattern_parent(Child::new(parent, width), replace, pat, start);
+        let vertex = self.expect_vertex_data_mut(parent);
+        self.vertex_replace_in_pattern(vertex, pat, range, rep)
     }
     pub(crate) fn add_pattern_parent(
         &mut self,
@@ -187,34 +235,34 @@ where
         if new.is_empty() {
             return parent.to_child();
         }
+        let width = pattern_width(&new);
         let (offset, width) = {
+            // Todo: use smart pointers to reference data in the graph
+            // so we can mutate multiple different nodes at the same time
+            let vertex = self.expect_vertex_data(parent.index());
+            let pattern = vertex.expect_child_pattern(&pattern_id).clone();
+            for c in pattern.into_iter().collect::<HashSet<_>>() {
+                let c = self.expect_vertex_data_mut(c);
+                c.get_parent_mut(parent.index()).unwrap().width += width;
+            }
             let vertex = self.expect_vertex_data_mut(parent.index());
             let pattern = vertex.expect_child_pattern_mut(&pattern_id);
             let offset = pattern.len();
             pattern.extend(new.iter());
-            vertex.width = pattern_width(pattern);
+            vertex.width += width;
             (offset, vertex.width)
         };
-        let parent = parent.to_child();
+        let parent = Child::new(parent.index(), width);
         self.add_pattern_parent(parent, new, pattern_id, offset);
-        Child::new(parent.index, width)
-    }
-    pub(crate) fn parent_range_index(
-        &mut self,
-        root: impl Indexed,
-        pid: PatternId,
-        range: impl PatternRangeIndex + Clone,
-        pattern: Pattern,
-    ) -> Child {
-        let c = self.insert_pattern(pattern);
-        self.replace_in_pattern(root, pid, range, c);
-        c
+        parent
     }
     pub fn index_found(&mut self, p: impl IntoPattern<Item=impl AsChild>, found: SearchFound) -> Child {
         let SearchFound {
-                index: found,
-                pattern_id,
-                sub_index,
+                location: PatternLocation {
+                    parent: found,
+                    pattern_id,
+                    range,
+                },
                 parent_match,
             } = found;
         if parent_match.parent_range.matches_completely() {
@@ -227,7 +275,8 @@ where
             self.replace_in_pattern(
                 found,
                 pattern_id,
-                sub_index..sub_index + w,
+                // todo: maybe range.end can be used here
+                range.start..range.start + w,
                 new,
             );
             new

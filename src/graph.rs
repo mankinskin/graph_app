@@ -51,9 +51,9 @@ impl Default for Layout {
 }
 #[derive(Clone)]
 pub struct Graph {
-    graph: Arc<RwLock<Hypergraph<char>>>,
-    vis: Arc<RwLock<GraphVis>>,
-    insert_text: String,
+    pub graph: Arc<RwLock<Hypergraph<char>>>,
+    pub vis: Arc<RwLock<GraphVis>>,
+    pub insert_text: String,
 }
 impl Graph {
     pub fn new_with_graph(graph: Hypergraph<char>) -> Self {
@@ -68,12 +68,8 @@ impl Graph {
         new.vis_mut().set_graph(g);
         new
     }
-    pub fn new_empty() -> Self {
-        let graph = Hypergraph::default();
-        Self::new_with_graph(graph)
-    }
     pub fn new() -> Self {
-        let graph = build_graph1();
+        let graph = Hypergraph::default();
         Self::new_with_graph(graph)
     }
     pub(crate) fn graph(&self) -> std::sync::RwLockReadGuard<'_, Hypergraph<char>> {
@@ -100,11 +96,8 @@ impl Graph {
     pub fn set_graph(&self, graph: Hypergraph<char>) {
         *self.graph_mut() = graph;
     }
-    pub fn reset(&mut self) {
-        *self = Self::new();
-    }
     pub fn clear(&mut self) {
-        *self = Self::new_empty();
+        *self = Self::new();
     }
     pub fn read(&self, text: impl ToString) {
         self.graph_mut().read_sequence(text.to_string().chars());
@@ -113,45 +106,8 @@ impl Graph {
         self.vis_mut().update();
         self.vis_mut().show(ui);
     }
-    pub fn context_menu(&mut self, ui: &mut Ui) {
-        ui.horizontal(|ui| {
-            ui.label("Insert:");
-            ui.text_edit_singleline(&mut self.insert_text);
-            if ui.button("Go").clicked() {
-                let insert_text = self.insert_text.clone();
-                self.read(insert_text);
-                self.insert_text = String::new();
-                ui.close_menu();
-            }
-        });
-        if ui.button("Reset").clicked() {
-            self.reset();
-            ui.close_menu();
-        }
-        ui.menu_button("Layout", |ui| {
-            let mut vis = self.vis_mut();
-            ui.radio_value(&mut vis.layout, Layout::Graph, "Graph")
-                .clicked();
-            ui.radio_value(&mut vis.layout, Layout::Nested, "Nested")
-                .clicked();
-        });
-        ui.menu_button("Load preset...", |ui| {
-            if ui.button("Graph 1").clicked() {
-                self.set_graph(build_graph1());
-                ui.close_menu();
-            }
-            if ui.button("Graph 2").clicked() {
-                self.set_graph(build_graph2());
-                ui.close_menu();
-            }
-        });
-        if ui.button("Clear").clicked() {
-            self.clear();
-            ui.close_menu();
-        }
-    }
 }
-fn build_graph1() -> Hypergraph<char> {
+pub fn build_graph1() -> Hypergraph<char> {
     let mut graph = Hypergraph::default();
     if let [a, b, w, x, y, z] = graph.insert_tokens([
         Token::Element('a'),
@@ -175,7 +131,7 @@ fn build_graph1() -> Hypergraph<char> {
     }
     graph
 }
-fn build_graph2() -> Hypergraph<char> {
+pub fn build_graph2() -> Hypergraph<char> {
     let mut graph = Hypergraph::default();
     if let [a, b, c, d, e, f, g, h, i] = graph.insert_tokens([
         Token::Element('a'),

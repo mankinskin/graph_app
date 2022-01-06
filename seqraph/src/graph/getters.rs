@@ -226,6 +226,38 @@ where
         }
         Ok(v)
     }
+    pub fn expect_parent(
+        &self,
+        index: impl Indexed,
+        parent: impl Indexed,
+    ) -> &Parent {
+        self.expect_vertex_data(index).expect_parent(parent)
+    }
+    pub fn expect_parent_mut(
+        &mut self,
+        index: impl Indexed,
+        parent: impl Indexed,
+    ) -> &mut Parent {
+        self.expect_vertex_data_mut(index).expect_parent_mut(parent)
+    }
+    pub fn expect_parents(
+        &self,
+        index: impl Indexed,
+    ) -> &VertexParents {
+        self.expect_vertex_data(index).get_parents()
+    }
+    pub fn expect_parents_mut(
+        &mut self,
+        index: impl Indexed,
+    ) -> &mut VertexParents {
+        self.expect_vertex_data_mut(index).get_parents_mut()
+    }
+    pub fn get_child(
+        &self,
+        index: impl Indexed,
+    ) -> Child {
+        self.to_child(index)
+    }
     pub fn to_child(
         &self,
         index: impl Indexed,

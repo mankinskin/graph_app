@@ -80,10 +80,27 @@ impl FoundRange {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SearchFound {
-    pub index: Child, // index in which we found the query
     pub parent_match: ParentMatch, // match ranges
-    pub pattern_id: PatternId, // pattern
-    pub sub_index: usize, // starting index in pattern
+    //pub index: Child, // index in which we found the query
+    //pub pattern_id: PatternId, // pattern
+    //pub sub_index: usize, // starting index in pattern
+    pub location: PatternLocation,
+}
+impl SearchFound {
+    pub fn unwrap_complete(self) -> Child {
+        if let FoundRange::Complete = self.parent_match.parent_range {
+            self.location.parent
+        } else {
+            panic!("Failed to unwrap {:#?} as complete match!", self);
+        }
+    }
+    pub fn expect_complete(self, msg: &str) -> Child {
+        if let FoundRange::Complete = self.parent_match.parent_range {
+            self.location.parent
+        } else {
+            panic!("Failed to unwrap {:#?} as complete match: {}", self, msg);
+        }
+    }
 }
 pub type SearchResult = Result<SearchFound, NoMatch>;
 
@@ -155,20 +172,22 @@ pub(crate) mod tests {
                 Ok((a, c)) => {
                     let a: &Child = a;
                     if let Ok(SearchFound {
-                        index,
+                        location,
                         parent_match,
                         ..
                     }) = $in
                     {
-                        assert_eq!(index, *a, $name);
+                        assert_eq!(location.parent, *a, $name);
                         assert_eq!(parent_match.parent_range, c, $name);
                     } else {
                         assert_eq!(
                             $in,
                             Ok(SearchFound {
-                                index: *a,
-                                pattern_id: 0,
-                                sub_index: 0,
+                                location: PatternLocation {
+                                    parent: *a,
+                                    pattern_id: 0,
+                                    range: 0..0
+                                },
                                 parent_match: ParentMatch {
                                     parent_range: c,
                                     remainder: None,
@@ -271,12 +290,14 @@ pub(crate) mod tests {
         assert_matches!(
             byz_found,
             Ok(SearchFound {
-                index: Child { width: 5, .. },
+                location: PatternLocation {
+                    parent: Child { width: 5, .. },
+                    ..
+                },
                 parent_match: ParentMatch {
                     parent_range: FoundRange::Postfix(_),
                     ..
                 },
-                ..
             })
         );
         let post = byz_found.unwrap().parent_match.parent_range;
@@ -325,7 +346,7 @@ pub(crate) mod tests {
                 ..
             })
         );
-        assert_eq!(abc_found.unwrap().index, *abc);
+        assert_eq!(abc_found.unwrap().location.parent, *abc);
         let ababababcdefghi_found = graph.find_sequence("ababababcdefghi".chars());
         assert_matches!(
             ababababcdefghi_found,
@@ -337,6 +358,6 @@ pub(crate) mod tests {
                 ..
             })
         );
-        assert_eq!(ababababcdefghi_found.unwrap().index, *ababababcdefghi);
+        assert_eq!(ababababcdefghi_found.unwrap().location.parent, *ababababcdefghi);
     }
 }

@@ -200,7 +200,7 @@ mod tests {
 
         assert_eq!(
             graph.compare_pattern_prefix(&a_b_c_pattern, &abcd_pattern),
-            Ok(PatternMatch(None, Some(vec![Child::new(*d, 1)])))
+            Ok(PatternMatch(None, Some(vec![*d])))
         );
 
         assert_eq!(
@@ -262,7 +262,7 @@ mod tests {
 
         assert_eq!(
             graph.compare_pattern_postfix(&a_b_pattern, &b_pattern),
-            Ok(PatternMatch(Some(vec![Child::new(a, 1)]), None))
+            Ok(PatternMatch(Some(vec![*a]), None))
         );
         assert_eq!(
             graph.compare_pattern_postfix(&a_b_c_pattern, &a_bc_pattern),
@@ -291,11 +291,11 @@ mod tests {
         );
         assert_eq!(
             graph.compare_pattern_postfix(&b_c_pattern, &a_bc_pattern),
-            Ok(PatternMatch(None, Some(vec![Child::new(*a, 1)])))
+            Ok(PatternMatch(None, Some(vec![*a])))
         );
         assert_eq!(
             graph.compare_pattern_postfix(&b_c_pattern, &a_d_c_pattern),
-            Err(NoMatch::Mismatch)
+            Ok(PatternMatch(Some(vec![*b]), Some(vec![*a, *d])))
         );
         assert_eq!(
             graph.compare_pattern_postfix(&a_bc_d_pattern, &abc_d_pattern),
@@ -325,15 +325,15 @@ mod tests {
         );
         assert_eq!(
             graph.compare_pattern_postfix(&bc_d_pattern, &ab_c_d_pattern),
-            Ok(PatternMatch(None, Some(vec![Child::new(*a, 1)])))
+            Ok(PatternMatch(None, Some(vec![*a])))
         );
         assert_eq!(
             graph.compare_pattern_postfix(&bc_d_pattern, &abc_d_pattern),
-            Ok(PatternMatch(None, Some(vec![Child::new(*a, 1)])))
+            Ok(PatternMatch(None, Some(vec![*a])))
         );
         assert_eq!(
             graph.compare_pattern_postfix(&abcd_pattern, &bc_d_pattern),
-            Ok(PatternMatch(Some(vec![Child::new(*a, 1)]), None))
+            Ok(PatternMatch(Some(vec![*a]), None))
         );
     }
 }

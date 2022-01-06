@@ -1,5 +1,6 @@
 use crate::{
     split::*,
+    read::*,
     direction::*,
 };
 use std::{
@@ -101,7 +102,7 @@ impl IndexSide for Left {
         (l, r)
     }
     fn concat_index_and_context(i: Child, c: SplitSegment) -> Pattern {
-        i.clone().into_iter().chain(c.clone()).collect()
+        [i.as_pattern_view(), c.as_pattern_view()].concat()
     }
     fn replace_range(l: &SplitSegment, _: &SplitSegment) -> std::ops::Range<usize> {
         0..l.len()
@@ -118,7 +119,7 @@ impl IndexSide for Right {
         (r, l)
     }
     fn concat_index_and_context(i: Child, c: SplitSegment) -> Pattern {
-        c.clone().into_iter().chain(i.clone()).collect()
+        [c.as_pattern_view(), i.as_pattern_view()].concat()
     }
     fn replace_range(l: &SplitSegment, r: &SplitSegment) -> std::ops::Range<usize> {
         let l = l.len();
@@ -423,11 +424,14 @@ mod tests {
             let xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
 
             let (left, right) = graph.index_splitter().split_index(xabyz, NonZeroUsize::new(2).unwrap());
-            println!("{:#?}", graph);
+            //println!("{:#?}", graph);
 
             let byz_found = graph.find_ancestor(vec![b, y, z]);
             let byz = if let SearchFound {
-                index: byz,
+                location: PatternLocation {
+                    parent: byz,
+                    ..
+                },
                 parent_match:
                     ParentMatch {
                         parent_range: FoundRange::Complete,
@@ -474,10 +478,13 @@ mod tests {
 
             assert_eq!(left, SplitSegment::Pattern(vec![w, xa]), "left");
 
-            println!("{:#?}", right);
+            //println!("{:#?}", right);
             let byz_found = graph.find_ancestor(vec![by, z]);
             let byz = if let SearchFound {
-                index: byz,
+                location: PatternLocation {
+                    parent: byz,
+                    ..
+                },
                 parent_match:
                     ParentMatch {
                         parent_range: FoundRange::Complete,
@@ -522,7 +529,10 @@ mod tests {
         let (left, right) = graph.index_splitter().split_index(wxabyz, NonZeroUsize::new(3).unwrap());
         let wxa_found = graph.find_ancestor(vec![w, x, a]);
         let wxa = if let SearchFound {
-            index: wxa,
+            location: PatternLocation {
+                parent: wxa,
+                ..
+            },
             parent_match:
                 ParentMatch {
                     parent_range: FoundRange::Complete,
@@ -536,9 +546,12 @@ mod tests {
         }
         .unwrap();
         let byz_found = graph.find_ancestor(vec![b, y, z]);
-        println!("{:#?}", byz_found);
+        //println!("{:#?}", byz_found);
         let byz = if let SearchFound {
-            index: byz,
+            location: PatternLocation {
+                parent: byz,
+                ..
+            },
             parent_match:
                 ParentMatch {
                     parent_range: FoundRange::Complete,
@@ -547,7 +560,7 @@ mod tests {
             ..
         } = byz_found.expect("byz not found")
         {
-            println!("byz = {}", graph.index_string(byz));
+            //println!("byz = {}", graph.index_string(byz));
             Some(byz)
         } else {
             None

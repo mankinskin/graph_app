@@ -86,8 +86,7 @@ impl IntoPattern for Child {
 }
 
 pub fn pattern_width<T: Borrow<Child>>(pat: impl IntoIterator<Item = T>) -> TokenPosition {
-    pat.into_iter()
-        .fold(0, |acc, child| acc + child.borrow().get_width())
+    pat.into_iter().map(|c| c.borrow().width()).sum()
 }
 pub fn prefix<T: AsChild + Clone>(
     pattern: &'_ [T],

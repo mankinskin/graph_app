@@ -1,4 +1,4 @@
-use crate::r#match::*;
+use crate::{r#match::*, merge::MergeDirection};
 use itertools::{
     EitherOrBoth,
     Itertools,
@@ -19,7 +19,8 @@ fn to_matching_iterator<'a, I: Indexed + 'a, J: Indexed + 'a>(
             _ => false,
         })
 }
-pub trait MatchDirection {
+pub trait MatchDirection : MergeDirection {
+    type Opposite: MatchDirection;
     /// get the parent where vertex is at the relevant position
     fn get_match_parent_to(
         vertex: &VertexData,
@@ -89,7 +90,8 @@ pub trait MatchDirection {
         p: Option<Pattern>,
         context: Pattern,
     ) -> FoundRange;
-    fn found_at_start(fr: FoundRange) -> bool;
+    fn found_at_start(fr: &FoundRange) -> bool;
+    fn found_at_end(fr: &FoundRange) -> bool;
     fn get_remainder(found_range: FoundRange) -> Option<Pattern>;
     fn directed_pattern_split<T: AsChild + Clone>(
         pattern: &'_ [T],
@@ -119,6 +121,7 @@ pub trait MatchDirection {
     }
 }
 impl MatchDirection for Right {
+    type Opposite = Left;
     fn get_match_parent_to(
         vertex: &VertexData,
         sup: impl Indexed,
@@ -200,12 +203,16 @@ impl MatchDirection for Right {
             _ => None,
         }
     }
-    fn found_at_start(fr: FoundRange) -> bool {
+    fn found_at_start(fr: &FoundRange) -> bool {
         matches!(fr, FoundRange::Prefix(_) | FoundRange::Complete)
+    }
+    fn found_at_end(fr: &FoundRange) -> bool {
+        matches!(fr, FoundRange::Postfix(_) | FoundRange::Complete)
     }
 }
 
 impl MatchDirection for Left {
+    type Opposite = Left;
     fn get_match_parent_to(
         vertex: &VertexData,
         sup: impl Indexed,
@@ -287,7 +294,10 @@ impl MatchDirection for Left {
             _ => None,
         }
     }
-    fn found_at_start(fr: FoundRange) -> bool {
+    fn found_at_start(fr: &FoundRange) -> bool {
         matches!(fr, FoundRange::Postfix(_) | FoundRange::Complete)
+    }
+    fn found_at_end(fr: &FoundRange) -> bool {
+        matches!(fr, FoundRange::Prefix(_) | FoundRange::Complete)
     }
 }

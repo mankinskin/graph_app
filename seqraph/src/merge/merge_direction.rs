@@ -7,6 +7,10 @@ pub use crate::direction::*;
 pub trait MergeDirection: Direction {
     type Opposite: MergeDirection;
     fn split_context_head(context: impl Merge) -> Option<(Child, Pattern)>;
+    fn split_last(context: impl Merge) -> Option<(Pattern, Child)> {
+        <Self as MergeDirection>::Opposite::split_context_head(context)
+            .map(|(c, rem)| (rem, c))
+    }
     fn split_inner_head(context: impl Merge) -> (Child, Pattern) {
         <Self as MergeDirection>::Opposite::split_context_head(context)
             .expect("Empty inner pattern!")

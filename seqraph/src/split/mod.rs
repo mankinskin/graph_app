@@ -194,4 +194,56 @@ mod tests {
         assert_eq!(left, expleft, "left");
         assert_eq!(right, expright, "right");
     }
+    #[test]
+    fn index_prefix_postfix1() {
+        let mut graph = Hypergraph::default();
+        let ind_hypergraph = graph.read_sequence("hypergraph".chars());
+        let h = graph.expect_token_child('h');
+        let y = graph.expect_token_child('y');
+        let p = graph.expect_token_child('p');
+        let e = graph.expect_token_child('e');
+        let r = graph.expect_token_child('r');
+        let g = graph.expect_token_child('g');
+        let a = graph.expect_token_child('a');
+        let pats = ind_hypergraph.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![h, y, p, e, r, g, r, a, p, h],
+        ]);
+        let (hyper, _) = graph.index_prefix(ind_hypergraph, NonZeroUsize::new(5).unwrap());
+        let pats = ind_hypergraph.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![hyper, g, r, a, p, h],
+        ]);
+        let (_, ind_graph) = graph.index_postfix(ind_hypergraph, NonZeroUsize::new(5).unwrap());
+        let pats = ind_hypergraph.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![hyper, ind_graph],
+        ]);
+    }
+    #[test]
+    fn index_postfix_prefix1() {
+        let mut graph = Hypergraph::default();
+        let ind_hypergraph = graph.read_sequence("hypergraph".chars());
+        let h = graph.expect_token_child('h');
+        let y = graph.expect_token_child('y');
+        let p = graph.expect_token_child('p');
+        let e = graph.expect_token_child('e');
+        let r = graph.expect_token_child('r');
+        let g = graph.expect_token_child('g');
+        let a = graph.expect_token_child('a');
+        let pats = ind_hypergraph.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![h, y, p, e, r, g, r, a, p, h],
+        ]);
+        let (_, ind_graph) = graph.index_postfix(ind_hypergraph, NonZeroUsize::new(5).unwrap());
+        let pats = ind_hypergraph.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![h, y, p, e, r, ind_graph],
+        ]);
+        let (hyper, _) = graph.index_prefix(ind_hypergraph, NonZeroUsize::new(5).unwrap());
+        let pats = ind_hypergraph.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![hyper, ind_graph],
+        ]);
+    }
 }

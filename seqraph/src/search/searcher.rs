@@ -51,9 +51,9 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
             let child_patterns = vert.get_children();
             //print!("matching parent \"{}\" ", self.index_string(parent.index));
             // get child pattern indices able to match at all
-            let candidates = D::filter_parent_pattern_indices(parent, child_patterns);
-            candidates
-                .into_iter()
+            //let candidates = D::filter_parent_pattern_indices(parent, child_patterns);
+            parent.pattern_indices
+                .iter()
                 .find(|(pattern_index, sub_index)|
                     // find pattern with same next index
                     D::compare_next_index_in_child_pattern(
@@ -63,22 +63,24 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                         *sub_index,
                     )
                 )
-                .map(|(pattern_index, sub_index)|
-                    (*index, child_patterns, parent, pattern_index, sub_index)
+                .map(|&(pattern_id, sub_index)|
+                    (child_patterns, PatternLocation {
+                        parent: Child::new(index, parent.width),
+                        range: sub_index..child_patterns.get(&pattern_id).unwrap().len(),
+                        pattern_id,
+                    })
                 )
         })
-        .and_then(|(index, child_patterns, parent, pattern_id, sub_index)|
+        .and_then(|(child_patterns, location)|
             self.matcher()
                 .compare_child_pattern_at_offset(
                     child_patterns,
                     context,
-                    pattern_id,
-                    sub_index,
+                    location.pattern_id,
+                    location.range.start,
                 )
-                .map(|parent_match| SearchFound {
-                    index: Child::new(index, parent.width),
-                    pattern_id,
-                    sub_index,
+                .map(|(parent_match, _)| SearchFound {
+                    location,
                     parent_match,
                 })
                 .ok()
@@ -113,11 +115,9 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                                 index,
                                 parent,
                             )
-                            .map(|(parent_match, pattern_id, sub_index)| SearchFound {
-                                index: Child::new(index, parent.width),
-                                pattern_id,
-                                sub_index,
+                            .map(|(parent_match, location)| SearchFound {
                                 parent_match,
+                                location,
                             })
                             .ok()
                     })
@@ -141,12 +141,16 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                                         )
                                         .map(|parent_match| (parent_match, pattern_index, sub_index))
                                 })
-                                .map(|(parent_match, pattern_id, sub_index)| SearchFound {
-                                    index: Child::new(index, parent.width),
-                                    pattern_id,
-                                    sub_index,
-                                    parent_match,
-                                })
+                                .map(|((parent_match, end_index), pattern_id, sub_index)|
+                                    SearchFound {
+                                        location: PatternLocation {
+                                            parent: Child::new(index, parent.width),
+                                            pattern_id,
+                                            range: sub_index..end_index,
+                                        },
+                                        parent_match,
+                                    }
+                                )
                                 .ok()
                         )
                     )
@@ -154,15 +158,17 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
             })
         .and_then(|search_found| {
             if let Some(rem) = &search_found.parent_match.remainder {
-                self.find_largest_matching_ancestor(search_found.index, rem, None)
-                    .map(|super_found| SearchFound {
-                        parent_match: search_found
-                            .parent_match
-                            .embed_in_super(super_found.parent_match),
-                        index: super_found.index,
-                        sub_index: super_found.sub_index,
-                        pattern_id: super_found.pattern_id,
-                    })
+                if D::found_at_end(&search_found.parent_match.parent_range) {
+                    self.find_largest_matching_ancestor(search_found.location.parent, rem, None)
+                        .map(|super_found| SearchFound {
+                            parent_match: search_found
+                                .parent_match
+                                .embed_in_super(super_found.parent_match),
+                            location: super_found.location,
+                        })
+                } else {
+                    Ok(search_found)
+                }
             } else {
                 Ok(search_found)
             }

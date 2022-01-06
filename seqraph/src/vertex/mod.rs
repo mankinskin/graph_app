@@ -5,7 +5,10 @@ use crate::{
 };
 use either::Either;
 use std::{
-    collections::HashMap,
+    collections::{
+        HashMap,
+        HashSet,
+    },
     fmt::Debug,
     slice::SliceIndex,
     sync::atomic::{
@@ -36,8 +39,8 @@ pub type IndexPosition = usize;
 pub type IndexPattern = Vec<VertexIndex>;
 pub type VertexPatternView<'a> = Vec<&'a VertexData>;
 
-pub(crate) fn clone_child_patterns(children: &ChildPatterns) -> Vec<Pattern> {
-    children.iter().map(|(_, p)| p.clone()).collect()
+pub(crate) fn clone_child_patterns<'a>(children: &'a ChildPatterns) -> impl IntoIterator<Item=Pattern> + 'a {
+    children.iter().map(|(_, p)| p.clone())
 }
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum VertexKey<T: Tokenize> {
@@ -79,8 +82,32 @@ impl VertexData {
             .get(index)
             .ok_or(NoMatch::NoMatchingParent(*index))
     }
+    pub fn get_parent_mut(
+        &mut self,
+        index: impl Indexed,
+    ) -> Result<&mut Parent, NoMatch> {
+        let index = index.index();
+        self.parents
+            .get_mut(index)
+            .ok_or(NoMatch::NoMatchingParent(*index))
+    }
+    pub fn expect_parent(
+        &self,
+        index: impl Indexed,
+    ) -> &Parent {
+        self.get_parent(index).unwrap()
+    }
+    pub fn expect_parent_mut(
+        &mut self,
+        index: impl Indexed,
+    ) -> &mut Parent {
+        self.get_parent_mut(index).unwrap()
+    }
     pub fn get_parents(&self) -> &VertexParents {
         &self.parents
+    }
+    pub fn get_parents_mut(&mut self) -> &mut VertexParents {
+        &mut self.parents
     }
     pub fn get_child_pattern_range<R: SliceIndex<[Child]>>(
         &self,
@@ -141,8 +168,14 @@ impl VertexData {
     pub fn get_children(&self) -> &ChildPatterns {
         &self.children
     }
-    pub fn get_child_patterns(&self) -> Vec<Pattern> {
+    pub fn get_child_patterns<'a>(&'a self) -> impl IntoIterator<Item=Pattern> + 'a {
         clone_child_patterns(&self.children)
+    }
+    pub fn get_child_pattern_set(&self) -> HashSet<Pattern> {
+        self.get_child_patterns().into_iter().collect()
+    }
+    pub fn get_child_pattern_vec(&self) -> Vec<Pattern> {
+        self.get_child_patterns().into_iter().collect()
     }
     pub fn add_pattern<P: IntoPattern<Item = impl AsChild>>(
         &mut self,
@@ -274,25 +307,23 @@ impl VertexData {
             })
             .ok_or(NoMatch::NoChildPatterns)
     }
-    /// replace indices in sub pattern and returns old indices
-    /// doesn't modify parents of sub-patterns!
-    pub(crate) fn replace_in_pattern(
-        &mut self,
-        pat: PatternId,
-        range: impl PatternRangeIndex + Clone,
-        replace: impl IntoPattern<Item = impl AsChild>,
-    ) -> Pattern {
-        let pattern = self.expect_child_pattern_mut(&pat);
-        let old = pattern
-            .get(range.clone())
-            .expect("Replace range out of range of pattern!")
-            .to_vec();
-        *pattern = replace_in_pattern(pattern.as_pattern_view(), range, replace);
-        old
-    }
 }
 
 impl<'g> Vertexed<'g, 'g> for &'g VertexData {
+    fn vertex<T: Tokenize>(
+        self,
+        _graph: &'g Hypergraph<T>,
+    ) -> &'g VertexData {
+        self
+    }
+    fn vertex_ref<T: Tokenize>(
+        &'g self,
+        _graph: &'g Hypergraph<T>,
+    ) -> &'g VertexData {
+        *self
+    }
+}
+impl<'g> Vertexed<'g, 'g> for &'g mut VertexData {
     fn vertex<T: Tokenize>(
         self,
         _graph: &'g Hypergraph<T>,
