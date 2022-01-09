@@ -5,7 +5,10 @@ use crate::{
     *,
 };
 use itertools::*;
-use std::{num::NonZeroUsize, collections::HashMap, ops::Range, rc};
+use std::{
+    num::NonZeroUsize,
+    ops::Range,
+};
 
 #[derive(Debug, Default)]
 struct ReaderCache {
@@ -64,10 +67,7 @@ impl ReaderCache {
             }
         }
     }
-    fn get<'g, T: Tokenize, D: MatchDirection>(
-        self,
-        reader: &'_ mut Reader<'g, T, D>,
-    ) -> Option<Child> {
+    fn get(self) -> Option<Child> {
         self.group.or(self.buffer)
     }
 }
@@ -175,7 +175,7 @@ impl<'a, T: Tokenize, D: MatchDirection> Reader<'a, T, D> {
         sequence: NewTokenIndices,
     ) -> Child {
         if sequence.is_empty() {
-            cache.get(self).expect("Empty sequence")
+            cache.get().expect("Empty sequence")
         } else {
             let (new, mut known, remainder) = self.find_known_block(sequence);
             cache.append_new(self, new);
@@ -244,8 +244,9 @@ impl<'a, T: Tokenize, D: MatchDirection> Reader<'a, T, D> {
             }
         } else {
             // some old overlaps though
-            let (pid, last) = vertex.largest_postfix();
-            let overlaps = self.read_overlaps(last, next);
+            let (_pid, last) = vertex.largest_postfix();
+            let _overlaps = self.read_overlaps(last, next);
+            // TODO
             parent
         }
     }
@@ -433,179 +434,6 @@ impl<'a, T: Tokenize, D: MatchDirection> Reader<'a, T, D> {
             overlaps
         }
     }
-    //fn overlap_largest(
-    //    &mut self,
-    //    left_parent: Option<Child>,
-    //    left_id: PatternId,
-    //    left_ctx: Pattern,
-    //    left: Child,
-    //    right: Child,
-    //    right_ctx: Pattern,
-    //) -> Option<(PatternId, Pattern)> {
-    //    let largest = vec![left, right];
-    //    self.right_searcher().find_parent(&largest)
-    //        .map(|search_found| {
-    //            // largest overlap matches
-    //            // index overlap
-    //            // index contexts in left and right
-    //            let (index, rem) = self.read_search_found(search_found);
-    //            // Todo: Remove this
-    //            assert!(rem.is_empty()); // there shouldn't be a remainder
-    //            // index prefix of overlap
-    //            let pre = self.index_context(left_parent, left_id, left_ctx, 0..left_ctx.len());
-    //            (left_id, [&pre[..], &[index][..], &right_ctx[..]].concat())
-    //        })
-    //        .ok()
-    //}
-    //fn find_overlaps(
-    //    &mut self,
-    //    left: impl PatternSource,
-    //    right: impl PatternSource,
-    //) -> Overlaps {
-    //    let mut overlaps = Vec::new();
-    //    let lps = left.sorted_patterns(self);
-    //    // left pattern with largest child
-    //    let (flp_id, flp) =
-    //        if let Some(l) = lps.first() {
-    //            l
-    //        } else {
-    //            return vec![];
-    //        };
-    //    let lparent = left.get_parent();
-    //    // split off largest match child
-    //    let (fl, fl_rem) = Left::split_ordering_element(flp);
-    //    let rps = right.sorted_patterns(self);
-    //    let (rlargest, rctx) = if let Some(rlargest) = right.get_parent() {
-    //        (rlargest, &[][..])
-    //    } else {
-    //        let (frp_id, frp) =
-    //            if let Some(r) = rps.first() {
-    //                r
-    //            } else {
-    //                return vec![];
-    //            };
-    //        Right::split_ordering_element(frp)
-    //    };
-    //    // todo handle right child pattern ids
-    //    if let Some(pattern) = self.overlap_largest(
-    //        lparent, *flp_id, fl_rem.into_pattern(), fl, rlargest, rctx.into_pattern(),
-    //    ) {
-    //        vec![pattern]
-    //    } else {
-    //        // largest doesn't match
-    //        // try smallest
-    //        let (slp_id, slp) = lps.last().unwrap();
-    //        let (srp_id, srp) = rps.last().unwrap();
-    //        let (sl, slctx) = Left::split_ordering_element(slp);
-    //        let (sr, srctx) = Right::split_ordering_element(srp);
-    //        if self.find_parent(&[sl, sr][..]).is_err() {
-    //            // smallest is not an overlap
-    //            // descend into smallest left or right (left major)
-    //            if sl.width() == 1 {
-    //                if sr.width() == 1 {
-    //                    // no overlap
-    //                    overlaps
-    //                } else {
-    //                    // move down into right smallest
-    //                    self.find_overlaps((left.get_parent(), *slp_id, *slp), sr)
-    //                }
-    //            } else {
-    //                // move down into left smallest
-    //                self.find_overlaps(sl, right)
-    //            }
-    //        } else {
-    //            // smallest works, largest doesn't
-    //            // search through left largest to smallest
-    //            // for each right smallest to largest
-    //            // Todo: use current result if number of patterns is 1
-    //            for (i, (lpid, lp)) in lps.iter().enumerate() {
-    //                let (l, lctx) = Left::split_context_head(lp.clone()).unwrap();
-    //                // find largest overlap with 
-    //                match rps.iter()
-    //                    .map(|(pid, p)| (Some(pid), p))
-    //                    .rev()
-    //                    // add largest right if we are not largest left
-    //                    .chain((i != 0).then(|| (None, &rlargest.into_pattern())))
-    //                    .try_fold(None, |rm, (rpid, rp)| {
-    //                        let (r, rctx) = Right::split_context_head(rp.clone()).unwrap();
-    //                        match self.find_parent([l, r].as_slice()) {
-    //                            Ok(f) => Ok(Some(((r, rctx), f))),
-    //                            Err(_) => Err(rm.map(|found| ((r, rctx), found))),
-    //                        }
-    //                    }) {
-    //                    Ok(Some(((r, rctx), found))) => {
-    //                        // largest right matches
-    //                        // extract pattern
-    //                        // add overlap
-    //                        let overlap = self.index_overlap(&[l, r][..], found, lctx, rctx);
-    //                        overlaps.push(overlap);
-    //                    }
-    //                    Err(Some((
-    //                        (miss, _),
-    //                        (
-    //                            (r, rctx),
-    //                            found
-    //                        )))) => {
-    //                        // some found right matches
-    //                        // larger miss didn't match
-    //                        // find rights in miss' children larger than found
-    //                        if Some(miss) == rfull {
-    //                            // next biggest is the full index, i.e. largest right matches
-    //                            let overlap = self.index_overlap(&[l, r][..], found, lctx, rctx);
-    //                            overlaps.push(overlap);
-    //                        } else {
-    //                            let children = miss.vertex(self.graph).get_child_pattern_vec();
-    //                            let candidates =
-    //                                Right::sort_filter_above_width(children, r.width());
-    //                            let olps = self.find_overlaps(l, candidates);
-    //                            if olps.is_empty() {
-    //                                let overlap = self.index_overlap(&[l, r][..], found, lctx, rctx);
-    //                                overlaps.push(overlap);
-    //                            } else {
-    //                                overlaps.extend(olps);
-    //                            }
-    //                        }
-    //                    }
-    //                    // this left with smallest right doesn't match
-    //                    Ok(None) | Err(None) => {
-    //                        let olps = self.find_overlaps(vec![l], sr);
-    //                        overlaps.extend(olps.into_iter().map(|olp| {
-    //                            let olp = self.merge_left_split(lctx.clone(), olp.into());
-    //                            self.merge_right_split(srctx.clone(), olp.into()).into_pattern()
-    //                        }));
-    //                    },
-    //                }
-    //            }
-    //            overlaps
-    //        }
-    //    }
-    //}
-    //fn index_overlap(
-    //    &mut self,
-    //    pattern: impl IntoPattern<Item=impl AsChild>,
-    //    found: SearchFound,
-    //    lctx: Pattern,
-    //    rctx: Pattern,
-    //) -> Pattern {
-    //    Right::concat_inner_and_context(lctx, vec![new], rctx)
-    //}
-    // child child: go into left children, match with right and right children
-    //      use left to update parent
-    // patterns child: run without left parent, find overlaps for each pattern with id
-    // child patterns: go into left children, match with right patterns
-    // patterns patterns: run without left parent
-    // get largest overlap 
-    fn index_context(
-        &mut self,
-        context: Pattern,
-        loc: PatternRangeLocation,
-    ) -> Option<Child> {
-        if context.len() > 1 {
-            Some(self.index_range_at(loc))
-        } else {
-            context.into_iter().next()
-        }
-    }
 }
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 struct PatternGroup {
@@ -614,40 +442,6 @@ struct PatternGroup {
     //overlaps: NewOverlaps, // overlaps of lead + postfix
 }
 impl PatternGroup {
-    //pub fn lead(lead: Pattern) -> Self {
-    //    Self {
-    //        lead,
-    //        postfix: None,
-    //        overlaps: vec![],
-    //    }
-    //}
-    //pub fn lead_next<'g, T: Tokenize, D: MatchDirection>(reader: &mut Reader<'g, T, D>, mut lead: Pattern, next: Child) -> Self {
-    //    match lead.len() {
-    //        0 => panic!("empty lead!"),
-    //        1 => {
-    //            let first = lead.into_iter().next().unwrap();
-    //            Self::overlapping(reader, first, next)
-    //        },
-    //        _ => {
-    //            let last = lead.pop().unwrap();
-    //            Self::lead_postfix(lead, Self::overlapping(reader, last, next))
-    //        },
-    //    }
-    //}
-    //pub fn lead_postfix(lead: Pattern, post: Self) -> Self {
-    //    Self {
-    //        lead,
-    //        postfix: Some(Box::new(post)),
-    //        overlaps: vec![],
-    //    }
-    //}
-    //pub fn computed(lead: Pattern, overlaps: NewOverlaps) -> Self {
-    //    Self {
-    //        lead,
-    //        postfix: None,
-    //        overlaps,
-    //    }
-    //}
     // - find overlaps with >lead postfix in previous PatternGroup
     // ||       |>        ||     *    |
     // ||   |       | | | ||
@@ -714,13 +508,6 @@ impl PatternGroup {
     //            reader.graph.insert_patterns(patterns)
     //        }
     //    }
-    //}
-    //pub fn append_new<'g, T: Tokenize, D: MatchDirection>(
-    //    &mut self,
-    //    reader: &mut Reader<'g, T, D>,
-    //    new: Pattern,
-    //) {
-    //    self.index = reader.graph.append_new_pattern_to_index(self.index, new);
     //}
     //pub fn append<'g, T: Tokenize, D: MatchDirection>(
     //    &mut self,
@@ -847,38 +634,8 @@ impl Overlap {
             }
         }
     }
-    pub fn get_left_ploc(&self) -> PatternLocation {
-        let (Overlap::Expandable(lloc, _, _, _, _) |
-            Overlap::EndPiece(lloc, _, _)) = self;
-        lloc.clone()
-    }
-    pub fn to_new_overlap(self) -> NewOverlap {
-        match self {
-            Self::Expandable(_, lctx, inner, rloc, rctx)
-                => NewOverlap::Expandable(lctx, inner, rloc, rctx),
-            Self::EndPiece(_, lctx, inner)
-                => NewOverlap::EndPiece(lctx, inner),
-        }
-    }
 }
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
-enum NewOverlap {
-    Expandable(Pattern, Child, PatternLocation, Pattern),
-    EndPiece(Pattern, Child),
-}
-impl NewOverlap {
-    pub fn into_pattern(self) -> Pattern {
-        match self {
-            Self::Expandable(lctx, inner, _, rctx)
-                => [lctx.as_slice(), &[inner], rctx.as_slice()].concat(),
-            Self::EndPiece(lctx, inner)
-                => [lctx.as_slice(), &[inner]].concat(),
-        }
-    }
-}
-type NewOverlaps = Vec<NewOverlap>;
 type Overlaps = Vec<Overlap>;
-type OverlapMap = HashMap<PatternLocation, Overlap>;
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct PatternRangeLocation {
@@ -943,17 +700,6 @@ trait OverlapSide : MatchDirection {
         );
         children
     }
-    //fn sort_filter_above_width(
-    //    children: LocatedPatterns,
-    //    min_width: usize,
-    //) -> LocatedPatterns {
-    //    Self::sort_by_inner(children)
-    //        .into_iter()
-    //        .take_while(|p|
-    //            Self::get_ordering_element(&p.1).width() > min_width
-    //        )
-    //        .collect()
-    //}
     fn get_ordering_element(
         pattern: &Pattern,
     ) -> &Child {

@@ -1,6 +1,5 @@
 use crate::{
     split::*,
-    read::*,
     direction::*,
 };
 use std::{
@@ -311,6 +310,7 @@ mod tests {
     use crate::{
         graph::tests::*,
         search::*,
+        read::*,
     };
     use pretty_assertions::assert_eq;
     use itertools::*;

@@ -366,13 +366,13 @@ impl<'g> Vertexed<'g, 'g> for &'g mut VertexData {
 impl<'g> VertexedMut<'g, 'g> for &'g mut VertexData {
     fn vertex_mut<T: Tokenize>(
         self,
-        graph: &'g mut Hypergraph<T>,
+        _graph: &'g mut Hypergraph<T>,
     ) -> &'g mut VertexData {
         self
     }
     fn vertex_ref_mut<T: Tokenize>(
         &'g mut self,
-        graph: &'g mut Hypergraph<T>,
+        _graph: &'g mut Hypergraph<T>,
     ) -> &'g mut VertexData {
         *self
     }
