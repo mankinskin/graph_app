@@ -64,10 +64,10 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                     )
                 )
                 .map(|&(pattern_id, sub_index)|
-                    (child_patterns, PatternLocation {
+                    (child_patterns, PatternRangeLocation {
                         parent: Child::new(index, parent.width),
-                        range: sub_index..child_patterns.get(&pattern_id).unwrap().len(),
                         pattern_id,
+                        range: sub_index..child_patterns.get(&pattern_id).unwrap().len(),
                     })
                 )
         })
@@ -94,7 +94,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
         context: impl IntoPattern<Item = impl AsChild>,
         width_ceiling: Option<TokenPosition>,
     ) -> SearchResult {
-        let vertex_index = *start.index();
+        let vertex_index = start.index();
         let vertex = start.vertex(self);
 
         // search parents for matching parents
@@ -143,7 +143,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                                 })
                                 .map(|((parent_match, end_index), pattern_id, sub_index)|
                                     SearchFound {
-                                        location: PatternLocation {
+                                        location: PatternRangeLocation {
                                             parent: Child::new(index, parent.width),
                                             pattern_id,
                                             range: sub_index..end_index,

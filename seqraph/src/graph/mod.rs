@@ -98,7 +98,7 @@ where
     ) -> String {
         pattern
             .into_iter()
-            .map(|child| self.index_string(*child.index()))
+            .map(|child| self.index_string(child.index()))
             .join(separator)
     }
     pub fn separated_pattern_string(
@@ -128,7 +128,7 @@ where
     ) -> String {
         match key {
             VertexKey::Token(token) => f(token),
-            VertexKey::Pattern(_) => self.pattern_string(data.expect_any_pattern()),
+            VertexKey::Pattern(_) => self.pattern_string(data.expect_any_pattern().1),
         }
     }
     pub fn index_string(

@@ -31,7 +31,7 @@ impl SplitKey {
         offset: NonZeroUsize,
     ) -> Self {
         Self {
-            index: *index.index(),
+            index: index.index(),
             offset,
         }
     }
@@ -301,8 +301,8 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
         Self { graph }
     }
     pub(crate) fn split_index(
-        &mut self,
-        root: impl Indexed,
+        &'g mut self,
+        root: impl VertexedMut<'g, 'g>,
         pos: NonZeroUsize,
     ) -> SingleSplitResult {
         let vertex = self.graph.expect_vertex_data(&root);
@@ -310,15 +310,15 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
         self.single_split_patterns(root, patterns, pos)
     }
     pub fn index_prefix(
-        &mut self,
-        root: impl Indexed,
+        &'g mut self,
+        root: impl VertexedMut<'g, 'g>,
         pos: NonZeroUsize,
     ) -> (Child, SplitSegment) {
         self.index_single_split::<Left, _>(root, pos).unwrap_prefix()
     }
     pub fn index_postfix(
-        &mut self,
-        root: impl Indexed,
+        &'g mut self,
+        root: impl VertexedMut<'g, 'g>,
         pos: NonZeroUsize,
     ) -> (SplitSegment, Child) {
         self.index_single_split::<Right, _>(root, pos).unwrap_postfix()

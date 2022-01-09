@@ -12,37 +12,51 @@ pub use index_splitter::*;
 mod split_indices;
 pub use split_indices::*;
 
-impl<'t, 'a, T> Hypergraph<T>
+impl<'t, 'g, T> Hypergraph<T>
 where
     T: Tokenize + 't,
 {
     /// Split an index the specified position
     pub fn index_splitter(
-        &mut self,
+        &'g mut self,
     ) -> IndexSplitter<T> {
         IndexSplitter::new(self)
     }
     // create index from token position range in index
     pub fn index_subrange(
         &mut self,
-        root: impl Indexed + Clone,
+        root: impl Indexed,
         range: impl PatternRangeIndex,
     ) -> Child {
-        self.index_splitter().index_subrange(root, range)
+        self.index_splitter().index_subrange(root.index(), range)
+    }
+    pub(crate) fn split_index(
+        &mut self,
+        root: impl Indexed,
+        pos: NonZeroUsize,
+    ) -> SingleSplitResult {
+        self.index_splitter().split_index(root.index(), pos)
+    }
+    pub(crate) fn split_subrange(
+        &mut self,
+        root: impl Indexed,
+        range: impl PatternRangeIndex,
+    ) -> RangeSplitResult {
+        self.index_splitter().split_subrange(root.index(), range)
     }
     pub fn index_prefix(
         &mut self,
         root: impl Indexed,
         pos: NonZeroUsize,
     ) -> (Child, SplitSegment) {
-        self.index_splitter().index_prefix(root, pos)
+        self.index_splitter().index_prefix(root.index(), pos)
     }
     pub fn index_postfix(
         &mut self,
         root: impl Indexed,
         pos: NonZeroUsize,
     ) -> (SplitSegment, Child) {
-        IndexSplitter::new(self).index_postfix(root, pos)
+        IndexSplitter::new(self).index_postfix(root.index(), pos)
     }
 }
 impl<'t, 'a, T> Hypergraph<T>

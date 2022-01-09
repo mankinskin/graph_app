@@ -7,11 +7,11 @@ use std::{
 pub type Pattern = Vec<Child>;
 pub type PatternView<'a> = &'a [Child];
 pub trait PatternRangeIndex:
-    SliceIndex<[Child], Output = [Child]> + RangeBounds<usize> + Iterator<Item = usize> + Debug
+    SliceIndex<[Child], Output = [Child]> + RangeBounds<usize> + Iterator<Item = usize> + Debug + Clone
 {
 }
 impl<
-        T: SliceIndex<[Child], Output = [Child]> + RangeBounds<usize> + Iterator<Item = usize> + Debug,
+        T: SliceIndex<[Child], Output = [Child]> + RangeBounds<usize> + Iterator<Item = usize> + Debug + Clone,
     > PatternRangeIndex for T
 {
 }

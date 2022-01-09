@@ -122,7 +122,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         context: impl IntoPattern<Item = impl AsChild>,
         sup: Child,
     ) -> ParentMatchResult {
-        let sub_index = *sub.index();
+        let sub_index = sub.index();
         let vertex = self.expect_vertex_data(sub);
         if vertex.get_parents().is_empty() {
             return Err(NoMatch::NoParents);
@@ -148,7 +148,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
                 )
                 .and_then(
                     |SearchFound {
-                         location: PatternLocation {
+                         location: PatternRangeLocation {
                              parent: parent_index,
                              ..
                         },
@@ -166,7 +166,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
                             // sup is no direct parent, search upwards
                             //println!("matching available parents");
                             // search sup in parents
-                            (parent_index == *sup.index())
+                            (parent_index == sup.index())
                             .then(|| ParentMatch {
                                 parent_range: FoundRange::Complete,
                                 remainder: (!new_context.is_empty()).then(|| new_context.clone()),
@@ -183,9 +183,9 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         context: impl IntoPattern<Item = impl AsChild>,
         parent_index: impl Indexed,
         parent: &Parent,
-    ) -> Result<(ParentMatch, PatternLocation), NoMatch> {
+    ) -> Result<(ParentMatch, PatternRangeLocation), NoMatch> {
         //println!("compare_parent_context");
-        let vert = self.expect_vertex_data(parent_index);
+        let vert = self.expect_vertex_data(parent_index.index());
         let child_patterns = vert.get_children();
         //print!("matching parent \"{}\" ", self.index_string(parent.index));
         // optionally filter by sub index
@@ -210,7 +210,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
                     sub_index,
                 )
                 .map(|(parent_match, end_index)|
-                    (parent_match, PatternLocation {
+                    (parent_match, PatternRangeLocation {
                         parent: Child::new(parent_index, parent.width),
                         pattern_id: pattern_index,
                         range: sub_index..end_index
@@ -233,10 +233,13 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         let child_tail = D::pattern_tail(&rem[..]);
         // match search context with child tail
         // back context is from child pattern
-        self.compare(context, child_tail).map(|pm| (ParentMatch {
-            parent_range: D::to_found_range(pm.1, back_context),
-            remainder: pm.0,
-        }, child_pattern.len()-pm.1.map(|p| p.len()).unwrap_or_default()))
+        self.compare(context, child_tail).map(|pm| {
+            let post_len = pm.1.as_ref().map(|p| p.len()).unwrap_or_default();
+            (ParentMatch {
+                parent_range: D::to_found_range(pm.1, back_context),
+                remainder: pm.0,
+            }, child_pattern.len()-post_len)
+        })
         // returns result of matching sub with parent's children
     }
     //#[allow(unused)]

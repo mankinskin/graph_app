@@ -9,7 +9,7 @@ pub use searcher::*;
 //pub use async_searcher::*;
 
 // TODO: rename to something with context
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct ParentMatch {
     pub parent_range: FoundRange, // context in parent
     pub remainder: Option<Pattern>, // remainder of query
@@ -29,7 +29,7 @@ pub type ParentMatchResult = Result<ParentMatch, NoMatch>;
 
 // found range of search pattern in vertex at index
 // TODO: actually a context
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub enum FoundRange {
     Complete,                // Full index found
     Prefix(Pattern),         // found prefix (remainder)
@@ -78,13 +78,13 @@ impl FoundRange {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct SearchFound {
     pub parent_match: ParentMatch, // match ranges
     //pub index: Child, // index in which we found the query
     //pub pattern_id: PatternId, // pattern
     //pub sub_index: usize, // starting index in pattern
-    pub location: PatternLocation,
+    pub location: PatternRangeLocation,
 }
 impl SearchFound {
     pub fn unwrap_complete(self) -> Child {
@@ -183,7 +183,7 @@ pub(crate) mod tests {
                         assert_eq!(
                             $in,
                             Ok(SearchFound {
-                                location: PatternLocation {
+                                location: PatternRangeLocation {
                                     parent: *a,
                                     pattern_id: 0,
                                     range: 0..0
@@ -290,7 +290,7 @@ pub(crate) mod tests {
         assert_matches!(
             byz_found,
             Ok(SearchFound {
-                location: PatternLocation {
+                location: PatternRangeLocation {
                     parent: Child { width: 5, .. },
                     ..
                 },

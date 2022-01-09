@@ -7,7 +7,7 @@ use std::{
     },
 };
 
-impl<'t, 'a, T> Hypergraph<T>
+impl<'t, 'g, T> Hypergraph<T>
 where
     T: Tokenize + 't,
 {
@@ -55,7 +55,7 @@ where
         let (a, b) = indices
             .into_iter()
             .map(|index| {
-                let index = *index.index();
+                let index = index.index();
                 let w = self.expect_vertex_data(index).get_width();
                 width += w;
                 (index, Child::new(index, w))
@@ -105,20 +105,26 @@ where
         &mut self,
         indices: impl IntoIterator<Item = impl Indexed>,
     ) -> (Child, Option<PatternId>) {
-        // todo check if exists already
-        // todo handle token nodes
         let indices: Vec<_> = indices.into_iter().collect();
         if indices.len() == 1 {
             (self.to_child(indices.first().unwrap().index()), None)
         } else {
-            let (width, indices, children) = self.to_width_indices_children(indices);
-            let mut new_data = VertexData::new(0, width);
-            let pattern_index = new_data.add_pattern(&children);
-            let id = Self::next_pattern_vertex_id();
-            let index = self.insert_vertex(VertexKey::Pattern(id), new_data);
-            self.add_parents_to_pattern_nodes(indices, Child::new(index, width), pattern_index);
-            (index, Some(pattern_index))
+            let (c, id) = self.force_insert_pattern_with_id(indices);
+            (c, Some(id))
         }
+    }
+    /// create new node from a pattern (even if single index)
+    pub fn force_insert_pattern_with_id(
+        &mut self,
+        indices: impl IntoIterator<Item = impl Indexed>,
+    ) -> (Child, PatternId) {
+        let (width, indices, children) = self.to_width_indices_children(indices);
+        let mut new_data = VertexData::new(0, width);
+        let pattern_index = new_data.add_pattern(&children);
+        let id = Self::next_pattern_vertex_id();
+        let index = self.insert_vertex(VertexKey::Pattern(id), new_data);
+        self.add_parents_to_pattern_nodes(indices, Child::new(index, width), pattern_index);
+        (index, pattern_index)
     }
     /// create new node from a pattern
     pub fn insert_pattern(
@@ -126,6 +132,13 @@ where
         indices: impl IntoIterator<Item = impl Indexed>,
     ) -> Child {
         self.insert_pattern_with_id(indices).0
+    }
+    /// create new node from a pattern
+    pub fn force_insert_pattern(
+        &mut self,
+        indices: impl IntoIterator<Item = impl Indexed>,
+    ) -> Child {
+        self.force_insert_pattern_with_id(indices).0
     }
     /// create new node from multiple patterns
     pub fn insert_patterns(
@@ -141,33 +154,39 @@ where
         }
         node
     }
+    pub(crate) fn index_range_at(
+        &mut self,
+        loc: PatternRangeLocation,
+    ) -> Child {
+        self.index_range_in(loc.parent, loc.pattern_id, loc.range)
+    }
     pub(crate) fn index_range_in(
         &mut self,
         parent: impl Indexed,
         pid: PatternId,
-        range: impl PatternRangeIndex + Clone,
+        range: impl PatternRangeIndex,
     ) -> Child {
-        let vertex = self.expect_vertex_data_mut(parent);
-        let pattern = vertex.get_child_pattern_range(&pid, range).unwrap();
+        let vertex = self.expect_vertex_data(parent.index());
+        let pattern = vertex.get_child_pattern_range(&pid, range.clone()).unwrap().to_vec();
         let c = self.insert_pattern(pattern);
-        self.vertex_replace_in_pattern(vertex, pid, range, c);
+        self.replace_in_pattern(parent.index(), pid, range, c);
         c
     }
-    pub fn vertex_replace_in_pattern(
-        &'a mut self,
-        parent: impl Vertexed<'a, 'a>,
+    pub fn replace_in_pattern(
+        &'g mut self,
+        parent: impl Indexed,
         pat: PatternId,
-        range: impl PatternRangeIndex + Clone,
+        range: impl PatternRangeIndex,
         rep: impl IntoPattern<Item = impl AsChild> + Clone,
     ) {
         if range.start_bound() == range.end_bound() {
             // empty range
             return;
         }
-        let vertex = parent.vertex(self);
-        let parent = parent.index();
+        let parent_index = parent.index();
         let replace: Pattern = rep.into_pattern();
         let (old, width, start, rem) = {
+            let vertex = self.expect_vertex_data_mut(parent);
             let width = vertex.width;
             let pattern = vertex.expect_child_pattern_mut(&pat);
             let old = pattern
@@ -186,11 +205,11 @@ where
         let old_end = start + old.len();
         range.clone().zip(old.into_iter()).for_each(|(pos, c)| {
             let c = self.expect_vertex_data_mut(c);
-            c.remove_parent(parent.index(), pat, pos);
+            c.remove_parent(parent_index, pat, pos);
         });
         let new_end = start + replace.len();
         for (i, c) in rem.into_iter().enumerate() {
-            let indices = &mut self.expect_parent_mut(c, parent.index()).pattern_indices;
+            let indices = &mut self.expect_parent_mut(c, parent_index).pattern_indices;
             //println!("before {:#?}", indices);
             let drained: Vec<_> = indices.drain_filter(|(pid, idx)| *pid == pat && idx >= &old_end)
                 .map(|(pid, _)| (pid, new_end + i))
@@ -200,17 +219,7 @@ where
             //println!("res {:#?}", indices);
             //println!("##########");
         }
-        self.add_pattern_parent(Child::new(parent.index(), width), replace, pat, start);
-    }
-    pub fn replace_in_pattern(
-        &mut self,
-        parent: impl Indexed,
-        pat: PatternId,
-        range: impl PatternRangeIndex + Clone,
-        rep: impl IntoPattern<Item = impl AsChild> + Clone,
-    ) {
-        let vertex = self.expect_vertex_data_mut(parent);
-        self.vertex_replace_in_pattern(vertex, pat, range, rep)
+        self.add_pattern_parent(Child::new(parent_index, width), replace, pat, start);
     }
     pub(crate) fn add_pattern_parent(
         &mut self,
@@ -256,15 +265,19 @@ where
         self.add_pattern_parent(parent, new, pattern_id, offset);
         parent
     }
-    pub fn index_found(&mut self, p: impl IntoPattern<Item=impl AsChild>, found: SearchFound) -> Child {
+    pub fn index_found(
+        &mut self,
+        p: impl IntoPattern<Item=impl AsChild>,
+        found: SearchFound
+    ) -> Child {
         let SearchFound {
-                location: PatternLocation {
-                    parent: found,
-                    pattern_id,
-                    range,
-                },
-                parent_match,
-            } = found;
+            location: PatternRangeLocation {
+                parent: found,
+                pattern_id,
+                range,
+            },
+            parent_match,
+        } = found;
         if parent_match.parent_range.matches_completely() {
             found
         } else {

@@ -79,8 +79,8 @@ impl VertexData {
     ) -> Result<&Parent, NoMatch> {
         let index = index.index();
         self.parents
-            .get(index)
-            .ok_or(NoMatch::NoMatchingParent(*index))
+            .get(&index)
+            .ok_or(NoMatch::NoMatchingParent(index))
     }
     pub fn get_parent_mut(
         &mut self,
@@ -88,8 +88,8 @@ impl VertexData {
     ) -> Result<&mut Parent, NoMatch> {
         let index = index.index();
         self.parents
-            .get_mut(index)
-            .ok_or(NoMatch::NoMatchingParent(*index))
+            .get_mut(&index)
+            .ok_or(NoMatch::NoMatchingParent(index))
     }
     pub fn expect_parent(
         &self,
@@ -135,15 +135,21 @@ impl VertexData {
     ) -> Option<&Pattern> {
         self.children.get(id)
     }
+    pub fn find_child_pattern_id(
+        &self,
+        f: impl FnMut(&(&PatternId, &Pattern)) -> bool,
+    ) -> Option<PatternId> {
+        self.children.iter().find(f).map(|r| *r.0)
+    }
     pub fn get_child_pattern_mut(
         &mut self,
         id: &PatternId,
     ) -> Result<&mut Pattern, NoMatch> {
         self.children.get_mut(id).ok_or(NoMatch::NoChildPatterns)
     }
-    pub fn expect_any_pattern(&self) -> &Pattern {
+    pub fn expect_any_pattern(&self) -> (&PatternId, &Pattern) {
         self.children
-            .values()
+            .iter()
             .next()
             .unwrap_or_else(|| panic!("Pattern vertex has no children {:#?}", self,))
     }
@@ -192,12 +198,12 @@ impl VertexData {
         pattern: usize,
         index: PatternId,
     ) {
-        if let Some(parent) = self.parents.get_mut(parent.index()) {
+        if let Some(parent) = self.parents.get_mut(&parent.index()) {
             parent.add_pattern_index(pattern, index);
         } else {
             let mut parent_rel = Parent::new(parent.width());
             parent_rel.add_pattern_index(pattern, index);
-            self.parents.insert(*parent.index(), parent_rel);
+            self.parents.insert(parent.index(), parent_rel);
         }
     }
     pub fn remove_parent(
@@ -206,11 +212,11 @@ impl VertexData {
         pattern: usize,
         index: PatternId,
     ) {
-        if let Some(parent) = self.parents.get_mut(vertex.index()) {
+        if let Some(parent) = self.parents.get_mut(&vertex.index()) {
             if parent.pattern_indices.len() > 1 {
                 parent.remove_pattern_index(pattern, index);
             } else {
-                self.parents.remove(vertex.index());
+                self.parents.remove(&vertex.index());
             }
         }
     }
@@ -252,7 +258,7 @@ impl VertexData {
         self.get_parent(index)
             .ok()
             .filter(cond)
-            .ok_or(NoMatch::NoMatchingParent(*index))
+            .ok_or(NoMatch::NoMatchingParent(index))
     }
     pub fn get_parent_to_starting_at(
         &self,
@@ -291,10 +297,10 @@ impl VertexData {
                 .unwrap_or(false)
         })
     }
-    pub fn find_ancestor_with_range<T: Tokenize + std::fmt::Display>(
+    pub fn find_ancestor_with_range(
         &self,
         half: Pattern,
-        range: impl PatternRangeIndex + Clone,
+        range: impl PatternRangeIndex,
     ) -> Result<PatternId, NoMatch> {
         self.children
             .iter()
@@ -306,6 +312,26 @@ impl VertexData {
                 }
             })
             .ok_or(NoMatch::NoChildPatterns)
+    }
+    pub fn largest_postfix(
+        &self,
+    ) -> (PatternId, Child) {
+        let (id, c) = self.children
+            .iter()
+            .fold(None, |acc: Option<(&PatternId, &Child)>, (pid, p)| 
+                if let Some(acc) = acc {
+                    let c = p.last().unwrap();
+                    if c.width() > acc.1.width() {
+                        Some((pid, c))
+                    } else {
+                        Some(acc)
+                    }
+                } else {
+                    Some((pid, p.last().unwrap()))
+                }
+            )
+            .unwrap();
+        (*id, c.clone())
     }
 }
 
@@ -337,8 +363,22 @@ impl<'g> Vertexed<'g, 'g> for &'g mut VertexData {
         *self
     }
 }
+impl<'g> VertexedMut<'g, 'g> for &'g mut VertexData {
+    fn vertex_mut<T: Tokenize>(
+        self,
+        graph: &'g mut Hypergraph<T>,
+    ) -> &'g mut VertexData {
+        self
+    }
+    fn vertex_ref_mut<T: Tokenize>(
+        &'g mut self,
+        graph: &'g mut Hypergraph<T>,
+    ) -> &'g mut VertexData {
+        *self
+    }
+}
 impl Indexed for VertexData {
-    fn index(&self) -> &VertexIndex {
-        &self.index
+    fn index(&self) -> VertexIndex {
+        self.index
     }
 }

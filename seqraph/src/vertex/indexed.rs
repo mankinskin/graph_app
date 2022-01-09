@@ -1,5 +1,36 @@
 use super::*;
 
+pub trait VertexedMut<'a, 'g>: Vertexed<'a, 'g> {
+    fn vertex_mut<T: Tokenize>(
+        self,
+        graph: &'g mut Hypergraph<T>,
+    ) -> &'g mut VertexData {
+        graph.expect_vertex_data_mut(self.index())
+    }
+    fn vertex_ref_mut<T: Tokenize>(
+        &'a mut self,
+        graph: &'g mut Hypergraph<T>,
+    ) -> &'g mut VertexData {
+        graph.expect_vertex_data_mut(self.index())
+    }
+}
+impl<'a, 'g> VertexedMut<'a, 'g> for VertexIndex {}
+impl<'a, 'g> VertexedMut<'a, 'g> for Child {}
+impl<'a, 'g, V: VertexedMut<'a, 'g>> VertexedMut<'a, 'g> for &'a mut V {
+    fn vertex_mut<T: Tokenize>(
+        self,
+        graph: &'g mut Hypergraph<T>,
+    ) -> &'g mut VertexData {
+        V::vertex_ref_mut(self, graph)
+    }
+    fn vertex_ref_mut<T: Tokenize>(
+        &'a mut self,
+        graph: &'g mut Hypergraph<T>,
+    ) -> &'g mut VertexData {
+        V::vertex_ref_mut(*self, graph)
+    }
+}
+
 pub trait Vertexed<'a, 'g>: Indexed + 'a + Sized {
     fn vertex<T: Tokenize>(
         self,
@@ -45,21 +76,21 @@ impl<'a, 'g, V: Vertexed<'a, 'g>> Vertexed<'a, 'g> for &'a mut V {
     }
 }
 pub trait Indexed {
-    fn index(&self) -> &VertexIndex;
+    fn index(&self) -> VertexIndex;
 }
 impl<I: Indexed> Indexed for &'_ I {
-    fn index(&self) -> &VertexIndex {
+    fn index(&self) -> VertexIndex {
         (**self).index()
     }
 }
 impl<I: Indexed> Indexed for &'_ mut I {
-    fn index(&self) -> &VertexIndex {
+    fn index(&self) -> VertexIndex {
         (**self).index()
     }
 }
 impl Indexed for VertexIndex {
-    fn index(&self) -> &VertexIndex {
-        self
+    fn index(&self) -> VertexIndex {
+        *self
     }
 }
 

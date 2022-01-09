@@ -28,21 +28,27 @@ impl Wide for NewTokenIndex {
     }
 }
 impl Indexed for NewTokenIndex {
-    fn index(&self) -> &VertexIndex {
+    fn index(&self) -> VertexIndex {
         match self {
-            Self::New(i) => i,
-            Self::Known(i) => i,
+            Self::New(i) => *i,
+            Self::Known(i) => *i,
         }
     }
 }
 impl Borrow<VertexIndex> for &'_ NewTokenIndex {
     fn borrow(&self) -> &VertexIndex {
-        (*self).index()
+        match self {
+            NewTokenIndex::New(i) => i,
+            NewTokenIndex::Known(i) => i,
+        }
     }
 }
 impl Borrow<VertexIndex> for &'_ mut NewTokenIndex {
     fn borrow(&self) -> &VertexIndex {
-        (*self).index()
+        match self {
+            NewTokenIndex::New(i) => i,
+            NewTokenIndex::Known(i) => i,
+        }
     }
 }
 pub(crate) type NewTokenIndices = Vec<NewTokenIndex>;
@@ -71,28 +77,30 @@ mod tests {
     use pretty_assertions::assert_eq;
     #[test]
     fn sync_read_text() {
-        let text = "Heldldo world!";
         let mut g: Hypergraph<char> = Hypergraph::default();
-        let result = g.read_sequence(text.chars());
+        let result = g.read_sequence("Heldldo world!".chars());
         let cap_h = g.expect_token_child('H');
         let e = g.expect_token_child('e');
-        let _l = g.expect_token_child('l');
-        let _d = g.expect_token_child('d');
+        let l = g.expect_token_child('l');
+        let d = g.expect_token_child('d');
         let o = g.expect_token_child('o');
         let space = g.expect_token_child(' ');
         let w = g.expect_token_child('w');
         let r = g.expect_token_child('r');
         let exclam = g.expect_token_child('!');
-        let ld = g.find_sequence("ld".chars()).unwrap().index;
-        let res_pats: HashSet<_> = result.vertex(&g).get_child_patterns().into_iter().collect();
-        let res_exp = hashset![
+        let ld = g.find_sequence("ld".chars()).unwrap().location.parent;
+        let pats: HashSet<_> = ld.vertex(&g).get_child_patterns().into_iter().collect();
+        assert_eq!(pats, hashset![
+            vec![l, d],
+        ]);
+        let pats: HashSet<_> = result.vertex(&g).get_child_patterns().into_iter().collect();
+        assert_eq!(pats, hashset![
             vec![cap_h, e, ld, ld, o, space, w, o, r, ld, exclam],
-        ];
-        assert_eq!(res_pats, res_exp);
+        ]);
     }
     fn assert_child_of_at<T: Tokenize>(graph: &Hypergraph<T>, child: impl AsChild, parent: impl AsChild, pattern_indices: impl IntoIterator<Item=(PatternId, usize)>) {
         assert_eq!(*graph.expect_parents(child), hashmap![
-            *parent.index() => Parent {
+            parent.index() => Parent {
                 pattern_indices: pattern_indices.into_iter().collect(),
                 width: parent.width(),
             },
@@ -170,6 +178,7 @@ mod tests {
     fn read_infix1() {
         let mut graph = Hypergraph::default();
         let subdivision = graph.read_sequence("subdivision".chars());
+        assert_eq!(subdivision.width(), 11);
         let s = graph.expect_token_child('s');
         let u = graph.expect_token_child('u');
         let b = graph.expect_token_child('b');
@@ -225,8 +234,8 @@ mod tests {
         let l = graph.expect_token_child('l');
         let z = graph.expect_token_child('z');
         let t = graph.expect_token_child('t');
-        let vi = graph.find_sequence("vi".chars()).unwrap().expect_complete("vi");
         let vis = graph.find_sequence("vis".chars()).unwrap().expect_complete("vis");
+        let vi = graph.find_sequence("vi".chars()).unwrap().expect_complete("vi");
         let pats = vis.vertex(&graph).get_child_pattern_set();
         assert_eq!(pats, hashset![
             vec![vi, s],

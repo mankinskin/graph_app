@@ -158,7 +158,7 @@ mod tests {
         //println!("right = {:#?}", right);
         let byz_found = graph.find_ancestor(vec![b, y, z]);
         let byz = if let SearchFound {
-            location: PatternLocation {
+            location: PatternRangeLocation {
                 parent: byz,
                 ..
             },

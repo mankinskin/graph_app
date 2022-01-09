@@ -18,7 +18,7 @@ where
         index: impl Indexed,
     ) -> Result<(&VertexKey<T>, &VertexData), NoMatch> {
         self.graph
-            .get_index(*index.index())
+            .get_index(index.index())
             .ok_or(NoMatch::UnknownIndex)
     }
     pub fn get_vertex_mut(
@@ -26,14 +26,14 @@ where
         index: impl Indexed,
     ) -> Result<(&mut VertexKey<T>, &mut VertexData), NoMatch> {
         self.graph
-            .get_index_mut(*index.index())
+            .get_index_mut(index.index())
             .ok_or(NoMatch::UnknownIndex)
     }
     pub fn expect_vertex(
         &self,
         index: impl Indexed,
     ) -> (&VertexKey<T>, &VertexData) {
-        let index = *index.index();
+        let index = index.index();
         self.get_vertex(index)
             .unwrap_or_else(|_| panic!("Index {} does not exist!", index))
     }
@@ -41,7 +41,7 @@ where
         &mut self,
         index: impl Indexed,
     ) -> (&mut VertexKey<T>, &mut VertexData) {
-        let index = *index.index();
+        let index = index.index();
         self.get_vertex_mut(index)
             .unwrap_or_else(|_| panic!("Index {} does not exist!", index))
     }
@@ -262,7 +262,7 @@ where
         &self,
         index: impl Indexed,
     ) -> Child {
-        Child::new(*index.index(), self.index_width(&index))
+        Child::new(index.index(), self.index_width(&index))
     }
     pub fn to_children(
         &self,

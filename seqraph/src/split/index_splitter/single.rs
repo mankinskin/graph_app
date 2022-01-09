@@ -276,7 +276,7 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
                      postfix,
                  }| {
                     // recurse
-                    let (l, r) = self.split_index(key.index, key.offset);
+                    let (l, r) = self.graph.split_index(key.index, key.offset);
                     ((prefix, l), (postfix, r))
                 },
             )
@@ -428,7 +428,7 @@ mod tests {
 
             let byz_found = graph.find_ancestor(vec![b, y, z]);
             let byz = if let SearchFound {
-                location: PatternLocation {
+                location: PatternRangeLocation {
                     parent: byz,
                     ..
                 },
@@ -481,7 +481,7 @@ mod tests {
             //println!("{:#?}", right);
             let byz_found = graph.find_ancestor(vec![by, z]);
             let byz = if let SearchFound {
-                location: PatternLocation {
+                location: PatternRangeLocation {
                     parent: byz,
                     ..
                 },
@@ -529,7 +529,7 @@ mod tests {
         let (left, right) = graph.index_splitter().split_index(wxabyz, NonZeroUsize::new(3).unwrap());
         let wxa_found = graph.find_ancestor(vec![w, x, a]);
         let wxa = if let SearchFound {
-            location: PatternLocation {
+            location: PatternRangeLocation {
                 parent: wxa,
                 ..
             },
@@ -548,7 +548,7 @@ mod tests {
         let byz_found = graph.find_ancestor(vec![b, y, z]);
         //println!("{:#?}", byz_found);
         let byz = if let SearchFound {
-            location: PatternLocation {
+            location: PatternRangeLocation {
                 parent: byz,
                 ..
             },

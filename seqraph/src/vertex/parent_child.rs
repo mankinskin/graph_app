@@ -102,7 +102,7 @@ impl Child {
         width: TokenPosition,
     ) -> Self {
         Self {
-            index: *index.index(),
+            index: index.index(),
             width,
         }
     }
@@ -188,8 +188,8 @@ impl IntoIterator for Child {
 }
 
 impl Indexed for Child {
-    fn index(&self) -> &VertexIndex {
-        &self.index
+    fn index(&self) -> VertexIndex {
+        self.index
     }
 }
 impl Wide for Child {

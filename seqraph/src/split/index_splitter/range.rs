@@ -7,12 +7,11 @@ use std::num::NonZeroUsize;
 impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
     pub(crate) fn index_subrange(
         &mut self,
-        root: impl Indexed + Clone,
+        root: impl Indexed,
         range: impl PatternRangeIndex,
     ) -> Child {
-        let root = root.index();
         //println!("splitting {} at {:?}", hypergraph.index_string(root), range);
-        let vertex = self.graph.expect_vertex_data(root).clone();
+        let vertex = self.graph.expect_vertex_data(root.index()).clone();
         // range is a subrange of the index
         let patterns = vertex.get_children().clone();
         match SplitIndices::verify_range_split_indices(vertex.width, range) {
@@ -27,12 +26,11 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
     }
     pub(crate) fn split_subrange(
         &mut self,
-        root: impl Indexed + Clone,
+        root: impl Indexed,
         range: impl PatternRangeIndex,
     ) -> RangeSplitResult {
-        let root = root.index();
         //println!("splitting {} at {:?}", hypergraph.index_string(root), range);
-        let vertex = self.graph.expect_vertex_data(root).clone();
+        let vertex = self.graph.expect_vertex_data(root.index()).clone();
         // range is a subrange of the index
         let patterns = vertex.get_children().clone();
         match SplitIndices::verify_range_split_indices(vertex.width, range) {
@@ -66,29 +64,37 @@ impl<'g, T: Tokenize + 'g> IndexSplitter<'g, T> {
                     .into_iter()
                     .fold(
                         (Vec::with_capacity(cap), Vec::with_capacity(cap), Vec::with_capacity(cap)),
-                        |(mut la, mut ia, mut ra), (_pattern_id, split_index)| {
+                        |(
+                            mut la,
+                            mut ia,
+                            mut ra,
+                        ),
+                        (
+                            _pattern_id,
+                            split_index,
+                        )| {
                             match split_index {
                                 DoubleSplitIndex::Left(pre, _, infix, single, post) => {
-                                    let (l, r) = self.split_index(single.index, single.offset);
+                                    let (l, r) = self.graph.split_index(single.index, single.offset);
                                     la.push((pre, None));
                                     ia.push((None, SplitSegment::Pattern(infix), Some(l)));
                                     ra.push((post, Some(r)));
                                 }
                                 DoubleSplitIndex::Right(pre, single, infix, _, post) => {
-                                    let (l, r) = self.split_index(single.index, single.offset);
+                                    let (l, r) = self.graph.split_index(single.index, single.offset);
                                     la.push((pre, Some(l)));
                                     ia.push((Some(r), SplitSegment::Pattern(infix), None));
                                     ra.push((post, None));
                                 }
                                 DoubleSplitIndex::Infix(pre, left, infix, right, post) => {
-                                    let (ll, lr) = self.split_index(left.index, left.offset);
-                                    let (rl, rr) = self.split_index(right.index, right.offset);
+                                    let (ll, lr) = self.graph.split_index(left.index, left.offset);
+                                    let (rl, rr) = self.graph.split_index(right.index, right.offset);
                                     la.push((pre, Some(ll)));
                                     ia.push((Some(lr), SplitSegment::Pattern(infix), Some(rl)));
                                     ra.push((post, Some(rr)));
                                 }
                                 DoubleSplitIndex::Inner(pre, (index, left, right), post) => {
-                                    match self.split_subrange(index, left.get()..right.get()) {
+                                    match self.graph.split_subrange(index, left.get()..right.get()) {
                                         RangeSplitResult::Double(l, i, r) => {
                                             la.push((pre, Some(l)));
                                             ia.push((None, i, None));
