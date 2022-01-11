@@ -85,6 +85,7 @@ pub struct SearchFound {
     //pub pattern_id: PatternId, // pattern
     //pub sub_index: usize, // starting index in pattern
     pub location: PatternRangeLocation,
+    pub path: Vec<Child>,
 }
 impl SearchFound {
     pub fn unwrap_complete(self) -> Child {
@@ -120,17 +121,7 @@ where
         pattern: impl IntoIterator<Item = impl Indexed>,
     ) -> SearchResult {
         let pattern = self.to_children(pattern);
-        Right::split_head_tail(&pattern)
-            .ok_or(NoMatch::EmptyPatterns)
-            .and_then(|(head, tail)|
-                if tail.is_empty() {
-                    // Todo: positive type to return when single index is passed
-                    Err(NoMatch::SingleIndex)
-                } else {
-                    self.right_searcher()
-                        .find_largest_matching_ancestor(head, tail.to_vec(), None)
-                }
-            )
+        self.right_searcher().find_ancestor(pattern)
     }
     pub(crate) fn find_parent(
         &self,
@@ -192,6 +183,7 @@ pub(crate) mod tests {
                                     parent_range: c,
                                     remainder: None,
                                 },
+                                path: vec![],
                             }),
                             $name
                         );
@@ -263,9 +255,9 @@ pub(crate) mod tests {
             Ok((ababababcdefghi, FoundRange::Complete))
         );
         let a_b_c_c_pattern = [&a_b_c_pattern[..], &[Child::new(c, 1)]].concat();
-        assert_matches!(
-            graph.find_ancestor(a_b_c_c_pattern),
-            Err(NoMatch::NoMatchingParent(_))
+        assert_match!(
+            graph.find_ancestor(&a_b_c_c_pattern),
+            Ok((abc, FoundRange::Complete))
         );
     }
     #[test]
@@ -298,6 +290,7 @@ pub(crate) mod tests {
                     parent_range: FoundRange::Postfix(_),
                     ..
                 },
+                ..
             })
         );
         let post = byz_found.unwrap().parent_match.parent_range;

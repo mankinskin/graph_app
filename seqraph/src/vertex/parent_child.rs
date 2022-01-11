@@ -52,6 +52,21 @@ impl Parent {
     ) -> bool {
         self.pattern_indices.contains(&(pat, pos))
     }
+    pub fn get_index_at_pos(
+        &self,
+        p: usize,
+    ) -> Option<(PatternId, usize)> {
+        self.pattern_indices.iter().find(|(_, pos)| *pos == p)
+            .map(Clone::clone)
+    }
+    pub fn get_index_at_postfix_of(
+        &self,
+        v: &VertexData,
+    ) -> Option<(PatternId, usize)> {
+        self.pattern_indices.iter()
+            .find(|(pid, pos)| v.expect_child_pattern(pid).len() == *pos + 1)
+            .map(Clone::clone)
+    }
     /// filter for pattern indices which occur at start of their patterns
     pub fn filter_pattern_indices_at_prefix(&self) -> impl Iterator<Item = &(PatternId, usize)> {
         self.pattern_indices

@@ -4,7 +4,6 @@ use crate::{
     ChildPatterns,
     Hypergraph,
     Indexed,
-    Parent,
     PatternId,
 };
 use itertools::*;
@@ -128,19 +127,20 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
             return Err(NoMatch::NoParents);
         }
         // get parent where vertex is at relevant position (prefix or postfix)
-        D::get_match_parent_to(vertex, sup)
-            .and_then(|parent|
-                // found vertex in sup at relevant position
+        D::get_match_parent_to(&self.graph, vertex, sup)
+            .and_then(|(pid, sub_index)|
+                // found vertex in sup at relevant position (prefix or postfix)
                 //println!("sup found in parents");
                 // compare context after vertex in parent
-                self.match_context_with_parent_children(
+                Ok(self.match_context_with_parent_child(
                     context.as_pattern_view(),
                     sup,
-                    parent,
-                )
-                .map(|(parent_match, _)| parent_match)
+                    pid,
+                    sub_index,
+                ))
             )
             .or_else(|_|
+                // no relevant parent relation with sup
                 self.searcher().find_largest_matching_ancestor(
                     vertex,
                     context,
@@ -178,48 +178,51 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
             )
     }
     /// match context against child context in parent.
-    pub(crate) fn match_context_with_parent_children(
+    pub(crate) fn match_context_with_parent_child(
         &'g self,
         context: impl IntoPattern<Item = impl AsChild>,
-        parent_index: impl Indexed,
-        parent: &Parent,
-    ) -> Result<(ParentMatch, PatternRangeLocation), NoMatch> {
+        parent: Child,
+        pattern_index: PatternId,
+        sub_index: usize,
+    ) -> ParentMatch {
         //println!("compare_parent_context");
-        let vert = self.expect_vertex_data(parent_index.index());
+        let vert = self.expect_vertex_data(parent.index());
         let child_patterns = vert.get_children();
         //print!("matching parent \"{}\" ", self.index_string(parent.index));
         // optionally filter by sub index
         //println!("with successors \"{}\"", self.pattern_string(post_pattern));
         // try to find child pattern with same next index
-        D::filter_parent_pattern_indices(parent, child_patterns)
-            .into_iter()
-            .find_or_first(|(pattern_index, sub_index)|
-                D::compare_next_index_in_child_pattern(
-                    child_patterns,
-                    context.as_pattern_view(),
-                    pattern_index,
-                    *sub_index,
-                )
+        let child_pattern = child_patterns
+            .get(&pattern_index)
+            .expect("non existent pattern found as best match!");
+        let (back_context, child_tail) = Self::split_child_context(child_pattern, sub_index);
+        let (parent_match, _end_index) = self.child_context_at_offset_comparison(
+                context.as_pattern_view(),
+                back_context.as_pattern_view(),
+                child_tail.as_pattern_view(),
+                child_pattern.len()
             )
-            .ok_or(NoMatch::NoChildPatterns)
-            .and_then(|(pattern_index, sub_index)| {
-                self.compare_child_pattern_at_offset(
-                    child_patterns,
-                    context,
-                    pattern_index,
-                    sub_index,
-                )
-                .map(|(parent_match, end_index)|
-                    (parent_match, PatternRangeLocation {
-                        parent: Child::new(parent_index, parent.width),
-                        pattern_id: pattern_index,
-                        range: sub_index..end_index
-                    })
-                )
-            })
+            .unwrap_or_else(|_| {
+                // if context doesn't match, at least current child matches
+                (ParentMatch {
+                    parent_range: D::to_found_range(Some(child_tail.to_vec()), back_context),
+                    remainder: Some(context.into_pattern()),
+                }, sub_index + 1)
+            });
+        parent_match
+    }
+    pub(crate) fn split_child_context(
+        child_pattern: &Pattern,
+        sub_index: usize,
+    ) -> (Pattern, Pattern) {
+        let (back_context, rem) = D::directed_pattern_split(child_pattern, sub_index);
+        let child_tail = D::pattern_tail(&rem[..]);
+        (back_context, child_tail.to_vec())
     }
     /// comparison on child pattern and context
-    pub(crate) fn compare_child_pattern_at_offset(
+    /// returns ParentMatch and end index of match
+    /// matches only when context matches at least one index
+    pub(crate) fn compare_child_context_at_offset(
         &'g self,
         child_patterns: &'g ChildPatterns,
         context: impl IntoPattern<Item = impl AsChild>,
@@ -229,18 +232,29 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Matcher<'g, T, D> {
         let child_pattern = child_patterns
             .get(&pattern_index)
             .expect("non existent pattern found as best match!");
-        let (back_context, rem) = D::directed_pattern_split(child_pattern, sub_index);
-        let child_tail = D::pattern_tail(&rem[..]);
+        let (back_context, child_tail) = Self::split_child_context(child_pattern, sub_index);
         // match search context with child tail
         // back context is from child pattern
-        self.compare(context, child_tail).map(|pm| {
-            let post_len = pm.1.as_ref().map(|p| p.len()).unwrap_or_default();
-            (ParentMatch {
-                parent_range: D::to_found_range(pm.1, back_context),
-                remainder: pm.0,
-            }, child_pattern.len()-post_len)
-        })
+        self.child_context_at_offset_comparison(context, back_context, child_tail, child_pattern.len())
         // returns result of matching sub with parent's children
+    }
+    pub(crate) fn child_context_at_offset_comparison(
+        &self,
+        context: impl IntoPattern<Item = impl AsChild>,
+        back_context: impl IntoPattern<Item = impl AsChild>,
+        child_tail: impl IntoPattern<Item = impl AsChild>,
+        child_pattern_len: usize,
+    ) -> Result<(ParentMatch, usize), NoMatch> {
+        // match search context with child tail
+        // back context is from child pattern
+        self.compare(context.as_pattern_view(), child_tail).map(|pm| {
+            let post_len = pm.1.as_ref().map(|p| p.len()).unwrap_or_default();
+            let end = child_pattern_len-post_len;
+            (ParentMatch {
+                parent_range: D::to_found_range(pm.1, back_context.into_pattern()),
+                remainder: pm.0,
+            }, end)
+        })
     }
     //#[allow(unused)]
     ///// match sub index and context with sup index with max width

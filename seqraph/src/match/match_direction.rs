@@ -23,9 +23,10 @@ pub trait MatchDirection : MergeDirection {
     type Opposite: MatchDirection;
     /// get the parent where vertex is at the relevant position
     fn get_match_parent_to(
+        graph: &Hypergraph<impl Tokenize>,
         vertex: &VertexData,
         sup: impl Indexed,
-    ) -> Result<&'_ Parent, NoMatch>;
+    ) -> Result<(PatternId, usize), NoMatch>;
     fn skip_equal_indices<'a, I: Indexed, J: Indexed>(
         a: impl DoubleEndedIterator<Item = &'a I>,
         b: impl DoubleEndedIterator<Item = &'a J>,
@@ -109,12 +110,14 @@ pub trait MatchDirection : MergeDirection {
         sub_index: usize,
     ) -> bool {
         Self::pattern_head(context.as_pattern_view())
-            .and_then(|next_sub| {
-                let next_sub: Child = next_sub.to_child();
+            .and_then(|context_next| {
+                let context_next: Child = context_next.to_child();
                 Self::index_next(sub_index).and_then(|i| {
                     child_patterns
                         .get(pattern_index)
-                        .and_then(|pattern| pattern.get(i).map(|next_sup| next_sub == *next_sup))
+                        .and_then(|pattern|
+                            pattern.get(i).map(|next| context_next == *next)
+                        )
                 })
             })
             .unwrap_or(false)
@@ -123,9 +126,10 @@ pub trait MatchDirection : MergeDirection {
 impl MatchDirection for Right {
     type Opposite = Left;
     fn get_match_parent_to(
+        _graph: &Hypergraph<impl Tokenize>,
         vertex: &VertexData,
         sup: impl Indexed,
-    ) -> Result<&'_ Parent, NoMatch> {
+    ) -> Result<(PatternId, usize), NoMatch> {
         vertex.get_parent_at_prefix_of(sup)
     }
     fn skip_equal_indices<'a, I: Indexed, J: Indexed>(
@@ -214,9 +218,11 @@ impl MatchDirection for Right {
 impl MatchDirection for Left {
     type Opposite = Left;
     fn get_match_parent_to(
+        graph: &Hypergraph<impl Tokenize>,
         vertex: &VertexData,
         sup: impl Indexed,
-    ) -> Result<&'_ Parent, NoMatch> {
+    ) -> Result<(PatternId, usize), NoMatch> {
+        let sup = graph.expect_vertex_data(sup);
         vertex.get_parent_at_postfix_of(sup)
     }
     fn skip_equal_indices<'a, I: Indexed, J: Indexed>(

@@ -277,6 +277,7 @@ where
                 range,
             },
             parent_match,
+            ..
         } = found;
         if parent_match.parent_range.matches_completely() {
             found

@@ -75,8 +75,17 @@ mod tests {
     use maplit::{hashset, hashmap};
     use std::collections::HashSet;
     use pretty_assertions::assert_eq;
+
+    fn assert_child_of_at<T: Tokenize>(graph: &Hypergraph<T>, child: impl AsChild, parent: impl AsChild, pattern_indices: impl IntoIterator<Item=(PatternId, usize)>) {
+        assert_eq!(*graph.expect_parents(child), hashmap![
+            parent.index() => Parent {
+                pattern_indices: pattern_indices.into_iter().collect(),
+                width: parent.width(),
+            },
+        ]);
+    }
     #[test]
-    fn sync_read_text() {
+    fn sync_read_text1() {
         let mut g: Hypergraph<char> = Hypergraph::default();
         let result = g.read_sequence("Heldldo world!".chars());
         let cap_h = g.expect_token_child('H');
@@ -89,21 +98,56 @@ mod tests {
         let r = g.expect_token_child('r');
         let exclam = g.expect_token_child('!');
         let ld = g.find_sequence("ld".chars()).unwrap().location.parent;
-        let pats: HashSet<_> = ld.vertex(&g).get_child_patterns().into_iter().collect();
+        let pats: HashSet<_> = ld.vertex(&g).get_child_pattern_set();
         assert_eq!(pats, hashset![
             vec![l, d],
         ]);
-        let pats: HashSet<_> = result.vertex(&g).get_child_patterns().into_iter().collect();
+        let pats: HashSet<_> = result.vertex(&g).get_child_pattern_set();
         assert_eq!(pats, hashset![
             vec![cap_h, e, ld, ld, o, space, w, o, r, ld, exclam],
         ]);
     }
-    fn assert_child_of_at<T: Tokenize>(graph: &Hypergraph<T>, child: impl AsChild, parent: impl AsChild, pattern_indices: impl IntoIterator<Item=(PatternId, usize)>) {
-        assert_eq!(*graph.expect_parents(child), hashmap![
-            parent.index() => Parent {
-                pattern_indices: pattern_indices.into_iter().collect(),
-                width: parent.width(),
-            },
+    #[test]
+    fn sync_read_text2() {
+        let mut g: Hypergraph<char> = Hypergraph::default();
+        let heldld = g.read_sequence("heldld".chars());
+        let h = g.expect_token_child('h');
+        let e = g.expect_token_child('e');
+        let l = g.expect_token_child('l');
+        let d = g.expect_token_child('d');
+        let ld = g.find_sequence("ld".chars()).unwrap().expect_complete("ld");
+        let pats: HashSet<_> = ld.vertex(&g).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![l, d],
+        ]);
+        let pats: HashSet<_> = heldld.vertex(&g).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![h, e, ld, ld],
+        ]);
+        let hell = g.read_sequence("hell".chars());
+        let he = g.find_sequence("he".chars()).unwrap().expect_complete("he");
+        let pats: HashSet<_> = he.vertex(&g).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![h, e],
+        ]);
+        let hel = g.find_sequence("hel".chars()).unwrap().expect_complete("hel");
+        let pats: HashSet<_> = hel.vertex(&g).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![he, l],
+        ]);
+        let pats: HashSet<_> = hell.vertex(&g).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![hel, l],
+        ]);
+        let held = g.find_sequence("held".chars()).unwrap().expect_complete("held");
+        let pats: HashSet<_> = held.vertex(&g).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![he, ld],
+            vec![hel, d],
+        ]);
+        let pats: HashSet<_> = heldld.vertex(&g).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![held, ld],
         ]);
     }
     #[test]
@@ -241,6 +285,10 @@ mod tests {
             vec![vi, s],
         ]);
         let su = graph.find_sequence("su".chars()).unwrap().expect_complete("su");
+        let pats = su.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![s, u],
+        ]);
         let visu = graph.find_sequence("visu".chars()).unwrap().expect_complete("visu");
         let pats = visu.vertex(&graph).get_child_pattern_set();
         assert_eq!(pats, hashset![
@@ -256,6 +304,50 @@ mod tests {
         //println!("{:#?}", );
         assert_eq!(pats, hashset![
             vec![su, b, d, i, vis, ion],
+        ]);
+    }
+    #[test]
+    fn read_infix2() {
+        let mut graph = Hypergraph::default();
+        let subvisu = graph.read_sequence("subvisu".chars());
+        assert_eq!(subvisu.width(), 7);
+        let s = graph.expect_token_child('s');
+        let u = graph.expect_token_child('u');
+        let b = graph.expect_token_child('b');
+        let v = graph.expect_token_child('v');
+        let i = graph.expect_token_child('i');
+        let su = graph.find_sequence("su".chars()).unwrap().expect_complete("su");
+        let pats = su.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![s, u],
+        ]);
+        let pats = subvisu.vertex(&graph).get_child_pattern_set();
+        //println!("{:#?}", );
+        assert_eq!(pats, hashset![
+            vec![su, b, v, i, su],
+        ]);
+        let visub = graph.read_sequence("visub".chars());
+        assert_eq!(visub.width(), 5);
+        //println!("{:#?}", );
+        let vi = graph.find_sequence("vi".chars()).unwrap().expect_complete("vi");
+        let sub = graph.find_sequence("sub".chars()).unwrap().expect_complete("sub");
+        let pats = sub.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![su, b],
+        ]);
+        let visu = graph.find_sequence("visu".chars()).unwrap().expect_complete("visu");
+        let pats = visu.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![vi, su],
+        ]);
+        let pats = visub.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![visu, b],
+            vec![vi, sub],
+        ]);
+        let pats = subvisu.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![sub, visu],
         ]);
     }
     //#[tokio::test]

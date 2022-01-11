@@ -263,9 +263,13 @@ impl VertexData {
     pub fn get_parent_to_starting_at(
         &self,
         parent_index: impl Indexed,
-        offset: PatternId,
-    ) -> Result<&'_ Parent, NoMatch> {
-        self.filter_parent_to(parent_index, |parent| parent.exists_at_pos(offset))
+        offset: usize,
+    ) -> Result<(PatternId, usize), NoMatch> {
+        let index = parent_index.index();
+        self.get_parent(index)
+            .ok()
+            .and_then(|parent| parent.get_index_at_pos(offset))
+            .ok_or(NoMatch::NoMatchingParent(index))
     }
     pub fn get_parent_to_ending_at(
         &self,
@@ -282,20 +286,19 @@ impl VertexData {
     pub fn get_parent_at_prefix_of(
         &self,
         index: impl Indexed,
-    ) -> Result<&'_ Parent, NoMatch> {
+    ) -> Result<(PatternId, usize), NoMatch> {
         self.get_parent_to_starting_at(index, 0)
     }
     pub fn get_parent_at_postfix_of(
         &self,
-        index: impl Indexed,
-    ) -> Result<&'_ Parent, NoMatch> {
-        self.filter_parent_to(index, |parent| {
-            parent
-                .width
-                .checked_sub(self.width)
-                .map(|p| parent.exists_at_pos(p))
-                .unwrap_or(false)
-        })
+        vertex: &VertexData,
+    ) -> Result<(PatternId, usize), NoMatch> {
+        self.get_parent(vertex.index)
+            .ok()
+            .and_then(|parent|
+                parent.get_index_at_postfix_of(vertex)
+            )
+            .ok_or(NoMatch::NoMatchingParent(vertex.index))
     }
     pub fn find_ancestor_with_range(
         &self,
