@@ -7,8 +7,8 @@ use std::{
     num::NonZeroUsize,
     ops::Bound,
 };
-mod index_splitter;
-pub use index_splitter::*;
+mod splitter;
+pub use splitter::*;
 mod split_indices;
 pub use split_indices::*;
 
@@ -17,47 +17,47 @@ where
     T: Tokenize + 't,
 {
     /// Split an index the specified position
-    pub fn index_splitter(
+    pub fn splitter(
         &'g mut self,
-    ) -> IndexSplitter<T> {
-        IndexSplitter::new(self)
+    ) -> Splitter<T> {
+        Splitter::new(self)
     }
-    // create index from token position range in index
-    pub fn index_subrange(
-        &mut self,
-        root: impl Indexed,
-        range: impl PatternRangeIndex,
-    ) -> Child {
-        self.index_splitter().index_subrange(root.index(), range)
-    }
+    //// create index from token position range in index
+    //pub fn index_subrange(
+    //    &mut self,
+    //    root: impl Indexed,
+    //    range: impl PatternRangeIndex,
+    //) -> Child {
+    //    self.splitter().index_subrange(root.index(), range)
+    //}
     pub(crate) fn split_index(
         &mut self,
-        root: impl Indexed,
+        root: impl AsChild,
         pos: NonZeroUsize,
     ) -> SingleSplitResult {
-        self.index_splitter().split_index(root.index(), pos)
+        self.splitter().split_index(root.as_child(), pos)
     }
     pub(crate) fn split_subrange(
         &mut self,
-        root: impl Indexed,
+        root: impl AsChild,
         range: impl PatternRangeIndex,
     ) -> RangeSplitResult {
-        self.index_splitter().split_subrange(root.index(), range)
+        self.splitter().split_subrange(root.as_child(), range)
     }
-    pub fn index_prefix(
-        &mut self,
-        root: impl Indexed,
-        pos: NonZeroUsize,
-    ) -> (Child, SplitSegment) {
-        self.index_splitter().index_prefix(root.index(), pos)
-    }
-    pub fn index_postfix(
-        &mut self,
-        root: impl Indexed,
-        pos: NonZeroUsize,
-    ) -> (SplitSegment, Child) {
-        IndexSplitter::new(self).index_postfix(root.index(), pos)
-    }
+    //pub fn index_prefix(
+    //    &mut self,
+    //    root: impl Indexed,
+    //    pos: NonZeroUsize,
+    //) -> (Child, SplitSegment) {
+    //    self.splitter().index_prefix(root.index(), pos)
+    //}
+    //pub fn index_postfix(
+    //    &mut self,
+    //    root: impl Indexed,
+    //    pos: NonZeroUsize,
+    //) -> (SplitSegment, Child) {
+    //    Splitter::new(self).index_postfix(root.index(), pos)
+    //}
 }
 impl<'t, 'a, T> Hypergraph<T>
 where
@@ -162,7 +162,7 @@ mod tests {
             (vec![d], SplitSegment::Child(c)),
             (vec![], SplitSegment::Child(cd)),
         ];
-        let mut splitter = IndexSplitter::new(&mut graph);
+        let mut splitter = Splitter::new(&mut graph);
         let (ps, child_splits) =
             splitter.get_perfect_split_separation(abcd, NonZeroUsize::new(2).unwrap());
         assert_eq!(ps, None);
@@ -191,7 +191,7 @@ mod tests {
         let xaby = graph.insert_patterns([vec![xab, y], vec![xa, by]]);
         let xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
 
-        let mut splitter = IndexSplitter::new(&mut graph);
+        let mut splitter = Splitter::new(&mut graph);
         let (ps, child_splits) =
             splitter.get_perfect_split_separation(xabyz, NonZeroUsize::new(2).unwrap());
         assert_eq!(ps, None);
@@ -258,6 +258,47 @@ mod tests {
         let pats = ind_hypergraph.vertex(&graph).get_child_pattern_set();
         assert_eq!(pats, hashset![
             vec![hyper, ind_graph],
+        ]);
+    }
+    #[test]
+    fn index_overlap1() {
+        let mut graph = Hypergraph::default();
+        let heldldo = graph.read_sequence("heldldo".chars());
+        let h = graph.expect_token_child('h');
+        let e = graph.expect_token_child('e');
+        let l = graph.expect_token_child('l');
+        let d = graph.expect_token_child('d');
+        let o = graph.expect_token_child('o');
+        let ld = graph.expect_pattern("ld".chars());
+        let pats = heldldo.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![h, e, ld, ld, o],
+        ]);
+        let (_, _) = graph.index_prefix(heldldo, NonZeroUsize::new(3).unwrap());
+        let he = graph.expect_pattern("he".chars());
+        let pats = he.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![h, e],
+        ]);
+        let hel = graph.expect_pattern("hel".chars());
+        let pats = hel.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![he, l],
+        ]);
+        let held = graph.expect_pattern("held".chars());
+        let pats = held.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![he, ld],
+            vec![hel, d],
+        ]);
+        let ldo = graph.expect_pattern("ldo".chars());
+        let pats = ldo.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![ld, o],
+        ]);
+        let pats = heldldo.vertex(&graph).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![held, ldo],
         ]);
     }
 }

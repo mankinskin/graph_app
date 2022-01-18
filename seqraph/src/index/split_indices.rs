@@ -1,26 +1,74 @@
 use crate::{
-    split::*,
-    VertexIndex,
+    vertex::*,
 };
 use std::{
     borrow::Borrow,
     num::NonZeroUsize,
+    ops::Bound,
 };
+
+/// refers to an index in a hypergraph node
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+pub struct IndexInParent {
+    pub pattern_index: usize,  // index of pattern in parent
+    pub replaced_index: usize, // replaced index in pattern
+}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SplitIndex {
     pos: TokenPosition,
-    index: VertexIndex,
+    index: Child,
     index_pos: IndexPosition,
 }
+
+// parameters for an index single split
+#[derive(Debug, PartialEq, Eq, Clone, Hash, Copy)]
+pub struct SplitKey {
+    pub index: Child,
+    pub offset: NonZeroUsize,
+}
+impl SplitKey {
+    pub fn new(
+        index: impl AsChild,
+        offset: NonZeroUsize,
+    ) -> Self {
+        Self {
+            index: index.as_child(),
+            offset,
+        }
+    }
+}
 pub type SingleSplitIndices = Vec<(PatternId, SplitIndex)>;
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+pub struct SplitContext {
+    pub loc: PatternLocation,
+    pub prefix: Pattern,
+    pub key: SplitKey,
+    pub postfix: Pattern,
+}
+
+pub type DoublePerfectSplitIndex = (PatternId, Pattern, usize, Pattern, usize, Pattern);
+pub type DoubleSplitIndices = Result<DoublePerfectSplitIndex, Vec<(PatternId, DoubleSplitIndex)>>;
+pub enum DoubleSplitIndex {
+    Left(Pattern, usize, Pattern, SplitKey, Pattern),
+    Right(Pattern, SplitKey, Pattern, usize, Pattern),
+    Infix(Pattern, SplitKey, Pattern, SplitKey, Pattern),
+    Inner(Pattern, (Child, NonZeroUsize, NonZeroUsize), Pattern),
+}
+pub enum DoubleSplitPositions {
+    None,
+    SinglePrefix(NonZeroUsize),
+    SinglePostfix(NonZeroUsize),
+    Double(NonZeroUsize, NonZeroUsize),
+}
+
 pub(crate) struct SplitIndices;
 impl<'g> SplitIndices {
     /// Get perfect split if it exists and remaining pattern split contexts
     pub(crate) fn find_perfect_split(
         patterns: ChildPatterns,
         pos: NonZeroUsize,
-    ) -> (Option<(Split, IndexInParent)>, Vec<SplitContext>) {
+    ) -> (Option<(Pattern, Pattern, IndexInParent)>, Vec<SplitContext>) {
         let split_indices = Self::build_single(&patterns, pos);
         Self::separate_perfect_single_split(patterns, split_indices)
     }
@@ -42,7 +90,7 @@ impl<'g> SplitIndices {
     pub(crate) fn separate_perfect_single_split(
         patterns: ChildPatterns,
         split_indices: impl IntoIterator<Item = (PatternId, SplitIndex)> + 'g,
-    ) -> (Option<(Split, IndexInParent)>, Vec<SplitContext>) {
+    ) -> (Option<(Pattern, Pattern, IndexInParent)>, Vec<SplitContext>) {
         let len = patterns.len();
         Self::perfect_split_search(patterns, split_indices)
             .into_iter()
@@ -58,7 +106,7 @@ impl<'g> SplitIndices {
     pub(crate) fn perfect_split_search<'a>(
         patterns: ChildPatterns,
         split_indices: impl IntoIterator<Item = (PatternId, SplitIndex)> + 'a,
-    ) -> impl IntoIterator<Item = Result<SplitContext, (Split, IndexInParent)>> + 'a {
+    ) -> impl IntoIterator<Item = Result<SplitContext, (Pattern, Pattern, IndexInParent)>> + 'a {
         split_indices
             .into_iter()
             .map(move |(pattern_index, split_index)| {
@@ -77,6 +125,7 @@ impl<'g> SplitIndices {
                                 prefix,
                                 key,
                                 postfix,
+                                loc: PatternLocation::new(key.index, pattern_index),
                             }
                         },
                     )
@@ -85,7 +134,8 @@ impl<'g> SplitIndices {
                              replaced_index: split_index,
                              ..
                          }| {
-                            (split_pattern_at_index(pattern, split_index), ind)
+                            let (left, right) = split_pattern_at_index(pattern, split_index);
+                            (left, right, ind)
                         },
                     )
             })
@@ -125,7 +175,7 @@ impl<'g> SplitIndices {
                 Some(SplitIndex {
                     index_pos: i,
                     pos: pos - skipped,
-                    index: child.index,
+                    index: child,
                 })
             }
         })

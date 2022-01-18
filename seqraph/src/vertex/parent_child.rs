@@ -25,6 +25,9 @@ impl Parent {
     pub fn get_width(&self) -> TokenPosition {
         self.width
     }
+    pub fn any_pattern_index(&self) -> (PatternId, usize) {
+        self.pattern_indices.iter().next().unwrap().clone()
+    }
     pub fn add_pattern_index(
         &mut self,
         pattern: usize,

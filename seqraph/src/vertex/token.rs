@@ -1,8 +1,7 @@
-use petgraph::graph::EdgeIndex;
-use serde::{
-    Deserialize,
-    Serialize,
+use crate::{
+    vertex::*,
 };
+use petgraph::graph::EdgeIndex;
 use std::{
     fmt::{
         self,
@@ -10,6 +9,7 @@ use std::{
         Display,
     },
     hash::Hash,
+    borrow::Borrow,
 };
 
 pub fn tokenizing_iter<T: Tokenize, C: AsToken<T>>(
@@ -53,7 +53,7 @@ impl<T: Wide> Wide for &'_ mut T {
     }
 }
 
-#[derive(Hash, Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Copy)]
+#[derive(Hash, Debug, Clone, PartialEq, Eq, Copy)]
 pub struct NoToken;
 
 impl Wide for NoToken {
@@ -61,6 +61,50 @@ impl Wide for NoToken {
         0
     }
 }
+
+#[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
+pub(crate) enum NewTokenIndex {
+    New(VertexIndex),
+    Known(VertexIndex),
+}
+impl NewTokenIndex {
+    pub fn is_known(&self) -> bool {
+        matches!(self, Self::Known(_))
+    }
+    pub fn is_new(&self) -> bool {
+        matches!(self, Self::New(_))
+    }
+}
+impl Wide for NewTokenIndex {
+    fn width(&self) -> usize {
+        1
+    }
+}
+impl Indexed for NewTokenIndex {
+    fn index(&self) -> VertexIndex {
+        match self {
+            Self::New(i) => *i,
+            Self::Known(i) => *i,
+        }
+    }
+}
+impl Borrow<VertexIndex> for &'_ NewTokenIndex {
+    fn borrow(&self) -> &VertexIndex {
+        match self {
+            NewTokenIndex::New(i) => i,
+            NewTokenIndex::Known(i) => i,
+        }
+    }
+}
+impl Borrow<VertexIndex> for &'_ mut NewTokenIndex {
+    fn borrow(&self) -> &VertexIndex {
+        match self {
+            NewTokenIndex::New(i) => i,
+            NewTokenIndex::Known(i) => i,
+        }
+    }
+}
+pub(crate) type NewTokenIndices = Vec<NewTokenIndex>;
 
 pub trait AsToken<T: Tokenize> {
     fn as_token(&self) -> Token<T>;
@@ -76,7 +120,7 @@ impl<T: Tokenize> AsToken<T> for T {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct ContextInfo<T: Tokenize> {
     pub token: Token<T>,
     pub incoming_groups: Vec<Vec<Token<T>>>,
@@ -161,7 +205,7 @@ pub fn groups_to_string<T: Tokenize, E: ContextLink, C: TokenContext<T, E> + Dis
 }
 
 /// Type for storing elements of a sequence
-#[derive(Copy, Debug, PartialEq, Clone, Serialize, Deserialize, Eq, Hash)]
+#[derive(Copy, Debug, PartialEq, Clone, Eq, Hash)]
 pub enum Token<T: Tokenize> {
     Element(T),
     Start,

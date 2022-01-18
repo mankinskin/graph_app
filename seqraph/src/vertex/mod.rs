@@ -1,7 +1,6 @@
 use crate::{
     graph::*,
     r#match::*,
-    read::*,
 };
 use either::Either;
 use std::{
@@ -22,8 +21,10 @@ mod parent_child;
 mod pattern;
 mod pattern_stream;
 mod token;
+mod pattern_location;
 pub use {
     indexed::*,
+    pattern_location::*,
     parent_child::*,
     pattern::*,
     pattern_stream::*,
@@ -134,6 +135,12 @@ impl VertexData {
         id: &PatternId,
     ) -> Option<&Pattern> {
         self.children.get(id)
+    }
+    pub fn expect_pattern_len(
+        &self,
+        id: &PatternId,
+    ) -> usize {
+        self.expect_child_pattern(id).len()
     }
     pub fn find_child_pattern_id(
         &self,
@@ -383,5 +390,10 @@ impl<'g> VertexedMut<'g, 'g> for &'g mut VertexData {
 impl Indexed for VertexData {
     fn index(&self) -> VertexIndex {
         self.index
+    }
+}
+impl Wide for VertexData {
+    fn width(&self) -> usize {
+        self.width
     }
 }

@@ -7,6 +7,8 @@ mod searcher;
 pub use searcher::*;
 //mod async_searcher;
 //pub use async_searcher::*;
+mod bft;
+pub use bft::*;
 
 // TODO: rename to something with context
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
@@ -78,32 +80,69 @@ impl FoundRange {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
-pub struct SearchFound {
-    pub parent_match: ParentMatch, // match ranges
-    //pub index: Child, // index in which we found the query
-    //pub pattern_id: PatternId, // pattern
-    //pub sub_index: usize, // starting index in pattern
-    pub location: PatternRangeLocation,
-    pub path: Vec<Child>,
+//#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+//pub struct SearchFound {
+//    pub parent_match: ParentMatch, // match ranges
+//    //pub index: Child, // index in which we found the query
+//    //pub pattern_id: PatternId, // pattern
+//    //pub sub_index: usize, // starting index in pattern
+//    pub location: PatternRangeLocation,
+//    pub path: Vec<Child>,
+//}
+//impl SearchFound {
+//    pub fn unwrap_complete(self) -> Child {
+//        if let FoundRange::Complete = self.parent_match.parent_range {
+//            self.location.parent
+//        } else {
+//            panic!("Failed to unwrap {:#?} as complete match!", self);
+//        }
+//    }
+//    pub fn expect_complete(self, msg: &str) -> Child {
+//        if let FoundRange::Complete = self.parent_match.parent_range {
+//            self.location.parent
+//        } else {
+//            panic!("Failed to unwrap {:#?} as complete match: {}", self, msg);
+//        }
+//    }
+//}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FoundPath {
+    root: Child,
+    start_path: ChildPath,
+    end_path: ChildPath,
+    remainder: Option<Pattern>
 }
-impl SearchFound {
+impl FoundPath {
+    pub fn complete(child: impl AsChild) -> Self {
+        Self {
+            root: child.as_child(),
+            start_path: vec![],
+            end_path: vec![],
+            remainder: None,
+        }
+    }
+    pub fn found_complete(&self) -> bool {
+        self.start_path.is_empty()
+            && self.end_path.is_empty()
+            && self.remainder.is_none()
+    }
     pub fn unwrap_complete(self) -> Child {
-        if let FoundRange::Complete = self.parent_match.parent_range {
-            self.location.parent
+        if self.found_complete() {
+            self.root
         } else {
             panic!("Failed to unwrap {:#?} as complete match!", self);
         }
     }
     pub fn expect_complete(self, msg: &str) -> Child {
-        if let FoundRange::Complete = self.parent_match.parent_range {
-            self.location.parent
+        if self.found_complete() {
+            self.root
         } else {
             panic!("Failed to unwrap {:#?} as complete match: {}", self, msg);
         }
     }
 }
-pub type SearchResult = Result<SearchFound, NoMatch>;
+pub type SearchResult = Result<FoundPath, NoMatch>;
 
 impl<'t, 'a, T> Hypergraph<T>
 where
@@ -121,14 +160,14 @@ where
         pattern: impl IntoIterator<Item = impl Indexed>,
     ) -> SearchResult {
         let pattern = self.to_children(pattern);
-        self.right_searcher().find_ancestor(pattern)
+        self.right_searcher().find_pattern_ancestor(pattern)
     }
     pub(crate) fn find_parent(
         &self,
         pattern: impl IntoIterator<Item = impl Indexed>,
     ) -> SearchResult {
         let pattern = self.to_children(pattern);
-        self.right_searcher().find_parent(pattern)
+        self.right_searcher().find_pattern_parent(pattern)
     }
     pub fn find_sequence(
         &self,
@@ -147,6 +186,7 @@ pub(crate) mod tests {
     use crate::{
         graph::tests::context,
         Child,
+        r#match::*,
     };
     use pretty_assertions::{
         assert_eq,
@@ -154,48 +194,8 @@ pub(crate) mod tests {
     };
     use itertools::*;
 
-    macro_rules! assert_match {
-        ($in:expr, $exp:expr) => {
-            assert_match!($in, $exp, "")
-        };
-        ($in:expr, $exp:expr, $name:literal) => {
-            match $exp {
-                Ok((a, c)) => {
-                    let a: &Child = a;
-                    if let Ok(SearchFound {
-                        location,
-                        parent_match,
-                        ..
-                    }) = $in
-                    {
-                        assert_eq!(location.parent, *a, $name);
-                        assert_eq!(parent_match.parent_range, c, $name);
-                    } else {
-                        assert_eq!(
-                            $in,
-                            Ok(SearchFound {
-                                location: PatternRangeLocation {
-                                    parent: *a,
-                                    pattern_id: 0,
-                                    range: 0..0
-                                },
-                                parent_match: ParentMatch {
-                                    parent_range: c,
-                                    remainder: None,
-                                },
-                                path: vec![],
-                            }),
-                            $name
-                        );
-                    }
-                }
-                Err(err) => assert_eq!($in, Err(err), $name),
-            }
-        };
-    }
-    pub(crate) use assert_match;
     #[test]
-    fn find_ancestor_1() {
+    fn find_ancestor1() {
         let (
             graph,
             a,
@@ -226,42 +226,62 @@ pub(crate) mod tests {
         let b_c_pattern = vec![Child::new(b, 1), Child::new(c, 1)];
         let bc_pattern = vec![Child::new(bc, 2)];
         let a_b_c_pattern = vec![Child::new(a, 1), Child::new(b, 1), Child::new(c, 1)];
-        //assert_match!(graph.find_ancestor(&bc_pattern), Ok((bc, FoundRange::Complete)));
-        assert_match!(graph.find_ancestor(&bc_pattern), Err(NoMatch::SingleIndex));
-        assert_match!(
+        assert_eq!(
+            graph.find_ancestor(&bc_pattern),
+            Ok(FoundPath {
+                root: *bc,
+                remainder: None,
+                start_path: vec![],
+                end_path: vec![],
+            }),
+            "bc"
+        );
+        assert_eq!(
             graph.find_ancestor(&b_c_pattern),
-            Ok((bc, FoundRange::Complete))
+            Ok(FoundPath::complete(bc)),
+            "b_c"
         );
-        assert_match!(
+        assert_eq!(
             graph.find_ancestor(&a_bc_pattern),
-            Ok((abc, FoundRange::Complete))
+            Ok(FoundPath::complete(abc)),
+            "a_bc"
         );
-        assert_match!(
+        assert_eq!(
             graph.find_ancestor(&ab_c_pattern),
-            Ok((abc, FoundRange::Complete))
+            Ok(FoundPath::complete(abc)),
+            "ab_c"
         );
-        assert_match!(
+        assert_eq!(
             graph.find_ancestor(&a_bc_d_pattern),
-            Ok((abcd, FoundRange::Complete))
+            Ok(FoundPath::complete(abcd)),
+            "a_bc_d"
         );
-        assert_match!(
+        assert_eq!(
             graph.find_ancestor(&a_b_c_pattern),
-            Ok((abc, FoundRange::Complete))
+            Ok(FoundPath::complete(abc)),
+            "a_b_c"
         );
         let a_b_a_b_a_b_a_b_c_d_e_f_g_h_i_pattern =
             vec![*a, *b, *a, *b, *a, *b, *a, *b, *c, *d, *e, *f, *g, *h, *i];
-        assert_match!(
+        assert_eq!(
             graph.find_ancestor(&a_b_a_b_a_b_a_b_c_d_e_f_g_h_i_pattern),
-            Ok((ababababcdefghi, FoundRange::Complete))
+            Ok(FoundPath::complete(ababababcdefghi)),
+            "a_b_a_b_a_b_a_b_c_d_e_f_g_h_i"
         );
         let a_b_c_c_pattern = [&a_b_c_pattern[..], &[Child::new(c, 1)]].concat();
-        assert_match!(
+        assert_eq!(
             graph.find_ancestor(&a_b_c_c_pattern),
-            Ok((abc, FoundRange::Complete))
+            Ok(FoundPath {
+                root: *abc,
+                end_path: vec![],
+                start_path: vec![],
+                remainder: Some(vec![*c]),
+            }),
+            "a_b_c_c"
         );
     }
     #[test]
-    fn find_ancestor_2() {
+    fn find_ancestor2() {
         let mut graph = Hypergraph::default();
         let (a, b, _w, x, y, z) = graph.insert_tokens([
             Token::Element('a'),
@@ -276,81 +296,82 @@ pub(crate) mod tests {
         let yz = graph.insert_pattern([y, z]);
         let xa = graph.insert_pattern([x, a]);
         let xab = graph.insert_patterns([[x, ab], [xa, b]]);
-        let xaby = graph.insert_patterns([vec![xab, y], vec![xa, by]]);
-        let _xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
+        let (xaby, xaby_ids) = graph.insert_patterns_with_ids([vec![xab, y], vec![xa, by]]);
+        let xa_by_id = xaby_ids[1];
+        let (xabyz, xabyz_ids) = graph.insert_patterns_with_ids([vec![xaby, z], vec![xab, yz]]);
+        let xaby_z_id = xabyz_ids[0];
         let byz_found = graph.find_ancestor(vec![by, z]);
-        assert_matches!(
+        assert_eq!(
             byz_found,
-            Ok(SearchFound {
-                location: PatternRangeLocation {
-                    parent: Child { width: 5, .. },
-                    ..
-                },
-                parent_match: ParentMatch {
-                    parent_range: FoundRange::Postfix(_),
-                    ..
-                },
-                ..
+            Ok(FoundPath {
+                root: xabyz,
+                remainder: None,
+                start_path: vec![
+                    ChildLocation {
+                        parent: xaby,
+                        pattern_id: xa_by_id,
+                        sub_index: 1,
+                    },
+                ],
+                end_path: vec![],
             })
         );
-        let post = byz_found.unwrap().parent_match.parent_range;
-        assert_eq!(post, FoundRange::Postfix(vec![xa]));
     }
-    #[test]
-    fn find_sequence() {
-        let (
-            graph,
-            _a,
-            _b,
-            _c,
-            _d,
-            _e,
-            _f,
-            _g,
-            _h,
-            _i,
-            _ab,
-            _bc,
-            _cd,
-            _bcd,
-            abc,
-            _abcd,
-            _ef,
-            _cdef,
-            _efghi,
-            _abab,
-            _ababab,
-            ababababcdefghi,
-        ) = &*context();
-        assert_match!(
-            graph.find_sequence("a".chars()),
-            Err(NoMatch::SingleIndex),
-            "a"
-        );
+    //#[test]
+    //fn find_sequence() {
+    //    let (
+    //        graph,
+    //        _a,
+    //        _b,
+    //        _c,
+    //        _d,
+    //        _e,
+    //        _f,
+    //        _g,
+    //        _h,
+    //        _i,
+    //        _ab,
+    //        _bc,
+    //        _cd,
+    //        _bcd,
+    //        abc,
+    //        _abcd,
+    //        _ef,
+    //        _cdef,
+    //        _efghi,
+    //        _abab,
+    //        _ababab,
+    //        ababababcdefghi,
+    //    ) = &*context();
+    //    assert_match!(
+    //        graph.find_sequence("a".chars()),
+    //        Err(NoMatch::SingleIndex),
+    //        "a"
+    //    );
 
-        let abc_found = graph.find_sequence("abc".chars());
-        assert_matches!(
-            abc_found,
-            Ok(SearchFound {
-                parent_match: ParentMatch {
-                    parent_range: FoundRange::Complete,
-                    ..
-                },
-                ..
-            })
-        );
-        assert_eq!(abc_found.unwrap().location.parent, *abc);
-        let ababababcdefghi_found = graph.find_sequence("ababababcdefghi".chars());
-        assert_matches!(
-            ababababcdefghi_found,
-            Ok(SearchFound {
-                parent_match: ParentMatch {
-                    parent_range: FoundRange::Complete,
-                    ..
-                },
-                ..
-            })
-        );
-        assert_eq!(ababababcdefghi_found.unwrap().location.parent, *ababababcdefghi);
-    }
+    //    let abc_found = graph.find_sequence("abc".chars());
+    //    assert_matches!(
+    //        abc_found,
+    //        Ok(SearchFound {
+    //            parent_match: ParentMatch {
+    //                parent_range: FoundRange::Complete,
+    //                ..
+    //            },
+    //            ..
+    //        })
+    //    );
+    //    assert_eq!(abc_found.unwrap().location.parent, *abc);
+    //    let ababababcdefghi_found = graph.find_sequence("ababababcdefghi".chars());
+    //    assert_matches!(
+    //        ababababcdefghi_found,
+    //        Ok(SearchFound {
+    //            parent_match: ParentMatch {
+    //                parent_range: FoundRange::Complete,
+    //                ..
+    //            },
+    //            ..
+    //        })
+    //    );
+    //    assert_eq!(ababababcdefghi_found.unwrap().location.parent, *ababababcdefghi);
+    //}
 }

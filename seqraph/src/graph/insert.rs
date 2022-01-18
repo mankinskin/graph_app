@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use crate::*;
 use std::{
     collections::HashSet,
@@ -140,6 +142,22 @@ where
     ) -> Child {
         self.force_insert_pattern_with_id(indices).0
     }
+    pub fn insert_patterns_with_ids(
+        &mut self,
+        patterns: impl IntoIterator<Item = impl IntoIterator<Item = impl Indexed>>,
+    ) -> (Child, Vec<PatternId>) {
+        // todo handle token nodes
+        let patterns = patterns.into_iter().collect_vec();
+        let mut ids = Vec::with_capacity(patterns.len());
+        let mut patterns = patterns.into_iter();
+        let first = patterns.next().expect("Tried to insert no patterns");
+        let (node, first_id) = self.insert_pattern_with_id(first);
+        ids.push(first_id.unwrap());
+        for pat in patterns {
+            ids.push(self.add_pattern_to_node(&node, pat));
+        }
+        (node, ids)
+    }
     /// create new node from multiple patterns
     pub fn insert_patterns(
         &mut self,
@@ -171,6 +189,14 @@ where
         let c = self.insert_pattern(pattern);
         self.replace_in_pattern(parent.index(), pid, range, c);
         c
+    }
+    pub(crate) fn replace_range_at(
+        &mut self,
+        loc: PatternLocation,
+        range: impl PatternRangeIndex,
+        rep: impl IntoPattern<Item = impl AsChild> + Clone,
+    ) {
+        self.replace_in_pattern(loc.parent, loc.pattern_id, range, rep)
     }
     pub fn replace_in_pattern(
         &'g mut self,
@@ -265,37 +291,37 @@ where
         self.add_pattern_parent(parent, new, pattern_id, offset);
         parent
     }
-    pub fn index_found(
-        &mut self,
-        p: impl IntoPattern<Item=impl AsChild>,
-        found: SearchFound
-    ) -> Child {
-        let SearchFound {
-            location: PatternRangeLocation {
-                parent: found,
-                pattern_id,
-                range,
-            },
-            parent_match,
-            ..
-        } = found;
-        if parent_match.parent_range.matches_completely() {
-            found
-        } else {
-            // create new index and replace in parent
-            let p = p.into_pattern();
-            let w = p.len();
-            let new = self.insert_pattern(p);
-            self.replace_in_pattern(
-                found,
-                pattern_id,
-                // todo: maybe range.end can be used here
-                range.start..range.start + w,
-                new,
-            );
-            new
-        }
-    }
+    //pub fn index_found(
+    //    &mut self,
+    //    p: impl IntoPattern<Item=impl AsChild>,
+    //    found: FoundPath
+    //) -> Child {
+    //    let FoundPath {
+    //        location: PatternRangeLocation {
+    //            parent: found,
+    //            pattern_id,
+    //            range,
+    //        },
+    //        parent_match,
+    //        ..
+    //    } = found;
+    //    if parent_match.parent_range.matches_completely() {
+    //        found
+    //    } else {
+    //        // create new index and replace in parent
+    //        let p = p.into_pattern();
+    //        let w = p.len();
+    //        let new = self.insert_pattern(p);
+    //        self.replace_in_pattern(
+    //            found,
+    //            pattern_id,
+    //            // todo: maybe range.end can be used here
+    //            range.start..range.start + w,
+    //            new,
+    //        );
+    //        new
+    //    }
+    //}
 }
 
 #[cfg(test)]

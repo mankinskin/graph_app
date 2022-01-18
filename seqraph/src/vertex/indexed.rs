@@ -14,7 +14,6 @@ pub trait VertexedMut<'a, 'g>: Vertexed<'a, 'g> {
         graph.expect_vertex_data_mut(self.index())
     }
 }
-impl<'a, 'g> VertexedMut<'a, 'g> for VertexIndex {}
 impl<'a, 'g> VertexedMut<'a, 'g> for Child {}
 impl<'a, 'g, V: VertexedMut<'a, 'g>> VertexedMut<'a, 'g> for &'a mut V {
     fn vertex_mut<T: Tokenize>(
@@ -31,7 +30,7 @@ impl<'a, 'g, V: VertexedMut<'a, 'g>> VertexedMut<'a, 'g> for &'a mut V {
     }
 }
 
-pub trait Vertexed<'a, 'g>: Indexed + 'a + Sized {
+pub trait Vertexed<'a, 'g>: AsChild + 'a + Sized {
     fn vertex<T: Tokenize>(
         self,
         graph: &'g Hypergraph<T>,
@@ -45,7 +44,6 @@ pub trait Vertexed<'a, 'g>: Indexed + 'a + Sized {
         graph.expect_vertex_data(self.index())
     }
 }
-impl<'a, 'g> Vertexed<'a, 'g> for VertexIndex {}
 impl<'a, 'g> Vertexed<'a, 'g> for Child {}
 impl<'a, 'g, V: Vertexed<'a, 'g>> Vertexed<'a, 'g> for &'a V {
     fn vertex<T: Tokenize>(

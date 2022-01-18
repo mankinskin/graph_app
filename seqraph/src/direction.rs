@@ -13,3 +13,5 @@ impl Direction for Left {
 impl Direction for Right {
     type Opposite = Left;
 }
+
+pub struct Both;

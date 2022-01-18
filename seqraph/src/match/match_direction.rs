@@ -1,4 +1,4 @@
-use crate::{r#match::*, merge::MergeDirection};
+use crate::{r#match::*};
 use itertools::{
     EitherOrBoth,
     Itertools,
@@ -19,7 +19,7 @@ fn to_matching_iterator<'a, I: Indexed + 'a, J: Indexed + 'a>(
             _ => false,
         })
 }
-pub trait MatchDirection : MergeDirection {
+pub trait MatchDirection {
     type Opposite: MatchDirection;
     /// get the parent where vertex is at the relevant position
     fn get_match_parent_to(
@@ -69,6 +69,7 @@ pub trait MatchDirection : MergeDirection {
     }
     fn pattern_tail<T: AsChild>(pattern: &'_ [T]) -> &'_ [T];
     fn pattern_head<T: AsChild>(pattern: &'_ [T]) -> Option<&T>;
+    fn head_index<T: AsChild>(_pattern: &'_ [T]) -> usize;
     fn normalize_index<T: AsChild>(
         pattern: &'_ [T],
         index: usize,
@@ -91,8 +92,8 @@ pub trait MatchDirection : MergeDirection {
         p: Option<Pattern>,
         context: Pattern,
     ) -> FoundRange;
-    fn found_at_start(fr: &FoundRange) -> bool;
-    fn found_at_end(fr: &FoundRange) -> bool;
+    fn found_from_start(fr: &FoundRange) -> bool;
+    fn found_till_end(fr: &FoundRange) -> bool;
     fn get_remainder(found_range: FoundRange) -> Option<Pattern>;
     fn directed_pattern_split<T: AsChild + Clone>(
         pattern: &'_ [T],
@@ -103,22 +104,24 @@ pub trait MatchDirection : MergeDirection {
             Self::split_end(pattern, index),
         )
     }
+    fn next_child(
+        pattern: impl IntoPattern<Item = impl AsChild>,
+        sub_index: usize,
+    ) -> Option<Child> {
+        Self::index_next(sub_index).and_then(|i| {
+            pattern.as_pattern_view().get(i).map(AsChild::as_child)
+        })
+    }
     fn compare_next_index_in_child_pattern(
-        child_patterns: &'_ ChildPatterns,
+        child_pattern: impl IntoPattern<Item = impl AsChild>,
         context: impl IntoPattern<Item = impl AsChild>,
-        pattern_index: &PatternId,
         sub_index: usize,
     ) -> bool {
         Self::pattern_head(context.as_pattern_view())
             .and_then(|context_next| {
                 let context_next: Child = context_next.to_child();
-                Self::index_next(sub_index).and_then(|i| {
-                    child_patterns
-                        .get(pattern_index)
-                        .and_then(|pattern|
-                            pattern.get(i).map(|next| context_next == *next)
-                        )
-                })
+                Self::next_child(child_pattern, sub_index)
+                    .map(|next| context_next == next)
             })
             .unwrap_or(false)
     }
@@ -161,6 +164,9 @@ impl MatchDirection for Right {
     }
     fn pattern_head<T: AsChild>(pattern: &'_ [T]) -> Option<&T> {
         pattern.first()
+    }
+    fn head_index<T: AsChild>(_pattern: &'_ [T]) -> usize {
+        0
     }
     fn index_next(index: usize) -> Option<usize> {
         index.checked_add(1)
@@ -207,10 +213,10 @@ impl MatchDirection for Right {
             _ => None,
         }
     }
-    fn found_at_start(fr: &FoundRange) -> bool {
+    fn found_from_start(fr: &FoundRange) -> bool {
         matches!(fr, FoundRange::Prefix(_) | FoundRange::Complete)
     }
-    fn found_at_end(fr: &FoundRange) -> bool {
+    fn found_till_end(fr: &FoundRange) -> bool {
         matches!(fr, FoundRange::Postfix(_) | FoundRange::Complete)
     }
 }
@@ -254,6 +260,9 @@ impl MatchDirection for Left {
     }
     fn pattern_head<T: AsChild>(pattern: &'_ [T]) -> Option<&T> {
         pattern.last()
+    }
+    fn head_index<T: AsChild>(pattern: &'_ [T]) -> usize {
+        pattern.len() - 1
     }
     fn index_next(index: usize) -> Option<usize> {
         index.checked_sub(1)
@@ -300,10 +309,10 @@ impl MatchDirection for Left {
             _ => None,
         }
     }
-    fn found_at_start(fr: &FoundRange) -> bool {
+    fn found_from_start(fr: &FoundRange) -> bool {
         matches!(fr, FoundRange::Postfix(_) | FoundRange::Complete)
     }
-    fn found_at_end(fr: &FoundRange) -> bool {
+    fn found_till_end(fr: &FoundRange) -> bool {
         matches!(fr, FoundRange::Prefix(_) | FoundRange::Complete)
     }
 }

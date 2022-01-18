@@ -1,5 +1,5 @@
 use crate::{
-    split::*,
+    index::*,
     vertex::*,
 };
 pub use crate::direction::*;
@@ -16,9 +16,13 @@ pub trait MergeDirection: Direction {
             .expect("Empty inner pattern!")
     }
     fn concat_inner_and_context(
-        inner_context: Pattern,
-        inner: Pattern,
+        inner: Child,
+        overlap: Option<Child>,
         outer_context: Pattern,
+    ) -> Pattern;
+    fn concat_inner_and_outer(
+        inner: Pattern,
+        outer: Pattern,
     ) -> Pattern;
     fn merge_order(
         inner: Child,
@@ -51,13 +55,13 @@ impl Merge for Pattern {
 impl Merge for SplitSegment {
     fn split_front(self) -> Option<(Child, Pattern)> {
         match self {
-            SplitSegment::Pattern(p) => p.split_front(),
+            SplitSegment::Pattern(p, _) => p.split_front(),
             SplitSegment::Child(c) => c.split_front(),
         }
     }
     fn split_back(self) -> Option<(Child, Pattern)> {
         match self {
-            SplitSegment::Pattern(p) => p.split_back(),
+            SplitSegment::Pattern(p, _) => p.split_back(),
             SplitSegment::Child(c) => c.split_back(),
         }
     }
@@ -74,11 +78,17 @@ impl MergeDirection for Left {
         (head, inner)
     }
     fn concat_inner_and_context(
-        inner_context: Pattern,
-        inner: Pattern,
-        outer_context: Pattern,
+        inner: Child,
+        overlap: Option<Child>,
+        outer: Pattern,
     ) -> Pattern {
-        [outer_context, inner, inner_context].concat()
+        outer.into_iter().chain(overlap).chain(inner).collect()
+    }
+    fn concat_inner_and_outer(
+        inner: Pattern,
+        outer: Pattern,
+    ) -> Pattern {
+        [outer, inner].concat()
     }
 }
 // context right, inner left
@@ -94,10 +104,16 @@ impl MergeDirection for Right {
         (inner, head)
     }
     fn concat_inner_and_context(
-        inner_context: Pattern,
-        inner: Pattern,
-        outer_context: Pattern,
+        inner: Child,
+        overlap: Option<Child>,
+        outer: Pattern,
     ) -> Pattern {
-        [inner_context, inner, outer_context].concat()
+        std::iter::once(inner).chain(overlap).chain(outer).collect()
+    }
+    fn concat_inner_and_outer(
+        inner: Pattern,
+        outer: Pattern,
+    ) -> Pattern {
+        [inner, outer].concat()
     }
 }

@@ -296,7 +296,7 @@ impl<'a, T: Tokenize, D: MatchDirection> Reader<'a, T, D> {
                     let post_width = pattern_width(post);
                     //println!("{}, {}, {}", pre_width, post_width, index.width);
                     //println!("{}", self.index_string(index));
-                    self.index_subrange(index, pre_width..index.width - post_width)
+                    self.index_subrange(index, pre_width..index.width - post_width).unwrap_child()
                 }
             }, parent_match.remainder.unwrap_or_default())
     }
@@ -347,7 +347,7 @@ impl<'a, T: Tokenize, D: MatchDirection> Reader<'a, T, D> {
                         right,
                     );
                 overlap.map(|(found, _loc, p)|
-                    (found, lploc.clone(), D::concat_inner_and_context(vec![], p, lctx))
+                    (found, lploc.clone(), D::concat_inner_and_outer(p, lctx))
                 )
             }
             Err((lploc, l, lctx, found)) => {
@@ -393,7 +393,7 @@ impl<'a, T: Tokenize, D: MatchDirection> Reader<'a, T, D> {
                     );
                 (
                     overlap.map(|(found, _loc, p)|
-                        (found, rploc, D::concat_inner_and_context(vec![], p, rctx))
+                        (found, rploc, D::concat_inner_and_outer(p, rctx))
                     ),
                     rlarge,
                 )
@@ -637,32 +637,6 @@ impl Overlap {
 }
 type Overlaps = Vec<Overlap>;
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
-pub struct PatternRangeLocation {
-    pub parent: Child,
-    pub pattern_id: PatternId,
-    pub range: Range<usize>,
-}
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
-pub struct PatternLocation {
-    pub parent: Child,
-    pub pattern_id: PatternId,
-}
-impl PatternLocation {
-    pub fn new(parent: Child, pattern_id: PatternId) -> Self {
-        Self {
-            parent,
-            pattern_id,
-        }
-    }
-    pub fn with_range(self, range: Range<usize>) -> PatternRangeLocation {
-        PatternRangeLocation {
-            parent: self.parent,
-            pattern_id: self.pattern_id,
-            range,
-        }
-    }
-}
 // - has parent if patterns are stored in other index
 // - patterns have id if they are stored in other index
 type LocatedPatterns = Vec<(PatternLocation, Pattern)>;

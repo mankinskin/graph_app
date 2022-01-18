@@ -10,17 +10,18 @@ mod direction;
 mod graph;
 mod r#match;
 mod search;
-mod read;
-mod merge;
-mod split;
+//mod read;
+//mod merge;
 mod vertex;
+//mod split;
+//mod index;
 
 pub use direction::*;
 #[cfg(test)]
 pub use graph::tests::*;
 pub use graph::*;
-pub use split::*;
-pub(crate) use read::*;
+//pub use split::*;
+//pub(crate) use read::*;
 pub use r#match::*;
 pub use search::*;
 pub use vertex::*;
