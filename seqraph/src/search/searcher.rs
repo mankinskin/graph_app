@@ -251,25 +251,17 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                 })
                 .map(|found_path|
                     if let Some(remainder) = found_path.remainder.clone() {
-                        self.matcher().traceback_path(found_path.end_path.clone(), remainder)
+                        self.matcher().grow_path_into_context(found_path.end_path.clone(), remainder)
                             .map_err(NoMatch::Mismatch)
                             .and_then(|match_path|
                                 match match_path.remainder {
-                                    MatchRemainder::Left(remainder)
+                                    GrowRemainder::Context(remainder)
                                         => self.bfs_match(found_path.root, remainder, end_op),
-                                    MatchRemainder::None
-                                        => Ok(FoundPath {
+                                    _ => Ok(FoundPath {
                                             start_path: found_path.start_path,
                                             root: found_path.root,
                                             end_path: vec![],
                                             remainder: None,
-                                        }),
-                                    MatchRemainder::Right(remainder)
-                                        => Ok(FoundPath {
-                                            start_path: found_path.start_path,
-                                            root: found_path.root,
-                                            end_path: match_path.path,
-                                            remainder: Some(remainder),
                                         }),
                                 }
                             )

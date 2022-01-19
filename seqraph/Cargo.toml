@@ -24,8 +24,6 @@ async-std = "^1"
 async-trait = "^0.1"
 futures = "^0.3"
 pin-project-lite = "^0.2"
-traversal = "^0.1"
-pathfinding = "^3"
 
 [dependencies.pretty_assertions]
 version = "^1"

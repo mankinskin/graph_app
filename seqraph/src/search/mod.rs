@@ -162,6 +162,7 @@ where
         let pattern = self.to_children(pattern);
         self.right_searcher().find_pattern_ancestor(pattern)
     }
+    #[allow(unused)]
     pub(crate) fn find_parent(
         &self,
         pattern: impl IntoIterator<Item = impl Indexed>,
@@ -186,11 +187,9 @@ pub(crate) mod tests {
     use crate::{
         graph::tests::context,
         Child,
-        r#match::*,
     };
     use pretty_assertions::{
         assert_eq,
-        assert_matches,
     };
     use itertools::*;
 
@@ -298,8 +297,7 @@ pub(crate) mod tests {
         let xab = graph.insert_patterns([[x, ab], [xa, b]]);
         let (xaby, xaby_ids) = graph.insert_patterns_with_ids([vec![xab, y], vec![xa, by]]);
         let xa_by_id = xaby_ids[1];
-        let (xabyz, xabyz_ids) = graph.insert_patterns_with_ids([vec![xaby, z], vec![xab, yz]]);
-        let xaby_z_id = xabyz_ids[0];
+        let xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
         let byz_found = graph.find_ancestor(vec![by, z]);
         assert_eq!(
             byz_found,
@@ -317,61 +315,46 @@ pub(crate) mod tests {
             })
         );
     }
-    //#[test]
-    //fn find_sequence() {
-    //    let (
-    //        graph,
-    //        _a,
-    //        _b,
-    //        _c,
-    //        _d,
-    //        _e,
-    //        _f,
-    //        _g,
-    //        _h,
-    //        _i,
-    //        _ab,
-    //        _bc,
-    //        _cd,
-    //        _bcd,
-    //        abc,
-    //        _abcd,
-    //        _ef,
-    //        _cdef,
-    //        _efghi,
-    //        _abab,
-    //        _ababab,
-    //        ababababcdefghi,
-    //    ) = &*context();
-    //    assert_match!(
-    //        graph.find_sequence("a".chars()),
-    //        Err(NoMatch::SingleIndex),
-    //        "a"
-    //    );
+    #[test]
+    fn find_sequence() {
+        let (
+            graph,
+            a,
+            _b,
+            _c,
+            _d,
+            _e,
+            _f,
+            _g,
+            _h,
+            _i,
+            _ab,
+            _bc,
+            _cd,
+            _bcd,
+            abc,
+            _abcd,
+            _ef,
+            _cdef,
+            _efghi,
+            _abab,
+            _ababab,
+            ababababcdefghi,
+        ) = &*context();
+        assert_eq!(
+            graph.find_sequence("a".chars()),
+            Ok(FoundPath::complete(a))
+        );
 
-    //    let abc_found = graph.find_sequence("abc".chars());
-    //    assert_matches!(
-    //        abc_found,
-    //        Ok(SearchFound {
-    //            parent_match: ParentMatch {
-    //                parent_range: FoundRange::Complete,
-    //                ..
-    //            },
-    //            ..
-    //        })
-    //    );
-    //    assert_eq!(abc_found.unwrap().location.parent, *abc);
-    //    let ababababcdefghi_found = graph.find_sequence("ababababcdefghi".chars());
-    //    assert_matches!(
-    //        ababababcdefghi_found,
-    //        Ok(SearchFound {
-    //            parent_match: ParentMatch {
-    //                parent_range: FoundRange::Complete,
-    //                ..
-    //            },
-    //            ..
-    //        })
-    //    );
-    //    assert_eq!(ababababcdefghi_found.unwrap().location.parent, *ababababcdefghi);
-    //}
+        let abc_found = graph.find_sequence("abc".chars());
+        assert_eq!(
+            abc_found,
+            Ok(FoundPath::complete(abc))
+        );
+        let ababababcdefghi_found = graph.find_sequence("ababababcdefghi".chars());
+        assert_eq!(
+            ababababcdefghi_found,
+            Ok(FoundPath::complete(ababababcdefghi))
+        );
+    }
 }
