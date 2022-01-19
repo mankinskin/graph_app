@@ -26,7 +26,7 @@ pub trait MatchDirection {
         graph: &Hypergraph<impl Tokenize>,
         vertex: &VertexData,
         sup: impl Indexed,
-    ) -> Result<(PatternId, usize), NoMatch>;
+    ) -> Result<PatternIndex, NoMatch>;
     fn skip_equal_indices<'a, I: Indexed, J: Indexed>(
         a: impl DoubleEndedIterator<Item = &'a I>,
         b: impl DoubleEndedIterator<Item = &'a J>,
@@ -87,14 +87,14 @@ pub trait MatchDirection {
     fn filter_parent_pattern_indices(
         parent: &Parent,
         child_patterns: &HashMap<PatternId, Pattern>,
-    ) -> HashSet<(PatternId, usize)>;
-    fn to_found_range(
-        p: Option<Pattern>,
-        context: Pattern,
-    ) -> FoundRange;
-    fn found_from_start(fr: &FoundRange) -> bool;
-    fn found_till_end(fr: &FoundRange) -> bool;
-    fn get_remainder(found_range: FoundRange) -> Option<Pattern>;
+    ) -> HashSet<PatternIndex>;
+    //fn to_found_range(
+    //    p: Option<Pattern>,
+    //    context: Pattern,
+    //) -> FoundRange;
+    //fn found_from_start(fr: &FoundRange) -> bool;
+    //fn found_till_end(fr: &FoundRange) -> bool;
+    //fn get_remainder(found_range: FoundRange) -> Option<Pattern>;
     fn directed_pattern_split<T: AsChild + Clone>(
         pattern: &'_ [T],
         index: usize,
@@ -132,7 +132,7 @@ impl MatchDirection for Right {
         _graph: &Hypergraph<impl Tokenize>,
         vertex: &VertexData,
         sup: impl Indexed,
-    ) -> Result<(PatternId, usize), NoMatch> {
+    ) -> Result<PatternIndex, NoMatch> {
         vertex.get_parent_at_prefix_of(sup)
     }
     fn skip_equal_indices<'a, I: Indexed, J: Indexed>(
@@ -190,35 +190,35 @@ impl MatchDirection for Right {
     fn filter_parent_pattern_indices(
         parent: &Parent,
         _patterns: &HashMap<PatternId, Pattern>,
-    ) -> HashSet<(PatternId, usize)> {
+    ) -> HashSet<PatternIndex> {
         parent
             .filter_pattern_indices_at_prefix()
             .cloned()
             .collect()
     }
-    fn to_found_range(
-        p: Option<Pattern>,
-        context: Pattern,
-    ) -> FoundRange {
-        match (context.is_empty(), p) {
-            (false, Some(rem)) => FoundRange::Infix(context, rem),
-            (true, Some(rem)) => FoundRange::Prefix(rem),
-            (false, None) => FoundRange::Postfix(context),
-            (true, None) => FoundRange::Complete,
-        }
-    }
-    fn get_remainder(found_range: FoundRange) -> Option<Pattern> {
-        match found_range {
-            FoundRange::Prefix(rem) => Some(rem),
-            _ => None,
-        }
-    }
-    fn found_from_start(fr: &FoundRange) -> bool {
-        matches!(fr, FoundRange::Prefix(_) | FoundRange::Complete)
-    }
-    fn found_till_end(fr: &FoundRange) -> bool {
-        matches!(fr, FoundRange::Postfix(_) | FoundRange::Complete)
-    }
+    //fn to_found_range(
+    //    p: Option<Pattern>,
+    //    context: Pattern,
+    //) -> FoundRange {
+    //    match (context.is_empty(), p) {
+    //        (false, Some(rem)) => FoundRange::Infix(context, rem),
+    //        (true, Some(rem)) => FoundRange::Prefix(rem),
+    //        (false, None) => FoundRange::Postfix(context),
+    //        (true, None) => FoundRange::Complete,
+    //    }
+    //}
+    //fn get_remainder(found_range: FoundRange) -> Option<Pattern> {
+    //    match found_range {
+    //        FoundRange::Prefix(rem) => Some(rem),
+    //        _ => None,
+    //    }
+    //}
+    //fn found_from_start(fr: &FoundRange) -> bool {
+    //    matches!(fr, FoundRange::Prefix(_) | FoundRange::Complete)
+    //}
+    //fn found_till_end(fr: &FoundRange) -> bool {
+    //    matches!(fr, FoundRange::Postfix(_) | FoundRange::Complete)
+    //}
 }
 
 impl MatchDirection for Left {
@@ -227,7 +227,7 @@ impl MatchDirection for Left {
         graph: &Hypergraph<impl Tokenize>,
         vertex: &VertexData,
         sup: impl Indexed,
-    ) -> Result<(PatternId, usize), NoMatch> {
+    ) -> Result<PatternIndex, NoMatch> {
         let sup = graph.expect_vertex_data(sup);
         vertex.get_parent_at_postfix_of(sup)
     }
@@ -286,33 +286,33 @@ impl MatchDirection for Left {
     fn filter_parent_pattern_indices(
         parent: &Parent,
         child_patterns: &HashMap<PatternId, Pattern>,
-    ) -> HashSet<(PatternId, usize)> {
+    ) -> HashSet<PatternIndex> {
         parent
             .filter_pattern_indices_at_end_in_patterns(child_patterns)
             .cloned()
             .collect()
     }
-    fn to_found_range(
-        p: Option<Pattern>,
-        context: Pattern,
-    ) -> FoundRange {
-        match (context.is_empty(), p) {
-            (false, Some(rem)) => FoundRange::Infix(rem, context),
-            (true, Some(rem)) => FoundRange::Postfix(rem),
-            (false, None) => FoundRange::Prefix(context),
-            (true, None) => FoundRange::Complete,
-        }
-    }
-    fn get_remainder(found_range: FoundRange) -> Option<Pattern> {
-        match found_range {
-            FoundRange::Postfix(rem) => Some(rem),
-            _ => None,
-        }
-    }
-    fn found_from_start(fr: &FoundRange) -> bool {
-        matches!(fr, FoundRange::Postfix(_) | FoundRange::Complete)
-    }
-    fn found_till_end(fr: &FoundRange) -> bool {
-        matches!(fr, FoundRange::Prefix(_) | FoundRange::Complete)
-    }
+    //fn to_found_range(
+    //    p: Option<Pattern>,
+    //    context: Pattern,
+    //) -> FoundRange {
+    //    match (context.is_empty(), p) {
+    //        (false, Some(rem)) => FoundRange::Infix(rem, context),
+    //        (true, Some(rem)) => FoundRange::Postfix(rem),
+    //        (false, None) => FoundRange::Prefix(context),
+    //        (true, None) => FoundRange::Complete,
+    //    }
+    //}
+    //fn get_remainder(found_range: FoundRange) -> Option<Pattern> {
+    //    match found_range {
+    //        FoundRange::Postfix(rem) => Some(rem),
+    //        _ => None,
+    //    }
+    //}
+    //fn found_from_start(fr: &FoundRange) -> bool {
+    //    matches!(fr, FoundRange::Postfix(_) | FoundRange::Complete)
+    //}
+    //fn found_till_end(fr: &FoundRange) -> bool {
+    //    matches!(fr, FoundRange::Prefix(_) | FoundRange::Complete)
+    //}
 }

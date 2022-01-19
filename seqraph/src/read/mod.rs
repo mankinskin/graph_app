@@ -3,7 +3,6 @@ use crate::{
     vertex::*,
     Hypergraph,
 };
-use std::borrow::Borrow;
 mod reader;
 pub use reader::*;
 //mod async_reader;
@@ -33,7 +32,7 @@ mod tests {
     use std::collections::HashSet;
     use pretty_assertions::assert_eq;
 
-    fn assert_child_of_at<T: Tokenize>(graph: &Hypergraph<T>, child: impl AsChild, parent: impl AsChild, pattern_indices: impl IntoIterator<Item=(PatternId, usize)>) {
+    fn assert_child_of_at<T: Tokenize>(graph: &Hypergraph<T>, child: impl AsChild, parent: impl AsChild, pattern_indices: impl IntoIterator<Item=PatternIndex>) {
         assert_eq!(*graph.expect_parents(child), hashmap![
             parent.index() => Parent {
                 pattern_indices: pattern_indices.into_iter().collect(),
@@ -54,7 +53,7 @@ mod tests {
         let w = g.expect_token_child('w');
         let r = g.expect_token_child('r');
         let exclam = g.expect_token_child('!');
-        let ld = g.find_sequence("ld".chars()).unwrap().location.parent;
+        let ld = g.find_sequence("ld".chars()).unwrap().root;
         let pats: HashSet<_> = ld.vertex(&g).get_child_pattern_set();
         assert_eq!(pats, hashset![
             vec![l, d],
@@ -126,30 +125,30 @@ mod tests {
         let pid = *ind_hypergraph.vertex(&graph).get_children().into_iter().next().unwrap().0;
         assert_child_of_at(&graph, h, ind_hypergraph,
             [
-                (pid, 0),
-                (pid, 9),
+                PatternIndex::new(pid, 0),
+                PatternIndex::new(pid, 9),
             ]);
         assert_child_of_at(&graph, y, ind_hypergraph,
             [
-                (pid, 1),
+                PatternIndex::new(pid, 1),
             ]);
         assert_child_of_at(&graph, p, ind_hypergraph,
             [
-                (pid, 2),
-                (pid, 8),
+                PatternIndex::new(pid, 2),
+                PatternIndex::new(pid, 8),
             ]);
         assert_child_of_at(&graph, e, ind_hypergraph,
             [
-                (pid, 3),
+                PatternIndex::new(pid, 3),
             ]);
         assert_child_of_at(&graph, r, ind_hypergraph,
             [
-                (pid, 6),
-                (pid, 4),
+                PatternIndex::new(pid, 6),
+                PatternIndex::new(pid, 4),
             ]);
         assert_child_of_at(&graph, a, ind_hypergraph,
             [
-                (pid, 7),
+                PatternIndex::new(pid, 7),
             ]);
         assert_eq!(ind_hypergraph.width(), 10);
         let hyper = graph.read_sequence("hyper".chars());
@@ -196,38 +195,38 @@ mod tests {
         let pid = *subdivision.vertex(&graph).get_children().into_iter().next().unwrap().0;
         assert_child_of_at(&graph, s, subdivision,
             [
-                (pid, 0),
-                (pid, 7),
+                PatternIndex::new(pid, 0),
+                PatternIndex::new(pid, 7),
             ]);
         assert_child_of_at(&graph, u, subdivision,
             [
-                (pid, 1),
+                PatternIndex::new(pid, 1),
             ]);
         assert_child_of_at(&graph, b, subdivision,
             [
-                (pid, 2),
+                PatternIndex::new(pid, 2),
             ]);
         assert_child_of_at(&graph, d, subdivision,
             [
-                (pid, 3),
+                PatternIndex::new(pid, 3),
             ]);
         assert_child_of_at(&graph, i, subdivision,
             [
-                (pid, 4),
-                (pid, 6),
-                (pid, 8),
+                PatternIndex::new(pid, 4),
+                PatternIndex::new(pid, 6),
+                PatternIndex::new(pid, 8),
             ]);
         assert_child_of_at(&graph, v, subdivision,
             [
-                (pid, 5),
+                PatternIndex::new(pid, 5),
             ]);
         assert_child_of_at(&graph, o, subdivision,
             [
-                (pid, 9),
+                PatternIndex::new(pid, 9),
             ]);
         assert_child_of_at(&graph, n, subdivision,
             [
-                (pid, 10),
+                PatternIndex::new(pid, 10),
             ]);
         assert_eq!(subdivision.width(), 11);
         let visualization = graph.read_sequence("visualization".chars());

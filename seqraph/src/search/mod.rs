@@ -10,76 +10,76 @@ pub use searcher::*;
 mod bft;
 pub use bft::*;
 
-// TODO: rename to something with context
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
-pub struct ParentMatch {
-    pub parent_range: FoundRange, // context in parent
-    pub remainder: Option<Pattern>, // remainder of query
-}
-impl ParentMatch {
-    pub fn embed_in_super(
-        self,
-        other: Self,
-    ) -> Self {
-        Self {
-            parent_range: self.parent_range.embed_in_super(other.parent_range),
-            remainder: other.remainder,
-        }
-    }
-}
-pub type ParentMatchResult = Result<ParentMatch, NoMatch>;
-
-// found range of search pattern in vertex at index
-// TODO: actually a context
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
-pub enum FoundRange {
-    Complete,                // Full index found
-    Prefix(Pattern),         // found prefix (remainder)
-    Postfix(Pattern),        // found postfix (remainder)
-    Infix(Pattern, Pattern), // found infix
-}
-impl FoundRange {
-    pub fn matches_completely(&self) -> bool {
-        self == &FoundRange::Complete
-    }
-    pub fn reverse(self) -> Self {
-        match self {
-            Self::Complete => Self::Complete,
-            Self::Prefix(post) => Self::Postfix(post),
-            Self::Postfix(pre) => Self::Prefix(pre),
-            Self::Infix(pre, post) => Self::Infix(post, pre),
-        }
-    }
-    pub fn embed_in_super(
-        self,
-        other: Self,
-    ) -> Self {
-        match (self, other) {
-            (Self::Complete, outer) => outer,
-            (inner, Self::Complete) => inner,
-            (Self::Prefix(inner), Self::Postfix(outer)) => Self::Infix(outer, inner),
-            (Self::Prefix(inner), Self::Prefix(outer)) => Self::Prefix([inner, outer].concat()),
-            (Self::Prefix(inner), Self::Infix(louter, router)) => {
-                Self::Infix(louter, [inner, router].concat())
-            }
-            (Self::Postfix(inner), Self::Prefix(outer)) => Self::Infix(inner, outer),
-            (Self::Postfix(inner), Self::Postfix(outer)) => Self::Postfix([outer, inner].concat()),
-            (Self::Postfix(inner), Self::Infix(louter, router)) => {
-                Self::Infix([louter, inner].concat(), router)
-            }
-            (Self::Infix(linner, rinner), Self::Prefix(outer)) => {
-                Self::Infix(linner, [rinner, outer].concat())
-            }
-            (Self::Infix(linner, rinner), Self::Postfix(outer)) => {
-                Self::Infix([outer, linner].concat(), rinner)
-            }
-            (Self::Infix(linner, rinner), Self::Infix(louter, router)) => {
-                Self::Infix([louter, linner].concat(), [rinner, router].concat())
-            }
-        }
-    }
-}
-
+//// TODO: rename to something with context
+//#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+//pub struct ParentMatch {
+//    pub parent_range: FoundRange, // context in parent
+//    pub remainder: Option<Pattern>, // remainder of query
+//}
+//impl ParentMatch {
+//    pub fn embed_in_super(
+//        self,
+//        other: Self,
+//    ) -> Self {
+//        Self {
+//            parent_range: self.parent_range.embed_in_super(other.parent_range),
+//            remainder: other.remainder,
+//        }
+//    }
+//}
+////pub type ParentMatchResult = Result<ParentMatch, NoMatch>;
+//
+//// found range of search pattern in vertex at index
+//// TODO: actually a context
+//#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+//pub enum FoundRange {
+//    Complete,                // Full index found
+//    Prefix(Pattern),         // found prefix (remainder)
+//    Postfix(Pattern),        // found postfix (remainder)
+//    Infix(Pattern, Pattern), // found infix
+//}
+//impl FoundRange {
+//    pub fn matches_completely(&self) -> bool {
+//        self == &FoundRange::Complete
+//    }
+//    pub fn reverse(self) -> Self {
+//        match self {
+//            Self::Complete => Self::Complete,
+//            Self::Prefix(post) => Self::Postfix(post),
+//            Self::Postfix(pre) => Self::Prefix(pre),
+//            Self::Infix(pre, post) => Self::Infix(post, pre),
+//        }
+//    }
+//    pub fn embed_in_super(
+//        self,
+//        other: Self,
+//    ) -> Self {
+//        match (self, other) {
+//            (Self::Complete, outer) => outer,
+//            (inner, Self::Complete) => inner,
+//            (Self::Prefix(inner), Self::Postfix(outer)) => Self::Infix(outer, inner),
+//            (Self::Prefix(inner), Self::Prefix(outer)) => Self::Prefix([inner, outer].concat()),
+//            (Self::Prefix(inner), Self::Infix(louter, router)) => {
+//                Self::Infix(louter, [inner, router].concat())
+//            }
+//            (Self::Postfix(inner), Self::Prefix(outer)) => Self::Infix(inner, outer),
+//            (Self::Postfix(inner), Self::Postfix(outer)) => Self::Postfix([outer, inner].concat()),
+//            (Self::Postfix(inner), Self::Infix(louter, router)) => {
+//                Self::Infix([louter, inner].concat(), router)
+//            }
+//            (Self::Infix(linner, rinner), Self::Prefix(outer)) => {
+//                Self::Infix(linner, [rinner, outer].concat())
+//            }
+//            (Self::Infix(linner, rinner), Self::Postfix(outer)) => {
+//                Self::Infix([outer, linner].concat(), rinner)
+//            }
+//            (Self::Infix(linner, rinner), Self::Infix(louter, router)) => {
+//                Self::Infix([louter, linner].concat(), [rinner, router].concat())
+//            }
+//        }
+//    }
+//}
+//
 //#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 //pub struct SearchFound {
 //    pub parent_match: ParentMatch, // match ranges
@@ -108,10 +108,10 @@ impl FoundRange {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FoundPath {
-    root: Child,
-    start_path: ChildPath,
-    end_path: ChildPath,
-    remainder: Option<Pattern>
+    pub(crate) root: Child,
+    pub(crate) start_path: ChildPath,
+    pub(crate) end_path: ChildPath,
+    pub(crate) remainder: Option<Pattern>
 }
 impl FoundPath {
     pub fn complete(child: impl AsChild) -> Self {

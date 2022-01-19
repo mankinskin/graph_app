@@ -1,14 +1,10 @@
 use crate::{
     r#match::*,
     search::*,
-    merge::*,
+    index::*,
     *,
 };
 use itertools::*;
-use std::{
-    num::NonZeroUsize,
-    ops::Range,
-};
 
 #[derive(Debug, Default)]
 struct ReaderCache {
@@ -16,7 +12,7 @@ struct ReaderCache {
     buffer: Option<Child>,
 }
 impl ReaderCache {
-    fn append_new<'g, T: Tokenize, D: MatchDirection>(
+    fn append_new<'g, T: Tokenize, D: IndexDirection>(
         &mut self,
         reader: &'_ mut Reader<'g, T, D>,
         new: Pattern,
@@ -49,7 +45,7 @@ impl ReaderCache {
             }
         }
     }
-    fn append_next<'g, T: Tokenize, D: MatchDirection>(
+    fn append_next<'g, T: Tokenize, D: IndexDirection>(
         &mut self,
         reader: &'_ mut Reader<'g, T, D>,
         next: Child,
@@ -72,22 +68,22 @@ impl ReaderCache {
     }
 }
 #[derive(Debug)]
-pub struct Reader<'a, T: Tokenize, D: MergeDirection> {
+pub struct Reader<'a, T: Tokenize, D: IndexDirection> {
     graph: &'a mut Hypergraph<T>,
     _ty: std::marker::PhantomData<D>,
 }
-impl<'a, T: Tokenize, D: MergeDirection> std::ops::Deref for Reader<'a, T, D> {
+impl<'a, T: Tokenize, D: IndexDirection> std::ops::Deref for Reader<'a, T, D> {
     type Target = Hypergraph<T>;
     fn deref(&self) -> &Self::Target {
         self.graph
     }
 }
-impl<'a, T: Tokenize, D: MatchDirection> std::ops::DerefMut for Reader<'a, T, D> {
+impl<'a, T: Tokenize, D: IndexDirection> std::ops::DerefMut for Reader<'a, T, D> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.graph
     }
 }
-impl<'a, T: Tokenize, D: MatchDirection> Reader<'a, T, D> {
+impl<'a, T: Tokenize, D: IndexDirection> Reader<'a, T, D> {
     pub(crate) fn new(graph: &'a mut Hypergraph<T>) -> Self {
         Self {
             graph,
@@ -250,65 +246,15 @@ impl<'a, T: Tokenize, D: MatchDirection> Reader<'a, T, D> {
             parent
         }
     }
-    fn read_search_found(
-        &mut self,
-        search_found: SearchFound,
-    ) -> (Child, Pattern) {
-        let SearchFound {
-                location: PatternRangeLocation {
-                    parent: index,
-                    ..
-                },
-                parent_match,
-                ..
-            } = search_found;
-        (match parent_match.parent_range {
-                FoundRange::Complete => {
-                    //println!("Found full index {}", self.graph.index_string(&index));
-                    index
-                }
-                FoundRange::Prefix(post) => {
-                    //println!("Found prefix of {} width {}", self.graph.index_string(&index), index.width);
-                    let width = pattern_width(&post);
-                    //println!("postfix {} width {}", self.graph.pattern_string(&post), width);
-                    //println!("{:#?}", &post);
-                    let width = index.width - width;
-                    let pos = NonZeroUsize::new(width)
-                        .expect("returned full length postfix remainder");
-                    //println!("prefix width {}", pos.get());
-                    let (l, _) = self.index_prefix(index, pos);
-                    l
-                }
-                FoundRange::Postfix(pre) => {
-                    //println!("Found postfix of {}", self.graph.index_string(&index));
-                    //println!("prefix {}", self.graph.pattern_string(&pre));
-                    let width = pattern_width(pre);
-                    let pos = NonZeroUsize::new(width)
-                        .expect("returned zero length prefix remainder");
-                    let (_, r) = self.index_postfix(index, pos);
-                    r
-                }
-                FoundRange::Infix(pre, post) => {
-                    //println!("Found infix of {}", self.graph.index_string(&index));
-                    //println!("postfix {}", self.graph.pattern_string(&post));
-                    //println!("prefix {}", self.graph.pattern_string(&pre));
-                    let pre_width = pattern_width(pre);
-                    let post_width = pattern_width(post);
-                    //println!("{}, {}, {}", pre_width, post_width, index.width);
-                    //println!("{}", self.index_string(index));
-                    self.index_subrange(index, pre_width..index.width - post_width).unwrap_child()
-                }
-            }, parent_match.remainder.unwrap_or_default())
-    }
     fn read_prefix(
         &mut self,
         pattern: Vec<Child>,
     ) -> (Child, Pattern) {
         //let _pat_str = self.graph.pattern_string(&pattern);
         match self.find_ancestor(&pattern) {
-            Ok(search_found) => self.read_search_found(search_found),
+            Ok(found_path) => self.index_found(found_path),
             Err(_not_found) => {
-                let (c, rem) = Right::split_context_head(pattern).unwrap();
+                let (c, rem) = D::split_context_head(pattern).unwrap();
                 (c, rem)
             },
         }
@@ -353,7 +299,7 @@ impl<'a, T: Tokenize, D: MatchDirection> Reader<'a, T, D> {
             Err((lploc, l, lctx, found)) => {
                 // some right matches
                 // add larger patterns to right all
-                let overlap = self.index_found([l, right].as_slice(), found);
+                let (overlap, _) = self.index_found(found);
                 Some((overlap, lploc.clone(), lctx))
             }
         }
@@ -402,7 +348,7 @@ impl<'a, T: Tokenize, D: MatchDirection> Reader<'a, T, D> {
                 // some right matches
                 // add larger patterns to right all
                 rlarge.extend(rps.into_iter().take(i));
-                let overlap = self.index_found([left, r].as_slice(), found);
+                let (overlap, _) = self.index_found(found);
                 (Some((overlap, rploc, rctx)), rlarge)
             }
         }
@@ -619,7 +565,7 @@ enum Overlap {
     EndPiece(PatternLocation, Pattern, Child),
 }
 impl Overlap {
-    pub fn index<'g, T: Tokenize, D: MatchDirection>(&self, reader: &mut Reader<'g, T, D>) -> Pattern {
+    pub fn index<'g, T: Tokenize, D: IndexDirection>(&self, reader: &mut Reader<'g, T, D>) -> Pattern {
         match self {
             Self::Expandable(lloc, lctx, inner, rloc, rctx)
                 => {

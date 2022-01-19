@@ -87,8 +87,8 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                 let p = Child::new(i, parent.width);
                 parent.pattern_indices
                     .iter()
-                    .map(|&(pid, sub_index)| {
-                        BfsNode::Parent(start_path.clone(), p.clone(), pid, sub_index)
+                    .map(|&i| {
+                        BfsNode::Parent(start_path.clone(), p.clone(), i.pattern_id, i.sub_index)
                     })
                     .collect_vec()
             })

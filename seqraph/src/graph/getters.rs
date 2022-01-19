@@ -293,7 +293,7 @@ where
         &self,
         pattern: impl IntoIterator<Item = impl Indexed>,
         parent: impl Indexed,
-    ) -> Result<(PatternId, usize), NoMatch> {
+    ) -> Result<PatternIndex, NoMatch> {
         let mut parents = self
             .get_pattern_parents(pattern, parent)?
             .into_iter()
@@ -304,8 +304,8 @@ where
                 first
                     .pattern_indices
                     .iter()
-                    .find(|(pat, pos)| {
-                        parents.all(|(i, post)| post.exists_at_pos_in_pattern(*pat, pos + i))
+                    .find(|pix| {
+                        parents.all(|(i, post)| post.exists_at_pos_in_pattern(pix.pattern_id, pix.sub_index + i))
                     })
                     .cloned()
             })
@@ -315,7 +315,7 @@ where
         &self,
         pattern: impl IntoIterator<Item = impl Indexed>,
         parent: impl Indexed,
-    ) -> (PatternId, usize) {
+    ) -> PatternIndex {
         self.get_common_pattern_in_parent(pattern, parent)
             .expect("No common pattern in parent for children.")
     }

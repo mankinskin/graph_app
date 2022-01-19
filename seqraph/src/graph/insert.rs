@@ -237,8 +237,8 @@ where
         for (i, c) in rem.into_iter().enumerate() {
             let indices = &mut self.expect_parent_mut(c, parent_index).pattern_indices;
             //println!("before {:#?}", indices);
-            let drained: Vec<_> = indices.drain_filter(|(pid, idx)| *pid == pat && idx >= &old_end)
-                .map(|(pid, _)| (pid, new_end + i))
+            let drained: Vec<_> = indices.drain_filter(|i| i.pattern_id == pat && i.sub_index >= old_end)
+                .map(|i| PatternIndex::new(i.pattern_id, new_end + i.sub_index))
                 .collect();
             //println!("drained {:#?}", drained);
             indices.extend(drained);
@@ -291,37 +291,6 @@ where
         self.add_pattern_parent(parent, new, pattern_id, offset);
         parent
     }
-    //pub fn index_found(
-    //    &mut self,
-    //    p: impl IntoPattern<Item=impl AsChild>,
-    //    found: FoundPath
-    //) -> Child {
-    //    let FoundPath {
-    //        location: PatternRangeLocation {
-    //            parent: found,
-    //            pattern_id,
-    //            range,
-    //        },
-    //        parent_match,
-    //        ..
-    //    } = found;
-    //    if parent_match.parent_range.matches_completely() {
-    //        found
-    //    } else {
-    //        // create new index and replace in parent
-    //        let p = p.into_pattern();
-    //        let w = p.len();
-    //        let new = self.insert_pattern(p);
-    //        self.replace_in_pattern(
-    //            found,
-    //            pattern_id,
-    //            // todo: maybe range.end can be used here
-    //            range.start..range.start + w,
-    //            new,
-    //        );
-    //        new
-    //    }
-    //}
 }
 
 #[cfg(test)]

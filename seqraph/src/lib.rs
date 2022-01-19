@@ -13,9 +13,9 @@ mod search;
 mod vertex;
 
 //mod read;
+//mod index;
 //mod merge;
 //mod split;
-//mod index;
 
 pub use direction::*;
 #[cfg(test)]

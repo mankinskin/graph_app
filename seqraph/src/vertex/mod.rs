@@ -271,7 +271,7 @@ impl VertexData {
         &self,
         parent_index: impl Indexed,
         offset: usize,
-    ) -> Result<(PatternId, usize), NoMatch> {
+    ) -> Result<PatternIndex, NoMatch> {
         let index = parent_index.index();
         self.get_parent(index)
             .ok()
@@ -293,13 +293,13 @@ impl VertexData {
     pub fn get_parent_at_prefix_of(
         &self,
         index: impl Indexed,
-    ) -> Result<(PatternId, usize), NoMatch> {
+    ) -> Result<PatternIndex, NoMatch> {
         self.get_parent_to_starting_at(index, 0)
     }
     pub fn get_parent_at_postfix_of(
         &self,
         vertex: &VertexData,
-    ) -> Result<(PatternId, usize), NoMatch> {
+    ) -> Result<PatternIndex, NoMatch> {
         self.get_parent(vertex.index)
             .ok()
             .and_then(|parent|
@@ -328,7 +328,7 @@ impl VertexData {
     ) -> (PatternId, Child) {
         let (id, c) = self.children
             .iter()
-            .fold(None, |acc: Option<(&PatternId, &Child)>, (pid, p)| 
+            .fold(None, |acc: Option<(&PatternId, &Child)>, (pid, p)|
                 if let Some(acc) = acc {
                     let c = p.last().unwrap();
                     if c.width() > acc.1.width() {
