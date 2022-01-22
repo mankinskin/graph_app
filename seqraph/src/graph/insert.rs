@@ -175,7 +175,7 @@ where
     pub(crate) fn index_range_at(
         &mut self,
         loc: PatternRangeLocation,
-    ) -> Child {
+    ) -> Option<Child> {
         self.index_range_in(loc.parent, loc.pattern_id, loc.range)
     }
     pub(crate) fn index_range_in(
@@ -183,21 +183,25 @@ where
         parent: impl Indexed,
         pid: PatternId,
         range: impl PatternRangeIndex,
-    ) -> Child {
+    ) -> Option<Child> {
         let vertex = self.expect_vertex_data(parent.index());
         let pattern = vertex.get_child_pattern_range(&pid, range.clone()).unwrap().to_vec();
-        let c = self.insert_pattern(pattern);
-        self.replace_in_pattern(parent.index(), pid, range, c);
-        c
+        if pattern.is_empty() {
+            None
+        } else {
+            let c = self.insert_pattern(pattern);
+            self.replace_in_pattern(parent.index(), pid, range, c);
+            Some(c)
+        }
     }
-    pub(crate) fn replace_range_at(
-        &mut self,
-        loc: PatternLocation,
-        range: impl PatternRangeIndex,
-        rep: impl IntoPattern<Item = impl AsChild> + Clone,
-    ) {
-        self.replace_in_pattern(loc.parent, loc.pattern_id, range, rep)
-    }
+    //pub(crate) fn replace_range_at(
+    //    &mut self,
+    //    loc: PatternLocation,
+    //    range: impl PatternRangeIndex,
+    //    rep: impl IntoPattern<Item = impl AsChild> + Clone,
+    //) {
+    //    self.replace_in_pattern(loc.parent, loc.pattern_id, range, rep)
+    //}
     pub fn replace_in_pattern(
         &'g mut self,
         parent: impl Indexed,
@@ -234,7 +238,7 @@ where
             c.remove_parent(parent_index, pat, pos);
         });
         let new_end = start + replace.len();
-        for (i, c) in rem.into_iter().enumerate() {
+        for (_i, c) in rem.into_iter().enumerate() {
             let indices = &mut self.expect_parent_mut(c, parent_index).pattern_indices;
             //println!("before {:#?}", indices);
             let drained: Vec<_> = indices.drain_filter(|i| i.pattern_id == pat && i.sub_index >= old_end)

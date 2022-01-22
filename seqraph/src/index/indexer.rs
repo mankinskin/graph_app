@@ -1,21 +1,24 @@
 use crate::{
     vertex::*,
-    direction::*,
+    r#match::*,
     index::*,
-    Indexed,
     Hypergraph,
-    search::*,
 };
-use std::{
-    cmp::PartialEq,
-    num::NonZeroUsize,
-};
-
-//pub type ChildSplits = (Vec<(SplitSegment, SplitSegment)>, Vec<(SplitSegment, SplitSegment)>);
 
 #[derive(Debug)]
 pub struct Indexer<'g, T: Tokenize> {
     graph: &'g mut Hypergraph<T>,
+}
+impl<'a, T: Tokenize> std::ops::Deref for Indexer<'a, T> {
+    type Target = Hypergraph<T>;
+    fn deref(&self) -> &Self::Target {
+        self.graph
+    }
+}
+impl<'a, T: Tokenize> std::ops::DerefMut for Indexer<'a, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.graph
+    }
 }
 impl<'g, T: Tokenize + 'g> Indexer<'g, T> {
     pub fn new(graph: &'g mut Hypergraph<T>) -> Self {
@@ -30,44 +33,108 @@ impl<'g, T: Tokenize + 'g> Indexer<'g, T> {
                 start_path,
                 end_path,
                 remainder,
-            } = found_path;
-        (match parent_match.parent_range {
-                FoundRange::Complete => {
-                    //println!("Found full index {}", self.graph.index_string(&index));
-                    index
+        } = found_path;
+        let left = start_path.map(|start_path| {
+            let mut start_path = start_path.into_iter();
+            let location = start_path.next().unwrap();
+            let inner = self.index_postfix_at(&location).unwrap();
+            start_path
+                .fold((None, inner, location), |(context, inner, prev_location), location| {
+                    let context = context.unwrap_or_else(||
+                        self.index_pre_context_at(&prev_location).unwrap()
+                    );
+                    let prefix = self.index_pre_context_at(&location).unwrap();
+                    let context = self.insert_pattern([prefix, context]);
+                    let inner = self.index_post_context_at(&location).map(|postfix|
+                        self.insert_pattern([inner, postfix])
+                    ).unwrap_or(inner);
+                    (Some(context), inner, location)
+                })
+        });
+        let right = end_path.map(|end_path| {
+            let mut end_path = end_path.into_iter().rev();
+            let location = end_path.next().unwrap();
+            let inner = self.index_prefix_at(&location).unwrap();
+            end_path
+                .fold((inner, None, location), |(inner, context, prev_location), location| {
+                    let context = context.unwrap_or_else(||
+                        self.index_post_context_at(&prev_location).unwrap()
+                    );
+                    let postfix = self.index_post_context_at(&location).unwrap();
+                    let context = self.insert_pattern([context, postfix]);
+                    let inner = self.index_pre_context_at(&location).map(|pre|
+                        self.insert_pattern([pre, inner])
+                    ).unwrap_or(inner);
+                    (inner, Some(context), location)
+                })
+        });
+        let inner = match (left, right) {
+            (None, None) => root,
+            (Some((lcontext, linner, _)), Some((rinner, rcontext, _))) => {
+                let inner = self.insert_pattern([linner, rinner].as_slice());
+                let root = root.vertex_mut(self);
+                match (lcontext, rcontext) {
+                    (Some(lctx), Some(rctx)) => {
+                        root.add_pattern([lctx, inner, rctx].as_slice());
+                    }
+                    (Some(lctx), None) => {
+                        root.add_pattern([lctx, inner].as_slice());
+                    }
+                    (None, Some(rctx)) => {
+                        root.add_pattern([inner, rctx].as_slice());
+                    }
+                    (None, None) => unreachable!(),
                 }
-                FoundRange::Prefix(post) => {
-                    //println!("Found prefix of {} width {}", self.graph.index_string(&index), index.width);
-                    let width = pattern_width(&post);
-                    //println!("postfix {} width {}", self.graph.pattern_string(&post), width);
-                    //println!("{:#?}", &post);
-                    let width = index.width - width;
-                    let pos = NonZeroUsize::new(width)
-                        .expect("returned full length postfix remainder");
-                    //println!("prefix width {}", pos.get());
-                    let (l, _) = self.index_prefix(index, pos);
-                    l
+                inner
+            },
+            (Some((lcontext, linner, _)), None) => {
+                if let Some(lctx) = lcontext {
+                    let root = root.vertex_mut(self);
+                    root.add_pattern([lctx, linner].as_slice());
+                    linner
+                } else {
+                    linner
                 }
-                FoundRange::Postfix(pre) => {
-                    //println!("Found postfix of {}", self.graph.index_string(&index));
-                    //println!("prefix {}", self.graph.pattern_string(&pre));
-                    let width = pattern_width(pre);
-                    let pos = NonZeroUsize::new(width)
-                        .expect("returned zero length prefix remainder");
-                    let (_, r) = self.index_postfix(index, pos);
-                    r
+            }
+            (None, Some((rinner, rcontext, _))) => {
+                if let Some(rctx) = rcontext {
+                    let root = root.vertex_mut(self);
+                    root.add_pattern([rinner, rctx].as_slice());
+                    rinner
+                } else {
+                    rinner
                 }
-                FoundRange::Infix(pre, post) => {
-                    //println!("Found infix of {}", self.graph.index_string(&index));
-                    //println!("postfix {}", self.graph.pattern_string(&post));
-                    //println!("prefix {}", self.graph.pattern_string(&pre));
-                    let pre_width = pattern_width(pre);
-                    let post_width = pattern_width(post);
-                    //println!("{}, {}, {}", pre_width, post_width, index.width);
-                    //println!("{}", self.index_string(index));
-                    self.index_subrange(index, pre_width..index.width - post_width).unwrap_child()
-                }
-            }, parent_match.remainder.unwrap_or_default())
+            }
+        };
+        (inner, remainder.unwrap_or_default())
+    }
+    /// includes location
+    pub(crate) fn index_prefix_at(
+        &mut self,
+        location: &ChildLocation,
+    ) -> Option<Child> {
+        self.index_range_in(location.parent, location.pattern_id, 0..location.sub_index + 1)
+    }
+    /// includes location
+    pub(crate) fn index_postfix_at(
+        &mut self,
+        location: &ChildLocation,
+    ) -> Option<Child> {
+        self.index_range_in(location.parent, location.pattern_id, location.sub_index..)
+    }
+    /// does not include location
+    pub(crate) fn index_pre_context_at(
+        &mut self,
+        location: &ChildLocation,
+    ) -> Option<Child> {
+        self.index_range_in(location.parent, location.pattern_id, 0..location.sub_index)
+    }
+    /// does not include location
+    pub(crate) fn index_post_context_at(
+        &mut self,
+        location: &ChildLocation,
+    ) -> Option<Child> {
+        self.index_range_in(location.parent, location.pattern_id, location.sub_index + 1..)
     }
     //pub(crate) fn index_single_split<D: IndexSide, R: AsChild>(
     //    &mut self,

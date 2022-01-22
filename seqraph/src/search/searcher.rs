@@ -8,7 +8,7 @@ use itertools::*;
 #[derive(Clone, Debug)]
 enum BfsNode {
     Start(Child),
-    Parent(ChildPath, Child, PatternId, usize), // start path, parent, pattern index
+    Parent(ChildPath), // start path, parent, pattern index
     Child(ChildPath, Child, ChildPath, Child), // start path, root, end path, child
 }
 
@@ -44,7 +44,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                 self.bfs_match(
                     start,
                     context,
-                    |_start_path, _root, _pattern_id, _sub_index| {
+                    |_start_path, _root, _loc| {
                         vec![]
                     }
                 )
@@ -64,9 +64,10 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                     self.bfs_match(
                         head,
                         tail,
-                        |mut start_path, root, pattern_id, sub_index| {
+                        |start_path, root, loc| {
                             // root at end of parent, recurse upwards to get all next children
-                            start_path.push(ChildLocation::new(root, pattern_id, sub_index));
+                            let mut start_path = start_path.clone();
+                            start_path.push(loc);
                             self.bfs_root_parents(root, start_path)
                         }
                     )
@@ -88,7 +89,9 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                 parent.pattern_indices
                     .iter()
                     .map(|&i| {
-                        BfsNode::Parent(start_path.clone(), p.clone(), i.pattern_id, i.sub_index)
+                        let mut start_path = start_path.clone();
+                        start_path.push(ChildLocation::new(p, i.pattern_id, i.sub_index));
+                        BfsNode::Parent(start_path)
                     })
                     .collect_vec()
             })
@@ -97,14 +100,16 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
     }
     fn bfs_parent_children_end_op(
         &self,
-        start_path: ChildPath,
-        root: Child,
-        pattern_id: PatternId,
-        sub_index: usize,
+        mut start_path: ChildPath,
         context_next: Child,
-        end_op: impl Fn(ChildPath, Child, PatternId, usize) -> Vec<BfsNode>,
+        end_op: impl Fn(ChildPath, Child, ChildLocation) -> Vec<BfsNode>,
     ) -> Vec<BfsNode> {
         // find parent partition with matching context
+        let loc@ChildLocation {
+            parent: root,
+            pattern_id,
+            sub_index,
+        } = start_path.pop().unwrap();
         let parent_vertex = self.expect_vertex_data(root.index());
         let child_patterns = parent_vertex.get_children();
         let pattern = child_patterns.get(&pattern_id).unwrap();
@@ -121,21 +126,21 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                 vec![]
             }
         } else {
-            end_op(start_path, root, pattern_id, sub_index)
+            end_op(start_path, root, loc)
         }
     }
     fn bfs_match<'a>(
         &'g self,
         start: impl Vertexed<'a, 'g>,
-        context: impl IntoPattern<Item = impl AsChild>,
-        end_op: impl Fn(ChildPath, Child, PatternId, usize) -> Vec<BfsNode> + Copy,
+        query: impl IntoPattern<Item = impl AsChild>,
+        end_op: impl Fn(ChildPath, Child, ChildLocation) -> Vec<BfsNode> + Copy,
     ) -> SearchResult {
         let start_index = start.as_child();
         // try any parent, i.e. first
-        let context = context.as_pattern_view();
-        D::pattern_head(context)
-            .and_then(|context_next| {
-                let context_next: Child = context_next.to_child();
+        let query = query.as_pattern_view();
+        D::pattern_head(query)
+            .and_then(|query_next| {
+                let query_next = query_next.to_child();
                 // if context not empty
                 // breadth first traversal
                 Bft::new(BfsNode::Start(start_index), |node| {
@@ -144,13 +149,10 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                             self.bfs_root_parents(root, vec![])
                                 .into_iter()
                         },
-                        BfsNode::Parent(start_path, parent, pattern_id, sub_index) => {
+                        BfsNode::Parent(start_path) => {
                             self.bfs_parent_children_end_op(
                                 start_path,
-                                parent,
-                                pattern_id,
-                                sub_index,
-                                context_next,
+                                query_next,
                                 end_op,
                             )
                             .into_iter()
@@ -174,45 +176,33 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                 .find_map(|(_, node)| {
                     match node {
                         BfsNode::Parent(
-                            start_path,
-                            parent,
-                            pid,
-                            sub_index,
+                            mut start_path,
                         ) => {
                             // find next child equal to next context index
+                            let loc@ChildLocation {
+                                parent,
+                                pattern_id,
+                                sub_index,
+                            } = start_path.pop().unwrap();
                             let parent_vertex = self.expect_vertex_data(parent.index());
                             let child_patterns = parent_vertex.get_children();
-                            let pattern = child_patterns.get(&pid).unwrap();
+                            let pattern = child_patterns.get(&pattern_id).unwrap();
                             D::next_child(pattern, sub_index)
-                                .and_then(|next_child|
-                                    (next_child == context_next).then(|| {
+                                .and_then(|child_next|
+                                    (child_next == query_next).then(|| {
                                         let next_index = D::index_next(sub_index).unwrap();
-                                        let remainder = D::pattern_tail(context).into_pattern();
-                                        let remainder = if remainder.is_empty() {
-                                            None
-                                        } else {
-                                            Some(remainder)
-                                        };
-                                        let end_path = if D::index_next(next_index)
-                                            .map(|next| next == pattern.len())
-                                            .unwrap_or(true) {
-                                            // matches completely
-                                            vec![]
-                                        } else {
-                                            vec![
-                                                ChildLocation::new(
-                                                    parent_vertex.as_child(),
-                                                    pid,
-                                                    next_index,
-                                                )
-                                            ]
-                                        };
-                                        FoundPath {
-                                            root: parent,
-                                            start_path,
-                                            end_path,
-                                            remainder,
+                                        let query_tail = D::pattern_tail(query).into_pattern();
+                                        if sub_index != D::head_index(pattern) {
+                                            start_path.push(loc);
                                         }
+                                        let end_path = vec![
+                                            ChildLocation::new(
+                                                parent_vertex.as_child(),
+                                                pattern_id,
+                                                next_index,
+                                            )
+                                        ];
+                                        FoundPath::new(parent, start_path, end_path, query_tail)
                                     })
                                 )
                         },
@@ -229,59 +219,67 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                                 .into_iter()
                                 .find(|(_pid, pattern)| {
                                     let &head = D::pattern_head(pattern).unwrap();
-                                    head == context_next
+                                    head == query_next
                                 })
                                 .map(|(&pid, pattern)| {
                                     path.push(ChildLocation::new(child, pid, D::head_index(pattern)));
-                                    let remainder = D::pattern_tail(context).into_pattern();
-                                    FoundPath {
-                                        root,
-                                        start_path,
-                                        end_path: path,
-                                        remainder: if remainder.is_empty() {
-                                            None
-                                        } else {
-                                            Some(remainder)
-                                        },
-                                    }
+                                    let query_tail = D::pattern_tail(query).into_pattern();
+                                    FoundPath::new(root, start_path, path, query_tail)
                                 })
                         },
                         _ => None,
                     }
                 })
                 .map(|found_path|
-                    if let Some(remainder) = found_path.remainder.clone() {
-                        self.matcher().grow_path_into_context(found_path.end_path.clone(), remainder)
-                            .map_err(NoMatch::Mismatch)
-                            .and_then(|match_path|
+                    if let Some(end_path) = found_path.end_path.clone() {
+                        match self.matcher()
+                            .match_path_in_context(
+                                end_path,
+                                found_path.remainder.clone().unwrap_or_default(),
+                            ) {
+                            Err(mismatch_path) =>
+                                Ok(FoundPath {
+                                    root: found_path.root,
+                                    start_path: found_path.start_path,
+                                    end_path: if mismatch_path.path.is_empty() {
+                                        None
+                                    } else {
+                                        Some(mismatch_path.path)
+                                    },
+                                    remainder: Some(mismatch_path.query),
+                                }),
+                            Ok(match_path) =>
                                 match match_path.remainder {
-                                    GrowRemainder::Context(remainder)
+                                    GrowthRemainder::Query(remainder)
                                         => self.bfs_match(found_path.root, remainder, end_op),
-                                    _ => Ok(FoundPath {
-                                            start_path: found_path.start_path,
-                                            root: found_path.root,
-                                            end_path: vec![],
-                                            remainder: None,
-                                        }),
-                                }
-                            )
+                                    GrowthRemainder::Child(_) => Ok(FoundPath {
+                                        root: found_path.root,
+                                        start_path: found_path.start_path,
+                                        end_path: if match_path.path.is_empty() {
+                                            None
+                                        } else {
+                                            Some(match_path.path)
+                                        },
+                                        remainder: None,
+                                    }),
+                                    GrowthRemainder::None => Ok(FoundPath {
+                                        root: found_path.root,
+                                        start_path: found_path.start_path,
+                                        end_path: if match_path.path.len() < 2 {
+                                            None
+                                        } else {
+                                            Some(match_path.path)
+                                        },
+                                        remainder: None,
+                                    })
+                                },
+                            }
                     } else {
                         Ok(found_path)
                     }
                 )
             })
-            .unwrap_or_else(||
-                Ok(FoundPath {
-                    root: start_index,
-                    start_path: vec![],
-                    end_path: vec![],
-                    remainder: if context.is_empty() {
-                        None
-                    } else {
-                        Some(context.into_pattern())
-                    },
-                })
-            )
+            .unwrap_or_else(|| Ok(FoundPath::remainder(start_index, query)))
     }
     ///// comparison on child pattern and context
     ///// returns ParentMatch and end index of match

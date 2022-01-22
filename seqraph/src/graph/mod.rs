@@ -157,30 +157,36 @@ pub(crate) mod tests {
         RwLockReadGuard,
         RwLockWriteGuard,
     };
-    type Context = (
-        Hypergraph<char>,
-        Child,
-        Child,
-        Child,
-        Child,
-        Child,
-        Child,
-        Child,
-        Child,
-        Child,
-        Child,
-        Child,
-        Child,
-        Child,
-        Child,
-        Child,
-        Child,
-        Child,
-        Child,
-        Child,
-        Child,
-        Child,
-    );
+    pub struct Context {
+        pub graph: Hypergraph<char>,
+        pub a: Child,
+        pub b: Child,
+        pub c: Child,
+        pub d: Child,
+        pub e: Child,
+        pub f: Child,
+        pub g: Child,
+        pub h: Child,
+        pub i: Child,
+        pub ab: Child,
+        pub bc: Child,
+        pub bc_id: PatternId,
+        pub cd: Child,
+        pub cd_id: PatternId,
+        pub bcd: Child,
+        pub b_cd_id: PatternId,
+        pub abc: Child,
+        pub a_bc_id: PatternId,
+        pub abcd: Child,
+        pub a_bcd_id: PatternId,
+        pub abc_d_id: PatternId,
+        pub ef: Child,
+        pub cdef: Child,
+        pub efghi: Child,
+        pub abab: Child,
+        pub ababab: Child,
+        pub ababababcdefghi: Child,
+    }
     lazy_static::lazy_static! {
         pub static ref
             CONTEXT: Arc<RwLock<Context>> = Arc::new(RwLock::new({
@@ -213,19 +219,19 @@ pub(crate) mod tests {
                 // a bcd
                 // index: 9
                 let ab = graph.insert_pattern([a, b]);
-                let bc = graph.insert_pattern([b, c]);
-                let abc = graph.insert_patterns([
+                let (bc, bc_id) = graph.insert_pattern_with_id([b, c]);
+                let (abc, abc_ids) = graph.insert_patterns_with_ids([
                     [ab, c],
                     [a, bc],
                 ]);
-                let cd = graph.insert_pattern([c, d]);
-                let bcd = graph.insert_patterns([
+                let (cd, cd_id) = graph.insert_pattern_with_id([c, d]);
+                let (bcd, bcd_ids) = graph.insert_patterns_with_ids([
                     [bc, d],
                     [b, cd],
                 ]);
                 //let abcd = graph.insert_pattern(&[abc, d]);
                 //graph.insert_to_pattern(abcd, &[a, bcd]);
-                let abcd = graph.insert_patterns([
+                let (abcd, abcd_ids) = graph.insert_patterns_with_ids([
                     [abc, d],
                     [a, bcd],
                 ]);
@@ -274,9 +280,9 @@ pub(crate) mod tests {
                 let ababababcdefghi = graph.insert_patterns([
                     [ababababcd, efghi],
                     [abab, ababcdefghi],
-                    [ababab, abcdefghi]
+                    [ababab, abcdefghi],
                 ]);
-                (
+                Context {
                     graph,
                     a,
                     b,
@@ -289,17 +295,23 @@ pub(crate) mod tests {
                     i,
                     ab,
                     bc,
+                    bc_id: bc_id.unwrap(),
                     cd,
+                    cd_id: cd_id.unwrap(),
                     bcd,
+                    b_cd_id: bcd_ids[1],
                     abc,
+                    a_bc_id: abc_ids[1],
                     abcd,
+                    abc_d_id: abcd_ids[0],
+                    a_bcd_id: abcd_ids[1],
                     ef,
                     cdef,
                     efghi,
                     abab,
                     ababab,
                     ababababcdefghi,
-                )
+                }
             } else {
                 panic!();
             }

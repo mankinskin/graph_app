@@ -12,8 +12,8 @@ mod r#match;
 mod search;
 mod vertex;
 
-//mod read;
-//mod index;
+mod read;
+mod index;
 //mod merge;
 //mod split;
 

@@ -83,6 +83,7 @@ pub trait MatchDirection {
         context: B,
     ) -> Vec<T>;
     fn index_next(index: usize) -> Option<usize>;
+    fn tail_index<T: AsChild>(pattern:  &'_ [T], tail: &'_ [T]) -> usize;
     /// filter pattern indices of parent relation by child patterns and matching direction
     fn filter_parent_pattern_indices(
         parent: &Parent,
@@ -167,6 +168,9 @@ impl MatchDirection for Right {
     }
     fn head_index<T: AsChild>(_pattern: &'_ [T]) -> usize {
         0
+    }
+    fn tail_index<T: AsChild>(pattern:  &'_ [T], tail: &'_ [T]) -> usize {
+        pattern.len() - tail.len() - 1
     }
     fn index_next(index: usize) -> Option<usize> {
         index.checked_add(1)
@@ -263,6 +267,9 @@ impl MatchDirection for Left {
     }
     fn head_index<T: AsChild>(pattern: &'_ [T]) -> usize {
         pattern.len() - 1
+    }
+    fn tail_index<T: AsChild>(_pattern:  &'_ [T], tail: &'_ [T]) -> usize {
+        tail.len()
     }
     fn index_next(index: usize) -> Option<usize> {
         index.checked_sub(1)

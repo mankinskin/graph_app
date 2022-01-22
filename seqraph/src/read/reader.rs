@@ -183,12 +183,23 @@ impl<'a, T: Tokenize, D: IndexDirection> Reader<'a, T, D> {
             self.try_read_sequence(cache, remainder)
         }
     }
-    pub fn overlap_sequence(&mut self, first: Child, second: Child) -> Child {
-        let overlaps = self.read_overlaps(first, second);
-        self.insert_with_overlaps(first, second, overlaps)
+    fn read_prefix(
+        &mut self,
+        pattern: Vec<Child>,
+    ) -> (Child, Pattern) {
+        //let _pat_str = self.graph.pattern_string(&pattern);
+        match self.find_ancestor(&pattern) {
+            Ok(found_path) => self.index_found(found_path),
+            Err(_not_found) => {
+                let (c, rem) = D::split_context_head(pattern).unwrap();
+                (c, rem)
+            },
+        }
     }
-    pub fn insert_with_overlaps(&mut self, first: Child, second: Child, overlaps: Vec<Pattern>) -> Child {
-        self.graph.insert_patterns([&[vec![first, second]], overlaps.as_slice()].concat())
+    pub fn overlap_sequence(&mut self, first: Child, second: Child) -> Child {
+        //let overlaps = self.read_overlaps(first, second);
+        //self.graph.insert_patterns([&[vec![first, second]], overlaps.as_slice()].concat())
+        self.graph.insert_pattern([first, second].as_slice())
     }
     pub fn read_overlaps(&mut self, first: Child, second: Child) -> Vec<Pattern> {
         self.find_overlaps(first, second)
@@ -227,36 +238,24 @@ impl<'a, T: Tokenize, D: IndexDirection> Reader<'a, T, D> {
             // if no old overlaps
             let (&pid, pat) = vertex.expect_any_pattern();
             let pat = pat.clone();
-            let last = pat.last().unwrap().clone();
-            let overlaps = self.read_overlaps(last.clone(), next);
-            if overlaps.is_empty() {
+            //let last = pat.last().unwrap().clone();
+            //let overlaps = self.read_overlaps(last.clone(), next);
+            //if overlaps.is_empty() {
                 // no new overlaps
                 // simply append next
-                self.append_to_pattern(parent, pid, next)
-            } else {
-                let new = self.insert_with_overlaps(last.clone(), next, overlaps);
-                self.replace_in_pattern(parent, pid, pat.len()-1..pat.len(), new);
-                parent
-            }
+            self.append_to_pattern(parent, pid, next)
+            //} else {
+            //    let new = self.insert_with_overlaps(last.clone(), next, overlaps);
+            //    self.replace_in_pattern(parent, pid, pat.len()-1..pat.len(), new);
+            //    parent
+            //}
         } else {
             // some old overlaps though
             let (_pid, last) = vertex.largest_postfix();
             let _overlaps = self.read_overlaps(last, next);
             // TODO
-            parent
-        }
-    }
-    fn read_prefix(
-        &mut self,
-        pattern: Vec<Child>,
-    ) -> (Child, Pattern) {
-        //let _pat_str = self.graph.pattern_string(&pattern);
-        match self.find_ancestor(&pattern) {
-            Ok(found_path) => self.index_found(found_path),
-            Err(_not_found) => {
-                let (c, rem) = D::split_context_head(pattern).unwrap();
-                (c, rem)
-            },
+            //parent
+            unimplemented!()
         }
     }
     // - left complete must not match with any right prefix
@@ -296,7 +295,7 @@ impl<'a, T: Tokenize, D: IndexDirection> Reader<'a, T, D> {
                     (found, lploc.clone(), D::concat_inner_and_outer(p, lctx))
                 )
             }
-            Err((lploc, l, lctx, found)) => {
+            Err((lploc, _l, lctx, found)) => {
                 // some right matches
                 // add larger patterns to right all
                 let (overlap, _) = self.index_found(found);
@@ -344,7 +343,7 @@ impl<'a, T: Tokenize, D: IndexDirection> Reader<'a, T, D> {
                     rlarge,
                 )
             }
-            Err((i, rploc, r, rctx, found)) => {
+            Err((i, rploc, _r, rctx, found)) => {
                 // some right matches
                 // add larger patterns to right all
                 rlarge.extend(rps.into_iter().take(i));
@@ -569,13 +568,13 @@ impl Overlap {
         match self {
             Self::Expandable(lloc, lctx, inner, rloc, rctx)
                 => {
-                let pre = reader.graph.index_range_at(lloc.clone().with_range(0..lctx.len()));
-                let post = reader.graph.index_range_at(rloc.clone().with_range(1..rctx.len()+1));
+                let pre = reader.graph.index_range_at(lloc.clone().with_range(0..lctx.len())).unwrap();
+                let post = reader.graph.index_range_at(rloc.clone().with_range(1..rctx.len()+1)).unwrap();
                 vec![pre, inner.clone(), post]
             },
             Self::EndPiece(lloc, lctx, inner)
                 => {
-                let pre = reader.graph.index_range_at(lloc.clone().with_range(0..lctx.len()));
+                let pre = reader.graph.index_range_at(lloc.clone().with_range(0..lctx.len())).unwrap();
                 vec![pre, inner.clone()]
             }
         }

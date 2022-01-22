@@ -43,8 +43,8 @@ mod tests {
     #[test]
     fn sync_read_text1() {
         let mut g: Hypergraph<char> = Hypergraph::default();
-        let result = g.read_sequence("Heldldo world!".chars());
-        let cap_h = g.expect_token_child('H');
+        let result = g.read_sequence("heldldo world!".chars());
+        let h = g.expect_token_child('h');
         let e = g.expect_token_child('e');
         let l = g.expect_token_child('l');
         let d = g.expect_token_child('d');
@@ -60,7 +60,7 @@ mod tests {
         ]);
         let pats: HashSet<_> = result.vertex(&g).get_child_pattern_set();
         assert_eq!(pats, hashset![
-            vec![cap_h, e, ld, ld, o, space, w, o, r, ld, exclam],
+            vec![h, e, ld, ld, o, space, w, o, r, ld, exclam],
         ]);
     }
     #[test]

@@ -265,7 +265,7 @@ where
     T: Tokenize + 't,
 {
     pub fn indexer(&'g mut self) -> Indexer<'g, T> {
-        Indexer::new(&mut self)
+        Indexer::new(self)
     }
     pub(crate) fn index_found(
         &mut self,
