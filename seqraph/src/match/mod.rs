@@ -18,6 +18,7 @@ pub enum NoMatch {
     NoParents,
     Mismatch(MismatchPath),
     NoChildPatterns,
+    NotFound(Pattern),
     NoMatchingParent(VertexIndex),
     SingleIndex,
     ParentMatchingPartially,

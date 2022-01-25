@@ -27,7 +27,7 @@ impl<'g, T: Tokenize + 'g> Indexer<'g, T> {
     pub(crate) fn index_found(
         &mut self,
         found_path: FoundPath,
-    ) -> (Child, Pattern) {
+    ) -> (Option<Child>, Child, Option<Child>, Pattern) {
         let FoundPath {
                 root,
                 start_path,
@@ -68,8 +68,8 @@ impl<'g, T: Tokenize + 'g> Indexer<'g, T> {
                     (inner, Some(context), location)
                 })
         });
-        let inner = match (left, right) {
-            (None, None) => root,
+        let (lctx, inner, rctx) = match (left, right) {
+            (None, None) => (None, root, None),
             (Some((lcontext, linner, _)), Some((rinner, rcontext, _))) => {
                 let inner = self.insert_pattern([linner, rinner].as_slice());
                 let root = root.vertex_mut(self);
@@ -84,29 +84,31 @@ impl<'g, T: Tokenize + 'g> Indexer<'g, T> {
                         root.add_pattern([inner, rctx].as_slice());
                     }
                     (None, None) => unreachable!(),
-                }
-                inner
+                };
+                (lcontext, inner, rcontext)
             },
             (Some((lcontext, linner, _)), None) => {
-                if let Some(lctx) = lcontext {
+                let inner = if let Some(lctx) = lcontext {
                     let root = root.vertex_mut(self);
                     root.add_pattern([lctx, linner].as_slice());
                     linner
                 } else {
                     linner
-                }
+                };
+                (lcontext, inner, None)
             }
             (None, Some((rinner, rcontext, _))) => {
-                if let Some(rctx) = rcontext {
+                let inner = if let Some(rctx) = rcontext {
                     let root = root.vertex_mut(self);
                     root.add_pattern([rinner, rctx].as_slice());
                     rinner
                 } else {
                     rinner
-                }
+                };
+                (None, inner, rcontext)
             }
         };
-        (inner, remainder.unwrap_or_default())
+        (lctx, inner, rctx, remainder.unwrap_or_default())
     }
     /// includes location
     pub(crate) fn index_prefix_at(

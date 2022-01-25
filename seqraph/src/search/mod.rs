@@ -210,6 +210,13 @@ where
         let pattern = self.to_children(pattern);
         self.right_searcher().find_pattern_ancestor(pattern)
     }
+    pub(crate) fn find_ancestor_in_context(
+        &self,
+        head: impl AsChild,
+        context: impl IntoPattern<Item = impl AsChild>,
+    ) -> SearchResult {
+        self.right_searcher().find_ancestor_in_context(head, context)
+    }
     #[allow(unused)]
     pub(crate) fn find_parent(
         &self,
@@ -267,36 +274,36 @@ pub(crate) mod tests {
         let b_c_pattern = vec![Child::new(b, 1), Child::new(c, 1)];
         let bc_pattern = vec![Child::new(bc, 2)];
         let a_b_c_pattern = vec![Child::new(a, 1), Child::new(b, 1), Child::new(c, 1)];
-        //assert_eq!(
-        //    graph.find_ancestor(&bc_pattern),
-        //    Ok(FoundPath::complete(bc)),
-        //    "bc"
-        //);
-        //assert_eq!(
-        //    graph.find_ancestor(&b_c_pattern),
-        //    Ok(FoundPath::complete(bc)),
-        //    "b_c"
-        //);
-        //assert_eq!(
-        //    graph.find_ancestor(&a_bc_pattern),
-        //    Ok(FoundPath::complete(abc)),
-        //    "a_bc"
-        //);
-        //assert_eq!(
-        //    graph.find_ancestor(&ab_c_pattern),
-        //    Ok(FoundPath::complete(abc)),
-        //    "ab_c"
-        //);
-        //assert_eq!(
-        //    graph.find_ancestor(&a_bc_d_pattern),
-        //    Ok(FoundPath::complete(abcd)),
-        //    "a_bc_d"
-        //);
-        //assert_eq!(
-        //    graph.find_ancestor(&a_b_c_pattern),
-        //    Ok(FoundPath::complete(abc)),
-        //    "a_b_c"
-        //);
+        assert_eq!(
+            graph.find_ancestor(&bc_pattern),
+            Err(NoMatch::SingleIndex),
+            "bc"
+        );
+        assert_eq!(
+            graph.find_ancestor(&b_c_pattern),
+            Ok(FoundPath::complete(bc)),
+            "b_c"
+        );
+        assert_eq!(
+            graph.find_ancestor(&a_bc_pattern),
+            Ok(FoundPath::complete(abc)),
+            "a_bc"
+        );
+        assert_eq!(
+            graph.find_ancestor(&ab_c_pattern),
+            Ok(FoundPath::complete(abc)),
+            "ab_c"
+        );
+        assert_eq!(
+            graph.find_ancestor(&a_bc_d_pattern),
+            Ok(FoundPath::complete(abcd)),
+            "a_bc_d"
+        );
+        assert_eq!(
+            graph.find_ancestor(&a_b_c_pattern),
+            Ok(FoundPath::complete(abc)),
+            "a_b_c"
+        );
         let a_b_a_b_a_b_a_b_c_d_e_f_g_h_i_pattern =
             vec![*a, *b, *a, *b, *a, *b, *a, *b, *c, *d, *e, *f, *g, *h, *i];
         assert_eq!(
@@ -359,7 +366,8 @@ pub(crate) mod tests {
          } = &*context();
         assert_eq!(
             graph.find_sequence("a".chars()),
-            Ok(FoundPath::complete(a))
+            //Ok(FoundPath::complete(a))
+            Err(NoMatch::SingleIndex),
         );
 
         let abc_found = graph.find_sequence("abc".chars());

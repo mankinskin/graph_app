@@ -1,7 +1,7 @@
 use crate::{
     vertex::*,
     search::*,
-    Hypergraph,
+    Hypergraph, ChildLocation,
 };
 
 mod indexer;
@@ -270,36 +270,21 @@ where
     pub(crate) fn index_found(
         &mut self,
         found_path: FoundPath,
-    ) -> (Child, Pattern) {
+    ) -> (Option<Child>, Child, Option<Child>, Pattern) {
         self.indexer().index_found(found_path)
     }
-    // create index from token position range in index
-    //pub fn index_subrange(
-    //    &mut self,
-    //    root: impl AsChild,
-    //    range: impl PatternRangeIndex,
-    //) -> IndexRangeResult {
-    //    self.indexer().index_subrange(root, range)
-    //}
-    //pub fn index_prefix(
-    //    &mut self,
-    //    root: impl AsChild,
-    //    pos: NonZeroUsize,
-    //) -> (Child, SplitSegment) {
-    //    self.indexer().index_single_split::<Left, _>(root.as_child(), pos)
-    //}
-    //pub fn index_postfix(
-    //    &mut self,
-    //    root: impl AsChild,
-    //    pos: NonZeroUsize,
-    //) -> (SplitSegment, Child) {
-    //    self.indexer().index_single_split::<Right, _>(root.as_child(), pos)
-    //}
-    //pub fn index_split(
-    //    &mut self,
-    //    root: impl AsChild,
-    //    pos: NonZeroUsize,
-    //) -> (Child, Child) {
-    //    self.indexer().index_single_split::<Both, _>(root.as_child(), pos)
-    //}
+    /// does not include location
+    pub(crate) fn index_pre_context_at(
+        &mut self,
+        location: &ChildLocation,
+    ) -> Option<Child> {
+        self.indexer().index_pre_context_at(location)
+    }
+    /// does not include location
+    pub(crate) fn index_post_context_at(
+        &mut self,
+        location: &ChildLocation,
+    ) -> Option<Child> {
+        self.indexer().index_post_context_at(location)
+    }
 }

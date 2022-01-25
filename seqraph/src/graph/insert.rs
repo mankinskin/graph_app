@@ -172,12 +172,6 @@ where
         }
         node
     }
-    pub(crate) fn index_range_at(
-        &mut self,
-        loc: PatternRangeLocation,
-    ) -> Option<Child> {
-        self.index_range_in(loc.parent, loc.pattern_id, loc.range)
-    }
     pub(crate) fn index_range_in(
         &mut self,
         parent: impl Indexed,
@@ -240,14 +234,10 @@ where
         let new_end = start + replace.len();
         for (_i, c) in rem.into_iter().enumerate() {
             let indices = &mut self.expect_parent_mut(c, parent_index).pattern_indices;
-            //println!("before {:#?}", indices);
             let drained: Vec<_> = indices.drain_filter(|i| i.pattern_id == pat && i.sub_index >= old_end)
-                .map(|i| PatternIndex::new(i.pattern_id, new_end + i.sub_index))
+                .map(|i| PatternIndex::new(i.pattern_id, new_end + i.sub_index - old_end))
                 .collect();
-            //println!("drained {:#?}", drained);
             indices.extend(drained);
-            //println!("res {:#?}", indices);
-            //println!("##########");
         }
         self.add_pattern_parent(Child::new(parent_index, width), replace, pat, start);
     }

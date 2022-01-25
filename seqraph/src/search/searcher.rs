@@ -58,21 +58,29 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
         Right::split_head_tail(pattern.as_pattern_view())
             .ok_or(NoMatch::EmptyPatterns)
             .and_then(|(head, tail)|
-                if tail.is_empty() {
-                    Ok(FoundPath::complete(head))
-                } else {
-                    self.bfs_match(
-                        head,
-                        tail,
-                        |start_path, root, loc| {
-                            // root at end of parent, recurse upwards to get all next children
-                            let mut start_path = start_path.clone();
-                            start_path.push(loc);
-                            self.bfs_root_parents(root, start_path)
-                        }
-                    )
+                self.find_ancestor_in_context(head, tail)
+            )
+    }
+    pub(crate) fn find_ancestor_in_context<'a>(
+        &'g self,
+        head: impl AsChild,
+        tail: impl IntoPattern<Item = impl AsChild>,
+    ) -> SearchResult {
+        let head = head.as_child();
+        if tail.is_empty() {
+            Err(NoMatch::SingleIndex)
+        } else {
+            self.bfs_match(
+                head,
+                tail,
+                |start_path, root, loc| {
+                    // root at end of parent, recurse upwards to get all next children
+                    let mut start_path = start_path.clone();
+                    start_path.push(loc);
+                    self.bfs_root_parents(root, start_path)
                 }
             )
+        }
     }
     fn bfs_root_parents(
         &self,
@@ -139,6 +147,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
         // try any parent, i.e. first
         let query = query.as_pattern_view();
         D::pattern_head(query)
+            .ok_or_else(|| NoMatch::SingleIndex)
             .and_then(|query_next| {
                 let query_next = query_next.to_child();
                 // if context not empty
@@ -251,7 +260,8 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                             Ok(match_path) =>
                                 match match_path.remainder {
                                     GrowthRemainder::Query(remainder)
-                                        => self.bfs_match(found_path.root, remainder, end_op),
+                                        => self.bfs_match(found_path.root, remainder.clone(), end_op)
+                                                .or_else(|_| Ok(FoundPath::remainder(found_path.root, remainder))),
                                     GrowthRemainder::Child(_) => Ok(FoundPath {
                                         root: found_path.root,
                                         start_path: found_path.start_path,
@@ -278,8 +288,10 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                         Ok(found_path)
                     }
                 )
+                .unwrap_or_else(||
+                    Err(NoMatch::NotFound(query.into_pattern()))
+                )
             })
-            .unwrap_or_else(|| Ok(FoundPath::remainder(start_index, query)))
     }
     ///// comparison on child pattern and context
     ///// returns ParentMatch and end index of match
