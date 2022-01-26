@@ -200,29 +200,6 @@ impl MatchDirection for Right {
             .cloned()
             .collect()
     }
-    //fn to_found_range(
-    //    p: Option<Pattern>,
-    //    context: Pattern,
-    //) -> FoundRange {
-    //    match (context.is_empty(), p) {
-    //        (false, Some(rem)) => FoundRange::Infix(context, rem),
-    //        (true, Some(rem)) => FoundRange::Prefix(rem),
-    //        (false, None) => FoundRange::Postfix(context),
-    //        (true, None) => FoundRange::Complete,
-    //    }
-    //}
-    //fn get_remainder(found_range: FoundRange) -> Option<Pattern> {
-    //    match found_range {
-    //        FoundRange::Prefix(rem) => Some(rem),
-    //        _ => None,
-    //    }
-    //}
-    //fn found_from_start(fr: &FoundRange) -> bool {
-    //    matches!(fr, FoundRange::Prefix(_) | FoundRange::Complete)
-    //}
-    //fn found_till_end(fr: &FoundRange) -> bool {
-    //    matches!(fr, FoundRange::Postfix(_) | FoundRange::Complete)
-    //}
 }
 
 impl MatchDirection for Left {

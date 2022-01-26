@@ -51,20 +51,6 @@ impl Merge for Pattern {
         last.map(|last| (last, self))
     }
 }
-//impl Merge for SplitSegment {
-//    fn split_front(self) -> Option<(Child, Pattern)> {
-//        match self {
-//            SplitSegment::Pattern(p, _) => p.split_front(),
-//            SplitSegment::Child(c) => c.split_front(),
-//        }
-//    }
-//    fn split_back(self) -> Option<(Child, Pattern)> {
-//        match self {
-//            SplitSegment::Pattern(p, _) => p.split_back(),
-//            SplitSegment::Child(c) => c.split_back(),
-//        }
-//    }
-//}
 impl IndexDirection for Left {
     type Opposite = Right;
     fn split_context_head(context: impl Merge) -> Option<(Child, Pattern)> {

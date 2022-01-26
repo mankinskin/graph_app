@@ -10,102 +10,6 @@ pub use searcher::*;
 mod bft;
 pub use bft::*;
 
-//// TODO: rename to something with context
-//#[derive(Debug, PartialEq, Eq, Clone, Hash)]
-//pub struct ParentMatch {
-//    pub parent_range: FoundRange, // context in parent
-//    pub remainder: Option<Pattern>, // remainder of query
-//}
-//impl ParentMatch {
-//    pub fn embed_in_super(
-//        self,
-//        other: Self,
-//    ) -> Self {
-//        Self {
-//            parent_range: self.parent_range.embed_in_super(other.parent_range),
-//            remainder: other.remainder,
-//        }
-//    }
-//}
-////pub type ParentMatchResult = Result<ParentMatch, NoMatch>;
-//
-//// found range of search pattern in vertex at index
-//// TODO: actually a context
-//#[derive(Debug, PartialEq, Eq, Clone, Hash)]
-//pub enum FoundRange {
-//    Complete,                // Full index found
-//    Prefix(Pattern),         // found prefix (remainder)
-//    Postfix(Pattern),        // found postfix (remainder)
-//    Infix(Pattern, Pattern), // found infix
-//}
-//impl FoundRange {
-//    pub fn matches_completely(&self) -> bool {
-//        self == &FoundRange::Complete
-//    }
-//    pub fn reverse(self) -> Self {
-//        match self {
-//            Self::Complete => Self::Complete,
-//            Self::Prefix(post) => Self::Postfix(post),
-//            Self::Postfix(pre) => Self::Prefix(pre),
-//            Self::Infix(pre, post) => Self::Infix(post, pre),
-//        }
-//    }
-//    pub fn embed_in_super(
-//        self,
-//        other: Self,
-//    ) -> Self {
-//        match (self, other) {
-//            (Self::Complete, outer) => outer,
-//            (inner, Self::Complete) => inner,
-//            (Self::Prefix(inner), Self::Postfix(outer)) => Self::Infix(outer, inner),
-//            (Self::Prefix(inner), Self::Prefix(outer)) => Self::Prefix([inner, outer].concat()),
-//            (Self::Prefix(inner), Self::Infix(louter, router)) => {
-//                Self::Infix(louter, [inner, router].concat())
-//            }
-//            (Self::Postfix(inner), Self::Prefix(outer)) => Self::Infix(inner, outer),
-//            (Self::Postfix(inner), Self::Postfix(outer)) => Self::Postfix([outer, inner].concat()),
-//            (Self::Postfix(inner), Self::Infix(louter, router)) => {
-//                Self::Infix([louter, inner].concat(), router)
-//            }
-//            (Self::Infix(linner, rinner), Self::Prefix(outer)) => {
-//                Self::Infix(linner, [rinner, outer].concat())
-//            }
-//            (Self::Infix(linner, rinner), Self::Postfix(outer)) => {
-//                Self::Infix([outer, linner].concat(), rinner)
-//            }
-//            (Self::Infix(linner, rinner), Self::Infix(louter, router)) => {
-//                Self::Infix([louter, linner].concat(), [rinner, router].concat())
-//            }
-//        }
-//    }
-//}
-//
-//#[derive(Debug, PartialEq, Eq, Clone, Hash)]
-//pub struct SearchFound {
-//    pub parent_match: ParentMatch, // match ranges
-//    //pub index: Child, // index in which we found the query
-//    //pub pattern_id: PatternId, // pattern
-//    //pub sub_index: usize, // starting index in pattern
-//    pub location: PatternRangeLocation,
-//    pub path: Vec<Child>,
-//}
-//impl SearchFound {
-//    pub fn unwrap_complete(self) -> Child {
-//        if let FoundRange::Complete = self.parent_match.parent_range {
-//            self.location.parent
-//        } else {
-//            panic!("Failed to unwrap {:#?} as complete match!", self);
-//        }
-//    }
-//    pub fn expect_complete(self, msg: &str) -> Child {
-//        if let FoundRange::Complete = self.parent_match.parent_range {
-//            self.location.parent
-//        } else {
-//            panic!("Failed to unwrap {:#?} as complete match: {}", self, msg);
-//        }
-//    }
-//}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FoundPath {
     pub(crate) root: Child,
@@ -359,7 +263,6 @@ pub(crate) mod tests {
     fn find_sequence() {
         let Context {
             graph,
-            a,
             abc,
             ababababcdefghi,
             ..
