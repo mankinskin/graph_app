@@ -110,15 +110,18 @@ impl VertexData {
     pub fn get_parents_mut(&mut self) -> &mut VertexParents {
         &mut self.parents
     }
-    pub fn get_child_pattern_range<R: SliceIndex<[Child]>>(
+    pub fn get_child_pattern_range<R: PatternRangeIndex>(
         &self,
         id: &PatternId,
         range: R,
     ) -> Result<&<R as SliceIndex<[Child]>>::Output, NoMatch> {
         self.children
             .get(id)
-            .and_then(|p| p.get(range))
-            .ok_or(NoMatch::NoChildPatterns)
+            .ok_or_else(|| NoMatch::InvalidPattern(*id))
+            .and_then(|p|
+                p.get(range.clone())
+                .ok_or_else(|| NoMatch::InvalidPatternRange(*id, p.clone(), format!("{:#?}", range)))
+            )
     }
     pub fn get_child_pattern_position(
         &self,
@@ -190,7 +193,7 @@ impl VertexData {
     pub fn get_child_pattern_vec(&self) -> Vec<Pattern> {
         self.get_child_patterns().into_iter().collect()
     }
-    pub fn add_pattern<P: IntoPattern<Item = impl AsChild>>(
+    pub fn add_pattern_no_update<P: IntoPattern<Item = impl AsChild>>(
         &mut self,
         pat: P,
     ) -> PatternId {

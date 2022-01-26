@@ -213,7 +213,7 @@ impl<'a, T: Tokenize, D: IndexDirection> Reader<'a, T, D> {
                     *pat.first().unwrap() == postfix
                 ).unwrap();
                 let post_context = self.index_post_context_at(&ChildLocation::new(next, n_pid, 0)).unwrap();
-                index.vertex_mut(self).add_pattern([pre_context, extension, post_context].as_slice());
+                self.add_pattern_to_node(index, [pre_context, extension, post_context].as_slice());
             }
             context = rem;
         }
@@ -227,7 +227,7 @@ impl<'a, T: Tokenize, D: IndexDirection> Reader<'a, T, D> {
         new: Pattern,
     ) -> Child {
         let vertex = parent.vertex_mut(self);
-        if vertex.children.len() == 1 {
+        if vertex.children.len() == 1 && vertex.parents.len() == 0 {
             // if no old overlaps
             // append to single pattern
             // no overlaps because new

@@ -1,6 +1,7 @@
 use crate::{
     vertex::*,
     search::*,
+    r#match::*,
     Hypergraph, ChildLocation,
 };
 
@@ -277,14 +278,14 @@ where
     pub(crate) fn index_pre_context_at(
         &mut self,
         location: &ChildLocation,
-    ) -> Option<Child> {
+    ) -> Result<Child, NoMatch> {
         self.indexer().index_pre_context_at(location)
     }
     /// does not include location
     pub(crate) fn index_post_context_at(
         &mut self,
         location: &ChildLocation,
-    ) -> Option<Child> {
+    ) -> Result<Child, NoMatch> {
         self.indexer().index_post_context_at(location)
     }
 }

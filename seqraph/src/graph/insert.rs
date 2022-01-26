@@ -86,7 +86,7 @@ where
         // todo handle token nodes
         let (width, indices, children) = self.to_width_indices_children(indices);
         let data = self.expect_vertex_data_mut(index.index());
-        let pattern_id = data.add_pattern(&children);
+        let pattern_id = data.add_pattern_no_update(&children);
         self.add_parents_to_pattern_nodes(indices, Child::new(index, width), pattern_id);
         pattern_id
     }
@@ -122,7 +122,7 @@ where
     ) -> (Child, PatternId) {
         let (width, indices, children) = self.to_width_indices_children(indices);
         let mut new_data = VertexData::new(0, width);
-        let pattern_index = new_data.add_pattern(&children);
+        let pattern_index = new_data.add_pattern_no_update(&children);
         let id = Self::next_pattern_vertex_id();
         let index = self.insert_vertex(VertexKey::Pattern(id), new_data);
         self.add_parents_to_pattern_nodes(indices, Child::new(index, width), pattern_index);
@@ -177,16 +177,15 @@ where
         parent: impl Indexed,
         pid: PatternId,
         range: impl PatternRangeIndex,
-    ) -> Option<Child> {
+    ) -> Result<Child, NoMatch> {
         let vertex = self.expect_vertex_data(parent.index());
-        let pattern = vertex.get_child_pattern_range(&pid, range.clone()).unwrap().to_vec();
-        if pattern.is_empty() {
-            None
-        } else {
-            let c = self.insert_pattern(pattern);
-            self.replace_in_pattern(parent.index(), pid, range, c);
-            Some(c)
-        }
+        vertex.get_child_pattern_range(&pid, range.clone())
+            .map(|pattern| pattern.to_vec())
+            .map(|pattern| {
+                let c = self.insert_pattern(pattern);
+                self.replace_in_pattern(parent.index(), pid, range, c);
+                c
+            })
     }
     //pub(crate) fn replace_range_at(
     //    &mut self,

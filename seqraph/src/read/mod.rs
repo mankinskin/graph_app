@@ -95,15 +95,15 @@ mod tests {
         assert_eq!(pats, hashset![
             vec![hel, l],
         ]);
-        let held = g.find_sequence("held".chars()).unwrap().expect_complete("held");
-        let pats: HashSet<_> = held.vertex(&g).get_child_pattern_set();
+        let dld = g.find_sequence("dld".chars()).unwrap().expect_complete("dld");
+        let pats: HashSet<_> = dld.vertex(&g).get_child_pattern_set();
         assert_eq!(pats, hashset![
-            vec![he, ld],
-            vec![hel, d],
+            vec![d, ld],
         ]);
         let pats: HashSet<_> = heldld.vertex(&g).get_child_pattern_set();
         assert_eq!(pats, hashset![
-            vec![held, ld],
+            vec![hel, dld],
+            vec![he, ld, ld],
         ]);
     }
     #[test]

@@ -20,6 +20,8 @@ pub enum NoMatch {
     NoChildPatterns,
     NotFound(Pattern),
     NoMatchingParent(VertexIndex),
+    InvalidPattern(PatternId),
+    InvalidPatternRange(PatternId, Pattern, String),
     SingleIndex,
     ParentMatchingPartially,
     UnknownKey,

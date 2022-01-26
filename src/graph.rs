@@ -85,14 +85,6 @@ impl Graph {
     pub(crate) fn vis_mut(&self) -> std::sync::RwLockWriteGuard<'_, GraphVis> {
         self.vis.write().unwrap()
     }
-    pub fn split_range(&self, index: VertexIndex, lower: NonZeroUsize, upper: NonZeroUsize) {
-        let lower = lower.get();
-        let upper = upper.get();
-        let _res = self.graph_mut().index_subrange(index, lower..upper);
-    }
-    pub fn split(&self, index: VertexIndex, pos: NonZeroUsize) {
-        let _res = self.graph_mut().index_prefix(index, pos);
-    }
     pub fn set_graph(&self, graph: Hypergraph<char>) {
         *self.graph_mut() = graph;
     }
@@ -454,27 +446,6 @@ impl NodeVis {
             })
             .response
     }
-    pub fn context_menu(&self, ui: &mut Ui) {
-        ui.horizontal(|ui| {
-            let mut state = self.state_mut();
-            ui.add(DragValue::new(&mut state.split_lower));
-            ui.add(DragValue::new(&mut state.split_upper));
-            state.split_upper = state.split_lower.max(state.split_upper);
-            if ui.button("Split").clicked() {
-                match (
-                    NonZeroUsize::new(state.split_lower),
-                    NonZeroUsize::new(state.split_upper),
-                ) {
-                    (Some(lower), Some(upper)) => self.graph.split_range(self.index, lower, upper),
-                    (None, Some(single)) | (Some(single), None) => {
-                        self.graph.split(self.index, single)
-                    }
-                    (None, None) => {}
-                }
-                ui.close_menu();
-            }
-        });
-    }
     pub fn show(&self, ui: &mut Ui, gvis: &GraphVis) -> Option<Response> {
         Window::new(&format!("{}({})", self.name, self.idx.index()))
             //Window::new(&self.name)
@@ -484,7 +455,7 @@ impl NodeVis {
                 ui.spacing_mut().item_spacing = Vec2::splat(0.0);
                 self.child_patterns(ui, gvis)
             })
-            .map(|ir| ir.response.context_menu(|ui| self.context_menu(ui)))
+            .map(|ir| ir.response)
     }
 }
 #[derive(Clone)]
