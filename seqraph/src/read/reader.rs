@@ -1,6 +1,7 @@
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+
 use crate::{
     r#match::*,
-    search::*,
     index::*,
     *,
 };
@@ -12,9 +13,9 @@ struct ReaderCache {
     buffer: Option<Child>,
 }
 impl ReaderCache {
-    fn append_new<'g, T: Tokenize, D: IndexDirection>(
+    fn append_new<T: Tokenize, D: IndexDirection>(
         &mut self,
-        reader: &'_ mut Reader<'g, T, D>,
+        reader: &'_ mut Reader<T, D>,
         new: Pattern,
     ) {
         if let Some(group) = self.group.as_mut() {
@@ -25,9 +26,9 @@ impl ReaderCache {
                 1 => {
                     let new = new.into_iter().next().unwrap();
                     if let Some(buffer) = self.buffer.take() {
-                        self.group = Some(reader.insert_pattern(vec![buffer, new]));
+                        self.group = Some(reader.graph_mut().insert_pattern(vec![buffer, new]));
                     } else {
-                        self.group = Some(reader.force_insert_pattern(vec![new]));
+                        self.group = Some(reader.graph_mut().force_insert_pattern(vec![new]));
                     }
                 },
                 _ => {
@@ -39,15 +40,15 @@ impl ReaderCache {
                     // insert new pattern so it can be found in later queries
                     // any new indicies afterwards need to be appended
                     // to the pattern inside this index
-                    let new = reader.insert_pattern(new);
+                    let new = reader.graph_mut().insert_pattern(new);
                     self.group = Some(new);
                 }
             }
         }
     }
-    fn read_known<'g, T: Tokenize, D: IndexDirection>(
+    fn read_known<T: Tokenize, D: IndexDirection>(
         &mut self,
-        reader: &'_ mut Reader<'g, T, D>,
+        reader: &'_ mut Reader<T, D>,
         known: Pattern,
     ) {
         if let Some(group) = self.group.as_mut() {
@@ -74,31 +75,37 @@ impl ReaderCache {
     }
 }
 #[derive(Debug)]
-pub struct Reader<'a, T: Tokenize, D: IndexDirection> {
-    graph: &'a mut Hypergraph<T>,
+pub struct Reader<T: Tokenize, D: IndexDirection> {
+    graph: Arc<RwLock<Hypergraph<T>>>,
     _ty: std::marker::PhantomData<D>,
 }
-impl<'a, T: Tokenize, D: IndexDirection> std::ops::Deref for Reader<'a, T, D> {
-    type Target = Hypergraph<T>;
-    fn deref(&self) -> &Self::Target {
-        self.graph
-    }
-}
-impl<'a, T: Tokenize, D: IndexDirection> std::ops::DerefMut for Reader<'a, T, D> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.graph
-    }
-}
-impl<'a, T: Tokenize, D: IndexDirection> Reader<'a, T, D> {
-    pub(crate) fn new(graph: &'a mut Hypergraph<T>) -> Self {
+//impl<T: Tokenize, D: IndexDirection> std::ops::Deref for Reader<T, D> {
+//    type Target = Hypergraph<T>;
+//    fn deref(&self) -> &Self::Target {
+//        &*self.graph.read().unwrap()
+//    }
+//}
+//impl<T: Tokenize, D: IndexDirection> std::ops::DerefMut for Reader<T, D> {
+//    fn deref_mut(&mut self) -> &mut Self::Target {
+//        &mut *self.graph.write().unwrap()
+//    }
+//}
+impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
+    pub(crate) fn new(graph: Arc<RwLock<Hypergraph<T>>>) -> Self {
         Self {
             graph,
             _ty: Default::default(),
         }
     }
+    pub(crate) fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>> {
+        self.graph.read().unwrap()
+    }
+    pub(crate) fn graph_mut(&mut self) -> RwLockWriteGuard<'_, Hypergraph<T>> {
+        self.graph.write().unwrap()
+    }
     #[allow(unused)]
-    pub(crate) fn right_searcher(&self) -> Searcher<T, Right> {
-        Searcher::new(self.graph)
+    pub(crate) fn indexer(&self) -> Indexer<T, D> {
+        Indexer::new(self.graph.clone())
     }
     fn new_token_indices(
         &mut self,
@@ -107,10 +114,13 @@ impl<'a, T: Tokenize, D: IndexDirection> Reader<'a, T, D> {
         sequence
             .into_iter()
             .map(|t| Token::Element(t))
-            .map(|t| match self.get_token_index(t) {
+            .map(|t| match {
+                let graph = self.graph();
+                graph.get_token_index(t)
+            } {
                 Ok(i) => NewTokenIndex::Known(i),
                 Err(_) => {
-                    let i = self.insert_token(t);
+                    let i = self.graph_mut().insert_token(t);
                     NewTokenIndex::New(i.index)
                 }
             })
@@ -160,10 +170,11 @@ impl<'a, T: Tokenize, D: IndexDirection> Reader<'a, T, D> {
         pattern: Vec<Child>,
     ) -> (Child, Pattern) {
         //let _pat_str = self.graph.pattern_string(&pattern);
-        match self.find_ancestor(&pattern) {
-            Ok(found_path) => {
-                let (_lctx, inner, _rctx, rem) = self.index_found(found_path);
-                (inner, rem)
+        match self.indexer().index_pattern(&pattern) {
+            Ok(_indexed_path) => {
+                unimplemented!();
+                //let (_lctx, inner, _rctx, rem) = self.index_found(found_path);
+                //(inner, rem)
             }
             Err(_not_found) => {
                 let (c, rem) = D::split_context_head(pattern).unwrap();
@@ -177,7 +188,8 @@ impl<'a, T: Tokenize, D: IndexDirection> Reader<'a, T, D> {
             let mut extensions = vec![];
             let mut smallest_postfix = Some(index);
             while let Some(current) = smallest_postfix.take() {
-                let vertex = current.vertex(self);
+                let graph = &*self.graph();
+                let vertex = current.vertex(&graph);
                 // find extensions from index into context
                 for (pid, mut p) in vertex.get_children().clone().into_iter() {
                     let postfix = p.pop().unwrap().clone();
@@ -190,10 +202,10 @@ impl<'a, T: Tokenize, D: IndexDirection> Reader<'a, T, D> {
                         }
                     );
                     // if extension found
-                    if let Some(found) = self.find_ancestor_in_context(postfix, context.clone()).ok() {
+                    if let Some(found) = graph.find_ancestor_in_context(postfix, context.clone()).ok() {
                         // create index for extension
-                        let (_, extension, _, _rem) = self.index_found(found);
-                        let pre_context = self.index_pre_context_at(&ChildLocation::new(current, pid, p.len())).unwrap();
+                        let (_, extension, _, _rem) = self.indexer().index_found(found);
+                        let pre_context = self.indexer().index_pre_context_at(&ChildLocation::new(current, pid, p.len())).unwrap();
                         // find pid with postfix context in extension
                         extensions.push((pre_context, postfix, extension));
                     }
@@ -202,18 +214,21 @@ impl<'a, T: Tokenize, D: IndexDirection> Reader<'a, T, D> {
             let (next, rem) = self.read_prefix(context.clone());
             index = self.append_new_pattern_to_index(index, next.into_pattern());
             for (pre_context, postfix, extension) in extensions.into_iter() {
-                let pid = extension.vertex(self).find_child_pattern_id(|(_pid, pat)|
-                    *pat.first().unwrap() == postfix
-                ).unwrap();
-                let p = extension.vertex(self).get_child_pattern(&pid).unwrap();
-                // postfix of extension
-                let postfix = *p.last().unwrap();
-                // find context of extension in next
-                let n_pid = next.vertex(self).find_child_pattern_id(|(_pid, pat)|
-                    *pat.first().unwrap() == postfix
-                ).unwrap();
-                let post_context = self.index_post_context_at(&ChildLocation::new(next, n_pid, 0)).unwrap();
-                self.add_pattern_to_node(index, [pre_context, extension, post_context].as_slice());
+                let n_pid = {
+                    let graph = &*self.graph();
+                    let pid = extension.vertex(&graph).find_child_pattern_id(|(_pid, pat)|
+                        *pat.first().unwrap() == postfix
+                    ).unwrap();
+                    let p = extension.vertex(&graph).get_child_pattern(&pid).unwrap();
+                    // postfix of extension
+                    let postfix = *p.last().unwrap();
+                    // find context of extension in next
+                    next.vertex(&graph).find_child_pattern_id(|(_pid, pat)|
+                        *pat.first().unwrap() == postfix
+                    ).unwrap()
+                };
+                let post_context = self.indexer().index_post_context_at(&ChildLocation::new(next, n_pid, 0)).unwrap();
+                self.graph_mut().add_pattern_to_node(index, [pre_context, extension, post_context].as_slice());
             }
             context = rem;
         }
@@ -226,16 +241,17 @@ impl<'a, T: Tokenize, D: IndexDirection> Reader<'a, T, D> {
         parent: Child,
         new: Pattern,
     ) -> Child {
-        let vertex = parent.vertex_mut(self);
+        let mut graph = &mut *self.graph_mut();
+        let vertex = parent.vertex_mut(&mut graph);
         if vertex.children.len() == 1 && vertex.parents.len() == 0 {
             // if no old overlaps
             // append to single pattern
             // no overlaps because new
             let (&pid, _) = vertex.expect_any_pattern();
-            self.append_to_pattern(parent, pid, new)
+            graph.append_to_pattern(parent, pid, new)
         } else {
             // some old overlaps though
-            self.insert_pattern([&[parent], new.as_slice()].concat())
+            graph.insert_pattern([&[parent], new.as_slice()].concat())
         }
     }
 }

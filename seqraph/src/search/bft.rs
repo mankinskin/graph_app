@@ -55,3 +55,12 @@ where
     I: Iterator<Item = T>,
 {
 }
+
+pub(crate) trait Traversable {
+    type Node;
+    type State;
+}
+pub(crate) trait BreadthFirstTraversal<'g> {
+    type Trav: Traversable;
+    fn end_op(state: <Self::Trav as Traversable>::State) -> Vec<<Self::Trav as Traversable>::Node>;
+}

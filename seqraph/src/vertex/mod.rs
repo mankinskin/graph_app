@@ -348,44 +348,48 @@ impl VertexData {
     }
 }
 
+use std::ops::{
+    Deref,
+    DerefMut,
+};
 impl<'g> Vertexed<'g, 'g> for &'g VertexData {
-    fn vertex<T: Tokenize>(
+    fn vertex<T: Tokenize + 'g, R: Deref<Target=Hypergraph<T>> + 'g>(
         self,
-        _graph: &'g Hypergraph<T>,
+        _graph: &'g R,
     ) -> &'g VertexData {
         self
     }
-    fn vertex_ref<T: Tokenize>(
+    fn vertex_ref<T: Tokenize + 'g, R: Deref<Target=Hypergraph<T>> + 'g>(
         &'g self,
-        _graph: &'g Hypergraph<T>,
+        _graph: &'g R,
     ) -> &'g VertexData {
         *self
     }
 }
 impl<'g> Vertexed<'g, 'g> for &'g mut VertexData {
-    fn vertex<T: Tokenize>(
+    fn vertex<T: Tokenize + 'g, R: Deref<Target=Hypergraph<T>> + 'g>(
         self,
-        _graph: &'g Hypergraph<T>,
+        _graph: &'g R,
     ) -> &'g VertexData {
         self
     }
-    fn vertex_ref<T: Tokenize>(
+    fn vertex_ref<T: Tokenize + 'g, R: Deref<Target=Hypergraph<T>> + 'g>(
         &'g self,
-        _graph: &'g Hypergraph<T>,
+        _graph: &'g R,
     ) -> &'g VertexData {
         *self
     }
 }
 impl<'g> VertexedMut<'g, 'g> for &'g mut VertexData {
-    fn vertex_mut<T: Tokenize>(
+    fn vertex_mut<T: Tokenize + 'g, R: Deref<Target=Hypergraph<T>> + DerefMut + 'g>(
         self,
-        _graph: &'g mut Hypergraph<T>,
+        _graph: &'g mut R,
     ) -> &'g mut VertexData {
         self
     }
-    fn vertex_ref_mut<T: Tokenize>(
+    fn vertex_ref_mut<T: Tokenize + 'g, R: Deref<Target=Hypergraph<T>> + DerefMut + 'g>(
         &'g mut self,
-        _graph: &'g mut Hypergraph<T>,
+        _graph: &'g mut R,
     ) -> &'g mut VertexData {
         *self
     }

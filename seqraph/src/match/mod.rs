@@ -62,14 +62,17 @@ impl ChildLocation {
 }
 pub type ChildPath = Vec<ChildLocation>;
 
-impl<'t, 'a, T> Hypergraph<T>
+impl<'t, 'g, T> Hypergraph<T>
 where
     T: Tokenize + 't,
 {
-    pub fn right_matcher(&'a self) -> Matcher<'a, T, Right> {
+    pub(crate) fn matcher<D: MatchDirection>(&'g self) -> Matcher<'g, T, D> {
         Matcher::new(self)
     }
-    pub fn left_matcher(&'a self) -> Matcher<'a, T, Left> {
-        Matcher::new(self)
+    pub fn right_matcher(&'g self) -> Matcher<'g, T, Right> {
+        self.matcher()
+    }
+    pub fn left_matcher(&'g self) -> Matcher<'g, T, Left> {
+        self.matcher()
     }
 }

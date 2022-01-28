@@ -10,6 +10,13 @@ pub use searcher::*;
 mod bft;
 pub use bft::*;
 
+#[derive(Clone, Debug)]
+pub(crate) enum SearchNode {
+    Start(Child),
+    Parent(ChildPath), // start path, parent, pattern index
+    Child(ChildPath, Child, ChildPath, Child), // start path, root, end path, child
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FoundPath {
     pub(crate) root: Child,
@@ -17,6 +24,7 @@ pub struct FoundPath {
     pub(crate) end_path: Option<ChildPath>,
     pub(crate) remainder: Option<Pattern>
 }
+
 impl FoundPath {
     pub fn complete(root: impl AsChild) -> Self {
         Self {
@@ -96,16 +104,19 @@ impl FoundPath {
 }
 pub type SearchResult = Result<FoundPath, NoMatch>;
 
-impl<'t, 'a, T> Hypergraph<T>
+impl<'t, 'g, T> Hypergraph<T>
 where
     T: Tokenize + 't,
 {
-    pub(crate) fn right_searcher(&'a self) -> Searcher<'a, T, Right> {
+    pub(crate) fn searcher<D: MatchDirection>(&'g self) -> Searcher<'g, T, D> {
         Searcher::new(self)
     }
+    pub(crate) fn right_searcher(&'g self) -> Searcher<'g, T, Right> {
+        self.searcher()
+    }
     #[allow(unused)]
-    pub(crate) fn left_searcher(&'a self) -> Searcher<'a, T, Left> {
-        Searcher::new(self)
+    pub(crate) fn left_searcher(&'g self) -> Searcher<'g, T, Left> {
+        self.searcher()
     }
     pub(crate) fn find_ancestor(
         &self,

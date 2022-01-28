@@ -3,7 +3,7 @@ use itertools::Itertools;
 use petgraph::graph::DiGraph;
 use std::{
     collections::HashMap,
-    fmt::Debug,
+    fmt::Debug, sync::{Arc, RwLock},
 };
 
 mod child_strings;
@@ -14,6 +14,21 @@ pub use {
     getters::*,
     insert::*,
 };
+
+#[derive(Clone, Default)]
+pub struct HypergraphRef<T: Tokenize>(pub Arc<RwLock<Hypergraph<T>>>);
+
+impl<T: Tokenize> std::ops::Deref for HypergraphRef<T> {
+    type Target = Arc<RwLock<Hypergraph<T>>>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl<T: Tokenize> std::ops::DerefMut for HypergraphRef<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct Hypergraph<T: Tokenize> {

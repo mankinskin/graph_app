@@ -202,7 +202,7 @@ where
         range: impl PatternRangeIndex,
         rep: impl IntoPattern<Item = impl AsChild> + Clone,
     ) {
-        if range.start_bound() == range.end_bound() {
+        if range.clone().next().is_none() {
             // empty range
             return;
         }
