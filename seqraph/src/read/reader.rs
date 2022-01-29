@@ -184,54 +184,55 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     }
     pub fn overlap_index(&mut self, mut index: Child, mut context: Pattern) -> Child {
         // keep going down into next smallest postfi
-        while !context.is_empty() {
-            let mut extensions = vec![];
-            let mut smallest_postfix = Some(index);
-            while let Some(current) = smallest_postfix.take() {
-                let graph = &*self.graph();
-                let vertex = current.vertex(&graph);
-                // find extensions from index into context
-                for (pid, mut p) in vertex.get_children().clone().into_iter() {
-                    let postfix = p.pop().unwrap().clone();
-                    // remember smallest postfix
-                    smallest_postfix = smallest_postfix.map_or(Some(postfix), |smallest|
-                        if postfix.width > 1 && smallest.width() > postfix.width() {
-                            Some(postfix)
-                        } else {
-                            Some(smallest)
-                        }
-                    );
-                    // if extension found
-                    if let Some(found) = graph.find_ancestor_in_context(postfix, context.clone()).ok() {
-                        // create index for extension
-                        let (_, extension, _, _rem) = self.indexer().index_found(found);
-                        let pre_context = self.indexer().index_pre_context_at(&ChildLocation::new(current, pid, p.len())).unwrap();
-                        // find pid with postfix context in extension
-                        extensions.push((pre_context, postfix, extension));
-                    }
-                }
-            }
-            let (next, rem) = self.read_prefix(context.clone());
-            index = self.append_new_pattern_to_index(index, next.into_pattern());
-            for (pre_context, postfix, extension) in extensions.into_iter() {
-                let n_pid = {
-                    let graph = &*self.graph();
-                    let pid = extension.vertex(&graph).find_child_pattern_id(|(_pid, pat)|
-                        *pat.first().unwrap() == postfix
-                    ).unwrap();
-                    let p = extension.vertex(&graph).get_child_pattern(&pid).unwrap();
-                    // postfix of extension
-                    let postfix = *p.last().unwrap();
-                    // find context of extension in next
-                    next.vertex(&graph).find_child_pattern_id(|(_pid, pat)|
-                        *pat.first().unwrap() == postfix
-                    ).unwrap()
-                };
-                let post_context = self.indexer().index_post_context_at(&ChildLocation::new(next, n_pid, 0)).unwrap();
-                self.graph_mut().add_pattern_to_node(index, [pre_context, extension, post_context].as_slice());
-            }
-            context = rem;
-        }
+        //unimplemented!();
+        //while !context.is_empty() {
+        //    let mut extensions = vec![];
+        //    let mut smallest_postfix = Some(index);
+        //    while let Some(current) = smallest_postfix.take() {
+        //        let graph = &*self.graph();
+        //        let vertex = current.vertex(&graph);
+        //        // find extensions from index into context
+        //        for (pid, mut p) in vertex.get_children().clone().into_iter() {
+        //            let postfix = p.pop().unwrap().clone();
+        //            // remember smallest postfix
+        //            smallest_postfix = smallest_postfix.map_or(Some(postfix), |smallest|
+        //                if postfix.width > 1 && smallest.width() > postfix.width() {
+        //                    Some(postfix)
+        //                } else {
+        //                    Some(smallest)
+        //                }
+        //            );
+        //            // if extension found
+        //            if let Some(found) = graph.find_ancestor_in_context(postfix, context.clone()).ok() {
+        //                // create index for extension
+        //                let (_, extension, _, _rem) = self.indexer().index_found(found);
+        //                let pre_context = self.indexer().index_pre_context_at(&ChildLocation::new(current, pid, p.len())).unwrap();
+        //                // find pid with postfix context in extension
+        //                extensions.push((pre_context, postfix, extension));
+        //            }
+        //        }
+        //    }
+        //    let (next, rem) = self.read_prefix(context.clone());
+        //    index = self.append_new_pattern_to_index(index, next.into_pattern());
+        //    for (pre_context, postfix, extension) in extensions.into_iter() {
+        //        let n_pid = {
+        //            let graph = &*self.graph();
+        //            let pid = extension.vertex(&graph).find_child_pattern_id(|(_pid, pat)|
+        //                *pat.first().unwrap() == postfix
+        //            ).unwrap();
+        //            let p = extension.vertex(&graph).get_child_pattern(&pid).unwrap();
+        //            // postfix of extension
+        //            let postfix = *p.last().unwrap();
+        //            // find context of extension in next
+        //            next.vertex(&graph).find_child_pattern_id(|(_pid, pat)|
+        //                *pat.first().unwrap() == postfix
+        //            ).unwrap()
+        //        };
+        //        let post_context = self.indexer().index_post_context_at(&ChildLocation::new(next, n_pid, 0)).unwrap();
+        //        self.graph_mut().add_pattern_to_node(index, [pre_context, extension, post_context].as_slice());
+        //    }
+        //    context = rem;
+        //}
         index
     }
     /// append a pattern of new token indices
