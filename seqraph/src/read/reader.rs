@@ -1,7 +1,6 @@
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::{RwLockReadGuard, RwLockWriteGuard};
 
 use crate::{
-    r#match::*,
     index::*,
     *,
 };
@@ -76,7 +75,7 @@ impl ReaderCache {
 }
 #[derive(Debug)]
 pub struct Reader<T: Tokenize, D: IndexDirection> {
-    graph: Arc<RwLock<Hypergraph<T>>>,
+    graph: HypergraphRef<T>,
     _ty: std::marker::PhantomData<D>,
 }
 //impl<T: Tokenize, D: IndexDirection> std::ops::Deref for Reader<T, D> {
@@ -91,7 +90,7 @@ pub struct Reader<T: Tokenize, D: IndexDirection> {
 //    }
 //}
 impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
-    pub(crate) fn new(graph: Arc<RwLock<Hypergraph<T>>>) -> Self {
+    pub(crate) fn new(graph: HypergraphRef<T>) -> Self {
         Self {
             graph,
             _ty: Default::default(),
@@ -182,7 +181,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             },
         }
     }
-    pub fn overlap_index(&mut self, mut index: Child, mut context: Pattern) -> Child {
+    pub fn overlap_index(&mut self, index: Child, mut _context: Pattern) -> Child {
         // keep going down into next smallest postfi
         //unimplemented!();
         //while !context.is_empty() {

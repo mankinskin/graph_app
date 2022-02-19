@@ -4,50 +4,71 @@ use crate::{
     Hypergraph,
 };
 use itertools::*;
-use std::ops::Deref;
+use std::sync::{RwLockReadGuard, RwLockWriteGuard};
 
-pub struct Searcher<'g, T: Tokenize, D: MatchDirection> {
-    graph: &'g Hypergraph<T>,
+#[derive(Clone)]
+pub struct Searcher<T: Tokenize, D: MatchDirection> {
+    graph: HypergraphRef<T>,
     _ty: std::marker::PhantomData<D>,
 }
-impl<'g, T: Tokenize, D: MatchDirection> Deref for Searcher<'g, T, D> {
-    type Target = Hypergraph<T>;
-    fn deref(&self) -> &Self::Target {
-        self.graph
-    }
-}
+//impl<'g, T: Tokenize, D: MatchDirection> Deref for Searcher<'g, T, D> {
+//    type Target = Hypergraph<T>;
+//    fn deref(&self) -> &Self::Target {
+//        self.graph
+//    }
+//}
 
 struct AncestorSearch<'g, T: Tokenize + 'g, D: MatchDirection> {
     _ty: std::marker::PhantomData<(&'g T, D)>,
 }
-impl<'g, T: Tokenize + 'g, D: MatchDirection + 'g> BreadthFirstTraversal<'g> for AncestorSearch<'g, T, D> {
-    type Trav = Searcher<'g, T, D>;
-    fn end_op((searcher, start_path, root, loc): <Self::Trav as Traversable>::State) -> Vec<<Self::Trav as Traversable>::Node> {
+impl<'g, T: Tokenize + 'g, D: MatchDirection + 'g> BreadthFirstTraversal<'g, T> for AncestorSearch<'g, T, D> {
+    type Trav = Searcher<T, D>;
+    fn end_op(
+        trav: Self::Trav,
+        start_path: ChildPath,
+        root: Child,
+        loc: ChildLocation,
+    ) -> Vec<<Self::Trav as Traversable<T>>::Node> {
         let mut start_path = start_path.clone();
         start_path.push(loc);
-        searcher.bft_parents(root, start_path)
+        trav.parent_nodes(root, start_path)
     }
+}
+impl<'g, T: Tokenize, D: MatchDirection + 'g> DirectedTraversalPolicy<'g, T, D> for AncestorSearch<'g, T, D> {
 }
 struct ParentSearch<'g, T: Tokenize + 'g, D: MatchDirection> {
     _ty: std::marker::PhantomData<(&'g T, D)>,
 }
-impl<'g, T: Tokenize + 'g, D: MatchDirection + 'g> BreadthFirstTraversal<'g> for ParentSearch<'g, T, D> {
-    type Trav = Searcher<'g, T, D>;
-    fn end_op(_state: <Self::Trav as Traversable>::State) -> Vec<<Self::Trav as Traversable>::Node> {
-        vec![]
-    }
-}
-impl<'g, T: Tokenize + 'g, D: MatchDirection + 'g> Traversable for Searcher<'g, T, D> {
+impl<T: Tokenize, D: MatchDirection> Traversable<T> for Searcher<T, D> {
     type Node = SearchNode;
     type State = (
-        &'g Self,
+        Self,
         ChildPath,
         Child,
         ChildLocation,
     );
+    fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>> {
+        self.graph.read().unwrap()
+    }
+    fn graph_mut(&mut self) -> RwLockWriteGuard<'_, Hypergraph<T>> {
+        self.graph.write().unwrap()
+    }
 }
-impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
-    pub fn new(graph: &'g Hypergraph<T>) -> Self {
+impl<'g, T: Tokenize + 'g, D: MatchDirection + 'g> BreadthFirstTraversal<'g, T> for ParentSearch<'g, T, D> {
+    type Trav = Searcher<T, D>;
+    fn end_op(
+        _trav: Self::Trav,
+        _start_path: ChildPath,
+        _root: Child,
+        _loc: ChildLocation,
+    ) -> Vec<<Self::Trav as Traversable<T>>::Node> {
+        vec![]
+    }
+}
+impl<'g, T: Tokenize, D: MatchDirection + 'g> DirectedTraversalPolicy<'g, T, D> for ParentSearch<'g, T, D> {
+}
+impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<T, D> {
+    pub fn new(graph: HypergraphRef<T>) -> Self {
         Self {
             graph,
             _ty: Default::default(),
@@ -61,9 +82,8 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
         Right::split_head_tail(pattern.as_pattern_view())
             .ok_or(NoMatch::EmptyPatterns)
             .and_then(|(head, context)| {
-                let start = head.vertex(self);
-                self.bft_search::<ParentSearch<'g, T, D>, _, _, _>(
-                    start,
+                self.bft_search::<ParentSearch<'_, T, D>, _, _, _>(
+                    head,
                     context,
                 )
             })
@@ -94,64 +114,6 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
             )
         }
     }
-    fn bft_parents(
-        &self,
-        root: Child,
-        start_path: ChildPath,
-    ) -> Vec<SearchNode> {
-        let vertex = root.vertex(self);
-        let mut parents = vertex.get_parents().into_iter().collect_vec();
-        // try parents in ascending width
-        parents.sort_unstable_by_key(|a| a.1.width);
-        parents.into_iter()
-            .map(|(i, parent)| {
-                let p = Child::new(i, parent.width);
-                parent.pattern_indices
-                    .iter()
-                    .map(|&i| {
-                        let mut start_path = start_path.clone();
-                        start_path.push(ChildLocation::new(p, i.pattern_id, i.sub_index));
-                        SearchNode::Parent(start_path)
-                    })
-                    .collect_vec()
-            })
-            .flatten()
-            .collect_vec()
-    }
-    fn bft_children<
-        S: BreadthFirstTraversal<'g, Trav=Self>,
-    >(
-        &'g self,
-        mut start_path: ChildPath,
-        context_next: Child,
-    ) -> Vec<SearchNode> {
-        // find parent partition with matching context
-        let loc@ChildLocation {
-            parent: root,
-            pattern_id,
-            sub_index,
-        } = start_path.pop().unwrap();
-        let parent_vertex = self.expect_vertex_data(root.index());
-        let child_patterns = parent_vertex.get_children();
-        let pattern = child_patterns.get(&pattern_id).unwrap();
-        if let Some(next_child) = D::next_child(pattern, sub_index) {
-            // equal indices would have been found in find
-            if next_child.width > context_next.width {
-                Some(SearchNode::Child(
-                    start_path,
-                    root,
-                    vec![ChildLocation::new(root, pattern_id, D::index_next(sub_index).unwrap())],
-                    next_child,
-                ))
-            } else {
-                None
-            }
-            .into_iter()
-            .collect_vec()
-        } else {
-            S::end_op((self, start_path, root, loc))
-        }
-    }
     pub(crate) fn match_parent(
         &self,
         mut start_path: ChildPath,
@@ -164,7 +126,8 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
             pattern_id,
             sub_index,
         } = start_path.pop().unwrap();
-        let parent_vertex = self.expect_vertex_data(parent.index());
+        let graph = self.graph();
+        let parent_vertex = graph.expect_vertex_data(parent.index());
         let child_patterns = parent_vertex.get_children();
         let pattern = child_patterns.get(&pattern_id).unwrap();
         D::next_child(pattern, sub_index)
@@ -197,7 +160,8 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
         query: impl IntoPattern<Item=impl AsChild>
     ) -> Option<FoundPath> {
         // find child starting with next_child
-        let vertex = self.expect_vertex_data(current);
+        let graph = self.graph();
+        let vertex = graph.expect_vertex_data(current);
         let child_patterns = vertex.get_children();
         child_patterns
             .into_iter()
@@ -212,13 +176,13 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
             })
     }
     pub(crate) fn expand_found<
-        S: BreadthFirstTraversal<'g, Trav=Self>,
+        S: DirectedTraversalPolicy<'g, T, D, Trav=Self>,
     >(
         &'g self,
         found_path: FoundPath,
     ) -> SearchResult {
         if let Some(end_path) = found_path.end_path.clone() {
-            match self.matcher::<D>()
+            match self.graph().matcher::<D>()
                 .match_path_in_context(
                     end_path,
                     found_path.remainder.clone().unwrap_or_default(),
@@ -267,7 +231,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
     }
     fn bft_search<
         'a,
-        S: BreadthFirstTraversal<'g, Trav=Self>,
+        S: DirectedTraversalPolicy<'g, T, D, Trav=Self>,
         V: Vertexed<'a, 'g>,
         C: AsChild,
         Q: IntoPattern<Item = C>,
@@ -288,18 +252,20 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<'g, T, D> {
                 Bft::new(SearchNode::Start(start_index), move |node| {
                     match node.clone() {
                         SearchNode::Start(root) => {
-                            self.bft_parents(root, vec![])
+                            self.parent_nodes(root, vec![])
                                 .into_iter()
                         },
                         SearchNode::Parent(start_path) => {
-                            self.bft_children::<S>(
+                            S::successor_nodes(
+                                (*self).clone(),
                                 start_path,
                                 query_next,
                             )
                             .into_iter()
                         },
                         SearchNode::Child(start_path, root, path, child) => {
-                            let vertex = self.expect_vertex_data(child);
+                            let graph = self.graph();
+                            let vertex = graph.expect_vertex_data(child);
                             let child_patterns = vertex.get_children();
                             child_patterns
                                 .into_iter()

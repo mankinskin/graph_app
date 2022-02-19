@@ -3,7 +3,7 @@ use crate::{
 };
 pub use crate::direction::*;
 
-pub trait IndexDirection: MatchDirection {
+pub trait IndexDirection: MatchDirection + Clone {
     type Opposite: IndexDirection;
     fn split_context_head(context: impl Merge) -> Option<(Child, Pattern)>;
     fn split_last(context: impl Merge) -> Option<(Pattern, Child)> {

@@ -15,9 +15,14 @@ pub use {
     insert::*,
 };
 
-#[derive(Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct HypergraphRef<T: Tokenize>(pub Arc<RwLock<Hypergraph<T>>>);
 
+impl<T: Tokenize> From<Hypergraph<T>> for HypergraphRef<T> {
+    fn from(g: Hypergraph<T>) -> Self {
+        Self(Arc::new(RwLock::new(g)))
+    }
+}
 impl<T: Tokenize> std::ops::Deref for HypergraphRef<T> {
     type Target = Arc<RwLock<Hypergraph<T>>>;
     fn deref(&self) -> &Self::Target {
@@ -173,7 +178,7 @@ pub(crate) mod tests {
         RwLockWriteGuard,
     };
     pub struct Context {
-        pub graph: Hypergraph<char>,
+        pub graph: HypergraphRef<char>,
         pub a: Child,
         pub b: Child,
         pub c: Child,
@@ -298,7 +303,7 @@ pub(crate) mod tests {
                     [ababab, abcdefghi],
                 ]);
                 Context {
-                    graph,
+                    graph: HypergraphRef::from(graph),
                     a,
                     b,
                     c,

@@ -19,7 +19,7 @@ fn to_matching_iterator<'a, I: Indexed + 'a, J: Indexed + 'a>(
             _ => false,
         })
 }
-pub trait MatchDirection {
+pub trait MatchDirection : Clone {
     type Opposite: MatchDirection;
     /// get the parent where vertex is at the relevant position
     fn get_match_parent_to(

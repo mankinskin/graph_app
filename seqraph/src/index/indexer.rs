@@ -1,6 +1,4 @@
 use std::sync::{
-    Arc,
-    RwLock,
     RwLockReadGuard,
     RwLockWriteGuard,
 };
@@ -9,23 +7,23 @@ use crate::{
     vertex::*,
     r#match::*,
     index::*,
-    Hypergraph,
+    Hypergraph, HypergraphRef,
 };
 use itertools::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Indexer<T: Tokenize, D: IndexDirection> {
-    graph: Arc<RwLock<Hypergraph<T>>>,
+    graph: HypergraphRef<T>,
     _ty: std::marker::PhantomData<D>,
 }
-impl<T: Tokenize, D: IndexDirection> Clone for Indexer<T, D> {
-    fn clone(&self) -> Self {
-        Self {
-            graph: self.graph.clone(),
-            _ty: Default::default(),
-        }
-    }
-}
+//impl<T: Tokenize, D: IndexDirection> Clone for Indexer<T, D> {
+//    fn clone(&self) -> Self {
+//        Self {
+//            graph: self.graph.clone(),
+//            _ty: Default::default(),
+//        }
+//    }
+//}
 //impl<T: Tokenize, D: IndexDirection> std::ops::Deref for Indexer<T, D> {
 //    type Target = Hypergraph<T>;
 //    fn deref(&self) -> &Self::Target {
@@ -40,35 +38,41 @@ impl<T: Tokenize, D: IndexDirection> Clone for Indexer<T, D> {
 struct Indexing<T: Tokenize, D: IndexDirection> {
     _ty: std::marker::PhantomData<(T, D)>,
 }
-impl<'g, T: Tokenize, D: IndexDirection> BreadthFirstTraversal<'g> for Indexing<T, D> {
-    type Trav = Indexer<T, D>;
-    fn end_op((indexer, mut start_path, root, subgraph): <Self::Trav as Traversable>::State) -> Vec<<Self::Trav as Traversable>::Node> {
-        // root at end of parent, recurse upwards to get all next children
-        //subgraph.add_index_parent(root.index, loc.parent, PatternIndex::new(loc.pattern_id, loc.sub_index));
-        indexer.bft_parents(start_path, root, subgraph)
-    }
-}
-impl<T: Tokenize, D: IndexDirection> Traversable for Indexer<T, D> {
+impl<T: Tokenize, D: IndexDirection> Traversable<T> for Indexer<T, D> {
     type Node = IndexingNode;
     type State = (
         Self,
-        ChildPath,
         Child,
-        Arc<RwLock<Subgraph>>,
+        ChildPath,
     );
+    fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>> {
+        self.graph.read().unwrap()
+    }
+    fn graph_mut(&mut self) -> RwLockWriteGuard<'_, Hypergraph<T>> {
+        self.graph.write().unwrap()
+    }
+}
+impl<'g, T: Tokenize, D: IndexDirection> BreadthFirstTraversal<'g, T> for Indexing<T, D> {
+    type Trav = Indexer<T, D>;
+    fn end_op(
+        trav: Self::Trav,
+        start_path: ChildPath,
+        root: Child,
+        _loc: ChildLocation,
+    ) -> Vec<<Self::Trav as Traversable<T>>::Node> {
+        // root at end of parent, recurse upwards to get all next children
+        //subgraph.add_index_parent(root.index, loc.parent, PatternIndex::new(loc.pattern_id, loc.sub_index));
+        trav.parent_nodes(root, start_path)
+    }
+}
+impl<'g, T: Tokenize, D: IndexDirection + 'g> DirectedTraversalPolicy<'g, T, D> for Indexing<T, D> {
 }
 impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
-    pub fn new(graph: Arc<RwLock<Hypergraph<T>>>) -> Self {
+    pub fn new(graph: HypergraphRef<T>) -> Self {
         Self {
             graph,
             _ty: Default::default(),
         }
-    }
-    pub(crate) fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>> {
-        self.graph.read().unwrap()
-    }
-    pub(crate) fn graph_mut(&mut self) -> RwLockWriteGuard<'_, Hypergraph<T>> {
-        self.graph.write().unwrap()
     }
     //pub(crate) fn index_found(
     //    &mut self,
@@ -177,6 +181,7 @@ impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
     //    (lctx, inner, rctx, remainder.unwrap_or_default())
     //}
     /// includes location
+    #[allow(unused)]
     pub(crate) fn index_prefix_at(
         &mut self,
         location: &ChildLocation,
@@ -207,10 +212,10 @@ impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
     pub(crate) fn index_pattern<'a>(
         &'g mut self,
         pattern: impl IntoPattern<Item = impl AsChild, Token=impl AsChild + Clone + Vertexed<'a, 'g>>,
-    ) -> IndexingResult {
+    ) -> Result<Child, NoMatch> {
         Right::split_head_tail(pattern.as_pattern_view())
             .ok_or(NoMatch::EmptyPatterns)
-            .and_then(|(head, tail)|
+            .map(|(head, tail)|
                 self.index_child_in_context(head, tail)
             )
     }
@@ -218,12 +223,12 @@ impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
         &'g mut self,
         head: impl AsChild,
         tail: impl IntoPattern<Item = impl AsChild>,
-    ) -> IndexingResult {
+    ) -> Child {
         let head = head.as_child();
         if tail.is_empty() {
-            Err(NoMatch::SingleIndex)
+            head
         } else {
-            self.bft_indexing(
+            self.indexing(
                 head,
                 tail,
             )
@@ -269,33 +274,6 @@ impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
         .unwrap()
     }
     /// creates an IndexingNode::Parent for each parent of root, extending its start path
-    fn bft_parents(
-        &self,
-        start_path: ChildPath,
-        root: Child,
-        _subgraph: Arc<RwLock<Subgraph>>,
-    ) -> Vec<IndexingNode> {
-        let graph = &*self.graph();
-        let vertex = root.vertex(&graph);
-        let mut parents = vertex.get_parents().into_iter().collect_vec();
-        // try parents in ascending width (might not be needed in indexing)
-        parents.sort_unstable_by_key(|a| a.1.width);
-        parents.into_iter()
-            .map(|(i, parent)| {
-                let p = Child::new(i, parent.width);
-                parent.pattern_indices
-                    .iter()
-                    .map(|&pi| {
-                        //subgraph.add_index_parent(root.index, p, pi);
-                        let mut start_path = start_path.clone();
-                        start_path.push(ChildLocation::new(p, pi.pattern_id, pi.sub_index));
-                        IndexingNode::Parent(start_path)
-                    })
-                    .collect_vec()
-            })
-            .flatten()
-            .collect_vec()
-    }
     fn bft_indexing<
         'a,
         V: Vertexed<'a, 'g>,
@@ -305,84 +283,97 @@ impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
         &mut self,
         start: V,
         query: Q,
-    ) -> IndexingResult {
+    ) -> Vec<IndexedPath> {
         let start_index = start.as_child();
         // try any parent, i.e. first
         let query = query.as_pattern_view();
         D::pattern_head(query)
             .ok_or_else(|| NoMatch::SingleIndex)
-            .and_then(|query_next| {
+            .map(|query_next| {
                 let query_next = query_next.to_child();
                 // if context not empty
                 // breadth first traversal
-                let subgraph = Arc::new(RwLock::new(Subgraph::new()));
+                //let subgraph = Arc::new(RwLock::new(Subgraph::new()));
                 let indexer = self.clone();
                 let mut indexer2 = self.clone();
-                // iterator over all successors of start_index
+
+                // breadth first iterator over graph from start
                 Bft::new(IndexingNode::Start(start_index), |node| {
                     match node.clone() {
                         IndexingNode::Start(root) =>
-                            indexer.bft_parents(
-                                vec![],
+                            // search parents of start
+                            indexer.parent_nodes(
                                 root,
-                                subgraph.clone()
+                                vec![],
                             )
                             .into_iter(),
                         IndexingNode::Parent(start_path) => {
-                            // look at path segment towards start_index (entry)
-                            let ChildLocation {
-                                parent: root,
-                                pattern_id,
-                                sub_index,
-                            } = start_path.last().unwrap().clone();
-                            let graph = &*indexer.graph();
-                            let parent_vertex = graph.expect_vertex_data(root.index());
-                            let child_patterns = parent_vertex.get_children();
-                            // look in child pattern containing entry from start index
-                            let pattern = child_patterns.get(&pattern_id).unwrap();
-                            if let Some(next_child) = D::next_child(pattern, sub_index) {
-                                // compare next successor
-                                // equal indices would have been found in find
-                                if next_child.width > query_next.width {
-                                    // might be a match, look in children
-                                    Some(IndexingNode::Child(
-                                        start_path,
-                                        vec![ChildLocation::new(root, pattern_id, D::index_next(sub_index).unwrap())],
-                                        next_child,
-                                    ))
-                                } else {
-                                    // can not match
-                                    None
-                                }
-                                .into_iter()
-                                .collect_vec()
-                            } else {
-                                // no next child, look in parents
-                                Indexing::end_op((indexer.clone(), start_path, root, subgraph.clone()))
-                            }
+                            Indexing::successor_nodes(
+                                indexer.clone(),
+                                start_path,
+                                query_next,
+                            )
                             .into_iter()
+                            // look at path segment towards start_index (entry)
+                            //let ChildLocation {
+                            //    parent: root,
+                            //    pattern_id,
+                            //    sub_index,
+                            //} = start_path.last().unwrap().clone();
+                            //let indexer = indexer.clone();
+                            //let parent_vertex = indexer.graph().expect_vertex_data(root.index());
+                            //let child_patterns = parent_vertex.get_children();
+                            //// look in child pattern containing entry from start index
+                            //let pattern = child_patterns.get(&pattern_id).unwrap();
+                            //if let Some(next_child) = D::next_child(pattern, sub_index) {
+                            //    // compare next successor
+                            //    if next_child.width > query_next.width {
+                            //        // might be a match, search successor
+                            //        Some(IndexingNode::Child(
+                            //            start_path,
+                            //            root,
+                            //            vec![ChildLocation::new(root, pattern_id, D::index_next(sub_index).unwrap())],
+                            //            next_child,
+                            //        ))
+                            //    } else {
+                            //        // matching or no matching children
+                            //        None
+                            //    }
+                            //    .into_iter()
+                            //    .collect_vec()
+                            //} else {
+                            //    // no next child, search parents
+                            //    Indexing::end_op((indexer, root, start_path))
+                            //}
+                            //.into_iter()
                         },
-                        IndexingNode::Child(start_path, path, child) => {
-                            let graph = &*indexer.graph();
-                            let vertex = graph.expect_vertex_data(child);
-                            let child_patterns = vertex.get_children();
-                            // check prefix of each child pattern
-                            child_patterns
-                                .into_iter()
-                                .filter_map(|(&pid, pattern)| {
-                                    let &head = D::pattern_head(pattern).unwrap();
-                                    (head.width() > query_next.width()).then(|| {
-                                        let mut path = path.clone();
-                                        path.push(ChildLocation::new(child, pid, D::head_index(pattern)));
-                                        IndexingNode::Child(start_path.clone(), path, head)
+                        IndexingNode::Child(start_path, root, path, child) => {
+                            // compare successor
+                            if child == query_next {
+                                vec![IndexingNode::Child(start_path, root, path, child)].into_iter()
+                            } else {
+                                let graph = &*indexer.graph();
+                                let vertex = graph.expect_vertex_data(child);
+                                let child_patterns = vertex.get_children();
+                                // search prefix of each child pattern
+                                child_patterns
+                                    .into_iter()
+                                    .filter_map(|(&pid, pattern)| {
+                                        let &head = D::pattern_head(pattern).unwrap();
+                                        (head.width() > query_next.width()).then(|| {
+                                            let mut path = path.clone();
+                                            path.push(ChildLocation::new(child, pid, D::head_index(pattern)));
+                                            IndexingNode::Child(start_path.clone(), root, path, head)
+                                        })
                                     })
-                                })
-                                .collect_vec()
-                                .into_iter()
+                                    .collect_vec()
+                                    .into_iter()
+                            }
                         },
                     }
                 })
-                // filter out mismatches
+
+                // keep matching paths
                 .filter_map(|(_, node)|
                     match node {
                         IndexingNode::Parent(start_path) => {
@@ -419,7 +410,7 @@ impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
                                 })
                             )
                         },
-                        IndexingNode::Child(start_path, mut end_path, current) =>
+                        IndexingNode::Child(start_path, _root, mut end_path, current) =>
                             {
                                 let graph = &*indexer2.graph();
                                 let vertex = graph.expect_vertex_data(current);
@@ -444,62 +435,94 @@ impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
                 )
                 // iterator over all roots with paths from start to query_next
                 .map(|indexed_path| {
+                    println!("{:#?}", indexed_path);
                     //subgraph.entry(found_path.root)
                     //    .and_modify(|indices| {
                     //        indices.insert((
                     //    })
-                    if let Some(end_path) = indexed_path.end_path.clone() {
-                        match {
-                            let graph = self.graph();
-                            graph.matcher::<D>()
-                                .match_path_in_context(
-                                    end_path,
-                                    indexed_path.remainder.clone().unwrap_or_default(),
-                                )
-                        } {
-                            Ok(match_path) =>
-                                match match_path.remainder {
-                                    GrowthRemainder::Query(remainder)
-                                        => self.bft_indexing(indexed_path.indexed.location.parent, remainder.clone())
-                                                .or_else(|_| Ok(IndexedPath::remainder(indexed_path.indexed, remainder))),
-                                    GrowthRemainder::Child(_) => Ok(IndexedPath {
-                                        indexed: indexed_path.indexed,
-                                        end_path: if match_path.path.is_empty() {
-                                            None
-                                        } else {
-                                            Some(match_path.path)
-                                        },
-                                        remainder: None,
-                                    }),
-                                    GrowthRemainder::None => Ok(IndexedPath {
-                                        indexed: indexed_path.indexed,
-                                        end_path: if match_path.path.len() < 2 {
-                                            None
-                                        } else {
-                                            Some(match_path.path)
-                                        },
-                                        remainder: None,
-                                    })
-                                },
-                            Err(mismatch_path) =>
-                                Ok(IndexedPath {
+                    let end_path = indexed_path.end_path.clone().unwrap();
+                    match {
+                        let graph = self.graph();
+                        graph.matcher::<D>()
+                            .match_path_in_context(
+                                end_path,
+                                indexed_path.remainder.clone().unwrap_or_default(),
+                            )
+                    } {
+                        Ok(match_path) =>
+                            match match_path.remainder {
+                                // matches completely, search parents
+                                GrowthRemainder::Query(remainder)
+                                    // todo: pass start path
+                                    => self.bft_indexing(indexed_path.indexed.location.parent, remainder.clone()),
+                                // matches partially, we ar at root
+                                GrowthRemainder::Child(_) => vec![IndexedPath {
                                     indexed: indexed_path.indexed,
-                                    end_path: if mismatch_path.path.is_empty() {
+                                    end_path: if match_path.path.is_empty() {
                                         None
                                     } else {
-                                        Some(mismatch_path.path)
+                                        Some(match_path.path)
                                     },
-                                    remainder: Some(mismatch_path.query),
-                                }),
-                        }
-                    } else {
-                        Ok(indexed_path)
+                                    remainder: None,
+                                }],
+                                // matches completely, and query is finished, we are at root
+                                GrowthRemainder::None => vec![IndexedPath {
+                                    indexed: indexed_path.indexed,
+                                    end_path: if match_path.path.len() < 2 {
+                                        None
+                                    } else {
+                                        Some(match_path.path)
+                                    },
+                                    remainder: None,
+                                }]
+                            },
+                        // found mismatch, we are at root
+                        Err(mismatch_path) =>
+                            vec![IndexedPath {
+                                indexed: indexed_path.indexed,
+                                end_path: if mismatch_path.path.is_empty() {
+                                    None
+                                } else {
+                                    Some(mismatch_path.path)
+                                },
+                                remainder: Some(mismatch_path.query),
+                            }],
                     }
                 })
-                .fold(None, |_acc, _indexing_result: IndexingResult| {
-                    unimplemented!()
-                })
-                .unwrap()
+                .flatten()
+                .collect_vec()
+            })
+            //.or_else(|_| Ok(IndexedPath::remainder(indexed_path.indexed, remainder))),
+            .unwrap_or_default()
+    }
+    fn indexing<
+        'a,
+        V: Vertexed<'a, 'g>,
+        C: AsChild,
+        Q: IntoPattern<Item = C>,
+    >(
+        &mut self,
+        start: V,
+        query: Q,
+    ) -> Child {
+        let start_child = start.as_child();
+        self.bft_indexing(start, query)
+            .into_iter()
+            // collect paths into subgraph
+            .fold(None, |acc: Option<IndexedPath>, indexed| {
+                if let Some(acc) = acc {
+                    assert!(
+                        acc.indexed.location.parent == indexed.indexed.location.parent,
+                        "Found multiple roots!"
+                    );
+                    Some(acc)
+                } else {
+                    Some(indexed)
+                }
+            })
+            .map(|indexed| indexed.indexed.location.parent)
+            .unwrap_or_else(|| {
+                start_child // todo
             })
     }
 }

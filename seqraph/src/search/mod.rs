@@ -16,6 +16,14 @@ pub(crate) enum SearchNode {
     Parent(ChildPath), // start path, parent, pattern index
     Child(ChildPath, Child, ChildPath, Child), // start path, root, end path, child
 }
+impl BftNode for SearchNode {
+    fn parent_node(start_path: ChildPath) -> Self {
+        Self::Parent(start_path)
+    }
+    fn child_node(start_path: ChildPath, root: Child, end_path: ChildPath, next_child: Child) -> Self {
+        Self::Child(start_path, root, end_path, next_child)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FoundPath {
@@ -104,27 +112,34 @@ impl FoundPath {
 }
 pub type SearchResult = Result<FoundPath, NoMatch>;
 
-impl<'t, 'g, T> Hypergraph<T>
+impl<'t, 'g, T> HypergraphRef<T>
 where
     T: Tokenize + 't,
 {
-    pub(crate) fn searcher<D: MatchDirection>(&'g self) -> Searcher<'g, T, D> {
-        Searcher::new(self)
+    pub(crate) fn searcher<D: MatchDirection>(&'g self) -> Searcher<T, D> {
+        Searcher::new(self.clone())
     }
-    pub(crate) fn right_searcher(&'g self) -> Searcher<'g, T, Right> {
+    pub(crate) fn right_searcher(&'g self) -> Searcher<T, Right> {
         self.searcher()
     }
     #[allow(unused)]
-    pub(crate) fn left_searcher(&'g self) -> Searcher<'g, T, Left> {
+    pub(crate) fn left_searcher(&'g self) -> Searcher<T, Left> {
         self.searcher()
+    }
+    pub fn expect_pattern(
+        &self,
+        pattern: impl IntoIterator<Item = impl AsToken<T>>,
+    ) -> Child {
+        self.find_sequence(pattern).unwrap().unwrap_complete()
     }
     pub(crate) fn find_ancestor(
         &self,
         pattern: impl IntoIterator<Item = impl Indexed>,
     ) -> SearchResult {
-        let pattern = self.to_children(pattern);
+        let pattern = self.read().unwrap().to_children(pattern);
         self.right_searcher().find_pattern_ancestor(pattern)
     }
+    #[allow(unused)]
     pub(crate) fn find_ancestor_in_context(
         &self,
         head: impl AsChild,
@@ -137,7 +152,7 @@ where
         &self,
         pattern: impl IntoIterator<Item = impl Indexed>,
     ) -> SearchResult {
-        let pattern = self.to_children(pattern);
+        let pattern = self.read().unwrap().to_children(pattern);
         self.right_searcher().find_pattern_parent(pattern)
     }
     pub fn find_sequence(
@@ -145,7 +160,7 @@ where
         pattern: impl IntoIterator<Item = impl AsToken<T>>,
     ) -> SearchResult {
         let iter = tokenizing_iter(pattern.into_iter());
-        let pattern = self.to_token_children(iter)?;
+        let pattern = self.read().unwrap().to_token_children(iter)?;
         self.find_ancestor(pattern)
     }
 }
@@ -253,6 +268,7 @@ pub(crate) mod tests {
         let xa_by_id = xaby_ids[1];
         let (xabyz, xabyz_ids) = graph.insert_patterns_with_ids([vec![xaby, z], vec![xab, yz]]);
         let _xaby_z_id = xabyz_ids[0];
+        let graph = HypergraphRef::from(graph);
         let byz_found = graph.find_ancestor(vec![by, z]);
         assert_eq!(
             byz_found,
