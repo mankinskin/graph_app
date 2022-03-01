@@ -17,7 +17,9 @@ use std::{
 };
 
 mod indexed;
-mod parent_child;
+mod parent;
+mod child;
+mod child_location;
 mod pattern;
 mod pattern_stream;
 mod token;
@@ -25,7 +27,9 @@ mod pattern_location;
 pub use {
     indexed::*,
     pattern_location::*,
-    parent_child::*,
+    child_location::*,
+    parent::*,
+    child::*,
     pattern::*,
     pattern_stream::*,
     token::*,

@@ -1,10 +1,23 @@
+use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::iter::{Extend, FusedIterator};
 use std::sync::{RwLockReadGuard, RwLockWriteGuard};
 
 use itertools::Itertools;
 
-use crate::{ChildPath, Child, ChildLocation, Tokenize, Hypergraph, Vertexed, MatchDirection, Indexed};
+use crate::{
+    ChildPath,
+    Child,
+    ChildLocation,
+    Tokenize,
+    Hypergraph,
+    Vertexed,
+    MatchDirection,
+    RangePath,
+    QueryRangePath,
+    PatternLocation,
+    IntoPatternLocation,
+};
 
 #[derive(Clone)]
 pub struct Bft<T, F, I>
@@ -62,21 +75,30 @@ where
 }
 
 pub(crate) trait BftNode {
-    fn parent_node(start_path: ChildPath) -> Self;
-    fn child_node(start_path: ChildPath, root: Child, end_path: ChildPath, next_child: Child) -> Self;
+    fn query_node(query: QueryRangePath) -> Self;
+    fn root_node(query: QueryRangePath, start_path: StartPath) -> Self;
+    fn match_node(path: RangePath, query: QueryRangePath) -> Self;
+}
+#[derive(Clone, Debug)]
+pub struct StartPath {
+    path: ChildPath,
+    entry: ChildLocation,
 }
 pub(crate) trait Traversable<T: Tokenize> {
     type Node: BftNode;
-    type State;
     fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>>;
     fn graph_mut(&mut self) -> RwLockWriteGuard<'_, Hypergraph<T>>;
     fn parent_nodes(
         &self,
-        root: Child,
-        start_path: ChildPath,
+        query: QueryRangePath,
+        start_path: Option<StartPath>,
     ) -> Vec<Self::Node> {
         let graph = &*self.graph();
-        let vertex = root.vertex(&graph);
+        let vertex = if let Some(start_path) = start_path {
+            start_path.entry.parent
+        } else {
+            query.get_entry()
+        }.vertex(&graph);
         let mut parents = vertex.get_parents().into_iter().collect_vec();
         // try parents in ascending width (might not be needed in indexing)
         parents.sort_unstable_by_key(|a| a.1.width);
@@ -86,10 +108,19 @@ pub(crate) trait Traversable<T: Tokenize> {
                 parent.pattern_indices
                     .iter()
                     .map(|&pi| {
-                        //subgraph.add_index_parent(root.index, p, pi);
-                        let mut start_path = start_path.clone();
-                        start_path.push(ChildLocation::new(p, pi.pattern_id, pi.sub_index));
-                        Self::Node::parent_node(start_path)
+                        let root_entry = ChildLocation::new(p, pi.pattern_id, pi.sub_index);
+                        let start_path = if let Some(mut start_path) = start_path {
+                            let segment = start_path.entry;
+                            start_path.path.push(segment);
+                            start_path.entry = root_entry;
+                            start_path
+                        } else {
+                            StartPath {
+                                entry: root_entry,
+                                path: vec![],
+                            }
+                        };
+                        Self::Node::root_node(query, start_path)
                     })
                     .collect_vec()
             })
@@ -97,48 +128,121 @@ pub(crate) trait Traversable<T: Tokenize> {
             .collect_vec()
     }
 }
-pub(crate) trait DirectedTraversalPolicy<'g, T: Tokenize, D: MatchDirection>: BreadthFirstTraversal<'g, T> {
-    fn successor_nodes(
-        trav: <Self as BreadthFirstTraversal<'g, T>>::Trav,
-        mut start_path: ChildPath,
-        query_next: Child,
-    ) -> Vec<<Self::Trav as Traversable<T>>::Node> {
-        // find parent partition with matching context
-        let loc@ChildLocation {
-            parent: root,
-            pattern_id,
-            sub_index,
-        } = start_path.pop().unwrap();
-        {
-            let graph = trav.graph();
-            let parent_vertex = graph.expect_vertex_data(root.index());
-            let child_patterns = parent_vertex.get_children();
-            let pattern = child_patterns.get(&pattern_id).unwrap();
-            if let Some(next_child) = D::next_child(pattern, sub_index) {
-                // equal indices would have been found in find
-                return if next_child.width > query_next.width {
-                    Some(<Self::Trav as Traversable<T>>::Node::child_node(
-                        start_path,
-                        root,
-                        vec![ChildLocation::new(root, pattern_id, D::index_next(sub_index).unwrap())],
-                        next_child,
-                    ))
-                } else {
-                    None
-                }
-                .into_iter()
-                .collect_vec();
-            }
-        }
-        <Self as BreadthFirstTraversal<'g, T>>::end_op(trav, start_path, root, loc)
-    }
-}
 pub(crate) trait BreadthFirstTraversal<'g, T: Tokenize>: Sized {
     type Trav: Traversable<T>;
     fn end_op(
         trav: Self::Trav,
-        start_path: ChildPath,
-        root: Child,
-        loc: ChildLocation,
+        query: QueryRangePath,
+        start_path: StartPath,
     ) -> Vec<<Self::Trav as Traversable<T>>::Node>;
+}
+pub(crate) trait DirectedTraversalPolicy<'g, T: Tokenize, D: MatchDirection>: BreadthFirstTraversal<'g, T> {
+    fn new_root_path(
+        trav: &<Self as BreadthFirstTraversal<'g, T>>::Trav,
+        start_path: StartPath,
+    ) -> Option<RangePath> {
+        let StartPath {
+            entry,
+            path: start,
+        } = start_path;
+        let graph = trav.graph();
+        let pattern = graph.expect_pattern_at(entry);
+        Some(
+            RangePath {
+                entry: entry.sub_index,
+                root_pattern: entry.into_pattern_location(),
+                start,
+                exit: D::index_next(pattern, entry.sub_index)?,
+                end: vec![],
+            }
+        )
+    }
+    fn root_successor_nodes(
+        trav: <Self as BreadthFirstTraversal<'g, T>>::Trav,
+        query: QueryRangePath,
+        start_path: StartPath,
+    ) -> Vec<<Self::Trav as Traversable<T>>::Node> {
+        // find parent partition with matching context
+        if let Some(path) = Self::new_root_path(&trav, start_path) {
+            Self::match_next(
+                trav,
+                path,
+                query,
+            )
+            .into_iter()
+            .collect_vec()
+        } else {
+            <Self as BreadthFirstTraversal<'g, T>>::end_op(trav, query, start_path)
+        }
+    }
+    /// generate nodes for a child
+    fn match_next(
+        trav: <Self as BreadthFirstTraversal<'g, T>>::Trav,
+        path: RangePath,
+        query: QueryRangePath,
+    ) -> Vec<<Self::Trav as Traversable<T>>::Node> {
+        let child_next = path.get_next(trav);
+        let query_next = query.get_next(trav);
+        match child_next.width.cmp(&query_next.width) {
+            Ordering::Greater =>
+                // continue in prefix of child
+                Self::prefix_nodes(
+                    trav,
+                    child_next,
+                    path,
+                    query,
+                ),
+            Ordering::Less => vec![], // todo: path in query
+            Ordering::Equal =>
+                (child_next == query_next).then(|| {
+                    // continue with match node
+                    Self::successor_nodes(trav, path, query)
+                })
+                .into_iter()
+                .flatten()
+                .collect_vec(),
+        }
+    }
+    /// generate child nodes for index prefixes
+    fn prefix_nodes(
+        trav: <Self as BreadthFirstTraversal<'g, T>>::Trav,
+        index: Child,
+        path: RangePath,
+        query: QueryRangePath,
+    ) -> Vec<<Self::Trav as Traversable<T>>::Node> {
+        let graph = trav.graph();
+        let vertex = graph.expect_vertex_data(index);
+        let child_patterns = vertex.get_children();
+        child_patterns
+            .into_iter()
+            .map(|(&pid, child_pattern)| {
+                let &child_prefix = D::pattern_head(child_pattern).unwrap();
+                let sub_index = D::head_index(child_pattern);
+                let mut path = path.clone();
+                path.push_next(ChildLocation::new(index, pid, sub_index));
+                <Self::Trav as Traversable<T>>::Node::match_node(
+                    path,
+                    query.clone(),
+                )
+            })
+            .collect_vec()
+    }
+    fn successor_nodes(
+        trav: <Self as BreadthFirstTraversal<'g, T>>::Trav,
+        path: RangePath,
+        query: QueryRangePath,
+    ) -> Vec<<Self::Trav as Traversable<T>>::Node> {
+        // find parent partition with matching context
+        // todo: get pattern of current node, not root
+        // todo: get next child in that pattern
+        if path.advance_end::<_, _, D>(trav) {
+            Self::match_next(
+                trav,
+                path,
+                query,
+            )
+        } else {
+            <Self as BreadthFirstTraversal<'g, T>>::end_op(trav, query, path.into_start_path())
+        }
+    }
 }

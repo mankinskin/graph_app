@@ -45,22 +45,6 @@ pub struct MismatchPath {
     pub child: Pattern,
     pub query: Pattern,
 }
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ChildLocation {
-    pub(crate) parent: Child,
-    pub(crate) pattern_id: PatternId,
-    pub(crate) sub_index: usize,
-}
-impl ChildLocation {
-    pub fn new(parent: impl AsChild, pattern_id: PatternId, sub_index: usize) -> Self {
-        Self {
-            parent: parent.as_child(),
-            pattern_id,
-            sub_index,
-        }
-    }
-}
-pub type ChildPath = Vec<ChildLocation>;
 
 impl<'t, 'g, T> Hypergraph<T>
 where

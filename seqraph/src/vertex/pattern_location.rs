@@ -1,31 +1,36 @@
-use crate::{
-    vertex::*,
-};
-use std::ops::Range;
+use super::*;
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
-pub struct PatternRangeLocation {
-    pub parent: Child,
-    pub pattern_id: PatternId,
-    pub range: Range<usize>,
-}
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PatternLocation {
-    pub parent: Child,
-    pub pattern_id: PatternId,
+    pub(crate) parent: Child,
+    pub(crate) pattern_id: PatternId,
 }
 impl PatternLocation {
-    pub fn new(parent: Child, pattern_id: PatternId) -> Self {
+    pub fn new(parent: impl AsChild, pattern_id: PatternId) -> Self {
         Self {
-            parent,
+            parent: parent.as_child(),
             pattern_id,
         }
     }
-    pub fn with_range(self, range: Range<usize>) -> PatternRangeLocation {
-        PatternRangeLocation {
+    pub fn to_child_location(&self, sub_index: usize) -> ChildLocation {
+        ChildLocation {
             parent: self.parent,
             pattern_id: self.pattern_id,
-            range,
+            sub_index,
         }
+    }
+}
+
+pub trait IntoPatternLocation {
+    fn into_pattern_location(self) -> PatternLocation;
+}
+impl IntoPatternLocation for PatternLocation {
+    fn into_pattern_location(self) -> PatternLocation {
+        self
+    }
+}
+impl IntoPatternLocation for &PatternLocation {
+    fn into_pattern_location(self) -> PatternLocation {
+        self.clone()
     }
 }

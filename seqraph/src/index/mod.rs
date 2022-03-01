@@ -14,17 +14,24 @@ pub use index_direction::*;
 
 #[derive(Clone, Debug)]
 pub(crate) enum IndexingNode {
-    Start(Child),
-    Parent(ChildPath),
-    Child(ChildPath, Child, ChildPath, Child), // start path, root, end path, child
+    Query(QueryRangePath),
+    Root(QueryRangePath, StartPath),
+    Match(RangePath, QueryRangePath),
+    //EndMatch(RangePath, QueryRangePath, ChildLocation),
 }
 impl BftNode for IndexingNode {
-    fn parent_node(start_path: ChildPath) -> Self {
-        Self::Parent(start_path)
+    fn query_node(query: QueryRangePath) -> Self {
+        Self::Query(query)
     }
-    fn child_node(start_path: ChildPath, root: Child, end_path: ChildPath, next_child: Child) -> Self {
-        Self::Child(start_path, root, end_path, next_child)
+    fn root_node(query: QueryRangePath, start_path: StartPath) -> Self {
+        Self::Root(query, start_path)
     }
+    fn match_node(path: RangePath, query: QueryRangePath) -> Self {
+        Self::Match(path, query)
+    }
+    //fn end_leaf_node(path: RangePath, query: QueryRangePath, location: ChildLocation) -> Self {
+    //    Self::EndMatch(path, query, location)
+    //}
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

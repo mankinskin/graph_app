@@ -37,6 +37,55 @@ where
         self.get_vertex(index)
             .unwrap_or_else(|_| panic!("Index {} does not exist!", index))
     }
+    pub fn get_pattern_at(
+        &mut self,
+        location: impl IntoPatternLocation,
+    ) -> Result<Pattern, NoMatch> {
+        let location = location.into_pattern_location();
+        let vertex = self.get_vertex_data(location.parent)?;
+        let child_patterns = vertex.get_children();
+        child_patterns.get(&location.pattern_id).cloned()
+            .ok_or_else(|| NoMatch::NoChildPatterns) // todo: better error
+    }
+    pub fn expect_pattern_at(
+        &self,
+        location: impl IntoPatternLocation,
+    ) -> Pattern {
+        let location = location.into_pattern_location();
+        self.get_pattern_at(location)
+            .expect(&format!("Pattern not found at location {:#?}", location))
+    }
+    pub fn get_child_at(
+        &self,
+        location: impl IntoChildLocation,
+    ) -> Result<Child, NoMatch> {
+        let location = location.into_child_location();
+        let pattern = self.get_pattern_at(&location)?;
+        pattern.get(location.sub_index)
+            .cloned()
+            .ok_or_else(|| NoMatch::NoChildPatterns) // todo: better error
+    }
+    pub fn expect_child_at(
+        &self,
+        location: impl IntoChildLocation,
+    ) -> Child {
+        let location = location.into_child_location();
+        self.get_child_at(location)
+            .expect(&format!("Child not found at location {:#?}", location))
+    }
+    pub fn get_children_of(
+        &self,
+        index: impl Indexed,
+    ) -> Result<&ChildPatterns, NoMatch> {
+        self.get_vertex_data(index)
+            .map(|vertex| vertex.get_children())
+    }
+    pub fn expect_children_of(
+        &self,
+        index: impl Indexed,
+    ) -> &ChildPatterns {
+        self.expect_vertex_data(index).get_children()
+    }
     pub fn expect_vertex_mut(
         &mut self,
         index: impl Indexed,

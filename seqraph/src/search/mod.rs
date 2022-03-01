@@ -12,105 +12,117 @@ pub use bft::*;
 
 #[derive(Clone, Debug)]
 pub(crate) enum SearchNode {
-    Start(Child),
-    Parent(ChildPath), // start path, parent, pattern index
-    Child(ChildPath, Child, ChildPath, Child), // start path, root, end path, child
+    Query(QueryRangePath),
+    Root(QueryRangePath, StartPath),
+    Match(RangePath, QueryRangePath),
+    //EndLeaf(RangePath, QueryRangePath, ChildLocation),
 }
 impl BftNode for SearchNode {
-    fn parent_node(start_path: ChildPath) -> Self {
-        Self::Parent(start_path)
+    fn query_node(query: QueryRangePath) -> Self {
+        Self::Query(query)
     }
-    fn child_node(start_path: ChildPath, root: Child, end_path: ChildPath, next_child: Child) -> Self {
-        Self::Child(start_path, root, end_path, next_child)
+    fn root_node(query: QueryRangePath, start_path: StartPath) -> Self {
+        Self::Root(query, start_path)
     }
+    fn match_node(path: RangePath, query: QueryRangePath) -> Self {
+        Self::Match(path, query)
+    }
+    //fn end_leaf_node(path: RangePath, query: QueryRangePath, location: ChildLocation) -> Self {
+    //    Self::EndLeaf(path, query, location)
+    //}
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FoundPath {
-    pub(crate) root: Child,
-    pub(crate) start_path: Option<ChildPath>,
-    pub(crate) end_path: Option<ChildPath>,
-    pub(crate) remainder: Option<Pattern>
+pub struct QueryRangePath {
+    pub(crate) query: Pattern,
+    pub(crate) entry: usize,
+    pub(crate) start: ChildPath,
+    pub(crate) exit: usize,
+    pub(crate) end: ChildPath,
+}
+impl QueryRangePath {
+    pub fn new_directed<D: MatchDirection>(query: Pattern) -> Result<Self, NoMatch> {
+        let entry = D::head_index(&query);
+        let exit = D::index_next(&query, entry).ok_or_else(|| NoMatch::SingleIndex)?;
+        Ok(Self {
+            query,
+            entry,
+            start: vec![],
+            exit,
+            end: vec![],
+        })
+    }
+    pub fn get_entry(&self) -> Child {
+        // todo: use path
+        self.query.get(self.entry).cloned().expect("Invalid entry")
+    }
+    pub fn get_exit(&self) -> Child {
+        // todo: use path
+        self.query.get(self.exit).cloned().expect("Invalid exit")
+    }
+    pub fn get_next<T: Tokenize>(&self, trav: impl Traversable<T>) -> Child {
+        if let Some(next) = self.end.last() {
+            trav.graph().expect_child_at(next)
+        } else {
+            self.query.get(self.exit).cloned().expect("Invalid exit")
+        }
+    }
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RangePath {
+    pub(crate) root_pattern: PatternLocation,
+    pub(crate) entry: usize,
+    pub(crate) start: ChildPath,
+    pub(crate) exit: usize,
+    pub(crate) end: ChildPath,
+}
+impl RangePath {
+    pub fn get_exit_location(&self) -> ChildLocation {
+        if self.end.is_empty() {
+            self.root_pattern.to_child_location(self.exit)
+        } else {
+            self.end.last().unwrap().clone()
+        }
+    }
+    pub fn get_next<T: Tokenize>(&self, trav: impl Traversable<T>) -> Child {
+        if let Some(next) = self.end.last() {
+            trav.graph().expect_child_at(next)
+        } else {
+            trav.graph().expect_child_at(self.get_exit_location())
+        }
+    }
+    pub fn push_next(&mut self, next: ChildLocation) {
+        self.end.push(next);
+    }
+    pub fn into_start_path(self) -> StartPath{
+        StartPath {
+            path: self.start,
+            entry: self.root_pattern.to_child_location(self.entry),
+        }
+    }
+    pub fn advance_end<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(&mut self, trav: Trav) -> bool {
+        let graph = trav.graph();
+        while let Some(location) = self.end.pop() {
+            let pattern = graph.expect_pattern_at(location);
+            if let Some(next) = D::index_next(pattern, location.sub_index) {
+                location.sub_index = next;
+                self.end.push(location);
+                return true;
+            }
+        }
+        let location = self.get_exit_location();
+        let pattern = graph.expect_pattern_at(location);
+        if let Some(next) = D::index_next(pattern, location.sub_index) {
+            location.sub_index = next;
+            self.end.push(location);
+            true
+        } else {
+            false
+        }
+    }
 }
 
-impl FoundPath {
-    pub fn complete(root: impl AsChild) -> Self {
-        Self {
-            root: root.as_child(),
-            start_path: None,
-            end_path: None,
-            remainder: None,
-        }
-    }
-    pub fn remainder(root: impl AsChild, remainder: impl IntoPattern<Item=impl AsChild>) -> Self {
-        Self {
-            root: root.as_child(),
-            start_path: None,
-            end_path: None,
-            remainder: if remainder.is_empty() {
-                None
-            } else {
-                Some(remainder.into_pattern())
-            },
-        }
-    }
-    pub fn new(root: impl AsChild, start_path: ChildPath, end_path: ChildPath, remainder: impl IntoPattern<Item=impl AsChild>) -> Self {
-        Self {
-            root: root.as_child(),
-            start_path: if start_path.is_empty() {
-                None
-            } else {
-                Some(start_path)
-            },
-            end_path: if end_path.is_empty() {
-                None
-            } else {
-                Some(end_path)
-            },
-            remainder: if remainder.is_empty() {
-                None
-            } else {
-                Some(remainder.into_pattern())
-            },
-        }
-    }
-    pub fn no_remainder(root: impl AsChild, start_path: ChildPath, end_path: ChildPath) -> Self {
-        Self {
-            root: root.as_child(),
-            start_path: if start_path.is_empty() {
-                None
-            } else {
-                Some(start_path)
-            },
-            end_path: if end_path.is_empty() {
-                None
-            } else {
-                Some(end_path)
-            },
-            remainder: None,
-        }
-    }
-    pub fn found_complete(&self) -> bool {
-        self.start_path.is_none()
-            && self.end_path.is_none()
-            && self.remainder.is_none()
-    }
-    pub fn unwrap_complete(self) -> Child {
-        if self.found_complete() {
-            self.root
-        } else {
-            panic!("Failed to unwrap {:#?} as complete match!", self);
-        }
-    }
-    pub fn expect_complete(self, msg: &str) -> Child {
-        if self.found_complete() {
-            self.root
-        } else {
-            panic!("Failed to unwrap {:#?} as complete match: {}", self, msg);
-        }
-    }
-}
-pub type SearchResult = Result<FoundPath, NoMatch>;
+pub type SearchResult = Result<RangePath, NoMatch>;
 
 impl<'t, 'g, T> HypergraphRef<T>
 where

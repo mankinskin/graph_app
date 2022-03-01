@@ -25,13 +25,10 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection + 'g> BreadthFirstTraversal<'g, T> 
     type Trav = Searcher<T, D>;
     fn end_op(
         trav: Self::Trav,
-        start_path: ChildPath,
-        root: Child,
-        loc: ChildLocation,
+        query: QueryRangePath,
+        start: StartPath,
     ) -> Vec<<Self::Trav as Traversable<T>>::Node> {
-        let mut start_path = start_path.clone();
-        start_path.push(loc);
-        trav.parent_nodes(root, start_path)
+        trav.parent_nodes(query, Some(start))
     }
 }
 impl<'g, T: Tokenize, D: MatchDirection + 'g> DirectedTraversalPolicy<'g, T, D> for AncestorSearch<'g, T, D> {
@@ -41,12 +38,6 @@ struct ParentSearch<'g, T: Tokenize + 'g, D: MatchDirection> {
 }
 impl<T: Tokenize, D: MatchDirection> Traversable<T> for Searcher<T, D> {
     type Node = SearchNode;
-    type State = (
-        Self,
-        ChildPath,
-        Child,
-        ChildLocation,
-    );
     fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>> {
         self.graph.read().unwrap()
     }
@@ -58,9 +49,8 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection + 'g> BreadthFirstTraversal<'g, T> 
     type Trav = Searcher<T, D>;
     fn end_op(
         _trav: Self::Trav,
-        _start_path: ChildPath,
-        _root: Child,
-        _loc: ChildLocation,
+        _query: QueryRangePath,
+        _start: StartPath,
     ) -> Vec<<Self::Trav as Traversable<T>>::Node> {
         vec![]
     }
@@ -79,220 +69,193 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<T, D> {
         &'g self,
         pattern: impl IntoPattern<Item = impl AsChild, Token=impl AsChild + Clone + Vertexed<'a, 'g>>,
     ) -> SearchResult {
-        Right::split_head_tail(pattern.as_pattern_view())
-            .ok_or(NoMatch::EmptyPatterns)
-            .and_then(|(head, context)| {
-                self.bft_search::<ParentSearch<'_, T, D>, _, _, _>(
-                    head,
-                    context,
-                )
-            })
+        self.bft_search::<ParentSearch<'_, T, D>, _, _>(
+            pattern,
+        )
     }
     /// find largest matching ancestor for pattern
     pub(crate) fn find_pattern_ancestor<'a>(
         &'g self,
         pattern: impl IntoPattern<Item = impl AsChild, Token=impl AsChild + Clone + Vertexed<'a, 'g>>,
     ) -> SearchResult {
-        Right::split_head_tail(pattern.as_pattern_view())
-            .ok_or(NoMatch::EmptyPatterns)
-            .and_then(|(head, tail)|
-                self.find_ancestor_in_context(head, tail)
-            )
+        self.bft_search::<AncestorSearch<'g, T, D>, _, _>(
+            pattern,
+        )
     }
-    pub(crate) fn find_ancestor_in_context(
-        &'g self,
-        head: impl AsChild,
-        tail: impl IntoPattern<Item = impl AsChild>,
-    ) -> SearchResult {
-        let head = head.as_child();
-        if tail.is_empty() {
-            Err(NoMatch::SingleIndex)
-        } else {
-            self.bft_search::<AncestorSearch<'g, T, D>, _, _, _>(
-                head,
-                tail,
-            )
-        }
-    }
-    pub(crate) fn match_parent(
-        &self,
-        mut start_path: ChildPath,
-        query_next: Child,
-        query: impl IntoPattern<Item=impl AsChild>
-    ) -> Option<FoundPath> {
-        // find next child equal to next context index
-        let loc@ChildLocation {
-            parent,
-            pattern_id,
-            sub_index,
-        } = start_path.pop().unwrap();
-        let graph = self.graph();
-        let parent_vertex = graph.expect_vertex_data(parent.index());
-        let child_patterns = parent_vertex.get_children();
-        let pattern = child_patterns.get(&pattern_id).unwrap();
-        D::next_child(pattern, sub_index)
-            .and_then(|child_next|
-                (child_next == query_next).then(|| {
-                    // todo: explain this
-                    if sub_index != D::head_index(pattern) {
-                        start_path.push(loc);
-                    }
-                    let next_index = D::index_next(sub_index).unwrap();
-                    let query_tail = D::pattern_tail(query.as_pattern_view()).into_pattern();
-                    let end_path = vec![
-                        ChildLocation::new(
-                            parent_vertex.as_child(),
-                            pattern_id,
-                            next_index,
-                        )
-                    ];
-                    FoundPath::new(parent, start_path, end_path, query_tail)
-                })
-            )
-    }
-    pub(crate) fn match_child(
-        &self,
-        start_path: ChildPath,
-        root: Child,
-        mut path: ChildPath,
-        current: Child,
-        query_next: Child,
-        query: impl IntoPattern<Item=impl AsChild>
-    ) -> Option<FoundPath> {
-        // find child starting with next_child
-        let graph = self.graph();
-        let vertex = graph.expect_vertex_data(current);
-        let child_patterns = vertex.get_children();
-        child_patterns
-            .into_iter()
-            .find(|(_pid, pattern)| {
-                let &head = D::pattern_head(pattern).unwrap();
-                head == query_next
-            })
-            .map(|(&pid, pattern)| {
-                path.push(ChildLocation::new(current, pid, D::head_index(pattern)));
-                let query_tail = D::pattern_tail(query.as_pattern_view()).into_pattern();
-                FoundPath::new(root, start_path, path, query_tail)
-            })
-    }
-    pub(crate) fn expand_found<
-        S: DirectedTraversalPolicy<'g, T, D, Trav=Self>,
-    >(
-        &'g self,
-        found_path: FoundPath,
-    ) -> SearchResult {
-        if let Some(end_path) = found_path.end_path.clone() {
-            match self.graph().matcher::<D>()
-                .match_path_in_context(
-                    end_path,
-                    found_path.remainder.clone().unwrap_or_default(),
-                ) {
-                Err(mismatch_path) =>
-                    Ok(FoundPath {
-                        root: found_path.root,
-                        start_path: found_path.start_path,
-                        end_path: if mismatch_path.path.is_empty() {
-                            None
-                        } else {
-                            Some(mismatch_path.path)
-                        },
-                        remainder: Some(mismatch_path.query),
-                    }),
-                Ok(match_path) =>
-                    match match_path.remainder {
-                        GrowthRemainder::Query(remainder)
-                            => self.bft_search::<S, _, _, _>(found_path.root, remainder.clone())
-                                    .or_else(|_| Ok(FoundPath::remainder(found_path.root, remainder))),
-                        GrowthRemainder::Child(_) => Ok(FoundPath {
-                            root: found_path.root,
-                            start_path: found_path.start_path,
-                            end_path: if match_path.path.is_empty() {
-                                None
-                            } else {
-                                Some(match_path.path)
-                            },
-                            remainder: None,
-                        }),
-                        GrowthRemainder::None => Ok(FoundPath {
-                            root: found_path.root,
-                            start_path: found_path.start_path,
-                            end_path: if match_path.path.len() < 2 {
-                                None
-                            } else {
-                                Some(match_path.path)
-                            },
-                            remainder: None,
-                        })
-                    },
-                }
-        } else {
-            Ok(found_path)
-        }
-    }
+    //pub(crate) fn match_parent(
+    //    &self,
+    //    mut start_path: ChildPath,
+    //    query_next: Child,
+    //    query: impl IntoPattern<Item=impl AsChild>
+    //) -> Option<FoundPath> {
+    //    // find next child equal to next context index
+    //    let loc@ChildLocation {
+    //        parent,
+    //        pattern_id,
+    //        sub_index,
+    //    } = start_path.pop().unwrap();
+    //    let graph = self.graph();
+    //    let parent_vertex = graph.expect_vertex_data(parent.index());
+    //    let child_patterns = parent_vertex.get_children();
+    //    let pattern = child_patterns.get(&pattern_id).unwrap();
+    //    D::next_child(pattern, sub_index)
+    //        .and_then(|child_next|
+    //            (child_next == query_next).then(|| {
+    //                // todo: explain this
+    //                if sub_index != D::head_index(pattern) {
+    //                    start_path.push(loc);
+    //                }
+    //                let next_index = D::index_next(sub_index).unwrap();
+    //                let query_tail = D::pattern_tail(query.as_pattern_view()).into_pattern();
+    //                let end_path = vec![
+    //                    ChildLocation::new(
+    //                        parent_vertex.as_child(),
+    //                        pattern_id,
+    //                        next_index,
+    //                    )
+    //                ];
+    //                FoundPath::new(parent, start_path, end_path, query_tail)
+    //            })
+    //        )
+    //}
+    //pub(crate) fn match_child(
+    //    &self,
+    //    start_path: ChildPath,
+    //    root: Child,
+    //    mut path: ChildPath,
+    //    current: Child,
+    //    query_next: Child,
+    //    query: impl IntoPattern<Item=impl AsChild>
+    //) -> Option<FoundPath> {
+    //    // find child starting with next_child
+    //    let graph = self.graph();
+    //    let vertex = graph.expect_vertex_data(current);
+    //    let child_patterns = vertex.get_children();
+    //    child_patterns
+    //        .into_iter()
+    //        .find(|(_pid, pattern)| {
+    //            let &head = D::pattern_head(pattern).unwrap();
+    //            head == query_next
+    //        })
+    //        .map(|(&pid, pattern)| {
+    //            path.push(ChildLocation::new(current, pid, D::head_index(pattern)));
+    //            let query_tail = D::pattern_tail(query.as_pattern_view()).into_pattern();
+    //            FoundPath::new(root, start_path, path, query_tail)
+    //        })
+    //}
+    //pub(crate) fn expand_found<
+    //    S: DirectedTraversalPolicy<'g, T, D, Trav=Self>,
+    //>(
+    //    &'g self,
+    //    found_path: FoundPath,
+    //) -> SearchResult {
+    //    if let Some(end_path) = found_path.end_path.clone() {
+    //        match self.graph().matcher::<D>()
+    //            .match_path_in_context(
+    //                end_path,
+    //                found_path.remainder.clone().unwrap_or_default(),
+    //            ) {
+    //                Err(mismatch_path) =>
+    //                    Ok(FoundPath {
+    //                        root: found_path.root,
+    //                        start_path: found_path.start_path,
+    //                        end_path: if mismatch_path.path.is_empty() {
+    //                            None
+    //                        } else {
+    //                            Some(mismatch_path.path)
+    //                        },
+    //                        remainder: Some(mismatch_path.query),
+    //                    }),
+    //                Ok(match_path) =>
+    //                    match match_path.remainder {
+    //                        GrowthRemainder::Query(remainder)
+    //                            => self.bft_search::<S, _, _, _>(remainder.clone())
+    //                                    .or_else(|_| Ok(FoundPath::remainder(found_path.root, remainder))),
+    //                        GrowthRemainder::Child(_) => Ok(FoundPath {
+    //                            root: found_path.root,
+    //                            start_path: found_path.start_path,
+    //                            end_path: if match_path.path.is_empty() {
+    //                                None
+    //                            } else {
+    //                                Some(match_path.path)
+    //                            },
+    //                            remainder: None,
+    //                        }),
+    //                        GrowthRemainder::None => Ok(FoundPath {
+    //                            root: found_path.root,
+    //                            start_path: found_path.start_path,
+    //                            end_path: if match_path.path.len() < 2 {
+    //                                None
+    //                            } else {
+    //                                Some(match_path.path)
+    //                            },
+    //                            remainder: None,
+    //                        })
+    //                    },
+    //            }
+    //    } else {
+    //        Ok(found_path)
+    //    }
+    //}
     fn bft_search<
         'a,
         S: DirectedTraversalPolicy<'g, T, D, Trav=Self>,
-        V: Vertexed<'a, 'g>,
         C: AsChild,
         Q: IntoPattern<Item = C>,
     >(
         &'g self,
-        start: V,
         query: Q,
     ) -> SearchResult {
-        let start_index = start.as_child();
-        // try any parent, i.e. first
-        let query = query.as_pattern_view();
-        D::pattern_head(query)
-            .ok_or_else(|| NoMatch::SingleIndex)
-            .and_then(|query_next| {
-                let query_next = query_next.to_child();
-                // if context not empty
-                // breadth first traversal
-                Bft::new(SearchNode::Start(start_index), move |node| {
-                    match node.clone() {
-                        SearchNode::Start(root) => {
-                            self.parent_nodes(root, vec![])
-                                .into_iter()
-                        },
-                        SearchNode::Parent(start_path) => {
-                            S::successor_nodes(
-                                (*self).clone(),
-                                start_path,
-                                query_next,
-                            )
-                            .into_iter()
-                        },
-                        SearchNode::Child(start_path, root, path, child) => {
-                            let graph = self.graph();
-                            let vertex = graph.expect_vertex_data(child);
-                            let child_patterns = vertex.get_children();
-                            child_patterns
-                                .into_iter()
-                                .map(|(&pid, pattern)| {
-                                    let &head = D::pattern_head(pattern).unwrap();
-                                    let mut path = path.clone();
-                                    path.push(ChildLocation::new(child, pid, D::head_index(pattern)));
-                                    SearchNode::Child(start_path.clone(), root, path, head)
-                                })
-                                .collect_vec()
-                                .into_iter()
-                        },
-                    }
-                })
-                .find_map(|(_, node)|
-                    match node {
-                        SearchNode::Parent(start_path) =>
-                            self.match_parent(start_path, query_next, query),
-                        SearchNode::Child(start_path, root, path, child) =>
-                            self.match_child(start_path, root, path, child, query_next, query),
-                        _ => None,
-                    }
-                )
-                .map(|found_path| self.expand_found::<S>(found_path))
-                .unwrap_or_else(||
-                    Err(NoMatch::NotFound(query.into_pattern()))
-                )
-            })
+        let query = query.into_pattern();
+        let query_path = QueryRangePath::new_directed::<D>(query)?;
+        Bft::new(SearchNode::Query(query_path), move |node| {
+            match node.clone() {
+                SearchNode::Query(query) => {
+                    self.parent_nodes(
+                        query,
+                        None,
+                    )
+                    .into_iter()
+                },
+                SearchNode::Root(query, start_path) => {
+                    S::root_successor_nodes(
+                        (*self).clone(),
+                        query,
+                        start_path,
+                    )
+                    .into_iter()
+                },
+                SearchNode::Match(path, query) => {
+                    S::match_next(
+                        *self,
+                        path,
+                        query,
+                    )
+                    .into_iter()
+                },
+                //SearchNode::EndLeaf(path, query, location) => {
+                //    S::leaf_successor_nodes(
+                //        (*self).clone(),
+                //        path,
+                //        query,
+                //        location
+                //    )
+                //    .into_iter()
+                //},
+            }
+        })
+        .find_map(|(_, node)|
+            match node {
+                SearchNode::Parent(start_path) =>
+                    self.match_parent(start_path, query_next, query),
+                SearchNode::Child(start_path, root, path, child) =>
+                    self.match_child(start_path, root, path, child, query_next, query),
+                _ => None,
+            }
+        )
+        .map(|found_path| self.expand_found::<S>(found_path))
+        .unwrap_or_else(||
+            Err(NoMatch::NotFound(query.into_pattern()))
+        )
     }
 }
