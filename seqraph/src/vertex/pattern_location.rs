@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Copy)]
 pub struct PatternLocation {
     pub(crate) parent: Child,
     pub(crate) pattern_id: PatternId,

@@ -17,7 +17,7 @@ pub(crate) enum IndexingNode {
     Query(QueryRangePath),
     Root(QueryRangePath, StartPath),
     Match(RangePath, QueryRangePath),
-    //EndMatch(RangePath, QueryRangePath, ChildLocation),
+    End(RangePath, QueryRangePath),
 }
 impl BftNode for IndexingNode {
     fn query_node(query: QueryRangePath) -> Self {
@@ -29,9 +29,9 @@ impl BftNode for IndexingNode {
     fn match_node(path: RangePath, query: QueryRangePath) -> Self {
         Self::Match(path, query)
     }
-    //fn end_leaf_node(path: RangePath, query: QueryRangePath, location: ChildLocation) -> Self {
-    //    Self::EndMatch(path, query, location)
-    //}
+    fn end_node(path: RangePath, query: QueryRangePath) -> Self {
+        Self::End(path, query)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

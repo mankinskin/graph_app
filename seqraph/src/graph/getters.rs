@@ -38,7 +38,7 @@ where
             .unwrap_or_else(|_| panic!("Index {} does not exist!", index))
     }
     pub fn get_pattern_at(
-        &mut self,
+        &self,
         location: impl IntoPatternLocation,
     ) -> Result<Pattern, NoMatch> {
         let location = location.into_pattern_location();

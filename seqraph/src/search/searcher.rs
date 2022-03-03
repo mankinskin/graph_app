@@ -22,7 +22,7 @@ struct AncestorSearch<'g, T: Tokenize + 'g, D: MatchDirection> {
     _ty: std::marker::PhantomData<(&'g T, D)>,
 }
 impl<'g, T: Tokenize + 'g, D: MatchDirection + 'g> BreadthFirstTraversal<'g, T> for AncestorSearch<'g, T, D> {
-    type Trav = Searcher<T, D>;
+    type Trav = &'g Searcher<T, D>;
     fn end_op(
         trav: Self::Trav,
         query: QueryRangePath,
@@ -41,12 +41,12 @@ impl<T: Tokenize, D: MatchDirection> Traversable<T> for Searcher<T, D> {
     fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>> {
         self.graph.read().unwrap()
     }
-    fn graph_mut(&mut self) -> RwLockWriteGuard<'_, Hypergraph<T>> {
-        self.graph.write().unwrap()
-    }
+    //fn graph_mut(&mut self) -> RwLockWriteGuard<'_, Hypergraph<T>> {
+    //    self.graph.write().unwrap()
+    //}
 }
 impl<'g, T: Tokenize + 'g, D: MatchDirection + 'g> BreadthFirstTraversal<'g, T> for ParentSearch<'g, T, D> {
-    type Trav = Searcher<T, D>;
+    type Trav = &'g Searcher<T, D>;
     fn end_op(
         _trav: Self::Trav,
         _query: QueryRangePath,
@@ -199,7 +199,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<T, D> {
     //}
     fn bft_search<
         'a,
-        S: DirectedTraversalPolicy<'g, T, D, Trav=Self>,
+        S: DirectedTraversalPolicy<'g, T, D, Trav=&'g Self>,
         C: AsChild,
         Q: IntoPattern<Item = C>,
     >(
@@ -207,55 +207,42 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<T, D> {
         query: Q,
     ) -> SearchResult {
         let query = query.into_pattern();
-        let query_path = QueryRangePath::new_directed::<D>(query)?;
+        let query_path = QueryRangePath::new_directed::<D, _, _>(query.as_pattern_view())?;
         Bft::new(SearchNode::Query(query_path), move |node| {
             match node.clone() {
-                SearchNode::Query(query) => {
+                SearchNode::Query(query) =>
                     self.parent_nodes(
                         query,
                         None,
                     )
-                    .into_iter()
-                },
-                SearchNode::Root(query, start_path) => {
+                ,
+                SearchNode::Root(query, start_path) =>
                     S::root_successor_nodes(
-                        (*self).clone(),
+                        self,
                         query,
                         start_path,
-                    )
-                    .into_iter()
-                },
-                SearchNode::Match(path, query) => {
+                    ),
+                SearchNode::Match(path, query) =>
                     S::match_next(
-                        *self,
+                        self,
                         path,
                         query,
-                    )
-                    .into_iter()
-                },
-                //SearchNode::EndLeaf(path, query, location) => {
-                //    S::leaf_successor_nodes(
-                //        (*self).clone(),
-                //        path,
-                //        query,
-                //        location
-                //    )
-                //    .into_iter()
-                //},
-            }
+                    ),
+                _ => vec![],
+            }.into_iter()
         })
         .find_map(|(_, node)|
             match node {
-                SearchNode::Parent(start_path) =>
-                    self.match_parent(start_path, query_next, query),
-                SearchNode::Child(start_path, root, path, child) =>
-                    self.match_child(start_path, root, path, child, query_next, query),
+                SearchNode::End(path, query) =>
+                    Some(Ok(FoundPath {
+                        path,
+                        query,
+                    })),
                 _ => None,
             }
         )
-        .map(|found_path| self.expand_found::<S>(found_path))
         .unwrap_or_else(||
-            Err(NoMatch::NotFound(query.into_pattern()))
+            Err(NoMatch::NotFound(query))
         )
     }
 }
