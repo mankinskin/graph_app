@@ -5,7 +5,6 @@ use std::sync::{
 
 use crate::{
     vertex::*,
-    r#match::*,
     index::*,
     Hypergraph, HypergraphRef,
 };
@@ -43,9 +42,9 @@ impl<T: Tokenize, D: IndexDirection> Traversable<T> for Indexer<T, D> {
     fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>> {
         self.graph.read().unwrap()
     }
-    fn graph_mut(&mut self) -> RwLockWriteGuard<'_, Hypergraph<T>> {
-        self.graph.write().unwrap()
-    }
+    //fn graph_mut(&mut self) -> RwLockWriteGuard<'_, Hypergraph<T>> {
+    //    self.graph.write().unwrap()
+    //}
 }
 impl<'g, T: Tokenize, D: IndexDirection> BreadthFirstTraversal<'g, T> for Indexing<T, D> {
     type Trav = Indexer<T, D>;

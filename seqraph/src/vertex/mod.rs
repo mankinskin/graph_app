@@ -1,6 +1,6 @@
 use crate::{
     graph::*,
-    r#match::*,
+    search::*,
 };
 use either::Either;
 use std::{

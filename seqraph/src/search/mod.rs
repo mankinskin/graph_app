@@ -1,14 +1,30 @@
 use crate::{
-    r#match::*,
     vertex::*,
     *,
 };
 mod searcher;
 pub use searcher::*;
+mod match_direction;
+pub use match_direction::*;
 //mod async_searcher;
 //pub use async_searcher::*;
 mod bft;
 pub use bft::*;
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum NoMatch {
+    EmptyPatterns,
+    NoParents,
+    NoChildPatterns,
+    NotFound(Pattern),
+    NoMatchingParent(VertexIndex),
+    InvalidPattern(PatternId),
+    InvalidPatternRange(PatternId, Pattern, String),
+    SingleIndex,
+    ParentMatchingPartially,
+    UnknownKey,
+    UnknownIndex,
+}
 
 #[derive(Clone, Debug)]
 pub(crate) enum SearchNode {

@@ -3,7 +3,6 @@
 use crate::{
     vertex::*,
     search::*,
-    r#match::*,
     ChildLocation, HypergraphRef,
 };
 
