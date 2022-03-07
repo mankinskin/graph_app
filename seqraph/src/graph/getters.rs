@@ -252,17 +252,25 @@ where
     }
     pub fn to_token_children_iter(
         &'a self,
-        tokens: impl IntoIterator<Item = Token<T>> + 'a,
+        tokens: impl IntoIterator<Item = impl AsToken<T> + 'a> + 'a,
     ) -> impl Iterator<Item = Result<Child, NoMatch>> + 'a {
         self.to_token_indices_iter(tokens)
             .map(move |index| index.map(|index| Child::new(index, 1)))
     }
     pub fn to_token_children(
         &self,
-        tokens: impl IntoIterator<Item = Token<T>>,
+        tokens: impl IntoIterator<Item = impl AsToken<T>>,
     ) -> Result<impl IntoPattern<Item = Child>, NoMatch> {
         self.to_token_children_iter(tokens)
             .collect::<Result<Pattern, _>>()
+    }
+    pub fn expect_token_pattern(
+        &self,
+        tokens: impl IntoIterator<Item = impl AsToken<T>>,
+    ) -> Pattern {
+        self.to_token_children(tokens)
+            .expect("Failed to convert tokens to children")
+            .into_pattern()
     }
     pub fn get_token_indices(
         &self,

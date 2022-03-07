@@ -2,7 +2,7 @@ use crate::{
     search::*,
     Hypergraph,
 };
-use std::sync::{RwLockReadGuard, RwLockWriteGuard};
+use std::{sync::{RwLockReadGuard, RwLockWriteGuard}, ops::ControlFlow};
 
 #[derive(Clone)]
 pub struct Searcher<T: Tokenize, D: MatchDirection> {
@@ -13,17 +13,15 @@ pub struct Searcher<T: Tokenize, D: MatchDirection> {
 struct AncestorSearch<'g, T: Tokenize + 'g, D: MatchDirection> {
     _ty: std::marker::PhantomData<(&'g T, D)>,
 }
-impl<'g, T: Tokenize + 'g, D: MatchDirection + 'g> BreadthFirstTraversal<'g, T> for AncestorSearch<'g, T, D> {
+impl<'g, T: Tokenize, D: MatchDirection + 'g> DirectedTraversalPolicy<'g, T, D> for AncestorSearch<'g, T, D> {
     type Trav = &'g Searcher<T, D>;
     fn end_op(
         trav: Self::Trav,
         query: QueryRangePath,
         start: StartPath,
     ) -> Vec<<Self::Trav as Traversable<T>>::Node> {
-        trav.parent_nodes(query, Some(start))
+        Self::parent_nodes(trav, query, Some(start))
     }
-}
-impl<'g, T: Tokenize, D: MatchDirection + 'g> DirectedTraversalPolicy<'g, T, D> for AncestorSearch<'g, T, D> {
 }
 struct ParentSearch<'g, T: Tokenize + 'g, D: MatchDirection> {
     _ty: std::marker::PhantomData<(&'g T, D)>,
@@ -37,7 +35,7 @@ impl<T: Tokenize, D: MatchDirection> Traversable<T> for Searcher<T, D> {
     //    self.graph.write().unwrap()
     //}
 }
-impl<'g, T: Tokenize + 'g, D: MatchDirection + 'g> BreadthFirstTraversal<'g, T> for ParentSearch<'g, T, D> {
+impl<'g, T: Tokenize, D: MatchDirection + 'g> DirectedTraversalPolicy<'g, T, D> for ParentSearch<'g, T, D> {
     type Trav = &'g Searcher<T, D>;
     fn end_op(
         _trav: Self::Trav,
@@ -46,8 +44,6 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection + 'g> BreadthFirstTraversal<'g, T> 
     ) -> Vec<<Self::Trav as Traversable<T>>::Node> {
         vec![]
     }
-}
-impl<'g, T: Tokenize, D: MatchDirection + 'g> DirectedTraversalPolicy<'g, T, D> for ParentSearch<'g, T, D> {
 }
 impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<T, D> {
     pub fn new(graph: HypergraphRef<T>) -> Self {
@@ -85,10 +81,11 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<T, D> {
     ) -> SearchResult {
         let query = query.into_pattern();
         let query_path = QueryRangePath::new_directed::<D, _, _>(query.as_pattern_view())?;
-        Bft::new(SearchNode::Query(query_path), move |node| {
+        match Bft::new(SearchNode::Query(query_path), move |node| {
             match node.clone() {
                 SearchNode::Query(query) =>
-                    self.parent_nodes(
+                    S::parent_nodes(
+                        self,
                         query,
                         None,
                     )
@@ -108,18 +105,34 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<T, D> {
                 _ => vec![],
             }.into_iter()
         })
-        .find_map(|(_, node)|
+        .try_fold(None, |acc: Option<QueryFound>, (_, node)|
             match node {
-                SearchNode::End(path, query) =>
-                    Some(Ok(FoundPath {
-                        path,
-                        query,
-                    })),
-                _ => None,
+                SearchNode::End(found) => {
+                    ControlFlow::Break(found)
+                },
+                SearchNode::Mismatch(found) => {
+                    match &found.found {
+                        FoundPath::Complete(_) => {
+                            println!("found: {:?}", found);
+                            ControlFlow::Continue(Some(found))
+                        },
+                        FoundPath::Range(path) => {
+                            println!("path: {:?}", path);
+                            println!("acc: {:?}", acc);
+                            if path.width > acc.as_ref().map(|f| f.found.width()).unwrap_or_default() { 
+                                ControlFlow::Continue(Some(found))
+                            } else {
+                                ControlFlow::Continue(acc)
+                            }
+                        },
+                    }
+                },
+                _ => ControlFlow::Continue(acc)
             }
-        )
-        .unwrap_or_else(||
-            Err(NoMatch::NotFound(query))
-        )
+        ) {
+            ControlFlow::Continue(None) => Err(NoMatch::NotFound(query)),
+            ControlFlow::Continue(Some(found)) => Ok(found),
+            ControlFlow::Break(found) => Ok(found)
+        }
     }
 }

@@ -31,7 +31,8 @@ pub(crate) enum SearchNode {
     Query(QueryRangePath),
     Root(QueryRangePath, StartPath),
     Match(RangePath, QueryRangePath),
-    End(RangePath, QueryRangePath),
+    End(QueryFound),
+    Mismatch(QueryFound),
 }
 impl BftNode for SearchNode {
     fn query_node(query: QueryRangePath) -> Self {
@@ -43,8 +44,11 @@ impl BftNode for SearchNode {
     fn match_node(path: RangePath, query: QueryRangePath) -> Self {
         Self::Match(path, query)
     }
-    fn end_node(path: RangePath, query: QueryRangePath) -> Self {
-        Self::End(path, query)
+    fn end_node(found: QueryFound) -> Self {
+        Self::End(found)
+    }
+    fn mismatch_node(found: QueryFound) -> Self {
+        Self::Mismatch(found)
     }
 }
 
@@ -57,6 +61,16 @@ pub struct QueryRangePath {
     pub(crate) end: ChildPath,
 }
 impl QueryRangePath {
+    pub fn complete(query: impl IntoPattern<Item = impl AsChild>, index: impl AsChild) -> Self {
+        let query = query.into_pattern();
+        Self {
+            entry: 0,
+            exit: query.len() - 1,
+            query,
+            start: vec![],
+            end: vec![],
+        }
+    }
     pub fn new_directed<D: MatchDirection, C: AsChild, P: IntoPattern<Item = C>>(query: P) -> Result<Self, NoMatch> {
         let entry = D::head_index(query.as_pattern_view());
         let exit = D::index_next(query.as_pattern_view(), entry).ok_or_else(|| NoMatch::SingleIndex)?;
@@ -108,6 +122,7 @@ pub struct RangePath {
     pub(crate) start: ChildPath,
     pub(crate) exit: usize,
     pub(crate) end: ChildPath,
+    pub(crate) width: usize,
 }
 impl RangePath {
     pub fn get_exit_location(&self) -> ChildLocation {
@@ -121,6 +136,7 @@ impl RangePath {
         StartPath {
             path: self.start,
             entry: self.root_pattern.to_child_location(self.entry),
+            width: self.width,
         }
     }
     pub fn is_complete(&self) -> bool {
@@ -141,7 +157,8 @@ impl RangePath {
         let graph = trav.graph();
         while let Some(mut location) = self.end.pop() {
             let pattern = graph.expect_pattern_at(location);
-            if let Some(next) = D::index_next(pattern, location.sub_index) {
+            if let Some(next) = D::index_next(&pattern, location.sub_index) {
+                self.width += pattern.get(location.sub_index).unwrap().width;
                 location.sub_index = next;
                 self.end.push(location);
                 return true;
@@ -149,7 +166,8 @@ impl RangePath {
         }
         let mut location = self.get_exit_location();
         let pattern = graph.expect_pattern_at(location);
-        if let Some(next) = D::index_next(pattern, location.sub_index) {
+        self.width += pattern.get(location.sub_index).unwrap().width;
+        if let Some(next) = D::index_next(&pattern, location.sub_index) {
             location.sub_index = next;
             self.end.push(location);
             true
@@ -157,23 +175,88 @@ impl RangePath {
             false
         }
     }
+    pub(crate) fn reduce_end<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(mut self, trav: Trav) -> FoundPath {
+        let graph = trav.graph();
+        while let Some(location) = self.end.pop() {
+            let pattern = graph.expect_pattern_at(location);
+            if location.sub_index != D::head_index(pattern.as_pattern_view()) {
+                self.end.push(location);
+                break;
+            }
+        }
+
+        if self.end.is_empty() {
+            let pattern = graph.expect_pattern_at(self.root_pattern);
+            if Some(self.exit) == D::index_next(&pattern, self.entry) {
+                if let Some(last) = self.start.pop() {
+                    self.entry = last.sub_index;
+                    self.root_pattern = last.into_pattern_location();
+                    let pattern = graph.expect_pattern_at(self.root_pattern);
+                    self.exit = pattern.len() - 1;
+                } else {
+                    return FoundPath::Complete(*pattern.get(self.entry).unwrap());
+                }
+            }
+        }
+        FoundPath::new(self)
+    }
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FoundPath {
-    pub(crate) path: RangePath,
-    pub(crate) query: QueryRangePath,
+pub enum FoundPath {
+    Complete(Child),
+    Range(RangePath),
 }
 impl FoundPath {
-    pub fn unwrap_complete(self) -> Child {
-        self.is_complete().then(||
-            self.path.root_pattern.parent
-        ).unwrap()
+    pub fn new(path: RangePath) -> Self {
+        if path.is_complete() {
+            FoundPath::Complete(path.root_pattern.parent)
+        } else {
+            FoundPath::Range(path)
+        }
     }
-    pub fn is_complete(&self) -> bool {
-        self.path.is_complete()
+    fn width(&self) -> usize {
+        match self {
+            Self::Complete(c) => c.width,
+            Self::Range(r) => r.width,
+        }
+    }
+    pub fn unwrap_complete(self) -> Child {
+        match self {
+            Self::Complete(index) => index,
+            _ => panic!("Unable to unwrap {:?} as complete.", self),
+        }
     }
 }
-pub type SearchResult = Result<FoundPath, NoMatch>;
+impl Into<FoundPath> for RangePath {
+    fn into(self) -> FoundPath {
+        FoundPath::new(self)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QueryFound {
+    pub(crate) found: FoundPath,
+    pub(crate) query: QueryRangePath,
+}
+
+impl QueryFound {
+    pub fn new(found: impl Into<FoundPath>, query: QueryRangePath) -> Self {
+        QueryFound {
+            found: found.into(),
+            query,
+        }
+    }
+    pub fn complete(query: impl IntoPattern<Item = impl AsChild>, index: impl AsChild) -> Self {
+        Self {
+            found: FoundPath::Complete(index.as_child()),
+            query: QueryRangePath::complete(query, index),
+        }
+    }
+    pub fn unwrap_complete(self) -> Child {
+        self.found.unwrap_complete()
+    }
+}
+pub type SearchResult = Result<QueryFound, NoMatch>;
 
 impl<'t, 'g, T> HypergraphRef<T>
 where
@@ -233,76 +316,92 @@ pub(crate) mod tests {
     };
     use itertools::*;
 
-    //#[test]
-    //fn find_ancestor1() {
-    //    let Context {
-    //        graph,
-    //        a,
-    //        b,
-    //        c,
-    //        d,
-    //        e,
-    //        f,
-    //        g,
-    //        h,
-    //        i,
-    //        ab,
-    //        bc,
-    //        abc,
-    //        abcd,
-    //        ababababcdefghi,
-    //        ..
-    //     } = &*context();
-    //    let a_bc_pattern = vec![Child::new(a, 1), Child::new(bc, 2)];
-    //    let ab_c_pattern = vec![Child::new(ab, 2), Child::new(c, 1)];
-    //    let a_bc_d_pattern = vec![Child::new(a, 1), Child::new(bc, 2), Child::new(d, 1)];
-    //    let b_c_pattern = vec![Child::new(b, 1), Child::new(c, 1)];
-    //    let bc_pattern = vec![Child::new(bc, 2)];
-    //    let a_b_c_pattern = vec![Child::new(a, 1), Child::new(b, 1), Child::new(c, 1)];
-    //    assert_eq!(
-    //        graph.find_ancestor(&bc_pattern),
-    //        Err(NoMatch::SingleIndex),
-    //        "bc"
-    //    );
-    //    assert_eq!(
-    //        graph.find_ancestor(&b_c_pattern),
-    //        Ok(FoundPath::complete(bc)),
-    //        "b_c"
-    //    );
-    //    assert_eq!(
-    //        graph.find_ancestor(&a_bc_pattern),
-    //        Ok(FoundPath::complete(abc)),
-    //        "a_bc"
-    //    );
-    //    assert_eq!(
-    //        graph.find_ancestor(&ab_c_pattern),
-    //        Ok(FoundPath::complete(abc)),
-    //        "ab_c"
-    //    );
-    //    assert_eq!(
-    //        graph.find_ancestor(&a_bc_d_pattern),
-    //        Ok(FoundPath::complete(abcd)),
-    //        "a_bc_d"
-    //    );
-    //    assert_eq!(
-    //        graph.find_ancestor(&a_b_c_pattern),
-    //        Ok(FoundPath::complete(abc)),
-    //        "a_b_c"
-    //    );
-    //    let a_b_a_b_a_b_a_b_c_d_e_f_g_h_i_pattern =
-    //        vec![*a, *b, *a, *b, *a, *b, *a, *b, *c, *d, *e, *f, *g, *h, *i];
-    //    assert_eq!(
-    //        graph.find_ancestor(&a_b_a_b_a_b_a_b_c_d_e_f_g_h_i_pattern),
-    //        Ok(FoundPath::complete(ababababcdefghi)),
-    //        "a_b_a_b_a_b_a_b_c_d_e_f_g_h_i"
-    //    );
-    //    let a_b_c_c_pattern = [&a_b_c_pattern[..], &[Child::new(c, 1)]].concat();
-    //    assert_eq!(
-    //        graph.find_ancestor(&a_b_c_c_pattern),
-    //        Ok(FoundPath::remainder(abc, [c].as_slice())),
-    //        "a_b_c_c"
-    //    );
-    //}
+    #[test]
+    fn find_ancestor1() {
+        let Context {
+            graph,
+            a,
+            b,
+            c,
+            d,
+            e,
+            f,
+            g,
+            h,
+            i,
+            ab,
+            bc,
+            abc,
+            abcd,
+            ababababcdefghi,
+            ..
+         } = &*context();
+        let a_bc_pattern = vec![Child::new(a, 1), Child::new(bc, 2)];
+        let ab_c_pattern = vec![Child::new(ab, 2), Child::new(c, 1)];
+        let a_bc_d_pattern = vec![Child::new(a, 1), Child::new(bc, 2), Child::new(d, 1)];
+        let b_c_pattern = vec![Child::new(b, 1), Child::new(c, 1)];
+        let bc_pattern = vec![Child::new(bc, 2)];
+        let a_b_c_pattern = vec![Child::new(a, 1), Child::new(b, 1), Child::new(c, 1)];
+
+        //let query = bc_pattern;
+        //assert_eq!(
+        //    graph.find_ancestor(&query),
+        //    Err(NoMatch::SingleIndex),
+        //    "bc"
+        //);
+        //let query = b_c_pattern;
+        //assert_eq!(
+        //    graph.find_ancestor(&query),
+        //    Ok(QueryFound::complete(query, bc)),
+        //    "b_c"
+        //);
+        //let query = a_bc_pattern;
+        //assert_eq!(
+        //    graph.find_ancestor(&query),
+        //    Ok(QueryFound::complete(query, abc)),
+        //    "a_bc"
+        //);
+        //let query = ab_c_pattern;
+        //assert_eq!(
+        //    graph.find_ancestor(&query),
+        //    Ok(QueryFound::complete(query, abc)),
+        //    "ab_c"
+        //);
+        //let query = a_bc_d_pattern;
+        //assert_eq!(
+        //    graph.find_ancestor(&query),
+        //    Ok(QueryFound::complete(query, abcd)),
+        //    "a_bc_d"
+        //);
+        //let query = a_b_c_pattern.clone();
+        //assert_eq!(
+        //    graph.find_ancestor(&query),
+        //    Ok(QueryFound::complete(query, abc)),
+        //    "a_b_c"
+        //);
+        //let query =
+        //    vec![*a, *b, *a, *b, *a, *b, *a, *b, *c, *d, *e, *f, *g, *h, *i];
+        //assert_eq!(
+        //    graph.find_ancestor(&query),
+        //    Ok(QueryFound::complete(query, ababababcdefghi)),
+        //    "a_b_a_b_a_b_a_b_c_d_e_f_g_h_i"
+        //);
+        let query = [&a_b_c_pattern[..], &[Child::new(c, 1)]].concat();
+        assert_eq!(
+            graph.find_ancestor(&query),
+            Ok(QueryFound {
+                found: FoundPath::Complete(*abc),
+                query: QueryRangePath {
+                    exit: query.len() - 2,
+                    query,
+                    entry: 0,
+                    start: vec![],
+                    end: vec![],
+                },
+            }),
+            "a_b_c_c"
+        );
+    }
     #[test]
     fn find_ancestor2() {
         let mut graph = Hypergraph::default();
@@ -328,8 +427,8 @@ pub(crate) mod tests {
         let byz_found = graph.find_ancestor(&query);
         assert_eq!(
             byz_found,
-            Ok(FoundPath {
-                path: RangePath {
+            Ok(QueryFound {
+                found: FoundPath::Range(RangePath {
                     root_pattern: xabyz.to_pattern_location(xaby_z_id),
                     entry: 0,
                     start: vec![
@@ -341,7 +440,8 @@ pub(crate) mod tests {
                     ],
                     end: vec![],
                     exit: 1,
-                },
+                    width: 3,
+                }),
                 query: QueryRangePath {
                     exit: query.len() - 1,
                     query,
@@ -352,29 +452,31 @@ pub(crate) mod tests {
             })
         );
     }
-    //#[test]
-    //fn find_sequence() {
-    //    let Context {
-    //        graph,
-    //        abc,
-    //        ababababcdefghi,
-    //        ..
-    //     } = &*context();
-    //    assert_eq!(
-    //        graph.find_sequence("a".chars()),
-    //        //Ok(FoundPath::complete(a))
-    //        Err(NoMatch::SingleIndex),
-    //    );
-
-    //    let abc_found = graph.find_sequence("abc".chars());
-    //    assert_eq!(
-    //        abc_found,
-    //        Ok(FoundPath::complete(abc))
-    //    );
-    //    let ababababcdefghi_found = graph.find_sequence("ababababcdefghi".chars());
-    //    assert_eq!(
-    //        ababababcdefghi_found,
-    //        Ok(FoundPath::complete(ababababcdefghi))
-    //    );
-    //}
+    #[test]
+    fn find_sequence() {
+        let Context {
+            graph,
+            abc,
+            ababababcdefghi,
+            ..
+         } = &*context();
+        assert_eq!(
+            graph.find_sequence("a".chars()),
+            Err(NoMatch::SingleIndex),
+        );
+        let query = graph.read().unwrap().expect_token_pattern("abc".chars());
+        let abc_found = graph.find_ancestor(&query);
+        assert_eq!(
+            abc_found,
+            Ok(QueryFound::complete(query, abc)),
+            "abc"
+        );
+        let query = graph.read().unwrap().expect_token_pattern("ababababcdefghi".chars());
+        let ababababcdefghi_found = graph.find_ancestor(&query);
+        assert_eq!(
+            ababababcdefghi_found,
+            Ok(QueryFound::complete(query, ababababcdefghi)),
+            "ababababcdefghi"
+        );
+    }
 }
