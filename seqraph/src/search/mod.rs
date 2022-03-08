@@ -99,14 +99,16 @@ impl QueryRangePath {
     }
     pub(crate) fn advance_end<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(&mut self, trav: Trav) -> bool {
         let graph = trav.graph();
+        // skip path segments with no successors
         while let Some(mut location) = self.end.pop() {
             let pattern = graph.expect_pattern_at(location);
-            if let Some(next) = D::index_next(pattern, location.sub_index) {
+            if let Some(next) = D::index_next(&pattern, location.sub_index) {
                 location.sub_index = next;
                 self.end.push(location);
                 return true;
             }
         }
+        // end is empty (exit is prev)
         if let Some(next) = D::index_next(&self.query, self.exit) {
             self.exit = next;
             true
@@ -126,6 +128,12 @@ pub struct RangePath {
 }
 impl RangePath {
     pub fn get_exit_location(&self) -> ChildLocation {
+        self.root_pattern.to_child_location(self.exit)
+    }
+    pub fn get_entry_location(&self) -> ChildLocation {
+        self.root_pattern.to_child_location(self.entry)
+    }
+    pub fn get_end_location(&self) -> ChildLocation {
         if self.end.is_empty() {
             self.root_pattern.to_child_location(self.exit)
         } else {
@@ -134,8 +142,8 @@ impl RangePath {
     }
     pub fn into_start_path(self) -> StartPath{
         StartPath {
+            entry: self.get_entry_location(),
             path: self.start,
-            entry: self.root_pattern.to_child_location(self.entry),
             width: self.width,
         }
     }
@@ -144,61 +152,60 @@ impl RangePath {
         self.start.is_empty() && self.end.is_empty()
     }
     pub(crate) fn get_next<T: Tokenize>(&self, trav: impl Traversable<T>) -> Child {
-        if let Some(next) = self.end.last() {
-            trav.graph().expect_child_at(next)
-        } else {
-            trav.graph().expect_child_at(self.get_exit_location())
-        }
+        trav.graph().expect_child_at(self.get_end_location())
     }
     pub(crate) fn push_next(&mut self, next: ChildLocation) {
         self.end.push(next);
     }
     pub(crate) fn advance_end<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(&mut self, trav: Trav) -> bool {
         let graph = trav.graph();
+        // skip path segments with no successors
         while let Some(mut location) = self.end.pop() {
             let pattern = graph.expect_pattern_at(location);
             if let Some(next) = D::index_next(&pattern, location.sub_index) {
-                self.width += pattern.get(location.sub_index).unwrap().width;
                 location.sub_index = next;
                 self.end.push(location);
                 return true;
             }
         }
-        let mut location = self.get_exit_location();
+        // end is empty (exit is prev)
+        let location = self.get_exit_location();
         let pattern = graph.expect_pattern_at(location);
-        self.width += pattern.get(location.sub_index).unwrap().width;
         if let Some(next) = D::index_next(&pattern, location.sub_index) {
-            location.sub_index = next;
-            self.end.push(location);
+            self.exit = next;
             true
         } else {
             false
         }
     }
-    pub(crate) fn reduce_end<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(mut self, trav: Trav) -> FoundPath {
+    pub(crate) fn reduce_mismatch<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(mut self, trav: Trav) -> FoundPath {
         let graph = trav.graph();
-        while let Some(location) = self.end.pop() {
+        // remove segments pointing to mismatch at pattern head
+        while let Some(mut location) = self.end.pop() {
             let pattern = graph.expect_pattern_at(location);
-            if location.sub_index != D::head_index(pattern.as_pattern_view()) {
+            if let Some(prev) = D::index_prev(pattern.as_pattern_view(), location.sub_index) {
+                location.sub_index = prev;
                 self.end.push(location);
-                break;
+                return FoundPath::new(self);
             }
         }
-
-        if self.end.is_empty() {
-            let pattern = graph.expect_pattern_at(self.root_pattern);
-            if Some(self.exit) == D::index_next(&pattern, self.entry) {
-                if let Some(last) = self.start.pop() {
-                    self.entry = last.sub_index;
-                    self.root_pattern = last.into_pattern_location();
-                    let pattern = graph.expect_pattern_at(self.root_pattern);
-                    self.exit = pattern.len() - 1;
-                } else {
-                    return FoundPath::Complete(*pattern.get(self.entry).unwrap());
-                }
+        // end is empty (exit is mismatch)
+        let pattern = graph.expect_pattern_at(self.root_pattern);
+        let prev = D::index_prev(&pattern, self.exit).unwrap();
+        if self.entry == prev {
+            if let Some(last) = self.start.pop() {
+                self.entry = last.sub_index;
+                self.root_pattern = last.into_pattern_location();
+                let pattern = graph.expect_pattern_at(self.root_pattern);
+                self.exit = pattern.len() - 1;
+                FoundPath::new(self)
+            } else {
+                FoundPath::Complete(*pattern.get(self.entry).unwrap())
             }
+        } else {
+            self.exit = prev;
+            FoundPath::new(self)
         }
-        FoundPath::new(self)
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq)]

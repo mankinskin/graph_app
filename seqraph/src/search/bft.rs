@@ -127,18 +127,18 @@ pub(crate) trait DirectedTraversalPolicy<'g, T: Tokenize, D: MatchDirection>: Si
                     .iter()
                     .sorted_unstable_by_key(|pi| pi.sub_index)
                     .map(|&pi| {
-                        let root_entry = ChildLocation::new(p, pi.pattern_id, pi.sub_index);
+                        let parent_entry = ChildLocation::new(p, pi.pattern_id, pi.sub_index);
                         let start = if let Some(mut start) = start.clone() {
-                            if start.path.is_empty() && start.entry.sub_index != 0 {
+                            let pattern = graph.expect_pattern_at(start.entry);
+                            if start.path.is_empty() && start.entry.sub_index != D::head_index(&pattern) {
                                 start.path.push(start.entry);
                             }
-                            let pattern = graph.expect_pattern_at(start.entry);
-                            start.width = start.width + pattern_width(D::front_context(&pattern, start.entry.sub_index));
-                            start.entry = root_entry;
+                            //start.width = start.width + pattern_width(D::front_context(&pattern, start.entry.sub_index));
+                            start.entry = parent_entry;
                             start
                         } else {
                             StartPath {
-                                entry: root_entry,
+                                entry: parent_entry,
                                 path: vec![],
                                 width: vertex.width,
                             }
@@ -225,7 +225,12 @@ pub(crate) trait DirectedTraversalPolicy<'g, T: Tokenize, D: MatchDirection>: Si
             Ordering::Equal =>
                 if child_next == query_next {
                     // continue with match node
-                    Self::successor_nodes(trav, path, query)
+                    Self::successor_nodes(
+                        trav,
+                        child_next,
+                        path,
+                        query,
+                    )
                 } else if child_next.width == 1{
                     // todo: find matching prefixes
                     vec![
@@ -260,7 +265,7 @@ pub(crate) trait DirectedTraversalPolicy<'g, T: Tokenize, D: MatchDirection>: Si
         path: RangePath,
         query: QueryRangePath,
     ) -> <Self::Trav as Traversable<T>>::Node {
-        let found = path.reduce_end::<_, _, D>(trav);
+        let found = path.reduce_mismatch::<_, _, D>(trav);
         <Self::Trav as Traversable<T>>::Node::mismatch_node(
             QueryFound::new(
                 found,
@@ -296,17 +301,14 @@ pub(crate) trait DirectedTraversalPolicy<'g, T: Tokenize, D: MatchDirection>: Si
     }
     fn successor_nodes(
         trav: Self::Trav,
+        prev: Child,
         mut path: RangePath,
         mut query: QueryRangePath,
     ) -> Vec<<Self::Trav as Traversable<T>>::Node> {
 
-        // find parent partition with matching context
-        // todo: get pattern of current node, not root
-        // todo: get next child in that pattern
-        let adv_path = path.advance_end::<_, _, D>(&trav);
-
+        path.width += prev.width;
         if query.advance_end::<_, _, D>(&trav) {
-            if adv_path {
+            if path.advance_end::<_, _, D>(&trav) {
                 Self::match_next(
                     trav,
                     path,
@@ -316,10 +318,15 @@ pub(crate) trait DirectedTraversalPolicy<'g, T: Tokenize, D: MatchDirection>: Si
                 Self::end_op(trav, query, path.into_start_path())
             }
         } else {
+            let found = if path.advance_end::<_, _, D>(&trav) {
+                path.reduce_mismatch::<_, _, D>(trav)
+            } else {
+                path.into()
+            };
             vec![
                 <Self::Trav as Traversable<T>>::Node::end_node(
                     QueryFound::new(
-                        path,
+                        found,
                         query,
                     )
                 )

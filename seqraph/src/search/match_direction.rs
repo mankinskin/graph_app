@@ -97,6 +97,17 @@ pub trait MatchDirection : Clone {
             (i < pattern.as_pattern_view().len()).then(|| i)
         )
     }
+    fn index_prev_impl(
+        index: usize,
+    ) -> Option<usize>;
+    fn index_prev(
+        pattern: impl IntoPattern<Item = impl AsChild>,
+        index: usize,
+    ) -> Option<usize> {
+        Self::index_prev_impl(index).and_then(|i|
+            (i < pattern.as_pattern_view().len()).then(|| i)
+        )
+    }
     fn tail_index<T: AsChild>(pattern:  &'_ [T], tail: &'_ [T]) -> usize;
     /// filter pattern indices of parent relation by child patterns and matching direction
     fn filter_parent_pattern_indices(
@@ -191,6 +202,11 @@ impl MatchDirection for Right {
     ) -> Option<usize> {
         index.checked_add(1)
     }
+    fn index_prev_impl(
+        index: usize,
+    ) -> Option<usize> {
+        index.checked_sub(1)
+    }
     fn normalize_index<T: AsChild>(
         _pattern: &'_ [T],
         index: usize,
@@ -264,8 +280,15 @@ impl MatchDirection for Left {
     fn tail_index<T: AsChild>(_pattern:  &'_ [T], tail: &'_ [T]) -> usize {
         tail.len()
     }
-    fn index_next_impl(index: usize) -> Option<usize> {
+    fn index_next_impl(
+        index: usize
+    ) -> Option<usize> {
         index.checked_sub(1)
+    }
+    fn index_prev_impl(
+        index: usize,
+    ) -> Option<usize> {
+        index.checked_add(1)
     }
     fn normalize_index<T: AsChild>(
         pattern: &'_ [T],

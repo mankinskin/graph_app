@@ -106,33 +106,41 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<T, D> {
             }.into_iter()
         })
         .try_fold(None, |acc: Option<QueryFound>, (_, node)|
-            match node {
-                SearchNode::End(found) => {
-                    ControlFlow::Break(found)
-                },
-                SearchNode::Mismatch(found) => {
-                    match &found.found {
-                        FoundPath::Complete(_) => {
-                            println!("found: {:?}", found);
-                            ControlFlow::Continue(Some(found))
-                        },
-                        FoundPath::Range(path) => {
-                            println!("path: {:?}", path);
-                            println!("acc: {:?}", acc);
-                            if path.width > acc.as_ref().map(|f| f.found.width()).unwrap_or_default() { 
-                                ControlFlow::Continue(Some(found))
-                            } else {
-                                ControlFlow::Continue(acc)
-                            }
-                        },
-                    }
-                },
-                _ => ControlFlow::Continue(acc)
-            }
+            fold_found(acc, node)
         ) {
             ControlFlow::Continue(None) => Err(NoMatch::NotFound(query)),
             ControlFlow::Continue(Some(found)) => Ok(found),
             ControlFlow::Break(found) => Ok(found)
         }
+    }
+}
+
+fn fold_found(acc: Option<QueryFound>, node: SearchNode) -> ControlFlow<QueryFound, Option<QueryFound>> {
+    match node {
+        SearchNode::End(found) => {
+            ControlFlow::Break(found)
+        },
+        SearchNode::Mismatch(found) => {
+            match &found.found {
+                FoundPath::Complete(_) => {
+                    //println!("found: {:?}", found);
+                    if found.found.width() > acc.as_ref().map(|f| f.found.width()).unwrap_or_default() {
+                        ControlFlow::Continue(Some(found))
+                    } else {
+                        ControlFlow::Continue(acc)
+                    }
+                },
+                FoundPath::Range(path) => {
+                    //println!("path: {:?}", path);
+                    //println!("acc: {:?}", acc);
+                    if path.width > acc.as_ref().map(|f| f.found.width()).unwrap_or_default() { 
+                        ControlFlow::Continue(Some(found))
+                    } else {
+                        ControlFlow::Continue(acc)
+                    }
+                },
+            }
+        },
+        _ => ControlFlow::Continue(acc)
     }
 }

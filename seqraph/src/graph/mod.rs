@@ -276,6 +276,7 @@ pub(crate) mod tests {
                     [abcdef, ghi]
                 ]);
                 let aba = graph.insert_pattern([ab, a]);
+                // 25
                 let abab = graph.insert_patterns([
                     [aba, b],
                     [ab, ab],
@@ -289,6 +290,7 @@ pub(crate) mod tests {
                     [aba, bcd],
                     [abab, cd],
                 ]);
+                // 28
                 let ababababcd = graph.insert_patterns([
                     [ababab, abcd],
                     [abab, ababcd],
@@ -297,6 +299,7 @@ pub(crate) mod tests {
                     [ab, abcdefghi],
                     [ababcd, efghi],
                 ]);
+                // 30
                 let ababababcdefghi = graph.insert_patterns([
                     [ababababcd, efghi],
                     [abab, ababcdefghi],
