@@ -19,7 +19,7 @@ impl<'g, T: Tokenize, D: MatchDirection + 'g> DirectedTraversalPolicy<'g, T, D> 
         trav: Self::Trav,
         query: QueryRangePath,
         start: StartPath,
-    ) -> Vec<<Self::Trav as Traversable<T>>::Node> {
+    ) -> Vec<BftNode> {
         Self::parent_nodes(trav, query, Some(start))
     }
 }
@@ -27,13 +27,9 @@ struct ParentSearch<'g, T: Tokenize + 'g, D: MatchDirection> {
     _ty: std::marker::PhantomData<(&'g T, D)>,
 }
 impl<T: Tokenize, D: MatchDirection> Traversable<T> for Searcher<T, D> {
-    type Node = SearchNode;
     fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>> {
         self.graph.read().unwrap()
     }
-    //fn graph_mut(&mut self) -> RwLockWriteGuard<'_, Hypergraph<T>> {
-    //    self.graph.write().unwrap()
-    //}
 }
 impl<'g, T: Tokenize, D: MatchDirection + 'g> DirectedTraversalPolicy<'g, T, D> for ParentSearch<'g, T, D> {
     type Trav = &'g Searcher<T, D>;
@@ -41,7 +37,7 @@ impl<'g, T: Tokenize, D: MatchDirection + 'g> DirectedTraversalPolicy<'g, T, D> 
         _trav: Self::Trav,
         _query: QueryRangePath,
         _start: StartPath,
-    ) -> Vec<<Self::Trav as Traversable<T>>::Node> {
+    ) -> Vec<BftNode> {
         vec![]
     }
 }
@@ -81,22 +77,22 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<T, D> {
     ) -> SearchResult {
         let query = query.into_pattern();
         let query_path = QueryRangePath::new_directed::<D, _, _>(query.as_pattern_view())?;
-        match Bft::new(SearchNode::Query(query_path), move |node| {
+        match Bft::new(BftNode::Query(query_path), move |node| {
             match node.clone() {
-                SearchNode::Query(query) =>
+                BftNode::Query(query) =>
                     S::parent_nodes(
                         self,
                         query,
                         None,
                     )
                 ,
-                SearchNode::Root(query, start_path) =>
+                BftNode::Root(query, start_path) =>
                     S::root_successor_nodes(
                         self,
                         query,
                         start_path,
                     ),
-                SearchNode::Match(path, query) =>
+                BftNode::Match(path, query) =>
                     S::match_next(
                         self,
                         path,
@@ -112,35 +108,5 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<T, D> {
             ControlFlow::Continue(Some(found)) => Ok(found),
             ControlFlow::Break(found) => Ok(found)
         }
-    }
-}
-
-fn fold_found(acc: Option<QueryFound>, node: SearchNode) -> ControlFlow<QueryFound, Option<QueryFound>> {
-    match node {
-        SearchNode::End(found) => {
-            ControlFlow::Break(found)
-        },
-        SearchNode::Mismatch(found) => {
-            match &found.found {
-                FoundPath::Complete(_) => {
-                    //println!("found: {:?}", found);
-                    if found.found.width() > acc.as_ref().map(|f| f.found.width()).unwrap_or_default() {
-                        ControlFlow::Continue(Some(found))
-                    } else {
-                        ControlFlow::Continue(acc)
-                    }
-                },
-                FoundPath::Range(path) => {
-                    //println!("path: {:?}", path);
-                    //println!("acc: {:?}", acc);
-                    if path.width > acc.as_ref().map(|f| f.found.width()).unwrap_or_default() { 
-                        ControlFlow::Continue(Some(found))
-                    } else {
-                        ControlFlow::Continue(acc)
-                    }
-                },
-            }
-        },
-        _ => ControlFlow::Continue(acc)
     }
 }

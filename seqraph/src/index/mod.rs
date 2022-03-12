@@ -11,27 +11,31 @@ pub use indexer::*;
 mod index_direction;
 pub use index_direction::*;
 
-#[derive(Clone, Debug)]
-pub(crate) enum IndexingNode {
-    Query(QueryRangePath),
-    Root(QueryRangePath, StartPath),
-    Match(RangePath, QueryRangePath),
-    End(RangePath, QueryRangePath),
-}
-impl BftNode for IndexingNode {
-    fn query_node(query: QueryRangePath) -> Self {
-        Self::Query(query)
-    }
-    fn root_node(query: QueryRangePath, start_path: StartPath) -> Self {
-        Self::Root(query, start_path)
-    }
-    fn match_node(path: RangePath, query: QueryRangePath) -> Self {
-        Self::Match(path, query)
-    }
-    fn end_node(path: RangePath, query: QueryRangePath) -> Self {
-        Self::End(path, query)
-    }
-}
+//#[derive(Clone, Debug)]
+//pub(crate) enum IndexingNode {
+//    Query(QueryRangePath),
+//    Root(QueryRangePath, StartPath),
+//    Match(RangePath, QueryRangePath),
+//    End(QueryFound),
+//    Mismatch(QueryFound),
+//}
+//impl BftNode for IndexingNode {
+//    fn query_node(query: QueryRangePath) -> Self {
+//        Self::Query(query)
+//    }
+//    fn root_node(query: QueryRangePath, start_path: StartPath) -> Self {
+//        Self::Root(query, start_path)
+//    }
+//    fn match_node(path: RangePath, query: QueryRangePath) -> Self {
+//        Self::Match(path, query)
+//    }
+//    fn end_node(found: QueryFound) -> Self {
+//        Self::End(found)
+//    }
+//    fn mismatch_node(found: QueryFound) -> Self {
+//        Self::Mismatch(found)
+//    }
+//}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IndexedPath {

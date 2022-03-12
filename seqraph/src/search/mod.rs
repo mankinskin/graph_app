@@ -26,32 +26,6 @@ pub enum NoMatch {
     UnknownIndex,
 }
 
-#[derive(Clone, Debug)]
-pub(crate) enum SearchNode {
-    Query(QueryRangePath),
-    Root(QueryRangePath, StartPath),
-    Match(RangePath, QueryRangePath),
-    End(QueryFound),
-    Mismatch(QueryFound),
-}
-impl BftNode for SearchNode {
-    fn query_node(query: QueryRangePath) -> Self {
-        Self::Query(query)
-    }
-    fn root_node(query: QueryRangePath, start_path: StartPath) -> Self {
-        Self::Root(query, start_path)
-    }
-    fn match_node(path: RangePath, query: QueryRangePath) -> Self {
-        Self::Match(path, query)
-    }
-    fn end_node(found: QueryFound) -> Self {
-        Self::End(found)
-    }
-    fn mismatch_node(found: QueryFound) -> Self {
-        Self::Mismatch(found)
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct QueryRangePath {
     pub(crate) query: Pattern,
@@ -340,7 +314,7 @@ pub(crate) mod tests {
             bc,
             abc,
             abcd,
-            ababababcdefghi,
+            //ababababcdefghi,
             ..
          } = &*context();
         let a_bc_pattern = vec![Child::new(a, 1), Child::new(bc, 2)];
@@ -350,42 +324,42 @@ pub(crate) mod tests {
         let bc_pattern = vec![Child::new(bc, 2)];
         let a_b_c_pattern = vec![Child::new(a, 1), Child::new(b, 1), Child::new(c, 1)];
 
-        //let query = bc_pattern;
-        //assert_eq!(
-        //    graph.find_ancestor(&query),
-        //    Err(NoMatch::SingleIndex),
-        //    "bc"
-        //);
-        //let query = b_c_pattern;
-        //assert_eq!(
-        //    graph.find_ancestor(&query),
-        //    Ok(QueryFound::complete(query, bc)),
-        //    "b_c"
-        //);
-        //let query = a_bc_pattern;
-        //assert_eq!(
-        //    graph.find_ancestor(&query),
-        //    Ok(QueryFound::complete(query, abc)),
-        //    "a_bc"
-        //);
-        //let query = ab_c_pattern;
-        //assert_eq!(
-        //    graph.find_ancestor(&query),
-        //    Ok(QueryFound::complete(query, abc)),
-        //    "ab_c"
-        //);
-        //let query = a_bc_d_pattern;
-        //assert_eq!(
-        //    graph.find_ancestor(&query),
-        //    Ok(QueryFound::complete(query, abcd)),
-        //    "a_bc_d"
-        //);
-        //let query = a_b_c_pattern.clone();
-        //assert_eq!(
-        //    graph.find_ancestor(&query),
-        //    Ok(QueryFound::complete(query, abc)),
-        //    "a_b_c"
-        //);
+        let query = bc_pattern;
+        assert_eq!(
+            graph.find_ancestor(&query),
+            Err(NoMatch::SingleIndex),
+            "bc"
+        );
+        let query = b_c_pattern;
+        assert_eq!(
+            graph.find_ancestor(&query),
+            Ok(QueryFound::complete(query, bc)),
+            "b_c"
+        );
+        let query = a_bc_pattern;
+        assert_eq!(
+            graph.find_ancestor(&query),
+            Ok(QueryFound::complete(query, abc)),
+            "a_bc"
+        );
+        let query = ab_c_pattern;
+        assert_eq!(
+            graph.find_ancestor(&query),
+            Ok(QueryFound::complete(query, abc)),
+            "ab_c"
+        );
+        let query = a_bc_d_pattern;
+        assert_eq!(
+            graph.find_ancestor(&query),
+            Ok(QueryFound::complete(query, abcd)),
+            "a_bc_d"
+        );
+        let query = a_b_c_pattern.clone();
+        assert_eq!(
+            graph.find_ancestor(&query),
+            Ok(QueryFound::complete(query, abc)),
+            "a_b_c"
+        );
         //let query =
         //    vec![*a, *b, *a, *b, *a, *b, *a, *b, *c, *d, *e, *f, *g, *h, *i];
         //assert_eq!(
@@ -464,7 +438,7 @@ pub(crate) mod tests {
         let Context {
             graph,
             abc,
-            ababababcdefghi,
+            //ababababcdefghi,
             ..
          } = &*context();
         assert_eq!(
@@ -478,12 +452,12 @@ pub(crate) mod tests {
             Ok(QueryFound::complete(query, abc)),
             "abc"
         );
-        let query = graph.read().unwrap().expect_token_pattern("ababababcdefghi".chars());
-        let ababababcdefghi_found = graph.find_ancestor(&query);
-        assert_eq!(
-            ababababcdefghi_found,
-            Ok(QueryFound::complete(query, ababababcdefghi)),
-            "ababababcdefghi"
-        );
+        //let query = graph.read().unwrap().expect_token_pattern("ababababcdefghi".chars());
+        //let ababababcdefghi_found = graph.find_ancestor(&query);
+        //assert_eq!(
+        //    ababababcdefghi_found,
+        //    Ok(QueryFound::complete(query, ababababcdefghi)),
+        //    "ababababcdefghi"
+        //);
     }
 }
