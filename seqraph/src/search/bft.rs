@@ -226,9 +226,24 @@ pub(crate) trait DirectedTraversalPolicy<'g, T: Tokenize, D: MatchDirection>: Si
         query: QueryRangePath,
     ) -> Vec<BftNode> {
 
-        let child_next = path.get_next(&trav);
-        let query_next = query.get_next(&trav);
+        let child_next = path.advance_next(&trav);
 
+        let (query_next, child_next) = if let Some(query_next) = query.advance_next(&trav) {
+            if let Some(child_next) = path.advance_next(&trav) {
+                (query_next, child_next)
+            } else {
+                return Self::end_op(trav, query, path.into_start_path());
+            }
+        } else {
+            return vec![
+                BftNode::End(
+                    QueryFound::new(
+                        found,
+                        query,
+                    )
+                )
+            ];
+        };
         match child_next.width.cmp(&query_next.width) {
             Ordering::Greater =>
                 // continue in prefix of child
@@ -250,7 +265,6 @@ pub(crate) trait DirectedTraversalPolicy<'g, T: Tokenize, D: MatchDirection>: Si
                     // continue with match node
                     Self::successor_nodes(
                         trav,
-                        child_next,
                         path,
                         query,
                     )
@@ -322,43 +336,43 @@ pub(crate) trait DirectedTraversalPolicy<'g, T: Tokenize, D: MatchDirection>: Si
             })
             .collect_vec()
     }
-    fn successor_nodes(
-        trav: Self::Trav,
-        prev: Child,
-        mut path: RangePath,
-        mut query: QueryRangePath,
-    ) -> Vec<BftNode> {
+    //fn successor_nodes(
+    //    trav: Self::Trav,
+    //    mut path: RangePath,
+    //    mut query: QueryRangePath,
+    //) -> Vec<BftNode> {
 
-        path.width += prev.width;
-        if query.advance_end::<_, _, D>(&trav) {
-            if path.advance_end::<_, _, D>(&trav) {
-                Self::match_next(
-                    trav,
-                    path,
-                    query,
-                )
-            } else {
-                Self::end_op(trav, query, path.into_start_path())
-            }
-        } else {
-            let found = if path.advance_end::<_, _, D>(&trav) {
-                path.reduce_mismatch::<_, _, D>(trav)
-            } else {
-                path.into()
-            };
-            vec![
-                BftNode::End(
-                    QueryFound::new(
-                        found,
-                        query,
-                    )
-                )
-            ]
-        }
-    }
+    //    if query.advance_end::<_, _, D>(&trav) {
+    //        if path.advance_end::<_, _, D>(&trav) {
+    //            Self::match_next(
+    //                trav,
+    //                path,
+    //                query,
+    //            )
+    //        } else {
+    //        }
+    //    } else {
+    //        let found = if path.advance_end::<_, _, D>(&trav) {
+    //            path.reduce_mismatch::<_, _, D>(trav)
+    //        } else {
+    //            path.into()
+    //        };
+    //        vec![
+    //            BftNode::End(
+    //                QueryFound::new(
+    //                    found,
+    //                    query,
+    //                )
+    //            )
+    //        ]
+    //    }
+    //}
 }
 
-pub(crate) fn fold_found(acc: Option<QueryFound>, node: BftNode) -> ControlFlow<QueryFound, Option<QueryFound>> {
+pub(crate) fn fold_found(
+    acc: Option<QueryFound>,
+    node: BftNode
+) -> ControlFlow<QueryFound, Option<QueryFound>> {
     match node {
         BftNode::End(found) => {
             ControlFlow::Break(found)

@@ -156,7 +156,7 @@ impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
     ) -> Result<Vec<IndexedPath>, NoMatch> {
         // try any parent, i.e. first
         let query = query.into_pattern();
-        let query = QueryRangePath::new_directed::<D, _, _>(query)?;
+        let query_path = QueryRangePath::new_directed::<D, _, _>(&query)?;
         // if context not empty
         // breadth first traversal
         //let subgraph = Arc::new(RwLock::new(Subgraph::new()));
@@ -164,7 +164,7 @@ impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
         let mut indexer2 = self.clone();
 
         // breadth first iterator over graph from start
-        match Bft::new(BftNode::Query(query), |node| {
+        match Bft::new(BftNode::Query(query_path), |node| {
             match node.clone() {
                 BftNode::Query(query) =>
                     // search parents of start
