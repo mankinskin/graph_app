@@ -2,7 +2,7 @@ use crate::{
     search::*,
     Hypergraph,
 };
-use std::{sync::{RwLockReadGuard, RwLockWriteGuard}, ops::ControlFlow};
+use std::{sync::RwLockReadGuard, ops::ControlFlow};
 
 #[derive(Clone)]
 pub struct Searcher<T: Tokenize, D: MatchDirection> {
@@ -80,12 +80,10 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<T, D> {
         match Bft::new(BftNode::Query(query_path), move |node| {
             match node.clone() {
                 BftNode::Query(query) =>
-                    S::parent_nodes(
+                    S::query_start(
                         self,
                         query,
-                        None,
-                    )
-                ,
+                    ),
                 BftNode::Root(query, start, parent_entry) =>
                     S::root_successor_nodes(
                         self,
@@ -93,7 +91,7 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<T, D> {
                         start,
                         parent_entry,
                     ),
-                BftNode::Match(path, query) =>
+                BftNode::Match(path, query, _prev_query) =>
                     S::after_match(
                         &self,
                         PathPair::GraphMajor(path, query),
@@ -102,11 +100,11 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<T, D> {
             }.into_iter()
         })
         .try_fold(None, |acc: Option<QueryFound>, (_, node)|
-            fold_found(acc, node)
+            fold_found::<_, _, D>(self, acc, node)
         ) {
             ControlFlow::Continue(None) => Err(NoMatch::NotFound(query)),
             ControlFlow::Continue(Some(found)) => Ok(found),
-            ControlFlow::Break(found) => Ok(found)
+            ControlFlow::Break(found) => found.ok_or(NoMatch::SingleIndex)
         }
     }
 }

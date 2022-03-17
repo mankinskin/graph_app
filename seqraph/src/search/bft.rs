@@ -16,7 +16,7 @@ use crate::{
     MatchDirection,
     GraphRangePath,
     QueryRangePath,
-    FoundPath, QueryFound, PathPair, pattern_width,
+    QueryFound, PathPair,
 };
 
 
@@ -79,17 +79,10 @@ where
 pub(crate) enum BftNode {
     Query(QueryRangePath),
     Root(QueryRangePath, Option<StartPath>, ChildLocation),
-    Match(GraphRangePath, QueryRangePath),
-    End(QueryFound),
-    Mismatch(QueryFound),
+    Match(GraphRangePath, QueryRangePath, QueryRangePath),
+    End(Option<QueryFound>),
+    Mismatch,
 }
-//pub(crate) trait BftNode {
-//    fn query_node(query: QueryRangePath) -> Self;
-//    fn root_node(query: QueryRangePath, start_path: StartPath) -> Self;
-//    fn match_node(path: GraphRangePath, query: QueryRangePath) -> Self;
-//    fn end_node(found: QueryFound) -> Self;
-//    fn mismatch_node(found: QueryFound) -> Self;
-//}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum StartPath {
     First(ChildLocation, Child, usize),
@@ -121,14 +114,19 @@ impl StartPath {
             Self::First(_, _, width) => width,
         }
     }
-    pub fn is_complete(&self) -> bool {
+    pub(crate) fn prev_pos<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(&self, trav: Trav) -> Option<usize> {
+        let location = self.entry();
+        let pattern = trav.graph().expect_pattern_at(&location);
+        D::index_prev(&pattern, location.sub_index)
+    }
+    pub(crate) fn is_complete<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(&self, trav: Trav) -> bool {
         // todo: file bug, && behind match not recognized as AND
         // todo: respect match direction (need graph access
         let e = match self {
             Self::Path(_, path, _) => path.is_empty(),
             _ => true,
         };
-        e && self.entry().sub_index == 0
+        e && self.prev_pos::<_, _, D>(trav).is_none()
     }
 }
 pub(crate) trait Traversable<T: Tokenize> {
@@ -202,24 +200,26 @@ pub(crate) trait DirectedTraversalPolicy<'g, T: Tokenize, D: MatchDirection>: Si
     }
     fn root_successor_nodes(
         trav: Self::Trav,
-        query: QueryRangePath,
+        old_query: QueryRangePath,
         old_start: Option<StartPath>,
         parent_entry: ChildLocation,
     ) -> Vec<BftNode> {
-        let start_index = query.get_entry();
+        let start_index = old_query.get_entry();
         let graph = trav.graph();
-        let new_start = match old_start.clone() {
+        let pre_start = match old_start.clone() {
             Some(StartPath::First(entry, _, width)) => {
-                //let pattern = graph.expect_pattern_at(entry);
-                //let width = width + pattern_width(D::front_context(&pattern, entry.sub_index));
+                let pattern = graph.expect_pattern_at(entry);
                 println!("first {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
-                StartPath::Path(parent_entry, vec![entry], width)
+                StartPath::Path(parent_entry, if entry.sub_index != D::head_index(&pattern) {
+                    vec![entry]
+                } else {
+                    vec![]
+                }, width)
             },
-            Some(StartPath::Path(entry, mut path, mut width)) => {
+            Some(StartPath::Path(entry, mut path, width)) => {
                 println!("path {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
                 let pattern = graph.expect_pattern_at(entry);
-                //width = width + pattern_width(D::front_context(&pattern, entry.sub_index));
-                if !(entry.sub_index == D::head_index(&pattern) && path.is_empty()) {
+                if entry.sub_index != D::head_index(&pattern) || !path.is_empty() {
                     path.push(entry);
                 }
                 StartPath::Path(parent_entry, path, width)
@@ -233,76 +233,43 @@ pub(crate) trait DirectedTraversalPolicy<'g, T: Tokenize, D: MatchDirection>: Si
                 )
             }
         };
-        let old_found = if let Some(old_start) = old_start {
-            GraphRangePath::new(old_start).into()
+        let mut path = GraphRangePath::new(pre_start);
+        if path.advance_next::<_, _, D>(&trav) {
+            Self::match_end(&trav, PathPair::GraphMajor(path, old_query))
         } else {
-            FoundPath::Complete(start_index)
-        };
-        let old_match = QueryFound::new(
-            old_found,
-            query.clone(),
-        );
-        match Self::advance_paths(
-            &trav,
-            GraphRangePath::new(new_start),
-            query.clone(),
-        ) {
-            Ok((new_path, new_query)) => {
-                Self::match_end(&trav, PathPair::GraphMajor(new_path, new_query), &old_match)
-            },
-            Err(up) => {
-                if up {
-                    Self::end_op(&trav, query, old_found.into_start_path())
-                } else {
-                    vec![
-                        BftNode::End(old_match)
-                    ]
-                }
-            },
+            Self::end_op(&trav, old_query, path.start)
         }
     }
-    fn advance_paths(
-        trav: &Self::Trav,
-        old_path: GraphRangePath,
-        old_query: QueryRangePath,
-    ) -> Result<(GraphRangePath, QueryRangePath), bool> {
-        let mut query = old_query.clone();
-        let mut path = old_path.clone();
+    fn query_start(
+        trav: Self::Trav,
+        mut query: QueryRangePath,
+    ) -> Vec<BftNode> {
         if query.advance_next::<_, _, D>(&trav) {
-            if path.advance_next::<_, _, D>(&trav) {
-                Ok((path, query))
-            } else {
-                Err(true)
-            }
+            Self::parent_nodes(
+                trav,
+                query,
+                None,
+            )
         } else {
-            Err(false)
+            vec![BftNode::End(None)]
         }
-    }
-    fn advance(
-        trav: &Self::Trav,
-        old_paths: PathPair,
-    ) -> Result<PathPair, Vec<BftNode>> {
-        let mode = old_paths.mode();
-        let (old_path, old_query) = old_paths.unpack();
-        Self::advance_paths(trav, old_path, old_query)
-            .map(|(p, q)| PathPair::from_mode(p, q, mode))
     }
     fn after_match(
         trav: &Self::Trav,
-        old_paths: PathPair,
+        paths: PathPair,
     ) -> Vec<BftNode> {
-        let new_paths = match Self::advance(&trav, old_paths.clone()) {
-            Ok(new_paths) => new_paths,
-            Err(nodes) => return nodes,
-        };
-        let (old_path, old_query) = old_paths.unpack();
-        Self::match_end(&trav, new_paths, &QueryFound::new(old_path, old_query))
+        let mode = paths.mode();
+        let (mut path, query) = paths.unpack();
+        if path.advance_next::<_, _, D>(&trav) {
+            Self::match_end(&trav, PathPair::from_mode(path, query, mode))
+        } else {
+            Self::end_op(&trav, query, path.start)
+        }
     }
     /// generate nodes for a child
     fn match_end(
         trav: &Self::Trav,
         new_paths: PathPair,
-        old_match: &QueryFound,
     ) -> Vec<BftNode> {
         let (new_path, new_query) = new_paths.unpack();
         let path_next = new_path.get_end(&trav);
@@ -314,35 +281,45 @@ pub(crate) trait DirectedTraversalPolicy<'g, T: Tokenize, D: MatchDirection>: Si
                     &trav,
                     path_next,
                     PathPair::GraphMajor(new_path, new_query),
-                    old_match,
                 ),
             Ordering::Less =>
                 Self::prefix_nodes(
                     &trav,
                     query_next,
                     PathPair::QueryMajor(new_query, new_path),
-                    old_match,
                 ), // todo: path in query
             Ordering::Equal =>
                 if path_next == query_next {
                     // continue with match node
+                    let mut path = new_path.clone();
+                    let mut query = new_query.clone();
                     vec![
-                        BftNode::Match(
-                            new_path.clone(),
-                            new_query.clone(),
-                        )
+                        if query.advance_next::<_, _, D>(&trav) {
+                            path.on_match(trav);
+                            BftNode::Match(
+                                path,
+                                query,
+                                new_query.clone(),
+                            )
+                        } else {
+                            path.on_match(trav);
+                            let found = QueryFound::new(
+                                //FoundPath::new::<_, _, D>(trav, path),
+                                path.reduce_end::<_, _, D>(trav),
+                                query,
+                            );
+                            BftNode::End(Some(found))
+                        }
                     ]
                 } else if path_next.width == 1 {
-                    // todo: find matching prefixes
                     vec![
-                        BftNode::Mismatch(old_match.clone())
+                        BftNode::Mismatch
                     ]
                 } else {
                     Self::prefix_nodes(
                         &trav,
                         path_next,
                         PathPair::GraphMajor(new_path.clone(), new_query.clone()),
-                        old_match,
                     )
                     .into_iter()
                     .chain(
@@ -350,7 +327,6 @@ pub(crate) trait DirectedTraversalPolicy<'g, T: Tokenize, D: MatchDirection>: Si
                             &trav,
                             query_next,
                             PathPair::QueryMajor(new_query, new_path),
-                            old_match,
                         )
                     )
                     .collect_vec()
@@ -362,7 +338,6 @@ pub(crate) trait DirectedTraversalPolicy<'g, T: Tokenize, D: MatchDirection>: Si
         trav: &Self::Trav,
         index: Child,
         new_paths: PathPair,
-        old_match: &QueryFound,
     ) -> Vec<BftNode> {
 
         let graph = trav.graph();
@@ -379,7 +354,6 @@ pub(crate) trait DirectedTraversalPolicy<'g, T: Tokenize, D: MatchDirection>: Si
                 Self::match_end(
                     trav,
                     new_paths,
-                    old_match,
                 )
             })
             .flatten()
@@ -387,35 +361,26 @@ pub(crate) trait DirectedTraversalPolicy<'g, T: Tokenize, D: MatchDirection>: Si
     }
 }
 
-pub(crate) fn fold_found(
+pub(crate) fn fold_found<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(
+    trav: Trav,
     acc: Option<QueryFound>,
     node: BftNode
-) -> ControlFlow<QueryFound, Option<QueryFound>> {
+) -> ControlFlow<Option<QueryFound>, Option<QueryFound>> {
     match node {
         BftNode::End(found) => {
             ControlFlow::Break(found)
         },
-        BftNode::Mismatch(found) => {
-            match &found.found {
-                FoundPath::Complete(_) => {
-                    //println!("found: {:?}", found);
-                    if found.found.width() > acc.as_ref().map(|f| f.found.width()).unwrap_or_default() {
-                        ControlFlow::Continue(Some(found))
-                    } else {
-                        ControlFlow::Continue(acc)
-                    }
-                },
-                FoundPath::Range(path) => {
-                    //println!("path: {:?}", path);
-                    //println!("acc: {:?}", acc);
-                    if path.start.width() > acc.as_ref().map(|f| f.found.width()).unwrap_or_default() { 
-                        ControlFlow::Continue(Some(found))
-                    } else {
-                        ControlFlow::Continue(acc)
-                    }
-                },
+        BftNode::Match(path, _, prev_query) => {
+            let found = QueryFound::new(
+                path.reduce_end::<_, _, D>(trav),
+                prev_query,
+            );
+            if acc.as_ref().map(|f| found.found.gt(&f.found)).unwrap_or(true) {
+                ControlFlow::Continue(Some(found))
+            } else {
+                ControlFlow::Continue(acc)
             }
-        },
+        }
         _ => ControlFlow::Continue(acc)
     }
 }
