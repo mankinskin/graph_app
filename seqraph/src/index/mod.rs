@@ -19,7 +19,7 @@ pub use index_direction::*;
 //    End(QueryFound),
 //    Mismatch(QueryFound),
 //}
-//impl BftNode for IndexingNode {
+//impl TraversalNode for IndexingNode {
 //    fn query_node(query: QueryRangePath) -> Self {
 //        Self::Query(query)
 //    }

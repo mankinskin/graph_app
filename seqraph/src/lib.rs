@@ -10,6 +10,7 @@ mod direction;
 mod graph;
 mod search;
 mod vertex;
+mod traversal;
 //mod index;
 //mod read;
 
@@ -19,3 +20,4 @@ pub use graph::tests::*;
 pub use graph::*;
 pub use search::*;
 pub use vertex::*;
+pub use traversal::*;

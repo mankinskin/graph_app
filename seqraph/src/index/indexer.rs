@@ -34,7 +34,7 @@ impl<'g, T: Tokenize, D: IndexDirection + 'g> DirectedTraversalPolicy<'g, T, D> 
         trav: Self::Trav,
         query: QueryRangePath,
         start: StartPath,
-    ) -> Vec<BftNode> {
+    ) -> Vec<TraversalNode> {
         // root at end of parent, recurse upwards to get all next children
         Self::parent_nodes(trav, query, Some(start))
     }
@@ -164,22 +164,22 @@ impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
         let mut indexer2 = self.clone();
 
         // breadth first iterator over graph from start
-        match Bft::new(BftNode::Query(query_path), |node| {
+        match Bft::new(TraversalNode::Query(query_path), |node| {
             match node.clone() {
-                BftNode::Query(query) =>
+                TraversalNode::Query(query) =>
                     // search parents of start
                     Indexing::parent_nodes(
                         indexer.clone(),
                         query,
                         None,
                     ),
-                BftNode::Root(query, start_path) =>
+                TraversalNode::Root(query, start_path) =>
                     Indexing::root_successor_nodes(
                         indexer.clone(),
                         query,
                         start_path,
                     ),
-                BftNode::Match(path, query) =>
+                TraversalNode::Match(path, query) =>
                     Indexing::match_next(
                         indexer.clone(),
                         path,
