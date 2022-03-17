@@ -15,7 +15,7 @@ pub use index_direction::*;
 //pub(crate) enum IndexingNode {
 //    Query(QueryRangePath),
 //    Root(QueryRangePath, StartPath),
-//    Match(RangePath, QueryRangePath),
+//    Match(GraphRangePath, QueryRangePath),
 //    End(QueryFound),
 //    Mismatch(QueryFound),
 //}
@@ -26,7 +26,7 @@ pub use index_direction::*;
 //    fn root_node(query: QueryRangePath, start_path: StartPath) -> Self {
 //        Self::Root(query, start_path)
 //    }
-//    fn match_node(path: RangePath, query: QueryRangePath) -> Self {
+//    fn match_node(path: GraphRangePath, query: QueryRangePath) -> Self {
 //        Self::Match(path, query)
 //    }
 //    fn end_node(found: QueryFound) -> Self {

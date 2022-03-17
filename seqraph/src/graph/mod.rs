@@ -203,9 +203,9 @@ pub(crate) mod tests {
         pub ef: Child,
         pub cdef: Child,
         pub efghi: Child,
-        //pub abab: Child,
-        //pub ababab: Child,
-        //pub ababababcdefghi: Child,
+        pub abab: Child,
+        pub ababab: Child,
+        pub ababababcdefghi: Child,
     }
     lazy_static::lazy_static! {
         pub static ref
@@ -277,34 +277,34 @@ pub(crate) mod tests {
                 ]);
                 let aba = graph.insert_pattern([ab, a]);
                 // 25
-                //let abab = graph.insert_patterns([
-                //    [aba, b],
-                //    [ab, ab],
-                //]);
-                //let ababab = graph.insert_patterns([
-                //    [abab, ab],
-                //    [ab, abab],
-                //]);
-                //let ababcd = graph.insert_patterns([
-                //    [ab, abcd],
-                //    [aba, bcd],
-                //    [abab, cd],
-                //]);
-                //// 28
-                //let ababababcd = graph.insert_patterns([
-                //    [ababab, abcd],
-                //    [abab, ababcd],
-                //]);
-                //let ababcdefghi = graph.insert_patterns([
-                //    [ab, abcdefghi],
-                //    [ababcd, efghi],
-                //]);
-                //// 30
-                //let ababababcdefghi = graph.insert_patterns([
-                //    [ababababcd, efghi],
-                //    [abab, ababcdefghi],
-                //    [ababab, abcdefghi],
-                //]);
+                let abab = graph.insert_patterns([
+                    [aba, b],
+                    [ab, ab],
+                ]);
+                let ababab = graph.insert_patterns([
+                    [abab, ab],
+                    [ab, abab],
+                ]);
+                let ababcd = graph.insert_patterns([
+                    [ab, abcd],
+                    [aba, bcd],
+                    [abab, cd],
+                ]);
+                // 28
+                let ababababcd = graph.insert_patterns([
+                    [ababab, abcd],
+                    [abab, ababcd],
+                ]);
+                let ababcdefghi = graph.insert_patterns([
+                    [ab, abcdefghi],
+                    [ababcd, efghi],
+                ]);
+                // 30
+                let ababababcdefghi = graph.insert_patterns([
+                    [ababababcd, efghi],
+                    [abab, ababcdefghi],
+                    [ababab, abcdefghi],
+                ]);
                 Context {
                     graph: HypergraphRef::from(graph),
                     a,
@@ -331,9 +331,9 @@ pub(crate) mod tests {
                     ef,
                     cdef,
                     efghi,
-                    //abab,
-                    //ababab,
-                    //ababababcdefghi,
+                    abab,
+                    ababab,
+                    ababababcdefghi,
                 }
             } else {
                 panic!();

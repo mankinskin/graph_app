@@ -16,7 +16,7 @@ struct AncestorSearch<'g, T: Tokenize + 'g, D: MatchDirection> {
 impl<'g, T: Tokenize, D: MatchDirection + 'g> DirectedTraversalPolicy<'g, T, D> for AncestorSearch<'g, T, D> {
     type Trav = &'g Searcher<T, D>;
     fn end_op(
-        trav: Self::Trav,
+        trav: &Self::Trav,
         query: QueryRangePath,
         start: StartPath,
     ) -> Vec<BftNode> {
@@ -34,7 +34,7 @@ impl<T: Tokenize, D: MatchDirection> Traversable<T> for Searcher<T, D> {
 impl<'g, T: Tokenize, D: MatchDirection + 'g> DirectedTraversalPolicy<'g, T, D> for ParentSearch<'g, T, D> {
     type Trav = &'g Searcher<T, D>;
     fn end_op(
-        _trav: Self::Trav,
+        _trav: &Self::Trav,
         _query: QueryRangePath,
         _start: StartPath,
     ) -> Vec<BftNode> {
@@ -86,17 +86,17 @@ impl<'g, T: Tokenize + 'g, D: MatchDirection> Searcher<T, D> {
                         None,
                     )
                 ,
-                BftNode::Root(query, start_path) =>
+                BftNode::Root(query, start, parent_entry) =>
                     S::root_successor_nodes(
                         self,
                         query,
-                        start_path,
+                        start,
+                        parent_entry,
                     ),
                 BftNode::Match(path, query) =>
-                    S::match_next(
-                        self,
-                        path,
-                        query,
+                    S::after_match(
+                        &self,
+                        PathPair::GraphMajor(path, query),
                     ),
                 _ => vec![],
             }.into_iter()
