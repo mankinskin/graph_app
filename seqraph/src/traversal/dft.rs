@@ -6,13 +6,13 @@ use crate::{TraversalNode, TraversalIterator, Tokenize, Traversable, MatchDirect
 pub(crate) struct Dft<'g, T, Trav, D, S>
 where
     T: Tokenize,
-    Trav: Traversable<T> + 'g,
+    Trav: Traversable<T>,
     D: MatchDirection,
     S: DirectedTraversalPolicy<T, D, Trav=Trav>,
 {
     stack: Vec<(usize, TraversalNode)>,
-    trav: Trav,
-    _ty: std::marker::PhantomData<(T, &'g Trav, D, S)>
+    trav: &'g Trav,
+    _ty: std::marker::PhantomData<(T, D, S)>
 }
 
 impl<'g, T, Trav, D, S> Dft<'g, T, Trav, D, S>
@@ -23,7 +23,7 @@ where
     S: DirectedTraversalPolicy<T, D, Trav=Trav>,
 {
     #[inline]
-    pub fn new(trav: Trav, root: TraversalNode) -> Self {
+    pub fn new(trav: &'g Trav, root: TraversalNode) -> Self {
         Self {
             stack: vec![(0, root)],
             trav,
@@ -67,14 +67,14 @@ where
 {
 }
 
-impl<'g, T, Trav, D, S> TraversalIterator<T, Trav, D, S> for Dft<'g, T, Trav, D, S>
+impl<'g, T, Trav, D, S> TraversalIterator<'g, T, Trav, D, S> for Dft<'g, T, Trav, D, S>
 where
     T: Tokenize,
     Trav: Traversable<T>,
     D: MatchDirection,
     S: DirectedTraversalPolicy<T, D, Trav=Trav>,
 {
-    fn new(trav: Trav, root: TraversalNode) -> Self {
+    fn new(trav: &'g Trav, root: TraversalNode) -> Self {
         Dft::new(trav, root)
     }
 }

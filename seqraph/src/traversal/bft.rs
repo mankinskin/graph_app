@@ -12,8 +12,8 @@ where
     S: DirectedTraversalPolicy<T, D, Trav=Trav>,
 {
     queue: VecDeque<(usize, TraversalNode)>,
-    trav: Trav,
-    _ty: std::marker::PhantomData<(T, &'g Trav, D, S)>
+    trav: &'g Trav,
+    _ty: std::marker::PhantomData<(T, D, S)>
 }
 
 impl<'g, T, Trav, D, S> Bft<'g, T, Trav, D, S>
@@ -24,7 +24,7 @@ where
     S: DirectedTraversalPolicy<T, D, Trav=Trav>,
 {
     #[inline]
-    pub fn new(trav: Trav, root: TraversalNode) -> Self {
+    pub fn new(trav: &'g Trav, root: TraversalNode) -> Self {
         Self {
             queue: VecDeque::from(vec![(0, root)]),
             trav,
@@ -46,7 +46,7 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         if let Some((depth, node)) = self.queue.pop_front() {
             self.queue.extend(
-                <Self as TraversalIterator<T, Trav, D, S>>::iter_children(&self.trav, &node)
+                <Self as TraversalIterator<T, Trav, D, S>>::iter_children(self.trav, &node)
                 .into_iter()
                 .map(|child| (depth + 1, child))
             );
@@ -67,14 +67,14 @@ where
 {
 }
 
-impl<'g, T, Trav, D, S> TraversalIterator<T, Trav, D, S> for Bft<'g, T, Trav, D, S>
+impl<'g, T, Trav, D, S> TraversalIterator<'g, T, Trav, D, S> for Bft<'g, T, Trav, D, S>
 where
     T: Tokenize,
     Trav: Traversable<T>,
     D: MatchDirection,
     S: DirectedTraversalPolicy<T, D, Trav=Trav>,
 {
-    fn new(trav: Trav, root: TraversalNode) -> Self {
+    fn new(trav: &'g Trav, root: TraversalNode) -> Self {
         Bft::new(trav, root)
     }
 }

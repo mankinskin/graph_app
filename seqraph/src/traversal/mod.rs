@@ -13,7 +13,6 @@ use std::sync::{RwLockReadGuard, RwLockWriteGuard};
 use itertools::Itertools;
 
 use crate::{
-    ChildPath,
     Child,
     ChildLocation,
     Tokenize,
@@ -23,7 +22,6 @@ use crate::{
     QueryFound,
 };
 
-
 #[derive(Clone, Debug)]
 pub(crate) enum TraversalNode {
     Query(QueryRangePath),
@@ -31,52 +29,6 @@ pub(crate) enum TraversalNode {
     Match(GraphRangePath, QueryRangePath, QueryRangePath),
     End(Option<QueryFound>),
     Mismatch,
-}
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum StartPath {
-    First(ChildLocation, Child, usize),
-    Path(ChildLocation, ChildPath, usize),
-}
-impl StartPath {
-    pub fn entry(&self) -> ChildLocation {
-        match self {
-            Self::Path(entry, _, _) |
-            Self::First(entry, _, _)
-                => *entry,
-        }
-    }
-    pub fn path(&self) -> ChildPath {
-        match self {
-            Self::Path(_, path, _) => path.clone(),
-            _ => vec![],
-        }
-    }
-    pub fn width(&self) -> usize {
-        match self {
-            Self::Path(_, _, width) |
-            Self::First(_, _, width) => *width,
-        }
-    }
-    pub fn width_mut(&mut self) -> &mut usize {
-        match self {
-            Self::Path(_, _, width) |
-            Self::First(_, _, width) => width,
-        }
-    }
-    pub(crate) fn prev_pos<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(&self, trav: Trav) -> Option<usize> {
-        let location = self.entry();
-        let pattern = trav.graph().expect_pattern_at(&location);
-        D::index_prev(&pattern, location.sub_index)
-    }
-    pub(crate) fn is_complete<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(&self, trav: Trav) -> bool {
-        // todo: file bug, && behind match not recognized as AND
-        // todo: respect match direction (need graph access
-        let e = match self {
-            Self::Path(_, path, _) => path.is_empty(),
-            _ => true,
-        };
-        e && self.prev_pos::<_, _, D>(trav).is_none()
-    }
 }
 pub(crate) trait Traversable<T: Tokenize> {
     //type Node: TraversalNode;
@@ -103,15 +55,15 @@ impl <T: Tokenize, Trav: TraversableMut<T>> TraversableMut<T> for &mut Trav {
         Trav::graph_mut(self)
     }
 }
-pub(crate) trait TraversalIterator<T, Trav, D, S>: Iterator<Item = (usize, TraversalNode)>
+pub(crate) trait TraversalIterator<'g, T, Trav, D, S>: Iterator<Item = (usize, TraversalNode)>
 where
     T: Tokenize,
     Trav: Traversable<T>,
     D: MatchDirection,
     S: DirectedTraversalPolicy<T, D, Trav=Trav>,
 {
-    fn new(trav: Trav, root: TraversalNode) -> Self;
-    fn iter_children(trav: &Trav, node: &TraversalNode) -> Vec<TraversalNode> {
+    fn new(trav: &'g Trav, root: TraversalNode) -> Self;
+    fn iter_children(trav: &'g Trav, node: &TraversalNode) -> Vec<TraversalNode> {
         match node.clone() {
             TraversalNode::Query(query) =>
                 S::query_start(
@@ -339,28 +291,27 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
             .flatten()
             .collect_vec()
     }
-}
-
-pub(crate) fn fold_found<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(
-    trav: Trav,
-    acc: Option<QueryFound>,
-    node: TraversalNode
-) -> ControlFlow<Option<QueryFound>, Option<QueryFound>> {
-    match node {
-        TraversalNode::End(found) => {
-            ControlFlow::Break(found)
-        },
-        TraversalNode::Match(path, _, prev_query) => {
-            let found = QueryFound::new(
-                path.reduce_end::<_, _, D>(trav),
-                prev_query,
-            );
-            if acc.as_ref().map(|f| found.found.gt(&f.found)).unwrap_or(true) {
-                ControlFlow::Continue(Some(found))
-            } else {
-                ControlFlow::Continue(acc)
+    fn fold_found(
+        trav: &Self::Trav,
+        acc: Option<QueryFound>,
+        node: TraversalNode
+    ) -> ControlFlow<Option<QueryFound>, Option<QueryFound>> {
+        match node {
+            TraversalNode::End(found) => {
+                ControlFlow::Break(found)
+            },
+            TraversalNode::Match(path, _, prev_query) => {
+                let found = QueryFound::new(
+                    path.reduce_end::<_, _, D>(trav),
+                    prev_query,
+                );
+                if acc.as_ref().map(|f| found.found.gt(&f.found)).unwrap_or(true) {
+                    ControlFlow::Continue(Some(found))
+                } else {
+                    ControlFlow::Continue(acc)
+                }
             }
+            _ => ControlFlow::Continue(acc)
         }
-        _ => ControlFlow::Continue(acc)
     }
 }

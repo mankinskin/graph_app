@@ -3,6 +3,53 @@ use crate::{
     *,
 };
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum StartPath {
+    First(ChildLocation, Child, usize),
+    Path(ChildLocation, ChildPath, usize),
+}
+impl StartPath {
+    pub fn entry(&self) -> ChildLocation {
+        match self {
+            Self::Path(entry, _, _) |
+            Self::First(entry, _, _)
+                => *entry,
+        }
+    }
+    pub fn path(&self) -> ChildPath {
+        match self {
+            Self::Path(_, path, _) => path.clone(),
+            _ => vec![],
+        }
+    }
+    pub fn width(&self) -> usize {
+        match self {
+            Self::Path(_, _, width) |
+            Self::First(_, _, width) => *width,
+        }
+    }
+    pub fn width_mut(&mut self) -> &mut usize {
+        match self {
+            Self::Path(_, _, width) |
+            Self::First(_, _, width) => width,
+        }
+    }
+    pub(crate) fn prev_pos<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(&self, trav: Trav) -> Option<usize> {
+        let location = self.entry();
+        let pattern = trav.graph().expect_pattern_at(&location);
+        D::index_prev(&pattern, location.sub_index)
+    }
+    pub(crate) fn is_complete<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(&self, trav: Trav) -> bool {
+        // todo: file bug, && behind match not recognized as AND
+        // todo: respect match direction (need graph access
+        let e = match self {
+            Self::Path(_, path, _) => path.is_empty(),
+            _ => true,
+        };
+        e && self.prev_pos::<_, _, D>(trav).is_none()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct QueryRangePath {
     pub(crate) query: Pattern,
