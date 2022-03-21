@@ -19,7 +19,7 @@ use crate::{
     Hypergraph,
     Vertexed,
     MatchDirection,
-    QueryFound,
+    QueryFound, TraversalOrder,
 };
 
 #[derive(Clone, Debug)]
@@ -107,27 +107,30 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
             None => query.get_entry()
         };
         let vertex = start_index.vertex(&graph).clone();
-        let mut parents = vertex.get_parents().into_iter().collect_vec();
-
-        // try parents in ascending width (might not be needed in indexing)
-        parents.sort_unstable_by_key(|a| a.1.width);
-        parents.into_iter()
+        let mut parents = vertex.get_parents()
+            .into_iter()
             .map(|(i, parent)| {
                 let p = Child::new(i, parent.width);
                 parent.pattern_indices
                     .iter()
-                    .sorted_unstable_by_key(|pi| pi.sub_index)
-                    .map(|&pi| {
-                        let parent_entry = ChildLocation::new(p, pi.pattern_id, pi.sub_index);
-                        TraversalNode::Root(
-                            query.clone(),
-                            start.clone(),
-                            parent_entry,
-                        )
+                    .cloned()
+                    .map(move |pi| {
+                        ChildLocation::new(p, pi.pattern_id, pi.sub_index)
                     })
-                    .collect_vec()
             })
             .flatten()
+            .collect_vec();
+
+        // try parents in ascending width (might not be needed in indexing)
+        parents.sort_unstable_by(|a, b| TraversalOrder::cmp(a, b));
+        parents.into_iter()
+            .map(|p|
+                TraversalNode::Root(
+                    query.clone(),
+                    start.clone(),
+                    p,
+                )
+            )
             .collect_vec()
     }
     fn root_successor_nodes(

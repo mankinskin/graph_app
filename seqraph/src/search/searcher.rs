@@ -78,6 +78,7 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
             query,
         )
     }
+    #[allow(unused)]
     fn bft_search<
         S: DirectedTraversalPolicy<T, D, Trav=Self>,
         C: AsChild,

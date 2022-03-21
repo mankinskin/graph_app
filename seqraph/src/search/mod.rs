@@ -26,9 +26,8 @@ pub enum NoMatch {
     UnknownIndex,
 }
 
-pub trait ResultOrd {
+pub trait ResultOrd: Wide {
     fn is_complete(&self) -> bool;
-    fn width(&self) -> usize;
     fn cmp(&self, other: impl ResultOrd) -> Ordering {
         let l = self.is_complete();
         let r = other.is_complete();
@@ -46,24 +45,23 @@ impl<T: ResultOrd> ResultOrd for &T {
     fn is_complete(&self) -> bool {
         ResultOrd::is_complete(*self)
     }
-    fn width(&self) -> usize {
-        ResultOrd::width(*self)
-    }
 }
 impl ResultOrd for GraphRangePath {
     fn is_complete(&self) -> bool {
         false
-    }
-    fn width(&self) -> usize {
-        self.start.width()
     }
 }
 impl ResultOrd for FoundPath {
     fn is_complete(&self) -> bool {
         matches!(self, FoundPath::Complete(_))
     }
+}
+impl Wide for FoundPath {
     fn width(&self) -> usize {
-        self.width()
+        match self {
+            Self::Complete(c) => c.width,
+            Self::Range(r) => r.start.width(),
+        }
     }
 }
 impl<Rhs: ResultOrd> PartialOrd<Rhs> for FoundPath {
@@ -97,12 +95,6 @@ impl FoundPath {
             FoundPath::Complete(path.start.entry().parent)
         } else {
             FoundPath::Range(path)
-        }
-    }
-    fn width(&self) -> usize {
-        match self {
-            Self::Complete(c) => c.width,
-            Self::Range(r) => r.start.width(),
         }
     }
     pub fn unwrap_complete(self) -> Child {

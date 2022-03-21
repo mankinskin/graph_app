@@ -22,12 +22,6 @@ impl StartPath {
             _ => vec![],
         }
     }
-    pub fn width(&self) -> usize {
-        match self {
-            Self::Path(_, _, width) |
-            Self::First(_, _, width) => *width,
-        }
-    }
     pub fn width_mut(&mut self) -> &mut usize {
         match self {
             Self::Path(_, _, width) |
@@ -47,6 +41,14 @@ impl StartPath {
             _ => true,
         };
         e && self.prev_pos::<_, _, D>(trav).is_none()
+    }
+}
+impl Wide for StartPath {
+    fn width(&self) -> usize {
+        match self {
+            Self::Path(_, _, width) |
+            Self::First(_, _, width) => *width,
+        }
     }
 }
 
@@ -120,6 +122,12 @@ impl QueryRangePath {
         self.end.push(next);
     }
 }
+impl Wide for GraphRangePath {
+    fn width(&self) -> usize {
+        self.start.width()
+    }
+}
+
 #[derive(Debug, Clone, Eq)]
 pub struct GraphRangePath {
     pub(crate) start: StartPath,
