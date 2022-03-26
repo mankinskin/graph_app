@@ -10,11 +10,46 @@ pub struct Searcher<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<D>,
 }
 
+trait SearchTraversalPolicy<T: Tokenize, D: MatchDirection>:
+    DirectedTraversalPolicy<T, D, Trav=Searcher<T, D>, Folder=Searcher<T, D>>
+{}
+impl<T: Tokenize, D: MatchDirection> SearchTraversalPolicy<T, D> for AncestorSearch<T, D> {}
+impl<T: Tokenize, D: MatchDirection> SearchTraversalPolicy<T, D> for ParentSearch<T, D> {}
+
+impl<T: Tokenize, D: MatchDirection> TraversalFolder<T, D> for Searcher<T, D> {
+    type Trav = Self;
+    type Break = Option<QueryFound>;
+    type Continue = Option<QueryFound>;
+    fn fold_found(
+        trav: &Self::Trav,
+        acc: Self::Continue,
+        node: TraversalNode,
+    ) -> ControlFlow<Self::Break, Self::Continue> {
+        match node {
+            TraversalNode::End(found) => {
+                ControlFlow::Break(found)
+            },
+            TraversalNode::Match(path, _, prev_query) => {
+                let found = QueryFound::new(
+                    path.reduce_end::<_, _, D>(trav),
+                    prev_query,
+                );
+                if acc.as_ref().map(|f| found.found.gt(&f.found)).unwrap_or(true) {
+                    ControlFlow::Continue(Some(found))
+                } else {
+                    ControlFlow::Continue(acc)
+                }
+            }
+            _ => ControlFlow::Continue(acc)
+        }
+    }
+}
 struct AncestorSearch<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<(T, D)>,
 }
 impl<T: Tokenize, D: MatchDirection> DirectedTraversalPolicy<T, D> for AncestorSearch<T, D> {
     type Trav = Searcher<T, D>;
+    type Folder = Searcher<T, D>;
     fn end_op(
         trav: &Self::Trav,
         query: QueryRangePath,
@@ -33,6 +68,7 @@ impl<T: Tokenize, D: MatchDirection> Traversable<T> for Searcher<T, D> {
 }
 impl<T: Tokenize, D: MatchDirection> DirectedTraversalPolicy<T, D> for ParentSearch<T, D> {
     type Trav = Searcher<T, D>;
+    type Folder = Searcher<T, D>;
     fn end_op(
         _trav: &Self::Trav,
         _query: QueryRangePath,
@@ -67,7 +103,7 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
         )
     }
     fn dft_search<
-        S: DirectedTraversalPolicy<T, D, Trav=Self>,
+        S: SearchTraversalPolicy<T, D>,
         C: AsChild,
         Q: IntoPattern<Item = C>,
     >(
@@ -80,7 +116,7 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
     }
     #[allow(unused)]
     fn bft_search<
-        S: DirectedTraversalPolicy<T, D, Trav=Self>,
+        S: SearchTraversalPolicy<T, D>,
         C: AsChild,
         Q: IntoPattern<Item = C>,
     >(
@@ -94,7 +130,7 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
     fn search<
         'g, 
         Ti: TraversalIterator<'g, T, Self, D, S>,
-        S: DirectedTraversalPolicy<T, D, Trav=Self>,
+        S: SearchTraversalPolicy<T, D>,
         C: AsChild,
         Q: IntoPattern<Item = C>,
     >(
@@ -105,7 +141,7 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
         let query_path = QueryRangePath::new_directed::<D, _, _>(query.as_pattern_view())?;
         match Ti::new(self, TraversalNode::Query(query_path))
             .try_fold(None, |acc: Option<QueryFound>, (_, node)|
-                S::fold_found(&self, acc, node)
+                S::Folder::fold_found(self, acc, node)
             )
         {
             ControlFlow::Continue(None) => Err(NoMatch::NotFound(query)),

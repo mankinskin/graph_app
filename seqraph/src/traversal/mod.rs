@@ -88,6 +88,7 @@ where
 }
 pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized {
     type Trav: Traversable<T>;
+    type Folder: TraversalFolder<T, D, Trav=Self::Trav>;
     fn end_op(
         trav: &Self::Trav,
         query: QueryRangePath,
@@ -294,27 +295,14 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
             .flatten()
             .collect_vec()
     }
+}
+pub(crate) trait TraversalFolder<T: Tokenize, D: MatchDirection>: Sized {
+    type Trav: Traversable<T>;
+    type Break;
+    type Continue;
     fn fold_found(
         trav: &Self::Trav,
-        acc: Option<QueryFound>,
+        acc: Self::Continue,
         node: TraversalNode
-    ) -> ControlFlow<Option<QueryFound>, Option<QueryFound>> {
-        match node {
-            TraversalNode::End(found) => {
-                ControlFlow::Break(found)
-            },
-            TraversalNode::Match(path, _, prev_query) => {
-                let found = QueryFound::new(
-                    path.reduce_end::<_, _, D>(trav),
-                    prev_query,
-                );
-                if acc.as_ref().map(|f| found.found.gt(&f.found)).unwrap_or(true) {
-                    ControlFlow::Continue(Some(found))
-                } else {
-                    ControlFlow::Continue(acc)
-                }
-            }
-            _ => ControlFlow::Continue(acc)
-        }
-    }
+    ) -> ControlFlow<Self::Break, Self::Continue>;
 }
