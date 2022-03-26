@@ -12,6 +12,7 @@ where
     S: DirectedTraversalPolicy<T, D, Trav=Trav>,
 {
     queue: VecDeque<(usize, TraversalNode)>,
+    last: (usize, TraversalNode),
     trav: &'g Trav,
     _ty: std::marker::PhantomData<(T, D, S)>
 }
@@ -26,7 +27,8 @@ where
     #[inline]
     pub fn new(trav: &'g Trav, root: TraversalNode) -> Self {
         Self {
-            queue: VecDeque::from(vec![(0, root)]),
+            queue: VecDeque::new(),
+            last: (0, root),
             trav,
             _ty: Default::default(),
         }
@@ -44,13 +46,14 @@ where
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some((depth, node)) = self.queue.pop_front() {
-            self.queue.extend(
-                <Self as TraversalIterator<T, Trav, D, S>>::iter_children(self.trav, &node)
+        let (last_depth, last_node) = &self.last;
+        self.queue.extend(
+            <Self as TraversalIterator<T, Trav, D, S>>::iter_children(self.trav, last_node)
                 .into_iter()
-                .map(|child| (depth + 1, child))
-            );
-
+                .map(|child| (last_depth + 1, child))
+        );
+        if let Some((depth, node)) = self.queue.pop_front() {
+            self.last = (depth, node.clone());
             Some((depth, node))
         } else {
             None
