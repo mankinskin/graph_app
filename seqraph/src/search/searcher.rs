@@ -2,7 +2,7 @@ use crate::{
     search::*,
     Hypergraph,
 };
-use std::{sync::RwLockReadGuard, ops::ControlFlow};
+use std::{sync::RwLockReadGuard, ops::ControlFlow, borrow::Borrow};
 
 #[derive(Clone)]
 pub struct Searcher<T: Tokenize, D: MatchDirection> {
@@ -87,7 +87,7 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
     // find largest matching direct parent
     pub(crate) fn find_pattern_parent<'a, 'g>(
         &'g self,
-        pattern: impl IntoPattern<Token=impl AsChild + Clone + Vertexed<'a, 'g>>,
+        pattern: impl IntoPattern,
     ) -> SearchResult {
         self.dft_search::<ParentSearch<T, D>, _>(
             pattern,
@@ -96,7 +96,7 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
     /// find largest matching ancestor for pattern
     pub(crate) fn find_pattern_ancestor<'a, 'g>(
         &'g self,
-        pattern: impl IntoPattern<Token=impl AsChild + Clone + Vertexed<'a, 'g>>,
+        pattern: impl IntoPattern,
     ) -> SearchResult {
         self.dft_search::<AncestorSearch<T, D>, _>(
             pattern,
@@ -135,7 +135,7 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
         query: Q,
     ) -> SearchResult {
         let query = query.into_pattern();
-        let query_path = QueryRangePath::new_directed::<D, _>(query.as_pattern_view())?;
+        let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())?;
         match Ti::new(self, TraversalNode::Query(query_path))
             .try_fold(None, |acc: Option<QueryFound>, (_, node)|
                 S::Folder::fold_found(self, acc, node)

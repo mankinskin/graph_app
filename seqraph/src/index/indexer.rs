@@ -77,44 +77,59 @@ impl<T: Tokenize, D: IndexDirection> TraversalFolder<T, D> for Indexer<T, D> {
 impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
     fn index_start_path(&mut self, start: StartPath) -> Child {
         let entry = start.entry();
-        let pattern = self.graph().expect_pattern_at(&entry);
-        let graph = self.graph();
-        let child_patterns = graph.expect_children_of(entry.parent);
-        let pattern = if let Some(last) = start.path().iter().next() {
-            let last = graph.expect_child_at(last);
-            let pattern = D::back_context(&pattern, entry.sub_index);
-            if child_patterns.len() < 2 {
-                return self.graph_mut().insert_pattern([&[last], &pattern[..]].concat());
-            } else {
-                pattern
-            }
-        } else {
-            let pattern = D::split_end(&pattern, entry.sub_index);
-            if child_patterns.len() < 2 {
-                return self.graph_mut().insert_pattern(pattern);
-            } else {
-                pattern
-            }
-        };
-        std::iter::once(pattern)
-            .chain(
-                child_patterns.iter()
-                    .filter(|(pid, _)| pid != entry.pattern_id)
-                    .map(|(_, pattern)| self.index_offset_split(pattern, start.width))
-            )
+        let (pre, post) = self.index_offset_split(entry.parent, start.width);
+        //let pattern = if let Some(last) = start.path().iter().next() {
+        //    let last = graph.expect_child_at(last);
+        //    let pattern = D::back_context(&pattern, entry.sub_index);
+        //    if child_patterns.len() < 2 {
+        //        return self.graph_mut().insert_pattern([&[last], &pattern[..]].concat());
+        //    } else {
+        //        pattern
+        //    }
+        //} else {
+        //    let pattern = D::split_end(&pattern, entry.sub_index);
+        //    if child_patterns.len() < 2 {
+        //        return self.graph_mut().insert_pattern(pattern);
+        //    } else {
+        //        pattern
+        //    }
+        //};
     }
-    fn index_offset_split(&mut self, pattern: Pattern, width: usize) -> (Child, Child) {
+    fn index_offset_split(&mut self, index: Child, width: usize) -> (Child, Child) {
+        let graph = self.graph();
+        let child_patterns = graph.expect_children_of(index);
+        let (pre, post) = child_patterns.clone().into_iter()
+            .map(|(pid, pattern)| self.pattern_offset_split(index, pid, pattern, width))
+            .unzip::<_, _, Vec<_>, Vec<_>>();
+        let graph = self.graph_mut();
+        (
+            graph.insert_patterns(pre),
+            graph.insert_patterns(post),
+        )
+    }
+    fn pattern_offset_split(&mut self, parent: Child, pid: PatternId, pattern: Pattern, width: usize) -> (Child, Child) {
         let (index, offset) = <D as MatchDirection>::Opposite::token_offset_split(pattern, width).unwrap();
-        if offset == 0 {
-            let (post, pre) = <D as MatchDirection>::Opposite::directed_pattern_split(pattern, index);
-            let graph = self.graph_mut();
-            (
-                graph.insert_pattern(pre),
-                graph.insert_pattern(post),
-            )
+        let (post, pre) = if offset == 0 {
+            <D as MatchDirection>::Opposite::directed_pattern_split(&pattern, index)
         } else {
-
+            let (pre, post) = self.index_offset_split(*pattern.get(index).unwrap(), offset);
+            (
+                [&D::front_context(pattern.borrow(), index)[..], &[pre]].concat(),
+                [&[post], &D::back_context(pattern.borrow(), index)[..]].concat(),
+            )
+        };
+        let graph = self.graph_mut();
+        let (pre, post) = (
+            graph.insert_pattern(pre),
+            graph.insert_pattern(post),
+        );
+        if offset == 0 {
+            graph.replace_in_pattern(parent, pid, 0..index, [pre]);
+            graph.replace_in_pattern(parent, pid, index.., [post]);
+        } else {
+            graph.add_pattern_to_node(parent, [pre, post])
         }
+        (pre, post)
     }
     pub fn new(graph: HypergraphRef<T>) -> Self {
         Self {
@@ -153,7 +168,7 @@ impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
     }
     pub(crate) fn index_pattern<'a>(
         &'g mut self,
-        pattern: impl IntoPattern<Token=impl AsChild + Clone + Vertexed<'a, 'g>>,
+        pattern: impl IntoPattern,
     ) -> Result<Child, NoMatch> {
         self.indexing::<Bft<_, _, _, _>, Indexing<T, D>, _>(pattern)
     }
@@ -207,7 +222,7 @@ impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
         query: Q,
     ) -> Result<Child, NoMatch> {
         let query = query.into_pattern();
-        let query_path = QueryRangePath::new_directed::<D, _>(query.as_pattern_view())?;
+        let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())?;
 
         match Ti::new(self, TraversalNode::Query(query_path))
             .try_fold(None, |acc, (_, node)|

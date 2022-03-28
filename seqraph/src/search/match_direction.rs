@@ -79,13 +79,12 @@ pub trait MatchDirection : Clone {
         index: usize,
     ) -> usize;
     fn merge_remainder_with_context<
-        T: AsChild + Clone,
-        A: IntoPattern<Token = T>,
-        B: IntoPattern<Token = T>,
+        A: IntoPattern,
+        B: IntoPattern,
     >(
         rem: A,
         context: B,
-    ) -> Vec<T>;
+    ) -> Pattern;
     fn index_next_impl(
         index: usize,
     ) -> Option<usize>;
@@ -94,7 +93,7 @@ pub trait MatchDirection : Clone {
         index: usize,
     ) -> Option<usize> {
         Self::index_next_impl(index).and_then(|i|
-            (i < pattern.as_pattern_view().len()).then(|| i)
+            (i < pattern.borrow().len()).then(|| i)
         )
     }
     fn index_prev_impl(
@@ -105,7 +104,7 @@ pub trait MatchDirection : Clone {
         index: usize,
     ) -> Option<usize> {
         Self::index_prev_impl(index).and_then(|i|
-            (i < pattern.as_pattern_view().len()).then(|| i)
+            (i < pattern.borrow().len()).then(|| i)
         )
     }
     fn tail_index<T: AsChild>(pattern:  &'_ [T], tail: &'_ [T]) -> usize;
@@ -134,8 +133,8 @@ pub trait MatchDirection : Clone {
         pattern: impl IntoPattern,
         sub_index: usize,
     ) -> Option<Child> {
-        Self::index_next(pattern.as_pattern_view(), sub_index).and_then(|i| {
-            pattern.as_pattern_view().get(i).map(AsChild::as_child)
+        Self::index_next(pattern.borrow(), sub_index).and_then(|i| {
+            pattern.borrow().get(i).map(AsChild::as_child)
         })
     }
     fn compare_next_index_in_child_pattern(
@@ -143,7 +142,7 @@ pub trait MatchDirection : Clone {
         context: impl IntoPattern,
         sub_index: usize,
     ) -> bool {
-        Self::pattern_head(context.as_pattern_view())
+        Self::pattern_head(context.borrow())
             .and_then(|context_next| {
                 let context_next: Child = context_next.to_child();
                 Self::next_child(child_pattern, sub_index)
@@ -233,14 +232,13 @@ impl MatchDirection for Right {
         index
     }
     fn merge_remainder_with_context<
-        T: AsChild + Clone,
-        A: IntoPattern<Token = T>,
-        B: IntoPattern<Token = T>,
+        A: IntoPattern,
+        B: IntoPattern,
     >(
         rem: A,
         context: B,
-    ) -> Vec<T> {
-        [rem.as_pattern_view(), context.as_pattern_view()].concat()
+    ) -> Pattern {
+        [rem.borrow(), context.borrow()].concat()
     }
     fn filter_parent_pattern_indices(
         parent: &Parent,
@@ -332,14 +330,13 @@ impl MatchDirection for Left {
         pattern.len() - index - 1
     }
     fn merge_remainder_with_context<
-        T: AsChild + Clone,
-        A: IntoPattern<Token = T>,
-        B: IntoPattern<Token = T>,
+        A: IntoPattern,
+        B: IntoPattern,
     >(
         rem: A,
         context: B,
-    ) -> Vec<T> {
-        [context.as_pattern_view(), rem.as_pattern_view()].concat()
+    ) -> Pattern {
+        [context.borrow(), rem.borrow()].concat()
     }
     fn filter_parent_pattern_indices(
         parent: &Parent,

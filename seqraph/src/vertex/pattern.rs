@@ -16,82 +16,96 @@ impl<
 {
 }
 /// trait for types which can be converted to a pattern with a known size
-pub trait IntoPattern: IntoIterator<Item = Self::Elem, IntoIter = Self::Iter> + Sized {
+pub trait IntoPattern: IntoIterator<Item = Self::Elem, IntoIter = Self::Iter> + Sized + Borrow<[Child]> {
     type Iter: ExactSizeIterator + DoubleEndedIterator<Item=Self::Elem>;
-    type Token: AsChild;
     type Elem: AsChild;
 
     fn into_pattern(self) -> Pattern {
         self.into_iter().map(|x| x.as_child()).collect()
     }
-    fn as_pattern_view(&'_ self) -> &'_ [Self::Token];
+    //fn as_pattern_view(&'_ self) -> &'_ [Child];
     fn is_empty(&self) -> bool;
 }
-impl<T: AsChild> IntoPattern for Vec<T> {
-    type Iter = <Vec<T> as IntoIterator>::IntoIter;
-    type Token = T;
-    type Elem = Self::Token;
-    fn as_pattern_view(&'_ self) -> &'_ [Self::Token] {
-        self.as_slice()
-    }
-    fn is_empty(&self) -> bool {
-        self.is_empty()
-    }
-}
-impl<'a, T: 'a> IntoPattern for &'a Vec<T>
-where
-    &'a T: AsChild,
-    T: AsChild,
+//impl<T: AsChild> IntoPattern for Vec<T> {
+//    type Iter = <Vec<T> as IntoIterator>::IntoIter;
+//    type Token = T;
+//    type Elem = Self::Token;
+//    fn as_pattern_view(&'_ self) -> &'_ [Self::Token] {
+//        self.as_slice()
+//    }
+//    fn is_empty(&self) -> bool {
+//        self.is_empty()
+//    }
+//}
+//impl<'a, T: 'a> IntoPattern for &'a Vec<T>
+//where
+//    &'a T: AsChild,
+//    T: AsChild,
+//{
+//    type Iter = <&'a Vec<T> as IntoIterator>::IntoIter;
+//    type Elem = &'a Self::Token;
+//    type Token = T;
+//    fn as_pattern_view(&'_ self) -> &'_ [Self::Token] {
+//        self.as_slice()
+//    }
+//    fn is_empty(&self) -> bool {
+//        (*self).is_empty()
+//    }
+//}
+//impl<'a, T: 'a> IntoPattern for &'a mut Vec<T>
+//where
+//    &'a mut T: AsChild,
+//    T: AsChild,
+//{
+//    type Iter = <&'a mut Vec<T> as IntoIterator>::IntoIter;
+//    type Elem = &'a mut Self::Token;
+//    type Token = T;
+//    fn as_pattern_view(&'_ self) -> &'_ [Self::Token] {
+//        self.as_slice()
+//    }
+//    fn is_empty(&self) -> bool {
+//        (**self).is_empty()
+//    }
+//}
+//impl<'a, T: 'a> IntoPattern for &'a [T]
+//where
+//    &'a T: AsChild,
+//    T: AsChild,
+//{
+//    type Iter = <&'a [T] as IntoIterator>::IntoIter;
+//    type Elem = &'a Self::Token;
+//    type Token = T;
+//    fn as_pattern_view(&'_ self) -> &'_ [Self::Token] {
+//        self
+//    }
+//    fn is_empty(&self) -> bool {
+//        (*self).is_empty()
+//    }
+//}
+//impl IntoPattern for Child {
+//    type Iter = std::iter::Once<Self::Token>;
+//    type Token = Child;
+//    type Elem = Self::Token;
+//    fn as_pattern_view(&'_ self) -> &'_ [Self::Token] {
+//        std::slice::from_ref(self)
+//    }
+//    fn is_empty(&self) -> bool {
+//        false
+//    }
+//}
+impl<C, It, T> IntoPattern for T
+    where
+        C: AsChild,
+        It: DoubleEndedIterator<Item=C> + ExactSizeIterator,
+        T: IntoIterator<Item=C, IntoIter=It> + Borrow<[Child]>,
 {
-    type Iter = <&'a Vec<T> as IntoIterator>::IntoIter;
-    type Elem = &'a Self::Token;
-    type Token = T;
-    fn as_pattern_view(&'_ self) -> &'_ [Self::Token] {
-        self.as_slice()
-    }
+    type Iter = It;
+    type Elem = C;
+    //fn as_pattern_view(&'_ self) -> &'_ [Child] {
+    //    self.borrow()
+    //}
     fn is_empty(&self) -> bool {
-        (*self).is_empty()
-    }
-}
-impl<'a, T: 'a> IntoPattern for &'a mut Vec<T>
-where
-    &'a mut T: AsChild,
-    T: AsChild,
-{
-    type Iter = <&'a mut Vec<T> as IntoIterator>::IntoIter;
-    type Elem = &'a mut Self::Token;
-    type Token = T;
-    fn as_pattern_view(&'_ self) -> &'_ [Self::Token] {
-        self.as_slice()
-    }
-    fn is_empty(&self) -> bool {
-        (**self).is_empty()
-    }
-}
-impl<'a, T: 'a> IntoPattern for &'a [T]
-where
-    &'a T: AsChild,
-    T: AsChild,
-{
-    type Iter = <&'a [T] as IntoIterator>::IntoIter;
-    type Elem = &'a Self::Token;
-    type Token = T;
-    fn as_pattern_view(&'_ self) -> &'_ [Self::Token] {
-        self
-    }
-    fn is_empty(&self) -> bool {
-        (*self).is_empty()
-    }
-}
-impl IntoPattern for Child {
-    type Iter = std::iter::Once<Self::Token>;
-    type Token = Child;
-    type Elem = Self::Token;
-    fn as_pattern_view(&'_ self) -> &'_ [Self::Token] {
-        std::slice::from_ref(self)
-    }
-    fn is_empty(&self) -> bool {
-        false
+        self.borrow().is_empty()
     }
 }
 

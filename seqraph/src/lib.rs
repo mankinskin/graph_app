@@ -3,6 +3,7 @@
 #![feature(assert_matches)]
 #![feature(try_blocks)]
 #![feature(hash_drain_filter)]
+#![feature(slice_pattern)]
 
 extern crate test;
 

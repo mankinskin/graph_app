@@ -6,7 +6,7 @@ use std::{
     sync::atomic::{
         AtomicUsize,
         Ordering,
-    },
+    }, borrow::Borrow,
 };
 
 impl<'t, 'g, T> Hypergraph<T>
@@ -81,12 +81,12 @@ where
     pub fn add_pattern_to_node(
         &mut self,
         index: impl Indexed,
-        indices: impl IntoIterator<Item = impl Indexed>,
+        indices: impl IntoPattern,
     ) -> PatternId {
         // todo handle token nodes
         let (width, indices, children) = self.to_width_indices_children(indices);
         let data = self.expect_vertex_data_mut(index.index());
-        let pattern_id = data.add_pattern_no_update(&children);
+        let pattern_id = data.add_pattern_no_update(children);
         self.add_parents_to_pattern_nodes(indices, Child::new(index, width), pattern_id);
         pattern_id
     }
@@ -94,7 +94,7 @@ where
     pub fn add_patterns_to_node(
         &mut self,
         index: impl Indexed,
-        patterns: impl IntoIterator<Item = impl IntoIterator<Item = impl Indexed>>,
+        patterns: impl IntoIterator<Item = impl IntoPattern>,
     ) -> Vec<PatternId> {
         let index = index.index();
         patterns
@@ -105,9 +105,9 @@ where
     /// create new node from a pattern
     pub fn insert_pattern_with_id(
         &mut self,
-        indices: impl IntoIterator<Item = impl Indexed>,
+        indices: impl IntoPattern,
     ) -> (Child, Option<PatternId>) {
-        let indices: Vec<_> = indices.into_iter().collect();
+        let indices = indices.into_pattern();
         if indices.len() == 1 {
             (self.to_child(indices.first().unwrap().index()), None)
         } else {
@@ -118,11 +118,11 @@ where
     /// create new node from a pattern (even if single index)
     pub fn force_insert_pattern_with_id(
         &mut self,
-        indices: impl IntoIterator<Item = impl Indexed>,
+        indices: impl IntoPattern,
     ) -> (Child, PatternId) {
         let (width, indices, children) = self.to_width_indices_children(indices);
         let mut new_data = VertexData::new(0, width);
-        let pattern_index = new_data.add_pattern_no_update(&children);
+        let pattern_index = new_data.add_pattern_no_update(children);
         let id = Self::next_pattern_vertex_id();
         let index = self.insert_vertex(VertexKey::Pattern(id), new_data);
         self.add_parents_to_pattern_nodes(indices, Child::new(index, width), pattern_index);
@@ -131,20 +131,20 @@ where
     /// create new node from a pattern
     pub fn insert_pattern(
         &mut self,
-        indices: impl IntoIterator<Item = impl Indexed>,
+        indices: impl IntoPattern,
     ) -> Child {
         self.insert_pattern_with_id(indices).0
     }
     /// create new node from a pattern
     pub fn force_insert_pattern(
         &mut self,
-        indices: impl IntoIterator<Item = impl Indexed>,
+        indices: impl IntoPattern,
     ) -> Child {
         self.force_insert_pattern_with_id(indices).0
     }
     pub fn insert_patterns_with_ids(
         &mut self,
-        patterns: impl IntoIterator<Item = impl IntoIterator<Item = impl Indexed>>,
+        patterns: impl IntoIterator<Item = impl IntoPattern>,
     ) -> (Child, Vec<PatternId>) {
         // todo handle token nodes
         let patterns = patterns.into_iter().collect_vec();
@@ -161,7 +161,7 @@ where
     /// create new node from multiple patterns
     pub fn insert_patterns(
         &mut self,
-        patterns: impl IntoIterator<Item = impl IntoIterator<Item = impl Indexed>>,
+        patterns: impl IntoIterator<Item = impl IntoPattern>,
     ) -> Child {
         // todo handle token nodes
         let mut patterns = patterns.into_iter();
@@ -217,7 +217,7 @@ where
                 .get(range.clone())
                 .expect("Replace range out of range of pattern!")
                 .to_vec();
-            *pattern = replace_in_pattern(pattern.as_pattern_view(), range.clone(), replace.clone());
+            *pattern = replace_in_pattern((*pattern).borrow(), range.clone(), replace.clone());
             let start = range.clone().next().unwrap();
             (
                 old,

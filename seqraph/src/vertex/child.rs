@@ -1,7 +1,7 @@
 use super::*;
 use std::{
     fmt::Debug,
-    hash::Hasher,
+    hash::Hasher, borrow::Borrow,
 };
 
 #[derive(Debug, Eq, Clone, Copy)]
@@ -116,5 +116,10 @@ impl Indexed for Child {
 impl Wide for Child {
     fn width(&self) -> usize {
         self.width
+    }
+}
+impl Borrow<[Child]> for Child {
+    fn borrow(&self) -> &[Child] {
+        std::slice::from_ref(self)
     }
 }

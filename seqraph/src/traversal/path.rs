@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use crate::{
     vertex::*,
     *,
@@ -31,7 +33,7 @@ impl StartPath {
     pub(crate) fn prev_pos<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(&self, trav: Trav) -> Option<usize> {
         let location = self.entry();
         let pattern = trav.graph().expect_pattern_at(&location);
-        D::index_prev(&pattern, location.sub_index)
+        D::index_prev(pattern, location.sub_index)
     }
     pub(crate) fn is_complete<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(&self, trav: Trav) -> bool {
         // todo: file bug, && behind match not recognized as AND
@@ -72,7 +74,7 @@ impl QueryRangePath {
         }
     }
     pub fn new_directed<D: MatchDirection, P: IntoPattern>(query: P) -> Result<Self, NoMatch> {
-        let entry = D::head_index(query.as_pattern_view());
+        let entry = D::head_index(query.borrow());
         let query = query.into_pattern();
         (query.len() > 1).then(||
             Self {
@@ -104,14 +106,14 @@ impl QueryRangePath {
         // skip path segments with no successors
         while let Some(mut location) = self.end.pop() {
             let pattern = graph.expect_pattern_at(location);
-            if let Some(next) = D::index_next(&pattern, location.sub_index) {
+            if let Some(next) = D::index_next(pattern, location.sub_index) {
                 location.sub_index = next;
                 self.end.push(location);
                 return true;
             }
         }
         // end is empty (exit is prev)
-        if let Some(next) = D::index_next(&self.query, self.exit) {
+        if let Some(next) = D::index_next(self.query.borrow(), self.exit) {
             self.exit = next;
             true
         } else {
@@ -158,7 +160,7 @@ impl GraphRangePath {
     pub(crate) fn next_pos<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(&self, trav: Trav) -> Option<usize> {
         let location = self.get_exit_location();
         let pattern = trav.graph().expect_pattern_at(&location);
-        D::index_next(&pattern, self.exit)
+        D::index_next(pattern, self.exit)
     }
     pub fn get_end_location(&self) -> ChildLocation {
         if self.end.is_empty() {
@@ -178,7 +180,7 @@ impl GraphRangePath {
         // skip path segments with no successors
         while let Some(mut location) = self.end.pop() {
             let pattern = graph.expect_pattern_at(&location);
-            if let Some(next) = D::index_next(&pattern, location.sub_index) {
+            if let Some(next) = D::index_next(pattern, location.sub_index) {
                 location.sub_index = next;
                 self.end.push(location);
                 return true;
@@ -202,7 +204,7 @@ impl GraphRangePath {
         while let Some(location) = self.end.pop() {
             let pattern = graph.expect_pattern_at(&location);
             // skip segments at end of pattern
-            if D::index_next(pattern.as_pattern_view(), location.sub_index).is_some() {
+            if D::index_next(pattern.borrow(), location.sub_index).is_some() {
                 self.end.push(location);
                 break;
             }
