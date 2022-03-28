@@ -5,7 +5,6 @@ use std::{
         HashSet,
     },
     fmt::Debug,
-    hash::Hasher,
 };
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct PatternIndex {

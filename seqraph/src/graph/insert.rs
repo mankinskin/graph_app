@@ -192,7 +192,7 @@ where
     //    &mut self,
     //    loc: PatternLocation,
     //    range: impl PatternRangeIndex,
-    //    rep: impl IntoPattern<Item = impl AsChild> + Clone,
+    //    rep: impl IntoPattern + Clone,
     //) {
     //    self.replace_in_pattern(loc.parent, loc.pattern_id, range, rep)
     //}
@@ -201,7 +201,7 @@ where
         parent: impl Indexed,
         pat: PatternId,
         range: impl PatternRangeIndex,
-        rep: impl IntoPattern<Item = impl AsChild> + Clone,
+        rep: impl IntoPattern + Clone,
     ) {
         if range.clone().next().is_none() {
             // empty range
@@ -245,7 +245,7 @@ where
     pub(crate) fn add_pattern_parent(
         &mut self,
         parent: impl AsChild,
-        pattern: impl IntoPattern<Item = impl AsChild>,
+        pattern: impl IntoPattern,
         pattern_id: PatternId,
         start: usize,
     ) {

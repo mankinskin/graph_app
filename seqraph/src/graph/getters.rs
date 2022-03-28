@@ -260,7 +260,7 @@ where
     pub fn to_token_children(
         &self,
         tokens: impl IntoIterator<Item = impl AsToken<T>>,
-    ) -> Result<impl IntoPattern<Item = Child>, NoMatch> {
+    ) -> Result<impl IntoPattern, NoMatch> {
         self.to_token_children_iter(tokens)
             .collect::<Result<Pattern, _>>()
     }

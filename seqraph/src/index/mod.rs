@@ -50,7 +50,7 @@ pub struct IndexedChild {
     pub(crate) inner: Child,
 }
 impl IndexedPath {
-    pub fn new(indexed: IndexedChild, end_path: ChildPath, remainder: impl IntoPattern<Item=impl AsChild>) -> Self {
+    pub fn new(indexed: IndexedChild, end_path: ChildPath, remainder: impl IntoPattern) -> Self {
         Self {
             indexed,
             end_path: if end_path.is_empty() {
@@ -65,7 +65,7 @@ impl IndexedPath {
             },
         }
     }
-    //pub fn remainder(indexed: IndexedChild, remainder: impl IntoPattern<Item=impl AsChild>) -> Self {
+    //pub fn remainder(indexed: IndexedChild, remainder: impl IntoPattern) -> Self {
     //    Self {
     //        indexed,
     //        end_path: None,

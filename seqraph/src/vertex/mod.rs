@@ -197,7 +197,7 @@ impl VertexData {
     pub fn get_child_pattern_vec(&self) -> Vec<Pattern> {
         self.get_child_patterns().into_iter().collect()
     }
-    pub fn add_pattern_no_update<P: IntoPattern<Item = impl AsChild>>(
+    pub fn add_pattern_no_update<P: IntoPattern>(
         &mut self,
         pat: P,
     ) -> PatternId {

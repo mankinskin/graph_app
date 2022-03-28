@@ -16,11 +16,11 @@ impl<
 {
 }
 /// trait for types which can be converted to a pattern with a known size
-pub trait IntoPattern: IntoIterator + Sized
-where
-    <Self as IntoIterator>::Item: AsChild,
-{
+pub trait IntoPattern: IntoIterator<Item = Self::Elem, IntoIter = Self::Iter> + Sized {
+    type Iter: ExactSizeIterator + DoubleEndedIterator<Item=Self::Elem>;
     type Token: AsChild;
+    type Elem: AsChild;
+
     fn into_pattern(self) -> Pattern {
         self.into_iter().map(|x| x.as_child()).collect()
     }
@@ -28,7 +28,9 @@ where
     fn is_empty(&self) -> bool;
 }
 impl<T: AsChild> IntoPattern for Vec<T> {
+    type Iter = <Vec<T> as IntoIterator>::IntoIter;
     type Token = T;
+    type Elem = Self::Token;
     fn as_pattern_view(&'_ self) -> &'_ [Self::Token] {
         self.as_slice()
     }
@@ -41,6 +43,8 @@ where
     &'a T: AsChild,
     T: AsChild,
 {
+    type Iter = <&'a Vec<T> as IntoIterator>::IntoIter;
+    type Elem = &'a Self::Token;
     type Token = T;
     fn as_pattern_view(&'_ self) -> &'_ [Self::Token] {
         self.as_slice()
@@ -54,6 +58,8 @@ where
     &'a mut T: AsChild,
     T: AsChild,
 {
+    type Iter = <&'a mut Vec<T> as IntoIterator>::IntoIter;
+    type Elem = &'a mut Self::Token;
     type Token = T;
     fn as_pattern_view(&'_ self) -> &'_ [Self::Token] {
         self.as_slice()
@@ -67,6 +73,8 @@ where
     &'a T: AsChild,
     T: AsChild,
 {
+    type Iter = <&'a [T] as IntoIterator>::IntoIter;
+    type Elem = &'a Self::Token;
     type Token = T;
     fn as_pattern_view(&'_ self) -> &'_ [Self::Token] {
         self
@@ -76,7 +84,9 @@ where
     }
 }
 impl IntoPattern for Child {
+    type Iter = std::iter::Once<Self::Token>;
     type Token = Child;
+    type Elem = Self::Token;
     fn as_pattern_view(&'_ self) -> &'_ [Self::Token] {
         std::slice::from_ref(self)
     }
@@ -108,9 +118,9 @@ pub fn postfix<T: AsChild + Clone>(
     pattern.get(index..).unwrap_or(&[]).to_vec()
 }
 pub fn replace_in_pattern(
-    pattern: impl IntoPattern<Item = impl AsChild>,
+    pattern: impl IntoPattern,
     range: impl PatternRangeIndex,
-    replace: impl IntoPattern<Item = impl AsChild>,
+    replace: impl IntoPattern,
 ) -> Pattern {
     let mut pattern: Pattern = pattern.into_pattern();
     pattern.splice(range, replace.into_pattern());

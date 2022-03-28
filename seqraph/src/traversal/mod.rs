@@ -31,15 +31,12 @@ pub(crate) enum TraversalNode {
     Mismatch,
 }
 pub(crate) trait Traversable<T: Tokenize> {
-    //type Node: TraversalNode;
     fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>>;
-    //fn graph_mut(&mut self) -> RwLockWriteGuard<'_, Hypergraph<T>>;
 }
-pub(crate) trait TraversableMut<T: Tokenize> : Traversable<T> {
+pub(crate) trait TraversableMut<T: Tokenize, Base = Self> : Traversable<T> {
     fn graph_mut(&mut self) -> RwLockWriteGuard<'_, Hypergraph<T>>;
 }
 impl <T: Tokenize, Trav: Traversable<T>> Traversable<T> for &Trav {
-    //type Node = <Trav as Traversable<T>>::Node;
     fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>> {
         Trav::graph(self)
     }
@@ -58,7 +55,7 @@ impl <T: Tokenize, Trav: TraversableMut<T>> TraversableMut<T> for &mut Trav {
 pub(crate) trait TraversalIterator<'g, T, Trav, D, S>: Iterator<Item = (usize, TraversalNode)>
 where
     T: Tokenize,
-    Trav: Traversable<T>,
+    Trav: Traversable<T> + 'g,
     D: MatchDirection,
     S: DirectedTraversalPolicy<T, D, Trav=Trav>,
 {
@@ -169,18 +166,19 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
                 )
             }
         };
+        drop(graph);
         let mut path = GraphRangePath::new(pre_start);
         if path.advance_next::<_, _, D>(&trav) {
             Self::match_end(&trav, PathPair::GraphMajor(path, old_query))
         } else {
-            Self::end_op(&trav, old_query, path.start)
+            Self::end_op(trav, old_query, path.start)
         }
     }
     fn query_start(
         trav: &Self::Trav,
         mut query: QueryRangePath,
     ) -> Vec<TraversalNode> {
-        if query.advance_next::<_, _, D>(trav) {
+        if query.advance_next::<_, _, D>(&trav) {
             Self::parent_nodes(
                 trav,
                 query,
@@ -199,7 +197,7 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
         if path.advance_next::<_, _, D>(&trav) {
             Self::match_end(&trav, PathPair::from_mode(path, query, mode))
         } else {
-            Self::end_op(&trav, query, path.start)
+            Self::end_op(trav, query, path.start)
         }
     }
     /// generate nodes for a child
@@ -208,19 +206,19 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
         new_paths: PathPair,
     ) -> Vec<TraversalNode> {
         let (new_path, new_query) = new_paths.unpack();
-        let path_next = new_path.get_end(&trav);
-        let query_next = new_query.get_end(&trav);
+        let path_next = new_path.get_end(trav);
+        let query_next = new_query.get_end(trav);
         match path_next.width.cmp(&query_next.width) {
             Ordering::Greater =>
                 // continue in prefix of child
                 Self::prefix_nodes(
-                    &trav,
+                    trav,
                     path_next,
                     PathPair::GraphMajor(new_path, new_query),
                 ),
             Ordering::Less =>
                 Self::prefix_nodes(
-                    &trav,
+                    trav,
                     query_next,
                     PathPair::QueryMajor(new_query, new_path),
                 ), // todo: path in query
@@ -230,7 +228,7 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
                     let mut path = new_path.clone();
                     let mut query = new_query.clone();
                     vec![
-                        if query.advance_next::<_, _, D>(&trav) {
+                        if query.advance_next::<_, _, D>(trav) {
                             path.on_match(trav);
                             TraversalNode::Match(
                                 path,
@@ -253,14 +251,14 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
                     ]
                 } else {
                     Self::prefix_nodes(
-                        &trav,
+                        trav,
                         path_next,
                         PathPair::GraphMajor(new_path.clone(), new_query.clone()),
                     )
                     .into_iter()
                     .chain(
                         Self::prefix_nodes(
-                            &trav,
+                            trav,
                             query_next,
                             PathPair::QueryMajor(new_query, new_path),
                         )

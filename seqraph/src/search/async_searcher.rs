@@ -58,7 +58,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
     }
     pub(crate) async fn find_ancestor(
         &self,
-        pattern: impl IntoPattern<Item=impl AsChild>,
+        pattern: impl IntoPattern,
     ) -> SearchResult {
         let pattern: Pattern = pattern.into_pattern();
         Right::split_head_tail(&pattern)

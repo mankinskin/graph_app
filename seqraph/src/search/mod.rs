@@ -118,7 +118,7 @@ impl QueryFound {
             query,
         }
     }
-    pub fn complete(query: impl IntoPattern<Item = impl AsChild>, index: impl AsChild) -> Self {
+    pub fn complete(query: impl IntoPattern, index: impl AsChild) -> Self {
         Self {
             found: FoundPath::Complete(index.as_child()),
             query: QueryRangePath::complete(query),

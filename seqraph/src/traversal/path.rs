@@ -61,7 +61,7 @@ pub struct QueryRangePath {
     pub(crate) end: ChildPath,
 }
 impl QueryRangePath {
-    pub fn complete(query: impl IntoPattern<Item = impl AsChild>) -> Self {
+    pub fn complete(query: impl IntoPattern) -> Self {
         let query = query.into_pattern();
         Self {
             entry: 0,
@@ -71,7 +71,7 @@ impl QueryRangePath {
             end: vec![],
         }
     }
-    pub fn new_directed<D: MatchDirection, C: AsChild, P: IntoPattern<Item = C>>(query: P) -> Result<Self, NoMatch> {
+    pub fn new_directed<D: MatchDirection, P: IntoPattern>(query: P) -> Result<Self, NoMatch> {
         let entry = D::head_index(query.as_pattern_view());
         let query = query.into_pattern();
         (query.len() > 1).then(||

@@ -99,12 +99,12 @@ where
     }
     pub fn pattern_child_strings(
         &self,
-        pattern: impl IntoPattern<Item = Child>,
+        pattern: impl IntoPattern,
     ) -> ChildStrings {
         let nodes = pattern.into_iter().map(|child| {
             (
-                self.index_string(child.index),
-                self.expect_vertex_data(child.index)
+                self.index_string(child.index()),
+                self.expect_vertex_data(child.index())
                     .to_pattern_strings(self),
             )
         });

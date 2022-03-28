@@ -41,7 +41,8 @@ impl<T: Tokenize, D: IndexDirection> DirectedTraversalPolicy<T, D> for Indexing<
         query: QueryRangePath,
         start: StartPath,
     ) -> Vec<TraversalNode> {
-        // root at end of parent, recurse upwards to get all next children
+        let ltrav = trav.clone();
+        ltrav.index_start_path(start);
         Self::parent_nodes(trav, query, Some(start))
     }
 }
@@ -55,8 +56,6 @@ impl<T: Tokenize, D: IndexDirection> TraversalFolder<T, D> for Indexer<T, D> {
         node: TraversalNode
     ) -> ControlFlow<Self::Break, Self::Continue> {
         match node {
-            TraversalNode::Root(found, start, entry) => {
-            }
             TraversalNode::End(found) => {
                 ControlFlow::Break(found)
             },
@@ -76,6 +75,47 @@ impl<T: Tokenize, D: IndexDirection> TraversalFolder<T, D> for Indexer<T, D> {
     }
 }
 impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
+    fn index_start_path(&mut self, start: StartPath) -> Child {
+        let entry = start.entry();
+        let pattern = self.graph().expect_pattern_at(&entry);
+        let graph = self.graph();
+        let child_patterns = graph.expect_children_of(entry.parent);
+        let pattern = if let Some(last) = start.path().iter().next() {
+            let last = graph.expect_child_at(last);
+            let pattern = D::back_context(&pattern, entry.sub_index);
+            if child_patterns.len() < 2 {
+                return self.graph_mut().insert_pattern([&[last], &pattern[..]].concat());
+            } else {
+                pattern
+            }
+        } else {
+            let pattern = D::split_end(&pattern, entry.sub_index);
+            if child_patterns.len() < 2 {
+                return self.graph_mut().insert_pattern(pattern);
+            } else {
+                pattern
+            }
+        };
+        std::iter::once(pattern)
+            .chain(
+                child_patterns.iter()
+                    .filter(|(pid, _)| pid != entry.pattern_id)
+                    .map(|(_, pattern)| self.index_offset_split(pattern, start.width))
+            )
+    }
+    fn index_offset_split(&mut self, pattern: Pattern, width: usize) -> (Child, Child) {
+        let (index, offset) = <D as MatchDirection>::Opposite::token_offset_split(pattern, width).unwrap();
+        if offset == 0 {
+            let (post, pre) = <D as MatchDirection>::Opposite::directed_pattern_split(pattern, index);
+            let graph = self.graph_mut();
+            (
+                graph.insert_pattern(pre),
+                graph.insert_pattern(post),
+            )
+        } else {
+
+        }
+    }
     pub fn new(graph: HypergraphRef<T>) -> Self {
         Self {
             graph,
@@ -113,9 +153,9 @@ impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
     }
     pub(crate) fn index_pattern<'a>(
         &'g mut self,
-        pattern: impl IntoPattern<Item = impl AsChild, Token=impl AsChild + Clone + Vertexed<'a, 'g>>,
+        pattern: impl IntoPattern<Token=impl AsChild + Clone + Vertexed<'a, 'g>>,
     ) -> Result<Child, NoMatch> {
-        self.indexing::<Bft<_, _, _, _>, Indexing<T, D>, _, _>(pattern)
+        self.indexing::<Bft<_, _, _, _>, Indexing<T, D>, _>(pattern)
     }
     //pub(crate) fn index_split(
     //    &mut self,
@@ -161,14 +201,13 @@ impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
         'a,
         Ti: TraversalIterator<'g, T, Self, D, S>,
         S: IndexingTraversalPolicy<T, D>,
-        C: AsChild,
-        Q: IntoPattern<Item = C>,
+        Q: IntoPattern,
     >(
         &'g mut self,
         query: Q,
     ) -> Result<Child, NoMatch> {
         let query = query.into_pattern();
-        let query_path = QueryRangePath::new_directed::<D, _, _>(query.as_pattern_view())?;
+        let query_path = QueryRangePath::new_directed::<D, _>(query.as_pattern_view())?;
 
         match Ti::new(self, TraversalNode::Query(query_path))
             .try_fold(None, |acc, (_, node)|

@@ -80,8 +80,8 @@ pub trait MatchDirection : Clone {
     ) -> usize;
     fn merge_remainder_with_context<
         T: AsChild + Clone,
-        A: IntoPattern<Item = impl AsChild, Token = T>,
-        B: IntoPattern<Item = impl AsChild, Token = T>,
+        A: IntoPattern<Token = T>,
+        B: IntoPattern<Token = T>,
     >(
         rem: A,
         context: B,
@@ -90,7 +90,7 @@ pub trait MatchDirection : Clone {
         index: usize,
     ) -> Option<usize>;
     fn index_next(
-        pattern: impl IntoPattern<Item = impl AsChild>,
+        pattern: impl IntoPattern,
         index: usize,
     ) -> Option<usize> {
         Self::index_next_impl(index).and_then(|i|
@@ -101,7 +101,7 @@ pub trait MatchDirection : Clone {
         index: usize,
     ) -> Option<usize>;
     fn index_prev(
-        pattern: impl IntoPattern<Item = impl AsChild>,
+        pattern: impl IntoPattern,
         index: usize,
     ) -> Option<usize> {
         Self::index_prev_impl(index).and_then(|i|
@@ -131,7 +131,7 @@ pub trait MatchDirection : Clone {
         )
     }
     fn next_child(
-        pattern: impl IntoPattern<Item = impl AsChild>,
+        pattern: impl IntoPattern,
         sub_index: usize,
     ) -> Option<Child> {
         Self::index_next(pattern.as_pattern_view(), sub_index).and_then(|i| {
@@ -139,8 +139,8 @@ pub trait MatchDirection : Clone {
         })
     }
     fn compare_next_index_in_child_pattern(
-        child_pattern: impl IntoPattern<Item = impl AsChild>,
-        context: impl IntoPattern<Item = impl AsChild>,
+        child_pattern: impl IntoPattern,
+        context: impl IntoPattern,
         sub_index: usize,
     ) -> bool {
         Self::pattern_head(context.as_pattern_view())
@@ -151,6 +151,10 @@ pub trait MatchDirection : Clone {
             })
             .unwrap_or(false)
     }
+    fn token_offset_split(
+        pattern: impl IntoPattern,
+        width: usize,
+    ) -> Option<(usize, usize)>;
 }
 impl MatchDirection for Right {
     type Opposite = Left;
@@ -172,6 +176,21 @@ impl MatchDirection for Right {
         index: PatternId,
     ) -> Vec<T> {
         postfix(pattern, index)
+    }
+    fn token_offset_split(
+        pattern: impl IntoPattern,
+        mut width: usize,
+    ) -> Option<(usize, usize)> {
+        pattern.into_iter()
+            .enumerate()
+            .find_map(|(i, c)|
+                if c.width() > width {
+                    Some((i, width))
+                } else {
+                    width -= c.width();
+                    None
+                }
+            )
     }
     fn front_context<T: AsChild + Clone>(
         pattern: &'_ [T],
@@ -215,8 +234,8 @@ impl MatchDirection for Right {
     }
     fn merge_remainder_with_context<
         T: AsChild + Clone,
-        A: IntoPattern<Item = impl AsChild, Token = T>,
-        B: IntoPattern<Item = impl AsChild, Token = T>,
+        A: IntoPattern<Token = T>,
+        B: IntoPattern<Token = T>,
     >(
         rem: A,
         context: B,
@@ -249,6 +268,22 @@ impl MatchDirection for Left {
         b: impl DoubleEndedIterator<Item = &'a J>,
     ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)> {
         to_matching_iterator(a.rev(), b.rev()).next()
+    }
+    fn token_offset_split(
+        pattern: impl IntoPattern,
+        mut width: usize,
+    ) -> Option<(usize, usize)> {
+        pattern.into_iter()
+            .enumerate()
+            .rev()
+            .find_map(|(i, c)|
+                if c.width() > width {
+                    Some((i, width))
+                } else {
+                    width -= c.width();
+                    None
+                }
+            )
     }
     fn split_end<T: AsChild + Clone>(
         pattern: &'_ [T],
@@ -298,8 +333,8 @@ impl MatchDirection for Left {
     }
     fn merge_remainder_with_context<
         T: AsChild + Clone,
-        A: IntoPattern<Item = impl AsChild, Token = T>,
-        B: IntoPattern<Item = impl AsChild, Token = T>,
+        A: IntoPattern<Token = T>,
+        B: IntoPattern<Token = T>,
     >(
         rem: A,
         context: B,

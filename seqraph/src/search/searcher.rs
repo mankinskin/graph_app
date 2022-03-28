@@ -87,43 +87,41 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
     // find largest matching direct parent
     pub(crate) fn find_pattern_parent<'a, 'g>(
         &'g self,
-        pattern: impl IntoPattern<Item = impl AsChild, Token=impl AsChild + Clone + Vertexed<'a, 'g>>,
+        pattern: impl IntoPattern<Token=impl AsChild + Clone + Vertexed<'a, 'g>>,
     ) -> SearchResult {
-        self.dft_search::<ParentSearch<T, D>, _, _>(
+        self.dft_search::<ParentSearch<T, D>, _>(
             pattern,
         )
     }
     /// find largest matching ancestor for pattern
     pub(crate) fn find_pattern_ancestor<'a, 'g>(
         &'g self,
-        pattern: impl IntoPattern<Item = impl AsChild, Token=impl AsChild + Clone + Vertexed<'a, 'g>>,
+        pattern: impl IntoPattern<Token=impl AsChild + Clone + Vertexed<'a, 'g>>,
     ) -> SearchResult {
-        self.dft_search::<AncestorSearch<T, D>, _, _>(
+        self.dft_search::<AncestorSearch<T, D>, _>(
             pattern,
         )
     }
     fn dft_search<
         S: SearchTraversalPolicy<T, D>,
-        C: AsChild,
-        Q: IntoPattern<Item = C>,
+        Q: IntoPattern,
     >(
         &self,
         query: Q,
     ) -> SearchResult {
-        self.search::<Dft<_, _, _, _>, S, _, _>(
+        self.search::<Dft<_, _, _, _>, S, _>(
             query,
         )
     }
     #[allow(unused)]
     fn bft_search<
         S: SearchTraversalPolicy<T, D>,
-        C: AsChild,
-        Q: IntoPattern<Item = C>,
+        Q: IntoPattern,
     >(
         &self,
         query: Q,
     ) -> SearchResult {
-        self.search::<Bft<_, _, _, _>, S, _, _>(
+        self.search::<Bft<_, _, _, _>, S, _>(
             query,
         )
     }
@@ -131,14 +129,13 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
         'g, 
         Ti: TraversalIterator<'g, T, Self, D, S>,
         S: SearchTraversalPolicy<T, D>,
-        C: AsChild,
-        Q: IntoPattern<Item = C>,
+        Q: IntoPattern,
     >(
         &'g self,
         query: Q,
     ) -> SearchResult {
         let query = query.into_pattern();
-        let query_path = QueryRangePath::new_directed::<D, _, _>(query.as_pattern_view())?;
+        let query_path = QueryRangePath::new_directed::<D, _>(query.as_pattern_view())?;
         match Ti::new(self, TraversalNode::Query(query_path))
             .try_fold(None, |acc: Option<QueryFound>, (_, node)|
                 S::Folder::fold_found(self, acc, node)
