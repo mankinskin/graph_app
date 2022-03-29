@@ -196,6 +196,14 @@ where
     //) {
     //    self.replace_in_pattern(loc.parent, loc.pattern_id, range, rep)
     //}
+    pub fn replace_pattern(
+        &'g mut self,
+        parent: impl Indexed,
+        pat: PatternId,
+        rep: impl IntoPattern + Clone,
+    ) {
+        self.replace_in_pattern(parent, pat, 0.., rep)
+    }
     pub fn replace_in_pattern(
         &'g mut self,
         parent: impl Indexed,

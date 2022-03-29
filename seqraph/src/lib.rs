@@ -12,7 +12,7 @@ mod graph;
 mod search;
 mod vertex;
 mod traversal;
-//mod index;
+mod index;
 //mod read;
 
 pub use direction::*;

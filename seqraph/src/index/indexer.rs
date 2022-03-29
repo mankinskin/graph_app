@@ -1,7 +1,7 @@
 use std::{sync::{
     RwLockReadGuard,
     RwLockWriteGuard,
-}, ops::ControlFlow};
+}, ops::ControlFlow, borrow::Borrow};
 
 use crate::{
     vertex::*,
@@ -41,14 +41,14 @@ impl<T: Tokenize, D: IndexDirection> DirectedTraversalPolicy<T, D> for Indexing<
         query: QueryRangePath,
         start: StartPath,
     ) -> Vec<TraversalNode> {
-        let ltrav = trav.clone();
-        ltrav.index_start_path(start);
+        let mut ltrav = trav.clone();
+        let start = ltrav.index_start_path(start);
         Self::parent_nodes(trav, query, Some(start))
     }
 }
 impl<T: Tokenize, D: IndexDirection> TraversalFolder<T, D> for Indexer<T, D> {
     type Trav = Self;
-    type Break = Option<Child>;
+    type Break = Child;
     type Continue = Option<Child>;
     fn fold_found(
         trav: &Self::Trav,
@@ -56,80 +56,92 @@ impl<T: Tokenize, D: IndexDirection> TraversalFolder<T, D> for Indexer<T, D> {
         node: TraversalNode
     ) -> ControlFlow<Self::Break, Self::Continue> {
         match node {
-            TraversalNode::End(found) => {
-                ControlFlow::Break(found)
+            TraversalNode::End(Some(found)) => {
+                ControlFlow::Break(match found.found {
+                    FoundPath::Range(path) => {
+                        let mut ltrav = trav.clone();
+                        let (_, _, post) = ltrav.index_offset_split(
+                            path.start.entry().parent,
+                            path.start.width(),
+                        );
+                        post
+                    },
+                    FoundPath::Complete(c) => c
+                } )
             },
-            TraversalNode::Match(path, _, prev_query) => {
-                let found = QueryFound::new(
-                    path.reduce_end::<_, _, D>(trav),
-                    prev_query,
-                );
-                if acc.as_ref().map(|f| found.found.gt(&f.found)).unwrap_or(true) {
-                    ControlFlow::Continue(Some(found))
-                } else {
-                    ControlFlow::Continue(acc)
-                }
-            }
+            TraversalNode::Mismatch(path, query) => {
+                unimplemented!()
+            },
             _ => ControlFlow::Continue(acc)
         }
     }
 }
-impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
-    fn index_start_path(&mut self, start: StartPath) -> Child {
-        let entry = start.entry();
-        let (pre, post) = self.index_offset_split(entry.parent, start.width);
-        //let pattern = if let Some(last) = start.path().iter().next() {
-        //    let last = graph.expect_child_at(last);
-        //    let pattern = D::back_context(&pattern, entry.sub_index);
-        //    if child_patterns.len() < 2 {
-        //        return self.graph_mut().insert_pattern([&[last], &pattern[..]].concat());
-        //    } else {
-        //        pattern
-        //    }
-        //} else {
-        //    let pattern = D::split_end(&pattern, entry.sub_index);
-        //    if child_patterns.len() < 2 {
-        //        return self.graph_mut().insert_pattern(pattern);
-        //    } else {
-        //        pattern
-        //    }
-        //};
-    }
-    fn index_offset_split(&mut self, index: Child, width: usize) -> (Child, Child) {
-        let graph = self.graph();
-        let child_patterns = graph.expect_children_of(index);
-        let (pre, post) = child_patterns.clone().into_iter()
-            .map(|(pid, pattern)| self.pattern_offset_split(index, pid, pattern, width))
-            .unzip::<_, _, Vec<_>, Vec<_>>();
-        let graph = self.graph_mut();
-        (
-            graph.insert_patterns(pre),
-            graph.insert_patterns(post),
-        )
-    }
-    fn pattern_offset_split(&mut self, parent: Child, pid: PatternId, pattern: Pattern, width: usize) -> (Child, Child) {
-        let (index, offset) = <D as MatchDirection>::Opposite::token_offset_split(pattern, width).unwrap();
-        let (post, pre) = if offset == 0 {
-            <D as MatchDirection>::Opposite::directed_pattern_split(&pattern, index)
-        } else {
-            let (pre, post) = self.index_offset_split(*pattern.get(index).unwrap(), offset);
-            (
-                [&D::front_context(pattern.borrow(), index)[..], &[pre]].concat(),
-                [&[post], &D::back_context(pattern.borrow(), index)[..]].concat(),
-            )
-        };
-        let graph = self.graph_mut();
-        let (pre, post) = (
-            graph.insert_pattern(pre),
-            graph.insert_pattern(post),
-        );
-        if offset == 0 {
-            graph.replace_in_pattern(parent, pid, 0..index, [pre]);
-            graph.replace_in_pattern(parent, pid, index.., [post]);
-        } else {
-            graph.add_pattern_to_node(parent, [pre, post])
+enum PatternSplitPosition {
+    Perfect(Pattern, PatternId, usize),
+    Imperfect(Pattern, usize, usize),
+}
+enum ContextHalf {
+    Child(Child),
+    Pattern(Pattern),
+}
+impl Borrow<[Child]> for ContextHalf {
+    fn borrow(&self) -> &[Child] {
+        match self {
+            Self::Child(c) => std::slice::from_ref(c),
+            Self::Pattern(p) => p.borrow(),
         }
-        (pre, post)
+    }
+}
+impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
+    fn index_start_path(&mut self, start: StartPath) -> StartPath {
+        let (loc, _, post) = self.index_offset_split(start.entry().parent, start.width());
+        StartPath::First(loc, post, start.width())
+    }
+    fn index_offset_split(&mut self, parent: Child, width: usize) -> (ChildLocation, ContextHalf, Child) {
+        let graph = self.graph();
+        let child_patterns = graph.expect_children_of(parent).clone();
+        let len = child_patterns.len();
+        let perfect = child_patterns.into_iter()
+            .try_fold(Vec::with_capacity(len), |mut acc, (pid, pattern)| {
+                let (index, offset) = <D as MatchDirection>::Opposite::token_offset_split(pattern.borrow(), width).unwrap();
+                if offset == 0 {
+                    ControlFlow::Break((pattern.into_pattern(), pid, index))
+                } else {
+                    acc.push((pattern.into_pattern(), index, offset));
+                    ControlFlow::Continue(acc)
+                }
+            });
+        drop(graph);
+        match perfect {
+            ControlFlow::Break((pattern, pid, pos)) => {
+                let (post, pre) = <D as MatchDirection>::Opposite::directed_pattern_split(&pattern[..], pos);
+                let mut graph = self.graph_mut();
+                let post = graph.insert_pattern(post);
+                graph.replace_in_pattern(parent, pid, pos.., [post]);
+                let pre = if pre.len() == 1 {
+                    ContextHalf::Child(pre.into_iter().next().unwrap())
+                } else {
+                    ContextHalf::Pattern(pre)
+                };
+                (ChildLocation::new(parent, pid, pos), pre, post)
+            },
+            ControlFlow::Continue(positions) => {
+                let (pre, post) = positions.into_iter().map(|(pattern, pos, offset)| {
+                    let (_, pre, post) = self.index_offset_split(*pattern.get(pos).unwrap(), offset);
+                    (
+                        [&D::front_context(pattern.borrow(), pos)[..], pre.borrow()].concat(),
+                        [&[post], &D::back_context(pattern.borrow(), pos)[..]].concat(),
+                    )
+                }).unzip::<_, _, Vec<_>, Vec<_>>();
+                let mut graph = self.graph_mut();
+                let (pre, post) = (
+                    graph.insert_patterns(pre),
+                    graph.insert_patterns(post),
+                );
+                let pid = graph.add_pattern_to_node(parent, [pre, post]);
+                (ChildLocation::new(parent, pid, 1), ContextHalf::Child(pre), post)
+            }
+        }
     }
     pub fn new(graph: HypergraphRef<T>) -> Self {
         Self {
@@ -172,45 +184,40 @@ impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
     ) -> Result<Child, NoMatch> {
         self.indexing::<Bft<_, _, _, _>, Indexing<T, D>, _>(pattern)
     }
-    //pub(crate) fn index_split(
-    //    &mut self,
-    //    path: ChildPath,
-    //) -> IndexedChild {
-    //    path.into_iter().fold(None, |acc, location| {
-    //        let context = self.index_pre_context_at(&location).ok();
-    //        let (inner, context, location) = if let Some(IndexedChild {
-    //                context: prev_context,
-    //                inner: prev_inner,
-    //                ..
-    //            }) = acc {
-    //            let context = context.and_then(|context|
-    //                prev_context.map(|prev_context|
-    //                    self.graph_mut().insert_pattern([context, prev_context].as_slice())
-    //                )
-    //                .or(Some(context))
-    //            )
-    //            .or(prev_context);
-    //            let inner = self.index_post_context_at(&location).expect("Invalid child location!");
-    //            (
-    //                self.graph_mut().insert_pattern([prev_inner, inner]),
-    //                context,
-    //                location,
-    //            )
-    //        } else {
-    //            (
-    //                self.index_postfix_at(&location).expect("Invalid child location!"),
-    //                context,
-    //                location,
-    //            )
-    //        };
-    //        Some(IndexedChild {
-    //            context,
-    //            inner,
-    //            location,
-    //        })
-    //    })
-    //    .unwrap()
-    //}
+    pub(crate) fn index_split(
+        &mut self,
+        path: ChildPath,
+    ) -> IndexedChild {
+        path.into_iter().fold(None, |acc, location| {
+            let context = self.index_pre_context_at(&location).ok();
+            Some(if let Some(IndexedChild {
+                    context: prev_context,
+                    inner: prev_inner,
+                    ..
+                }) = acc {
+                let context = context.and_then(|context|
+                    prev_context.map(|prev_context|
+                        self.graph_mut().insert_pattern([context, prev_context].as_slice())
+                    )
+                    .or(Some(context))
+                )
+                .or(prev_context);
+                let inner = self.index_post_context_at(&location).expect("Invalid child location!");
+                IndexedChild {
+                    context,
+                    inner: self.graph_mut().insert_pattern([prev_inner, inner]),
+                    location,
+                }
+            } else {
+                IndexedChild {
+                    context,
+                    inner: self.index_postfix_at(&location).expect("Invalid child location!"),
+                    location,
+                }
+            })
+        })
+        .unwrap()
+    }
     /// creates an IndexingNode::Parent for each parent of root, extending its start path
     fn indexing<
         'a,
@@ -231,7 +238,7 @@ impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
         {
             ControlFlow::Continue(None) => Err(NoMatch::NotFound(query)),
             ControlFlow::Continue(Some(found)) => Ok(found),
-            ControlFlow::Break(found) => found.ok_or(NoMatch::SingleIndex)
+            ControlFlow::Break(found) => Ok(found)
         }
     }
 }

@@ -28,7 +28,7 @@ pub(crate) enum TraversalNode {
     Root(QueryRangePath, Option<StartPath>, ChildLocation),
     Match(GraphRangePath, QueryRangePath, QueryRangePath),
     End(Option<QueryFound>),
-    Mismatch,
+    Mismatch(GraphRangePath, QueryRangePath),
 }
 pub(crate) trait Traversable<T: Tokenize> {
     fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>>;
@@ -247,7 +247,10 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
                     ]
                 } else if path_next.width == 1 {
                     vec![
-                        TraversalNode::Mismatch
+                        TraversalNode::Mismatch(
+                            new_path,
+                            new_query,
+                        )
                     ]
                 } else {
                     Self::prefix_nodes(
