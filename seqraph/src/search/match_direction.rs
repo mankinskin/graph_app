@@ -126,7 +126,7 @@ pub trait MatchDirection : Clone {
     ) -> (Vec<T>, Vec<T>) {
         (
             Self::back_context(pattern, index),
-            Self::split_end(pattern, index),
+            Self::split_end_normalized(pattern, index),
         )
     }
     fn next_child(

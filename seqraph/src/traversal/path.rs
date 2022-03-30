@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 
 use crate::{
     vertex::*,
-    *,
+    *, index::{IndexTraversable, IndexDirection},
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -43,6 +43,10 @@ impl StartPath {
             _ => true,
         };
         e && self.prev_pos::<_, _, D>(trav).is_none()
+    }
+    pub(crate) fn indexing<T: Tokenize, D: IndexDirection, Trav: IndexTraversable<T, D>>(self, mut trav: Trav) -> Self {
+        let (loc, post) = trav.index_start_path(self);
+        StartPath::First(loc, post, post.width())
     }
 }
 impl Wide for StartPath {

@@ -3,121 +3,42 @@
 use crate::{
     vertex::*,
     search::*,
-    ChildLocation, HypergraphRef,
+    HypergraphRef,
 };
+use std::borrow::Borrow;
 
 mod indexer;
 pub use indexer::*;
 mod index_direction;
 pub use index_direction::*;
 
-//#[derive(Clone, Debug)]
-//pub(crate) enum IndexingNode {
-//    Query(QueryRangePath),
-//    Root(QueryRangePath, StartPath),
-//    Match(GraphRangePath, QueryRangePath),
-//    End(QueryFound),
-//    Mismatch(QueryFound),
-//}
-//impl TraversalNode for IndexingNode {
-//    fn query_node(query: QueryRangePath) -> Self {
-//        Self::Query(query)
-//    }
-//    fn root_node(query: QueryRangePath, start_path: StartPath) -> Self {
-//        Self::Root(query, start_path)
-//    }
-//    fn match_node(path: GraphRangePath, query: QueryRangePath) -> Self {
-//        Self::Match(path, query)
-//    }
-//    fn end_node(found: QueryFound) -> Self {
-//        Self::End(found)
-//    }
-//    fn mismatch_node(found: QueryFound) -> Self {
-//        Self::Mismatch(found)
-//    }
-//}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct IndexedPath {
-    pub(crate) indexed: IndexedChild,
-    pub(crate) end_path: Option<ChildPath>,
-    pub(crate) remainder: Option<Pattern>
-}
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct IndexedChild {
-    pub(crate) location: ChildLocation,
-    pub(crate) context: Option<Child>,
-    pub(crate) inner: Child,
-}
-impl IndexedPath {
-    pub fn new(indexed: IndexedChild, end_path: ChildPath, remainder: impl IntoPattern) -> Self {
-        Self {
-            indexed,
-            end_path: if end_path.is_empty() {
-                None
-            } else {
-                Some(end_path)
-            },
-            remainder: if remainder.is_empty() {
-                None
-            } else {
-                Some(remainder.into_pattern())
-            },
-        }
-    }
-    //pub fn remainder(indexed: IndexedChild, remainder: impl IntoPattern) -> Self {
-    //    Self {
-    //        indexed,
-    //        end_path: None,
-    //        remainder: if remainder.is_empty() {
-    //            None
-    //        } else {
-    //            Some(remainder.into_pattern())
-    //        },
-    //    }
-    //}
-}
 //#[derive(Debug, Clone, PartialEq, Eq)]
-//pub struct Subgraph {
-//    graph: HashMap<VertexIndex, SubgraphVertex>,
-//}
-//impl Subgraph {
-//    pub fn new() -> Self {
-//        Self {
-//            graph: HashMap::new(),
-//        }
-//    }
-//    pub fn add_index_parent(&mut self, root: VertexIndex, parent: Child, pi: PatternIndex) {
-//        self.graph.entry(root).and_modify(|v|
-//            v.add_parent(parent, pi)
-//        )
-//        .or_insert_with(|| {
-//            let mut v = SubgraphVertex::new();
-//            v.add_parent(parent, pi);
-//            v
-//        });
-//    }
+//pub struct IndexedPath {
+//    pub(crate) indexed: IndexedChild,
+//    pub(crate) end_path: Option<ChildPath>,
+//    pub(crate) remainder: Option<Pattern>
 //}
 //#[derive(Debug, Clone, PartialEq, Eq)]
-//pub struct SubgraphVertex {
-//    parents: VertexParents,
+//pub struct IndexedChild {
+//    pub(crate) location: ChildLocation,
+//    pub(crate) context: Option<Child>,
+//    pub(crate) inner: Child,
 //}
-//impl SubgraphVertex {
-//    fn new() -> Self {
+//impl IndexedPath {
+//    pub fn new(indexed: IndexedChild, end_path: ChildPath, remainder: impl IntoPattern) -> Self {
 //        Self {
-//            parents: Default::default(),
+//            indexed,
+//            end_path: if end_path.is_empty() {
+//                None
+//            } else {
+//                Some(end_path)
+//            },
+//            remainder: if remainder.is_empty() {
+//                None
+//            } else {
+//                Some(remainder.into_pattern())
+//            },
 //        }
-//    }
-//    fn add_parent(&mut self, parent: Child, pi: PatternIndex) {
-//        self.parents.entry(parent.index)
-//            .and_modify(|p|
-//                p.add_pattern_index(pi.pattern_id, pi.sub_index)
-//            )
-//            .or_insert_with(|| {
-//                let mut p = Parent::new(parent.width);
-//                p.add_pattern_index(pi.pattern_id, pi.sub_index);
-//                p
-//            });
 //    }
 //}
 //type IndexingResult = Result<IndexedPath, NoMatch>;
@@ -129,24 +50,66 @@ where
     pub fn indexer(&self) -> Indexer<T, Right> {
         Indexer::new(self.clone())
     }
-    //pub(crate) fn index_found(
-    //    &mut self,
-    //    found_path: FoundPath,
-    //) -> (Option<Child>, Child, Option<Child>, Pattern) {
-    //    self.indexer().index_found(found_path)
-    //}
-    ///// does not include location
-    //pub(crate) fn index_pre_context_at(
-    //    &mut self,
-    //    location: &ChildLocation,
-    //) -> Result<Child, NoMatch> {
-    //    self.indexer().index_pre_context_at(location)
-    //}
-    ///// does not include location
-    //pub(crate) fn index_post_context_at(
-    //    &mut self,
-    //    location: &ChildLocation,
-    //) -> Result<Child, NoMatch> {
-    //    self.indexer().index_post_context_at(location)
-    //}
+    #[allow(unused)]
+    pub(crate) fn index_pattern(
+        &self,
+        pattern: impl IntoPattern,
+    ) -> Result<Child, NoMatch> {
+        self.indexer().index_pattern(pattern)
+    }
+}
+
+pub(crate) enum ContextHalf {
+    Child(Child),
+    Pattern(Pattern),
+}
+impl Borrow<[Child]> for ContextHalf {
+    fn borrow(&self) -> &[Child] {
+        match self {
+            Self::Child(c) => std::slice::from_ref(c),
+            Self::Pattern(p) => p.borrow(),
+        }
+    }
+}
+
+#[macro_use]
+#[cfg(test)]
+#[allow(clippy::many_single_char_names)]
+pub(crate) mod tests {
+
+    use super::*;
+    use crate::Hypergraph;
+    use pretty_assertions::{
+        assert_eq,
+    };
+    use itertools::*;
+
+    #[test]
+    fn index_pattern1() {
+        let mut graph = Hypergraph::default();
+        let (a, b, _w, x, y, z) = graph.insert_tokens([
+            Token::Element('a'),
+            Token::Element('b'),
+            Token::Element('w'),
+            Token::Element('x'),
+            Token::Element('y'),
+            Token::Element('z'),
+        ]).into_iter().next_tuple().unwrap();
+        let ab = graph.insert_pattern([a, b]);
+        let by = graph.insert_pattern([b, y]);
+        let yz = graph.insert_pattern([y, z]);
+        let xa = graph.insert_pattern([x, a]);
+        let xab = graph.insert_patterns([[x, ab], [xa, b]]);
+        let xaby = graph.insert_patterns([vec![xab, y], vec![xa, by]]);
+        let _xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
+        let graph = HypergraphRef::from(graph);
+        let query = vec![by, z];
+        let byz = graph.index_pattern(query.borrow()).expect("Indexing failed");
+        let byz_found = graph.find_parent(&query);
+        assert_eq!(
+            byz_found,
+            Ok(QueryFound::complete(query, byz)),
+            "byz"
+        );
+    }
 }

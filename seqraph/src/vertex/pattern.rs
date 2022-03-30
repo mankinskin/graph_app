@@ -116,7 +116,7 @@ pub fn prefix<T: AsChild + Clone>(
     pattern: &'_ [T],
     index: PatternId,
 ) -> Vec<T> {
-    pattern.get(..index).unwrap_or(pattern).to_vec()
+    pattern.get(0..index).unwrap_or(pattern).to_vec()
 }
 pub fn infix<T: AsChild + Clone>(
     pattern: &'_ [T],

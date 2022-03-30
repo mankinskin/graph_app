@@ -30,7 +30,7 @@ pub(crate) enum TraversalNode {
     End(Option<QueryFound>),
     Mismatch(GraphRangePath, QueryRangePath),
 }
-pub(crate) trait Traversable<T: Tokenize> {
+pub(crate) trait Traversable<T: Tokenize>: Sized {
     fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>>;
 }
 pub(crate) trait TraversableMut<T: Tokenize, Base = Self> : Traversable<T> {
@@ -42,7 +42,6 @@ impl <T: Tokenize, Trav: Traversable<T>> Traversable<T> for &Trav {
     }
 }
 impl <T: Tokenize, Trav: Traversable<T>> Traversable<T> for &mut Trav {
-    //type Node = <Trav as Traversable<T>>::Node;
     fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>> {
         Trav::graph(self)
     }
@@ -238,7 +237,6 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
                         } else {
                             path.on_match(trav);
                             let found = QueryFound::new(
-                                //FoundPath::new::<_, _, D>(trav, path),
                                 path.reduce_end::<_, _, D>(trav),
                                 query,
                             );
