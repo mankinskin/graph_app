@@ -60,7 +60,7 @@ impl Wide for FoundPath {
     fn width(&self) -> usize {
         match self {
             Self::Complete(c) => c.width,
-            Self::Range(r) => r.start.width(),
+            Self::Range(r) => r.width(),
         }
     }
 }
@@ -92,7 +92,7 @@ pub enum FoundPath {
 impl FoundPath {
     pub(crate) fn new<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(trav: Trav, path: GraphRangePath) -> Self {
         if path.is_complete::<_, _, D>(trav) {
-            FoundPath::Complete(path.start.entry().parent)
+            FoundPath::Complete(path.into_start_path().entry().parent)
         } else {
             FoundPath::Range(path)
         }
@@ -182,12 +182,86 @@ pub(crate) mod tests {
     use crate::{
         graph::tests::context,
         Child,
+        traversal::path::GraphRangePath,
     };
     use pretty_assertions::{
         assert_eq,
     };
     use itertools::*;
 
+    #[test]
+    fn find_parent1() {
+        let Context {
+            graph,
+            a,
+            b,
+            c,
+            d,
+            ab,
+            bc,
+            abc,
+            abcd,
+            ..
+         } = &*context();
+        let a_bc_pattern = vec![Child::new(a, 1), Child::new(bc, 2)];
+        let ab_c_pattern = vec![Child::new(ab, 2), Child::new(c, 1)];
+        let a_bc_d_pattern = vec![Child::new(a, 1), Child::new(bc, 2), Child::new(d, 1)];
+        let b_c_pattern = vec![Child::new(b, 1), Child::new(c, 1)];
+        let bc_pattern = vec![Child::new(bc, 2)];
+        let a_b_c_pattern = vec![Child::new(a, 1), Child::new(b, 1), Child::new(c, 1)];
+
+        let query = bc_pattern;
+        assert_eq!(
+            graph.find_parent(&query),
+            Err(NoMatch::SingleIndex),
+            "bc"
+        );
+        let query = b_c_pattern;
+        assert_eq!(
+            graph.find_parent(&query),
+            Ok(QueryFound::complete(query, bc)),
+            "b_c"
+        );
+        let query = a_bc_pattern;
+        assert_eq!(
+            graph.find_parent(&query),
+            Ok(QueryFound::complete(query, abc)),
+            "a_bc"
+        );
+        let query = ab_c_pattern;
+        assert_eq!(
+            graph.find_parent(&query),
+            Ok(QueryFound::complete(query, abc)),
+            "ab_c"
+        );
+        let query = a_bc_d_pattern;
+        assert_eq!(
+            graph.find_parent(&query),
+            Ok(QueryFound::complete(query, abcd)),
+            "a_bc_d"
+        );
+        let query = a_b_c_pattern.clone();
+        assert_eq!(
+            graph.find_parent(&query),
+            Ok(QueryFound::complete(query, abc)),
+            "a_b_c"
+        );
+        let query = [&a_b_c_pattern[..], &[Child::new(c, 1)]].concat();
+        assert_eq!(
+            graph.find_parent(&query),
+            Ok(QueryFound {
+                found: FoundPath::Complete(*abc),
+                query: QueryRangePath {
+                    exit: query.len() - 2,
+                    query,
+                    entry: 0,
+                    start: vec![],
+                    end: vec![],
+                },
+            }),
+            "a_b_c_c"
+        );
+    }
     #[test]
     fn find_ancestor1() {
         let Context {
@@ -311,10 +385,11 @@ pub(crate) mod tests {
                                 sub_index: 1,
                             },
                         ],
-                        3,
+                        2,
                     ),
                     end: vec![],
                     exit: 1,
+                    end_width: 1,
                 }),
                 query: QueryRangePath {
                     exit: query.len() - 1,

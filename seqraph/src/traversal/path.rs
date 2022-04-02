@@ -6,6 +6,12 @@ use crate::{
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct EndPath {
+    entry: ChildLocation,
+    path: ChildPath,
+    width: usize,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum StartPath {
     First(ChildLocation, Child, usize),
     Path(ChildLocation, ChildPath, usize),
@@ -130,7 +136,7 @@ impl QueryRangePath {
 }
 impl Wide for GraphRangePath {
     fn width(&self) -> usize {
-        self.start.width()
+        self.start.width() + self.end_width
     }
 }
 
@@ -139,6 +145,7 @@ pub struct GraphRangePath {
     pub(crate) start: StartPath,
     pub(crate) exit: usize,
     pub(crate) end: ChildPath,
+    pub(crate) end_width: usize,
 }
 impl GraphRangePath {
     pub fn get_exit_location(&self) -> ChildLocation {
@@ -154,7 +161,21 @@ impl GraphRangePath {
             exit: start.entry().sub_index,
             start,
             end: vec![],
+            end_width: 0,
         }
+    }
+    pub fn get_end_width(&self) -> usize {
+        self.end_width
+    }
+    pub fn move_width_into_start(&mut self) {
+        *self.start.width_mut() += self.end_width;
+        self.end_width = 0;
+    }
+    pub fn get_start_path_mut(&mut self) -> &mut StartPath {
+        &mut self.start
+    }
+    pub fn into_start_path(self) -> StartPath {
+        self.start
     }
     pub(crate) fn is_complete<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(&self, trav: Trav) -> bool {
         self.start.is_complete::<_, _, D>(&trav) &&
@@ -165,6 +186,15 @@ impl GraphRangePath {
         let location = self.get_exit_location();
         let pattern = trav.graph().expect_pattern_at(&location);
         D::index_next(pattern, self.exit)
+    }
+    /// true if points to a match end position
+    pub(crate) fn has_end_match<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(&self, trav: Trav) -> bool {
+        !self.end.is_empty() || self.prev_pos::<_, _, D>(trav) == Some(self.start.entry().sub_index)
+    }
+    pub(crate) fn prev_pos<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(&self, trav: Trav) -> Option<usize> {
+        let location = self.get_exit_location();
+        let pattern = trav.graph().expect_pattern_at(&location);
+        D::index_prev(pattern, self.exit)
     }
     pub fn get_end_location(&self) -> ChildLocation {
         if self.end.is_empty() {
@@ -177,7 +207,9 @@ impl GraphRangePath {
         trav.graph().expect_child_at(self.get_end_location())
     }
     pub(crate) fn on_match<T: Tokenize>(&mut self, trav: impl Traversable<T>) {
-        *self.start.width_mut() += self.get_end(trav).width;
+        // todo: maybe use end_width
+        //*self.start.width_mut() += self.get_end(trav).width;
+        self.end_width += self.get_end(trav).width;
     }
     pub(crate) fn advance_next<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(&mut self, trav: Trav) -> bool {
         let graph = trav.graph();
@@ -212,6 +244,27 @@ impl GraphRangePath {
                 self.end.push(location);
                 break;
             }
+        }
+        if self.end.is_empty() {
+            self.move_width_into_start();
+        }
+        FoundPath::new::<_, _, D>(&trav, self)
+    }
+    pub(crate) fn reduce_mismatch<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(mut self, trav: Trav) -> FoundPath {
+        let graph = trav.graph();
+        //self.reduce_end_path::<T, D>(&*graph);
+        // remove segments pointing to mismatch at pattern head
+        while let Some(mut location) = self.end.pop() {
+            let pattern = graph.expect_pattern_at(&location);
+            // skip segments at end of pattern
+            if let Some(prev) = D::index_prev(pattern.borrow(), location.sub_index) {
+                location.sub_index = prev;
+                self.end.push(location);
+                break;
+            }
+        }
+        if self.end.is_empty() {
+            self.exit = self.prev_pos::<_, _, D>(&trav).unwrap();
         }
         FoundPath::new::<_, _, D>(&trav, self)
     }

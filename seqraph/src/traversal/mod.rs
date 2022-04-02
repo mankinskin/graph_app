@@ -1,6 +1,6 @@
-mod bft;
-mod dft;
-mod path;
+pub(crate) mod bft;
+pub(crate) mod dft;
+pub(crate) mod path;
 
 pub(crate) use bft::*;
 pub(crate) use dft::*;
@@ -28,7 +28,7 @@ pub(crate) enum TraversalNode {
     Root(QueryRangePath, Option<StartPath>, ChildLocation),
     Match(GraphRangePath, QueryRangePath, QueryRangePath),
     End(Option<QueryFound>),
-    Mismatch(GraphRangePath, QueryRangePath),
+    Mismatch(GraphRangePath),
 }
 pub(crate) trait Traversable<T: Tokenize>: Sized {
     fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>>;
@@ -117,7 +117,6 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
             })
             .flatten()
             .collect_vec();
-
         // try parents in ascending width (might not be needed in indexing)
         parents.sort_unstable_by(|a, b| TraversalOrder::cmp(a, b));
         parents.into_iter()
@@ -170,7 +169,7 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
         if path.advance_next::<_, _, D>(&trav) {
             Self::match_end(&trav, PathPair::GraphMajor(path, old_query))
         } else {
-            Self::end_op(trav, old_query, path.start)
+            Self::index_end(trav, old_query, path)
         }
     }
     fn query_start(
@@ -196,8 +195,16 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
         if path.advance_next::<_, _, D>(&trav) {
             Self::match_end(&trav, PathPair::from_mode(path, query, mode))
         } else {
-            Self::end_op(trav, query, path.start)
+            Self::index_end(trav, query, path)
         }
+    }
+    fn index_end(
+        trav: &Self::Trav,
+        query: QueryRangePath,
+        mut path: GraphRangePath,
+    ) -> Vec<TraversalNode> {
+        path.move_width_into_start();
+        Self::end_op(trav, query, path.into_start_path())
     }
     /// generate nodes for a child
     fn match_end(
@@ -226,16 +233,15 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
                     // continue with match node
                     let mut path = new_path.clone();
                     let mut query = new_query.clone();
+                    path.on_match(trav);
                     vec![
                         if query.advance_next::<_, _, D>(trav) {
-                            path.on_match(trav);
                             TraversalNode::Match(
                                 path,
                                 query,
                                 new_query.clone(),
                             )
                         } else {
-                            path.on_match(trav);
                             let found = QueryFound::new(
                                 path.reduce_end::<_, _, D>(trav),
                                 query,
@@ -245,10 +251,7 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
                     ]
                 } else if path_next.width == 1 {
                     vec![
-                        TraversalNode::Mismatch(
-                            new_path,
-                            new_query,
-                        )
+                        TraversalNode::Mismatch(new_path)
                     ]
                 } else {
                     Self::prefix_nodes(

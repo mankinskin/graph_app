@@ -6,7 +6,17 @@ use std::{sync::{
 use crate::{
     vertex::*,
     index::*,
-    Hypergraph, HypergraphRef, Traversable, DirectedTraversalPolicy, QueryRangePath, StartPath, TraversableMut, TraversalNode, TraversalIterator, Dft, TraversalFolder,
+    Hypergraph,
+    HypergraphRef,
+    Traversable,
+    DirectedTraversalPolicy,
+    QueryRangePath,
+    StartPath,
+    TraversableMut,
+    TraversalNode,
+    TraversalIterator,
+    TraversalFolder,
+    Bft,
 };
 
 #[derive(Debug, Clone)]
@@ -58,14 +68,26 @@ impl<T: Tokenize, D: IndexDirection> TraversalFolder<T, D> for Indexer<T, D> {
                 ControlFlow::Break(match found.found {
                     FoundPath::Range(path) => {
                         let mut ltrav = trav.clone();
-                        let (_, post) = ltrav.index_start_path(path.start);
+                        let (_, post) = ltrav.index_start_path(path.into_start_path());
                         post
                     },
                     FoundPath::Complete(c) => c
                 } )
             },
-            TraversalNode::Mismatch(_path, _query) => {
-                unimplemented!()
+            TraversalNode::Mismatch(path) => {
+                let found = path.reduce_mismatch::<_, _, D>(trav);
+                match found {
+                    FoundPath::Range(path) =>
+                        if path.has_end_match::<_, _, D>(trav) {
+                            let mut ltrav = trav.clone();
+                            let (_, front) = ltrav.index_start_path(path.into_start_path());
+                            //let (_, back) = ltrav.index_end_path(path);
+                            ControlFlow::Break(front)
+                        } else {
+                            ControlFlow::Continue(acc)
+                        },
+                    FoundPath::Complete(c) => ControlFlow::Break(c)
+                }
             },
             _ => ControlFlow::Continue(acc)
         }
@@ -78,6 +100,12 @@ pub(crate) trait IndexTraversable<T: Tokenize, D: IndexDirection>: TraversableMu
         let (loc, _, post) = self.index_offset_split(parent, offset);
         (loc, post)
     }
+    //fn index_end_path(&mut self, path: GraphRangePath) -> (ChildLocation, Child) {
+    //    let parent = start.entry().parent;
+    //    let offset = parent.width - start.width();
+    //    let (loc, _, post) = self.index_offset_split(parent, offset);
+    //    (loc, post)
+    //}
     fn index_offset_split(&mut self, parent: Child, offset: usize) -> (ChildLocation, ContextHalf, Child) {
         let graph = self.graph();
         let child_patterns = graph.expect_children_of(parent).clone();
@@ -141,11 +169,11 @@ impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
             _ty: Default::default(),
         }
     }
-    pub(crate) fn index_pattern(
+    pub(crate) fn index_prefix(
         &mut self,
         pattern: impl IntoPattern,
     ) -> Result<Child, NoMatch> {
-        self.indexing::<Dft<_, _, _, _>, Indexing<T, D>, _>(pattern)
+        self.indexing::<Bft<_, _, _, _>, Indexing<T, D>, _>(pattern)
     }
     //pub(crate) fn index_prefix_at(
     //    &mut self,

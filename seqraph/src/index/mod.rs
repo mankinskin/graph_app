@@ -51,11 +51,11 @@ where
         Indexer::new(self.clone())
     }
     #[allow(unused)]
-    pub(crate) fn index_pattern(
+    pub(crate) fn index_prefix(
         &self,
         pattern: impl IntoPattern,
     ) -> Result<Child, NoMatch> {
-        self.indexer().index_pattern(pattern)
+        self.indexer().index_prefix(pattern)
     }
 }
 
@@ -78,14 +78,14 @@ impl Borrow<[Child]> for ContextHalf {
 pub(crate) mod tests {
 
     use super::*;
-    use crate::Hypergraph;
+    use crate::{Hypergraph, QueryRangePath};
     use pretty_assertions::{
         assert_eq,
     };
     use itertools::*;
 
     #[test]
-    fn index_pattern1() {
+    fn index_prefix1() {
         let mut graph = Hypergraph::default();
         let (a, b, _w, x, y, z) = graph.insert_tokens([
             Token::Element('a'),
@@ -104,12 +104,59 @@ pub(crate) mod tests {
         let _xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
         let graph = HypergraphRef::from(graph);
         let query = vec![by, z];
-        let byz = graph.index_pattern(query.borrow()).expect("Indexing failed");
+        let byz = graph.index_prefix(query.borrow()).expect("Indexing failed");
         let byz_found = graph.find_parent(&query);
         assert_eq!(
             byz_found,
             Ok(QueryFound::complete(query, byz)),
             "byz"
+        );
+        let query = vec![ab, y];
+        let aby = graph.index_prefix(query.borrow()).expect("Indexing failed");
+        let aby_found = graph.find_parent(&query);
+        assert_eq!(
+            aby_found,
+            Ok(QueryFound::complete(query, aby)),
+            "aby"
+        );
+    }
+    #[test]
+    fn index_prefix2() {
+        let mut graph = Hypergraph::default();
+        let (a, b, _w, x, y, z) = graph.insert_tokens([
+            Token::Element('a'),
+            Token::Element('b'),
+            Token::Element('w'),
+            Token::Element('x'),
+            Token::Element('y'),
+            Token::Element('z'),
+        ]).into_iter().next_tuple().unwrap();
+        // index 6
+        let yz = graph.insert_pattern([y, z]);
+        let xab = graph.insert_pattern([x, a, b]);
+        let _xyz = graph.insert_pattern([x, yz]);
+        let _xabz = graph.insert_pattern([xab, z]);
+        let _xabyz = graph.insert_pattern([xab, yz]);
+
+        let graph = HypergraphRef::from(graph);
+
+        let query = vec![a, b, y, x];
+        let aby = graph.index_prefix(query.borrow()).expect("Indexing failed");
+        let query = vec![a, b, y];
+        let aby_found = graph.find_ancestor(&query);
+        assert_eq!(
+            aby_found,
+            Ok(QueryFound {
+                found: FoundPath::Complete(aby),
+                query: QueryRangePath {
+                    entry: 0,
+                    exit: 2,
+                    start: vec![],
+                    end: vec![],
+                    query,
+                }
+            }),
+            "aby"
         );
     }
 }
