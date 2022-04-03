@@ -1,7 +1,7 @@
 use std::{sync::{
     RwLockReadGuard,
     RwLockWriteGuard,
-}, ops::ControlFlow, borrow::Borrow};
+}, ops::{ControlFlow, RangeInclusive, RangeFrom}, borrow::Borrow};
 
 use crate::{
     vertex::*,
@@ -16,7 +16,7 @@ use crate::{
     TraversalNode,
     TraversalIterator,
     TraversalFolder,
-    Bft,
+    Bft, EndPath, GraphPath,
 };
 
 #[derive(Debug, Clone)]
@@ -50,7 +50,9 @@ impl<T: Tokenize, D: IndexDirection> DirectedTraversalPolicy<T, D> for Indexing<
         query: QueryRangePath,
         start: StartPath,
     ) -> Vec<TraversalNode> {
-        let start = start.indexing::<T, D, Self::Trav>(trav.clone());
+        let mut ltrav = trav.clone();
+        let (loc, post) = IndexFront::index_path(&mut ltrav, start);
+        let start = StartPath::First(loc, post, post.width());
         Self::parent_nodes(trav, query, Some(start))
     }
 }
@@ -68,8 +70,9 @@ impl<T: Tokenize, D: IndexDirection> TraversalFolder<T, D> for Indexer<T, D> {
                 ControlFlow::Break(match found.found {
                     FoundPath::Range(path) => {
                         let mut ltrav = trav.clone();
-                        let (_, post) = ltrav.index_start_path(path.into_start_path());
-                        post
+                        let (_, front) = IndexFront::index_path(&mut ltrav, path.into_start_path());
+                        //let (_, back) = ltrav.index_end_path(path);
+                        front
                     },
                     FoundPath::Complete(c) => c
                 } )
@@ -80,7 +83,7 @@ impl<T: Tokenize, D: IndexDirection> TraversalFolder<T, D> for Indexer<T, D> {
                     FoundPath::Range(path) =>
                         if path.has_end_match::<_, _, D>(trav) {
                             let mut ltrav = trav.clone();
-                            let (_, front) = ltrav.index_start_path(path.into_start_path());
+                            let (_, front) = IndexFront::index_path(&mut ltrav, path.into_start_path());
                             //let (_, back) = ltrav.index_end_path(path);
                             ControlFlow::Break(front)
                         } else {
@@ -93,21 +96,35 @@ impl<T: Tokenize, D: IndexDirection> TraversalFolder<T, D> for Indexer<T, D> {
         }
     }
 }
-pub(crate) trait IndexTraversable<T: Tokenize, D: IndexDirection>: TraversableMut<T> {
-    fn index_start_path(&mut self, start: StartPath) -> (ChildLocation, Child) {
-        let parent = start.entry().parent;
-        let offset = parent.width - start.width();
-        let (loc, _, post) = self.index_offset_split(parent, offset);
-        (loc, post)
+pub(crate) struct IndexSplitResult {
+    inner: Child,
+    context: ContextHalf,
+    location: ChildLocation,
+}
+pub(crate) trait IndexSide<T: Tokenize, D: IndexDirection> {
+    type Trav: TraversableMut<T>;
+    type Path: GraphPath;
+    type Range: PatternRangeIndex;
+    fn width_offset(path: &Self::Path) -> usize;
+    fn back_front_order<A>(back: A, front: A) -> IndexingPair<A>;
+    fn context_inner_order<
+        'a,
+        C: AsRef<[Child]> + 'a,
+        I: AsRef<[Child]> + 'a
+    >(context: &'a C, inner: &'a I) -> (&'a [Child], &'a [Child]);
+    fn replace_range(pos: usize) -> Self::Range;
+    fn index_path(trav: &mut Self::Trav, path: Self::Path) -> (ChildLocation, Child) {
+        let offset = Self::width_offset(&path);
+        let parent = path.entry().parent;
+        let IndexSplitResult {
+            location,
+            inner,
+            ..
+        } = Self::index_offset_split(trav, parent, offset);
+        (location, inner)
     }
-    //fn index_end_path(&mut self, path: GraphRangePath) -> (ChildLocation, Child) {
-    //    let parent = start.entry().parent;
-    //    let offset = parent.width - start.width();
-    //    let (loc, _, post) = self.index_offset_split(parent, offset);
-    //    (loc, post)
-    //}
-    fn index_offset_split(&mut self, parent: Child, offset: usize) -> (ChildLocation, ContextHalf, Child) {
-        let graph = self.graph();
+    fn index_offset_split(trav: &mut Self::Trav, parent: Child, offset: usize) -> IndexSplitResult {
+        let graph = trav.graph();
         let child_patterns = graph.expect_children_of(parent).clone();
         let len = child_patterns.len();
         let perfect = child_patterns.into_iter()
@@ -122,45 +139,122 @@ pub(crate) trait IndexTraversable<T: Tokenize, D: IndexDirection>: TraversableMu
             });
         drop(graph);
         match perfect {
+            // perfect split
             ControlFlow::Break((pattern, pid, pos)) => {
-                let (pre, post) = D::directed_pattern_split(&pattern[..], pos);
-                let post = if post.len() == 1 {
-                    post.into_iter().next().unwrap()
+                let (back, front) = D::directed_pattern_split(&pattern[..], pos);
+                let IndexingPair {
+                    inner,
+                    context
+                } = Self::back_front_order(back, front);
+                let inner = if inner.len() == 1 {
+                    inner.into_iter().next().unwrap()
                 } else {
-                    let mut graph = self.graph_mut();
-                    let post = graph.insert_pattern(post);
-                    graph.replace_in_pattern(parent, pid, pos.., [post]);
-                    post
+                    let mut graph = trav.graph_mut();
+                    let inner = graph.insert_pattern(inner);
+                    graph.replace_in_pattern(parent, pid, Self::replace_range(pos), [inner]);
+                    inner
                 };
-                let pre = if pre.len() == 1 {
-                    ContextHalf::Child(pre.into_iter().next().unwrap())
+                let context = if context.len() == 1 {
+                    ContextHalf::Child(context.into_iter().next().unwrap())
                 } else {
-                    ContextHalf::Pattern(pre)
+                    ContextHalf::Pattern(context)
                 };
-                (ChildLocation::new(parent, pid, pos), pre, post)
+                IndexSplitResult {
+                    location: ChildLocation::new(parent, pid, pos),
+                    context,
+                    inner,
+                }
             },
+            // no perfect split
             ControlFlow::Continue(positions) => {
-                let (pres, posts) = positions.into_iter().map(|(pattern, pos, offset)| {
-                    let (_, pre, post) = self.index_offset_split(*pattern.get(pos).unwrap(), offset);
-                    (
-                        [&D::back_context(pattern.borrow(), pos)[..], pre.borrow()].concat(),
-                        [&[post], &D::front_context(pattern.borrow(), pos)[..]].concat(),
-                    )
-                }).unzip::<_, _, Vec<_>, Vec<_>>();
-                println!("{:#?}", pres);
-                println!("{:#?}", posts);
-                let mut graph = self.graph_mut();
-                let (pre, post) = (
-                    graph.insert_patterns(pres),
-                    graph.insert_patterns(posts),
+                let (backs, fronts) = positions.into_iter()
+                    .map(|(pattern, pos, offset)| {
+                        let IndexSplitResult {
+                            inner,
+                            context,
+                            ..
+                        } = Self::index_offset_split(trav, *pattern.get(pos).unwrap(), offset);
+                        let (back, front) = Self::context_inner_order(&context, &inner);
+                        (
+                            // todo: order depends on D
+                            [&D::back_context(pattern.borrow(), pos)[..], back].concat(),
+                            [front, &D::front_context(pattern.borrow(), pos)[..]].concat(),
+                        )
+                    }).unzip::<_, _, Vec<_>, Vec<_>>();
+                let mut graph = trav.graph_mut();
+                let (back, front) = (
+                    graph.insert_patterns(backs),
+                    graph.insert_patterns(fronts),
                 );
-                let pid = graph.add_pattern_to_node(parent, [pre, post]);
-                (ChildLocation::new(parent, pid, 1), ContextHalf::Child(pre), post)
+                let pid = graph.add_pattern_to_node(parent, [back, front]);
+                let IndexingPair {
+                    inner,
+                    context
+                } = Self::back_front_order(back, front);
+                IndexSplitResult {
+                    location: ChildLocation::new(parent, pid, 1),
+                    context: ContextHalf::Child(context),
+                    inner,
+                }
             }
         }
     }
 }
-impl<T: Tokenize, D: IndexDirection> IndexTraversable<T, D> for Indexer<T, D> {}
+pub(crate) struct IndexingPair<T> {
+    inner: T,
+    context: T,
+}
+pub(crate) struct IndexFront;
+impl<T: Tokenize, D: IndexDirection> IndexSide<T, D> for IndexFront {
+    type Trav = Indexer<T, D>;
+    type Path = StartPath;
+    type Range = RangeFrom<usize>;
+    fn replace_range(pos: usize) -> Self::Range {
+        pos..
+    }
+    fn context_inner_order<
+        'a,
+        C: AsRef<[Child]> + 'a,
+        I: AsRef<[Child]> + 'a
+    >(context: &'a C, inner: &'a I) -> (&'a [Child], &'a [Child]) {
+        (context.as_ref(), inner.as_ref())
+    }
+    fn back_front_order<A>(back: A, front: A) -> IndexingPair<A> {
+        IndexingPair {
+            inner: front,
+            context: back,
+        }
+    }
+    fn width_offset(path: &Self::Path) -> usize {
+        // todo: changes with index direction
+        path.entry().parent.width() - path.width()
+    }
+}
+pub(crate) struct IndexBack;
+impl<T: Tokenize, D: IndexDirection> IndexSide<T, D> for IndexBack {
+    type Trav = Indexer<T, D>;
+    type Path = EndPath;
+    type Range = RangeInclusive<usize>;
+    fn replace_range(pos: usize) -> Self::Range {
+        0..=pos
+    }
+    fn context_inner_order<
+        'a,
+        C: AsRef<[Child]> + 'a,
+        I: AsRef<[Child]> + 'a
+    >(context: &'a C, inner: &'a I) -> (&'a [Child], &'a [Child]) {
+        (inner.as_ref(), context.as_ref())
+    }
+    fn back_front_order<A>(back: A, front: A) -> IndexingPair<A> {
+        IndexingPair {
+            inner: back,
+            context: front,
+        }
+    }
+    fn width_offset(path: &Self::Path) -> usize {
+        path.width()
+    }
+}
 
 impl<'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
     pub fn new(graph: HypergraphRef<T>) -> Self {

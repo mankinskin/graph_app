@@ -123,3 +123,8 @@ impl Borrow<[Child]> for Child {
         std::slice::from_ref(self)
     }
 }
+impl AsRef<[Child]> for Child {
+    fn as_ref(&self) -> &[Child] {
+        self.borrow()
+    }
+}

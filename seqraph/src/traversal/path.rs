@@ -2,8 +2,12 @@ use std::borrow::Borrow;
 
 use crate::{
     vertex::*,
-    *, index::{IndexTraversable, IndexDirection},
+    *,
 };
+pub trait GraphPath: Wide {
+    fn entry(&self) -> ChildLocation;
+    fn path(&self) -> &[ChildLocation];
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EndPath {
@@ -11,25 +15,48 @@ pub struct EndPath {
     path: ChildPath,
     width: usize,
 }
+impl GraphPath for EndPath {
+    fn entry(&self) -> ChildLocation {
+        self.entry
+    }
+    fn path(&self) -> &[ChildLocation] {
+        self.path.as_slice()
+    }
+}
+impl Wide for EndPath {
+    fn width(&self) -> usize {
+        self.width
+    }
+}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum StartPath {
     First(ChildLocation, Child, usize),
     Path(ChildLocation, ChildPath, usize),
 }
-impl StartPath {
-    pub fn entry(&self) -> ChildLocation {
+impl GraphPath for StartPath {
+    fn entry(&self) -> ChildLocation {
         match self {
             Self::Path(entry, _, _) |
             Self::First(entry, _, _)
                 => *entry,
         }
     }
-    pub fn path(&self) -> ChildPath {
+    fn path(&self) -> &[ChildLocation] {
         match self {
-            Self::Path(_, path, _) => path.clone(),
-            _ => vec![],
+            Self::Path(_, path, _) => path.as_slice(),
+            _ => &[],
         }
     }
+}
+impl Wide for StartPath {
+    fn width(&self) -> usize {
+        match self {
+            Self::Path(_, _, width) |
+            Self::First(_, _, width) => *width,
+        }
+    }
+}
+impl StartPath {
     pub fn width_mut(&mut self) -> &mut usize {
         match self {
             Self::Path(_, _, width) |
@@ -49,18 +76,6 @@ impl StartPath {
             _ => true,
         };
         e && self.prev_pos::<_, _, D>(trav).is_none()
-    }
-    pub(crate) fn indexing<T: Tokenize, D: IndexDirection, Trav: IndexTraversable<T, D>>(self, mut trav: Trav) -> Self {
-        let (loc, post) = trav.index_start_path(self);
-        StartPath::First(loc, post, post.width())
-    }
-}
-impl Wide for StartPath {
-    fn width(&self) -> usize {
-        match self {
-            Self::Path(_, _, width) |
-            Self::First(_, _, width) => *width,
-        }
     }
 }
 

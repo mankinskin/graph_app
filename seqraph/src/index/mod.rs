@@ -71,6 +71,11 @@ impl Borrow<[Child]> for ContextHalf {
         }
     }
 }
+impl AsRef<[Child]> for ContextHalf {
+    fn as_ref(&self) -> &[Child] {
+        self.borrow()
+    }
+}
 
 #[macro_use]
 #[cfg(test)]
@@ -78,10 +83,11 @@ impl Borrow<[Child]> for ContextHalf {
 pub(crate) mod tests {
 
     use super::*;
-    use crate::{Hypergraph, QueryRangePath};
-    use pretty_assertions::{
-        assert_eq,
+    use crate::{
+        Hypergraph,
+        QueryRangePath,
     };
+    use pretty_assertions::assert_eq;
     use itertools::*;
 
     #[test]
