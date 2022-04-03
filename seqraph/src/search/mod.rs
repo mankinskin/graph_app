@@ -375,18 +375,18 @@ pub(crate) mod tests {
             byz_found,
             Ok(QueryFound {
                 found: FoundPath::Range(GraphRangePath {
-                    start: StartPath::Path(
-                        xabyz.to_pattern_location(xaby_z_id)
+                    start: StartPath::Path {
+                        entry: xabyz.to_pattern_location(xaby_z_id)
                             .to_child_location(0),
-                        vec![
+                        path: vec![
                             ChildLocation {
                                 parent: xaby,
                                 pattern_id: xa_by_id,
                                 sub_index: 1,
                             },
                         ],
-                        2,
-                    ),
+                        width: 2,
+                    },
                     end: vec![],
                     exit: 1,
                     end_width: 1,

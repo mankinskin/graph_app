@@ -51,8 +51,8 @@ impl<T: Tokenize, D: IndexDirection> DirectedTraversalPolicy<T, D> for Indexing<
         start: StartPath,
     ) -> Vec<TraversalNode> {
         let mut ltrav = trav.clone();
-        let (loc, post) = IndexFront::index_path(&mut ltrav, start);
-        let start = StartPath::First(loc, post, post.width());
+        let (entry, post) = IndexFront::index_path(&mut ltrav, start);
+        let start = StartPath::First { entry, child: post, width: post.width() };
         Self::parent_nodes(trav, query, Some(start))
     }
 }
@@ -63,7 +63,7 @@ impl<T: Tokenize, D: IndexDirection> TraversalFolder<T, D> for Indexer<T, D> {
     fn fold_found(
         trav: &Self::Trav,
         acc: Self::Continue,
-        node: TraversalNode
+        node: TraversalNode,
     ) -> ControlFlow<Self::Break, Self::Continue> {
         match node {
             TraversalNode::End(Some(found)) => {

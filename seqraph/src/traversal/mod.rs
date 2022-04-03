@@ -98,8 +98,8 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
 
         let graph = trav.graph();
         let start_index = match start {
-            Some(StartPath::First(entry, _, _)) |
-            Some(StartPath::Path(entry, _, _)) =>
+            Some(StartPath::First { entry, .. }) |
+            Some(StartPath::Path { entry, .. }) =>
                 entry.parent,
             None => query.get_entry()
         };
@@ -138,30 +138,38 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
         let start_index = old_query.get_entry();
         let graph = trav.graph();
         let pre_start = match old_start.clone() {
-            Some(StartPath::First(entry, _, width)) => {
+            Some(StartPath::First { entry, width, .. }) => {
                 let pattern = graph.expect_pattern_at(entry);
                 println!("first {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
-                StartPath::Path(parent_entry, if entry.sub_index != D::head_index(&pattern) {
-                    vec![entry]
-                } else {
-                    vec![]
-                }, width)
+                StartPath::Path {
+                    entry: parent_entry,
+                    path: if entry.sub_index != D::head_index(&pattern) {
+                        vec![entry]
+                    } else {
+                        vec![]
+                    },
+                    width,
+                }
             },
-            Some(StartPath::Path(entry, mut path, width)) => {
+            Some(StartPath::Path { entry, mut path, width }) => {
                 println!("path {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
                 let pattern = graph.expect_pattern_at(entry);
                 if entry.sub_index != D::head_index(&pattern) || !path.is_empty() {
                     path.push(entry);
                 }
-                StartPath::Path(parent_entry, path, width)
+                StartPath::Path {
+                    entry: parent_entry,
+                    path,
+                    width,
+                }
             },
             None => {
                 println!("start {} -> {}, {}", start_index.index, parent_entry.parent.index, start_index.width);
-                StartPath::First(
-                    parent_entry,
-                    start_index,
-                    start_index.width,
-                )
+                StartPath::First {
+                    entry: parent_entry,
+                    child: start_index,
+                    width: start_index.width,
+                }
             }
         };
         drop(graph);
