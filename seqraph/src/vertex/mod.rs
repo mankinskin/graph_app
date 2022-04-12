@@ -20,18 +20,14 @@ mod indexed;
 mod parent;
 mod child;
 mod child_location;
-mod pattern;
-mod pattern_stream;
 mod token;
-mod pattern_location;
+mod pattern;
 pub use {
     indexed::*,
-    pattern_location::*,
     child_location::*,
     parent::*,
     child::*,
     pattern::*,
-    pattern_stream::*,
     token::*,
 };
 

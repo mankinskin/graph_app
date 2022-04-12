@@ -1,20 +1,18 @@
-use super::*;
-use std::{
-    borrow::Borrow,
-    ops::RangeBounds,
-    slice::SliceIndex,
+mod pattern_stream;
+mod pattern_location;
+mod pattern_range;
+
+use super::{
+    *,
+};
+use std::borrow::Borrow;
+pub use {
+    pattern_range::*,
+    pattern_location::*,
+    pattern_stream::*,
 };
 pub type Pattern = Vec<Child>;
 pub type PatternView<'a> = &'a [Child];
-pub trait PatternRangeIndex:
-    SliceIndex<[Child], Output = [Child]> + RangeBounds<usize> + Iterator<Item = usize> + Debug + Clone
-{
-}
-impl<
-        T: SliceIndex<[Child], Output = [Child]> + RangeBounds<usize> + Iterator<Item = usize> + Debug + Clone,
-    > PatternRangeIndex for T
-{
-}
 /// trait for types which can be converted to a pattern with a known size
 pub trait IntoPattern: IntoIterator<Item = Self::Elem, IntoIter = Self::Iter> + Sized + Borrow<[Child]> {
     type Iter: ExactSizeIterator + DoubleEndedIterator<Item=Self::Elem>;
