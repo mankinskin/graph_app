@@ -35,42 +35,21 @@ pub trait MatchDirection : Clone {
         a: impl DoubleEndedIterator<Item = &'a I>,
         b: impl DoubleEndedIterator<Item = &'a J>,
     ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)>;
-    fn split_head_tail<T: AsChild + Clone>(pattern: &'_ [T]) -> Option<(T, &'_ [T])> {
-        Self::pattern_head(pattern).map(|head| (head.clone(), Self::pattern_tail(pattern)))
-    }
     /// get remaining pattern in matching direction including index
     fn split_end<T: AsChild + Clone>(
         pattern: &'_ [T],
         index: PatternId,
     ) -> Vec<T>;
-    fn split_end_normalized<T: AsChild + Clone>(
-        pattern: &'_ [T],
-        index: PatternId,
-    ) -> Vec<T> {
-        Self::split_end(pattern, Self::normalize_index(pattern, index))
-    }
     /// get remaining pattern in matching direction excluding index
     fn front_context<T: AsChild + Clone>(
         pattern: &'_ [T],
         index: PatternId,
     ) -> Vec<T>;
-    fn front_context_normalized<T: AsChild + Clone>(
-        pattern: &'_ [T],
-        index: PatternId,
-    ) -> Vec<T> {
-        Self::front_context(pattern, Self::normalize_index(pattern, index))
-    }
     /// get remaining pattern agains matching direction excluding index
     fn back_context<T: AsChild + Clone>(
         pattern: &'_ [T],
         index: PatternId,
     ) -> Vec<T>;
-    fn back_context_normalized<T: AsChild + Clone>(
-        pattern: &'_ [T],
-        index: PatternId,
-    ) -> Vec<T> {
-        Self::back_context(pattern, Self::normalize_index(pattern, index))
-    }
     fn pattern_tail<T: AsChild>(pattern: &'_ [T]) -> &'_ [T];
     fn pattern_head<T: AsChild>(pattern: &'_ [T]) -> Option<&T>;
     fn head_index<T: AsChild>(_pattern: &'_ [T]) -> usize;
@@ -85,34 +64,60 @@ pub trait MatchDirection : Clone {
         rem: A,
         context: B,
     ) -> Pattern;
-    fn index_next_impl(
-        index: usize,
-    ) -> Option<usize>;
     fn index_next(
-        pattern: impl IntoPattern,
-        index: usize,
-    ) -> Option<usize> {
-        Self::index_next_impl(index).and_then(|i|
-            (i < pattern.borrow().len()).then(|| i)
-        )
-    }
-    fn index_prev_impl(
         index: usize,
     ) -> Option<usize>;
     fn index_prev(
-        pattern: impl IntoPattern,
         index: usize,
-    ) -> Option<usize> {
-        Self::index_prev_impl(index).and_then(|i|
-            (i < pattern.borrow().len()).then(|| i)
-        )
-    }
+    ) -> Option<usize>;
     fn tail_index<T: AsChild>(pattern:  &'_ [T], tail: &'_ [T]) -> usize;
     /// filter pattern indices of parent relation by child patterns and matching direction
     fn filter_parent_pattern_indices(
         parent: &Parent,
         child_patterns: &HashMap<PatternId, Pattern>,
     ) -> HashSet<PatternIndex>;
+    fn token_offset_split(
+        pattern: impl IntoPattern,
+        width: usize,
+    ) -> Option<(usize, usize)>;
+
+    fn split_head_tail<T: AsChild + Clone>(pattern: &'_ [T]) -> Option<(T, &'_ [T])> {
+        Self::pattern_head(pattern).map(|head| (head.clone(), Self::pattern_tail(pattern)))
+    }
+    fn split_end_normalized<T: AsChild + Clone>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T> {
+        Self::split_end(pattern, Self::normalize_index(pattern, index))
+    }
+    fn front_context_normalized<T: AsChild + Clone>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T> {
+        Self::front_context(pattern, Self::normalize_index(pattern, index))
+    }
+    fn back_context_normalized<T: AsChild + Clone>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T> {
+        Self::back_context(pattern, Self::normalize_index(pattern, index))
+    }
+    fn pattern_index_next(
+        pattern: impl IntoPattern,
+        index: usize,
+    ) -> Option<usize> {
+        Self::index_next(index).and_then(|i|
+            (i < pattern.borrow().len()).then(|| i)
+        )
+    }
+    fn pattern_index_prev(
+        pattern: impl IntoPattern,
+        index: usize,
+    ) -> Option<usize> {
+        Self::index_prev(index).and_then(|i|
+            (i < pattern.borrow().len()).then(|| i)
+        )
+    }
     //fn to_found_range(
     //    p: Option<Pattern>,
     //    context: Pattern,
@@ -133,7 +138,7 @@ pub trait MatchDirection : Clone {
         pattern: impl IntoPattern,
         sub_index: usize,
     ) -> Option<Child> {
-        Self::index_next(pattern.borrow(), sub_index).and_then(|i| {
+        Self::pattern_index_next(pattern.borrow(), sub_index).and_then(|i| {
             pattern.borrow().get(i).map(AsChild::as_child)
         })
     }
@@ -150,10 +155,6 @@ pub trait MatchDirection : Clone {
             })
             .unwrap_or(false)
     }
-    fn token_offset_split(
-        pattern: impl IntoPattern,
-        width: usize,
-    ) -> Option<(usize, usize)>;
 }
 impl MatchDirection for Right {
     type Opposite = Left;
@@ -215,12 +216,12 @@ impl MatchDirection for Right {
     fn tail_index<T: AsChild>(pattern:  &'_ [T], tail: &'_ [T]) -> usize {
         pattern.len() - tail.len() - 1
     }
-    fn index_next_impl(
+    fn index_next(
         index: usize,
     ) -> Option<usize> {
         index.checked_add(1)
     }
-    fn index_prev_impl(
+    fn index_prev(
         index: usize,
     ) -> Option<usize> {
         index.checked_sub(1)
@@ -313,12 +314,12 @@ impl MatchDirection for Left {
     fn tail_index<T: AsChild>(_pattern:  &'_ [T], tail: &'_ [T]) -> usize {
         tail.len()
     }
-    fn index_next_impl(
+    fn index_next(
         index: usize
     ) -> Option<usize> {
         index.checked_sub(1)
     }
-    fn index_prev_impl(
+    fn index_prev(
         index: usize,
     ) -> Option<usize> {
         index.checked_add(1)

@@ -7,8 +7,13 @@ pub(crate) use dft::*;
 pub use path::*;
 
 use std::cmp::Ordering;
-use std::ops::ControlFlow;
+use std::ops::{
+    ControlFlow,
+    Deref,
+    DerefMut,
+};
 use std::sync::{RwLockReadGuard, RwLockWriteGuard};
+use std::borrow::{Borrow, BorrowMut};
 
 use itertools::Itertools;
 
@@ -30,36 +35,72 @@ pub(crate) enum TraversalNode {
     End(Option<QueryFound>),
     Mismatch(GraphRangePath),
 }
-pub(crate) trait Traversable<T: Tokenize>: Sized {
-    fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>>;
+pub(crate) trait Traversable<'a: 'g, 'g, T: Tokenize>: Sized + 'a {
+    type Guard: Traversable<'g, 'g, T> + Deref<Target=Hypergraph<T>>;
+    fn graph(&'a self) -> Self::Guard;
 }
-pub(crate) trait TraversableMut<T: Tokenize, Base = Self> : Traversable<T> {
-    fn graph_mut(&mut self) -> RwLockWriteGuard<'_, Hypergraph<T>>;
-}
-impl <T: Tokenize, Trav: Traversable<T>> Traversable<T> for &Trav {
-    fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>> {
-        Trav::graph(self)
+impl <'a: 'g, 'g, T: Tokenize + 'a> Traversable<'a, 'g, T> for &'a Hypergraph<T> {
+    type Guard = &'g Hypergraph<T>;
+    fn graph(&'a self) -> Self::Guard {
+        self
     }
 }
-impl <T: Tokenize, Trav: Traversable<T>> Traversable<T> for &mut Trav {
-    fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>> {
-        Trav::graph(self)
+impl <'a, T: Tokenize + 'a> Traversable<'a, 'a, T> for &'a mut Hypergraph<T> {
+    type Guard = &'a Hypergraph<T>;
+    fn graph(&'a self) -> Self::Guard {
+        &*self
     }
 }
-impl <T: Tokenize, Trav: TraversableMut<T>> TraversableMut<T> for &mut Trav {
-    fn graph_mut(&mut self) -> RwLockWriteGuard<'_, Hypergraph<T>> {
-        Trav::graph_mut(self)
+impl<'a: 'g, 'g, T: Tokenize + 'a> Traversable<'a, 'g, T> for RwLockReadGuard<'a, Hypergraph<T>> {
+    type Guard = &'g Hypergraph<T>;
+    fn graph(&'a self) -> Self::Guard {
+        &*self
     }
 }
-pub(crate) trait TraversalIterator<'g, T, Trav, D, S>: Iterator<Item = (usize, TraversalNode)>
+impl<'a: 'g, 'g, T: Tokenize + 'a> Traversable<'a, 'g, T> for RwLockWriteGuard<'a, Hypergraph<T>> {
+    type Guard = &'g Hypergraph<T>;
+    fn graph(&'a self) -> Self::Guard {
+        &**self
+    }
+}
+
+pub(crate) trait TraversableMut<'a: 'g, 'g, T: Tokenize> : Traversable<'a, 'g, T> {
+    type GuardMut: TraversableMut<'g, 'g, T> + Deref<Target=Hypergraph<T>> + DerefMut;
+    fn graph_mut(&'a mut self) -> Self::GuardMut;
+}
+impl <'a, T: Tokenize + 'a> Traversable<'a, 'a, T> for Hypergraph<T> {
+    type Guard = &'a Self;
+    fn graph(&'a self) -> Self::Guard {
+        self
+    }
+}
+impl <'a, T: Tokenize + 'a> TraversableMut<'a, 'a, T> for Hypergraph<T> {
+    type GuardMut = &'a mut Self;
+    fn graph_mut(&'a mut self) -> Self::GuardMut {
+        self
+    }
+}
+impl <'a, T: Tokenize + 'a> TraversableMut<'a, 'a, T> for &'a mut Hypergraph<T> {
+    type GuardMut = Self;
+    fn graph_mut(&'a mut self) -> Self::GuardMut {
+        *self
+    }
+}
+impl<'a: 'g, 'g, T: Tokenize + 'g> TraversableMut<'a, 'g, T> for RwLockWriteGuard<'a, Hypergraph<T>> {
+    type GuardMut = &'g mut Hypergraph<T>;
+    fn graph_mut(&'a mut self) -> Self::GuardMut {
+        &mut **self
+    }
+}
+pub(crate) trait TraversalIterator<'a: 'g, 'g, T, Trav, D, S>: Iterator<Item = (usize, TraversalNode)>
 where
-    T: Tokenize,
-    Trav: Traversable<T> + 'g,
-    D: MatchDirection,
-    S: DirectedTraversalPolicy<T, D, Trav=Trav>,
+    T: Tokenize + 'a,
+    Trav: Traversable<'a, 'g, T>,
+    D: MatchDirection + 'a,
+    S: DirectedTraversalPolicy<'a, 'g, T, D, Trav=Trav>,
 {
-    fn new(trav: &'g Trav, root: TraversalNode) -> Self;
-    fn iter_children(trav: &'g Trav, node: &TraversalNode) -> Vec<TraversalNode> {
+    fn new(trav: &'a Trav, root: TraversalNode) -> Self;
+    fn iter_children(trav: &'a Trav, node: &TraversalNode) -> Vec<TraversalNode> {
         match node.clone() {
             TraversalNode::Query(query) =>
                 S::query_start(
@@ -82,16 +123,16 @@ where
         }
     }
 }
-pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized {
-    type Trav: Traversable<T>;
-    type Folder: TraversalFolder<T, D, Trav=Self::Trav>;
+pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>: Sized {
+    type Trav: Traversable<'a, 'g, T>;
+    type Folder: TraversalFolder<'a, 'g, T, D, Trav=Self::Trav>;
     fn end_op(
-        trav: &Self::Trav,
+        trav: &'a Self::Trav,
         query: QueryRangePath,
         start_path: StartPath,
     ) -> Vec<TraversalNode>;
     fn parent_nodes(
-        trav: &Self::Trav,
+        trav: &'a Self::Trav,
         query: QueryRangePath,
         start: Option<StartPath>,
     ) -> Vec<TraversalNode> {
@@ -130,7 +171,7 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
             .collect_vec()
     }
     fn root_successor_nodes(
-        trav: &Self::Trav,
+        trav: &'a Self::Trav,
         old_query: QueryRangePath,
         old_start: Option<StartPath>,
         parent_entry: ChildLocation,
@@ -174,17 +215,17 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
         };
         drop(graph);
         let mut path = GraphRangePath::new(pre_start);
-        if path.advance_next::<_, _, D>(&trav) {
+        if path.advance_next::<_, _, D>(trav) {
             Self::match_end(&trav, PathPair::GraphMajor(path, old_query))
         } else {
             Self::index_end(trav, old_query, path)
         }
     }
     fn query_start(
-        trav: &Self::Trav,
+        trav: &'a Self::Trav,
         mut query: QueryRangePath,
     ) -> Vec<TraversalNode> {
-        if query.advance_next::<_, _, D>(&trav) {
+        if query.advance_next::<_, _, D>(trav) {
             Self::parent_nodes(
                 trav,
                 query,
@@ -195,19 +236,19 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
         }
     }
     fn after_match(
-        trav: &Self::Trav,
+        trav: &'a Self::Trav,
         paths: PathPair,
     ) -> Vec<TraversalNode> {
         let mode = paths.mode();
         let (mut path, query) = paths.unpack();
-        if path.advance_next::<_, _, D>(&trav) {
+        if path.advance_next::<_, _, D>(trav) {
             Self::match_end(&trav, PathPair::from_mode(path, query, mode))
         } else {
             Self::index_end(trav, query, path)
         }
     }
     fn index_end(
-        trav: &Self::Trav,
+        trav: &'a Self::Trav,
         query: QueryRangePath,
         mut path: GraphRangePath,
     ) -> Vec<TraversalNode> {
@@ -216,7 +257,7 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
     }
     /// generate nodes for a child
     fn match_end(
-        trav: &Self::Trav,
+        trav: &'a Self::Trav,
         new_paths: PathPair,
     ) -> Vec<TraversalNode> {
         let (new_path, new_query) = new_paths.unpack();
@@ -281,7 +322,7 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
     }
     /// generate child nodes for index prefixes
     fn prefix_nodes(
-        trav: &Self::Trav,
+        trav: &'a Self::Trav,
         index: Child,
         new_paths: PathPair,
     ) -> Vec<TraversalNode> {
@@ -306,12 +347,12 @@ pub(crate) trait DirectedTraversalPolicy<T: Tokenize, D: MatchDirection>: Sized 
             .collect_vec()
     }
 }
-pub(crate) trait TraversalFolder<T: Tokenize, D: MatchDirection>: Sized {
-    type Trav: Traversable<T>;
+pub(crate) trait TraversalFolder<'a: 'g, 'g, T: Tokenize, D: MatchDirection>: Sized {
+    type Trav: Traversable<'a, 'g, T>;
     type Break;
     type Continue;
     fn fold_found(
-        trav: &Self::Trav,
+        trav: &'a Self::Trav,
         acc: Self::Continue,
         node: TraversalNode
     ) -> ControlFlow<Self::Break, Self::Continue>;

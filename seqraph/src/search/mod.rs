@@ -85,12 +85,19 @@ impl<Rhs: ResultOrd> PartialEq<Rhs> for GraphRangePath {
     }
 }
 #[derive(Debug, Clone, Eq)]
-pub enum FoundPath {
+pub(crate) enum FoundPath {
     Complete(Child),
     Range(GraphRangePath),
 }
-impl FoundPath {
-    pub(crate) fn new<T: Tokenize, Trav: Traversable<T>, D: MatchDirection>(trav: Trav, path: GraphRangePath) -> Self {
+impl<
+    'a: 'g,
+    'g,
+> FoundPath {
+    pub(crate) fn new<
+        T: Tokenize + 'a,
+        Trav: Traversable<'a, 'g, T>,
+        D: MatchDirection + 'a,
+    >(trav: &'a Trav, path: GraphRangePath) -> Self {
         if path.is_complete::<_, _, D>(trav) {
             FoundPath::Complete(path.into_start_path().entry().parent)
         } else {
@@ -112,7 +119,7 @@ pub struct QueryFound {
 }
 
 impl QueryFound {
-    pub fn new(found: impl Into<FoundPath>, query: QueryRangePath) -> Self {
+    pub(crate) fn new(found: impl Into<FoundPath>, query: QueryRangePath) -> Self {
         QueryFound {
             found: found.into(),
             query,
@@ -351,7 +358,7 @@ pub(crate) mod tests {
     #[test]
     fn find_ancestor2() {
         let mut graph = Hypergraph::default();
-        let (a, b, _w, x, y, z) = graph.insert_tokens([
+        let (a, b, _w, x, y, z) = graph.index_tokens([
             Token::Element('a'),
             Token::Element('b'),
             Token::Element('w'),
@@ -359,14 +366,14 @@ pub(crate) mod tests {
             Token::Element('y'),
             Token::Element('z'),
         ]).into_iter().next_tuple().unwrap();
-        let ab = graph.insert_pattern([a, b]);
-        let by = graph.insert_pattern([b, y]);
-        let yz = graph.insert_pattern([y, z]);
-        let xa = graph.insert_pattern([x, a]);
-        let xab = graph.insert_patterns([[x, ab], [xa, b]]);
-        let (xaby, xaby_ids) = graph.insert_patterns_with_ids([vec![xab, y], vec![xa, by]]);
+        let ab = graph.index_pattern([a, b]);
+        let by = graph.index_pattern([b, y]);
+        let yz = graph.index_pattern([y, z]);
+        let xa = graph.index_pattern([x, a]);
+        let xab = graph.index_patterns([[x, ab], [xa, b]]);
+        let (xaby, xaby_ids) = graph.index_patterns_with_ids([vec![xab, y], vec![xa, by]]);
         let xa_by_id = xaby_ids[1];
-        let (xabyz, xabyz_ids) = graph.insert_patterns_with_ids([vec![xaby, z], vec![xab, yz]]);
+        let (xabyz, xabyz_ids) = graph.index_patterns_with_ids([vec![xaby, z], vec![xab, yz]]);
         let xaby_z_id = xabyz_ids[0];
         let graph = HypergraphRef::from(graph);
         let query = vec![by, z];

@@ -110,13 +110,13 @@ pub fn build_graph1() -> Hypergraph<char> {
         Token::Element('z'),
     ])[..]
     {
-        let ab = graph.insert_pattern([a, b]);
-        let by = graph.insert_pattern([b, y]);
-        let yz = graph.insert_pattern([y, z]);
-        let xa = graph.insert_pattern([x, a]);
-        let xab = graph.insert_patterns([vec![x, ab], vec![xa, b]]);
-        let xaby = graph.insert_patterns([vec![xab, y], vec![xa, by]]);
-        let xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
+        let ab = graph.index_pattern([a, b]);
+        let by = graph.index_pattern([b, y]);
+        let yz = graph.index_pattern([y, z]);
+        let xa = graph.index_pattern([x, a]);
+        let xab = graph.index_patterns([vec![x, ab], vec![xa, b]]);
+        let xaby = graph.index_patterns([vec![xab, y], vec![xa, by]]);
+        let xabyz = graph.index_patterns([vec![xaby, z], vec![xab, yz]]);
         let _wxabyzabbyxabyz = graph.insert_pattern([w, xabyz, ab, by, xabyz]);
     } else {
         panic!("Inserting tokens failed!");
@@ -137,28 +137,28 @@ pub fn build_graph2() -> Hypergraph<char> {
         Token::Element('i'),
     ])[..]
     {
-        let ab = graph.insert_pattern([a, b]);
-        let bc = graph.insert_pattern([b, c]);
-        let ef = graph.insert_pattern([e, f]);
-        let def = graph.insert_pattern([d, ef]);
-        let cdef = graph.insert_pattern([c, def]);
-        let gh = graph.insert_pattern([g, h]);
-        let efgh = graph.insert_pattern([ef, gh]);
-        let ghi = graph.insert_pattern([gh, i]);
-        let abc = graph.insert_patterns([[ab, c], [a, bc]]);
-        let cd = graph.insert_pattern([c, d]);
-        let bcd = graph.insert_patterns([[bc, d], [b, cd]]);
-        let abcd = graph.insert_patterns([[abc, d], [a, bcd]]);
-        let efghi = graph.insert_patterns([[efgh, i], [ef, ghi]]);
-        let abcdefghi = graph.insert_patterns([vec![abcd, efghi], vec![ab, cdef, ghi]]);
-        let aba = graph.insert_pattern([ab, a]);
-        let abab = graph.insert_patterns([[aba, b], [ab, ab]]);
-        let ababab = graph.insert_patterns([[abab, ab], [ab, abab]]);
-        let ababcd = graph.insert_patterns([[ab, abcd], [aba, bcd], [abab, cd]]);
+        let ab = graph.index_pattern([a, b]);
+        let bc = graph.index_pattern([b, c]);
+        let ef = graph.index_pattern([e, f]);
+        let def = graph.index_pattern([d, ef]);
+        let cdef = graph.index_pattern([c, def]);
+        let gh = graph.index_pattern([g, h]);
+        let efgh = graph.index_pattern([ef, gh]);
+        let ghi = graph.index_pattern([gh, i]);
+        let abc = graph.index_patterns([[ab, c], [a, bc]]);
+        let cd = graph.index_pattern([c, d]);
+        let bcd = graph.index_patterns([[bc, d], [b, cd]]);
+        let abcd = graph.index_patterns([[abc, d], [a, bcd]]);
+        let efghi = graph.index_patterns([[efgh, i], [ef, ghi]]);
+        let abcdefghi = graph.index_patterns([vec![abcd, efghi], vec![ab, cdef, ghi]]);
+        let aba = graph.index_pattern([ab, a]);
+        let abab = graph.index_patterns([[aba, b], [ab, ab]]);
+        let ababab = graph.index_patterns([[abab, ab], [ab, abab]]);
+        let ababcd = graph.index_patterns([[ab, abcd], [aba, bcd], [abab, cd]]);
         let ababababcd =
-            graph.insert_patterns([vec![ababab, abcd], vec![abab, ababcd], vec![ab, ababab, cd]]);
-        let ababcdefghi = graph.insert_patterns([[ab, abcdefghi], [ababcd, efghi]]);
-        let _ababababcdefghi = graph.insert_patterns([
+            graph.index_patterns([vec![ababab, abcd], vec![abab, ababcd], vec![ab, ababab, cd]]);
+        let ababcdefghi = graph.index_patterns([[ab, abcdefghi], [ababcd, efghi]]);
+        let _ababababcdefghi = graph.index_patterns([
             [ababababcd, efghi],
             [abab, ababcdefghi],
             [ababab, abcdefghi],

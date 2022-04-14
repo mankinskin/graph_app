@@ -228,7 +228,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         //            ).unwrap()
         //        };
         //        let post_context = self.indexer().index_post_context_at(&ChildLocation::new(next, n_pid, 0)).unwrap();
-        //        self.graph_mut().add_pattern_to_node(index, [pre_context, extension, post_context].as_slice());
+        //        self.graph_mut().add_pattern_with_update(index, [pre_context, extension, post_context].as_slice());
         //    }
         //    context = rem;
         //}

@@ -34,6 +34,16 @@ impl<T: Tokenize> std::ops::DerefMut for HypergraphRef<T> {
         &mut self.0
     }
 }
+impl<T: Tokenize> std::convert::AsRef<Self> for Hypergraph<T> {
+    fn as_ref(&self) -> &Self {
+        self
+    }
+}
+impl<T: Tokenize> std::convert::AsMut<Self> for Hypergraph<T> {
+    fn as_mut(&mut self) -> &mut Self {
+        self
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct Hypergraph<T: Tokenize> {
@@ -52,6 +62,21 @@ where
     }
     pub fn vertex_count(&self) -> usize {
         self.graph.len()
+    }
+    /// create index from a pattern and return its pattern id
+    pub fn index_pattern_with_id(
+        &mut self,
+        indices: impl IntoPattern,
+    ) -> (Child, Option<PatternId>) {
+        let (c, id) = self.insert_pattern_with_id(indices);
+        (c.expect("Tried to index empty pattern!"), id)
+    }
+    /// create index from a pattern
+    pub fn index_pattern(
+        &mut self,
+        indices: impl IntoPattern,
+    ) -> Child {
+        self.index_pattern_with_id(indices).0
     }
     //pub fn index_sequence<N: Into<T>, I: IntoIterator<Item = N>>(&mut self, seq: I) -> VertexIndex {
     //    let seq = seq.into_iter();
@@ -211,7 +236,7 @@ pub(crate) mod tests {
         pub static ref
             CONTEXT: Arc<RwLock<Context>> = Arc::new(RwLock::new({
             let mut graph = Hypergraph::default();
-            if let [a, b, c, d, e, f, g, h, i] = graph.insert_tokens(
+            if let [a, b, c, d, e, f, g, h, i] = graph.index_tokens(
                 [
                     Token::Element('a'),
                     Token::Element('b'),
@@ -238,69 +263,69 @@ pub(crate) mod tests {
                 // abc d
                 // a bcd
                 // index: 9
-                let ab = graph.insert_pattern([a, b]);
-                let (bc, bc_id) = graph.insert_pattern_with_id([b, c]);
-                let (abc, abc_ids) = graph.insert_patterns_with_ids([
+                let ab = graph.index_pattern([a, b]);
+                let (bc, bc_id) = graph.index_pattern_with_id([b, c]);
+                let (abc, abc_ids) = graph.index_patterns_with_ids([
                     [ab, c],
                     [a, bc],
                 ]);
-                let (cd, cd_id) = graph.insert_pattern_with_id([c, d]);
-                let (bcd, bcd_ids) = graph.insert_patterns_with_ids([
+                let (cd, cd_id) = graph.index_pattern_with_id([c, d]);
+                let (bcd, bcd_ids) = graph.index_patterns_with_ids([
                     [bc, d],
                     [b, cd],
                 ]);
                 //let abcd = graph.insert_pattern(&[abc, d]);
                 //graph.insert_to_pattern(abcd, &[a, bcd]);
-                let (abcd, abcd_ids) = graph.insert_patterns_with_ids([
+                let (abcd, abcd_ids) = graph.index_patterns_with_ids([
                     [abc, d],
                     [a, bcd],
                 ]);
                 // index 15
-                let ef = graph.insert_pattern([e, f]);
-                let gh = graph.insert_pattern([g, h]);
-                let ghi = graph.insert_pattern([gh, i]);
-                let efgh = graph.insert_pattern([ef, gh]);
-                let efghi = graph.insert_patterns([
+                let ef = graph.index_pattern([e, f]);
+                let gh = graph.index_pattern([g, h]);
+                let ghi = graph.index_pattern([gh, i]);
+                let efgh = graph.index_pattern([ef, gh]);
+                let efghi = graph.index_patterns([
                     [efgh, i],
                     [ef, ghi],
                 ]);
-                let def = graph.insert_pattern([d, ef]);
-                let cdef = graph.insert_pattern([c, def]);
+                let def = graph.index_pattern([d, ef]);
+                let cdef = graph.index_pattern([c, def]);
                 // index 22
-                let abcdef = graph.insert_patterns([
+                let abcdef = graph.index_patterns([
                     [abc, def],
                     [ab, cdef]
                 ]);
-                let abcdefghi = graph.insert_patterns([
+                let abcdefghi = graph.index_patterns([
                     [abcd, efghi],
                     [abcdef, ghi]
                 ]);
-                let aba = graph.insert_pattern([ab, a]);
+                let aba = graph.index_pattern([ab, a]);
                 // 25
-                let abab = graph.insert_patterns([
+                let abab = graph.index_patterns([
                     [aba, b],
                     [ab, ab],
                 ]);
-                let ababab = graph.insert_patterns([
+                let ababab = graph.index_patterns([
                     [abab, ab],
                     [ab, abab],
                 ]);
-                let ababcd = graph.insert_patterns([
+                let ababcd = graph.index_patterns([
                     [ab, abcd],
                     [aba, bcd],
                     [abab, cd],
                 ]);
                 // 28
-                let ababababcd = graph.insert_patterns([
+                let ababababcd = graph.index_patterns([
                     [ababab, abcd],
                     [abab, ababcd],
                 ]);
-                let ababcdefghi = graph.insert_patterns([
+                let ababcdefghi = graph.index_patterns([
                     [ab, abcdefghi],
                     [ababcd, efghi],
                 ]);
                 // 30
-                let ababababcdefghi = graph.insert_patterns([
+                let ababababcdefghi = graph.index_patterns([
                     [ababababcd, efghi],
                     [abab, ababcdefghi],
                     [ababab, abcdefghi],
@@ -349,7 +374,7 @@ pub(crate) mod tests {
     #[test]
     fn test_to_petgraph() {
         let mut graph = Hypergraph::default();
-        if let [a, b, c, d] = graph.insert_tokens([
+        if let [a, b, c, d] = graph.index_tokens([
             Token::Element('a'),
             Token::Element('b'),
             Token::Element('c'),
@@ -360,12 +385,12 @@ pub(crate) mod tests {
             // abc d
             // a bcd
 
-            let ab = graph.insert_pattern([a, b]);
-            let bc = graph.insert_pattern([b, c]);
-            let abc = graph.insert_patterns([[ab, c], [a, bc]]);
-            let cd = graph.insert_pattern([c, d]);
-            let bcd = graph.insert_patterns([[bc, d], [b, cd]]);
-            let _abcd = graph.insert_patterns([[abc, d], [a, bcd]]);
+            let ab = graph.index_pattern([a, b]);
+            let bc = graph.index_pattern([b, c]);
+            let abc = graph.index_patterns([[ab, c], [a, bc]]);
+            let cd = graph.index_pattern([c, d]);
+            let bcd = graph.index_patterns([[bc, d], [b, cd]]);
+            let _abcd = graph.index_patterns([[abc, d], [a, bcd]]);
         } else {
             panic!();
         }

@@ -4,6 +4,7 @@
 #![feature(try_blocks)]
 #![feature(hash_drain_filter)]
 #![feature(slice_pattern)]
+#![feature(generic_associated_types)]
 
 extern crate test;
 

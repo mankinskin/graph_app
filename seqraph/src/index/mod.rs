@@ -5,7 +5,7 @@ use crate::{
     search::*,
     HypergraphRef,
 };
-use std::borrow::Borrow;
+use std::{borrow::Borrow, ops::{RangeFrom, RangeInclusive}};
 
 mod indexer;
 pub use indexer::*;
@@ -58,11 +58,33 @@ where
         self.indexer().index_prefix(pattern)
     }
 }
-
 pub(crate) enum ContextHalf {
     Child(Child),
     Pattern(Pattern),
 }
+impl ContextHalf {
+    pub fn try_new(p: impl IntoPattern) -> Option<Self> {
+        let p = p.borrow();
+        match p.len() {
+            0 => None,
+            1 => Some(Self::Child(*p.into_iter().next().unwrap())),
+            _ => Some(Self::Pattern(p.into_pattern())),
+        }
+    }
+    pub fn unwrap_child(self) -> Child {
+        match self {
+            Self::Child(c) => c,
+            _ => panic!("Failed to unwrap ContextHalf::Child!"),
+        }
+    }
+    pub fn expect_child(self, msg: &str) -> Child {
+        match self {
+            Self::Child(c) => c,
+            _ => panic!("Expected ContextHalf::Child!: {}", msg),
+        }
+    }
+}
+
 impl Borrow<[Child]> for ContextHalf {
     fn borrow(&self) -> &[Child] {
         match self {
@@ -75,6 +97,17 @@ impl AsRef<[Child]> for ContextHalf {
     fn as_ref(&self) -> &[Child] {
         self.borrow()
     }
+}
+
+enum PathRootHalf {
+    Perfect(Pattern),
+    Unperfect(ContextHalf, Child),
+}
+
+pub(crate) struct IndexSplitResult {
+    inner: Child,
+    location: ChildLocation,
+    context: Vec<ChildLocation>,
 }
 
 #[macro_use]
@@ -93,7 +126,7 @@ pub(crate) mod tests {
     #[test]
     fn index_prefix1() {
         let mut graph = Hypergraph::default();
-        let (a, b, _w, x, y, z) = graph.insert_tokens([
+        let (a, b, _w, x, y, z) = graph.index_tokens([
             Token::Element('a'),
             Token::Element('b'),
             Token::Element('w'),
@@ -101,13 +134,13 @@ pub(crate) mod tests {
             Token::Element('y'),
             Token::Element('z'),
         ]).into_iter().next_tuple().unwrap();
-        let ab = graph.insert_pattern([a, b]);
-        let by = graph.insert_pattern([b, y]);
-        let yz = graph.insert_pattern([y, z]);
-        let xa = graph.insert_pattern([x, a]);
-        let xab = graph.insert_patterns([[x, ab], [xa, b]]);
-        let xaby = graph.insert_patterns([vec![xab, y], vec![xa, by]]);
-        let _xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
+        let ab = graph.index_pattern([a, b]);
+        let by = graph.index_pattern([b, y]);
+        let yz = graph.index_pattern([y, z]);
+        let xa = graph.index_pattern([x, a]);
+        let xab = graph.index_patterns([[x, ab], [xa, b]]);
+        let xaby = graph.index_patterns([vec![xab, y], vec![xa, by]]);
+        let _xabyz = graph.index_patterns([vec![xaby, z], vec![xab, yz]]);
         let graph = HypergraphRef::from(graph);
         let query = vec![by, z];
         let byz = graph.index_prefix(query.borrow()).expect("Indexing failed");
@@ -129,7 +162,7 @@ pub(crate) mod tests {
     #[test]
     fn index_prefix2() {
         let mut graph = Hypergraph::default();
-        let (a, b, _w, x, y, z) = graph.insert_tokens([
+        let (a, b, _w, x, y, z) = graph.index_tokens([
             Token::Element('a'),
             Token::Element('b'),
             Token::Element('w'),
@@ -138,11 +171,11 @@ pub(crate) mod tests {
             Token::Element('z'),
         ]).into_iter().next_tuple().unwrap();
         // index 6
-        let yz = graph.insert_pattern([y, z]);
-        let xab = graph.insert_pattern([x, a, b]);
-        let _xyz = graph.insert_pattern([x, yz]);
-        let _xabz = graph.insert_pattern([xab, z]);
-        let _xabyz = graph.insert_pattern([xab, yz]);
+        let yz = graph.index_pattern([y, z]);
+        let xab = graph.index_pattern([x, a, b]);
+        let _xyz = graph.index_pattern([x, yz]);
+        let _xabz = graph.index_pattern([xab, z]);
+        let _xabyz = graph.index_pattern([xab, yz]);
 
         let graph = HypergraphRef::from(graph);
 

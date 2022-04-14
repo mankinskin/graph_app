@@ -32,14 +32,14 @@ where
         c
     }
     /// insert single token node
-    pub fn insert_token(
+    pub fn index_token(
         &mut self,
         token: Token<T>,
     ) -> Child {
         self.insert_vertex(VertexKey::Token(token), VertexData::new(0, 1))
     }
     /// insert multiple token nodes
-    pub fn insert_tokens(
+    pub fn index_tokens(
         &mut self,
         tokens: impl IntoIterator<Item = Token<T>>,
     ) -> Vec<Child> {
@@ -78,7 +78,7 @@ where
         }
     }
     /// add pattern to existing node
-    pub fn add_pattern_to_node(
+    pub fn add_pattern_with_update(
         &mut self,
         index: impl Indexed,
         indices: impl IntoPattern,
@@ -91,7 +91,7 @@ where
         pattern_id
     }
     /// add pattern to existing node
-    pub fn add_patterns_to_node(
+    pub fn add_patterns_with_update(
         &mut self,
         index: impl Indexed,
         patterns: impl IntoIterator<Item = impl IntoPattern>,
@@ -99,24 +99,26 @@ where
         let index = index.index();
         patterns
             .into_iter()
-            .map(|p| self.add_pattern_to_node(index, p))
+            .map(|p| self.add_pattern_with_update(index, p))
             .collect()
     }
     /// create new node from a pattern
     pub fn insert_pattern_with_id(
         &mut self,
         indices: impl IntoPattern,
-    ) -> (Child, Option<PatternId>) {
+    ) -> (Option<Child>, Option<PatternId>) {
         let indices = indices.into_pattern();
-        if indices.len() == 1 {
-            (self.to_child(indices.first().unwrap().index()), None)
-        } else {
-            let (c, id) = self.force_insert_pattern_with_id(indices);
-            (c, Some(id))
+        match indices.len() {
+            0 => (None, None),
+            1 => (Some(self.to_child(indices.first().unwrap().index())), None),
+            _ => {
+                let (c, id) = self.force_index_pattern_with_id(indices);
+                (Some(c), Some(id))
+            }
         }
     }
     /// create new node from a pattern (even if single index)
-    pub fn force_insert_pattern_with_id(
+    pub fn force_index_pattern_with_id(
         &mut self,
         indices: impl IntoPattern,
     ) -> (Child, PatternId) {
@@ -132,17 +134,17 @@ where
     pub fn insert_pattern(
         &mut self,
         indices: impl IntoPattern,
-    ) -> Child {
+    ) -> Option<Child> {
         self.insert_pattern_with_id(indices).0
     }
     /// create new node from a pattern
-    pub fn force_insert_pattern(
+    pub fn force_index_pattern(
         &mut self,
         indices: impl IntoPattern,
     ) -> Child {
-        self.force_insert_pattern_with_id(indices).0
+        self.force_index_pattern_with_id(indices).0
     }
-    pub fn insert_patterns_with_ids(
+    pub fn index_patterns_with_ids(
         &mut self,
         patterns: impl IntoIterator<Item = impl IntoPattern>,
     ) -> (Child, Vec<PatternId>) {
@@ -151,40 +153,40 @@ where
         let mut ids = Vec::with_capacity(patterns.len());
         let mut patterns = patterns.into_iter();
         let first = patterns.next().expect("Tried to insert no patterns");
-        let (node, first_id) = self.insert_pattern_with_id(first);
+        let (node, first_id) = self.index_pattern_with_id(first);
         ids.push(first_id.unwrap());
         for pat in patterns {
-            ids.push(self.add_pattern_to_node(&node, pat));
+            ids.push(self.add_pattern_with_update(&node, pat));
         }
         (node, ids)
     }
     /// create new node from multiple patterns
-    pub fn insert_patterns(
+    pub fn index_patterns(
         &mut self,
         patterns: impl IntoIterator<Item = impl IntoPattern>,
     ) -> Child {
         // todo handle token nodes
         let mut patterns = patterns.into_iter();
         let first = patterns.next().expect("Tried to insert no patterns");
-        let node = self.insert_pattern(first);
+        let node = self.index_pattern(first);
         for pat in patterns {
-            self.add_pattern_to_node(&node, pat);
+            self.add_pattern_with_update(&node, pat);
         }
         node
     }
     #[allow(unused)]
     pub(crate) fn index_range_in(
         &mut self,
-        parent: impl Indexed,
-        pid: PatternId,
+        location: impl IntoPatternLocation,
         range: impl PatternRangeIndex,
     ) -> Result<Child, NoMatch> {
-        let vertex = self.expect_vertex_data(parent.index());
-        vertex.get_child_pattern_range(&pid, range.clone())
+        let location = location.into_pattern_location();
+        let vertex = self.expect_vertex_data(location.parent);
+        vertex.get_child_pattern_range(&location.pattern_id, range.clone())
             .map(|pattern| pattern.to_vec())
             .map(|pattern| {
-                let c = self.insert_pattern(pattern);
-                self.replace_in_pattern(parent.index(), pid, range, c);
+                let c = self.index_pattern(pattern);
+                self.replace_in_pattern(location, range, c);
                 c
             })
     }
@@ -198,16 +200,14 @@ where
     //}
     pub fn replace_pattern(
         &'g mut self,
-        parent: impl Indexed,
-        pat: PatternId,
+        location: impl IntoPatternLocation,
         rep: impl IntoPattern + Clone,
     ) {
-        self.replace_in_pattern(parent, pat, 0.., rep)
+        self.replace_in_pattern(location, 0.., rep)
     }
     pub fn replace_in_pattern(
         &'g mut self,
-        parent: impl Indexed,
-        pat: PatternId,
+        location: impl IntoPatternLocation,
         range: impl PatternRangeIndex,
         rep: impl IntoPattern + Clone,
     ) {
@@ -215,7 +215,10 @@ where
             // empty range
             return;
         }
+        let location = location.into_pattern_location();
+        let parent = location.parent;
         let parent_index = parent.index();
+        let pat = location.pattern_id;
         let replace: Pattern = rep.into_pattern();
         let (old, width, start, rem) = {
             let vertex = self.expect_vertex_data_mut(parent);
@@ -303,14 +306,14 @@ mod tests {
     #[test]
     fn insert_subpattern() {
         let mut graph = Hypergraph::default();
-        if let [a, b, c, d] = graph.insert_tokens([
+        if let [a, b, c, d] = graph.index_tokens([
             Token::Element('a'),
             Token::Element('b'),
             Token::Element('c'),
             Token::Element('d'),
         ])[..]
         {
-            let _abcd = graph.insert_pattern([a, b, c, d]);
+            let _abcd = graph.index_pattern([a, b, c, d]);
             // read abcd
             // then abe
             // then bce
