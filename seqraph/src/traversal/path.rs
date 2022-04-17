@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 
 use crate::{
     vertex::*,
-    *, index::ContextHalf,
+    *,
 };
 pub trait RelativeDirection {
     type Direction: MatchDirection;
@@ -25,7 +25,7 @@ pub(crate) trait GraphPath: Wide {
     fn is_perfect(&self) -> bool {
         self.path().is_empty()
     }
-    fn pattern<'a: 'g, 'g, T: Tokenize + 'g, Trav: Traversable<'a, 'g, T>>(&self, trav: &'a Trav) -> Pattern {
+    fn pattern<'a: 'g, 'g, 'x, T: Tokenize + 'g, Trav: Traversable<'a, 'g, T>>(&self, trav: &'a Trav) -> Pattern {
         let graph = trav.graph();
         graph.expect_pattern_at(&self.entry())
     }
@@ -35,19 +35,19 @@ pub(crate) trait DirectedGraphPath<D: MatchDirection>: GraphPath {
     fn pattern_entry_outer_pos<P: IntoPattern>(pattern: P, entry: usize) -> Option<usize> {
         <Self::BorderDirection as RelativeDirection>::Direction::pattern_index_next(pattern, entry)
     }
-    fn pattern_entry_outer_context<P: IntoPattern>(pattern: P, entry: usize) -> ContextHalf {
-        ContextHalf::try_new(<Self::BorderDirection as RelativeDirection>::Direction::front_context(pattern.borrow(), entry))
-            .expect("GraphPath references border of index!")
-    }
-    fn pattern_outer_context<P: IntoPattern>(&self, pattern: P) -> ContextHalf {
-        Self::pattern_entry_outer_context(pattern, self.entry().sub_index)
-    }
+    //fn pattern_entry_outer_context<P: IntoPattern>(pattern: P, entry: usize) -> ContextHalf {
+    //    ContextHalf::try_new(<Self::BorderDirection as RelativeDirection>::Direction::front_context(pattern.borrow(), entry))
+    //        .expect("GraphPath references border of index!")
+    //}
+    //fn pattern_outer_context<P: IntoPattern>(&self, pattern: P) -> ContextHalf {
+    //    Self::pattern_entry_outer_context(pattern, self.entry().sub_index)
+    //}
     fn pattern_outer_pos<P: IntoPattern>(&self, pattern: P) -> Option<usize> {
         Self::pattern_entry_outer_pos(pattern, self.entry().sub_index)
     }
-    fn outer_context<'a: 'g, 'g, T: Tokenize + 'a, Trav: Traversable<'a, 'g, T>>(&self, trav: &'a Trav) -> ContextHalf {
-        self.pattern_outer_context(self.pattern(trav))
-    }
+    //fn outer_context<'a: 'g, 'g, T: Tokenize + 'a, Trav: Traversable<'a, 'g, T>>(&self, trav: &'a Trav) -> ContextHalf {
+    //    self.pattern_outer_context(self.pattern(trav))
+    //}
     fn outer_pos<'a: 'g, 'g, T: Tokenize + 'a, Trav: Traversable<'a, 'g, T>>(&self, trav: &'a Trav) -> Option<usize> {
         self.pattern_outer_pos(self.pattern(trav))
     }
@@ -71,14 +71,14 @@ pub(crate) struct EndPath {
     pub(crate) path: ChildPath,
     pub(crate) width: usize,
 }
-impl EndPath {
-    pub fn path_mut(&mut self) -> &mut ChildPath {
-        &mut self.path
-    }
-    pub fn width_mut(&mut self) -> &mut usize {
-        &mut self.width
-    }
-}
+//impl EndPath {
+//    pub fn path_mut(&mut self) -> &mut ChildPath {
+//        &mut self.path
+//    }
+//    pub fn width_mut(&mut self) -> &mut usize {
+//        &mut self.width
+//    }
+//}
 impl GraphPath for EndPath {
     fn entry(&self) -> ChildLocation {
         self.entry
@@ -146,21 +146,16 @@ impl Wide for StartPath {
 #[derive(Debug, Clone, Eq)]
 pub(crate) struct GraphRangePath {
     pub(crate) start: StartPath,
+    pub(crate) inner_width: usize,
     pub(crate) exit: usize,
     pub(crate) end: ChildPath,
     pub(crate) end_width: usize,
 }
-impl<
-    'a: 'g,
-    'g,
-> GraphRangePath {
+impl<'a: 'g, 'g> GraphRangePath {
     pub fn get_exit_location(&self) -> ChildLocation {
         self.start.entry()
             .into_pattern_location()
             .to_child_location(self.exit)
-    }
-    pub fn entry(&self) -> ChildLocation {
-        self.start.entry()
     }
     pub fn new(start: StartPath) -> Self {
         Self {
@@ -168,23 +163,19 @@ impl<
             start,
             end: vec![],
             end_width: 0,
+            inner_width: 0,
         }
     }
-    pub(crate) fn pattern<
-        T: Tokenize + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Pattern {
-        self.start.pattern(trav)
-    }
-    pub fn get_end_width(&self) -> usize {
-        self.end_width
-    }
+    //pub(crate) fn pattern<
+    //    T: Tokenize + 'a,
+    //    Trav: Traversable<'a, 'g, T>,
+    //>(&self, trav: &'a Trav) -> Pattern {
+    //    self.start.pattern(trav)
+    //}
     pub fn move_width_into_start(&mut self) {
-        *self.start.width_mut() += self.end_width;
+        *self.start.width_mut() += self.inner_width + self.end_width;
+        self.inner_width = 0;
         self.end_width = 0;
-    }
-    pub fn get_start_path_mut(&mut self) -> &mut StartPath {
-        &mut self.start
     }
     pub fn into_start_path(self) -> StartPath {
         self.start
@@ -220,13 +211,13 @@ impl<
         D::pattern_index_next(pattern, self.exit)
     }
     /// true if points to a match end position
-    pub(crate) fn has_end_match<
-        T: Tokenize + 'a,
-        Trav: Traversable<'a, 'g, T>,
-        D: MatchDirection + 'a,
-    >(&self, trav: &'a Trav) -> bool {
-        !self.end.is_empty() || self.prev_pos::<_, _, D>(trav) == Some(self.start.entry().sub_index)
-    }
+    //pub(crate) fn has_end_match<
+    //    T: Tokenize + 'a,
+    //    Trav: Traversable<'a, 'g, T>,
+    //    D: MatchDirection + 'a,
+    //>(&self, trav: &'a Trav) -> bool {
+    //    !self.end.is_empty() || self.prev_pos::<_, _, D>(trav) >= Some(self.start.entry().sub_index)
+    //}
     pub(crate) fn prev_pos<
         T: Tokenize + 'a,
         Trav: Traversable<'a, 'g, T>,
@@ -253,9 +244,13 @@ impl<
         T: Tokenize + 'a,
         Trav: Traversable<'a, 'g, T>,
     >(&mut self, trav: &'a Trav) {
-        // todo: maybe use end_width
-        //*self.start.width_mut() += self.get_end(trav).width;
-        self.end_width += self.get_end(trav).width;
+        let width = self.get_end(trav).width;
+        let wmut = if self.end.is_empty() {
+            &mut self.inner_width
+        } else {
+            &mut self.end_width
+        };
+        *wmut += width;
     }
     pub(crate) fn advance_next<
         T: Tokenize + 'a,
@@ -324,6 +319,7 @@ impl<
         if self.end.is_empty() {
             self.exit = self.prev_pos::<_, _, D>(trav).unwrap();
         }
+
         FoundPath::new::<_, _, D>(trav, self)
     }
 }

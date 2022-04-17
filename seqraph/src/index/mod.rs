@@ -5,7 +5,7 @@ use crate::{
     search::*,
     HypergraphRef,
 };
-use std::{borrow::Borrow, ops::{RangeFrom, RangeInclusive}};
+use std::ops::{RangeFrom, RangeInclusive};
 
 mod indexer;
 pub use indexer::*;
@@ -58,51 +58,46 @@ where
         self.indexer().index_prefix(pattern)
     }
 }
-pub(crate) enum ContextHalf {
-    Child(Child),
-    Pattern(Pattern),
-}
-impl ContextHalf {
-    pub fn try_new(p: impl IntoPattern) -> Option<Self> {
-        let p = p.borrow();
-        match p.len() {
-            0 => None,
-            1 => Some(Self::Child(*p.into_iter().next().unwrap())),
-            _ => Some(Self::Pattern(p.into_pattern())),
-        }
-    }
-    pub fn unwrap_child(self) -> Child {
-        match self {
-            Self::Child(c) => c,
-            _ => panic!("Failed to unwrap ContextHalf::Child!"),
-        }
-    }
-    pub fn expect_child(self, msg: &str) -> Child {
-        match self {
-            Self::Child(c) => c,
-            _ => panic!("Expected ContextHalf::Child!: {}", msg),
-        }
-    }
-}
-
-impl Borrow<[Child]> for ContextHalf {
-    fn borrow(&self) -> &[Child] {
-        match self {
-            Self::Child(c) => std::slice::from_ref(c),
-            Self::Pattern(p) => p.borrow(),
-        }
-    }
-}
-impl AsRef<[Child]> for ContextHalf {
-    fn as_ref(&self) -> &[Child] {
-        self.borrow()
-    }
-}
-
-enum PathRootHalf {
-    Perfect(Pattern),
-    Unperfect(ContextHalf, Child),
-}
+//pub(crate) enum ContextHalf {
+//    Child(Child),
+//    Pattern(Pattern),
+//}
+//impl ContextHalf {
+//    pub fn try_new(p: impl IntoPattern) -> Option<Self> {
+//        let p = p.borrow();
+//        match p.len() {
+//            0 => None,
+//            1 => Some(Self::Child(*p.into_iter().next().unwrap())),
+//            _ => Some(Self::Pattern(p.into_pattern())),
+//        }
+//    }
+//    pub fn unwrap_child(self) -> Child {
+//        match self {
+//            Self::Child(c) => c,
+//            _ => panic!("Failed to unwrap ContextHalf::Child!"),
+//        }
+//    }
+//    pub fn expect_child(self, msg: &str) -> Child {
+//        match self {
+//            Self::Child(c) => c,
+//            _ => panic!("Expected ContextHalf::Child!: {}", msg),
+//        }
+//    }
+//}
+//
+//impl Borrow<[Child]> for ContextHalf {
+//    fn borrow(&self) -> &[Child] {
+//        match self {
+//            Self::Child(c) => std::slice::from_ref(c),
+//            Self::Pattern(p) => p.borrow(),
+//        }
+//    }
+//}
+//impl AsRef<[Child]> for ContextHalf {
+//    fn as_ref(&self) -> &[Child] {
+//        self.borrow()
+//    }
+//}
 
 pub(crate) struct IndexSplitResult {
     inner: Child,
@@ -122,6 +117,7 @@ pub(crate) mod tests {
     };
     use pretty_assertions::assert_eq;
     use itertools::*;
+    use std::borrow::Borrow;
 
     #[test]
     fn index_prefix1() {

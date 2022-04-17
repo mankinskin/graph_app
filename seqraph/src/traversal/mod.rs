@@ -13,7 +13,6 @@ use std::ops::{
     DerefMut,
 };
 use std::sync::{RwLockReadGuard, RwLockWriteGuard};
-use std::borrow::{Borrow, BorrowMut};
 
 use itertools::Itertools;
 
@@ -45,8 +44,8 @@ impl <'a: 'g, 'g, T: Tokenize + 'a> Traversable<'a, 'g, T> for &'a Hypergraph<T>
         self
     }
 }
-impl <'a, T: Tokenize + 'a> Traversable<'a, 'a, T> for &'a mut Hypergraph<T> {
-    type Guard = &'a Hypergraph<T>;
+impl <'a: 'g, 'g, T: Tokenize + 'a> Traversable<'a, 'g, T> for &'a mut Hypergraph<T> {
+    type Guard = &'g Hypergraph<T>;
     fn graph(&'a self) -> Self::Guard {
         &*self
     }
@@ -68,20 +67,20 @@ pub(crate) trait TraversableMut<'a: 'g, 'g, T: Tokenize> : Traversable<'a, 'g, T
     type GuardMut: TraversableMut<'g, 'g, T> + Deref<Target=Hypergraph<T>> + DerefMut;
     fn graph_mut(&'a mut self) -> Self::GuardMut;
 }
-impl <'a, T: Tokenize + 'a> Traversable<'a, 'a, T> for Hypergraph<T> {
-    type Guard = &'a Self;
+impl <'a: 'g, 'g, T: Tokenize + 'a> Traversable<'a, 'g, T> for Hypergraph<T> {
+    type Guard = &'g Self;
     fn graph(&'a self) -> Self::Guard {
         self
     }
 }
-impl <'a, T: Tokenize + 'a> TraversableMut<'a, 'a, T> for Hypergraph<T> {
-    type GuardMut = &'a mut Self;
+impl <'a: 'g, 'g, T: Tokenize + 'a> TraversableMut<'a, 'g, T> for Hypergraph<T> {
+    type GuardMut = &'g mut Self;
     fn graph_mut(&'a mut self) -> Self::GuardMut {
         self
     }
 }
-impl <'a, T: Tokenize + 'a> TraversableMut<'a, 'a, T> for &'a mut Hypergraph<T> {
-    type GuardMut = Self;
+impl <'a: 'g, 'g, T: Tokenize + 'a> TraversableMut<'a, 'g, T> for &'a mut Hypergraph<T> {
+    type GuardMut = &'g mut Hypergraph<T>;
     fn graph_mut(&'a mut self) -> Self::GuardMut {
         *self
     }

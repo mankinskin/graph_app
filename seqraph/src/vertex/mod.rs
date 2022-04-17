@@ -21,7 +21,7 @@ mod parent;
 mod child;
 mod child_location;
 mod token;
-mod pattern;
+pub mod pattern;
 pub use {
     indexed::*,
     child_location::*,

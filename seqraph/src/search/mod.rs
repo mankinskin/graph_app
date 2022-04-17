@@ -97,11 +97,27 @@ impl<
         T: Tokenize + 'a,
         Trav: Traversable<'a, 'g, T>,
         D: MatchDirection + 'a,
-    >(trav: &'a Trav, path: GraphRangePath) -> Self {
-        if path.is_complete::<_, _, D>(trav) {
-            FoundPath::Complete(path.into_start_path().entry().parent)
+    >(trav: &'a Trav, mut range_path: GraphRangePath) -> Self {
+        if range_path.is_complete::<_, _, D>(trav) {
+            Self::Complete(range_path.into_start_path().entry().parent)
         } else {
-            FoundPath::Range(path)
+            if range_path.exit == range_path.start.entry().sub_index {
+                match &mut range_path.start {
+                    StartPath::First { child, .. } =>
+                        Self::Complete(*child),
+                    StartPath::Path { entry, path, width } => {
+                        if path.is_empty() {
+                            let child = trav.graph().expect_child_at(*entry);
+                            range_path.start = StartPath::First { entry: *entry, child, width: *width };
+                        } else {
+                            *entry = path.pop().unwrap();
+                        }
+                        Self::Range(range_path)
+                    }
+                }
+            } else {
+                Self::Range(range_path)
+            }
         }
     }
     pub fn unwrap_complete(self) -> Child {
@@ -396,6 +412,7 @@ pub(crate) mod tests {
                     },
                     end: vec![],
                     exit: 1,
+                    inner_width: 0,
                     end_width: 1,
                 }),
                 query: QueryRangePath {
