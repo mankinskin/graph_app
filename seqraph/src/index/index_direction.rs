@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use crate::{
     index::*,
 };
@@ -27,6 +29,10 @@ pub trait IndexDirection: MatchDirection + Clone {
         inner: Child,
         head: Child,
     ) -> (Child, Child);
+    fn inner_context_range(
+        back: usize,
+        front: usize,
+    ) -> Range<usize>;
 }
 pub trait Merge {
     fn split_front(self) -> Option<(Child, Pattern)>;
@@ -75,8 +81,13 @@ impl IndexDirection for Left {
     ) -> Pattern {
         [outer, inner].concat()
     }
+    fn inner_context_range(
+        back: usize,
+        front: usize,
+    ) -> Range<usize> {
+        Self::index_prev(front).unwrap()..back
+    }
 }
-// context right, inner left
 impl IndexDirection for Right {
     type Opposite = Left;
     fn split_context_head(context: impl Merge) -> Option<(Child, Pattern)> {
@@ -100,5 +111,11 @@ impl IndexDirection for Right {
         outer: Pattern,
     ) -> Pattern {
         [inner, outer].concat()
+    }
+    fn inner_context_range(
+        back: usize,
+        front: usize,
+    ) -> Range<usize> {
+        Self::index_next(back).unwrap()..front
     }
 }

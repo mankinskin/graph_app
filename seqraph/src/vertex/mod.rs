@@ -21,6 +21,7 @@ mod parent;
 mod child;
 mod child_location;
 mod token;
+mod wide;
 pub mod pattern;
 pub use {
     indexed::*,
@@ -29,6 +30,7 @@ pub use {
     child::*,
     pattern::*,
     token::*,
+    wide::*,
 };
 
 pub type VertexIndex = usize;

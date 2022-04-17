@@ -8,6 +8,8 @@ use std::{
     hash::Hash,
 };
 
+use crate::*;
+
 pub fn tokenizing_iter<T: Tokenize, C: AsToken<T>>(
     seq: impl Iterator<Item = C>
 ) -> impl Iterator<Item = Token<T>> {
@@ -29,25 +31,6 @@ impl<T: TokenData + Wide + Hash + Eq + Copy + Debug> Tokenize for T {}
 
 pub trait TokenData: Debug + PartialEq + Clone + Wide {}
 impl<T: Debug + PartialEq + Clone + Wide> TokenData for T {}
-
-pub trait Wide {
-    fn width(&self) -> usize;
-}
-impl Wide for char {
-    fn width(&self) -> usize {
-        1
-    }
-}
-impl<T: Wide> Wide for &'_ T {
-    fn width(&self) -> usize {
-        (**self).width()
-    }
-}
-impl<T: Wide> Wide for &'_ mut T {
-    fn width(&self) -> usize {
-        (**self).width()
-    }
-}
 
 #[derive(Hash, Debug, Clone, PartialEq, Eq, Copy)]
 pub struct NoToken;
@@ -258,11 +241,11 @@ impl<T: Tokenize> PartialEq<T> for Token<T> {
 //        *self == *<Node<T> as TokenContext<T, Edge>>::token(rhs)
 //    }
 //}
-impl PartialEq<Token<char>> for char {
-    fn eq(
-        &self,
-        rhs: &Token<char>,
-    ) -> bool {
-        *rhs == *self
-    }
-}
+//impl PartialEq<Token<char>> for char {
+//    fn eq(
+//        &self,
+//        rhs: &Token<char>,
+//    ) -> bool {
+//        *rhs == *self
+//    }
+//}

@@ -182,10 +182,12 @@ impl<'a: 'g, 'g> GraphRangePath {
     }
     pub fn into_paths(self) -> (StartPath, EndPath) {
         let entry = self.start.entry();
+        let mut exit = entry.clone();
+        exit.sub_index = self.exit;
         (
             self.start,
             EndPath {
-                entry,
+                entry: exit,
                 path: self.end,
                 width: self.end_width,
             }

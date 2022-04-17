@@ -16,6 +16,25 @@ impl ChildLocation {
             sub_index,
         }
     }
+    pub fn get_child_in<'a>(&self, patterns: &'a ChildPatterns) -> Option<&'a Child> {
+        self.get_pattern_in(patterns)
+            .and_then(|p| self.get_child_in_pattern(p))
+    }
+    pub fn expect_child_in<'a>(&self, patterns: &'a ChildPatterns) -> &'a Child {
+        self.get_child_in(patterns).expect("Expected Child not present in ChildPatterns!")
+    }
+    pub fn get_child_in_pattern<'a>(&self, pattern: &'a Pattern) -> Option<&'a Child> {
+        pattern.get(self.sub_index)
+    }
+    pub fn expect_child_in_pattern<'a>(&self, pattern: &'a Pattern) -> &'a Child {
+        self.get_child_in_pattern(pattern).expect("Expected Child not present in ChildPatterns!")
+    }
+    pub fn get_pattern_in<'a>(&self, patterns: &'a ChildPatterns) -> Option<&'a Pattern> {
+        patterns.get(&self.pattern_id)
+    }
+    pub fn expect_pattern_in<'a>(&self, patterns: &'a ChildPatterns) -> &'a Pattern {
+        self.get_pattern_in(patterns).expect("Expected Pattern not present in ChildPatterns!")
+    }
 }
 pub type ChildPath = Vec<ChildLocation>;
 

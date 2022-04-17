@@ -11,7 +11,7 @@ pub struct Searcher<T: Tokenize, D: MatchDirection> {
 }
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> Traversable<'a, 'g, T> for Searcher<T, D> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    fn graph(&'a self) -> Self::Guard {
+    fn graph(&'g self) -> Self::Guard {
         self.graph.read().unwrap()
     }
 }

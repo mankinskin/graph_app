@@ -113,11 +113,11 @@ pub(crate) mod tests {
     use super::*;
     use crate::{
         Hypergraph,
-        QueryRangePath,
+        QueryRangePath, Traversable,
     };
     use pretty_assertions::assert_eq;
     use itertools::*;
-    use std::borrow::Borrow;
+    use std::{borrow::Borrow, collections::{HashMap, HashSet}};
 
     #[test]
     fn index_prefix1() {
@@ -130,6 +130,7 @@ pub(crate) mod tests {
             Token::Element('y'),
             Token::Element('z'),
         ]).into_iter().next_tuple().unwrap();
+        // index 6
         let ab = graph.index_pattern([a, b]);
         let by = graph.index_pattern([b, y]);
         let yz = graph.index_pattern([y, z]);
@@ -140,7 +141,11 @@ pub(crate) mod tests {
         let graph = HypergraphRef::from(graph);
         let query = vec![by, z];
         let byz = graph.index_prefix(query.borrow()).expect("Indexing failed");
-        let byz_found = graph.find_parent(&query);
+        assert_eq!(byz, Child {
+            index: 13,
+            width: 3,
+        }, "byz");
+        let byz_found = graph.find_ancestor(&query);
         assert_eq!(
             byz_found,
             Ok(QueryFound::complete(query, byz)),
@@ -173,12 +178,21 @@ pub(crate) mod tests {
         let _xabz = graph.index_pattern([xab, z]);
         let _xabyz = graph.index_pattern([xab, yz]);
 
-        let graph = HypergraphRef::from(graph);
+        let graph_ref = HypergraphRef::from(graph);
 
         let query = vec![a, b, y, x];
-        let aby = graph.index_prefix(query.borrow()).expect("Indexing failed");
+        let aby = graph_ref.index_prefix(query.borrow()).expect("Indexing failed");
+        assert_eq!(aby, Child {
+            index: 12,
+            width: 3,
+        }, "aby");
+        let graph = graph_ref.read().unwrap();
+        let aby_vertex = graph.expect_vertex_data(aby);
+        assert_eq!(aby_vertex.parents.len(), 1, "aby");
+        assert_eq!(aby_vertex.children.len(), 1, "aby");
+        drop(graph);
         let query = vec![a, b, y];
-        let aby_found = graph.find_ancestor(&query);
+        let aby_found = graph_ref.find_ancestor(&query);
         assert_eq!(
             aby_found,
             Ok(QueryFound {
