@@ -5,7 +5,7 @@ use std::{
         Debug,
         Display,
     },
-    hash::Hash,
+    hash::Hash, borrow::Borrow,
 };
 
 use crate::*;
@@ -41,49 +41,49 @@ impl Wide for NoToken {
     }
 }
 
-//#[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
-//pub(crate) enum NewTokenIndex {
-//    New(VertexIndex),
-//    Known(VertexIndex),
-//}
-//impl NewTokenIndex {
-//    pub fn is_known(&self) -> bool {
-//        matches!(self, Self::Known(_))
-//    }
-//    pub fn is_new(&self) -> bool {
-//        matches!(self, Self::New(_))
-//    }
-//}
-//impl Wide for NewTokenIndex {
-//    fn width(&self) -> usize {
-//        1
-//    }
-//}
-//impl Indexed for NewTokenIndex {
-//    fn index(&self) -> VertexIndex {
-//        match self {
-//            Self::New(i) => *i,
-//            Self::Known(i) => *i,
-//        }
-//    }
-//}
-//impl Borrow<VertexIndex> for &'_ NewTokenIndex {
-//    fn borrow(&self) -> &VertexIndex {
-//        match self {
-//            NewTokenIndex::New(i) => i,
-//            NewTokenIndex::Known(i) => i,
-//        }
-//    }
-//}
-//impl Borrow<VertexIndex> for &'_ mut NewTokenIndex {
-//    fn borrow(&self) -> &VertexIndex {
-//        match self {
-//            NewTokenIndex::New(i) => i,
-//            NewTokenIndex::Known(i) => i,
-//        }
-//    }
-//}
-//pub(crate) type NewTokenIndices = Vec<NewTokenIndex>;
+#[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
+pub(crate) enum NewTokenIndex {
+    New(VertexIndex),
+    Known(VertexIndex),
+}
+impl NewTokenIndex {
+    pub fn is_known(&self) -> bool {
+        matches!(self, Self::Known(_))
+    }
+    pub fn is_new(&self) -> bool {
+        matches!(self, Self::New(_))
+    }
+}
+impl Wide for NewTokenIndex {
+    fn width(&self) -> usize {
+        1
+    }
+}
+impl Indexed for NewTokenIndex {
+    fn index(&self) -> VertexIndex {
+        match self {
+            Self::New(i) => *i,
+            Self::Known(i) => *i,
+        }
+    }
+}
+impl Borrow<VertexIndex> for &'_ NewTokenIndex {
+    fn borrow(&self) -> &VertexIndex {
+        match self {
+            NewTokenIndex::New(i) => i,
+            NewTokenIndex::Known(i) => i,
+        }
+    }
+}
+impl Borrow<VertexIndex> for &'_ mut NewTokenIndex {
+    fn borrow(&self) -> &VertexIndex {
+        match self {
+            NewTokenIndex::New(i) => i,
+            NewTokenIndex::Known(i) => i,
+        }
+    }
+}
+pub(crate) type NewTokenIndices = Vec<NewTokenIndex>;
 
 pub trait AsToken<T: Tokenize> {
     fn as_token(&self) -> Token<T>;

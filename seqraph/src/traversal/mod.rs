@@ -23,7 +23,7 @@ use crate::{
     Hypergraph,
     Vertexed,
     MatchDirection,
-    QueryFound, TraversalOrder, HypergraphRef,
+    QueryFound, TraversalOrder,
 };
 
 #[derive(Clone, Debug)]

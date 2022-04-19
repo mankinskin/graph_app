@@ -97,7 +97,7 @@ impl<
         T: Tokenize + 'a,
         Trav: Traversable<'a, 'g, T>,
         D: MatchDirection + 'a,
-    >(trav: &'a Trav, mut range_path: GraphRangePath) -> Self {
+    >(trav: &'a Trav, range_path: GraphRangePath) -> Self {
         if range_path.is_complete::<_, _, D>(trav) {
             Self::Complete(range_path.into_start_path().entry().parent)
         } else {

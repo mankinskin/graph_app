@@ -18,6 +18,11 @@ pub use {
 #[derive(Debug, Clone, Default)]
 pub struct HypergraphRef<T: Tokenize>(pub Arc<RwLock<Hypergraph<T>>>);
 
+impl<T: Tokenize> HypergraphRef<T> {
+    pub fn new(g: Hypergraph<T>) -> Self {
+        Self::from(g)
+    }
+}
 impl<T: Tokenize> From<Hypergraph<T>> for HypergraphRef<T> {
     fn from(g: Hypergraph<T>) -> Self {
         Self(Arc::new(RwLock::new(g)))

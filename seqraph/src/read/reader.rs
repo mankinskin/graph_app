@@ -1,4 +1,4 @@
-use std::sync::{RwLockReadGuard, RwLockWriteGuard};
+use std::{sync::{RwLockReadGuard, RwLockWriteGuard}, borrow::Borrow};
 
 use crate::{
     index::*,
@@ -25,9 +25,9 @@ impl ReaderCache {
                 1 => {
                     let new = new.into_iter().next().unwrap();
                     if let Some(buffer) = self.buffer.take() {
-                        self.group = Some(reader.graph_mut().insert_pattern(vec![buffer, new]));
+                        self.group = Some(reader.graph_mut().index_pattern(vec![buffer, new]));
                     } else {
-                        self.group = Some(reader.graph_mut().force_insert_pattern(vec![new]));
+                        self.group = Some(reader.graph_mut().force_index_pattern(vec![new]));
                     }
                 },
                 _ => {
@@ -39,7 +39,7 @@ impl ReaderCache {
                     // insert new pattern so it can be found in later queries
                     // any new indicies afterwards need to be appended
                     // to the pattern inside this index
-                    let new = reader.graph_mut().insert_pattern(new);
+                    let new = reader.graph_mut().index_pattern(new);
                     self.group = Some(new);
                 }
             }
@@ -119,7 +119,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             } {
                 Ok(i) => NewTokenIndex::Known(i),
                 Err(_) => {
-                    let i = self.graph_mut().insert_token(t);
+                    let i = self.graph_mut().index_token(t);
                     NewTokenIndex::New(i.index)
                 }
             })
@@ -169,7 +169,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         pattern: Vec<Child>,
     ) -> (Child, Pattern) {
         //let _pat_str = self.graph.pattern_string(&pattern);
-        match self.indexer().index_pattern(&pattern) {
+        match self.indexer().index_prefix(pattern.borrow()) {
             Ok(_indexed_path) => {
                 unimplemented!();
                 //let (_lctx, inner, _rctx, rem) = self.index_found(found_path);
@@ -180,6 +180,20 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                 (c, rem)
             },
         }
+    }
+    /// index prefix of new pattern of known indices
+    /// store pattern and width in collection
+    /// find largest postfix of index (location, offset from begin)
+    pub fn find_largest_postfix(index: Child) -> (ChildLocation, usize) {
+        unimplemented!()
+    }
+    /// try to expand postfix
+    pub fn try_expand_postfix() -> Option<Child> {
+        unimplemented!()
+    }
+    /// index the context of an expanded postfix
+    pub fn index_context() -> Child {
+        unimplemented!()
     }
     pub fn overlap_index(&mut self, index: Child, mut _context: Pattern) -> Child {
         // keep going down into next smallest postfi
@@ -251,7 +265,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             graph.append_to_pattern(parent, pid, new)
         } else {
             // some old overlaps though
-            graph.insert_pattern([&[parent], new.as_slice()].concat())
+            graph.index_pattern([&[parent], new.as_slice()].concat())
         }
     }
 }

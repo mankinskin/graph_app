@@ -5,7 +5,7 @@ use crate::{
     search::*,
     HypergraphRef,
 };
-use std::ops::{RangeFrom, RangeInclusive};
+use std::ops::RangeFrom;
 
 mod indexer;
 pub use indexer::*;

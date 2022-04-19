@@ -95,11 +95,11 @@ impl<T: Into<Child> + Clone> From<&'_ T> for Child {
         (*o).clone().into()
     }
 }
-//impl From<NewTokenIndex> for Child {
-//    fn from(o: NewTokenIndex) -> Self {
-//        Self::new(o.index(), 1)
-//    }
-//}
+impl From<NewTokenIndex> for Child {
+    fn from(o: NewTokenIndex) -> Self {
+        Self::new(o.index(), 1)
+    }
+}
 impl IntoIterator for Child {
     type Item = Self;
     type IntoIter = std::iter::Once<Child>;

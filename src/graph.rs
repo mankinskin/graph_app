@@ -51,13 +51,13 @@ impl Default for Layout {
 }
 #[derive(Clone)]
 pub struct Graph {
-    pub graph: Arc<RwLock<Hypergraph<char>>>,
+    pub graph: HypergraphRef<char>,
     pub vis: Arc<RwLock<GraphVis>>,
     pub insert_text: String,
 }
 impl Graph {
     pub fn new_with_graph(graph: Hypergraph<char>) -> Self {
-        let graph = Arc::new(RwLock::new(graph));
+        let graph = HypergraphRef::new(graph);
         let vis = Arc::new(RwLock::new(GraphVis::default()));
         let new = Self {
             graph,
@@ -91,8 +91,8 @@ impl Graph {
     pub fn clear(&mut self) {
         *self = Self::new();
     }
-    pub fn read(&self, text: impl ToString) {
-        self.graph_mut().read_sequence(text.to_string().chars());
+    pub fn read(&mut self, text: impl ToString) {
+        self.graph.read_sequence(text.to_string().chars());
     }
     pub fn show(&self, ui: &mut Ui) {
         self.vis_mut().update();
@@ -101,7 +101,7 @@ impl Graph {
 }
 pub fn build_graph1() -> Hypergraph<char> {
     let mut graph = Hypergraph::default();
-    if let [a, b, w, x, y, z] = graph.insert_tokens([
+    if let [a, b, w, x, y, z] = graph.index_tokens([
         Token::Element('a'),
         Token::Element('b'),
         Token::Element('w'),
@@ -125,7 +125,7 @@ pub fn build_graph1() -> Hypergraph<char> {
 }
 pub fn build_graph2() -> Hypergraph<char> {
     let mut graph = Hypergraph::default();
-    if let [a, b, c, d, e, f, g, h, i] = graph.insert_tokens([
+    if let [a, b, c, d, e, f, g, h, i] = graph.index_tokens([
         Token::Element('a'),
         Token::Element('b'),
         Token::Element('c'),

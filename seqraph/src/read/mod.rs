@@ -8,7 +8,7 @@ pub use reader::*;
 //mod async_reader;
 //pub use async_reader::*;
 
-impl<T: Tokenize + Send + std::fmt::Display> HypergraphRef<T> {
+impl<T: Tokenize + Send> HypergraphRef<T> {
     pub fn right_reader(&self) -> Reader<T, Right> {
         Reader::new(self.clone())
     }
