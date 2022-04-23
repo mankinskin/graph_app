@@ -18,7 +18,7 @@ use crate::{
     TraversalNode,
     TraversalIterator,
     TraversalFolder,
-    Bft, EndPath, GraphPath, GraphRangePath, DirectedGraphPath,
+    Bft, EndPath, GraphRangePath, DirectedBorderPath,
 };
 
 #[derive(Debug, Clone)]
@@ -48,7 +48,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> DirectedTraversalPoli
         trav: &'a Self::Trav,
         query: QueryRangePath,
         start: StartPath,
-    ) -> Vec<TraversalNode> {
+    ) -> Vec<<Self::Folder as TraversalFolder<'a, 'g, T, D>>::Node> {
         let mut ltrav = trav.clone();
         let IndexSplitResult {
             inner: post,
@@ -67,20 +67,26 @@ impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection> IndexingTraversalPolicy<'a, 'g,
 
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversalFolder<'a, 'g, T, D> for Indexer<T, D> {
     type Trav = Self;
-    type Break = Child;
-    type Continue = Option<Child>;
+    type Break = (Child, QueryRangePath);
+    type Continue = Option<(Child, QueryRangePath)>;
+    type Path = GraphRangePath;
+    type Query = QueryRangePath;
+    type Node = MatchNode;
     fn fold_found(
         trav: &Self::Trav,
         acc: Self::Continue,
-        node: TraversalNode,
+        node: Self::Node,
     ) -> ControlFlow<Self::Break, Self::Continue> {
         let mut trav = trav.clone();
         match node {
-            TraversalNode::End(Some(found)) => {
-                ControlFlow::Break(Indexable::<_, D>::index_found(&mut trav, found.found))
+            MatchNode::End(Some(found)) => {
+                ControlFlow::Break((
+                    Indexable::<_, D>::index_found(&mut trav, found.found),
+                    found.query,
+                ))
             },
-            TraversalNode::Mismatch(path) => {
-                Indexable::<_, D>::index_mismatch(&mut trav, acc, path)
+            MatchNode::Mismatch(paths) => {
+                Indexable::<_, D>::index_mismatch(&mut trav, acc, paths)
             },
             _ => ControlFlow::Continue(acc)
         }
@@ -127,9 +133,9 @@ trait Indexable<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a>: Traversab
         let pattern = start.pattern(&*graph);
         match (
             start.is_perfect(),
-            DirectedGraphPath::<D>::is_at_pattern_border(&start, pattern.borrow()), 
+            DirectedBorderPath::<D>::is_at_pattern_border(&start, pattern.borrow()), 
             end.is_perfect(),
-            DirectedGraphPath::<D>::is_at_pattern_border(&end, pattern.borrow()), 
+            DirectedBorderPath::<D>::is_at_pattern_border(&end, pattern.borrow()), 
         ) {
             //   start         end
             // perf comp    perf   comp
@@ -237,16 +243,19 @@ trait Indexable<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a>: Traversab
     fn index_mismatch<Acc>(
         &'a mut self,
         acc: Acc,
-        path: GraphRangePath,
-    ) -> ControlFlow<Child, Acc> {
+        paths: PathPair<QueryRangePath, GraphRangePath>,
+    ) -> ControlFlow<(Child, QueryRangePath), Acc> {
         let mut graph = self.graph_mut();
-        let found = path.reduce_mismatch::<_, _, D>(&*graph);
-        if let FoundPath::Range(path) = &found {
+        let found = paths.reduce_mismatch::<_, D, _>(&*graph);
+        if let FoundPath::Range(path) = &found.found {
             if path.exit == path.start.entry().sub_index {
                 return ControlFlow::Continue(acc);
             }
         }
-        ControlFlow::Break(Indexable::<_, D>::index_found(&mut *graph, found))
+        ControlFlow::Break((
+            Indexable::<_, D>::index_found(&mut *graph, found.found),
+            found.query
+        ))
     }
     fn index_found(
         &'a mut self,
@@ -416,7 +425,7 @@ trait IndexableSide<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: 
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Trav: Indexable<'a, 'g, T, D>, S: IndexSide<D> + 'a> IndexableSide<'a, 'g, T, D, S> for Trav {}
 
 trait IndexSide<D: IndexDirection> {
-    type Path: DirectedGraphPath<D>;
+    type Path: DirectedBorderPath<D>;
     type InnerRange: PatternRangeIndex + StartInclusive;
     type ContextRange: PatternRangeIndex + StartInclusive;
     fn width_offset(parent: &Child, width: usize) -> usize;
@@ -528,8 +537,14 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
     pub(crate) fn index_prefix(
         &mut self,
         pattern: impl IntoPattern,
-    ) -> Result<Child, NoMatch> {
+    ) -> Result<(Child, QueryRangePath), NoMatch> {
         self.indexing::<Bft<_, _, _, _>, Indexing<T, D>, _>(pattern)
+    }
+    pub(crate) fn index_path_prefix(
+        &mut self,
+        query: QueryRangePath,
+    ) -> Result<(Child, QueryRangePath), NoMatch> {
+        self.path_indexing::<Bft<_, _, _, _>, Indexing<T, D>>(query)
     }
     //pub(crate) fn index_prefix_at(
     //    &mut self,
@@ -563,18 +578,26 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
     >(
         &'a mut self,
         query: Q,
-    ) -> Result<Child, NoMatch> {
+    ) -> Result<(Child, QueryRangePath), NoMatch> {
         let query = query.into_pattern();
         let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())?;
-
-        match Ti::new(self, TraversalNode::Query(query_path))
+        self.path_indexing::<Ti, S>(query_path)
+    }
+    fn path_indexing<
+        Ti: TraversalIterator<'a, 'g, T, Self, D, S>,
+        S: IndexingTraversalPolicy<'a, 'g, T, D>,
+    >(
+        &'a mut self,
+        query_path: QueryRangePath,
+    ) -> Result<(Child, QueryRangePath), NoMatch> {
+        match Ti::new(self, TraversalNode::query_node(query_path.clone()))
             .try_fold(None, |acc, (_, node)|
                 S::Folder::fold_found(self, acc, node)
             )
         {
-            ControlFlow::Continue(None) => Err(NoMatch::NotFound(query)),
-            ControlFlow::Continue(Some(found)) => Ok(found),
-            ControlFlow::Break(found) => Ok(found)
+            ControlFlow::Continue(None) => Err(NoMatch::NotFound(query_path.query)),
+            ControlFlow::Continue(Some((found, query))) => Ok((found, query)),
+            ControlFlow::Break((found, query)) => Ok((found, query))
         }
     }
 }

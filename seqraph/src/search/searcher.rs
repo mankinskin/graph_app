@@ -26,18 +26,21 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> TraversalFolder<'a, '
     type Trav = Self;
     type Break = Option<QueryFound>;
     type Continue = Option<QueryFound>;
+    type Node = MatchNode;
+    type Query = QueryRangePath;
+    type Path = GraphRangePath;
     fn fold_found(
         trav: &Self::Trav,
         acc: Self::Continue,
-        node: TraversalNode,
+        node: Self::Node,
     ) -> ControlFlow<Self::Break, Self::Continue> {
         match node {
-            TraversalNode::End(found) => {
+            MatchNode::End(found) => {
                 ControlFlow::Break(found)
             },
-            TraversalNode::Match(path, _, prev_query) => {
+            MatchNode::Match(path, _, prev_query) => {
                 let found = QueryFound::new(
-                    path.reduce_end::<_, _, D>(trav),
+                    path.reduce_end::<_, D, _>(trav),
                     prev_query,
                 );
                 if acc.as_ref().map(|f| found.found.gt(&f.found)).unwrap_or(true) {
@@ -60,7 +63,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> DirectedTraversalPoli
         trav: &'a Self::Trav,
         query: QueryRangePath,
         start: StartPath,
-    ) -> Vec<TraversalNode> {
+    ) -> Vec<<Self::Folder as TraversalFolder<'a, 'g, T, D>>::Node> {
         Self::parent_nodes(trav, query, Some(start))
     }
 }
@@ -74,7 +77,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> DirectedTraversalPoli
         _trav: &'a Self::Trav,
         _query: QueryRangePath,
         _start: StartPath,
-    ) -> Vec<TraversalNode> {
+    ) -> Vec<<Self::Folder as TraversalFolder<'a, 'g, T, D>>::Node> {
         vec![]
     }
 }
@@ -136,7 +139,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
     ) -> SearchResult {
         let query = query.into_pattern();
         let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())?;
-        match Ti::new(self, TraversalNode::Query(query_path))
+        match Ti::new(self, TraversalNode::query_node(query_path))
             .try_fold(None, |acc: Option<QueryFound>, (_, node)|
                 S::Folder::fold_found(self, acc, node)
             )

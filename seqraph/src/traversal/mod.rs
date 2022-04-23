@@ -23,18 +23,50 @@ use crate::{
     Hypergraph,
     Vertexed,
     MatchDirection,
-    QueryFound, TraversalOrder,
+    TraversalOrder, QueryResult,
 };
 
-#[derive(Clone, Debug)]
-pub(crate) enum TraversalNode {
-    Query(QueryRangePath),
-    Root(QueryRangePath, Option<StartPath>, ChildLocation),
-    Match(GraphRangePath, QueryRangePath, QueryRangePath),
-    End(Option<QueryFound>),
-    Mismatch(GraphRangePath),
+pub(crate) trait ToTraversalNode<Q: QueryPath, G: GraphPath>: Clone + Into<TraversalNode<Q, G>> {
+    fn query_node(query: Q) -> Self;
+    fn root_node(query: Q, start: Option<StartPath>, entry: ChildLocation) -> Self;
+    fn match_node(path: G, query: Q, old_query: Q) -> Self;
+    fn end_node(found: Option<QueryResult<Q>>) -> Self;
+    fn mismatch_node(paths: PathPair<Q, G>) -> Self;
 }
-pub(crate) trait Traversable<'a: 'g, 'g, T: Tokenize>: Sized + 'a {
+
+#[derive(Clone, Debug)]
+pub(crate) enum TraversalNode<
+    Q: QueryPath,
+    G: GraphPath,
+> {
+    Query(Q),
+    Root(Q, Option<StartPath>, ChildLocation),
+    Match(G, Q, Q),
+    End(Option<QueryResult<Q>>),
+    Mismatch(PathPair<Q, G>),
+}
+impl<
+    Q: QueryPath,
+    G: GraphPath,
+> ToTraversalNode<Q, G> for TraversalNode<Q, G> {
+    fn query_node(query: Q) -> Self {
+        Self::Query(query)
+    }
+    fn root_node(query: Q, start: Option<StartPath>, entry: ChildLocation) -> Self {
+        Self::Root(query, start, entry)
+    }
+    fn match_node(path: G, query: Q, old_query: Q) -> Self {
+        Self::Match(path, query, old_query)
+    }
+    fn end_node(found: Option<QueryResult<Q>>) -> Self {
+        Self::End(found)
+    }
+    fn mismatch_node(paths: PathPair<Q, G>) -> Self {
+        Self::Mismatch(paths)
+    }
+}
+pub(crate) type MatchNode = TraversalNode<QueryRangePath, GraphRangePath>;
+pub trait Traversable<'a: 'g, 'g, T: Tokenize>: Sized + 'a {
     type Guard: Traversable<'g, 'g, T> + Deref<Target=Hypergraph<T>>;
     fn graph(&'g self) -> Self::Guard;
 }
@@ -91,16 +123,23 @@ impl<'a: 'g, 'g, T: Tokenize + 'g> TraversableMut<'a, 'g, T> for RwLockWriteGuar
         &mut **self
     }
 }
-pub(crate) trait TraversalIterator<'a: 'g, 'g, T, Trav, D, S>: Iterator<Item = (usize, TraversalNode)>
+pub(crate) trait TraversalIterator<
+    'a: 'g,
+    'g,
+    T,
+    Trav,
+    D,
+    S,
+>: Iterator<Item = (usize, <S::Folder as TraversalFolder<'a, 'g, T, D>>::Node)>
 where
     T: Tokenize + 'a,
     Trav: Traversable<'a, 'g, T>,
     D: MatchDirection + 'a,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Trav=Trav>,
 {
-    fn new(trav: &'a Trav, root: TraversalNode) -> Self;
-    fn iter_children(trav: &'a Trav, node: &TraversalNode) -> Vec<TraversalNode> {
-        match node.clone() {
+    fn new(trav: &'a Trav, root: <S::Folder as TraversalFolder<'a, 'g, T, D>>::Node) -> Self;
+    fn iter_children(trav: &'a Trav, node: &<S::Folder as TraversalFolder<'a, 'g, T, D>>::Node) -> Vec<<S::Folder as TraversalFolder<'a, 'g, T, D>>::Node> {
+        match node.clone().into() {
             TraversalNode::Query(query) =>
                 S::query_start(
                     trav,
@@ -127,14 +166,14 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
     type Folder: TraversalFolder<'a, 'g, T, D, Trav=Self::Trav>;
     fn end_op(
         trav: &'a Self::Trav,
-        query: QueryRangePath,
+        query: <Self::Folder as TraversalFolder<'a, 'g, T, D>>::Query,
         start_path: StartPath,
-    ) -> Vec<TraversalNode>;
+    ) -> Vec<<Self::Folder as TraversalFolder<'a, 'g, T, D>>::Node>;
     fn parent_nodes(
         trav: &'a Self::Trav,
-        query: QueryRangePath,
+        query: <Self::Folder as TraversalFolder<'a, 'g, T, D>>::Query,
         start: Option<StartPath>,
-    ) -> Vec<TraversalNode> {
+    ) -> Vec<<Self::Folder as TraversalFolder<'a, 'g, T, D>>::Node> {
 
         let graph = trav.graph();
         let start_index = match start {
@@ -161,7 +200,7 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
         parents.sort_unstable_by(|a, b| TraversalOrder::cmp(a, b));
         parents.into_iter()
             .map(|p|
-                TraversalNode::Root(
+                ToTraversalNode::root_node(
                     query.clone(),
                     start.clone(),
                     p,
@@ -171,10 +210,10 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
     }
     fn root_successor_nodes(
         trav: &'a Self::Trav,
-        old_query: QueryRangePath,
+        old_query: <Self::Folder as TraversalFolder<'a, 'g, T, D>>::Query,
         old_start: Option<StartPath>,
         parent_entry: ChildLocation,
-    ) -> Vec<TraversalNode> {
+    ) -> Vec<<Self::Folder as TraversalFolder<'a, 'g, T, D>>::Node> {
         let start_index = old_query.get_entry();
         let graph = trav.graph();
         let pre_start = match old_start.clone() {
@@ -213,55 +252,62 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
             }
         };
         drop(graph);
-        let mut path = GraphRangePath::new(pre_start);
-        if path.advance_next::<_, _, D>(trav) {
-            Self::match_end(&trav, PathPair::GraphMajor(path, old_query))
-        } else {
-            Self::index_end(trav, old_query, path)
-        }
+        let path =
+            <Self::Folder as TraversalFolder<'a, 'g, T, D>>::Path::from_start_path(pre_start);
+        IntoSequenceIterator::<_, D, _>::into_seq_iter(path, trav).next()
+            .map(|path|
+                Self::match_end(&trav, PathPair::GraphMajor(path, old_query.clone()))
+            )
+            .unwrap_or_else(|path|
+                Self::index_end(trav, old_query.clone(), path)
+            )
     }
     fn query_start(
         trav: &'a Self::Trav,
-        mut query: QueryRangePath,
-    ) -> Vec<TraversalNode> {
-        if query.advance_next::<_, _, D>(trav) {
-            Self::parent_nodes(
-                trav,
-                query,
-                None,
+        query: <Self::Folder as TraversalFolder<'a, 'g, T, D>>::Query,
+    ) -> Vec<<Self::Folder as TraversalFolder<'a, 'g, T, D>>::Node> {
+        IntoSequenceIterator::<_, D, _>::into_seq_iter(query, trav).next()
+            .map(|query|
+                Self::parent_nodes(
+                    trav,
+                    query,
+                    None,
+                )
             )
-        } else {
-            vec![TraversalNode::End(None)]
-        }
+            .unwrap_or_else(|_|
+                vec![ToTraversalNode::end_node(None)]
+            )
     }
     fn after_match(
         trav: &'a Self::Trav,
-        paths: PathPair,
-    ) -> Vec<TraversalNode> {
+        paths: PathPair<<Self::Folder as TraversalFolder<'a, 'g, T, D>>::Query, <Self::Folder as TraversalFolder<'a, 'g, T, D>>::Path>,
+    ) -> Vec<<Self::Folder as TraversalFolder<'a, 'g, T, D>>::Node> {
         let mode = paths.mode();
-        let (mut path, query) = paths.unpack();
-        if path.advance_next::<_, _, D>(trav) {
-            Self::match_end(&trav, PathPair::from_mode(path, query, mode))
-        } else {
-            Self::index_end(trav, query, path)
-        }
+        let (path, query) = paths.unpack();
+        IntoSequenceIterator::<_, D, _>::into_seq_iter(path, trav).next()
+            .map(|path|
+                Self::match_end(&trav, PathPair::from_mode(path, query.clone(), mode))
+            )
+            .unwrap_or_else(|path|
+                Self::index_end(trav, query.clone(), path)
+            )
     }
     fn index_end(
         trav: &'a Self::Trav,
-        query: QueryRangePath,
-        mut path: GraphRangePath,
-    ) -> Vec<TraversalNode> {
+        query: <Self::Folder as TraversalFolder<'a, 'g, T, D>>::Query,
+        mut path: <Self::Folder as TraversalFolder<'a, 'g, T, D>>::Path,
+    ) -> Vec<<Self::Folder as TraversalFolder<'a, 'g, T, D>>::Node> {
         path.move_width_into_start();
         Self::end_op(trav, query, path.into_start_path())
     }
     /// generate nodes for a child
     fn match_end(
         trav: &'a Self::Trav,
-        new_paths: PathPair,
-    ) -> Vec<TraversalNode> {
+        new_paths: PathPair<<Self::Folder as TraversalFolder<'a, 'g, T, D>>::Query, <Self::Folder as TraversalFolder<'a, 'g, T, D>>::Path>,
+    ) -> Vec<<Self::Folder as TraversalFolder<'a, 'g, T, D>>::Node> {
         let (new_path, new_query) = new_paths.unpack();
-        let path_next = new_path.get_end(trav);
-        let query_next = new_query.get_end(trav);
+        let path_next = new_path.get_end::<_, D, _>(trav);
+        let query_next = new_query.get_end::<_, D, _>(trav);
         match path_next.width.cmp(&query_next.width) {
             Ordering::Greater =>
                 // continue in prefix of child
@@ -280,26 +326,27 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
                 if path_next == query_next {
                     // continue with match node
                     let mut path = new_path.clone();
-                    let mut query = new_query.clone();
-                    path.on_match(trav);
+                    let query = new_query.clone();
+                    path.on_match::<_, D, _>(trav);
                     vec![
-                        if query.advance_next::<_, _, D>(trav) {
-                            TraversalNode::Match(
-                                path,
-                                query,
-                                new_query.clone(),
+                        IntoSequenceIterator::<_, D, _>::into_seq_iter(query, trav).next()
+                            .map(|query|
+                                ToTraversalNode::match_node(
+                                    path.clone(),
+                                    query,
+                                    new_query.clone(),
+                                )
                             )
-                        } else {
-                            let found = QueryFound::new(
-                                path.reduce_end::<_, _, D>(trav),
-                                query,
-                            );
-                            TraversalNode::End(Some(found))
-                        }
+                            .unwrap_or_else(|query|
+                                ToTraversalNode::end_node(Some(QueryResult::new(
+                                    path.reduce_end::<_, D, _>(trav),
+                                    query,
+                                )))
+                            )
                     ]
                 } else if path_next.width == 1 {
                     vec![
-                        TraversalNode::Mismatch(new_path)
+                        ToTraversalNode::mismatch_node(PathPair::GraphMajor(new_path, new_query))
                     ]
                 } else {
                     Self::prefix_nodes(
@@ -323,8 +370,8 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
     fn prefix_nodes(
         trav: &'a Self::Trav,
         index: Child,
-        new_paths: PathPair,
-    ) -> Vec<TraversalNode> {
+        new_paths: PathPair<<Self::Folder as TraversalFolder<'a, 'g, T, D>>::Query, <Self::Folder as TraversalFolder<'a, 'g, T, D>>::Path>,
+    ) -> Vec<<Self::Folder as TraversalFolder<'a, 'g, T, D>>::Node> {
 
         let graph = trav.graph();
         let vertex = graph.expect_vertex_data(index);
@@ -348,11 +395,14 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
 }
 pub(crate) trait TraversalFolder<'a: 'g, 'g, T: Tokenize, D: MatchDirection>: Sized {
     type Trav: Traversable<'a, 'g, T>;
+    type Query: QueryPath;
+    type Path: GraphPath;
+    type Node: ToTraversalNode<Self::Query, Self::Path>;
     type Break;
     type Continue;
     fn fold_found(
         trav: &'a Self::Trav,
         acc: Self::Continue,
-        node: TraversalNode
+        node: Self::Node
     ) -> ControlFlow<Self::Break, Self::Continue>;
 }

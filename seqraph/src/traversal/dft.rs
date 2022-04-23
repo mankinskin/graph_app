@@ -1,6 +1,6 @@
 use std::iter::{Extend, FusedIterator};
 
-use crate::{TraversalNode, TraversalIterator, Tokenize, Traversable, MatchDirection, DirectedTraversalPolicy};
+use crate::{TraversalIterator, Tokenize, Traversable, MatchDirection, DirectedTraversalPolicy, TraversalFolder};
 
 #[derive(Clone)]
 pub(crate) struct Dft<'a: 'g, 'g, T, Trav, D, S>
@@ -10,8 +10,8 @@ where
     D: MatchDirection + 'a,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Trav=Trav>,
 {
-    stack: Vec<(usize, TraversalNode)>,
-    last: (usize, TraversalNode),
+    stack: Vec<(usize, <S::Folder as TraversalFolder<'a, 'g, T, D>>::Node)>,
+    last: (usize, <S::Folder as TraversalFolder<'a, 'g, T, D>>::Node),
     trav: &'a Trav,
     _ty: std::marker::PhantomData<(&'g T, D, S)>
 }
@@ -24,7 +24,7 @@ where
     S: DirectedTraversalPolicy<'a, 'g, T, D, Trav=Trav>,
 {
     #[inline]
-    pub fn new(trav: &'a Trav, root: TraversalNode) -> Self {
+    pub fn new(trav: &'a Trav, root: <S::Folder as TraversalFolder<'a, 'g, T, D>>::Node) -> Self {
         Self {
             stack: vec![],
             last: (0, root),
@@ -41,7 +41,7 @@ where
     D: MatchDirection + 'a,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Trav=Trav>,
 {
-    type Item = (usize, TraversalNode);
+    type Item = (usize, <S::Folder as TraversalFolder<'a, 'g, T, D>>::Node);
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -77,7 +77,7 @@ where
     D: MatchDirection + 'a,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Trav=Trav>,
 {
-    fn new(trav: &'a Trav, root: TraversalNode) -> Self {
+    fn new(trav: &'a Trav, root: <S::Folder as TraversalFolder<'a, 'g, T, D>>::Node) -> Self {
         Dft::new(trav, root)
     }
 }

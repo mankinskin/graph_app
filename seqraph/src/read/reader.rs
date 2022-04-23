@@ -1,4 +1,4 @@
-use std::{sync::{RwLockReadGuard, RwLockWriteGuard}, borrow::Borrow};
+use std::{sync::{RwLockReadGuard, RwLockWriteGuard}, borrow::Borrow, collections::HashMap};
 
 use crate::{
     index::*,
@@ -7,31 +7,140 @@ use crate::{
 use itertools::*;
 
 #[derive(Debug, Default)]
-struct ReaderCache {
-    pub(crate) group: Option<Child>,
-    buffer: Option<Child>,
+struct ReaderBuffer {
+    patterns: HashMap<usize, Pattern>,
 }
-impl ReaderCache {
-    fn append_new<T: Tokenize, D: IndexDirection>(
+impl ReaderBuffer {
+    pub fn new(next: Child) -> Self {
+        Self {
+            patterns: HashMap::from([
+                (next.width(), vec![next]),
+            ])
+        }
+    }
+    pub fn close<T: Tokenize, D: IndexDirection>(
         &mut self,
         reader: &'_ mut Reader<T, D>,
+    ) -> Option<Child> {
+        None
+    }
+}
+#[derive(Debug)]
+struct CacheRoot {
+    index: Child,
+    last_new: bool,
+}
+impl CacheRoot {
+    pub fn new_unknown(index: Child) -> Self {
+        Self {
+            index,
+            last_new: true,
+        }
+    }
+    pub fn new_known(index: Child) -> Self {
+        Self {
+            index,
+            last_new: false,
+        }
+    }
+}
+#[derive(Debug)]
+pub struct Reader<T: Tokenize, D: IndexDirection> {
+    graph: HypergraphRef<T>,
+    root: Option<CacheRoot>,
+    buffer: Option<ReaderBuffer>,
+    _ty: std::marker::PhantomData<D>,
+}
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for Reader<T, D> {
+    type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
+    fn graph(&'g self) -> Self::Guard {
+        self.graph.read().unwrap()
+    }
+}
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g, T> for Reader<T, D> {
+    type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
+    fn graph_mut(&'g mut self) -> Self::GuardMut {
+        self.graph.write().unwrap()
+    }
+}
+impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
+    pub(crate) fn new(graph: HypergraphRef<T>) -> Self {
+        Self {
+            graph,
+            root: None,
+            buffer: None,
+            _ty: Default::default(),
+        }
+    }
+    pub(crate) fn read_sequence(
+        &mut self,
+        sequence: impl IntoIterator<Item = T>,
+    ) -> Child {
+        let sequence: NewTokenIndices = self.new_token_indices(sequence);
+        self.try_read_sequence(sequence)
+    }
+    fn try_read_sequence(
+        &mut self,
+        sequence: NewTokenIndices,
+    ) -> Child {
+        if sequence.is_empty() {
+            self.finish().expect("Empty sequence")
+        } else {
+            let (unknown, known, remainder) = self.find_known_block(sequence);
+            self.append_unknown(unknown);
+            match QueryRangePath::new_directed::<D, _>(known) {
+                Ok(query_path) => self.read_known(query_path),
+                Err(NoMatch::SingleIndex) => unimplemented!(),
+                Err(err) => panic!("{:?}", err),
+            }
+            self.try_read_sequence(remainder)
+        }
+    }
+    /// append a pattern of new token indices
+    /// returns index of possible new index
+    fn append_pattern_to_root(
+        &mut self,
+        new: Pattern,
+    ) -> Result<(), ()> {
+        if let Some(CacheRoot {
+            index: root,
+            last_new,
+        }) = self.root.as_mut() {
+            let mut graph = &mut *self.graph_mut();
+            let vertex = root.vertex_mut(&mut graph);
+            *root = if vertex.children.len() == 1 && vertex.parents.len() == 0 {
+                // if no old overlaps
+                // append to single pattern
+                // no overlaps because new
+                let (&pid, _) = vertex.expect_any_pattern();
+                graph.append_to_pattern(root, pid, new)
+            } else {
+                // some old overlaps though
+                graph.index_pattern([&[*root], new.as_slice()].concat())
+            };
+            Result::Err(())
+        } else {
+            Result::Ok(())
+        }
+    }
+    fn append_unknown(
+        &mut self,
         new: Pattern,
     ) {
-        if let Some(group) = self.group.as_mut() {
-            *group = reader.append_new_pattern_to_index(group.clone(), new);
-        } else {
+        if self.append_pattern_to_root(new).is_err() {
             match new.len() {
                 0 => {},
                 1 => {
                     let new = new.into_iter().next().unwrap();
-                    if let Some(buffer) = self.buffer.take() {
-                        self.group = Some(reader.graph_mut().index_pattern(vec![buffer, new]));
+                    if let Some(buffer) = self.buffer {
+                        // TODO: respect direction
+                        self.root = Some(CacheRoot::new_unknown(self.graph_mut().index_pattern(vec![buffer, new])));
                     } else {
-                        self.group = Some(reader.graph_mut().force_index_pattern(vec![new]));
+                        self.root = Some(CacheRoot::new_unknown(new));
                     }
                 },
                 _ => {
-                    let new = if let Some(buffer) = self.buffer.take() {
+                    let new = if let Some(buffer) = self.buffer {
                         [&[buffer], &new[..]].concat()
                     } else {
                         new
@@ -39,68 +148,105 @@ impl ReaderCache {
                     // insert new pattern so it can be found in later queries
                     // any new indicies afterwards need to be appended
                     // to the pattern inside this index
-                    let new = reader.graph_mut().index_pattern(new);
-                    self.group = Some(new);
+                    let new = self.graph_mut().index_pattern(new);
+                    self.root = Some(CacheRoot::new_unknown(new));
                 }
             }
         }
     }
-    fn read_known<T: Tokenize, D: IndexDirection>(
+    fn try_read_prefix(
         &mut self,
-        reader: &'_ mut Reader<T, D>,
-        known: Pattern,
+        query: QueryRangePath,
+    ) -> Option<(Child, QueryRangePath)> {
+        let mut indexer = self.indexer();
+        match indexer.index_next_prefix(query.clone()) {
+            Ok((index, query)) => Some((index, query)),
+            Err(_not_found) => query.get_advance::<_, _, D>(&mut indexer),
+        }
+    }
+    fn read_known(
+        &mut self,
+        known: QueryRangePath,
     ) {
-        if let Some(group) = self.group.as_mut() {
-            let new = reader.overlap_index(*group, known);
-            *group = new;
+        if let Some(CacheRoot {
+            index: root,
+            last_new,
+        }) = self.root.as_mut() {
+            if *last_new {
+
+            } else {
+                let new = self.overlap_index(*root, known);
+                *root = new;
+            }
         } else {
             // first or second index
-            if let Some(buffer) = self.buffer.take() {
+            if let Some(buffer) = self.buffer {
                 // second index
-                let new = reader.overlap_index(buffer, known);
-                self.group = Some(new);
+                let new = self.overlap_index(buffer, known);
+                self.root = Some(CacheRoot::new_known(new));
             } else {
                 // first index
-                let (next, rem) = reader.read_prefix(known);
-                self.buffer = Some(next);
-                if !rem.is_empty() {
-                    self.read_known(reader, rem);
-                }
+                let (prefix, advanced) = self.try_read_prefix(known).expect("Empty known block!");
+                self.buffer = Some(ReaderBuffer::new(prefix));
+                self.read_known(advanced);
             }
         }
     }
-    fn get(self) -> Option<Child> {
-        self.group.or(self.buffer)
+    fn finish(
+        self,
+    ) -> Option<Child> {
+        unimplemented!();
+        //let root = self.root.map(|root| root.index);
+        //self.buffer.close(&mut self)
+        //    .and_then(|buffer|
+        //        if let Some(root) = root {
+
+        //        } else {
+        //            buffer
+        //        }
+        //    )
+        //    .or(root)
     }
-}
-#[derive(Debug)]
-pub struct Reader<T: Tokenize, D: IndexDirection> {
-    graph: HypergraphRef<T>,
-    _ty: std::marker::PhantomData<D>,
-}
-//impl<T: Tokenize, D: IndexDirection> std::ops::Deref for Reader<T, D> {
-//    type Target = Hypergraph<T>;
-//    fn deref(&self) -> &Self::Target {
-//        &*self.graph.read().unwrap()
-//    }
-//}
-//impl<T: Tokenize, D: IndexDirection> std::ops::DerefMut for Reader<T, D> {
-//    fn deref_mut(&mut self) -> &mut Self::Target {
-//        &mut *self.graph.write().unwrap()
-//    }
-//}
-impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
-    pub(crate) fn new(graph: HypergraphRef<T>) -> Self {
-        Self {
-            graph,
-            _ty: Default::default(),
-        }
+    /// try to expand postfix
+    pub fn try_expand_postfix() -> Option<Child> {
+        unimplemented!()
     }
-    pub(crate) fn graph(&self) -> RwLockReadGuard<'_, Hypergraph<T>> {
-        self.graph.read().unwrap()
+    /// index the context of an expanded postfix
+    pub fn index_context(context_path: Vec<ChildLocation>) -> Child {
+        unimplemented!()
     }
-    pub(crate) fn graph_mut(&mut self) -> RwLockWriteGuard<'_, Hypergraph<T>> {
-        self.graph.write().unwrap()
+    pub fn overlap_index_path(&mut self, mut path: ChildPath, index: Child, context: QueryRangePath) -> Option<(ChildPath, Child, QueryRangePath)> {
+        // find postfix with overlap
+        let mut graph = self.graph_mut();
+        let child_patterns = graph.expect_children_of(index);
+        drop(graph);
+        let postfixes = child_patterns.iter().map(|(pid, pattern)| {
+            let last = D::last_index(pattern);
+            (ChildLocation::new(index, *pid, last), pattern[last].clone())
+        })
+        .sorted_by(|a, b|
+            a.1.width().cmp(&b.1.width())
+        ).collect_vec();
+        postfixes.into_iter().fold(Err(None), |_, (loc, postfix)|
+            // todo: merge query path context with postfix
+            match self.graph.index_path_prefix(postfix) {
+                Ok((extension, advanced)) => Ok((loc, extension, advanced)),
+                _ => Err(Some((loc, postfix)))
+            }
+        )
+        .map(|(loc, postfix, advanced)| {
+            path.push(loc);
+            Some((path, postfix, advanced))
+        })
+        .unwrap_or_else(|res| 
+            res.and_then(|(loc, postfix)| {
+                path.push(loc);
+                self.overlap_index_path(path, postfix, context)
+            })
+        )
+    }
+    pub fn overlap_index(&mut self, index: Child, context: QueryRangePath) -> Option<(ChildPath, Child, QueryRangePath)> {
+        self.overlap_index_path(vec![], index, context)
     }
     #[allow(unused)]
     pub(crate) fn indexer(&self) -> Indexer<T, D> {
@@ -142,130 +288,5 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         let cache = Self::take_while(&mut seq_iter, |t| t.is_new());
         let known = Self::take_while(&mut seq_iter, |t| t.is_known());
         (cache, known, seq_iter.collect())
-    }
-    pub(crate) fn read_sequence(
-        &mut self,
-        sequence: impl IntoIterator<Item = T>,
-    ) -> Child {
-        let sequence: NewTokenIndices = self.new_token_indices(sequence);
-        self.try_read_sequence(ReaderCache::default(), sequence)
-    }
-    fn try_read_sequence(
-        &mut self,
-        mut cache: ReaderCache,
-        sequence: NewTokenIndices,
-    ) -> Child {
-        if sequence.is_empty() {
-            cache.get().expect("Empty sequence")
-        } else {
-            let (new, known, remainder) = self.find_known_block(sequence);
-            cache.append_new(self, new);
-            cache.read_known(self, known);
-            self.try_read_sequence(cache, remainder)
-        }
-    }
-    fn read_prefix(
-        &mut self,
-        pattern: Vec<Child>,
-    ) -> (Child, Pattern) {
-        //let _pat_str = self.graph.pattern_string(&pattern);
-        match self.indexer().index_prefix(pattern.borrow()) {
-            Ok(_indexed_path) => {
-                unimplemented!();
-                //let (_lctx, inner, _rctx, rem) = self.index_found(found_path);
-                //(inner, rem)
-            }
-            Err(_not_found) => {
-                let (c, rem) = D::split_context_head(pattern).unwrap();
-                (c, rem)
-            },
-        }
-    }
-    /// index prefix of new pattern of known indices
-    /// store pattern and width in collection
-    /// find largest postfix of index (location, offset from begin)
-    pub fn find_largest_postfix(index: Child) -> (ChildLocation, usize) {
-        unimplemented!()
-    }
-    /// try to expand postfix
-    pub fn try_expand_postfix() -> Option<Child> {
-        unimplemented!()
-    }
-    /// index the context of an expanded postfix
-    pub fn index_context() -> Child {
-        unimplemented!()
-    }
-    pub fn overlap_index(&mut self, index: Child, mut _context: Pattern) -> Child {
-        // keep going down into next smallest postfi
-        //unimplemented!();
-        //while !context.is_empty() {
-        //    let mut extensions = vec![];
-        //    let mut smallest_postfix = Some(index);
-        //    while let Some(current) = smallest_postfix.take() {
-        //        let graph = &*self.graph();
-        //        let vertex = current.vertex(&graph);
-        //        // find extensions from index into context
-        //        for (pid, mut p) in vertex.get_children().clone().into_iter() {
-        //            let postfix = p.pop().unwrap().clone();
-        //            // remember smallest postfix
-        //            smallest_postfix = smallest_postfix.map_or(Some(postfix), |smallest|
-        //                if postfix.width > 1 && smallest.width() > postfix.width() {
-        //                    Some(postfix)
-        //                } else {
-        //                    Some(smallest)
-        //                }
-        //            );
-        //            // if extension found
-        //            if let Some(found) = graph.find_ancestor_in_context(postfix, context.clone()).ok() {
-        //                // create index for extension
-        //                let (_, extension, _, _rem) = self.indexer().index_found(found);
-        //                let pre_context = self.indexer().index_pre_context_at(&ChildLocation::new(current, pid, p.len())).unwrap();
-        //                // find pid with postfix context in extension
-        //                extensions.push((pre_context, postfix, extension));
-        //            }
-        //        }
-        //    }
-        //    let (next, rem) = self.read_prefix(context.clone());
-        //    index = self.append_new_pattern_to_index(index, next.into_pattern());
-        //    for (pre_context, postfix, extension) in extensions.into_iter() {
-        //        let n_pid = {
-        //            let graph = &*self.graph();
-        //            let pid = extension.vertex(&graph).find_child_pattern_id(|(_pid, pat)|
-        //                *pat.first().unwrap() == postfix
-        //            ).unwrap();
-        //            let p = extension.vertex(&graph).get_child_pattern(&pid).unwrap();
-        //            // postfix of extension
-        //            let postfix = *p.last().unwrap();
-        //            // find context of extension in next
-        //            next.vertex(&graph).find_child_pattern_id(|(_pid, pat)|
-        //                *pat.first().unwrap() == postfix
-        //            ).unwrap()
-        //        };
-        //        let post_context = self.indexer().index_post_context_at(&ChildLocation::new(next, n_pid, 0)).unwrap();
-        //        self.graph_mut().add_pattern_with_update(index, [pre_context, extension, post_context].as_slice());
-        //    }
-        //    context = rem;
-        //}
-        index
-    }
-    /// append a pattern of new token indices
-    /// returns index of possible new index
-    pub fn append_new_pattern_to_index(
-        &mut self,
-        parent: Child,
-        new: Pattern,
-    ) -> Child {
-        let mut graph = &mut *self.graph_mut();
-        let vertex = parent.vertex_mut(&mut graph);
-        if vertex.children.len() == 1 && vertex.parents.len() == 0 {
-            // if no old overlaps
-            // append to single pattern
-            // no overlaps because new
-            let (&pid, _) = vertex.expect_any_pattern();
-            graph.append_to_pattern(parent, pid, new)
-        } else {
-            // some old overlaps though
-            graph.index_pattern([&[parent], new.as_slice()].concat())
-        }
     }
 }

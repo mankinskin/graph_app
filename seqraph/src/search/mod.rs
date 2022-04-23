@@ -95,10 +95,10 @@ impl<
 > FoundPath {
     pub(crate) fn new<
         T: Tokenize + 'a,
-        Trav: Traversable<'a, 'g, T>,
         D: MatchDirection + 'a,
+        Trav: Traversable<'a, 'g, T>,
     >(trav: &'a Trav, range_path: GraphRangePath) -> Self {
-        if range_path.is_complete::<_, _, D>(trav) {
+        if range_path.is_complete::<_, D, _>(trav) {
             Self::Complete(range_path.into_start_path().entry().parent)
         } else {
             Self::Range(range_path)
@@ -113,14 +113,14 @@ impl<
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct QueryFound {
+pub struct QueryResult<Q: QueryPath> {
     pub(crate) found: FoundPath,
-    pub(crate) query: QueryRangePath,
+    pub(crate) query: Q,
 }
 
-impl QueryFound {
-    pub(crate) fn new(found: impl Into<FoundPath>, query: QueryRangePath) -> Self {
-        QueryFound {
+impl<Q: QueryPath> QueryResult<Q> {
+    pub(crate) fn new(found: impl Into<FoundPath>, query: Q) -> Self {
+        Self {
             found: found.into(),
             query,
         }
@@ -128,13 +128,14 @@ impl QueryFound {
     pub fn complete(query: impl IntoPattern, index: impl AsChild) -> Self {
         Self {
             found: FoundPath::Complete(index.as_child()),
-            query: QueryRangePath::complete(query),
+            query: Q::complete(query),
         }
     }
     pub fn unwrap_complete(self) -> Child {
         self.found.unwrap_complete()
     }
 }
+pub type QueryFound = QueryResult<QueryRangePath>;
 pub type SearchResult = Result<QueryFound, NoMatch>;
 
 impl<'t, 'g, T> HypergraphRef<T>

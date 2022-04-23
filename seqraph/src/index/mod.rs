@@ -3,7 +3,7 @@
 use crate::{
     vertex::*,
     search::*,
-    HypergraphRef,
+    HypergraphRef, QueryRangePath,
 };
 use std::ops::RangeFrom;
 
@@ -11,37 +11,6 @@ mod indexer;
 pub use indexer::*;
 mod index_direction;
 pub use index_direction::*;
-
-//#[derive(Debug, Clone, PartialEq, Eq)]
-//pub struct IndexedPath {
-//    pub(crate) indexed: IndexedChild,
-//    pub(crate) end_path: Option<ChildPath>,
-//    pub(crate) remainder: Option<Pattern>
-//}
-//#[derive(Debug, Clone, PartialEq, Eq)]
-//pub struct IndexedChild {
-//    pub(crate) location: ChildLocation,
-//    pub(crate) context: Option<Child>,
-//    pub(crate) inner: Child,
-//}
-//impl IndexedPath {
-//    pub fn new(indexed: IndexedChild, end_path: ChildPath, remainder: impl IntoPattern) -> Self {
-//        Self {
-//            indexed,
-//            end_path: if end_path.is_empty() {
-//                None
-//            } else {
-//                Some(end_path)
-//            },
-//            remainder: if remainder.is_empty() {
-//                None
-//            } else {
-//                Some(remainder.into_pattern())
-//            },
-//        }
-//    }
-//}
-//type IndexingResult = Result<IndexedPath, NoMatch>;
 
 impl<'t, 'g, T> HypergraphRef<T>
 where
@@ -54,50 +23,16 @@ where
     pub(crate) fn index_prefix(
         &self,
         pattern: impl IntoPattern,
-    ) -> Result<Child, NoMatch> {
+    ) -> Result<(Child, QueryRangePath), NoMatch> {
         self.indexer().index_prefix(pattern)
     }
+    pub(crate) fn index_path_prefix(
+        &self,
+        query: QueryRangePath,
+    ) -> Result<(Child, QueryRangePath), NoMatch> {
+        self.indexer().index_path_prefix(query)
+    }
 }
-//pub(crate) enum ContextHalf {
-//    Child(Child),
-//    Pattern(Pattern),
-//}
-//impl ContextHalf {
-//    pub fn try_new(p: impl IntoPattern) -> Option<Self> {
-//        let p = p.borrow();
-//        match p.len() {
-//            0 => None,
-//            1 => Some(Self::Child(*p.into_iter().next().unwrap())),
-//            _ => Some(Self::Pattern(p.into_pattern())),
-//        }
-//    }
-//    pub fn unwrap_child(self) -> Child {
-//        match self {
-//            Self::Child(c) => c,
-//            _ => panic!("Failed to unwrap ContextHalf::Child!"),
-//        }
-//    }
-//    pub fn expect_child(self, msg: &str) -> Child {
-//        match self {
-//            Self::Child(c) => c,
-//            _ => panic!("Expected ContextHalf::Child!: {}", msg),
-//        }
-//    }
-//}
-//
-//impl Borrow<[Child]> for ContextHalf {
-//    fn borrow(&self) -> &[Child] {
-//        match self {
-//            Self::Child(c) => std::slice::from_ref(c),
-//            Self::Pattern(p) => p.borrow(),
-//        }
-//    }
-//}
-//impl AsRef<[Child]> for ContextHalf {
-//    fn as_ref(&self) -> &[Child] {
-//        self.borrow()
-//    }
-//}
 
 pub(crate) struct IndexSplitResult {
     inner: Child,
@@ -140,7 +75,7 @@ pub(crate) mod tests {
         let _xabyz = graph.index_patterns([vec![xaby, z], vec![xab, yz]]);
         let graph = HypergraphRef::from(graph);
         let query = vec![by, z];
-        let byz = graph.index_prefix(query.borrow()).expect("Indexing failed");
+        let (byz, _) = graph.index_prefix(query.borrow()).expect("Indexing failed");
         assert_eq!(byz, Child {
             index: 13,
             width: 3,
@@ -152,7 +87,7 @@ pub(crate) mod tests {
             "byz"
         );
         let query = vec![ab, y];
-        let aby = graph.index_prefix(query.borrow()).expect("Indexing failed");
+        let (aby, _) = graph.index_prefix(query.borrow()).expect("Indexing failed");
         let aby_found = graph.find_parent(&query);
         assert_eq!(
             aby_found,
@@ -181,7 +116,7 @@ pub(crate) mod tests {
         let graph_ref = HypergraphRef::from(graph);
 
         let query = vec![a, b, y, x];
-        let aby = graph_ref.index_prefix(query.borrow()).expect("Indexing failed");
+        let (aby, _) = graph_ref.index_prefix(query.borrow()).expect("Indexing failed");
         assert_eq!(aby, Child {
             index: 12,
             width: 3,

@@ -53,6 +53,9 @@ pub trait MatchDirection : Clone {
     fn pattern_tail<T: AsChild>(pattern: &'_ [T]) -> &'_ [T];
     fn pattern_head<T: AsChild>(pattern: &'_ [T]) -> Option<&T>;
     fn head_index<T: AsChild>(_pattern: &'_ [T]) -> usize;
+    fn last_index<T: AsChild>(pattern: &'_ [T]) -> usize {
+        Self::Opposite::head_index(pattern)
+    }
     fn normalize_index<T: AsChild>(
         pattern: &'_ [T],
         index: usize,
