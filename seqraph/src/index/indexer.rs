@@ -48,7 +48,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> DirectedTraversalPoli
         trav: &'a Self::Trav,
         query: QueryRangePath,
         start: StartPath,
-    ) -> Vec<<Self::Folder as TraversalFolder<'a, 'g, T, D>>::Node> {
+    ) -> Vec<FolderNode<'a, 'g, T, D, Self>> {
         let mut ltrav = trav.clone();
         let IndexSplitResult {
             inner: post,

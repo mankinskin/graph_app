@@ -1,4 +1,4 @@
-use std::{sync::{RwLockReadGuard, RwLockWriteGuard}, borrow::Borrow, collections::HashMap};
+use std::{sync::{RwLockReadGuard, RwLockWriteGuard}, collections::HashMap};
 
 use crate::{
     index::*,

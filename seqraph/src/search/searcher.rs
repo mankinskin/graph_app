@@ -63,7 +63,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> DirectedTraversalPoli
         trav: &'a Self::Trav,
         query: QueryRangePath,
         start: StartPath,
-    ) -> Vec<<Self::Folder as TraversalFolder<'a, 'g, T, D>>::Node> {
+    ) -> Vec<FolderNode<'a, 'g, T, D, Self>> {
         Self::parent_nodes(trav, query, Some(start))
     }
 }
@@ -77,7 +77,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> DirectedTraversalPoli
         _trav: &'a Self::Trav,
         _query: QueryRangePath,
         _start: StartPath,
-    ) -> Vec<<Self::Folder as TraversalFolder<'a, 'g, T, D>>::Node> {
+    ) -> Vec<FolderNode<'a, 'g, T, D, Self>> {
         vec![]
     }
 }
