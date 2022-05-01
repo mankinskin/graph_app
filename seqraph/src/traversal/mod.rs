@@ -23,10 +23,13 @@ use crate::{
     Hypergraph,
     Vertexed,
     MatchDirection,
-    TraversalOrder, QueryResult,
+    TraversalOrder, QueryResult, FoundPath,
 };
 
-pub(crate) trait ToTraversalNode<Q: QueryPath, G: GraphPath>: Clone + Into<TraversalNode<Q, G>> {
+pub(crate) trait ToTraversalNode<
+    Q: TraversalQuery,
+    G: TraversalPath,
+    >: Clone + Into<TraversalNode<Q, G>> {
     fn query_node(query: Q) -> Self;
     fn root_node(query: Q, start: Option<StartPath>, entry: ChildLocation) -> Self;
     fn match_node(path: G, query: Q, old_query: Q) -> Self;
@@ -36,8 +39,8 @@ pub(crate) trait ToTraversalNode<Q: QueryPath, G: GraphPath>: Clone + Into<Trave
 
 #[derive(Clone, Debug)]
 pub(crate) enum TraversalNode<
-    Q: QueryPath,
-    G: GraphPath,
+    Q: TraversalQuery,
+    G: TraversalPath,
 > {
     Query(Q),
     Root(Q, Option<StartPath>, ChildLocation),
@@ -46,8 +49,8 @@ pub(crate) enum TraversalNode<
     Mismatch(PathPair<Q, G>),
 }
 impl<
-    Q: QueryPath,
-    G: GraphPath,
+    Q: TraversalQuery,
+    G: TraversalPath,
 > ToTraversalNode<Q, G> for TraversalNode<Q, G> {
     fn query_node(query: Q) -> Self {
         Self::Query(query)
@@ -261,7 +264,7 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
             }
         };
         drop(graph);
-        let path = FolderPath::<'a, 'g, T, D, Self>::from_start_path(pre_start);
+        let path = FolderPath::<'a, 'g, T, D, Self>::from(pre_start);
         IntoSequenceIterator::<_, D, _>::into_seq_iter(path, trav).next()
             .map(|path|
                 Self::match_end(&trav, PathPair::GraphMajor(path, old_query.clone()))
@@ -306,7 +309,7 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
         mut path: FolderPath<'a, 'g, T, D, Self>,
     ) -> Vec<FolderNode<'a, 'g, T, D, Self>> {
         path.move_width_into_start();
-        Self::end_op(trav, query, path.into_start_path())
+        Self::end_op(trav, query, Into::<StartPath>::into(path))
     }
     /// generate nodes for a child
     fn match_end(
@@ -403,8 +406,8 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
 }
 pub(crate) trait TraversalFolder<'a: 'g, 'g, T: Tokenize, D: MatchDirection>: Sized {
     type Trav: Traversable<'a, 'g, T>;
-    type Query: QueryPath;
-    type Path: GraphPath;
+    type Query: TraversalQuery;
+    type Path: TraversalPath;
     type Node: ToTraversalNode<Self::Query, Self::Path>;
     type Break;
     type Continue;
@@ -413,4 +416,89 @@ pub(crate) trait TraversalFolder<'a: 'g, 'g, T: Tokenize, D: MatchDirection>: Si
         acc: Self::Continue,
         node: Self::Node
     ) -> ControlFlow<Self::Break, Self::Continue>;
+}
+
+pub trait TraversalQuery: RangePath + PatternStart + PatternEnd {}
+impl<T: RangePath + PatternStart + PatternEnd> TraversalQuery for T {}
+
+pub(crate) trait TraversalPath:
+    RangePath +
+    GraphStart +
+    GraphEnd +
+    From<StartPath> +
+    Into<StartPath> +
+    Into<GraphRangePath>
+{
+    fn reduce_end<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        D: MatchDirection + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(self, trav: &'a Trav) -> FoundPath;
+    fn move_width_into_start(&mut self);
+    fn on_match<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        D: MatchDirection + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(&mut self, trav: &'a Trav);
+}
+
+#[derive(Clone, Debug)]
+pub(crate) enum PathPair<
+    Q: TraversalQuery,
+    G: TraversalPath,
+> {
+    GraphMajor(G, Q),
+    QueryMajor(Q, G),
+}
+impl<
+    Q: TraversalQuery,
+    G: TraversalPath,
+> PathPair<Q, G> {
+    pub fn from_mode(path: G, query: Q, mode: bool) -> Self {
+        if mode {
+            Self::GraphMajor(path, query)
+        } else {
+            Self::QueryMajor(query, path)
+        }
+    }
+    pub fn mode(&self) -> bool {
+        matches!(self, Self::GraphMajor(_, _))
+    }
+    pub fn push_major(&mut self, location: ChildLocation) {
+        match self {
+            Self::GraphMajor(path, _) =>
+                path.push_next(location),
+            Self::QueryMajor(query, _) =>
+                query.push_next(location),
+        }
+    }
+    pub fn unpack(self) -> (G, Q) {
+        match self {
+            Self::GraphMajor(path, query) =>
+                (path, query),
+            Self::QueryMajor(query, path) =>
+                (path, query),
+        }
+    }
+    pub(crate) fn reduce_mismatch<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        D: MatchDirection + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(self, trav: &'a Trav) -> QueryResult<Q> {
+        match self {
+            Self::GraphMajor(path, query) |
+            Self::QueryMajor(query, path) => {
+                QueryResult::new(
+                    FoundPath::new::<_, D, _>(trav, path.reduce_mismatch::<_, D, _>(trav).into()),
+                    query.reduce_mismatch::<_, D, _>(trav),
+                )
+            }
+        }
+    }
 }

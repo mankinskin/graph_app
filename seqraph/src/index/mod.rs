@@ -26,6 +26,7 @@ where
     ) -> Result<(Child, QueryRangePath), NoMatch> {
         self.indexer().index_prefix(pattern)
     }
+    #[allow(unused)]
     pub(crate) fn index_path_prefix(
         &self,
         query: QueryRangePath,
@@ -48,11 +49,11 @@ pub(crate) mod tests {
     use super::*;
     use crate::{
         Hypergraph,
-        QueryRangePath, Traversable,
+        QueryRangePath,
     };
     use pretty_assertions::assert_eq;
     use itertools::*;
-    use std::{borrow::Borrow, collections::{HashMap, HashSet}};
+    use std::{borrow::Borrow};
 
     #[test]
     fn index_prefix1() {

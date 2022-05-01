@@ -99,7 +99,7 @@ impl<
         Trav: Traversable<'a, 'g, T>,
     >(trav: &'a Trav, range_path: GraphRangePath) -> Self {
         if range_path.is_complete::<_, D, _>(trav) {
-            Self::Complete(range_path.into_start_path().entry().parent)
+            Self::Complete(Into::<StartPath>::into(range_path).entry().parent)
         } else {
             Self::Range(range_path)
         }
@@ -113,26 +113,28 @@ impl<
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct QueryResult<Q: QueryPath> {
+pub struct QueryResult<Q: TraversalQuery> {
     pub(crate) found: FoundPath,
     pub(crate) query: Q,
 }
 
-impl<Q: QueryPath> QueryResult<Q> {
+impl<Q: TraversalQuery> QueryResult<Q> {
     pub(crate) fn new(found: impl Into<FoundPath>, query: Q) -> Self {
         Self {
             found: found.into(),
             query,
         }
     }
+    pub fn unwrap_complete(self) -> Child {
+        self.found.unwrap_complete()
+    }
+}
+impl<Q: QueryPath> QueryResult<Q> {
     pub fn complete(query: impl IntoPattern, index: impl AsChild) -> Self {
         Self {
             found: FoundPath::Complete(index.as_child()),
             query: Q::complete(query),
         }
-    }
-    pub fn unwrap_complete(self) -> Child {
-        self.found.unwrap_complete()
     }
 }
 pub type QueryFound = QueryResult<QueryRangePath>;

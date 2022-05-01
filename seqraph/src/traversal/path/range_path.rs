@@ -1,9 +1,176 @@
-use std::borrow::Borrow;
-
 use crate::{
     vertex::*,
     *,
 };
+pub trait EntryPos {
+    fn get_entry_pos(&self) -> usize;
+}
+pub trait ExitPos {
+    fn get_exit_pos(&self) -> usize;
+}
+pub trait PatternEntry: EntryPos {
+    fn get_entry_pattern(&self) -> &[Child];
+    fn get_entry(&self) -> Child {
+        self.get_entry_pattern()[self.get_entry_pos()]
+    }
+}
+pub trait PatternExit: ExitPos {
+    fn get_exit_pattern(&self) -> &[Child];
+    fn get_exit(&self) -> Child {
+        self.get_exit_pattern()[self.get_exit_pos()]
+    }
+}
+pub trait GraphEntry: EntryPos {
+    fn get_entry_location(&self) -> ChildLocation;
+    fn get_entry_pattern<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> Pattern {
+        trav.graph().expect_pattern_at(self.get_entry_location())
+    }
+    fn get_entry<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        D: MatchDirection + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> Child {
+        trav.graph().expect_child_at(self.get_entry_location())
+    }
+}
+pub trait GraphExit: ExitPos {
+    fn get_exit_location(&self) -> ChildLocation;
+    fn get_exit_pattern<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> Pattern {
+        trav.graph().expect_pattern_at(self.get_exit_location())
+    }
+    fn get_exit<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        D: MatchDirection + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> Child {
+        trav.graph().expect_child_at(self.get_exit_location())
+    }
+}
+pub trait HasStartPath {
+    fn get_start_path(&self) -> &[ChildLocation];
+}
+pub trait HasEndPath {
+    fn get_end_path(&self) -> &[ChildLocation];
+}
+pub trait PatternStart: PatternEntry + HasStartPath {
+    fn get_start<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        D: MatchDirection + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> Child {
+        if let Some(next) = self.get_start_path().last() {
+            trav.graph().expect_child_at(next)
+        } else {
+            self.get_entry()
+        }
+    }
+}
+pub trait PatternEnd: PatternExit + HasEndPath {
+    fn get_end<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        D: MatchDirection + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> Child {
+        if let Some(start) = self.get_end_path().last() {
+            trav.graph().expect_child_at(start)
+        } else {
+            self.get_exit()
+        }
+    }
+}
+pub trait GraphStart: GraphEntry + HasStartPath {
+    fn get_start_location(&self) -> ChildLocation {
+        if let Some(start) = self.get_start_path().last() {
+            start.clone()
+        } else {
+            self.get_entry_location()
+        }
+    }
+    fn get_start<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        D: MatchDirection + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> Child {
+        trav.graph().expect_child_at(self.get_start_location())
+    }
+}
+pub trait GraphEnd: GraphExit + HasEndPath {
+    fn get_end_location(&self) -> ChildLocation {
+        if let Some(end) = self.get_end_path().last() {
+            end.clone()
+        } else {
+            self.get_exit_location()
+        }
+    }
+    fn get_end<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        D: MatchDirection + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> Child {
+        trav.graph().expect_child_at(self.get_end_location())
+    }
+}
+pub trait RangePath: Clone {
+    //fn get_exit_pos(&self) -> usize;
+    //fn get_entry_pos(&self) -> usize;
+    //fn get_pattern<
+    //    'a: 'g,
+    //    'g,
+    //    T: Tokenize + 'a,
+    //    Trav: Traversable<'a, 'g, T>,
+    //>(&self, trav: &'a Trav) -> Pattern;
+    //fn get_exit<
+    //    'a: 'g,
+    //    'g,
+    //    T: Tokenize + 'a,
+    //    D: MatchDirection + 'a,
+    //    Trav: Traversable<'a, 'g, T>,
+    //>(&self, trav: &'a Trav) -> Child;
+    fn push_next(&mut self, next: ChildLocation);
+    fn reduce_mismatch<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        D: MatchDirection + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(self, trav: &'a Trav) -> Self;
+    fn prev_pos<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        D: MatchDirection + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> Option<usize>;
+    fn advance_next<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        D: MatchDirection + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(&mut self, trav: &'a Trav) -> bool;
+}
 pub(crate) struct RangePathIter<
     'a: 'g,
     'g,
@@ -97,329 +264,6 @@ impl<
             path: self,
             trav,
             _ty: Default::default(),
-        }
-    }
-}
-
-pub trait RangePath: Clone {
-    fn get_exit_pos(&self) -> usize;
-    fn get_entry_pos(&self) -> usize;
-    fn get_pattern<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Pattern;
-    fn get_end<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Child;
-    fn get_exit<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Child {
-        self.get_pattern(trav)[self.get_exit_pos()]
-    }
-    fn push_next(&mut self, next: ChildLocation);
-    fn reduce_mismatch<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(self, trav: &'a Trav) -> Self;
-    fn prev_pos<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Option<usize>;
-    fn advance_next<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(&mut self, trav: &'a Trav) -> bool;
-}
-pub trait QueryPath: RangePath {
-    fn get_entry(&self) -> Child;
-    fn complete(pattern: impl IntoPattern) -> Self;
-}
-pub(crate) trait GraphPath: RangePath + Into<GraphRangePath> {
-    fn from_start_path(start: StartPath) -> Self;
-    fn into_start_path(self) -> StartPath;
-    fn reduce_end<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(self, trav: &'a Trav) -> FoundPath;
-    fn move_width_into_start(&mut self);
-    fn on_match<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(&mut self, trav: &'a Trav);
-}
-impl GraphPath for GraphRangePath {
-    fn from_start_path(start: StartPath) -> Self {
-        Self::new(start)
-    }
-    fn into_start_path(self) -> StartPath {
-        self.start
-    }
-    fn reduce_end<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(mut self, trav: &'a Trav) -> FoundPath {
-        let graph = trav.graph();
-        //self.reduce_end_path::<T, D>(&*graph);
-        // remove segments pointing to mismatch at pattern head
-        while let Some(location) = self.end.pop() {
-            let pattern = graph.expect_pattern_at(&location);
-            // skip segments at end of pattern
-            if D::pattern_index_next(pattern.borrow(), location.sub_index).is_some() {
-                self.end.push(location);
-                break;
-            }
-        }
-        if self.end.is_empty() {
-            self.move_width_into_start();
-        }
-        FoundPath::new::<_, D, _>(trav, self)
-    }
-    fn move_width_into_start(&mut self) {
-        *self.start.width_mut() += self.inner_width + self.end_width;
-        self.inner_width = 0;
-        self.end_width = 0;
-    }
-    fn on_match<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(&mut self, trav: &'a Trav) {
-        let width = self.get_end::<_, D, _>(trav).width;
-        let wmut = if self.end.is_empty() {
-            &mut self.inner_width
-        } else {
-            &mut self.end_width
-        };
-        *wmut += width;
-    }
-}
-impl RangePath for GraphRangePath {
-    fn get_pattern<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Pattern {
-        trav.graph().expect_pattern_at(self.get_end_location())
-    }
-    fn push_next(&mut self, next: ChildLocation) {
-        self.end.push(next);
-    }
-    fn reduce_mismatch<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(mut self, trav: &'a Trav) -> Self {
-        let graph = trav.graph();
-        //self.reduce_end_path::<T, D>(&*graph);
-        // remove segments pointing to mismatch at pattern head
-        while let Some(mut location) = self.end.pop() {
-            let pattern = graph.expect_pattern_at(&location);
-            // skip segments at end of pattern
-            if let Some(prev) = D::pattern_index_prev(pattern.borrow(), location.sub_index) {
-                location.sub_index = prev;
-                self.end.push(location);
-                break;
-            }
-        }
-        if self.end.is_empty() {
-            self.exit = self.prev_pos::<_, D, _>(trav).unwrap();
-        }
-
-        self
-    }
-    fn get_entry_pos(&self) -> usize {
-        self.start.entry().sub_index
-    }
-    fn get_exit_pos(&self) -> usize {
-        self.exit
-    }
-    fn get_end<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Child {
-        trav.graph().expect_child_at(self.get_end_location())
-    }
-    fn prev_pos<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Option<usize> {
-        let location = self.get_end_location();
-        let pattern = trav.graph().expect_pattern_at(&location);
-        D::pattern_index_prev(pattern, location.sub_index)
-    }
-    fn advance_next<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(&mut self, trav: &'a Trav) -> bool {
-        let graph = trav.graph();
-        // skip path segments with no successors
-        while let Some(mut location) = self.end.pop() {
-            let pattern = graph.expect_pattern_at(&location);
-            if let Some(next) = D::pattern_index_next(pattern, location.sub_index) {
-                location.sub_index = next;
-                self.end.push(location);
-                return true;
-            }
-        }
-        // end is empty (exit is prev)
-        if let Some(next) = self.next_pos::<_, D, _>(trav) {
-            self.exit = next;
-            true
-        } else {
-            false
-        }
-    }
-}
-impl QueryPath for QueryRangePath {
-    fn get_entry(&self) -> Child {
-        self.query[self.entry]
-    }
-    fn complete(query: impl IntoPattern) -> Self {
-        let query = query.into_pattern();
-        Self {
-            entry: 0,
-            exit: query.len() - 1,
-            query,
-            start: vec![],
-            end: vec![],
-        }
-    }
-}
-impl RangePath for QueryRangePath {
-    fn get_pattern<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        Trav: Traversable<'a, 'g, T>
-    >(&self, _trav: &'a Trav) -> Pattern {
-        self.query.clone()
-    }
-    fn get_entry_pos(&self) -> usize {
-        self.entry
-    }
-    fn get_exit_pos(&self) -> usize {
-        self.exit
-    }
-    fn get_end<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Child {
-        if let Some(next) = self.end.last() {
-            trav.graph().expect_child_at(next)
-        } else {
-            self.get_exit()
-        }
-    }
-    fn push_next(&mut self, next: ChildLocation) {
-        self.end.push(next);
-    }
-    fn reduce_mismatch<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(mut self, trav: &'a Trav) -> Self {
-        let graph = trav.graph();
-        // remove segments pointing to mismatch at pattern head
-        while let Some(mut location) = self.end.pop() {
-            let pattern = graph.expect_pattern_at(&location);
-            // skip segments at end of pattern
-            if let Some(prev) = D::pattern_index_prev(pattern.borrow(), location.sub_index) {
-                location.sub_index = prev;
-                self.end.push(location);
-                break;
-            }
-        }
-        if self.end.is_empty() {
-            self.exit = self.prev_pos::<_, D, _>(trav).unwrap();
-        }
-
-        self
-    }
-    fn prev_pos<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Option<usize> {
-        if self.end.is_empty() {
-            D::pattern_index_prev(self.query.borrow(), self.exit)
-        } else {
-            let location = self.end.last().unwrap().clone();
-            let pattern = trav.graph().expect_pattern_at(&location);
-            D::pattern_index_prev(pattern, location.sub_index)
-        }
-    }
-    fn advance_next<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(&mut self, trav: &'a Trav) -> bool {
-        let graph = trav.graph();
-        // skip path segments with no successors
-        while let Some(mut location) = self.end.pop() {
-            let pattern = graph.expect_pattern_at(location);
-            if let Some(next) = D::pattern_index_next(pattern, location.sub_index) {
-                location.sub_index = next;
-                self.end.push(location);
-                return true;
-            }
-        }
-        // end is empty (exit is prev)
-        if let Some(next) = D::pattern_index_next(self.query.borrow(), self.exit) {
-            self.exit = next;
-            true
-        } else {
-            false
         }
     }
 }
