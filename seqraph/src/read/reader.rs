@@ -88,8 +88,9 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         } else {
             let (unknown, known, remainder) = self.find_known_block(sequence);
             self.append_unknown(unknown);
-            match QueryRangePath::new_directed::<D, _>(known) {
-                Ok(query_path) => self.read_known(query_path),
+            // 
+            match PrefixPath::new_directed::<D, _>(known) {
+                Ok(path) => self.read_known(path),
                 Err(NoMatch::SingleIndex) => unimplemented!(),
                 Err(err) => panic!("{:?}", err),
             }
@@ -134,7 +135,10 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                     let new = new.into_iter().next().unwrap();
                     if let Some(buffer) = self.buffer {
                         // TODO: respect direction
-                        self.root = Some(CacheRoot::new_unknown(self.graph_mut().index_pattern(vec![buffer, new])));
+                        self.root = Some(CacheRoot::new_unknown(
+                            self.graph_mut()
+                                .index_pattern(vec![buffer, new]))
+                        );
                     } else {
                         self.root = Some(CacheRoot::new_unknown(new));
                     }
@@ -159,14 +163,14 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         query: QueryRangePath,
     ) -> Option<(Child, QueryRangePath)> {
         let mut indexer = self.indexer();
-        match indexer.index_next_prefix(query.clone()) {
+        match indexer.index_path_prefix(query) {
             Ok((index, query)) => Some((index, query)),
-            Err(_not_found) => query.get_advance::<_, _, D>(&mut indexer),
+            Err(_not_found) => query.get_advance::<_, D, _>(&mut indexer),
         }
     }
     fn read_known(
         &mut self,
-        known: QueryRangePath,
+        known: PrefixPath,
     ) {
         if let Some(CacheRoot {
             index: root,
@@ -215,7 +219,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     pub fn index_context(context_path: Vec<ChildLocation>) -> Child {
         unimplemented!()
     }
-    pub fn overlap_index_path(&mut self, mut path: ChildPath, index: Child, context: QueryRangePath) -> Option<(ChildPath, Child, QueryRangePath)> {
+    pub fn overlap_index_path(&mut self, mut path: ChildPath, index: Child, context: PrefixPath) -> Option<(ChildPath, Child, OverlapPrimer)> {
         // find postfix with overlap
         let mut graph = self.graph_mut();
         let child_patterns = graph.expect_children_of(index);
@@ -227,13 +231,12 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         .sorted_by(|a, b|
             a.1.width().cmp(&b.1.width())
         ).collect_vec();
-        postfixes.into_iter().fold(Err(None), |_, (loc, postfix)|
-            // todo: merge query path context with postfix
-            match self.graph.index_path_prefix(postfix) {
+        postfixes.into_iter().fold(Err(None), |_, (loc, postfix)| {
+            match self.graph.index_path_prefix(OverlapPrimer::new(postfix, context)) {
                 Ok((extension, advanced)) => Ok((loc, extension, advanced)),
                 _ => Err(Some((loc, postfix)))
             }
-        )
+        })
         .map(|(loc, postfix, advanced)| {
             path.push(loc);
             Some((path, postfix, advanced))
@@ -245,11 +248,10 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             })
         )
     }
-    pub fn overlap_index(&mut self, index: Child, context: QueryRangePath) -> Option<(ChildPath, Child, QueryRangePath)> {
+    pub fn overlap_index(&mut self, index: Child, context: PrefixPath) -> Option<(ChildPath, Child, OverlapPrimer)> {
         self.overlap_index_path(vec![], index, context)
     }
-    #[allow(unused)]
-    pub(crate) fn indexer(&self) -> Indexer<T, D> {
+    pub(crate) fn indexer<Q: TraversalQuery>(&self) -> Indexer<T, D, Q> {
         Indexer::new(self.graph.clone())
     }
     fn new_token_indices(

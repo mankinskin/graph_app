@@ -70,6 +70,8 @@ impl<
 }
 
 pub(crate) type MatchNode = TraversalNode<QueryRangePath, GraphRangePath>;
+pub(crate) type IndexingNode<Q> = TraversalNode<Q, GraphRangePath>;
+
 pub trait Traversable<'a: 'g, 'g, T: Tokenize>: Sized + 'a {
     type Guard: Traversable<'g, 'g, T> + Deref<Target=Hypergraph<T>>;
     fn graph(&'g self) -> Self::Guard;

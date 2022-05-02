@@ -6,6 +6,8 @@ pub(crate) mod graph_range_path;
 pub(crate) use graph_range_path::*;
 pub(crate) mod overlap_primer;
 pub(crate) use overlap_primer::*;
+pub(crate) mod prefix_path;
+pub(crate) use prefix_path::*;
 
 use crate::{
     vertex::*,

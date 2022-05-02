@@ -8,6 +8,16 @@ pub struct OverlapPrimer {
     pub(crate) exit: usize,
     pub(crate) end: ChildPath,
 }
+impl OverlapPrimer {
+    pub fn new(start: Child, context: PrefixPath) -> Self {
+        Self {
+            start,
+            context: context.pattern,
+            exit: context.exit,
+            end: context.end,
+        }
+    }
+}
 impl EntryPos for OverlapPrimer {
     fn get_entry_pos(&self) -> usize {
         0
@@ -18,6 +28,12 @@ impl PatternEntry for OverlapPrimer {
         self.start.borrow()
     }
 }
+impl HasStartPath for OverlapPrimer {
+    fn get_start_path(&self) -> &[ChildLocation] {
+        &[]
+    }
+}
+impl PatternStart for OverlapPrimer {}
 impl ExitPos for OverlapPrimer {
     fn get_exit_pos(&self) -> usize {
         self.exit

@@ -3,7 +3,7 @@
 use crate::{
     vertex::*,
     search::*,
-    HypergraphRef, QueryRangePath,
+    HypergraphRef, QueryRangePath, TraversalQuery,
 };
 use std::ops::RangeFrom;
 
@@ -16,7 +16,9 @@ impl<'t, 'g, T> HypergraphRef<T>
 where
     T: Tokenize + 't,
 {
-    pub fn indexer(&self) -> Indexer<T, Right> {
+    pub fn indexer<
+        Q: TraversalQuery
+    >(&self) -> Indexer<T, Right, Q> {
         Indexer::new(self.clone())
     }
     #[allow(unused)]
@@ -27,10 +29,12 @@ where
         self.indexer().index_prefix(pattern)
     }
     #[allow(unused)]
-    pub(crate) fn index_path_prefix(
+    pub(crate) fn index_path_prefix<
+        Q: TraversalQuery
+    >(
         &self,
-        query: QueryRangePath,
-    ) -> Result<(Child, QueryRangePath), NoMatch> {
+        query: Q,
+    ) -> Result<(Child, Q), NoMatch> {
         self.indexer().index_path_prefix(query)
     }
 }

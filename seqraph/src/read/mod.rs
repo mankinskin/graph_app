@@ -55,7 +55,7 @@ mod tests {
         let r = g.expect_token_child('r');
         let exclam = g.expect_token_child('!');
         drop(g);
-        let ld = graph.find_sequence("ld".chars()).unwrap().root;
+        let ld = graph.find_sequence("ld".chars()).unwrap().expect_complete("ld");
         let g = graph.read().unwrap();
         let pats: HashSet<_> = ld.vertex(&g).get_child_pattern_set();
         assert_eq!(pats, hashset![

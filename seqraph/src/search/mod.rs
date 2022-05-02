@@ -110,6 +110,12 @@ impl<
             _ => panic!("Unable to unwrap {:?} as complete.", self),
         }
     }
+    pub fn expect_complete(self, msg: &str) -> Child {
+        match self {
+            Self::Complete(index) => index,
+            _ => panic!("Unable to unwrap {:?} as complete: {}", self, msg),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -127,6 +133,9 @@ impl<Q: TraversalQuery> QueryResult<Q> {
     }
     pub fn unwrap_complete(self) -> Child {
         self.found.unwrap_complete()
+    }
+    pub fn expect_complete(self, msg: &str) -> Child {
+        self.found.expect_complete(msg)
     }
 }
 impl<Q: QueryPath> QueryResult<Q> {
