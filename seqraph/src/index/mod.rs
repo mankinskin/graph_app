@@ -28,7 +28,6 @@ where
     ) -> Result<(Child, QueryRangePath), NoMatch> {
         self.indexer().index_prefix(pattern)
     }
-    #[allow(unused)]
     pub(crate) fn index_path_prefix<
         Q: TraversalQuery
     >(

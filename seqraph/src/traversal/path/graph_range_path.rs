@@ -155,35 +155,29 @@ impl HasEndPath for GraphRangePath {
     }
 }
 impl GraphEnd for GraphRangePath {}
-impl RangePath for GraphRangePath {
-    fn push_next(&mut self, next: ChildLocation) {
-        self.end.push(next);
+impl EndPathMut for GraphRangePath {
+    fn end_path_mut(&mut self) -> &mut ChildPath {
+        &mut self.end
     }
-    fn reduce_mismatch<
+}
+impl ExitMut for GraphRangePath {
+    fn exit_mut(&mut self) -> &mut usize {
+        &mut self.exit
+    }
+}
+impl End for GraphRangePath {
+    fn get_end<
         'a: 'g,
         'g,
         T: Tokenize + 'a,
         D: MatchDirection + 'a,
         Trav: Traversable<'a, 'g, T>,
-    >(mut self, trav: &'a Trav) -> Self {
-        let graph = trav.graph();
-        //self.reduce_end_path::<T, D>(&*graph);
-        // remove segments pointing to mismatch at pattern head
-        while let Some(mut location) = self.end.pop() {
-            let pattern = graph.expect_pattern_at(&location);
-            // skip segments at end of pattern
-            if let Some(prev) = D::pattern_index_prev(pattern.borrow(), location.sub_index) {
-                location.sub_index = prev;
-                self.end.push(location);
-                break;
-            }
-        }
-        if self.end.is_empty() {
-            self.exit = self.prev_pos::<_, D, _>(trav).unwrap();
-        }
-
-        self
+    >(&self, trav: &'a Trav) -> Child {
+        self.get_graph_end::<_, D, _>(trav)
     }
+}
+
+impl AdvanceablePath for GraphRangePath {
     fn prev_pos<
         'a: 'g,
         'g,
@@ -195,30 +189,14 @@ impl RangePath for GraphRangePath {
         let pattern = trav.graph().expect_pattern_at(&location);
         D::pattern_index_prev(pattern, location.sub_index)
     }
-    fn advance_next<
+    fn next_exit_pos<
         'a: 'g,
         'g,
         T: Tokenize + 'a,
         D: MatchDirection + 'a,
         Trav: Traversable<'a, 'g, T>,
-    >(&mut self, trav: &'a Trav) -> bool {
-        let graph = trav.graph();
-        // skip path segments with no successors
-        while let Some(mut location) = self.end.pop() {
-            let pattern = graph.expect_pattern_at(&location);
-            if let Some(next) = D::pattern_index_next(pattern, location.sub_index) {
-                location.sub_index = next;
-                self.end.push(location);
-                return true;
-            }
-        }
-        // end is empty (exit is prev)
-        if let Some(next) = self.next_pos::<_, D, _>(trav) {
-            self.exit = next;
-            true
-        } else {
-            false
-        }
+    >(&self, trav: &'a Trav) -> Option<usize> {
+        self.next_pos::<_, D, _>(trav)
     }
 }
 impl Wide for GraphRangePath {

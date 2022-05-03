@@ -50,34 +50,28 @@ impl HasEndPath for OverlapPrimer {
     }
 }
 impl PatternEnd for OverlapPrimer {}
-impl RangePath for OverlapPrimer {
-    fn push_next(&mut self, next: ChildLocation) {
-        self.end.push(next);
+impl EndPathMut for OverlapPrimer {
+    fn end_path_mut(&mut self) -> &mut ChildPath {
+        &mut self.end
     }
-    fn reduce_mismatch<
+}
+impl ExitMut for OverlapPrimer {
+    fn exit_mut(&mut self) -> &mut usize {
+        &mut self.exit
+    }
+}
+impl End for OverlapPrimer {
+    fn get_end<
         'a: 'g,
         'g,
         T: Tokenize + 'a,
         D: MatchDirection + 'a,
         Trav: Traversable<'a, 'g, T>,
-    >(mut self, trav: &'a Trav) -> Self {
-        let graph = trav.graph();
-        // remove segments pointing to mismatch at pattern head
-        while let Some(mut location) = self.end.pop() {
-            let pattern = graph.expect_pattern_at(&location);
-            // skip segments at end of pattern
-            if let Some(prev) = D::pattern_index_prev(pattern.borrow(), location.sub_index) {
-                location.sub_index = prev;
-                self.end.push(location);
-                break;
-            }
-        }
-        if self.end.is_empty() {
-            self.exit = self.prev_pos::<_, D, _>(trav).unwrap();
-        }
-
-        self
+    >(&self, trav: &'a Trav) -> Child {
+        self.get_pattern_end::<_, D, _>(trav)
     }
+}
+impl AdvanceablePath for OverlapPrimer {
     fn prev_pos<
         'a: 'g,
         'g,
@@ -93,29 +87,13 @@ impl RangePath for OverlapPrimer {
             D::pattern_index_prev(pattern, location.sub_index)
         }
     }
-    fn advance_next<
+    fn next_exit_pos<
         'a: 'g,
         'g,
         T: Tokenize + 'a,
         D: MatchDirection + 'a,
         Trav: Traversable<'a, 'g, T>,
-    >(&mut self, trav: &'a Trav) -> bool {
-        let graph = trav.graph();
-        // skip path segments with no successors
-        while let Some(mut location) = self.end.pop() {
-            let pattern = graph.expect_pattern_at(location);
-            if let Some(next) = D::pattern_index_next(pattern, location.sub_index) {
-                location.sub_index = next;
-                self.end.push(location);
-                return true;
-            }
-        }
-        // end is empty (exit is prev)
-        if let Some(next) = D::pattern_index_next(self.context.borrow(), self.exit) {
-            self.exit = next;
-            true
-        } else {
-            false
-        }
+    >(&self, trav: &'a Trav) -> Option<usize> {
+        D::pattern_index_next(self.context.borrow(), self.exit)
     }
 }

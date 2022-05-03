@@ -41,7 +41,7 @@ impl Wide for NoToken {
     }
 }
 
-#[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Copy, PartialEq, Eq)]
 pub(crate) enum NewTokenIndex {
     New(VertexIndex),
     Known(VertexIndex),

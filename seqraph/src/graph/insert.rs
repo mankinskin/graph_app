@@ -298,6 +298,24 @@ where
         self.add_pattern_parent(parent, new, pattern_id, offset);
         parent
     }
+    pub(crate) fn new_token_indices(
+        &mut self,
+        sequence: impl IntoIterator<Item = T>,
+    ) -> NewTokenIndices {
+        sequence
+            .into_iter()
+            .map(|t| Token::Element(t))
+            .map(|t| match {
+                self.get_token_index(t)
+            } {
+                Ok(i) => NewTokenIndex::Known(i),
+                Err(_) => {
+                    let i = self.index_token(t);
+                    NewTokenIndex::New(i.index)
+                }
+            })
+            .collect()
+    }
 }
 
 #[cfg(test)]

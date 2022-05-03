@@ -420,11 +420,11 @@ pub(crate) trait TraversalFolder<'a: 'g, 'g, T: Tokenize, D: MatchDirection>: Si
     ) -> ControlFlow<Self::Break, Self::Continue>;
 }
 
-pub trait TraversalQuery: RangePath + PatternStart + PatternEnd {}
-impl<T: RangePath + PatternStart + PatternEnd> TraversalQuery for T {}
+pub trait TraversalQuery: AdvanceablePath + PatternStart + PatternEnd {}
+impl<T: AdvanceablePath + PatternStart + PatternEnd> TraversalQuery for T {}
 
 pub(crate) trait TraversalPath:
-    RangePath +
+    AdvanceablePath +
     GraphStart +
     GraphEnd +
     From<StartPath> +
