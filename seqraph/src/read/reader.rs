@@ -1,4 +1,4 @@
-use std::{sync::{RwLockReadGuard, RwLockWriteGuard}, collections::HashMap};
+use std::{sync::{RwLockReadGuard, RwLockWriteGuard}, collections::HashMap, borrow::Borrow};
 
 use crate::{
     index::*,
@@ -47,8 +47,8 @@ impl CacheRoot {
 #[derive(Debug)]
 pub struct Reader<T: Tokenize, D: IndexDirection> {
     graph: HypergraphRef<T>,
-    root: Option<CacheRoot>,
-    buffer: ReaderBuffer,
+    //root: Option<CacheRoot>,
+    //buffer: ReaderBuffer,
     _ty: std::marker::PhantomData<D>,
 }
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for Reader<T, D> {
@@ -63,6 +63,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g
         self.graph.write().unwrap()
     }
 }
+type ReadingBands = HashMap<usize, Pattern>;
 impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     pub(crate) fn read_sequence<N, S: ToNewTokenIndices<N, T>>(
         &mut self,
@@ -74,7 +75,6 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         }
         let (unknown, known, remainder) = self.find_known_block(sequence);
         self.append_unknown(unknown);
-        // 
         match PrefixPath::new_directed::<D, _>(known) {
             Ok(path) => self.read_known(path),
             Err(NoMatch::SingleIndex) => unimplemented!(),
@@ -83,38 +83,49 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         self.read_sequence(remainder)
     }
     fn read_known(&mut self, known: PrefixPath) {
-        let mut bands = HashMap::new();
         let (prefix, advanced) = self.read_prefix(known).expect("Empty known block!");
-        bands.insert(prefix.width(), vec![prefix]);
-
-        if let Some(CacheRoot {
-            index: root,
-            last_new,
-        }) = self.root.as_mut() {
-            if *last_new {
-
-            } else {
-                let new = self.overlap_index(*root, known);
-                *root = new;
-            }
-        } else {
-            // first or second index
-            if let Some(buffer) = self.buffer {
-                // second index
-                let new = self.overlap_index(buffer, known);
-                self.root = Some(CacheRoot::new_known(new));
-            } else {
-                // first index
-                self.buffer = Some(ReaderBuffer::new(prefix));
-                self.read_known(advanced);
+        let end_bound = prefix.width();
+        let mut bands = ReadingBands::new();
+        bands.insert(end_bound, vec![prefix]);
+        self.read_index_overlaps_known_bands(prefix, end_bound, known, bands)
+    }
+    fn read_index_overlaps_known_bands(&mut self, index: Child, end_bound: usize, context: PrefixPath, mut bands: ReadingBands) {
+        let bundle = vec![];
+        // todo: check if context is empty
+        match self.overlap_index(&mut bands, bundle, end_bound, index, context) {
+            Ok((
+                context_path,
+                expansion,
+                end_bound,
+                context,
+            )) => {
+                // expanded
+                self.read_index_overlaps_known_bands(expansion, end_bound, context, bands)
+            },
+            Err(bundle) => {
+                // no overlap found, continue after last band (something left to do)
+                let (next, advanced) = self.read_prefix(context).expect("Empty known block!");
+                let old = bands.remove(&end_bound).expect("current index not in bands");
+                let end_bound = end_bound + next.width();
+                bands.insert(end_bound, [&old[..], next.borrow()].concat());
+                self.read_index_overlaps_known_bands(next, end_bound, advanced, bands)
             }
         }
     }
-    fn overlap_index_path(&mut self, mut path: ChildPath, index: Child, context: PrefixPath) -> Option<(ChildPath, Child, OverlapPrimer)> {
+    fn overlap_index_path(
+        &mut self,
+        bands: &mut ReadingBands,
+        mut bundle: Vec<Pattern>,
+        end_bound: usize,
+        mut path: ChildPath,
+        index: Child,
+        context: PrefixPath,
+    ) -> Result<(ChildPath, Child, usize, PrefixPath), Vec<Pattern>> {
         // find postfix with overlap
         let mut graph = self.graph_mut();
         let child_patterns = graph.expect_children_of(index);
         drop(graph);
+        // collect postfixes in descending length
         let postfixes = child_patterns.iter().map(|(pid, pattern)| {
             let last = D::last_index(pattern);
             (ChildLocation::new(index, *pid, last), pattern[last].clone())
@@ -122,29 +133,65 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         .sorted_by(|a, b|
             a.1.width().cmp(&b.1.width())
         ).collect_vec();
+        // find largest expandable postfix
         postfixes.into_iter().fold(Err(None), |_, (loc, postfix)| {
+            let start_bound = end_bound - postfix.width();
+            let old = bands.remove(&start_bound);
             match self.graph.index_path_prefix(OverlapPrimer::new(postfix, context)) {
-                Ok((extension, advanced)) => {
-                    // successful extension
-                    let context = IndexableSide::<T, D, IndexBack>::index_context_path(self, loc, path);
-                    Ok((loc, extension, advanced))
+                Ok((expansion, advanced)) => {
+                    // expanded
+                    match bundle.len() {
+                        0 => {},
+                        1 => {
+                            let band = bundle.into_iter().next().unwrap();
+                            bands.insert(end_bound, band);
+                        },
+                        _ => {
+                            let band = self.graph_mut().index_patterns(bundle);
+                            bands.insert(end_bound, vec![band]);
+                        }
+                    }
+                    let context = if let Some(old) = old {
+                        &old[..]
+                    } else {
+                        &[IndexableSide::<T, D, IndexBack>::index_context_path(self, loc, path)]
+                    };
+                    let end_bound = start_bound + expansion.width();
+                    bands.insert(end_bound, [context, expansion.borrow()].concat());
+                    Ok((loc, expansion, end_bound, advanced.into_prefix_path()))
                 },
-                _ => Err(Some((loc, postfix)))
+                _ => {
+                    // not expandable
+                    if let Some(old) = old {
+                        // remember if this comes right after existing band
+                        bundle.push([&old[..], postfix.borrow()].concat());
+                    }
+                    Err(Some((loc, postfix)))
+                }
             }
         })
-        .map(|(loc, postfix, advanced)| {
+        .map(|(loc, expansion, end_bound, advanced)| {
             path.push(loc);
-            Some((path, postfix, advanced))
+            Ok((path, expansion, end_bound, advanced))
         })
         .unwrap_or_else(|res| 
-            res.and_then(|(loc, postfix)| {
+            if let Some((loc, postfix)) = res {
                 path.push(loc);
-                self.overlap_index_path(path, postfix, context)
-            })
+                self.overlap_index_path(bands, bundle, end_bound, path, postfix, context)
+            } else {
+                Err(bundle)
+            }
         )
     }
-    fn overlap_index(&mut self, index: Child, context: PrefixPath) -> Option<(ChildPath, Child, OverlapPrimer)> {
-        self.overlap_index_path(vec![], index, context)
+    fn overlap_index(
+        &mut self,
+        bands: &mut ReadingBands,
+        bundle: Vec<Pattern>,
+        end_bound: usize,
+        index: Child,
+        context: PrefixPath,
+    ) -> Result<(ChildPath, Child, usize, PrefixPath), Vec<Pattern>> {
+        self.overlap_index_path(bands, bundle, end_bound, vec![], index, context)
     }
     pub(crate) fn indexer<Q: TraversalQuery>(&self) -> Indexer<T, D, Q> {
         Indexer::new(self.graph.clone())
@@ -152,8 +199,6 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     pub(crate) fn new(graph: HypergraphRef<T>) -> Self {
         Self {
             graph,
-            root: None,
-            buffer: None,
             _ty: Default::default(),
         }
     }
@@ -218,7 +263,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             Result::Ok(())
         }
     }
-    fn try_read_prefix(
+    fn read_prefix(
         &mut self,
         query: PrefixPath,
     ) -> Option<(Child, PrefixPath)> {

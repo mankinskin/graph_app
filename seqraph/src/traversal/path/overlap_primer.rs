@@ -17,6 +17,13 @@ impl OverlapPrimer {
             end: context.end,
         }
     }
+    pub fn into_prefix_path(self) -> PrefixPath {
+        PrefixPath {
+            pattern: self.context,
+            exit: self.exit,
+            end: self.end,
+        }
+    }
 }
 impl EntryPos for OverlapPrimer {
     fn get_entry_pos(&self) -> usize {
