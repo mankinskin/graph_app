@@ -32,32 +32,33 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     ) -> Child {
         let sequence: NewTokenIndices = sequence.to_new_token_indices(self);
         if sequence.is_empty() {
-            panic!("Empty sequence")
+            self.root.unwrap()
+        } else {
+            let (unknown, known, remainder) = self.find_known_block(sequence);
+            self.append_pattern_to_root(unknown);
+            if let Ok(known) = PrefixPath::new_directed::<D, _>(known)
+                .and_then(|path| self.read_known(path))
+            {
+                self.append_pattern_to_root(known);
+            }
+            self.read_sequence(remainder)
         }
-        let (unknown, known, remainder) = self.find_known_block(sequence);
-        self.append_pattern_to_root(unknown);
-        let known = match PrefixPath::new_directed::<D, _>(known) {
-            Ok(path) => self.read_known(path),
-            Err(NoMatch::SingleIndex) => unimplemented!(),
-            Err(err) => panic!("{:?}", err),
-        };
-        self.append_pattern_to_root(known);
-        self.read_sequence(remainder)
     }
-    fn read_known(&mut self, known: PrefixPath) -> Pattern {
+    fn read_known(&mut self, known: PrefixPath) -> Result<Pattern, NoMatch> {
         self.read_next_bands(known, ReadingBands::new(), 0)
     }
-    fn read_next_bands(&mut self, known: PrefixPath, mut bands: ReadingBands, end_bound: usize) -> Pattern {
-        let (next, advanced) = self.read_prefix(known).expect("Empty known block!");
-        let (end_bound, band) = if let Some(old) = bands.remove(&end_bound) {
-            (end_bound + next.width(), [&old[..], next.borrow()].concat())
+    fn read_next_bands(&mut self, known: PrefixPath, mut bands: ReadingBands, end_bound: usize) -> Result<Pattern, NoMatch> {
+        let (next, advanced) = self.read_prefix(known).ok_or(NoMatch::EmptyPatterns)?;
+        let end_bound = end_bound + next.width();
+        let band = if let Some(old) = bands.remove(&end_bound) {
+            [&old[..], next.borrow()].concat()
         } else {
-            (end_bound, vec![next])
+            vec![next]
         };
         bands.insert(end_bound, band);
         self.overlap_index(next, end_bound, advanced, bands)
     }
-    fn overlap_index(&mut self, index: Child, end_bound: usize, context: PrefixPath, mut bands: ReadingBands) -> Pattern {
+    fn overlap_index(&mut self, index: Child, end_bound: usize, context: PrefixPath, mut bands: ReadingBands) -> Result<Pattern, NoMatch> {
         let bundle = vec![];
         //if context.is_complete() {
 

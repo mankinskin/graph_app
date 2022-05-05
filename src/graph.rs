@@ -1,7 +1,6 @@
 use eframe::egui::{
     self,
     vec2,
-    DragValue,
     Frame,
     Pos2,
     Rect,
@@ -24,7 +23,6 @@ use petgraph::{
 use seqraph::*;
 use std::collections::HashMap;
 use std::f32::consts::PI;
-use std::num::NonZeroUsize;
 use std::sync::{
     Arc,
     RwLock,
