@@ -223,12 +223,10 @@ pub trait AdvanceablePath: Clone + EndPathMut + ExitMut + End {
         T: Tokenize + 'a,
         D: MatchDirection + 'a,
         Trav: Traversable<'a, 'g, T>,
-    >(mut self, trav: &'a Trav) -> Option<(Child, Self)> {
-        if self.advance_next::<_, D, _>(trav) {
-            Some((self.get_end::<_, D, _>(trav), self))
-        } else {
-            None
-        }
+    >(mut self, trav: &'a Trav) -> (Child, Self) {
+        let current = self.get_end::<_, D, _>(trav);
+        self.advance_next::<_, D, _>(trav);
+        (current, self)
     }
 }
 pub(crate) struct RangePathIter<

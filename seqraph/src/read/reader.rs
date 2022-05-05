@@ -36,19 +36,30 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         } else {
             let (unknown, known, remainder) = self.find_known_block(sequence);
             self.append_pattern_to_root(unknown);
-            if let Ok(known) = PrefixPath::new_directed::<D, _>(known)
-                .and_then(|path| self.read_known(path))
-            {
-                self.append_pattern_to_root(known);
-            }
+            self.read_known(known);
             self.read_sequence(remainder)
         }
     }
-    fn read_known(&mut self, known: PrefixPath) -> Result<Pattern, NoMatch> {
+    fn read_known(&mut self, known: Pattern) {
+        match known.len() {
+            0 => {},
+            1 => self.append_pattern_to_root(known),
+            _ => if let Ok(known) = PrefixPath::new_directed::<D, _>(known)
+                .and_then(|path| self.read_known_path(path))
+            {
+                self.append_pattern_to_root(known);
+            }
+        }
+    }
+    fn read_known_path(&mut self, known: PrefixPath) -> Result<Pattern, NoMatch> {
         self.read_next_bands(known, ReadingBands::new(), 0)
     }
     fn read_next_bands(&mut self, known: PrefixPath, mut bands: ReadingBands, end_bound: usize) -> Result<Pattern, NoMatch> {
-        let (next, advanced) = self.read_prefix(known).ok_or(NoMatch::EmptyPatterns)?;
+        let mut indexer = self.indexer();
+        let (next, advanced) = match indexer.index_path_prefix(known.clone()) {
+            Ok((index, query)) => (index, query),
+            Err(_) => known.get_advance::<_, D, _>(&mut indexer),
+        };
         let end_bound = end_bound + next.width();
         let band = if let Some(old) = bands.remove(&end_bound) {
             [&old[..], next.borrow()].concat()
@@ -60,101 +71,87 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     }
     fn overlap_index(&mut self, index: Child, end_bound: usize, context: PrefixPath, mut bands: ReadingBands) -> Result<Pattern, NoMatch> {
         let bundle = vec![];
-        //if context.is_complete() {
-
-        //} else {
-        match self.overlap_index_path(&mut bands, bundle, end_bound, vec![], index, context) {
-            Ok((
-                _context_path,
-                expansion,
-                end_bound,
-                context,
-            )) => {
-                // expanded, continue overlapping
-                self.overlap_index(expansion, end_bound, context, bands)
-            },
-            Err((_bundle, context)) => {
-                // no overlap found, continue after last band
-                self.read_next_bands(context, bands, end_bound)
+        if context.is_complete() {
+            Ok(vec![index])
+        } else {
+            match self.overlap_index_path(&mut bands, bundle, end_bound, index, context) {
+                Ok((
+                    _context_path,
+                    expansion,
+                    end_bound,
+                    context,
+                )) => {
+                    // expanded, continue overlapping
+                    self.overlap_index(expansion, end_bound, context, bands)
+                },
+                Err((_bundle, context)) => {
+                    // no overlap found, continue after last band
+                    self.read_next_bands(context, bands, end_bound)
+                }
             }
         }
-        //}
     }
     fn overlap_index_path(
         &mut self,
         bands: &mut ReadingBands,
         mut bundle: Vec<Pattern>,
         end_bound: usize,
-        mut path: ChildPath,
         index: Child,
         context: PrefixPath,
     ) -> Result<(ChildPath, Child, usize, PrefixPath), (Vec<Pattern>, PrefixPath)> {
-        // find postfix with overlap
-        let graph = self.graph_mut();
-        let child_patterns = graph.expect_children_of(index).clone();
-        drop(graph);
-        // collect postfixes in descending length
-        let postfixes = child_patterns.into_iter().map(|(pid, pattern)| {
-            let last = D::last_index(&pattern);
-            (ChildLocation::new(index, pid, last), pattern[last].clone())
-        })
-        .sorted_by(|a, b|
-            a.1.width().cmp(&b.1.width())
-        ).collect_vec();
         // find largest expandable postfix
-        match postfixes.into_iter().fold(Err(None), |_, (loc, postfix)| {
-            let start_bound = end_bound - postfix.width();
-            let old = bands.remove(&start_bound);
-            match self.graph.index_path_prefix(OverlapPrimer::new(postfix, context.clone())) {
-                Ok((expansion, advanced)) => {
-                    // expanded
-                    match bundle.len() {
-                        0 => {},
-                        1 => {
-                            let band = bundle.pop().unwrap();
-                            bands.insert(end_bound, band);
-                        },
-                        _ => {
-                            let band = self.graph_mut().index_patterns(bundle.drain(..));
-                            bands.insert(end_bound, vec![band]);
-                        }
-                    }
-                    let context = if let Some(old) = old {
-                        old
-                    } else {
-                        vec![
-                            IndexableSide::<T, D, IndexBack>::index_context_path(
-                                self,
-                                loc,
-                                path.clone(),
-                            )
-                        ]
-                    };
-                    let end_bound = start_bound + expansion.width();
-                    bands.insert(end_bound, [&context[..], &[expansion]].concat());
-                    Ok((loc, expansion, end_bound, advanced.into_prefix_path()))
-                },
-                _ => {
-                    // not expandable
-                    if let Some(old) = old {
-                        // remember if this comes right after existing band
-                        bundle.push([&old[..], postfix.borrow()].concat());
-                    }
-                    Err(Some((loc, postfix)))
+        let mut path = vec![];
+        match PostfixIterator::<_, D, _>::new(&self.indexer(), index)
+            .fold(None, |_, (path_segment, loc, postfix)| {
+                if let Some(segment) = path_segment {
+                    path.push(segment);
                 }
-            }
-        }) {
-        Ok((loc, expansion, end_bound, advanced)) => {
-            path.push(loc);
-            Ok((path, expansion, end_bound, advanced))
-        },
-        Err(last) =>
-            if let Some((loc, postfix)) = last {
+                let start_bound = end_bound - postfix.width();
+                let old = bands.remove(&start_bound);
+                match self.graph.index_path_prefix(OverlapPrimer::new(postfix, context.clone())) {
+                    Ok((expansion, advanced)) => {
+                        // expanded
+                        match bundle.len() {
+                            0 => {},
+                            1 => {
+                                let band = bundle.pop().unwrap();
+                                bands.insert(end_bound, band);
+                            },
+                            _ => {
+                                let band = self.graph_mut().index_patterns(bundle.drain(..));
+                                bands.insert(end_bound, vec![band]);
+                            }
+                        }
+                        let context = if let Some(old) = old {
+                            old
+                        } else {
+                            vec![
+                                IndexableSide::<T, D, IndexBack>::index_context_path(
+                                    self,
+                                    loc,
+                                    path.clone(),
+                                )
+                            ]
+                        };
+                        let end_bound = start_bound + expansion.width();
+                        bands.insert(end_bound, [&context[..], &[expansion]].concat());
+                        Some((loc, expansion, end_bound, advanced.into_prefix_path()))
+                    },
+                    _ => {
+                        // not expandable
+                        if let Some(old) = old {
+                            // remember if this comes right after existing band
+                            bundle.push([&old[..], postfix.borrow()].concat());
+                        }
+                        None
+                    }
+                }
+            }) {
+            Some((loc, expansion, end_bound, advanced)) => {
                 path.push(loc);
-                self.overlap_index_path(bands, bundle, end_bound, path, postfix, context)
-            } else {
-                Err((bundle, context))
-            }
+                Ok((path, expansion, end_bound, advanced))
+            },
+            None => Err((bundle, context))
         }
     }
     pub(crate) fn indexer(&self) -> Indexer<T, D> {
@@ -201,16 +198,6 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                     self.root = Some(new);
                 }
             }
-        }
-    }
-    fn read_prefix(
-        &mut self,
-        query: PrefixPath,
-    ) -> Option<(Child, PrefixPath)> {
-        let mut indexer = self.indexer();
-        match indexer.index_path_prefix(query.clone()) {
-            Ok((index, query)) => Some((index, query)),
-            Err(_not_found) => query.get_advance::<_, D, _>(&mut indexer),
         }
     }
     fn take_while<I, J: Iterator<Item = I> + itertools::PeekingNext>(

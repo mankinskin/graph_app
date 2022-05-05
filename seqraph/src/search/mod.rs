@@ -104,12 +104,14 @@ impl<
             Self::Range(range_path)
         }
     }
+    #[track_caller]
     pub fn unwrap_complete(self) -> Child {
         match self {
             Self::Complete(index) => index,
             _ => panic!("Unable to unwrap {:?} as complete.", self),
         }
     }
+    #[track_caller]
     pub fn expect_complete(self, msg: &str) -> Child {
         match self {
             Self::Complete(index) => index,
@@ -131,9 +133,11 @@ impl<Q: TraversalQuery> QueryResult<Q> {
             query,
         }
     }
+    #[track_caller]
     pub fn unwrap_complete(self) -> Child {
         self.found.unwrap_complete()
     }
+    #[track_caller]
     pub fn expect_complete(self, msg: &str) -> Child {
         self.found.expect_complete(msg)
     }
