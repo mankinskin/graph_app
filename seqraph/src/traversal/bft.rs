@@ -1,31 +1,33 @@
 use std::collections::VecDeque;
 use std::iter::{Extend, FusedIterator};
 
-use crate::{TraversalIterator, Tokenize, Traversable, MatchDirection, DirectedTraversalPolicy, FolderNode};
+use crate::{TraversalIterator, Tokenize, Traversable, MatchDirection, DirectedTraversalPolicy, FolderNode, TraversalQuery};
 
 #[derive(Clone)]
-pub(crate) struct Bft<'a: 'g, 'g, T, Trav, D, S>
+pub(crate) struct Bft<'a: 'g, 'g, T, Trav, D, Q, S>
 where
     T: Tokenize + 'a,
     Trav: Traversable<'a, 'g, T>,
     D: MatchDirection + 'a,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Trav=Trav>,
+    Q: TraversalQuery + 'a,
+    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
 {
-    queue: VecDeque<(usize, FolderNode<'a, 'g, T, D, S>)>,
-    last: (usize, FolderNode<'a, 'g, T, D, S>),
+    queue: VecDeque<(usize, FolderNode<'a, 'g, T, D, Q, S>)>,
+    last: (usize, FolderNode<'a, 'g, T, D, Q, S>),
     trav: &'a Trav,
     _ty: std::marker::PhantomData<(&'g T, D, S)>
 }
 
-impl<'a: 'g, 'g, T, Trav, D, S> Bft<'a, 'g, T, Trav, D, S>
+impl<'a: 'g, 'g, T, Trav, D, Q, S> Bft<'a, 'g, T, Trav, D, Q, S>
 where
     T: Tokenize + 'a,
     Trav: Traversable<'a, 'g, T>,
     D: MatchDirection + 'a,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Trav=Trav>,
+    Q: TraversalQuery + 'a,
+    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
 {
     #[inline]
-    pub fn new(trav: &'a Trav, root: FolderNode<'a, 'g, T, D, S>) -> Self {
+    pub fn new(trav: &'a Trav, root: FolderNode<'a, 'g, T, D, Q, S>) -> Self {
         Self {
             queue: VecDeque::new(),
             last: (0, root),
@@ -35,20 +37,21 @@ where
     }
 }
 
-impl<'a: 'g, 'g, T, Trav, D, S> Iterator for Bft<'a, 'g, T, Trav, D, S>
+impl<'a: 'g, 'g, T, Trav, D, Q, S> Iterator for Bft<'a, 'g, T, Trav, D, Q, S>
 where
     T: Tokenize + 'a,
     Trav: Traversable<'a, 'g, T>,
     D: MatchDirection + 'a,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Trav=Trav>,
+    Q: TraversalQuery + 'a,
+    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
 {
-    type Item = (usize, FolderNode<'a, 'g, T, D, S>);
+    type Item = (usize, FolderNode<'a, 'g, T, D, Q, S>);
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         let (last_depth, last_node) = &self.last;
         self.queue.extend(
-            <Self as TraversalIterator<T, Trav, D, S>>::iter_children(&self.trav, last_node)
+            <Self as TraversalIterator<T, Trav, D, Q, S>>::iter_children(&self.trav, last_node)
                 .into_iter()
                 .map(|child| (last_depth + 1, child))
         );
@@ -61,23 +64,25 @@ where
     }
 }
 
-impl<'a: 'g, 'g, T, Trav, D, S> FusedIterator for Bft<'a, 'g, T, Trav, D, S>
+impl<'a: 'g, 'g, T, Trav, D, Q, S> FusedIterator for Bft<'a, 'g, T, Trav, D, Q, S>
 where
     T: Tokenize + 'a,
     Trav: Traversable<'a, 'g, T>,
     D: MatchDirection + 'a,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Trav=Trav>,
+    Q: TraversalQuery + 'a,
+    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
 {
 }
 
-impl<'a: 'g, 'g, T, Trav, D, S> TraversalIterator<'a, 'g, T, Trav, D, S> for Bft<'a, 'g, T, Trav, D, S>
+impl<'a: 'g, 'g, T, Trav, D, Q, S> TraversalIterator<'a, 'g, T, Trav, D, Q, S> for Bft<'a, 'g, T, Trav, D, Q, S>
 where
     T: Tokenize + 'a,
     Trav: Traversable<'a, 'g, T>,
     D: MatchDirection + 'a,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Trav=Trav>,
+    Q: TraversalQuery + 'a,
+    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
 {
-    fn new(trav: &'a Trav, root: FolderNode<'a, 'g, T, D, S>) -> Self {
+    fn new(trav: &'a Trav, root: FolderNode<'a, 'g, T, D, Q, S>) -> Self {
         Bft::new(trav, root)
     }
 }

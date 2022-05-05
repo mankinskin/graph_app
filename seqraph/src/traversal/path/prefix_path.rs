@@ -29,6 +29,9 @@ impl<
             })
         }
     }
+    pub(crate) fn is_complete(&self) -> bool {
+        self.end.is_empty() && self.exit + 1 == self.pattern.len()
+    }
 }
 impl EntryPos for PrefixPath {
     fn get_entry_pos(&self) -> usize {
@@ -105,7 +108,7 @@ impl AdvanceablePath for PrefixPath {
         T: Tokenize + 'a,
         D: MatchDirection + 'a,
         Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Option<usize> {
+    >(&self, _trav: &'a Trav) -> Option<usize> {
         D::pattern_index_next(self.pattern.borrow(), self.exit)
     }
 }

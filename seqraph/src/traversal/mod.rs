@@ -23,7 +23,7 @@ use crate::{
     Hypergraph,
     Vertexed,
     MatchDirection,
-    TraversalOrder, QueryResult, FoundPath,
+    TraversalOrder, QueryResult, FoundPath, HypergraphRef,
 };
 
 pub(crate) trait ToTraversalNode<
@@ -100,6 +100,12 @@ impl<'a: 'g, 'g, T: Tokenize + 'a> Traversable<'a, 'g, T> for RwLockWriteGuard<'
         &**self
     }
 }
+impl<'a: 'g, 'g, T: Tokenize + 'a> Traversable<'a, 'g, T> for HypergraphRef<T> {
+    type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
+    fn graph(&'g self) -> Self::Guard {
+        self.read().unwrap()
+    }
+}
 
 pub(crate) trait TraversableMut<'a: 'g, 'g, T: Tokenize> : Traversable<'a, 'g, T> {
     type GuardMut: TraversableMut<'g, 'g, T> + Deref<Target=Hypergraph<T>> + DerefMut;
@@ -129,30 +135,51 @@ impl<'a: 'g, 'g, T: Tokenize + 'a> TraversableMut<'a, 'g, T> for RwLockWriteGuar
         &mut **self
     }
 }
-pub(crate) type Folder<'a, 'g, T, D, Ty>
-    = <Ty as DirectedTraversalPolicy<'a, 'g, T, D>>::Folder;
-pub(crate) type FolderNode<'a, 'g, T, D, Ty>
-    = <Folder<'a, 'g, T, D, Ty> as TraversalFolder<'a, 'g, T, D>>::Node;
-pub(crate) type FolderQuery<'a, 'g, T, D, Ty>
-    = <Folder<'a, 'g, T, D, Ty>  as TraversalFolder<'a, 'g, T, D>>::Query;
-pub(crate) type FolderPath<'a, 'g, T, D, Ty>
-    = <Folder<'a, 'g, T, D, Ty> as TraversalFolder<'a, 'g, T, D>>::Path;
+impl<'a: 'g, 'g, T: Tokenize + 'a> TraversableMut<'a, 'g, T> for HypergraphRef<T> {
+    type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
+    fn graph_mut(&'g mut self) -> Self::GuardMut {
+        self.write().unwrap()
+    }
+}
+pub(crate) type Folder<'a, 'g, T, D, Q, Ty>
+    = <Ty as DirectedTraversalPolicy<'a, 'g, T, D, Q>>::Folder;
+pub(crate) type FolderNode<'a, 'g, T, D, Q, Ty>
+    = <Folder<'a, 'g, T, D, Q, Ty> as TraversalFolder<'a, 'g, T, D, Q>>::Node;
+pub(crate) trait FolderQ<
+    'a: 'g,
+    'g,
+    T: Tokenize + 'a,
+    D: MatchDirection + 'a,
+    Q: TraversalQuery,
+> {
+    type Query: TraversalQuery;
+}
+impl<
+    'a: 'g,
+    'g,
+    T: Tokenize + 'a,
+    D: MatchDirection + 'a,
+    Q: TraversalQuery + 'a,
+    Ty: TraversalFolder<'a, 'g, T, D, Q>,
+> FolderQ<'a, 'g, T, D, Q> for Ty {
+    type Query = Q;
+}
+pub(crate) type FolderQuery<'a, 'g, T, D, Q, Ty> =
+    <Folder<'a, 'g, T, D, Q, Ty> as FolderQ<'a, 'g, T, D, Q>>::Query;
+pub(crate) type FolderPath<'a, 'g, T, D, Q, Ty>
+    = <Folder<'a, 'g, T, D, Q, Ty> as TraversalFolder<'a, 'g, T, D, Q>>::Path;
 pub(crate) trait TraversalIterator<
     'a: 'g,
     'g,
-    T,
-    Trav,
-    D,
-    S,
->: Iterator<Item = (usize, FolderNode<'a, 'g, T, D, S>)>
-where
     T: Tokenize + 'a,
     Trav: Traversable<'a, 'g, T>,
     D: MatchDirection + 'a,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Trav=Trav>,
+    Q: TraversalQuery + 'a,
+    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
+>: Iterator<Item = (usize, FolderNode<'a, 'g, T, D, Q, S>)>
 {
-    fn new(trav: &'a Trav, root: FolderNode<'a, 'g, T, D, S>) -> Self;
-    fn iter_children(trav: &'a Trav, node: &FolderNode<'a, 'g, T, D, S>) -> Vec<FolderNode<'a, 'g, T, D, S>> {
+    fn new(trav: &'a Trav, root: FolderNode<'a, 'g, T, D, Q, S>) -> Self;
+    fn iter_children(trav: &'a Trav, node: &FolderNode<'a, 'g, T, D, Q, S>) -> Vec<FolderNode<'a, 'g, T, D, Q, S>> {
         match node.clone().into() {
             TraversalNode::Query(query) =>
                 S::query_start(
@@ -175,19 +202,19 @@ where
         }
     }
 }
-pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>: Sized {
+pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a, Q: TraversalQuery + 'a>: Sized {
     type Trav: Traversable<'a, 'g, T>;
-    type Folder: TraversalFolder<'a, 'g, T, D, Trav=Self::Trav>;
+    type Folder: TraversalFolder<'a, 'g, T, D, Q, Trav=Self::Trav>;
     fn end_op(
         trav: &'a Self::Trav,
-        query: FolderQuery<'a, 'g, T, D, Self>,
+        query: FolderQuery<'a, 'g, T, D, Q, Self>,
         start_path: StartPath,
-    ) -> Vec<FolderNode<'a, 'g, T, D, Self>>;
+    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>>;
     fn parent_nodes(
         trav: &'a Self::Trav,
-        query: FolderQuery<'a, 'g, T, D, Self>,
+        query: FolderQuery<'a, 'g, T, D, Q, Self>,
         start: Option<StartPath>,
-    ) -> Vec<FolderNode<'a, 'g, T, D, Self>> {
+    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
 
         let graph = trav.graph();
         let start_index = match start {
@@ -224,10 +251,10 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
     }
     fn root_successor_nodes(
         trav: &'a Self::Trav,
-        old_query: FolderQuery<'a, 'g, T, D, Self>,
+        old_query: FolderQuery<'a, 'g, T, D, Q, Self>,
         old_start: Option<StartPath>,
         parent_entry: ChildLocation,
-    ) -> Vec<FolderNode<'a, 'g, T, D, Self>> {
+    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
         let start_index = old_query.get_entry();
         let graph = trav.graph();
         let pre_start = match old_start.clone() {
@@ -266,7 +293,7 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
             }
         };
         drop(graph);
-        let path = FolderPath::<'a, 'g, T, D, Self>::from(pre_start);
+        let path = FolderPath::<'a, 'g, T, D, Q, Self>::from(pre_start);
         IntoSequenceIterator::<_, D, _>::into_seq_iter(path, trav).next()
             .map(|path|
                 Self::match_end(&trav, PathPair::GraphMajor(path, old_query.clone()))
@@ -277,8 +304,8 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
     }
     fn query_start(
         trav: &'a Self::Trav,
-        query: FolderQuery<'a, 'g, T, D, Self>,
-    ) -> Vec<FolderNode<'a, 'g, T, D, Self>> {
+        query: FolderQuery<'a, 'g, T, D, Q, Self>,
+    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
         IntoSequenceIterator::<_, D, _>::into_seq_iter(query, trav).next()
             .map(|query|
                 Self::parent_nodes(
@@ -293,8 +320,8 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
     }
     fn after_match(
         trav: &'a Self::Trav,
-        paths: PathPair<FolderQuery<'a, 'g, T, D, Self>, FolderPath<'a, 'g, T, D, Self>>,
-    ) -> Vec<FolderNode<'a, 'g, T, D, Self>> {
+        paths: PathPair<FolderQuery<'a, 'g, T, D, Q, Self>, FolderPath<'a, 'g, T, D, Q, Self>>,
+    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
         let mode = paths.mode();
         let (path, query) = paths.unpack();
         IntoSequenceIterator::<_, D, _>::into_seq_iter(path, trav).next()
@@ -307,17 +334,17 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
     }
     fn index_end(
         trav: &'a Self::Trav,
-        query: FolderQuery<'a, 'g, T, D, Self>,
-        mut path: FolderPath<'a, 'g, T, D, Self>,
-    ) -> Vec<FolderNode<'a, 'g, T, D, Self>> {
+        query: FolderQuery<'a, 'g, T, D, Q, Self>,
+        mut path: FolderPath<'a, 'g, T, D, Q, Self>,
+    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
         path.move_width_into_start();
         Self::end_op(trav, query, Into::<StartPath>::into(path))
     }
     /// generate nodes for a child
     fn match_end(
         trav: &'a Self::Trav,
-        new_paths: PathPair<FolderQuery<'a, 'g, T, D, Self>, FolderPath<'a, 'g, T, D, Self>>,
-    ) -> Vec<FolderNode<'a, 'g, T, D, Self>> {
+        new_paths: PathPair<FolderQuery<'a, 'g, T, D, Q, Self>, FolderPath<'a, 'g, T, D, Q, Self>>,
+    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
         let (new_path, new_query) = new_paths.unpack();
         let path_next = new_path.get_end::<_, D, _>(trav);
         let query_next = new_query.get_end::<_, D, _>(trav);
@@ -383,8 +410,8 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
     fn prefix_nodes(
         trav: &'a Self::Trav,
         index: Child,
-        new_paths: PathPair<FolderQuery<'a, 'g, T, D, Self>, FolderPath<'a, 'g, T, D, Self>>,
-    ) -> Vec<FolderNode<'a, 'g, T, D, Self>> {
+        new_paths: PathPair<FolderQuery<'a, 'g, T, D, Q, Self>, FolderPath<'a, 'g, T, D, Q, Self>>,
+    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
 
         let graph = trav.graph();
         let vertex = graph.expect_vertex_data(index);
@@ -406,11 +433,10 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
             .collect_vec()
     }
 }
-pub(crate) trait TraversalFolder<'a: 'g, 'g, T: Tokenize, D: MatchDirection>: Sized {
+pub(crate) trait TraversalFolder<'a: 'g, 'g, T: Tokenize, D: MatchDirection, Q: TraversalQuery + 'a>: Sized {
     type Trav: Traversable<'a, 'g, T>;
-    type Query: TraversalQuery;
     type Path: TraversalPath;
-    type Node: ToTraversalNode<Self::Query, Self::Path>;
+    type Node: ToTraversalNode<Q, Self::Path>;
     type Break;
     type Continue;
     fn fold_found(

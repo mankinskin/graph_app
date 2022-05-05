@@ -62,19 +62,6 @@ impl<'a: 'g, 'g> GraphRangePath {
         let pattern = trav.graph().expect_pattern_at(&location);
         D::pattern_index_next(pattern, self.exit)
     }
-    //pub(crate) fn on_match<
-    //    T: Tokenize + 'a,
-    //    D: MatchDirection + 'a,
-    //    Trav: Traversable<'a, 'g, T>,
-    //>(&mut self, trav: &'a Trav) {
-    //    let width = self.get_end::<_, D, _>(trav).width;
-    //    let wmut = if self.end.is_empty() {
-    //        &mut self.inner_width
-    //    } else {
-    //        &mut self.end_width
-    //    };
-    //    *wmut += width;
-    //}
 }
 impl TraversalPath for GraphRangePath {
     fn reduce_end<

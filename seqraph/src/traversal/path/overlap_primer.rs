@@ -100,7 +100,7 @@ impl AdvanceablePath for OverlapPrimer {
         T: Tokenize + 'a,
         D: MatchDirection + 'a,
         Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Option<usize> {
+    >(&self, _trav: &'a Trav) -> Option<usize> {
         D::pattern_index_next(self.context.borrow(), self.exit)
     }
 }

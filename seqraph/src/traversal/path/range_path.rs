@@ -173,10 +173,10 @@ pub trait AdvanceablePath: Clone + EndPathMut + ExitMut + End {
         T: Tokenize + 'a,
         D: MatchDirection + 'a,
         Trav: Traversable<'a, 'g, T>,
-    >(self, trav: &'a Trav) -> Self {
+    >(mut self, trav: &'a Trav) -> Self {
         let graph = trav.graph();
         // remove segments pointing to mismatch at pattern head
-        let mut end = self.end_path_mut();
+        let end = self.end_path_mut();
         while let Some(mut location) = end.pop() {
             let pattern = graph.expect_pattern_at(&location);
             // skip segments at end of pattern
@@ -200,7 +200,7 @@ pub trait AdvanceablePath: Clone + EndPathMut + ExitMut + End {
     >(&mut self, trav: &'a Trav) -> bool {
         let graph = trav.graph();
         // skip path segments with no successors
-        let mut end = self.end_path_mut();
+        let end = self.end_path_mut();
         while let Some(mut location) = end.pop() {
             let pattern = graph.expect_pattern_at(&location);
             if let Some(next) = D::pattern_index_next(pattern, location.sub_index) {

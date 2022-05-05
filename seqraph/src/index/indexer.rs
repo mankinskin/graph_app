@@ -22,33 +22,33 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct Indexer<T: Tokenize, D: IndexDirection, Q: TraversalQuery> {
+pub struct Indexer<T: Tokenize, D: IndexDirection> {
     graph: HypergraphRef<T>,
-    _ty: std::marker::PhantomData<(D, Q)>,
+    _ty: std::marker::PhantomData<D>,
 }
 struct Indexing<'a, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery> {
     _ty: std::marker::PhantomData<(&'a T, D, Q)>,
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + 'a> Traversable<'a, 'g, T> for Indexer<T, D, Q> {
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for Indexer<T, D> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
     fn graph(&'g self) -> Self::Guard {
         self.graph.read().unwrap()
     }
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + 'a> TraversableMut<'a, 'g, T> for Indexer<T, D, Q> {
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g, T> for Indexer<T, D> {
     type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
     fn graph_mut(&'g mut self) -> Self::GuardMut {
         self.graph.write().unwrap()
     }
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + 'a> DirectedTraversalPolicy<'a, 'g, T, D> for Indexing<'a, T, D, Q> {
-    type Trav = Indexer<T, D, Q>;
-    type Folder = Indexer<T, D, Q>;
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + 'a> DirectedTraversalPolicy<'a, 'g, T, D, Q> for Indexing<'a, T, D, Q> {
+    type Trav = Indexer<T, D>;
+    type Folder = Indexer<T, D>;
     fn end_op(
         trav: &'a Self::Trav,
         query: Q,
         start: StartPath,
-    ) -> Vec<FolderNode<'a, 'g, T, D, Self>> {
+    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
         let mut ltrav = trav.clone();
         let IndexSplitResult {
             inner: post,
@@ -61,16 +61,15 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + '
     }
 }
 trait IndexingTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + 'a>:
-    DirectedTraversalPolicy<'a, 'g, T, D, Trav=Indexer<T, D, Q>, Folder=Indexer<T, D, Q>>
+    DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Indexer<T, D>, Folder=Indexer<T, D>>
 { }
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + 'a> IndexingTraversalPolicy<'a, 'g, T, D, Q> for Indexing<'a, T, D, Q> {}
 
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + 'a> TraversalFolder<'a, 'g, T, D> for Indexer<T, D, Q> {
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + 'a> TraversalFolder<'a, 'g, T, D, Q> for Indexer<T, D> {
     type Trav = Self;
     type Break = (Child, Q);
     type Continue = Option<(Child, Q)>;
     type Path = GraphRangePath;
-    type Query = Q;
     type Node = IndexingNode<Q>;
     fn fold_found(
         trav: &Self::Trav,
@@ -92,7 +91,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + '
         }
     }
 }
-trait Indexable<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a>: TraversableMut<'a, 'g, T> {
+pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a>: TraversableMut<'a, 'g, T> {
     fn index_end_path(
         &'a mut self,
         end: EndPath,
@@ -540,16 +539,22 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
     }
 }
 
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D, QueryRangePath> {
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
+    pub fn new(graph: HypergraphRef<T>) -> Self {
+        Self {
+            graph,
+            _ty: Default::default(),
+        }
+    }
     pub(crate) fn index_prefix(
         &mut self,
         pattern: impl IntoPattern,
     ) -> Result<(Child, QueryRangePath), NoMatch> {
-        self.indexing::<Bft<_, _, _, _>, Indexing<T, D, QueryRangePath>, _>(pattern)
+        self.indexing::<Bft<_, _, _, _, _>, Indexing<T, D, QueryRangePath>, _>(pattern)
     }
     /// creates an IndexingNode::Parent for each parent of root, extending its start path
     fn indexing<
-        Ti: TraversalIterator<'a, 'g, T, Self, D, S>,
+        Ti: TraversalIterator<'a, 'g, T, Self, D, QueryRangePath, S>,
         S: IndexingTraversalPolicy<'a, 'g, T, D, QueryRangePath>,
         P: IntoPattern,
     >(
@@ -558,24 +563,19 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D, QueryRa
     ) -> Result<(Child, QueryRangePath), NoMatch> {
         let query = query.into_pattern();
         let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())?;
-        self.path_indexing::<Ti, S>(query_path)
+        self.path_indexing::<_, Ti, S>(query_path)
     }
-}
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery> Indexer<T, D, Q> {
-    pub fn new(graph: HypergraphRef<T>) -> Self {
-        Self {
-            graph,
-            _ty: Default::default(),
-        }
-    }
-    pub(crate) fn index_path_prefix(
+    pub(crate) fn index_path_prefix<
+        Q: TraversalQuery + 'a,
+    >(
         &mut self,
         query: Q,
     ) -> Result<(Child, Q), NoMatch> {
-        self.path_indexing::<Bft<_, _, _, _>, Indexing<T, D, Q>>(query)
+        self.path_indexing::<_, Bft<_, _, _, _, _>, Indexing<T, D, Q>>(query)
     }
     fn path_indexing<
-        Ti: TraversalIterator<'a, 'g, T, Self, D, S>,
+        Q: TraversalQuery + 'a,
+        Ti: TraversalIterator<'a, 'g, T, Self, D, Q, S>,
         S: IndexingTraversalPolicy<'a, 'g, T, D, Q>,
     >(
         &'a mut self,

@@ -16,9 +16,7 @@ impl<'t, 'g, T> HypergraphRef<T>
 where
     T: Tokenize + 't,
 {
-    pub fn indexer<
-        Q: TraversalQuery
-    >(&self) -> Indexer<T, Right, Q> {
+    pub fn indexer(&self) -> Indexer<T, Right> {
         Indexer::new(self.clone())
     }
     #[allow(unused)]

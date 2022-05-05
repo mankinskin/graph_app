@@ -17,17 +17,22 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> Traversable<'a, 'g, T
 }
 
 trait SearchTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>:
-    DirectedTraversalPolicy<'a, 'g, T, D, Trav=Searcher<T, D>, Folder=Searcher<T, D>>
+    DirectedTraversalPolicy<'a, 'g, T, D, QueryRangePath, Trav=Searcher<T, D>, Folder=Searcher<T, D>>
 {}
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> SearchTraversalPolicy<'a, 'g, T, D> for AncestorSearch<T, D> {}
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> SearchTraversalPolicy<'a, 'g, T, D> for ParentSearch<T, D> {}
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>
+    SearchTraversalPolicy<'a, 'g, T, D> for AncestorSearch<T, D>
+{}
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>
+    SearchTraversalPolicy<'a, 'g, T, D> for ParentSearch<T, D>
+{}
 
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> TraversalFolder<'a, 'g, T, D> for Searcher<T, D> {
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>
+    TraversalFolder<'a, 'g, T, D, QueryRangePath> for Searcher<T, D>
+{
     type Trav = Self;
     type Break = Option<QueryFound>;
     type Continue = Option<QueryFound>;
     type Node = MatchNode;
-    type Query = QueryRangePath;
     type Path = GraphRangePath;
     fn fold_found(
         trav: &Self::Trav,
@@ -56,28 +61,32 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> TraversalFolder<'a, '
 struct AncestorSearch<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<(T, D)>,
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> DirectedTraversalPolicy<'a, 'g, T, D> for AncestorSearch<T, D> {
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>
+    DirectedTraversalPolicy<'a, 'g, T, D, QueryRangePath> for AncestorSearch<T, D>
+{
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
     fn end_op(
         trav: &'a Self::Trav,
         query: QueryRangePath,
         start: StartPath,
-    ) -> Vec<FolderNode<'a, 'g, T, D, Self>> {
+    ) -> Vec<FolderNode<'a, 'g, T, D, QueryRangePath, Self>> {
         Self::parent_nodes(trav, query, Some(start))
     }
 }
 struct ParentSearch<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<(T, D)>,
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> DirectedTraversalPolicy<'a, 'g, T, D> for ParentSearch<T, D> {
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>
+    DirectedTraversalPolicy<'a, 'g, T, D, QueryRangePath> for ParentSearch<T, D>
+{
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
     fn end_op(
         _trav: &'a Self::Trav,
         _query: QueryRangePath,
         _start: StartPath,
-    ) -> Vec<FolderNode<'a, 'g, T, D, Self>> {
+    ) -> Vec<FolderNode<'a, 'g, T, D, QueryRangePath, Self>> {
         vec![]
     }
 }
@@ -108,34 +117,34 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
     }
     fn dft_search<
         S: SearchTraversalPolicy<'a, 'g, T, D>,
-        Q: IntoPattern,
+        P: IntoPattern,
     >(
         &'a self,
-        query: Q,
+        query: P,
     ) -> SearchResult {
-        self.search::<Dft<_, _, _, _>, S, _>(
+        self.search::<Dft<_, _, _, _, _>, S, _>(
             query,
         )
     }
     #[allow(unused)]
     fn bft_search<
         S: SearchTraversalPolicy<'a, 'g, T, D>,
-        Q: IntoPattern,
+        P: IntoPattern,
     >(
         &'a self,
-        query: Q,
+        query: P,
     ) -> SearchResult {
-        self.search::<Bft<_, _, _, _>, S, _>(
+        self.search::<Bft<_, _, _, _, _>, S, _>(
             query,
         )
     }
     fn search<
-        Ti: TraversalIterator<'a, 'g, T, Self, D, S>,
+        Ti: TraversalIterator<'a, 'g, T, Self, D, QueryRangePath, S>,
         S: SearchTraversalPolicy<'a, 'g, T, D>,
-        Q: IntoPattern,
+        P: IntoPattern,
     >(
         &'a self,
-        query: Q,
+        query: P,
     ) -> SearchResult {
         let query = query.into_pattern();
         let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())?;
