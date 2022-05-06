@@ -81,7 +81,7 @@ pub trait MatchDirection : Clone {
     ) -> HashSet<PatternIndex>;
     fn token_offset_split(
         pattern: impl IntoPattern,
-        width: usize,
+        offset: usize,
     ) -> Option<(usize, usize)>;
 
     fn split_head_tail<T: AsChild + Clone>(pattern: &'_ [T]) -> Option<(T, &'_ [T])> {
@@ -182,15 +182,15 @@ impl MatchDirection for Right {
     }
     fn token_offset_split(
         pattern: impl IntoPattern,
-        mut width: usize,
+        mut offset: usize,
     ) -> Option<(usize, usize)> {
         pattern.into_iter()
             .enumerate()
             .find_map(|(i, c)|
-                if c.width() > width {
-                    Some((i, width))
+                if c.width() > offset {
+                    Some((i, offset))
                 } else {
-                    width -= c.width();
+                    offset -= c.width();
                     None
                 }
             )
@@ -273,16 +273,16 @@ impl MatchDirection for Left {
     }
     fn token_offset_split(
         pattern: impl IntoPattern,
-        mut width: usize,
+        mut offset: usize,
     ) -> Option<(usize, usize)> {
         pattern.into_iter()
             .enumerate()
             .rev()
             .find_map(|(i, c)|
-                if c.width() > width {
-                    Some((i, width))
+                if c.width() > offset {
+                    Some((i, offset))
                 } else {
-                    width -= c.width();
+                    offset -= c.width();
                     None
                 }
             )

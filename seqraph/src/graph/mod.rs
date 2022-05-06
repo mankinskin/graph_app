@@ -69,6 +69,7 @@ where
         self.graph.len()
     }
     /// create index from a pattern and return its pattern id
+    #[track_caller]
     pub fn index_pattern_with_id(
         &mut self,
         indices: impl IntoPattern,
@@ -77,6 +78,7 @@ where
         (c.expect("Tried to index empty pattern!"), id)
     }
     /// create index from a pattern
+    #[track_caller]
     pub fn index_pattern(
         &mut self,
         indices: impl IntoPattern,

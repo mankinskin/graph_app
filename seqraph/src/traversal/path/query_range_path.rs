@@ -8,6 +8,7 @@ pub struct QueryRangePath {
     pub(crate) start: ChildPath,
     pub(crate) exit: usize,
     pub(crate) end: ChildPath,
+    pub(crate) finished: bool,
 }
 impl<
     'a: 'g,
@@ -21,6 +22,7 @@ impl<
             query,
             start: vec![],
             end: vec![],
+            finished: true
         }
     }
     pub fn new_directed<
@@ -32,14 +34,14 @@ impl<
         match query.len() {
             0 => Err(NoMatch::EmptyPatterns),
             1 => Err(NoMatch::SingleIndex),
-            _ => 
-            Ok(Self {
-                query,
-                entry,
-                start: vec![],
-                exit: entry,
-                end: vec![],
-            })
+            _ => Ok(Self {
+                    query,
+                    entry,
+                    start: vec![],
+                    exit: entry,
+                    end: vec![],
+                    finished: false
+                })
         }
     }
 }
@@ -56,6 +58,7 @@ impl QueryPath for QueryRangePath {
             query,
             start: vec![],
             end: vec![],
+            finished: true,
         }
     }
 }
@@ -91,6 +94,14 @@ impl HasEndPath for QueryRangePath {
     }
 }
 impl PatternEnd for QueryRangePath {}
+impl PathFinished for QueryRangePath {
+    fn is_finished(&self) -> bool {
+        self.finished
+    }
+    fn set_finished(&mut self) {
+        self.finished = true;
+    }
+}
 impl EndPathMut for QueryRangePath {
     fn end_path_mut(&mut self) -> &mut ChildPath {
         &mut self.end

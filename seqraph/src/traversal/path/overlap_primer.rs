@@ -3,10 +3,11 @@ use crate::*;
 
 #[derive(Debug, Clone)]
 pub struct OverlapPrimer {
-    start: Child,
-    context: Pattern,
+    pub(crate) start: Child,
+    pub(crate) context: Pattern,
     pub(crate) exit: usize,
     pub(crate) end: ChildPath,
+    pub(crate) finished: bool,
 }
 impl OverlapPrimer {
     pub fn new(start: Child, context: PrefixPath) -> Self {
@@ -15,6 +16,7 @@ impl OverlapPrimer {
             context: context.pattern,
             exit: context.exit,
             end: context.end,
+            finished: context.finished,
         }
     }
     pub fn into_prefix_path(self) -> PrefixPath {
@@ -22,6 +24,7 @@ impl OverlapPrimer {
             pattern: self.context,
             exit: self.exit,
             end: self.end,
+            finished: self.finished,
         }
     }
 }
@@ -76,6 +79,14 @@ impl End for OverlapPrimer {
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child {
         self.get_pattern_end::<_, D, _>(trav)
+    }
+}
+impl PathFinished for OverlapPrimer {
+    fn is_finished(&self) -> bool {
+        self.finished
+    }
+    fn set_finished(&mut self) {
+        self.finished = true;
     }
 }
 impl AdvanceablePath for OverlapPrimer {

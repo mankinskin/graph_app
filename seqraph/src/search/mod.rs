@@ -280,6 +280,7 @@ pub(crate) mod tests {
                     entry: 0,
                     start: vec![],
                     end: vec![],
+                    finished: false,
                 },
             }),
             "a_b_c_c"
@@ -366,6 +367,7 @@ pub(crate) mod tests {
                     entry: 0,
                     start: vec![],
                     end: vec![],
+                    finished: false,
                 },
             }),
             "a_b_c_c"
@@ -421,6 +423,7 @@ pub(crate) mod tests {
                     entry: 0,
                     start: vec![],
                     end: vec![],
+                    finished: true,
                 },
             }),
             "by_z"

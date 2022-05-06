@@ -68,6 +68,10 @@ pub trait HasStartPath {
 pub trait HasEndPath {
     fn get_end_path(&self) -> &[ChildLocation];
 }
+pub trait PathFinished {
+    fn is_finished(&self) -> bool;
+    fn set_finished(&mut self);
+}
 pub trait PatternStart: PatternEntry + HasStartPath {
     fn get_start<
         'a: 'g,
@@ -149,7 +153,7 @@ pub trait End {
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child;
 }
-pub trait AdvanceablePath: Clone + EndPathMut + ExitMut + End {
+pub trait AdvanceablePath: Clone + EndPathMut + ExitMut + End + PathFinished {
     fn next_exit_pos<
         'a: 'g,
         'g,
@@ -211,9 +215,10 @@ pub trait AdvanceablePath: Clone + EndPathMut + ExitMut + End {
         }
         // end is empty (exit is prev)
         if let Some(next) = self.next_exit_pos::<_, D, _>(trav) {
-            *self.exit_mut() =  next;
+            *self.exit_mut() = next;
             true
         } else {
+            self.set_finished();
             false
         }
     }

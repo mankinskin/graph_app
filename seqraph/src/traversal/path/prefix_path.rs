@@ -6,6 +6,7 @@ pub struct PrefixPath {
     pub(crate) pattern: Pattern,
     pub(crate) exit: usize,
     pub(crate) end: ChildPath,
+    pub(crate) finished: bool,
 }
 
 impl<
@@ -21,16 +22,13 @@ impl<
         match pattern.len() {
             0 => Err(NoMatch::EmptyPatterns),
             1 => Err(NoMatch::SingleIndex),
-            _ => 
-            Ok(Self {
-                pattern,
-                exit,
-                end: vec![],
-            })
+            _ => Ok(Self {
+                    pattern,
+                    exit,
+                    end: vec![],
+                    finished: false,
+                })
         }
-    }
-    pub(crate) fn is_complete(&self) -> bool {
-        self.end.is_empty() && self.exit + 1 == self.pattern.len()
     }
 }
 impl EntryPos for PrefixPath {
@@ -75,6 +73,15 @@ impl HasEndPath for PrefixPath {
     }
 }
 impl PatternEnd for PrefixPath {}
+
+impl PathFinished for PrefixPath {
+    fn is_finished(&self) -> bool {
+        self.finished
+    }
+    fn set_finished(&mut self) {
+        self.finished = true;
+    }
+}
 impl End for PrefixPath {
     fn get_end<
         'a: 'g,

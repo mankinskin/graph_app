@@ -164,6 +164,13 @@ impl End for GraphRangePath {
     }
 }
 
+impl PathFinished for GraphRangePath {
+    fn is_finished(&self) -> bool {
+        false
+    }
+    fn set_finished(&mut self) {
+    }
+}
 impl AdvanceablePath for GraphRangePath {
     fn prev_pos<
         'a: 'g,

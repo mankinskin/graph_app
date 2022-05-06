@@ -24,7 +24,7 @@ use crate::{
     Hypergraph,
     Vertexed,
     MatchDirection,
-    TraversalOrder, QueryResult, FoundPath, HypergraphRef, Wide, PatternLocation, Pattern, ChildPath,
+    TraversalOrder, QueryResult, FoundPath, HypergraphRef, Wide, PatternLocation, Pattern,
 };
 
 pub(crate) trait ToTraversalNode<
@@ -371,7 +371,7 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
         let pre_start = match old_start.clone() {
             Some(StartPath::First { entry, width, .. }) => {
                 let pattern = graph.expect_pattern_at(entry);
-                println!("first {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
+                //println!("first {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
                 StartPath::Path {
                     entry: parent_entry,
                     path: if entry.sub_index != D::head_index(&pattern) {
@@ -383,7 +383,7 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
                 }
             },
             Some(StartPath::Path { entry, mut path, width }) => {
-                println!("path {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
+                //println!("path {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
                 let pattern = graph.expect_pattern_at(entry);
                 if entry.sub_index != D::head_index(&pattern) || !path.is_empty() {
                     path.push(entry);
@@ -395,7 +395,7 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
                 }
             },
             None => {
-                println!("start {} -> {}, {}", start_index.index, parent_entry.parent.index, start_index.width);
+                //println!("start {} -> {}, {}", start_index.index, parent_entry.parent.index, start_index.width);
                 StartPath::First {
                     entry: parent_entry,
                     child: start_index,
@@ -557,8 +557,8 @@ pub(crate) trait TraversalFolder<'a: 'g, 'g, T: Tokenize, D: MatchDirection, Q: 
     ) -> ControlFlow<Self::Break, Self::Continue>;
 }
 
-pub trait TraversalQuery: AdvanceablePath + PatternStart + PatternEnd {}
-impl<T: AdvanceablePath + PatternStart + PatternEnd> TraversalQuery for T {}
+pub trait TraversalQuery: AdvanceablePath + PatternStart + PatternEnd + PathFinished {}
+impl<T: AdvanceablePath + PatternStart + PatternEnd + PathFinished> TraversalQuery for T {}
 
 pub(crate) trait TraversalPath:
     AdvanceablePath +

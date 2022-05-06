@@ -140,6 +140,7 @@ pub(crate) mod tests {
                     start: vec![],
                     end: vec![],
                     query,
+                    finished: true,
                 }
             }),
             "aby"
