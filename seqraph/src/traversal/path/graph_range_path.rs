@@ -195,6 +195,6 @@ impl AdvanceablePath for GraphRangePath {
 }
 impl Wide for GraphRangePath {
     fn width(&self) -> usize {
-        self.start.width() + self.end_width
+        self.start.width() + self.inner_width + self.end_width
     }
 }

@@ -1,4 +1,4 @@
-use std::{sync::{RwLockReadGuard, RwLockWriteGuard}, collections::HashMap, borrow::Borrow};
+use std::{sync::{RwLockReadGuard, RwLockWriteGuard}, collections::HashMap, borrow::Borrow, ops::ControlFlow};
 
 use crate::{
     index::*,
@@ -69,11 +69,10 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         self.overlap_index(next, end_bound, advanced, bands)
     }
     fn overlap_index(&mut self, index: Child, end_bound: usize, context: PrefixPath, mut bands: ReadingBands) -> Result<Pattern, NoMatch> {
-        let bundle = vec![];
         if context.is_finished() {
-            self.close_index_path(&mut bands, bundle, end_bound, index, context)
+            Ok(self.close_bands(&mut bands, end_bound, index))
         } else {
-            match self.overlap_index_path(&mut bands, bundle, end_bound, index, context) {
+            match self.overlap_index_path(&mut bands, end_bound, index, context) {
                 Ok((
                     _context_path,
                     expansion,
@@ -93,15 +92,15 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     fn overlap_index_path(
         &mut self,
         bands: &mut ReadingBands,
-        mut bundle: Vec<Pattern>,
         end_bound: usize,
         index: Child,
         context: PrefixPath,
     ) -> Result<(ChildPath, Child, usize, PrefixPath), (Vec<Pattern>, PrefixPath)> {
+        let mut bundle = vec![];
         // find largest expandable postfix
         let mut path = vec![];
         match PostfixIterator::<_, D, _>::new(&self.indexer(), index)
-            .fold(None, |_, (path_segment, loc, postfix)| {
+            .find_map(|(path_segment, loc, postfix)| {
                 if let Some(segment) = path_segment {
                     path.push(segment);
                 }
@@ -153,69 +152,34 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             None => Err((bundle, context))
         }
     }
-    fn close_index_path(
+    fn close_bands(
         &mut self,
         bands: &mut ReadingBands,
-        mut bundle: Vec<Pattern>,
         end_bound: usize,
         index: Child,
-        context: PrefixPath,
-    ) -> Result<Pattern, NoMatch> {
-        Ok(bands.remove(&end_bound).unwrap())
-        // find largest expandable postfix
-        //let mut path = vec![];
-        //match PostfixIterator::<_, D, _>::new(&self.indexer(), index)
-        //    .fold(None, |_, (path_segment, loc, postfix)| {
-        //        if let Some(segment) = path_segment {
-        //            path.push(segment);
-        //        }
-        //        let start_bound = end_bound - postfix.width();
-        //        let old = bands.remove(&start_bound);
-        //        match self.graph.index_path_prefix(OverlapPrimer::new(postfix, context.clone())) {
-        //            Ok((expansion, advanced)) => {
-        //                // expanded
-        //                match bundle.len() {
-        //                    0 => {},
-        //                    1 => {
-        //                        let band = bundle.pop().unwrap();
-        //                        bands.insert(end_bound, band);
-        //                    },
-        //                    _ => {
-        //                        let band = self.graph_mut().index_patterns(bundle.drain(..));
-        //                        bands.insert(end_bound, vec![band]);
-        //                    }
-        //                }
-        //                let context = if let Some(old) = old {
-        //                    old
-        //                } else {
-        //                    vec![
-        //                        IndexableSide::<T, D, IndexBack>::index_context_path(
-        //                            self,
-        //                            loc,
-        //                            path.clone(),
-        //                        )
-        //                    ]
-        //                };
-        //                let end_bound = start_bound + expansion.width();
-        //                bands.insert(end_bound, [&context[..], &[expansion]].concat());
-        //                Some((loc, expansion, end_bound, advanced.into_prefix_path()))
-        //            },
-        //            _ => {
-        //                // not expandable
-        //                if let Some(old) = old {
-        //                    // remember if this comes right after existing band
-        //                    bundle.push([&old[..], postfix.borrow()].concat());
-        //                }
-        //                None
-        //            }
-        //        }
-        //    }) {
-        //    Some((loc, expansion, end_bound, advanced)) => {
-        //        path.push(loc);
-        //        Ok((path, expansion, end_bound, advanced))
-        //    },
-        //    None => Err((bundle, context))
-        //}
+    ) -> Pattern {
+        let finisher = bands.remove(&end_bound).expect("closing on at empty end_bound!");
+        let bundle = PostfixIterator::<_, D, _>::new(&self.indexer(), index)
+            .map_while(|(_path_segment, _loc, postfix)|
+                if !bands.is_empty() {
+                    let start_bound = end_bound - postfix.width();
+                    Some(bands.remove(&start_bound).map(|old|
+                        [&old[..], &[postfix]].concat()
+                    ))
+                } else {
+                    None
+                }
+            )
+            .filter_map(|item| item)
+            .collect_vec();
+        if bundle.is_empty() {
+            finisher
+        } else {
+            vec![self.graph_mut().index_patterns([
+                &[finisher],
+                &bundle[..],
+            ].concat())]
+        }
     }
     pub(crate) fn indexer(&self) -> Indexer<T, D> {
         Indexer::new(self.graph.clone())

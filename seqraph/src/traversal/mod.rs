@@ -321,6 +321,22 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
         query: FolderQuery<'a, 'g, T, D, Q, Self>,
         start_path: StartPath,
     ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>>;
+    fn query_start(
+        trav: &'a Self::Trav,
+        query: FolderQuery<'a, 'g, T, D, Q, Self>,
+    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
+        IntoSequenceIterator::<_, D, _>::into_seq_iter(query, trav).next()
+            .map(|query|
+                Self::parent_nodes(
+                    trav,
+                    query,
+                    None,
+                )
+            )
+            .unwrap_or_else(|_|
+                vec![ToTraversalNode::end_node(None)]
+            )
+    }
     fn parent_nodes(
         trav: &'a Self::Trav,
         query: FolderQuery<'a, 'g, T, D, Q, Self>,
@@ -411,22 +427,6 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
             )
             .unwrap_or_else(|path|
                 Self::index_end(trav, old_query.clone(), path)
-            )
-    }
-    fn query_start(
-        trav: &'a Self::Trav,
-        query: FolderQuery<'a, 'g, T, D, Q, Self>,
-    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
-        IntoSequenceIterator::<_, D, _>::into_seq_iter(query, trav).next()
-            .map(|query|
-                Self::parent_nodes(
-                    trav,
-                    query,
-                    None,
-                )
-            )
-            .unwrap_or_else(|_|
-                vec![ToTraversalNode::end_node(None)]
             )
     }
     fn after_match(

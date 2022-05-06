@@ -23,6 +23,38 @@ fn to_matching_iterator<'a, I: Indexed + 'a, J: Indexed + 'a>(
             _ => false,
         })
 }
+fn pattern_skip_offset(
+    pattern: impl IntoPattern,
+    mut offset: usize,
+) -> Option<(usize, usize)> {
+    pattern.into_iter()
+        .enumerate()
+        .find_map(|(i, c)|
+            if c.width() > offset {
+                Some((i, offset))
+            } else {
+                offset -= c.width();
+                None
+            }
+        )
+}
+fn pattern_find_offset_end(
+    pattern: impl IntoPattern,
+    mut offset: usize,
+) -> Option<(usize, usize)> {
+    pattern.into_iter()
+        .enumerate()
+        .find_map(|(i, c)|
+            match c.width().cmp(&offset) {
+                Ordering::Greater => Some((i, offset)),
+                Ordering::Equal => Some((i, 0)),
+                Ordering::Less => {
+                    offset -= c.width();
+                    None
+                }
+            }
+        )
+}
 pub trait MatchDirection : Clone {
     type Opposite: MatchDirection;
     /// get the parent where vertex is at the relevant position
@@ -79,7 +111,13 @@ pub trait MatchDirection : Clone {
         parent: &Parent,
         child_patterns: &HashMap<PatternId, Pattern>,
     ) -> HashSet<PatternIndex>;
-    fn token_offset_split(
+
+    fn pattern_offset_context_split(
+        pattern: impl IntoPattern,
+        offset: usize,
+    ) -> Option<(usize, usize)>;
+
+    fn pattern_offset_inner_split(
         pattern: impl IntoPattern,
         offset: usize,
     ) -> Option<(usize, usize)>;
@@ -180,21 +218,20 @@ impl MatchDirection for Right {
     ) -> Vec<T> {
         postfix(pattern, index)
     }
-    fn token_offset_split(
+    fn pattern_offset_context_split(
         pattern: impl IntoPattern,
-        mut offset: usize,
+        offset: usize,
     ) -> Option<(usize, usize)> {
-        pattern.into_iter()
-            .enumerate()
-            .find_map(|(i, c)|
-                if c.width() > offset {
-                    Some((i, offset))
-                } else {
-                    offset -= c.width();
-                    None
-                }
-            )
+        pattern_skip_offset(pattern, offset)
     }
+
+    fn pattern_offset_inner_split(
+        pattern: impl IntoPattern,
+        offset: usize,
+    ) -> Option<(usize, usize)> {
+        pattern_find_offset_end(pattern, offset)
+    }
+
     fn front_context<T: AsChild + Clone>(
         pattern: &'_ [T],
         index: PatternId,
@@ -271,21 +308,18 @@ impl MatchDirection for Left {
     ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)> {
         to_matching_iterator(a.rev(), b.rev()).next()
     }
-    fn token_offset_split(
+    fn pattern_offset_context_split(
         pattern: impl IntoPattern,
-        mut offset: usize,
+        offset: usize,
     ) -> Option<(usize, usize)> {
-        pattern.into_iter()
-            .enumerate()
-            .rev()
-            .find_map(|(i, c)|
-                if c.width() > offset {
-                    Some((i, offset))
-                } else {
-                    offset -= c.width();
-                    None
-                }
-            )
+        pattern_find_offset_end(pattern, offset)
+    }
+
+    fn pattern_offset_inner_split(
+        pattern: impl IntoPattern,
+        offset: usize,
+    ) -> Option<(usize, usize)> {
+        pattern_skip_offset(pattern, offset)
     }
     fn split_end<T: AsChild + Clone>(
         pattern: &'_ [T],

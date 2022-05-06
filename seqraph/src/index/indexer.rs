@@ -1,7 +1,7 @@
 use std::{sync::{
     RwLockReadGuard,
     RwLockWriteGuard,
-}, ops::{ControlFlow, Range}, borrow::Borrow};
+}, ops::{ControlFlow, Range, RangeInclusive}, borrow::Borrow};
 
 use itertools::{Itertools, multiunzip};
 
@@ -130,11 +130,6 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a>
         let (start, end) = path.into_paths();
         let mut graph = self.graph_mut();
         let pattern = start.pattern(&*graph);
-        // Todo: this should not be needed
-        let end_location = ChildLocation {
-            sub_index: D::index_next(end.entry().sub_index).unwrap(),
-            ..end.entry()
-        };
         match (
             start.is_perfect(),
             DirectedBorderPath::<D>::is_at_pattern_border(&start, pattern.borrow()),
@@ -149,7 +144,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a>
                 IndexableSide::<_, D, IndexBack>::pattern_index_perfect_split(&mut *graph, pattern, location),
             // perfect front half split
             (true, true, true, _) =>
-                IndexableSide::<_, D, IndexFront>::pattern_index_perfect_split(&mut *graph, pattern, end_location),
+                IndexableSide::<_, D, IndexFront>::pattern_index_perfect_split(&mut *graph, pattern, end.entry()),
             // unperfect back half split
             (false, _, true, true) =>
                 IndexableSide::<_, D, IndexBack>::index_offset_split(
@@ -162,7 +157,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a>
                 IndexableSide::<_, D, IndexFront>::index_offset_split(
                     &mut *graph,
                     parent,
-                    <IndexBack as IndexSide<D>>::width_offset(&parent, offset)
+                    <IndexFront as IndexSide<D>>::width_offset(&parent, offset)
                 ),
             // perfect/perfect inner split
             (true, _, true, _) =>
@@ -197,8 +192,8 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a>
                 let front_offset = pre_width + back_index.width() + inner_width + <IndexFront as IndexSide<D>>::width_offset(&front_index, end.width());
                 let positions = child_patterns.into_iter()
                     .map(|(pid, pattern)| {
-                        let (back_index, back_offset) = D::token_offset_split(pattern.borrow(), back_offset).unwrap();
-                        let (front_index, front_offset) = D::token_offset_split(pattern.borrow(), front_offset).unwrap();
+                        let (back_index, back_offset) = <IndexBack as IndexSide<D>>::token_offset_split(pattern.borrow(), back_offset).unwrap();
+                        let (front_index, front_offset) = <IndexFront as IndexSide<D>>::token_offset_split(pattern.borrow(), front_offset).unwrap();
                         (pid, pattern.into_pattern(), back_index, back_offset, front_index, front_offset)
                     })
                     .collect_vec();
@@ -414,9 +409,10 @@ pub(crate) trait IndexableSide<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection +
         let mut graph = self.graph_mut();
         let child_patterns = graph.expect_children_of(parent).clone();
         let len = child_patterns.len();
+        assert!(offset > 0);
         let perfect = child_patterns.into_iter()
             .try_fold(Vec::with_capacity(len), |mut acc, (pid, pattern)| {
-                let (index, inner_offset) = D::token_offset_split(pattern.borrow(), offset).unwrap();
+                let (index, inner_offset) = Side::token_offset_split(pattern.borrow(), offset).unwrap();
                 if inner_offset == 0 {
                     ControlFlow::Break((pattern.into_pattern(), pid, index))
                 } else {
@@ -462,6 +458,10 @@ pub(crate) trait IndexSide<D: IndexDirection> {
     fn limited_inner_range(range: &Range<usize>) -> Range<usize>;
     fn max_range(pattern: impl IntoPattern, pos: usize) -> Range<usize>;
     fn split_context<'a>(pattern: &'a impl IntoPattern, pos: usize) -> &'a [Child];
+    fn token_offset_split(
+        pattern: impl IntoPattern,
+        offset: usize,
+    ) -> Option<(usize, usize)>;
 }
 pub(crate) struct IndexBack;
 impl<D: IndexDirection> IndexSide<D> for IndexBack {
@@ -504,14 +504,20 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
     fn max_range(pattern: impl IntoPattern, pos: usize) -> Range<usize> {
         pos..pattern.borrow().len()
     }
+    fn token_offset_split(
+        pattern: impl IntoPattern,
+        offset: usize,
+    ) -> Option<(usize, usize)> {
+        D::pattern_offset_context_split(pattern, offset)
+    }
 }
 pub(crate) struct IndexFront;
 impl<D: IndexDirection> IndexSide<D> for IndexFront {
     type Path = EndPath;
-    type InnerRange = Range<usize>;
+    type InnerRange = RangeInclusive<usize>;
     type ContextRange = RangeFrom<usize>;
     fn inner_range(pos: usize) -> Self::InnerRange {
-        0..pos
+        0..=pos
     }
     fn context_range(pos: usize) -> Self::ContextRange {
         D::index_next(pos).unwrap()..
@@ -543,7 +549,13 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
         range.start()..D::index_prev(range.end()).unwrap()
     }
     fn max_range(_pattern: impl IntoPattern, pos: usize) -> Range<usize> {
-        0..D::index_next(pos).unwrap()
+        0..pos
+    }
+    fn token_offset_split(
+        pattern: impl IntoPattern,
+        offset: usize,
+    ) -> Option<(usize, usize)> {
+        D::pattern_offset_inner_split(pattern, offset)
     }
 }
 
