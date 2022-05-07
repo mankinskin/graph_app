@@ -164,7 +164,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a>
                 Indexable::<_, D>::pattern_index_perfect_split_range(&mut *graph, pattern, location, entry..=exit),
             // unperfect/perfect inner split
             (false, _, true, false) =>
-                IndexableSide::<_, D, IndexBack>::pattern_index_unperfect_split(
+                IndexableSide::<_, D, IndexBack>::pattern_range_unperfect_split(
                     &mut *graph,
                     pattern,
                     location,
@@ -173,7 +173,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a>
                 ),
             // perfect/unperfect inner split
             (true, false, false, _) =>
-                IndexableSide::<_, D, IndexFront>::pattern_index_unperfect_split(
+                IndexableSide::<_, D, IndexFront>::pattern_range_unperfect_split(
                     &mut *graph,
                     pattern,
                     location,
@@ -339,33 +339,61 @@ pub(crate) trait IndexableSide<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection +
             context
         }
     }
-    fn pattern_index_unperfect_split(&'a mut self, pattern: Pattern, location: impl IntoPatternLocation, offset: usize, range: Range<usize>) -> IndexSplitResult {
-            let PatternLocation {
+    fn pattern_range_unperfect_split(
+        &'a mut self,
+        pattern: Pattern,
+        location: impl IntoPatternLocation,
+        offset: usize,
+        range: Range<usize>,
+    ) -> IndexSplitResult {
+        let (_index, offset) = Side::token_offset_split(&pattern[range.clone()], offset).unwrap();
+        self.pattern_index_unperfect_split(pattern, location, offset, range)
+    }
+    fn pattern_index_unperfect_split(
+        &'a mut self,
+        pattern: Pattern,
+        location: impl IntoPatternLocation,
+        offset: usize,
+        range: Range<usize>,
+    ) -> IndexSplitResult {
+            let mut graph = self.graph_mut();
+            let location@PatternLocation {
                 parent,
                 pattern_id: pid,
             } = location.into_pattern_location();
+            // range_front of max_range & limited_range with pos must equal pos
             let pos = Side::range_front(&range);
-            let mut graph = self.graph_mut();
             let IndexSplitResult {
-                inner,
+                inner: split_inner,
                 context,
-                location,
+                location: split_location,
+                // split index at pos with offset
             } = IndexableSide::<_, _, Side>::index_offset_split(&mut *graph, *pattern.get(pos).unwrap(), offset);
-            let inner_context = IndexableSide::<_, _, Side>::index_context_path(&mut *graph, location, context);
-            let (back, front) = Side::context_inner_order(&inner_context, &inner);
+
+            let split_context = IndexableSide::<_, _, Side>::index_context_path(&mut *graph, split_location, context);
+
+            let (split_back, split_front) = Side::context_inner_order(&split_context, &split_inner);
+            // includes split index
             let old = &pattern[range.clone()];
-            let context_range = Side::limited_inner_range(&range);
-            let front = graph.index_pattern([front, &pattern[context_range]].concat());
-            let new = [back[0], front];
+            // range from indexing start (back) until split index (front)
+            let inner_range = Side::limited_inner_range(&range);
+            let old_inner = graph.index_pattern(&pattern[inner_range.clone()]);
+            let old_inner_range = range.start()-inner_range.start()..inner_range.end()-inner_range.start();
+            let old = replace_in_pattern(old, old_inner_range, old_inner);
+
+            let (inner_back, inner_front) = Side::context_inner_order(&split_back, &old_inner);
+            let new_inner = graph.index_pattern([inner_back[0], inner_front[0]]);
+            let (back, front) = Side::context_inner_order(&split_front, &new_inner);
+            let new = [back[0], front[0]];
+
             let (inner, ids) = graph.index_patterns_with_ids([&new, &old[..]]);
-            let inner_pid = ids[0];
+            let new_pid = ids[0];
             graph.replace_in_pattern(location, range, inner);
-            // todo: pos depends on Direction
             let location = ChildLocation::new(parent, pid, pos);
             IndexSplitResult {
                 location,
-                context: vec![ChildLocation::new(inner, inner_pid, 1)],
-                inner,
+                context: vec![ChildLocation::new(inner, new_pid, 1)],
+                inner: new_inner,
             }
     }
     fn index_unperfect_splits(&'a mut self, parent: Child, positions: Vec<(PatternId, Pattern, usize, usize)>) -> IndexSplitResult {
@@ -495,11 +523,11 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
     fn limited_range(start: usize, end: usize) -> Range<usize> {
         start..end
     }
-    fn limited_inner_range(range: &Range<usize>) -> Range<usize> {
-        D::index_next(range.start()).unwrap()..range.end()
-    }
     fn range_front(range: &Range<usize>) -> usize {
         range.start()
+    }
+    fn limited_inner_range(range: &Range<usize>) -> Range<usize> {
+        D::index_next(range.start()).unwrap()..range.end()
     }
     fn max_range(pattern: impl IntoPattern, pos: usize) -> Range<usize> {
         pos..pattern.borrow().len()
@@ -540,16 +568,16 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
         width
     }
     fn limited_range(start: usize, end: usize) -> Range<usize> {
-        start..end
+        start..D::index_next(end).unwrap()
     }
     fn range_front(range: &Range<usize>) -> usize {
-        range.end()
+        D::index_prev(range.end()).unwrap()
     }
     fn limited_inner_range(range: &Range<usize>) -> Range<usize> {
         range.start()..D::index_prev(range.end()).unwrap()
     }
     fn max_range(_pattern: impl IntoPattern, pos: usize) -> Range<usize> {
-        0..pos
+        0..D::index_next(pos).unwrap()
     }
     fn token_offset_split(
         pattern: impl IntoPattern,

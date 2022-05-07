@@ -106,16 +106,16 @@ mod tests {
             vec![hel, l],
         ]);
         drop(g);
-        let dld = graph.find_sequence("dld".chars()).unwrap().expect_complete("dld");
+        let held = graph.find_sequence("held".chars()).unwrap().expect_complete("held");
         let g = graph.read().unwrap();
-        let pats: HashSet<_> = dld.vertex(&g).get_child_pattern_set();
+        let pats: HashSet<_> = held.vertex(&g).get_child_pattern_set();
         assert_eq!(pats, hashset![
-            vec![d, ld],
+            vec![hel, d],
+            vec![he, ld],
         ]);
         let pats: HashSet<_> = heldld.vertex(&g).get_child_pattern_set();
         assert_eq!(pats, hashset![
-            vec![hel, dld],
-            vec![he, ld, ld],
+            vec![held, ld],
         ]);
     }
     #[test]
@@ -263,6 +263,13 @@ mod tests {
             drop(g);
 
             let vis = graph.find_sequence("vis".chars()).unwrap().expect_complete("vis");
+            let su = graph.find_sequence("su".chars()).unwrap().expect_complete("su");
+            let g = graph.read().unwrap();
+            let pats = su.vertex(&g).get_child_pattern_set();
+            assert_eq!(pats, hashset![
+                vec![s, u],
+            ]);
+            drop(g);
             let vi = graph.find_sequence("vi".chars()).unwrap().expect_complete("vi");
             let g = graph.read().unwrap();
             let pats = vis.vertex(&g).get_child_pattern_set();
@@ -271,13 +278,6 @@ mod tests {
             ]);
             drop(g);
 
-            let su = graph.find_sequence("su".chars()).unwrap().expect_complete("su");
-            let g = graph.read().unwrap();
-            let pats = su.vertex(&g).get_child_pattern_set();
-            assert_eq!(pats, hashset![
-                vec![s, u],
-            ]);
-            drop(g);
 
             let visu = graph.find_sequence("visu".chars()).unwrap().expect_complete("visu");
             let g = graph.read().unwrap();

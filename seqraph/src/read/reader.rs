@@ -71,7 +71,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     fn overlap_index(&mut self, index: Child, end_bound: usize, context: PrefixPath, mut bands: ReadingBands) -> Result<Pattern, NoMatch> {
         if context.is_finished() {
             Ok(self.close_bands(&mut bands, end_bound, index))
-        } else {
+        } else if index.width() > 1 {
             match self.overlap_index_path(&mut bands, end_bound, index, context) {
                 Ok((
                     _context_path,
@@ -82,11 +82,14 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                     // expanded, continue overlapping
                     self.overlap_index(expansion, end_bound, context, bands)
                 },
-                Err((_bundle, context)) => {
+                Err((_bundle, mut context)) => {
                     // no overlap found, continue after last band
+                    context.advance_next::<T, D, _>(self);
                     self.read_next_bands(context, bands, end_bound)
                 }
             }
+        } else {
+            self.read_next_bands(context, bands, end_bound)
         }
     }
     fn overlap_index_path(

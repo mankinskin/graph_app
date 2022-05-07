@@ -161,6 +161,7 @@ where
         (node, ids)
     }
     /// create new node from multiple patterns
+    #[track_caller]
     pub fn index_patterns(
         &mut self,
         patterns: impl IntoIterator<Item = impl IntoPattern>,
@@ -175,6 +176,7 @@ where
         node
     }
     #[allow(unused)]
+    #[track_caller]
     pub(crate) fn index_range_in(
         &mut self,
         location: impl IntoPatternLocation,
@@ -205,6 +207,7 @@ where
     ) {
         self.replace_in_pattern(location, 0.., rep)
     }
+    #[track_caller]
     pub fn replace_in_pattern(
         &'g mut self,
         location: impl IntoPatternLocation,

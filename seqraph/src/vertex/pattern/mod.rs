@@ -57,6 +57,7 @@ pub fn postfix<T: AsChild + Clone>(
 ) -> Vec<T> {
     pattern.get(index..).unwrap_or(&[]).to_vec()
 }
+#[track_caller]
 pub fn replace_in_pattern(
     pattern: impl IntoPattern,
     range: impl PatternRangeIndex,

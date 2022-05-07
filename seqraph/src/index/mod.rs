@@ -54,6 +54,7 @@ pub(crate) mod tests {
     };
     use pretty_assertions::assert_eq;
     use itertools::*;
+    use maplit::{hashset, hashmap};
     use std::{borrow::Borrow};
 
     #[test]
@@ -144,6 +145,74 @@ pub(crate) mod tests {
                 }
             }),
             "aby"
+        );
+    }
+    #[test]
+    fn index_infix1() {
+        let mut graph = Hypergraph::default();
+        let (a, b, w, x, y, z) = graph.index_tokens([
+            Token::Element('a'),
+            Token::Element('b'),
+            Token::Element('w'),
+            Token::Element('x'),
+            Token::Element('y'),
+            Token::Element('z'),
+        ]).into_iter().next_tuple().unwrap();
+        // index 6
+        let yz = graph.index_pattern([y, z]);
+        let xxabyzw = graph.index_pattern([x, x, a, b, yz, w]);
+
+        let graph_ref = HypergraphRef::from(graph);
+
+        let (aby, _) = graph_ref.index_prefix([a, b, y]).expect("Indexing failed");
+        let ab = graph_ref.find_ancestor([a, b]).unwrap().expect_complete("ab");
+        let graph = graph_ref.read().unwrap();
+        let aby_vertex = graph.expect_vertex_data(aby);
+        assert_eq!(aby.width, 3, "aby");
+        assert_eq!(aby_vertex.parents.len(), 1, "aby");
+        assert_eq!(aby_vertex.children.len(), 1, "aby");
+        assert_eq!(
+            aby_vertex.get_child_pattern_set(),
+            hashset![
+                vec![ab, y]
+            ],
+            "aby"
+        );
+        drop(graph);
+        let aby_found = graph_ref.find_ancestor([a, b, y]);
+        assert_eq!(
+            aby_found,
+            Ok(QueryFound {
+                found: FoundPath::Complete(aby),
+                query: QueryRangePath {
+                    entry: 0,
+                    exit: 2,
+                    start: vec![],
+                    end: vec![],
+                    query: vec![a, b, y],
+                    finished: true,
+                }
+            }),
+            "aby"
+        );
+        let abyz = graph_ref.find_ancestor([ab, yz]).unwrap().expect_complete("abyz");
+        let graph = graph_ref.read().unwrap();
+        let abyz_vertex = graph.expect_vertex_data(abyz);
+        assert_eq!(
+            abyz_vertex.get_child_pattern_set(),
+            hashset![
+                vec![aby, z],
+                vec![ab, yz]
+            ],
+            "abyz"
+        );
+        let xxabyzw_vertex = graph.expect_vertex_data(xxabyzw);
+        assert_eq!(
+            xxabyzw_vertex.get_child_pattern_set(),
+            hashset![
+                vec![x, x, abyz, w]
+            ],
+            "xxabyzw"
         );
     }
 }
