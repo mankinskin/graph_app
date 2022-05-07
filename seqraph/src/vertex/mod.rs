@@ -221,6 +221,12 @@ impl VertexData {
     pub fn remove_parent(
         &mut self,
         vertex: impl Indexed,
+    ) {
+        self.parents.remove(&vertex.index());
+    }
+    pub fn remove_parent_index(
+        &mut self,
+        vertex: impl Indexed,
         pattern: usize,
         index: PatternId,
     ) {

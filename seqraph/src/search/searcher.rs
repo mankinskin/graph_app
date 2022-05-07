@@ -66,13 +66,6 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>
 {
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
-    fn end_op(
-        trav: &'a Self::Trav,
-        query: QueryRangePath,
-        start: StartPath,
-    ) -> Vec<FolderNode<'a, 'g, T, D, QueryRangePath, Self>> {
-        Self::parent_nodes(trav, query, Some(start))
-    }
 }
 struct ParentSearch<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<(T, D)>,

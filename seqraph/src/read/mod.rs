@@ -251,9 +251,9 @@ mod tests {
                 [
                     PatternIndex::new(pid, 10),
                 ]);
-            assert_eq!(subdivision.width(), 11);
         }
         let visualization = graph.read_sequence("visualization".chars());
+        assert_eq!(visualization.width(), 13);
         {
             let g = graph.read().unwrap();
             let a = g.expect_token_child('a');

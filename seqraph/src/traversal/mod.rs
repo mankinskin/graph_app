@@ -320,7 +320,15 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
         trav: &'a Self::Trav,
         query: FolderQuery<'a, 'g, T, D, Q, Self>,
         start_path: StartPath,
-    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>>;
+    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
+        Self::parent_nodes(trav, query, Some(start_path))
+    }
+    fn after_match_end(
+        trav: &'a Self::Trav,
+        start: StartPath,
+    ) -> StartPath {
+        start
+    }
     fn query_start(
         trav: &'a Self::Trav,
         query: FolderQuery<'a, 'g, T, D, Q, Self>,
@@ -382,7 +390,6 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
         old_start: Option<StartPath>,
         parent_entry: ChildLocation,
     ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
-        let start_index = old_query.get_entry();
         let graph = trav.graph();
         let pre_start = match old_start.clone() {
             Some(StartPath::First { entry, width, .. }) => {
@@ -411,6 +418,7 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
                 }
             },
             None => {
+                let start_index = old_query.get_entry();
                 //println!("start {} -> {}, {}", start_index.index, parent_entry.parent.index, start_index.width);
                 StartPath::First {
                     entry: parent_entry,
@@ -425,9 +433,9 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
             .map(|path|
                 Self::match_end(&trav, PathPair::GraphMajor(path, old_query.clone()))
             )
-            .unwrap_or_else(|path|
-                Self::index_end(trav, old_query.clone(), path)
-            )
+            .unwrap_or_else(|path| {
+                Self::end_op(trav, old_query.clone(), Into::<StartPath>::into(path))
+            })
     }
     fn after_match(
         trav: &'a Self::Trav,
@@ -439,23 +447,18 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
             .map(|path|
                 Self::match_end(&trav, PathPair::from_mode(path, query.clone(), mode))
             )
-            .unwrap_or_else(|path|
-                Self::index_end(trav, query.clone(), path)
-            )
-    }
-    fn index_end(
-        trav: &'a Self::Trav,
-        query: FolderQuery<'a, 'g, T, D, Q, Self>,
-        mut path: FolderPath<'a, 'g, T, D, Q, Self>,
-    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
-        path.move_width_into_start();
-        Self::end_op(trav, query, Into::<StartPath>::into(path))
+            .unwrap_or_else(|mut path| {
+                path.move_width_into_start();
+                let start = Self::after_match_end(trav, Into::<StartPath>::into(path));
+                Self::end_op(trav, query, start)
+            })
     }
     /// generate nodes for a child
     fn match_end(
         trav: &'a Self::Trav,
         new_paths: PathPair<FolderQuery<'a, 'g, T, D, Q, Self>, FolderPath<'a, 'g, T, D, Q, Self>>,
     ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
+        // todo: remove "new" in current paths
         let (new_path, new_query) = new_paths.unpack();
         let path_next = new_path.get_end::<_, D, _>(trav);
         let query_next = new_query.get_end::<_, D, _>(trav);

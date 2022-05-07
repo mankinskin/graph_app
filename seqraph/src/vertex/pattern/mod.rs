@@ -5,12 +5,13 @@ mod pattern_range;
 use super::{
     *,
 };
-use std::borrow::Borrow;
+use std::borrow::{Borrow, BorrowMut};
 pub use {
     pattern_range::*,
     pattern_location::*,
     pattern_stream::*,
 };
+use itertools::*;
 pub type Pattern = Vec<Child>;
 pub type PatternView<'a> = &'a [Child];
 
@@ -34,6 +35,14 @@ impl<C, It, T> IntoPattern for T
 {
     type Iter = It;
     type Elem = C;
+}
+/// trait for types which can be converted to a pattern with a known size
+pub trait AsPatternMut: BorrowMut<Vec<Child>> {
+}
+impl<T> AsPatternMut for T
+    where
+        T: BorrowMut<Vec<Child>>,
+{
 }
 pub fn pattern_width<T: Borrow<Child>>(pat: impl IntoIterator<Item = T>) -> TokenPosition {
     pat.into_iter().map(|c| c.borrow().width()).sum()
@@ -59,13 +68,18 @@ pub fn postfix<T: AsChild + Clone>(
 }
 #[track_caller]
 pub fn replace_in_pattern(
-    pattern: impl IntoPattern,
+    mut pattern: impl AsPatternMut ,
     range: impl PatternRangeIndex,
     replace: impl IntoPattern,
 ) -> Pattern {
-    let mut pattern: Pattern = pattern.into_pattern();
-    pattern.splice(range, replace.into_pattern());
-    pattern
+    print!("replacing {:?} in {:?}[{:#?}]",
+        replace.borrow().iter().map(|c| c.index()).collect_vec(),
+        pattern.borrow().iter().map(|c| c.index()).collect_vec(),
+        range
+    );
+    let old = pattern.borrow_mut().splice(range, replace.into_pattern()).collect();
+    println!(" -> {:?}", pattern.borrow().iter().map(|c| c.index()).collect_vec());
+    old
 }
 pub fn single_child_patterns(halves: Vec<Pattern>) -> Result<Child, Vec<Pattern>> {
     match (halves.len(), halves.first()) {

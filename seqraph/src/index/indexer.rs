@@ -44,11 +44,10 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + 'a> DirectedTraversalPolicy<'a, 'g, T, D, Q> for Indexing<'a, T, D, Q> {
     type Trav = Indexer<T, D>;
     type Folder = Indexer<T, D>;
-    fn end_op(
+    fn after_match_end(
         trav: &'a Self::Trav,
-        query: Q,
         start: StartPath,
-    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
+    ) -> StartPath {
         let mut ltrav = trav.clone();
         let IndexSplitResult {
             inner: post,
@@ -56,8 +55,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + '
             ..
             // should call leaf split and use known info of leaf position
          } = IndexableSide::<_, D, IndexBack>::index_entry_split(&mut ltrav, start.entry(), start.width());
-        let start = StartPath::First { entry, child: post, width: start.width() };
-        Self::parent_nodes(trav, query, Some(start))
+        StartPath::First { entry, child: post, width: start.width() }
     }
 }
 trait IndexingTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + 'a>:
@@ -68,7 +66,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + '
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + 'a> TraversalFolder<'a, 'g, T, D, Q> for Indexer<T, D> {
     type Trav = Self;
     type Break = (Child, Q);
-    type Continue = Option<(Child, Q)>;
+    type Continue = Option<QueryResult<Q>>;
     type Path = GraphRangePath;
     type Node = IndexingNode<Q>;
     fn fold_found(
@@ -87,6 +85,17 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + '
             IndexingNode::Mismatch(paths) => {
                 Indexable::<_, D>::index_mismatch(&mut trav, acc, paths)
             },
+            IndexingNode::Match(path, _, prev_query) => {
+                let found = QueryResult::new(
+                    path.reduce_end::<_, D, _>(&trav),
+                    prev_query,
+                );
+                if acc.as_ref().map(|f| found.found.gt(&f.found)).unwrap_or(true) {
+                    ControlFlow::Continue(Some(found))
+                } else {
+                    ControlFlow::Continue(acc)
+                }
+            }
             _ => ControlFlow::Continue(acc)
         }
     }
@@ -316,6 +325,7 @@ pub(crate) trait IndexableSide<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection +
         let pattern = graph.expect_pattern_at(&location);
         let context = Side::split_context(&pattern, location.sub_index);
         let context = graph.index_pattern(context);
+        // todo: skip if not needed
         graph.replace_in_pattern(location, Side::context_range(location.sub_index), context);
         context
     }
@@ -374,12 +384,12 @@ pub(crate) trait IndexableSide<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection +
 
             let (split_back, split_front) = Side::context_inner_order(&split_context, &split_inner);
             // includes split index
-            let old = &pattern[range.clone()];
+            let mut old = pattern[range.clone()].to_vec();
             // range from indexing start (back) until split index (front)
             let inner_range = Side::limited_inner_range(&range);
             let old_inner = graph.index_pattern(&pattern[inner_range.clone()]);
-            let old_inner_range = range.start()-inner_range.start()..inner_range.end()-inner_range.start();
-            let old = replace_in_pattern(old, old_inner_range, old_inner);
+            let old_inner_range = Side::sub_ranges(&range, &inner_range);
+            replace_in_pattern(&mut old, old_inner_range, old_inner);
 
             let (inner_back, inner_front) = Side::context_inner_order(&split_back, &old_inner);
             let new_inner = graph.index_pattern([inner_back[0], inner_front[0]]);
@@ -486,6 +496,7 @@ pub(crate) trait IndexSide<D: IndexDirection> {
     fn limited_inner_range(range: &Range<usize>) -> Range<usize>;
     fn max_range(pattern: impl IntoPattern, pos: usize) -> Range<usize>;
     fn split_context<'a>(pattern: &'a impl IntoPattern, pos: usize) -> &'a [Child];
+    fn sub_ranges(inner: &Range<usize>, limited: &Range<usize>) -> Range<usize>;
     fn token_offset_split(
         pattern: impl IntoPattern,
         offset: usize,
@@ -532,6 +543,9 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
     fn max_range(pattern: impl IntoPattern, pos: usize) -> Range<usize> {
         pos..pattern.borrow().len()
     }
+    fn sub_ranges(inner: &Range<usize>, limited: &Range<usize>) -> Range<usize> {
+        limited.start()-inner.start()..limited.end()-limited.start()
+    }
     fn token_offset_split(
         pattern: impl IntoPattern,
         offset: usize,
@@ -575,6 +589,9 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
     }
     fn limited_inner_range(range: &Range<usize>) -> Range<usize> {
         range.start()..D::index_prev(range.end()).unwrap()
+    }
+    fn sub_ranges(_inner: &Range<usize>, limited: &Range<usize>) -> Range<usize> {
+        0..limited.end()-limited.start()
     }
     fn max_range(_pattern: impl IntoPattern, pos: usize) -> Range<usize> {
         0..D::index_next(pos).unwrap()
@@ -630,13 +647,13 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
         query_path: Q,
     ) -> Result<(Child, Q), NoMatch> {
         let query = query_path.get_exit_pattern().to_vec();
-        match Ti::new(self, TraversalNode::query_node(query_path))
+        let result = Ti::new(self, TraversalNode::query_node(query_path))
             .try_fold(None, |acc, (_, node)|
                 S::Folder::fold_found(self, acc, node)
-            )
-        {
+            );
+        match result {
             ControlFlow::Continue(None) => Err(NoMatch::NotFound(query)),
-            ControlFlow::Continue(Some((found, query))) => Ok((found, query)),
+            ControlFlow::Continue(Some(found)) => Ok((Indexable::<_, D>::index_found(&mut self.clone(), found.found), found.query)),
             ControlFlow::Break((found, query)) => Ok((found, query))
         }
     }

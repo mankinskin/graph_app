@@ -175,38 +175,23 @@ where
         }
         node
     }
-    #[allow(unused)]
-    #[track_caller]
-    pub(crate) fn index_range_in(
-        &mut self,
-        location: impl IntoPatternLocation,
-        range: impl PatternRangeIndex,
-    ) -> Result<Child, NoMatch> {
-        let location = location.into_pattern_location();
-        let vertex = self.expect_vertex_data(location.parent);
-        vertex.get_child_pattern_range(&location.pattern_id, range.clone())
-            .map(|pattern| pattern.to_vec())
-            .map(|pattern| {
-                let c = self.index_pattern(pattern);
-                self.replace_in_pattern(location, range, c);
-                c
-            })
-    }
-    //pub(crate) fn replace_range_at(
+    //#[allow(unused)]
+    //#[track_caller]
+    //pub(crate) fn index_range_in(
     //    &mut self,
-    //    loc: PatternLocation,
+    //    location: impl IntoPatternLocation,
     //    range: impl PatternRangeIndex,
-    //    rep: impl IntoPattern + Clone,
-    //) {
-    //    self.replace_in_pattern(loc.parent, loc.pattern_id, range, rep)
+    //) -> Result<Child, NoMatch> {
+    //    let location = location.into_pattern_location();
+    //    let vertex = self.expect_vertex_data(location.parent);
+    //    vertex.get_child_pattern_range(&location.pattern_id, range.clone())
+    //        .map(|pattern| pattern.to_vec())
+    //        .map(|pattern| {
+    //            let c = self.index_pattern(pattern);
+    //            self.replace_in_pattern(location, range, c);
+    //            c
+    //        })
     //}
-    pub fn replace_pattern(
-        &'g mut self,
-        location: impl IntoPatternLocation,
-        rep: impl IntoPattern + Clone,
-    ) {
-        self.replace_in_pattern(location, 0.., rep)
-    }
     #[track_caller]
     pub fn replace_in_pattern(
         &'g mut self,
@@ -214,44 +199,47 @@ where
         range: impl PatternRangeIndex,
         rep: impl IntoPattern + Clone,
     ) {
-        if range.clone().next().is_none() {
-            // empty range
-            return;
-        }
         let location = location.into_pattern_location();
         let parent = location.parent;
         let parent_index = parent.index();
         let pat = location.pattern_id;
         let replace: Pattern = rep.into_pattern();
-        let (old, width, start, rem) = {
+        let (old, width, start, new_end, rem) = {
             let vertex = self.expect_vertex_data_mut(parent);
             let width = vertex.width;
             let pattern = vertex.expect_child_pattern_mut(&pat);
-            let old = pattern
-                .get(range.clone())
-                .expect("Replace range out of range of pattern!")
-                .to_vec();
-            *pattern = replace_in_pattern((*pattern).borrow(), range.clone(), replace.clone());
             let start = range.clone().next().unwrap();
+            let new_end = start + replace.len();
+            let old = replace_in_pattern(&mut *pattern, range.clone(), replace.clone());
             (
                 old,
                 width,
                 start,
-                pattern.iter().skip(start + replace.len()).cloned().collect::<Pattern>(),
+                new_end,
+                pattern.iter().skip(new_end).cloned().collect::<Pattern>(),
             )
         };
         let old_end = start + old.len();
         range.clone().zip(old.into_iter()).for_each(|(pos, c)| {
             let c = self.expect_vertex_data_mut(c);
-            c.remove_parent(parent_index, pat, pos);
+            c.remove_parent_index(parent_index, pat, pos);
         });
-        let new_end = start + replace.len();
-        for (_i, c) in rem.into_iter().enumerate() {
-            let indices = &mut self.expect_parent_mut(c, parent_index).pattern_indices;
-            let drained: Vec<_> = indices.drain_filter(|i| i.pattern_id == pat && i.sub_index >= old_end)
-                .map(|i| PatternIndex::new(i.pattern_id, new_end + i.sub_index - old_end))
+        for c in rem.into_iter().unique() {
+            let c = self.expect_vertex_data_mut(c);
+            let indices = &mut c.expect_parent_mut(parent_index).pattern_indices;
+            *indices = indices.drain()
+                .filter(|i| i.pattern_id != pat || !range.clone().contains(&i.sub_index))
+                .map(|i|
+                    if i.pattern_id == pat && i.sub_index >= old_end {
+                        PatternIndex::new(i.pattern_id, i.sub_index - old_end + new_end)
+                    } else {
+                        i
+                    }
+                )
                 .collect();
-            indices.extend(drained);
+            if indices.is_empty() {
+                c.remove_parent(parent_index);
+            }
         }
         self.add_pattern_parent(Child::new(parent_index, width), replace, pat, start);
     }
