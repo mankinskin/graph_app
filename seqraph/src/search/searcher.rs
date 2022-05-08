@@ -4,7 +4,7 @@ use crate::{
 };
 use std::{sync::RwLockReadGuard, ops::ControlFlow, borrow::Borrow};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Searcher<T: Tokenize, D: MatchDirection> {
     graph: HypergraphRef<T>,
     _ty: std::marker::PhantomData<D>,
@@ -91,7 +91,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
         }
     }
     // find largest matching direct parent
-    pub(crate) fn find_pattern_parent(
+    pub fn find_pattern_parent(
         &'a self,
         pattern: impl IntoPattern,
     ) -> SearchResult {
@@ -100,7 +100,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
         )
     }
     /// find largest matching ancestor for pattern
-    pub(crate) fn find_pattern_ancestor(
+    pub fn find_pattern_ancestor(
         &'a self,
         pattern: impl IntoPattern,
     ) -> SearchResult {

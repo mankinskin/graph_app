@@ -1,7 +1,11 @@
 use std::collections::VecDeque;
+use crate::{
+    Tokenize,
+    MatchDirection,
+};
 use std::iter::{Extend, FusedIterator};
 
-use crate::{TraversalIterator, Tokenize, Traversable, MatchDirection, DirectedTraversalPolicy, FolderNode, TraversalQuery};
+use super::*;
 
 #[derive(Clone)]
 pub(crate) struct Bft<'a: 'g, 'g, T, Trav, D, Q, S>

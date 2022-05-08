@@ -10,8 +10,6 @@ pub struct Child {
     pub width: TokenPosition, // the token width
 }
 impl Child {
-    #[allow(unused)]
-    pub(crate) const INVALID: Child = Child { index: 0, width: 0 };
     pub fn new(
         index: impl Indexed,
         width: TokenPosition,

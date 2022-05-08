@@ -242,7 +242,6 @@ where
         }
         self.add_pattern_parent(Child::new(parent_index, width), replace, pat, start);
     }
-    #[allow(unused)]
     pub(crate) fn add_pattern_parent(
         &mut self,
         parent: impl AsChild,
@@ -256,7 +255,6 @@ where
             c.add_parent(parent.as_child(), pattern_id, pos);
         });
     }
-    #[allow(unused)]
     pub(crate) fn append_to_pattern(
         &mut self,
         parent: impl AsChild,

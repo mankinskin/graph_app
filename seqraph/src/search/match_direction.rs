@@ -55,7 +55,9 @@ fn pattern_find_offset_end(
             }
         )
 }
-pub trait MatchDirection : Clone {
+use std::fmt::Debug;
+
+pub trait MatchDirection : Clone + Debug {
     type Opposite: MatchDirection;
     /// get the parent where vertex is at the relevant position
     fn get_match_parent_to(

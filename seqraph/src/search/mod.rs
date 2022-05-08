@@ -163,8 +163,7 @@ where
     pub(crate) fn right_searcher(&'g self) -> Searcher<T, Right> {
         self.searcher()
     }
-    #[allow(unused)]
-    pub(crate) fn left_searcher(&'g self) -> Searcher<T, Left> {
+    pub fn left_searcher(&'g self) -> Searcher<T, Left> {
         self.searcher()
     }
     pub fn expect_pattern(
@@ -180,8 +179,7 @@ where
         let pattern = self.read().unwrap().to_children(pattern);
         self.right_searcher().find_pattern_ancestor(pattern)
     }
-    #[allow(unused)]
-    pub(crate) fn find_parent(
+    pub fn find_parent(
         &self,
         pattern: impl IntoIterator<Item = impl Indexed>,
     ) -> SearchResult {

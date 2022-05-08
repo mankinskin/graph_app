@@ -1,6 +1,10 @@
+use crate::{
+    Tokenize,
+    MatchDirection,
+};
 use std::iter::{Extend, FusedIterator};
+use super::*;
 
-use crate::{TraversalIterator, Tokenize, Traversable, MatchDirection, DirectedTraversalPolicy, FolderNode, TraversalQuery};
 
 #[derive(Clone)]
 pub(crate) struct Dft<'a: 'g, 'g, T, Trav, D, Q, S>

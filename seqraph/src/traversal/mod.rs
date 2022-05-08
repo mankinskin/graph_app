@@ -1,151 +1,40 @@
 pub(crate) mod bft;
 pub(crate) mod dft;
 pub(crate) mod path;
+pub(crate) mod node;
+pub(crate) mod traversable;
+pub(crate) mod folder;
+pub(crate) mod iterator;
 
 pub(crate) use bft::*;
 pub(crate) use dft::*;
-pub use path::*;
+pub(crate) use path::*;
+pub(crate) use node::*;
+pub(crate) use traversable::*;
+pub(crate) use folder::*;
+pub(crate) use iterator::*;
 
 use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::ops::{
     ControlFlow,
-    Deref,
-    DerefMut,
 };
-use std::sync::{RwLockReadGuard, RwLockWriteGuard};
-
-use itertools::Itertools;
-
 use crate::{
+    *,
     Child,
     ChildLocation,
     Tokenize,
-    Hypergraph,
     Vertexed,
     MatchDirection,
-    TraversalOrder, QueryResult, FoundPath, HypergraphRef, Wide, PatternLocation, Pattern,
+    TraversalOrder, QueryResult, Wide, PatternLocation, Pattern,
 };
 
-pub(crate) trait ToTraversalNode<
-    Q: TraversalQuery,
-    G: TraversalPath,
-    >: Clone + Into<TraversalNode<Q, G>> {
-    fn query_node(query: Q) -> Self;
-    fn root_node(query: Q, start: Option<StartPath>, entry: ChildLocation) -> Self;
-    fn match_node(path: G, query: Q, old_query: Q) -> Self;
-    fn end_node(found: Option<QueryResult<Q>>) -> Self;
-    fn mismatch_node(paths: PathPair<Q, G>) -> Self;
-}
-
-#[derive(Clone, Debug)]
-pub(crate) enum TraversalNode<
-    Q: TraversalQuery,
-    G: TraversalPath,
-> {
-    Query(Q),
-    Root(Q, Option<StartPath>, ChildLocation),
-    Match(G, Q, Q),
-    End(Option<QueryResult<Q>>),
-    Mismatch(PathPair<Q, G>),
-}
-impl<
-    Q: TraversalQuery,
-    G: TraversalPath,
-> ToTraversalNode<Q, G> for TraversalNode<Q, G> {
-    fn query_node(query: Q) -> Self {
-        Self::Query(query)
-    }
-    fn root_node(query: Q, start: Option<StartPath>, entry: ChildLocation) -> Self {
-        Self::Root(query, start, entry)
-    }
-    fn match_node(path: G, query: Q, old_query: Q) -> Self {
-        Self::Match(path, query, old_query)
-    }
-    fn end_node(found: Option<QueryResult<Q>>) -> Self {
-        Self::End(found)
-    }
-    fn mismatch_node(paths: PathPair<Q, G>) -> Self {
-        Self::Mismatch(paths)
-    }
-}
-
-pub(crate) type MatchNode = TraversalNode<QueryRangePath, GraphRangePath>;
-pub(crate) type IndexingNode<Q> = TraversalNode<Q, GraphRangePath>;
-
-pub trait Traversable<'a: 'g, 'g, T: Tokenize>: Sized + 'a {
-    type Guard: Traversable<'g, 'g, T> + Deref<Target=Hypergraph<T>>;
-    fn graph(&'g self) -> Self::Guard;
-}
-impl <'a: 'g, 'g, T: Tokenize + 'a> Traversable<'a, 'g, T> for &'a Hypergraph<T> {
-    type Guard = &'g Hypergraph<T>;
-    fn graph(&'g self) -> Self::Guard {
-        self
-    }
-}
-impl <'a: 'g, 'g, T: Tokenize + 'a> Traversable<'a, 'g, T> for &'a mut Hypergraph<T> {
-    type Guard = &'g Hypergraph<T>;
-    fn graph(&'g self) -> Self::Guard {
-        &*self
-    }
-}
-impl<'a: 'g, 'g, T: Tokenize + 'a> Traversable<'a, 'g, T> for RwLockReadGuard<'a, Hypergraph<T>> {
-    type Guard = &'g Hypergraph<T>;
-    fn graph(&'g self) -> Self::Guard {
-        &*self
-    }
-}
-impl<'a: 'g, 'g, T: Tokenize + 'a> Traversable<'a, 'g, T> for RwLockWriteGuard<'a, Hypergraph<T>> {
-    type Guard = &'g Hypergraph<T>;
-    fn graph(&'g self) -> Self::Guard {
-        &**self
-    }
-}
-impl<'a: 'g, 'g, T: Tokenize + 'a> Traversable<'a, 'g, T> for HypergraphRef<T> {
-    type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    fn graph(&'g self) -> Self::Guard {
-        self.read().unwrap()
-    }
-}
-
-pub(crate) trait TraversableMut<'a: 'g, 'g, T: Tokenize> : Traversable<'a, 'g, T> {
-    type GuardMut: TraversableMut<'g, 'g, T> + Deref<Target=Hypergraph<T>> + DerefMut;
-    fn graph_mut(&'g mut self) -> Self::GuardMut;
-}
-impl <'a: 'g, 'g, T: Tokenize + 'a> Traversable<'a, 'g, T> for Hypergraph<T> {
-    type Guard = &'g Self;
-    fn graph(&'g self) -> Self::Guard {
-        self
-    }
-}
-impl <'a: 'g, 'g, T: Tokenize + 'a> TraversableMut<'a, 'g, T> for Hypergraph<T> {
-    type GuardMut = &'g mut Self;
-    fn graph_mut(&'g mut self) -> Self::GuardMut {
-        self
-    }
-}
-impl <'a: 'g, 'g, T: Tokenize + 'a> TraversableMut<'a, 'g, T> for &'a mut Hypergraph<T> {
-    type GuardMut = &'g mut Hypergraph<T>;
-    fn graph_mut(&'g mut self) -> Self::GuardMut {
-        *self
-    }
-}
-impl<'a: 'g, 'g, T: Tokenize + 'a> TraversableMut<'a, 'g, T> for RwLockWriteGuard<'a, Hypergraph<T>> {
-    type GuardMut = &'g mut Hypergraph<T>;
-    fn graph_mut(&'g mut self) -> Self::GuardMut {
-        &mut **self
-    }
-}
-impl<'a: 'g, 'g, T: Tokenize + 'a> TraversableMut<'a, 'g, T> for HypergraphRef<T> {
-    type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
-    fn graph_mut(&'g mut self) -> Self::GuardMut {
-        self.write().unwrap()
-    }
-}
 pub(crate) type Folder<'a, 'g, T, D, Q, Ty>
     = <Ty as DirectedTraversalPolicy<'a, 'g, T, D, Q>>::Folder;
+
 pub(crate) type FolderNode<'a, 'g, T, D, Q, Ty>
     = <Folder<'a, 'g, T, D, Q, Ty> as TraversalFolder<'a, 'g, T, D, Q>>::Node;
+
 pub(crate) trait FolderQ<
     'a: 'g,
     'g,
@@ -155,6 +44,7 @@ pub(crate) trait FolderQ<
 > {
     type Query: TraversalQuery;
 }
+
 impl<
     'a: 'g,
     'g,
@@ -165,157 +55,24 @@ impl<
 > FolderQ<'a, 'g, T, D, Q> for Ty {
     type Query = Q;
 }
+
 pub(crate) type FolderQuery<'a, 'g, T, D, Q, Ty> =
     <Folder<'a, 'g, T, D, Q, Ty> as FolderQ<'a, 'g, T, D, Q>>::Query;
+
 pub(crate) type FolderPath<'a, 'g, T, D, Q, Ty>
     = <Folder<'a, 'g, T, D, Q, Ty> as TraversalFolder<'a, 'g, T, D, Q>>::Path;
-pub(crate) trait TraversalIterator<
+
+pub(crate) trait DirectedTraversalPolicy<
     'a: 'g,
     'g,
     T: Tokenize + 'a,
-    Trav: Traversable<'a, 'g, T>,
     D: MatchDirection + 'a,
-    Q: TraversalQuery + 'a,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
->: Iterator<Item = (usize, FolderNode<'a, 'g, T, D, Q, S>)>
-{
-    fn new(trav: &'a Trav, root: FolderNode<'a, 'g, T, D, Q, S>) -> Self;
-    fn iter_children(trav: &'a Trav, node: &FolderNode<'a, 'g, T, D, Q, S>) -> Vec<FolderNode<'a, 'g, T, D, Q, S>> {
-        match node.clone().into() {
-            TraversalNode::Query(query) =>
-                S::query_start(
-                    trav,
-                    query,
-                ),
-            TraversalNode::Root(query, start, parent_entry) =>
-                S::root_successor_nodes(
-                    trav,
-                    query,
-                    start,
-                    parent_entry,
-                ),
-            TraversalNode::Match(path, query, _prev_query) =>
-                S::after_match(
-                    trav,
-                    PathPair::GraphMajor(path, query),
-                ),
-            _ => vec![],
-        }
-    }
-}
-pub(crate) trait BandExpandingPolicy<
-    'a: 'g,
-    'g,
-    T: Tokenize + 'a,
-    Trav: Traversable<'a, 'g, T>,
-> {
-    fn expand_band(location: PatternLocation, pattern: &Pattern) -> (ChildLocation, Child);
-    fn map_batch(batch: impl IntoIterator<Item=(ChildLocation, Child)>) -> Vec<(ChildLocation, Child)> {
-        batch.into_iter().collect_vec()
-    }
-}
-pub(crate) struct PostfixExpandingPolicy<D: MatchDirection> {
-    _ty: std::marker::PhantomData<D>,
-}
+    Q: TraversalQuery + 'a
+>: Sized {
 
-pub(crate) trait BandIterator<
-    'a: 'g,
-    'g,
-    T: Tokenize + 'a,
-    Trav: Traversable<'a, 'g, T>,
-    P: BandExpandingPolicy<'a, 'g, T, Trav>,
->: Iterator<Item = (Option<ChildLocation>, ChildLocation, Child)>
-{
-    fn new(trav: &'a Trav, root: Child) -> Self;
-    fn next_children(trav: &'a Trav, index: Child) -> Vec<(ChildLocation, Child)> {
-        P::map_batch(
-            trav.graph()
-                .expect_children_of(index)
-                .into_iter()
-                .map(|(pid, pattern)|
-                    P::expand_band(PatternLocation::new(index, *pid), pattern)
-                )
-        )
-    }
-}
-impl <
-    'a: 'g,
-    'g,
-    T: Tokenize + 'a,
-    Trav: Traversable<'a, 'g, T>,
-    D: MatchDirection,
-> BandExpandingPolicy<'a, 'g, T, Trav> for PostfixExpandingPolicy<D> {
-    fn expand_band(location: PatternLocation, pattern: &Pattern) -> (ChildLocation, Child) {
-        let last = D::last_index(pattern);
-        (location.to_child_location(last), pattern[last].clone())
-    }
-    fn map_batch(batch: impl IntoIterator<Item=(ChildLocation, Child)>) -> Vec<(ChildLocation, Child)> {
-        batch.into_iter()
-            .sorted_by(|a, b|
-                a.1.width().cmp(&b.1.width())
-            )
-            .collect_vec()
-    }
-}
-pub(crate) struct BandExpandingIterator<'a: 'g, 'g, T, Trav, P>
-where
-    T: Tokenize + 'a,
-    Trav: Traversable<'a, 'g, T>,
-    P: BandExpandingPolicy<'a, 'g, T, Trav>,
-{
-    trav: &'a Trav,
-    queue: VecDeque<(ChildLocation, Child)>,
-    last: (Option<ChildLocation>, Child),
-    _ty: std::marker::PhantomData<(&'g T, P)>
-}
-pub(crate) type PostfixIterator<'a, 'g, T, D, Trav>
-    = BandExpandingIterator<'a, 'g, T, Trav, PostfixExpandingPolicy<D>>;
-
-impl<'a: 'g, 'g, T, Trav, P> BandIterator<'a, 'g, T, Trav, P> for BandExpandingIterator<'a, 'g, T, Trav, P>
-where
-    T: Tokenize + 'a,
-    Trav: Traversable<'a, 'g, T>,
-    P: BandExpandingPolicy<'a, 'g, T, Trav>,
-{
-    fn new(trav: &'a Trav, root: Child) -> Self {
-        Self {
-            trav,
-            queue: VecDeque::new(),
-            last: (None, root),
-            _ty: Default::default(),
-        }
-    }
-}
-impl<'a: 'g, 'g, T, Trav, P> Iterator for BandExpandingIterator<'a, 'g, T, Trav, P>
-where
-    T: Tokenize + 'a,
-    Trav: Traversable<'a, 'g, T>,
-    P: BandExpandingPolicy<'a, 'g, T, Trav>,
-{
-    type Item = (Option<ChildLocation>, ChildLocation, Child);
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        let (last_location, last_node) = &mut self.last;
-        let mut segment = None;
-        if self.queue.is_empty() {
-            segment = last_location.take();
-            self.queue.extend(
-                <Self as BandIterator<T, Trav, P>>::next_children(&self.trav, last_node.clone())
-            )
-        }
-        if let Some((location, node)) = self.queue.pop_front() {
-            *last_location = Some(location);
-            *last_node = node.clone();
-            Some((segment, location, node))
-        } else {
-            None
-        }
-    }
-}
-pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a, Q: TraversalQuery + 'a>: Sized {
     type Trav: Traversable<'a, 'g, T>;
     type Folder: TraversalFolder<'a, 'g, T, D, Q, Trav=Self::Trav>;
+
     fn end_op(
         trav: &'a Self::Trav,
         query: FolderQuery<'a, 'g, T, D, Q, Self>,
@@ -545,102 +302,5 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
             })
             .flatten()
             .collect_vec()
-    }
-}
-pub(crate) trait TraversalFolder<'a: 'g, 'g, T: Tokenize, D: MatchDirection, Q: TraversalQuery + 'a>: Sized {
-    type Trav: Traversable<'a, 'g, T>;
-    type Path: TraversalPath;
-    type Node: ToTraversalNode<Q, Self::Path>;
-    type Break;
-    type Continue;
-    fn fold_found(
-        trav: &'a Self::Trav,
-        acc: Self::Continue,
-        node: Self::Node
-    ) -> ControlFlow<Self::Break, Self::Continue>;
-}
-
-pub trait TraversalQuery: AdvanceablePath + PatternStart + PatternEnd + PathFinished {}
-impl<T: AdvanceablePath + PatternStart + PatternEnd + PathFinished> TraversalQuery for T {}
-
-pub(crate) trait TraversalPath:
-    AdvanceablePath +
-    GraphStart +
-    GraphEnd +
-    From<StartPath> +
-    Into<StartPath> +
-    Into<GraphRangePath>
-{
-    fn reduce_end<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(self, trav: &'a Trav) -> FoundPath;
-    fn move_width_into_start(&mut self);
-    fn on_match<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(&mut self, trav: &'a Trav);
-}
-
-#[derive(Clone, Debug)]
-pub(crate) enum PathPair<
-    Q: TraversalQuery,
-    G: TraversalPath,
-> {
-    GraphMajor(G, Q),
-    QueryMajor(Q, G),
-}
-impl<
-    Q: TraversalQuery,
-    G: TraversalPath,
-> PathPair<Q, G> {
-    pub fn from_mode(path: G, query: Q, mode: bool) -> Self {
-        if mode {
-            Self::GraphMajor(path, query)
-        } else {
-            Self::QueryMajor(query, path)
-        }
-    }
-    pub fn mode(&self) -> bool {
-        matches!(self, Self::GraphMajor(_, _))
-    }
-    pub fn push_major(&mut self, location: ChildLocation) {
-        match self {
-            Self::GraphMajor(path, _) =>
-                path.push_next(location),
-            Self::QueryMajor(query, _) =>
-                query.push_next(location),
-        }
-    }
-    pub fn unpack(self) -> (G, Q) {
-        match self {
-            Self::GraphMajor(path, query) =>
-                (path, query),
-            Self::QueryMajor(query, path) =>
-                (path, query),
-        }
-    }
-    pub(crate) fn reduce_mismatch<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(self, trav: &'a Trav) -> QueryResult<Q> {
-        match self {
-            Self::GraphMajor(path, query) |
-            Self::QueryMajor(query, path) => {
-                QueryResult::new(
-                    FoundPath::new::<_, D, _>(trav, path.reduce_mismatch::<_, D, _>(trav).into()),
-                    query.reduce_mismatch::<_, D, _>(trav),
-                )
-            }
-        }
     }
 }

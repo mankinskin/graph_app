@@ -5,18 +5,22 @@ mod pattern_range;
 use super::{
     *,
 };
-use std::borrow::{Borrow, BorrowMut};
+use crate::*;
 pub use {
     pattern_range::*,
     pattern_location::*,
     pattern_stream::*,
 };
-use itertools::*;
 pub type Pattern = Vec<Child>;
 pub type PatternView<'a> = &'a [Child];
 
 /// trait for types which can be converted to a pattern with a known size
-pub trait IntoPattern: IntoIterator<Item = Self::Elem, IntoIter = Self::Iter> + Sized + Borrow<[Child]> {
+pub trait IntoPattern:
+    IntoIterator<Item = Self::Elem, IntoIter = Self::Iter>
+    + Sized
+    + Borrow<[Child]>
+    + Debug
+{
     type Iter: ExactSizeIterator + DoubleEndedIterator<Item=Self::Elem>;
     type Elem: AsChild;
 
@@ -31,17 +35,18 @@ impl<C, It, T> IntoPattern for T
     where
         C: AsChild,
         It: DoubleEndedIterator<Item=C> + ExactSizeIterator,
-        T: IntoIterator<Item=C, IntoIter=It> + Borrow<[Child]>,
+        T: IntoIterator<Item=C, IntoIter=It> + Borrow<[Child]> + Debug,
 {
     type Iter = It;
     type Elem = C;
 }
 /// trait for types which can be converted to a pattern with a known size
-pub trait AsPatternMut: BorrowMut<Vec<Child>> {
+pub trait AsPatternMut: BorrowMut<Vec<Child>> + Debug {
 }
 impl<T> AsPatternMut for T
     where
-        T: BorrowMut<Vec<Child>>,
+        T: BorrowMut<Vec<Child>>
+            + Debug
 {
 }
 pub fn pattern_width<T: Borrow<Child>>(pat: impl IntoIterator<Item = T>) -> TokenPosition {
@@ -67,18 +72,19 @@ pub fn postfix<T: AsChild + Clone>(
     pattern.get(index..).unwrap_or(&[]).to_vec()
 }
 #[track_caller]
+#[tracing::instrument]
 pub fn replace_in_pattern(
     mut pattern: impl AsPatternMut ,
     range: impl PatternRangeIndex,
     replace: impl IntoPattern,
 ) -> Pattern {
-    print!("replacing {:?} in {:?}[{:#?}]",
-        replace.borrow().iter().map(|c| c.index()).collect_vec(),
-        pattern.borrow().iter().map(|c| c.index()).collect_vec(),
-        range
-    );
+    //print!("replacing {:?} in {:?}[{:#?}]",
+    //    replace.borrow().iter().map(|c| c.index()).collect_vec(),
+    //    pattern.borrow().iter().map(|c| c.index()).collect_vec(),
+    //    range
+    //);
     let old = pattern.borrow_mut().splice(range, replace.into_pattern()).collect();
-    println!(" -> {:?}", pattern.borrow().iter().map(|c| c.index()).collect_vec());
+    //println!(" -> {:?}", pattern.borrow().iter().map(|c| c.index()).collect_vec());
     old
 }
 pub fn single_child_patterns(halves: Vec<Pattern>) -> Result<Child, Vec<Pattern>> {

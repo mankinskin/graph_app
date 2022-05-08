@@ -1,9 +1,14 @@
-use std::{sync::{
-    RwLockReadGuard,
-    RwLockWriteGuard,
-}, ops::{ControlFlow, Range, RangeInclusive}, borrow::Borrow};
-
-use itertools::{Itertools, multiunzip};
+use std::{
+    sync::{
+        RwLockReadGuard,
+        RwLockWriteGuard,
+    },
+    ops::{
+        ControlFlow,
+        Range,
+        RangeInclusive,
+    },
+};
 
 use crate::{
     *,
