@@ -324,7 +324,7 @@ pub(crate) trait DirectedTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchD
         Self::parent_nodes(trav, query, Some(start_path))
     }
     fn after_match_end(
-        trav: &'a Self::Trav,
+        _trav: &'a Self::Trav,
         start: StartPath,
     ) -> StartPath {
         start

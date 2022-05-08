@@ -6,7 +6,7 @@ use std::{
     sync::atomic::{
         AtomicUsize,
         Ordering,
-    }, borrow::Borrow,
+    },
 };
 
 impl<'t, 'g, T> Hypergraph<T>
@@ -175,7 +175,6 @@ where
         }
         node
     }
-    //#[allow(unused)]
     //#[track_caller]
     //pub(crate) fn index_range_in(
     //    &mut self,

@@ -19,8 +19,7 @@ where
     pub fn indexer(&self) -> Indexer<T, Right> {
         Indexer::new(self.clone())
     }
-    #[allow(unused)]
-    pub(crate) fn index_prefix(
+    pub fn index_prefix(
         &self,
         pattern: impl IntoPattern,
     ) -> Result<(Child, QueryRangePath), NoMatch> {
@@ -54,8 +53,8 @@ pub(crate) mod tests {
     };
     use pretty_assertions::assert_eq;
     use itertools::*;
-    use maplit::{hashset, hashmap};
-    use std::{borrow::Borrow};
+    use maplit::hashset;
+    use std::borrow::Borrow;
 
     #[test]
     fn index_prefix1() {

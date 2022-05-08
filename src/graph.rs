@@ -289,6 +289,7 @@ pub struct NodeVis {
     state: Arc<RwLock<NodeState>>,
     graph: Graph,
 }
+#[allow(unused)]
 pub struct NodeState {
     split_lower: usize,
     split_upper: usize,
@@ -367,6 +368,7 @@ impl NodeVis {
     fn state(&self) -> std::sync::RwLockReadGuard<'_, NodeState> {
         self.state.read().unwrap()
     }
+    #[allow(unused)]
     fn state_mut(&self) -> std::sync::RwLockWriteGuard<'_, NodeState> {
         self.state.write().unwrap()
     }

@@ -119,18 +119,6 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
             query,
         )
     }
-    #[allow(unused)]
-    fn bft_search<
-        S: SearchTraversalPolicy<'a, 'g, T, D>,
-        P: IntoPattern,
-    >(
-        &'a self,
-        query: P,
-    ) -> SearchResult {
-        self.search::<Bft<_, _, _, _, _>, S, _>(
-            query,
-        )
-    }
     fn search<
         Ti: TraversalIterator<'a, 'g, T, Self, D, QueryRangePath, S>,
         S: SearchTraversalPolicy<'a, 'g, T, D>,
