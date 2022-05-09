@@ -4,6 +4,13 @@ edition = "2018"
 name = "seqraph"
 version = "0.1.0"
 
+[features]
+default = ["log_stdout"]
+log_file = []
+log_stdout = []
+tracing_off = ["tracing/max_level_off"]
+
+
 [dependencies]
 async-std = "^1"
 async-trait = "^0.1"
@@ -16,13 +23,16 @@ num-traits = "^0.2"
 pin-project-lite = "^0.2"
 serde_json = "^1"
 tempfile = "^3.3.0"
-tracing-appender = "^0.1"
-tracing-subscriber = "^0.2"
-tracing-test = "^0.1"
+tracing-appender = "^0.2"
+tracing-test = "^0.2"
 
 [dependencies.tracing]
 version = "^0.1"
 features = ["attributes"]
+
+[dependencies.tracing-subscriber]
+version = "^0.3"
+features = ["json"]
 
 [dependencies.itertools]
 version = "0.10"
