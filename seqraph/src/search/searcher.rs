@@ -75,7 +75,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>
 {
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
-    fn end_op(
+    fn at_index_end(
         _trav: &'a Self::Trav,
         _query: QueryRangePath,
         _start: StartPath,

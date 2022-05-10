@@ -129,6 +129,32 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a>
             width,
         )
     }
+    fn index_mismatch<Acc, Q: TraversalQuery>(
+        &'a mut self,
+        acc: Acc,
+        paths: PathPair<Q, GraphRangePath>,
+    ) -> ControlFlow<(Child, Q), Acc> {
+        let mut graph = self.graph_mut();
+        let found = paths.reduce_mismatch::<_, D, _>(&*graph);
+        if let FoundPath::Range(path) = &found.found {
+            if path.exit == path.start.entry().sub_index {
+                return ControlFlow::Continue(acc);
+            }
+        }
+        ControlFlow::Break((
+            Indexable::<_, D>::index_found(&mut *graph, found.found),
+            found.query
+        ))
+    }
+    fn index_found(
+        &'a mut self,
+        found: FoundPath,
+    ) -> Child {
+        match found {
+            FoundPath::Range(path) => self.index_range_path(path),
+            FoundPath::Complete(c) => c
+        }
+    }
     fn index_range_path(
         &'a mut self,
         path: GraphRangePath,
@@ -252,32 +278,6 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a>
                 }
             },
         }.inner
-    }
-    fn index_mismatch<Acc, Q: TraversalQuery>(
-        &'a mut self,
-        acc: Acc,
-        paths: PathPair<Q, GraphRangePath>,
-    ) -> ControlFlow<(Child, Q), Acc> {
-        let mut graph = self.graph_mut();
-        let found = paths.reduce_mismatch::<_, D, _>(&*graph);
-        if let FoundPath::Range(path) = &found.found {
-            if path.exit == path.start.entry().sub_index {
-                return ControlFlow::Continue(acc);
-            }
-        }
-        ControlFlow::Break((
-            Indexable::<_, D>::index_found(&mut *graph, found.found),
-            found.query
-        ))
-    }
-    fn index_found(
-        &'a mut self,
-        found: FoundPath,
-    ) -> Child {
-        match found {
-            FoundPath::Range(path) => self.index_range_path(path),
-            FoundPath::Complete(c) => c
-        }
     }
     fn pattern_index_perfect_split_range(
         &'a mut self,

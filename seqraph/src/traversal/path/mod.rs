@@ -47,19 +47,9 @@ pub(crate) trait DirectedBorderPath<D: MatchDirection>: BorderPath {
     fn pattern_entry_outer_pos<P: IntoPattern>(pattern: P, entry: usize) -> Option<usize> {
         <Self::BorderDirection as RelativeDirection>::Direction::pattern_index_next(pattern, entry)
     }
-    //fn pattern_entry_outer_context<P: IntoPattern>(pattern: P, entry: usize) -> ContextHalf {
-    //    ContextHalf::try_new(<Self::BorderDirection as RelativeDirection>::Direction::front_context(pattern.borrow(), entry))
-    //        .expect("GraphPath references border of index!")
-    //}
-    //fn pattern_outer_context<P: IntoPattern>(&self, pattern: P) -> ContextHalf {
-    //    Self::pattern_entry_outer_context(pattern, self.entry().sub_index)
-    //}
     fn pattern_outer_pos<P: IntoPattern>(&self, pattern: P) -> Option<usize> {
         Self::pattern_entry_outer_pos(pattern, self.entry().sub_index)
     }
-    //fn outer_context<'a: 'g, 'g, T: Tokenize + 'a, Trav: Traversable<'a, 'g, T>>(&self, trav: &'a Trav) -> ContextHalf {
-    //    self.pattern_outer_context(self.pattern(trav))
-    //}
     fn outer_pos<'a: 'g, 'g, T: Tokenize + 'a, Trav: Traversable<'a, 'g, T>>(&self, trav: &'a Trav) -> Option<usize> {
         self.pattern_outer_pos(self.pattern(trav))
     }
@@ -83,14 +73,6 @@ pub(crate) struct EndPath {
     pub(crate) path: ChildPath,
     pub(crate) width: usize,
 }
-//impl EndPath {
-//    pub fn path_mut(&mut self) -> &mut ChildPath {
-//        &mut self.path
-//    }
-//    pub fn width_mut(&mut self) -> &mut usize {
-//        &mut self.width
-//    }
-//}
 impl BorderPath for EndPath {
     fn entry(&self) -> ChildLocation {
         self.entry

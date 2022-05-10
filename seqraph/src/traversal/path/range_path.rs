@@ -195,13 +195,13 @@ pub trait AdvanceablePath: Clone + EndPathMut + ExitMut + End + PathFinished {
         }
         self
     }
-    fn advance_next<
+    fn try_advance<
         'a: 'g,
         'g,
         T: Tokenize + 'a,
         D: MatchDirection + 'a,
         Trav: Traversable<'a, 'g, T>,
-    >(&mut self, trav: &'a Trav) -> bool {
+    >(mut self, trav: &'a Trav) -> Result<Self, Self> {
         let graph = trav.graph();
         // skip path segments with no successors
         let end = self.end_path_mut();
@@ -210,17 +210,26 @@ pub trait AdvanceablePath: Clone + EndPathMut + ExitMut + End + PathFinished {
             if let Some(next) = D::pattern_index_next(pattern, location.sub_index) {
                 location.sub_index = next;
                 end.push(location);
-                return true;
+                return Ok(self);
             }
         }
         // end is empty (exit is prev)
         if let Some(next) = self.next_exit_pos::<_, D, _>(trav) {
             *self.exit_mut() = next;
-            true
+            Ok(self)
         } else {
             self.set_finished();
-            false
+            Err(self)
         }
+    }
+    fn into_advanced<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        D: MatchDirection + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(self, trav: &'a Trav) -> Self {
+        self.try_advance::<_, D, _>(trav).unwrap_or_else(|e| e)
     }
     fn get_advance<
         'a: 'g,
@@ -228,105 +237,10 @@ pub trait AdvanceablePath: Clone + EndPathMut + ExitMut + End + PathFinished {
         T: Tokenize + 'a,
         D: MatchDirection + 'a,
         Trav: Traversable<'a, 'g, T>,
-    >(mut self, trav: &'a Trav) -> (Child, Self) {
-        let current = self.get_end::<_, D, _>(trav);
-        self.advance_next::<_, D, _>(trav);
-        (current, self)
-    }
-}
-pub(crate) struct RangePathIter<
-    'a: 'g,
-    'g,
-    P: AdvanceablePath,
-    T: Tokenize + 'a,
-    D: MatchDirection + 'a,
-    Trav: Traversable<'a, 'g, T>,
-> {
-    path: P,
-    trav: &'a Trav,
-    _ty: std::marker::PhantomData<(&'g T, D)>
-}
-pub(crate) trait SequenceIterator: Sized {
-    type Item;
-    fn next(self) -> Result<Self::Item, Self::Item>;
-}
-impl<
-    'a: 'g,
-    'g,
-    P: AdvanceablePath,
-    T: Tokenize + 'a,
-    D: MatchDirection + 'a,
-    Trav: Traversable<'a, 'g, T>,
-> SequenceIterator for RangePathIter<'a, 'g, P, T, D, Trav> {
-    type Item = P;
-    fn next(mut self) -> Result<Self::Item, Self::Item> {
-        if self.path.advance_next::<_, D, _>(self.trav) {
-            Ok(self.path)
-        } else {
-            Err(self.path)
-        }
-    }
-}
-//impl<
-//    'a: 'g,
-//    'g,
-//    P: RangePath,
-//    T: Tokenize + 'a,
-//    D: MatchDirection + 'a,
-//    Trav: Traversable<'a, 'g, T>,
-//> RangePathIter<'a, 'g, P, T, D, Trav> {
-//    fn get_pattern(&self) -> Pattern {
-//        self.path.get_pattern(self.trav)
-//    }
-//    fn push_next(&mut self, next: ChildLocation) {
-//        self.path.push_next(next)
-//    }
-//    fn move_width_into_start(&mut self) {
-//        self.path.move_width_into_start()
-//    }
-//    fn reduce_mismatch(mut self) -> P {
-//        self.path.reduce_mismatch::<_, D, _>(self.trav)
-//    }
-//    fn get_entry_pos(&self) -> usize {
-//        self.path.get_entry_pos()
-//    }
-//    fn get_exit_pos(&self) -> usize {
-//        self.path.get_exit_pos()
-//    }
-//    fn get_end(&self) -> Child {
-//        self.path.get_end::<_, D, _>(self.trav)
-//    }
-//    fn prev_pos(&self) -> Option<usize> {
-//        self.path.prev_pos::<_, D, _>(self.trav)
-//    }
-//    fn on_match(&mut self) {
-//        self.path.on_match::<_, D, _>(self.trav)
-//    }
-//}
-pub(crate) trait IntoSequenceIterator<
-    'a: 'g,
-    'g,
-    T: Tokenize + 'a,
-    D: MatchDirection + 'a,
-    Trav: Traversable<'a, 'g, T>,
-> {
-    type Iter: SequenceIterator;
-    fn into_seq_iter(self, trav: &'a Trav) -> Self::Iter;
-}
-impl<
-    'a: 'g,
-    'g,
-    P: AdvanceablePath,
-    T: Tokenize + 'a,
-    D: MatchDirection + 'a,
-    Trav: Traversable<'a, 'g, T>,
-> IntoSequenceIterator<'a, 'g, T, D, Trav> for P {
-    type Iter = RangePathIter<'a, 'g, P, T, D, Trav>;
-    fn into_seq_iter(self, trav: &'a Trav) -> Self::Iter {
-        RangePathIter {
-            path: self,
-            trav,
-            _ty: Default::default(),
-        }
+    >(self, trav: &'a Trav) -> (Child, Self) {
+        (
+            self.get_end::<_, D, _>(trav),
+            self.into_advanced::<_, D, _>(trav),
+        )
     }
 }

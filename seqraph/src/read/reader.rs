@@ -82,9 +82,9 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                     // expanded, continue overlapping
                     self.overlap_index(expansion, end_bound, context, bands)
                 },
-                Err((_bundle, mut context)) => {
+                Err((_bundle, context)) => {
                     // no overlap found, continue after last band
-                    context.advance_next::<T, D, _>(self);
+                    let context = context.into_advanced::<_, D, _>(self);
                     self.read_next_bands(context, bands, end_bound)
                 }
             }

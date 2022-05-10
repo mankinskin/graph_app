@@ -1,4 +1,3 @@
-use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{
     fmt::{
         self,
