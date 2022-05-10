@@ -355,6 +355,45 @@ mod tests {
             vec![sub, visu],
         ]);
     }
+    #[test]
+    fn read_loose_sequence1() {
+        let mut graph = HypergraphRef::default();
+        let abxaxxb = graph.read_sequence("abxaxxb".chars());
+        assert_eq!(abxaxxb.width(), 6);
+        let g = graph.read().unwrap();
+        let a = g.expect_token_child('a');
+        let b = g.expect_token_child('b');
+        let x = g.expect_token_child('x');
+
+        let pats = abxaxxb.vertex(&g).get_child_pattern_set();
+        //println!("{:#?}", );
+        assert_eq!(pats, hashset![
+            vec![a, b, x, a, x, x, b],
+        ]);
+    }
+    #[test]
+    fn read_repeating_known1() {
+        let mut graph = HypergraphRef::default();
+        let xyyxy = graph.read_sequence("xyyxy".chars());
+        assert_eq!(xyyxy.width(), 5);
+        let g = graph.read().unwrap();
+        let x = g.expect_token_child('x');
+        let y = g.expect_token_child('y');
+
+        drop(g);
+        let xy = graph.find_sequence("xy".chars()).unwrap().expect_complete("xy");
+        let g = graph.read().unwrap();
+
+        let pats = xy.vertex(&g).get_child_pattern_set();
+        assert_eq!(pats, hashset![
+            vec![x, y],
+        ]);
+        let pats = xyyxy.vertex(&g).get_child_pattern_set();
+        //println!("{:#?}", );
+        assert_eq!(pats, hashset![
+            vec![xy, y, xy],
+        ]);
+    }
     //#[tokio::test]
     //async fn async_read_text() {
     //    let (mut tx, mut rx) = mpsc::unbounded_channel::<char>();
