@@ -8,8 +8,6 @@ mod searcher;
 pub use searcher::*;
 mod match_direction;
 pub use match_direction::*;
-//mod async_searcher;
-//pub use async_searcher::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum NoMatch {

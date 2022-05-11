@@ -1,5 +1,5 @@
 use crate::{
-    QueryResult, ChildLocation,
+    QueryResult,
 };
 use super::*;
 
@@ -9,7 +9,8 @@ pub(crate) trait ToTraversalNode<
     >: Clone + Into<TraversalNode<Q, G>> {
     fn query_node(query: Q) -> Self;
     fn match_node(path: G, query: Q, old_query: Q) -> Self;
-    fn root_node(path: Option<StartPath>, query: Q, parent_entry: ChildLocation) -> Self;
+    fn to_match_node(paths: PathPair<Q, G>) -> Self;
+    fn parent_node(path: StartPath, query: Q) -> Self;
     fn end_node(found: Option<QueryResult<Q>>) -> Self;
     fn mismatch_node(paths: PathPair<Q, G>) -> Self;
 }
@@ -20,9 +21,10 @@ pub(crate) enum TraversalNode<
     G: TraversalPath,
 > {
     Query(Q),
-    Match(G, Q, Q),
-    Root(Option<StartPath>, Q, ChildLocation),
+    Parent(StartPath, Q),
     End(Option<QueryResult<Q>>),
+    ToMatch(PathPair<Q, G>),
+    Match(G, Q, Q),
     Mismatch(PathPair<Q, G>),
 }
 impl<
@@ -35,8 +37,11 @@ impl<
     fn match_node(path: G, query: Q, old_query: Q) -> Self {
         Self::Match(path, query, old_query)
     }
-    fn root_node(path: Option<StartPath>, query: Q, parent_entry: ChildLocation) -> Self {
-        Self::Root(path, query, parent_entry)
+    fn to_match_node(paths: PathPair<Q, G>) -> Self {
+        Self::ToMatch(paths)
+    }
+    fn parent_node(path: StartPath, query: Q) -> Self {
+        Self::Parent(path, query)
     }
     fn end_node(found: Option<QueryResult<Q>>) -> Self {
         Self::End(found)

@@ -7,6 +7,7 @@ pub(crate) mod folder;
 pub(crate) mod iterator;
 pub(crate) mod policy;
 
+pub(crate) use super::*;
 pub(crate) use bft::*;
 pub(crate) use dft::*;
 pub(crate) use path::*;
@@ -15,7 +16,3 @@ pub(crate) use traversable::*;
 pub(crate) use folder::*;
 pub(crate) use iterator::*;
 pub(crate) use policy::*;
-
-
-#[cfg(test)]
-mod tests;

@@ -109,6 +109,42 @@ impl StartPath {
             Self::First { width , ..} => width,
         }
     }
+    pub fn append<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>
+    >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self {
+        let graph = trav.graph();
+        match self {
+            StartPath::First { entry, width, .. } => {
+                let pattern = graph.expect_pattern_at(entry);
+                //println!("first {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
+                StartPath::Path {
+                    entry: parent_entry,
+                    path: if entry.sub_index != D::head_index(&pattern) {
+                        vec![entry]
+                    } else {
+                        vec![]
+                    },
+                    width,
+                }
+            },
+            StartPath::Path { entry, mut path, width } => {
+                //println!("path {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
+                let pattern = graph.expect_pattern_at(entry);
+                if entry.sub_index != D::head_index(&pattern) || !path.is_empty() {
+                    path.push(entry);
+                }
+                StartPath::Path {
+                    entry: parent_entry,
+                    path,
+                    width,
+                }
+            },
+        }
+    }
 }
 impl BorderPath for StartPath {
     fn entry(&self) -> ChildLocation {

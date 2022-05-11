@@ -5,7 +5,6 @@ use crate::{
     Child,
     ChildLocation,
     Tokenize,
-    Vertexed,
     MatchDirection,
     TraversalOrder, QueryResult,
 };
@@ -54,13 +53,6 @@ pub(crate) trait DirectedTraversalPolicy<
     type Trav: Traversable<'a, 'g, T>;
     type Folder: TraversalFolder<'a, 'g, T, D, Q, Trav=Self::Trav>;
 
-    fn at_index_end(
-        trav: &'a Self::Trav,
-        query: FolderQuery<'a, 'g, T, D, Q, Self>,
-        start_path: StartPath,
-    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
-        Self::parent_nodes(trav, query, Some(start_path))
-    }
     fn after_match_end(
         _trav: &'a Self::Trav,
         start: StartPath,
@@ -73,31 +65,58 @@ pub(crate) trait DirectedTraversalPolicy<
     ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
         query.try_advance::<_, D, _>(trav)
             .map(|query|
-                Self::parent_nodes(
+                Self::initial_parent_nodes(
                     trav,
                     query,
-                    None,
                 )
             )
             .unwrap_or_else(|_|
                 vec![ToTraversalNode::end_node(None)]
             )
     }
-    fn parent_nodes(
+    fn initial_parent_nodes(
         trav: &'a Self::Trav,
         query: FolderQuery<'a, 'g, T, D, Q, Self>,
-        start: Option<StartPath>,
     ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
-
-        let graph = trav.graph();
-        let start_index = match start {
-            Some(StartPath::First { entry, .. }) |
-            Some(StartPath::Path { entry, .. }) =>
-                entry.parent,
-            None => query.get_entry()
-        };
-        let vertex = start_index.vertex(&graph).clone();
-        let mut parents = vertex.get_parents()
+        let start_index = query.get_entry();
+        Self::gen_parent_nodes(
+            trav,
+            query,
+            start_index, 
+            |p|
+                StartPath::First {
+                    entry: p,
+                    child: start_index,
+                    width: start_index.width,
+                }
+        )
+    }
+    fn inter_parent_nodes(
+        trav: &'a Self::Trav,
+        query: FolderQuery<'a, 'g, T, D, Q, Self>,
+        start: StartPath,
+    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
+        Self::gen_parent_nodes(
+            trav,
+            query,
+            match start {
+                StartPath::First { entry, .. } |
+                StartPath::Path { entry, .. } =>
+                    entry.parent,
+            },
+            |p|
+                start.clone().append::<_, D, _>(trav, p)
+        )
+    }
+    fn gen_parent_nodes(
+        trav: &'a Self::Trav,
+        query: FolderQuery<'a, 'g, T, D, Q, Self>,
+        index: Child,
+        build_start: impl Fn(ChildLocation) -> StartPath,
+    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
+        trav.graph()
+            .expect_vertex_data(index)
+            .get_parents()
             .into_iter()
             .map(|(i, parent)| {
                 let p = Child::new(i, parent.width);
@@ -109,71 +128,27 @@ pub(crate) trait DirectedTraversalPolicy<
                     })
             })
             .flatten()
-            .collect_vec();
-        // try parents in ascending width (might not be needed in indexing)
-        parents.sort_unstable_by(|a, b| TraversalOrder::cmp(a, b));
-        parents.into_iter()
+            .sorted_unstable_by(|a, b| TraversalOrder::cmp(a, b))
             .map(|p|
-                ToTraversalNode::root_node(
-                    start.clone(),
+                ToTraversalNode::parent_node(
+                    build_start(p),
                     query.clone(),
-                    p,
                 )
             )
             .collect_vec()
     }
-    fn root_successor_nodes(
+    fn context_nodes(
         trav: &'a Self::Trav,
-        old_start: Option<StartPath>,
+        start: StartPath,
         old_query: FolderQuery<'a, 'g, T, D, Q, Self>,
-        parent_entry: ChildLocation,
     ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
-        let graph = trav.graph();
-        let pre_start = match old_start.clone() {
-            Some(StartPath::First { entry, width, .. }) => {
-                let pattern = graph.expect_pattern_at(entry);
-                //println!("first {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
-                StartPath::Path {
-                    entry: parent_entry,
-                    path: if entry.sub_index != D::head_index(&pattern) {
-                        vec![entry]
-                    } else {
-                        vec![]
-                    },
-                    width,
-                }
-            },
-            Some(StartPath::Path { entry, mut path, width }) => {
-                //println!("path {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
-                let pattern = graph.expect_pattern_at(entry);
-                if entry.sub_index != D::head_index(&pattern) || !path.is_empty() {
-                    path.push(entry);
-                }
-                StartPath::Path {
-                    entry: parent_entry,
-                    path,
-                    width,
-                }
-            },
-            None => {
-                let start_index = old_query.get_entry();
-                //println!("start {} -> {}, {}", start_index.index, parent_entry.parent.index, start_index.width);
-                StartPath::First {
-                    entry: parent_entry,
-                    child: start_index,
-                    width: start_index.width,
-                }
-            }
-        };
-        drop(graph);
-        let path = FolderPath::<'a, 'g, T, D, Q, Self>::from(pre_start);
-        path.try_advance::<_, D, _>(trav)
-            .map(|path|
-                Self::match_end(&trav, PathPair::GraphMajor(path, old_query.clone()))
-            )
-            .unwrap_or_else(|path| {
-                Self::at_index_end(trav, old_query.clone(), Into::<StartPath>::into(path))
-            })
+        let path = FolderPath::<'a, 'g, T, D, Q, Self>::from(start);
+        match path.try_advance::<_, D, _>(trav) {
+            Ok(path) =>
+                vec![ToTraversalNode::to_match_node(PathPair::GraphMajor(path, old_query))],
+            Err(path) =>
+                Self::at_index_end(trav, old_query, Into::<StartPath>::into(path)),
+        }
     }
     fn after_match(
         trav: &'a Self::Trav,
@@ -181,15 +156,22 @@ pub(crate) trait DirectedTraversalPolicy<
     ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
         let mode = paths.mode();
         let (path, query) = paths.unpack();
-        path.try_advance::<_, D, _>(trav)
-            .map(|path|
-                Self::match_end(&trav, PathPair::from_mode(path, query.clone(), mode))
-            )
-            .unwrap_or_else(|mut path| {
+        match path.try_advance::<_, D, _>(trav) { 
+            Ok(path) =>
+                vec![ToTraversalNode::to_match_node(PathPair::from_mode(path, query, mode))],
+            Err(mut path) => {
                 path.move_width_into_start();
                 let start = Self::after_match_end(trav, Into::<StartPath>::into(path));
                 Self::at_index_end(trav, query, start)
-            })
+            }
+        }
+    }
+    fn at_index_end(
+        trav: &'a Self::Trav,
+        query: FolderQuery<'a, 'g, T, D, Q, Self>,
+        start_path: StartPath,
+    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
+        Self::inter_parent_nodes(trav, query, start_path)
     }
     /// generate nodes for a child
     fn match_end(
@@ -264,24 +246,16 @@ pub(crate) trait DirectedTraversalPolicy<
         index: Child,
         new_paths: PathPair<FolderQuery<'a, 'g, T, D, Q, Self>, FolderPath<'a, 'g, T, D, Q, Self>>,
     ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
-
-        let graph = trav.graph();
-        let vertex = graph.expect_vertex_data(index);
-        let mut child_patterns = vertex.get_children().into_iter().collect_vec();
-
-        child_patterns.sort_unstable_by_key(|(_, p)| p.first().unwrap().width);
-        child_patterns
-            .into_iter()
+        trav.graph()
+            .expect_vertex_data(index)
+            .get_children().into_iter()
+            .sorted_unstable_by_key(|(_, p)| p.first().unwrap().width)
             .map(|(&pid, child_pattern)| {
                 let sub_index = D::head_index(child_pattern);
                 let mut new_paths = new_paths.clone();
                 new_paths.push_major(ChildLocation::new(index, pid, sub_index));
-                Self::match_end(
-                    trav,
-                    new_paths,
-                )
+                ToTraversalNode::to_match_node(new_paths)
             })
-            .flatten()
             .collect_vec()
     }
 }
