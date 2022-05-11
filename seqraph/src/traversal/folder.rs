@@ -1,3 +1,7 @@
+use std::ops::ControlFlow;
+
+use crate::{Tokenize, MatchDirection};
+
 use super::*;
 
 pub(crate) trait TraversalFolder<'a: 'g, 'g, T: Tokenize, D: MatchDirection, Q: TraversalQuery + 'a>: Sized {

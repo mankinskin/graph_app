@@ -1,3 +1,9 @@
+use std::collections::VecDeque;
+
+use itertools::Itertools;
+
+use crate::{PatternLocation, ChildLocation, Pattern, Child, Wide};
+
 use super::*;
 
 pub(crate) trait BandExpandingPolicy<

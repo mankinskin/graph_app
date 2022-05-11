@@ -2,6 +2,8 @@ pub mod bands;
 
 pub(crate) use bands::*;
 
+use crate::{MatchDirection, Tokenize};
+
 use super::*;
 
 pub(crate) trait TraversalIterator<

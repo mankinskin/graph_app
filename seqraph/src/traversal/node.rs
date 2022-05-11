@@ -1,5 +1,5 @@
 use crate::{
-    QueryResult,
+    QueryResult, ChildLocation,
 };
 use super::*;
 
