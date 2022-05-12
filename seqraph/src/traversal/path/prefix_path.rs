@@ -93,8 +93,8 @@ impl End for PrefixPath {
         self.get_pattern_end::<_, D, _>(trav)
     }
 }
-impl AdvanceablePath for PrefixPath {
-    fn prev_pos<
+impl ReduciblePath for PrefixPath {
+    fn prev_exit_pos<
         'a: 'g,
         'g,
         T: Tokenize + 'a,
@@ -109,13 +109,5 @@ impl AdvanceablePath for PrefixPath {
             D::pattern_index_prev(pattern, location.sub_index)
         }
     }
-    fn next_exit_pos<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, _trav: &'a Trav) -> Option<usize> {
-        D::pattern_index_next(self.pattern.borrow(), self.exit)
-    }
 }
+impl AdvanceablePath for PrefixPath {}

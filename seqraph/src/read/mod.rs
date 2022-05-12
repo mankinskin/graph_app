@@ -359,7 +359,7 @@ mod tests {
     fn read_loose_sequence1() {
         let mut graph = HypergraphRef::default();
         let abxaxxb = graph.read_sequence("abxaxxb".chars());
-        assert_eq!(abxaxxb.width(), 6);
+        assert_eq!(abxaxxb.width(), 7);
         let g = graph.read().unwrap();
         let a = g.expect_token_child('a');
         let b = g.expect_token_child('b');

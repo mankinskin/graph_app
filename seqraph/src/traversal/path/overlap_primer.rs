@@ -4,65 +4,46 @@ use crate::*;
 #[derive(Debug, Clone)]
 pub struct OverlapPrimer {
     pub(crate) start: Child,
-    pub(crate) context: Pattern,
-    pub(crate) exit: usize,
-    pub(crate) end: ChildPath,
-    pub(crate) finished: bool,
+    context: PrefixPath,
+    context_offset: usize,
+    exit: usize,
+    end: ChildPath,
 }
 impl OverlapPrimer {
     pub fn new(start: Child, context: PrefixPath) -> Self {
         Self {
             start,
-            context: context.pattern,
-            exit: context.exit,
-            end: context.end,
-            finished: context.finished,
+            context_offset: context.exit,
+            context,
+            exit: 0,
+            end: vec![],
         }
     }
     pub fn into_prefix_path(self) -> PrefixPath {
-        PrefixPath {
-            pattern: self.context,
-            exit: self.exit,
-            end: self.end,
-            finished: self.finished,
-        }
+        self.context
     }
 }
-impl EntryPos for OverlapPrimer {
-    fn get_entry_pos(&self) -> usize {
-        0
-    }
-}
-impl PatternEntry for OverlapPrimer {
-    fn get_entry_pattern(&self) -> &[Child] {
-        self.start.borrow()
-    }
-}
-impl HasStartPath for OverlapPrimer {
-    fn get_start_path(&self) -> &[ChildLocation] {
-        &[]
-    }
-}
-impl PatternStart for OverlapPrimer {}
 impl ExitPos for OverlapPrimer {
     fn get_exit_pos(&self) -> usize {
         self.exit
     }
 }
-impl PatternExit for OverlapPrimer {
-    fn get_exit_pattern(&self) -> &[Child] {
-        &self.context
-    }
-}
 impl HasEndPath for OverlapPrimer {
     fn get_end_path(&self) -> &[ChildLocation] {
-        self.end.borrow()
+        if self.exit == 0 {
+            self.end.borrow()
+        } else {
+            self.context.end.borrow()
+        }
     }
 }
-impl PatternEnd for OverlapPrimer {}
 impl EndPathMut for OverlapPrimer {
     fn end_path_mut(&mut self) -> &mut ChildPath {
-        &mut self.end
+        if self.exit == 0 {
+            &mut self.end
+        } else {
+            &mut self.context.end
+        }
     }
 }
 impl ExitMut for OverlapPrimer {
@@ -78,33 +59,41 @@ impl End for OverlapPrimer {
         D: MatchDirection + 'a,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child {
-        self.get_pattern_end::<_, D, _>(trav)
+        if self.exit == 0 {
+            self.start
+        } else {
+            self.context.get_pattern_end::<_, D, _>(trav)
+        }
     }
 }
 impl PathFinished for OverlapPrimer {
     fn is_finished(&self) -> bool {
-        self.finished
+        self.context.finished
     }
     fn set_finished(&mut self) {
-        self.finished = true;
+        self.context.finished = true;
     }
 }
-impl AdvanceablePath for OverlapPrimer {
-    fn prev_pos<
+impl ReduciblePath for OverlapPrimer {
+    fn prev_exit_pos<
         'a: 'g,
         'g,
         T: Tokenize + 'a,
         D: MatchDirection + 'a,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Option<usize> {
-        if self.end.is_empty() {
-            D::pattern_index_prev(self.context.borrow(), self.exit)
-        } else {
-            let location = self.end.last().unwrap().clone();
-            let pattern = trav.graph().expect_pattern_at(&location);
-            D::pattern_index_prev(pattern, location.sub_index)
+        match self.exit {
+            0 => None,
+            1 => if self.context.get_exit_pos() > self.context_offset {
+                self.context.prev_exit_pos::<_, D, _>(trav)
+            } else {
+                Some(0)
+            },
+            _ => Some(1),
         }
     }
+}
+impl AdvanceableExit for OverlapPrimer {
     fn next_exit_pos<
         'a: 'g,
         'g,
@@ -112,6 +101,25 @@ impl AdvanceablePath for OverlapPrimer {
         D: MatchDirection + 'a,
         Trav: Traversable<'a, 'g, T>,
     >(&self, _trav: &'a Trav) -> Option<usize> {
-        D::pattern_index_next(self.context.borrow(), self.exit)
+        if self.exit == 0 {
+            Some(1)
+        } else {
+            None
+        }
+    }
+    fn advance_exit_pos<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        D: MatchDirection + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(&mut self, trav: &'a Trav) -> Result<(), ()> {
+        if let Some(next) = self.next_exit_pos::<_, D, _>(trav) {
+            *self.exit_mut() = next;
+            Ok(())
+        } else {
+            self.context.advance_exit_pos::<_, D, _>(trav)
+        }
     }
 }
+impl AdvanceablePath for OverlapPrimer {}

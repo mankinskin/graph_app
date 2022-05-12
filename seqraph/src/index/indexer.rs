@@ -31,7 +31,7 @@ pub struct Indexer<T: Tokenize, D: IndexDirection> {
     graph: HypergraphRef<T>,
     _ty: std::marker::PhantomData<D>,
 }
-struct Indexing<'a, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery> {
+struct Indexing<'a, T: Tokenize + 'a, D: IndexDirection + 'a, Q: IndexingQuery> {
     _ty: std::marker::PhantomData<(&'a T, D, Q)>,
 }
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for Indexer<T, D> {
@@ -46,7 +46,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g
         self.graph.write().unwrap()
     }
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + 'a> DirectedTraversalPolicy<'a, 'g, T, D, Q> for Indexing<'a, T, D, Q> {
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: IndexingQuery + 'a> DirectedTraversalPolicy<'a, 'g, T, D, Q> for Indexing<'a, T, D, Q> {
     type Trav = Indexer<T, D>;
     type Folder = Indexer<T, D>;
     fn after_match_end(
@@ -63,12 +63,15 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + '
         StartPath::First { entry, child: post, width: start.width() }
     }
 }
-trait IndexingTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + 'a>:
+trait IndexingTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: IndexingQuery + 'a>:
     DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Indexer<T, D>, Folder=Indexer<T, D>>
 { }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + 'a> IndexingTraversalPolicy<'a, 'g, T, D, Q> for Indexing<'a, T, D, Q> {}
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: IndexingQuery + 'a> IndexingTraversalPolicy<'a, 'g, T, D, Q> for Indexing<'a, T, D, Q> {}
 
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: TraversalQuery + 'a> TraversalFolder<'a, 'g, T, D, Q> for Indexer<T, D> {
+pub(crate) trait IndexingQuery: TraversalQuery + ReduciblePath {}
+impl<T: TraversalQuery + ReduciblePath> IndexingQuery for T {}
+
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: IndexingQuery + 'a> TraversalFolder<'a, 'g, T, D, Q> for Indexer<T, D> {
     type Trav = Self;
     type Break = (Child, Q);
     type Continue = Option<QueryResult<Q>>;
@@ -129,7 +132,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a>
             width,
         )
     }
-    fn index_mismatch<Acc, Q: TraversalQuery>(
+    fn index_mismatch<Acc, Q: TraversalQuery + ReduciblePath>(
         &'a mut self,
         acc: Acc,
         paths: PathPair<Q, GraphRangePath>,
@@ -452,7 +455,6 @@ pub(crate) trait IndexableSide<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection +
         let mut graph = self.graph_mut();
         let child_patterns = graph.expect_children_of(parent).clone();
         let len = child_patterns.len();
-        assert!(offset > 0);
         let perfect = child_patterns.into_iter()
             .try_fold(Vec::with_capacity(len), |mut acc, (pid, pattern)| {
                 let (index, inner_offset) = Side::token_offset_split(pattern.borrow(), offset).unwrap();
@@ -636,7 +638,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
         self.path_indexing::<_, Ti, S>(query_path)
     }
     pub(crate) fn index_path_prefix<
-        Q: TraversalQuery + 'a,
+        Q: IndexingQuery + 'a,
     >(
         &mut self,
         query: Q,
@@ -644,20 +646,19 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
         self.path_indexing::<_, Bft<_, _, _, _, _>, Indexing<T, D, Q>>(query)
     }
     fn path_indexing<
-        Q: TraversalQuery + 'a,
+        Q: IndexingQuery + 'a,
         Ti: TraversalIterator<'a, 'g, T, Self, D, Q, S>,
         S: IndexingTraversalPolicy<'a, 'g, T, D, Q>,
     >(
         &'a mut self,
         query_path: Q,
     ) -> Result<(Child, Q), NoMatch> {
-        let query = query_path.get_exit_pattern().to_vec();
         let result = Ti::new(self, TraversalNode::query_node(query_path))
             .try_fold(None, |acc, (_, node)|
                 S::Folder::fold_found(self, acc, node)
             );
         match result {
-            ControlFlow::Continue(None) => Err(NoMatch::NotFound(query)),
+            ControlFlow::Continue(None) => Err(NoMatch::NotFound),
             ControlFlow::Continue(Some(found)) => Ok((Indexable::<_, D>::index_found(&mut self.clone(), found.found), found.query)),
             ControlFlow::Break((found, query)) => Ok((found, query))
         }

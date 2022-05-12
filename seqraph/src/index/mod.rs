@@ -26,7 +26,7 @@ where
         self.indexer().index_prefix(pattern)
     }
     pub(crate) fn index_path_prefix<
-        Q: TraversalQuery
+        Q: IndexingQuery
     >(
         &self,
         query: Q,

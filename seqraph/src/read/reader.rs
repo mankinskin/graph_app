@@ -35,7 +35,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             self.root.unwrap()
         } else {
             let (unknown, known, remainder) = self.find_known_block(sequence);
-            self.append_pattern_to_root(unknown);
+            self.append_to_root(unknown);
             self.read_known(known);
             self.read_sequence(remainder)
         }
@@ -43,29 +43,40 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     fn read_known(&mut self, known: Pattern) {
         match known.len() {
             0 => {},
-            1 => self.append_pattern_to_root(known),
+            1 => self.append_to_root(known),
             _ => if let Ok(known) = PrefixPath::new_directed::<D, _>(known)
                 .and_then(|path| self.read_known_path(path))
             {
-                self.append_pattern_to_root(known);
+                self.append_to_root(known);
             }
         }
     }
     fn read_known_path(&mut self, known: PrefixPath) -> Result<Pattern, NoMatch> {
         self.read_next_bands(known, ReadingBands::new(), 0)
     }
-    fn read_next_bands(&mut self, known: PrefixPath, mut bands: ReadingBands, end_bound: usize) -> Result<Pattern, NoMatch> {
-        let mut indexer = self.indexer();
-        let (next, advanced) = match indexer.index_path_prefix(known.clone()) {
-            Ok((index, query)) => (index, query),
-            Err(_) => known.get_advance::<_, D, _>(&mut indexer),
-        };
+    fn expand_bands(bands: &mut ReadingBands, end_bound: usize, next: Child) -> usize {
         let (end_bound, band) = if let Some(old) = bands.remove(&end_bound) {
             (end_bound + next.width(), [&old[..], next.borrow()].concat())
         } else {
             (next.width(), vec![next])
         };
         bands.insert(end_bound, band);
+        end_bound
+    }
+    fn append_index(&mut self, bands: &mut ReadingBands, end_bound: usize, index: Child) -> usize {
+        if bands.is_empty() {
+            self.append_to_root(index);
+            end_bound
+        } else {
+            Self::expand_bands(bands, end_bound, index)
+        }
+    }
+    fn read_next_bands(&mut self, known: PrefixPath, bands: ReadingBands, end_bound: usize) -> Result<Pattern, NoMatch> {
+        let mut indexer = self.indexer();
+        let (next, advanced) = match indexer.index_path_prefix(known.clone()) {
+            Ok((index, query)) => (index, query),
+            Err(_) => known.get_advance::<_, D, _>(&mut indexer),
+        };
         self.overlap_index(next, end_bound, advanced, bands)
     }
     fn overlap_index(&mut self, index: Child, end_bound: usize, context: PrefixPath, mut bands: ReadingBands) -> Result<Pattern, NoMatch> {
@@ -76,19 +87,21 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                 Ok((
                     _context_path,
                     expansion,
-                    end_bound,
+                    next_bound,
                     context,
                 )) => {
                     // expanded, continue overlapping
-                    self.overlap_index(expansion, end_bound, context, bands)
+                    self.overlap_index(expansion, next_bound, context, bands)
                 },
                 Err((_bundle, context)) => {
                     // no overlap found, continue after last band
+                    self.append_index(&mut bands, end_bound, index);
                     let context = context.into_advanced::<_, D, _>(self);
                     self.read_next_bands(context, bands, end_bound)
                 }
             }
         } else {
+            let end_bound = self.append_index(&mut bands, end_bound, index);
             self.read_next_bands(context, bands, end_bound)
         }
     }
@@ -99,9 +112,10 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         index: Child,
         context: PrefixPath,
     ) -> Result<(ChildPath, Child, usize, PrefixPath), (Vec<Pattern>, PrefixPath)> {
-        let mut bundle = vec![];
+        let mut bundle = vec![vec![index]];
         // find largest expandable postfix
         let mut path = vec![];
+        let end_bound = end_bound + index.width();
         match PostfixIterator::<_, D, _>::new(&self.indexer(), index)
             .find_map(|(path_segment, loc, postfix)| {
                 if let Some(segment) = path_segment {
@@ -109,7 +123,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                 }
                 let start_bound = end_bound - postfix.width();
                 let old = bands.remove(&start_bound);
-                match self.graph.index_path_prefix(OverlapPrimer::new(postfix, context.clone())) {
+                match self.graph.index_path_prefix(OverlapPrimer::new(postfix, context.clone().into_advanced::<_, D, _>(self))) {
                     Ok((expansion, advanced)) => {
                         // expanded
                         match bundle.len() {
@@ -161,27 +175,36 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         end_bound: usize,
         index: Child,
     ) -> Pattern {
-        let finisher = bands.remove(&end_bound).expect("closing on at empty end_bound!");
-        let bundle = PostfixIterator::<_, D, _>::new(&self.indexer(), index)
-            .map_while(|(_path_segment, _loc, postfix)|
-                if !bands.is_empty() {
-                    let start_bound = end_bound - postfix.width();
-                    Some(bands.remove(&start_bound).map(|old|
-                        [&old[..], &[postfix]].concat()
-                    ))
+        let finisher = bands.remove(&end_bound);
+        match (finisher, bands.is_empty()) {
+            (None, _) => vec![index],
+            (Some(mut finisher), true) => {
+                finisher.push(index);
+                finisher
+            },
+            (Some(finisher), _) => {
+                let bundle = PostfixIterator::<_, D, _>::new(&self.indexer(), index)
+                    .map_while(|(_path_segment, _loc, postfix)|
+                        if !bands.is_empty() {
+                            let start_bound = end_bound - postfix.width();
+                            Some(bands.remove(&start_bound).map(|old|
+                                [&old[..], &[postfix]].concat()
+                            ))
+                        } else {
+                            None
+                        }
+                    )
+                    .filter_map(|item| item)
+                    .collect_vec();
+                if bundle.is_empty() {
+                    finisher
                 } else {
-                    None
+                    vec![self.graph_mut().index_patterns([
+                        &[finisher],
+                        &bundle[..],
+                    ].concat())]
                 }
-            )
-            .filter_map(|item| item)
-            .collect_vec();
-        if bundle.is_empty() {
-            finisher
-        } else {
-            vec![self.graph_mut().index_patterns([
-                &[finisher],
-                &bundle[..],
-            ].concat())]
+            }
         }
     }
     pub(crate) fn indexer(&self) -> Indexer<T, D> {
@@ -196,10 +219,13 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     }
     /// append a pattern of new token indices
     /// returns index of possible new index
-    fn append_pattern_to_root(
+    fn append_to_root(
         &mut self,
-        new: Pattern,
+        new: impl IntoPattern,
     ) {
+        if new.is_empty() {
+            return;
+        }
         if let Some(root) = &mut self.root {
             let mut graph = self.graph.graph_mut();
             let vertex = (*root).vertex_mut(&mut graph);
@@ -211,14 +237,15 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                 graph.append_to_pattern(*root, pid, new)
             } else {
                 // some old overlaps though
+                let new = new.into_pattern();
                 graph.index_pattern([&[*root], new.as_slice()].concat())
             };
         } else {
-            match new.len() {
+            match new.borrow().len() {
                 0 => {},
                 1 => {
-                    let new = new.into_iter().next().unwrap();
-                    self.root = Some(new);
+                    let new = new.borrow().into_iter().next().unwrap();
+                    self.root = Some(*new);
                 },
                 _ => {
                     // insert new pattern so it can be found in later queries

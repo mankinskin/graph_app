@@ -14,7 +14,7 @@ pub enum NoMatch {
     EmptyPatterns,
     NoParents,
     NoChildPatterns,
-    NotFound(Pattern),
+    NotFound,
     NoMatchingParent(VertexIndex),
     InvalidPattern(PatternId),
     InvalidPatternRange(PatternId, Pattern, String),

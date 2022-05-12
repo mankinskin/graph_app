@@ -171,8 +171,8 @@ impl PathFinished for GraphRangePath {
     fn set_finished(&mut self) {
     }
 }
-impl AdvanceablePath for GraphRangePath {
-    fn prev_pos<
+impl ReduciblePath for GraphRangePath {
+    fn prev_exit_pos<
         'a: 'g,
         'g,
         T: Tokenize + 'a,
@@ -183,6 +183,8 @@ impl AdvanceablePath for GraphRangePath {
         let pattern = trav.graph().expect_pattern_at(&location);
         D::pattern_index_prev(pattern, location.sub_index)
     }
+}
+impl AdvanceableExit for GraphRangePath {
     fn next_exit_pos<
         'a: 'g,
         'g,
@@ -198,3 +200,4 @@ impl Wide for GraphRangePath {
         self.start.width() + self.inner_width + self.end_width
     }
 }
+impl AdvanceablePath for GraphRangePath {}

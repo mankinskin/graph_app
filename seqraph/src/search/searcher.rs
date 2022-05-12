@@ -2,7 +2,7 @@ use crate::{
     search::*,
     Hypergraph,
 };
-use std::{sync::RwLockReadGuard, ops::ControlFlow, borrow::Borrow};
+use std::{sync::RwLockReadGuard, ops::ControlFlow};
 
 #[derive(Clone, Debug)]
 pub struct Searcher<T: Tokenize, D: MatchDirection> {
@@ -127,14 +127,13 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
         &'a self,
         query: P,
     ) -> SearchResult {
-        let query = query.into_pattern();
         let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())?;
         match Ti::new(self, TraversalNode::query_node(query_path))
             .try_fold(None, |acc: Option<QueryFound>, (_, node)|
                 S::Folder::fold_found(self, acc, node)
             )
         {
-            ControlFlow::Continue(None) => Err(NoMatch::NotFound(query)),
+            ControlFlow::Continue(None) => Err(NoMatch::NotFound),
             ControlFlow::Continue(Some(found)) => Ok(found),
             ControlFlow::Break(found) => found.ok_or(NoMatch::SingleIndex)
         }

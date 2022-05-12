@@ -10,21 +10,21 @@ use super::*;
 
 pub trait TraversalQuery:
     AdvanceablePath
-    + PatternStart
-    + PatternEnd
     + PathFinished
     + Debug
+    + Clone
 {}
 impl<
     T: AdvanceablePath
-        + PatternStart
-        + PatternEnd
+        + ReduciblePath
         + PathFinished
-        + Debug,
+        + Debug
+        + Clone
 > TraversalQuery for T {}
 
 pub(crate) trait TraversalPath:
     AdvanceablePath
+    + ReduciblePath
     + GraphStart
     + GraphEnd
     + From<StartPath>
@@ -74,9 +74,9 @@ impl<
     pub fn push_major(&mut self, location: ChildLocation) {
         match self {
             Self::GraphMajor(path, _) =>
-                path.push_next(location),
+                path.push_end(location),
             Self::QueryMajor(query, _) =>
-                query.push_next(location),
+                query.push_end(location),
         }
     }
     pub fn unpack(self) -> (G, Q) {
@@ -87,6 +87,12 @@ impl<
                 (path, query),
         }
     }
+}
+
+impl<
+    Q: index::IndexingQuery,
+    G: TraversalPath,
+> PathPair<Q, G> {
     pub(crate) fn reduce_mismatch<
         'a: 'g,
         'g,
