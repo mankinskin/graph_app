@@ -104,6 +104,11 @@ pub(crate) enum StartPath {
         width: usize
     },
 }
+impl From<GraphRangePath> for StartPath {
+    fn from(p: GraphRangePath) -> Self {
+        p.start
+    }
+}
 impl StartPath {
     pub fn width_mut(&mut self) -> &mut usize {
         match self {
@@ -276,7 +281,7 @@ pub trait PatternEnd: PatternExit + HasEndPath + End {
 pub trait GraphStart: GraphEntry + HasStartPath {
     fn get_start_location(&self) -> ChildLocation {
         if let Some(start) = self.get_start_path().last() {
-            start.clone()
+            *start
         } else {
             self.get_entry_location()
         }
@@ -294,7 +299,7 @@ pub trait GraphStart: GraphEntry + HasStartPath {
 pub trait GraphEnd: GraphExit + HasEndPath + End {
     fn get_end_location(&self) -> ChildLocation {
         if let Some(end) = self.get_end_path().last() {
-            end.clone()
+            *end
         } else {
             self.get_exit_location()
         }

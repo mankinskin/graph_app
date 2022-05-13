@@ -53,7 +53,7 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         let (last_depth, last_node) = &self.last;
         self.queue.extend(
-            <Self as TraversalIterator<T, Trav, D, Q, S>>::iter_children(&self.trav, last_node)
+            <Self as TraversalIterator<T, Trav, D, Q, S>>::iter_children(self.trav, last_node)
                 .into_iter()
                 .map(|child| (last_depth + 1, child))
         );

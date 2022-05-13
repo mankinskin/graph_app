@@ -36,11 +36,14 @@ impl<
     type Query = Q;
 }
 
-pub(crate) type FolderQuery<'a, 'g, T, D, Q, Ty> =
-    <Folder<'a, 'g, T, D, Q, Ty> as FolderQ<'a, 'g, T, D, Q>>::Query;
+pub(crate) type FolderQuery<'a, 'g, T, D, Q, Ty>
+    = <Folder<'a, 'g, T, D, Q, Ty> as FolderQ<'a, 'g, T, D, Q>>::Query;
 
 pub(crate) type FolderPath<'a, 'g, T, D, Q, Ty>
     = <Folder<'a, 'g, T, D, Q, Ty> as TraversalFolder<'a, 'g, T, D, Q>>::Path;
+
+pub(crate) type  FolderPathPair<'a, 'g, T, D, Q, Ty>
+    = PathPair<FolderQuery<'a, 'g, T, D, Q, Ty>, FolderPath<'a, 'g, T, D, Q, Ty>>;
 
 pub(crate) trait DirectedTraversalPolicy<
     'a: 'g,
@@ -106,8 +109,8 @@ pub(crate) trait DirectedTraversalPolicy<
         trav.graph()
             .expect_vertex_data(index)
             .get_parents()
-            .into_iter()
-            .map(|(i, parent)| {
+            .iter()
+            .flat_map(|(i, parent)| {
                 let p = Child::new(i, parent.width);
                 parent.pattern_indices
                     .iter()
@@ -116,7 +119,6 @@ pub(crate) trait DirectedTraversalPolicy<
                         ChildLocation::new(p, pi.pattern_id, pi.sub_index)
                     })
             })
-            .flatten()
             .sorted_unstable_by(|a, b| TraversalOrder::cmp(a, b))
             .map(|p|
                 ToTraversalNode::parent_node(
@@ -141,7 +143,7 @@ pub(crate) trait DirectedTraversalPolicy<
     }
     fn after_match(
         trav: &'a Self::Trav,
-        paths: PathPair<FolderQuery<'a, 'g, T, D, Q, Self>, FolderPath<'a, 'g, T, D, Q, Self>>,
+        paths: FolderPathPair<'a, 'g, T, D, Q, Self>,
     ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
         let mode = paths.mode();
         let (path, query) = paths.unpack();
@@ -165,7 +167,7 @@ pub(crate) trait DirectedTraversalPolicy<
     /// generate nodes for a child
     fn match_end(
         trav: &'a Self::Trav,
-        paths: PathPair<FolderQuery<'a, 'g, T, D, Q, Self>, FolderPath<'a, 'g, T, D, Q, Self>>,
+        paths: FolderPathPair<'a, 'g, T, D, Q, Self>,
     ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
         let (mut path, query) = paths.unpack();
         let path_next = path.get_end::<_, D, _>(trav);
@@ -228,11 +230,11 @@ pub(crate) trait DirectedTraversalPolicy<
     fn prefix_nodes(
         trav: &'a Self::Trav,
         index: Child,
-        paths: PathPair<FolderQuery<'a, 'g, T, D, Q, Self>, FolderPath<'a, 'g, T, D, Q, Self>>,
+        paths: FolderPathPair<'a, 'g, T, D, Q, Self>,
     ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
         trav.graph()
             .expect_vertex_data(index)
-            .get_children().into_iter()
+            .get_children().iter()
             .sorted_unstable_by_key(|(_, p)| p.first().unwrap().width)
             .map(|(&pid, child_pattern)| {
                 let sub_index = D::head_index(child_pattern);

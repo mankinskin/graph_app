@@ -31,6 +31,6 @@ impl IntoPatternLocation for PatternLocation {
 }
 impl IntoPatternLocation for &PatternLocation {
     fn into_pattern_location(self) -> PatternLocation {
-        self.clone()
+        *self
     }
 }

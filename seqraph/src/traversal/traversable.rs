@@ -18,7 +18,7 @@ impl <'a: 'g, 'g, T: Tokenize + 'a> Traversable<'a, 'g, T> for &'a Hypergraph<T>
 impl <'a: 'g, 'g, T: Tokenize + 'a> Traversable<'a, 'g, T> for &'a mut Hypergraph<T> {
     type Guard = &'g Hypergraph<T>;
     fn graph(&'g self) -> Self::Guard {
-        &*self
+        *self
     }
 }
 impl<'a: 'g, 'g, T: Tokenize + 'a> Traversable<'a, 'g, T> for RwLockReadGuard<'a, Hypergraph<T>> {

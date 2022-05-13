@@ -52,7 +52,7 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         let (last_depth, last_node) = &self.last;
         self.stack.extend(
-            <Self as TraversalIterator<'a, 'g, T, Trav, D, Q, S>>::iter_children(&self.trav, last_node)
+            <Self as TraversalIterator<'a, 'g, T, Trav, D, Q, S>>::iter_children(self.trav, last_node)
                 .into_iter()
                 .rev()
                 .map(|child| (last_depth + 1, child))

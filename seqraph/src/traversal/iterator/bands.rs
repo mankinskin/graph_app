@@ -34,7 +34,7 @@ pub(crate) trait BandIterator<
         P::map_batch(
             trav.graph()
                 .expect_children_of(index)
-                .into_iter()
+                .iter()
                 .map(|(pid, pattern)|
                     P::expand_band(PatternLocation::new(index, *pid), pattern)
                 )
@@ -50,7 +50,7 @@ impl <
 > BandExpandingPolicy<'a, 'g, T, Trav> for PostfixExpandingPolicy<D> {
     fn expand_band(location: PatternLocation, pattern: &Pattern) -> (ChildLocation, Child) {
         let last = D::last_index(pattern);
-        (location.to_child_location(last), pattern[last].clone())
+        (location.to_child_location(last), pattern[last])
     }
     fn map_batch(batch: impl IntoIterator<Item=(ChildLocation, Child)>) -> Vec<(ChildLocation, Child)> {
         batch.into_iter()
@@ -103,12 +103,12 @@ where
         if self.queue.is_empty() {
             segment = last_location.take();
             self.queue.extend(
-                <Self as BandIterator<T, Trav, P>>::next_children(&self.trav, last_node.clone())
+                <Self as BandIterator<T, Trav, P>>::next_children(self.trav, *last_node)
             )
         }
         if let Some((location, node)) = self.queue.pop_front() {
             *last_location = Some(location);
-            *last_node = node.clone();
+            *last_node = node;
             Some((segment, location, node))
         } else {
             None

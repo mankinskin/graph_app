@@ -104,8 +104,8 @@ impl ReduciblePath for PrefixPath {
         if self.end.is_empty() {
             D::pattern_index_prev(self.pattern.borrow(), self.exit)
         } else {
-            let location = self.end.last().unwrap().clone();
-            let pattern = trav.graph().expect_pattern_at(&location);
+            let location = self.end.last().unwrap();
+            let pattern = trav.graph().expect_pattern_at(location);
             D::pattern_index_prev(pattern, location.sub_index)
         }
     }

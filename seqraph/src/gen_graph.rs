@@ -52,7 +52,9 @@ pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
         }
     }
     std::panic::set_hook(prev_hook);
-    if panics.len() > 0 {
+    if panics.is_empty() {
+        Ok(graph.unwrap())
+    } else {
         println!("\nPanic locations:");
         for (err, instances) in panics {
             let percent = ((instances.len() as f32/panic_count as f32) * 100.0) as u32;
@@ -60,7 +62,5 @@ pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
         }
         println!("Panics: {}/{}", panic_count, fuzz_len);
         Err(graph.unwrap())
-    } else {
-        Ok(graph.unwrap())
     }
 }

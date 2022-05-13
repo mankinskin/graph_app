@@ -134,7 +134,7 @@ impl ReduciblePath for QueryRangePath {
         if self.end.is_empty() {
             D::pattern_index_prev(self.query.borrow(), self.exit)
         } else {
-            let location = self.end.last().unwrap().clone();
+            let location = *self.end.last().unwrap();
             let pattern = trav.graph().expect_pattern_at(&location);
             D::pattern_index_prev(pattern, location.sub_index)
         }

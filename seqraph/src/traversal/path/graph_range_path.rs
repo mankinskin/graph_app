@@ -15,11 +15,6 @@ impl From<StartPath> for GraphRangePath {
         Self::new(start)
     }
 }
-impl Into<StartPath> for GraphRangePath {
-    fn into(self) -> StartPath {
-        self.start
-    }
-}
 impl<'a: 'g, 'g> GraphRangePath {
     pub fn new(start: StartPath) -> Self {
         Self {
@@ -32,7 +27,7 @@ impl<'a: 'g, 'g> GraphRangePath {
     }
     pub fn into_paths(self) -> (StartPath, EndPath) {
         let entry = self.start.entry();
-        let mut exit = entry.clone();
+        let mut exit = entry;
         exit.sub_index = self.exit;
         (
             self.start,

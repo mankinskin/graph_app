@@ -230,9 +230,9 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a>
                 let pattern = start.entry().expect_pattern_in(&child_patterns);
                 let pre_width = pattern[..start.entry().sub_index].width();
                 let back_index = start.entry().expect_child_in_pattern(pattern);
-                let back_offset = pre_width + <IndexBack as IndexSide<D>>::width_offset(&back_index, start.width());
+                let back_offset = pre_width + <IndexBack as IndexSide<D>>::width_offset(back_index, start.width());
                 let front_index = end.entry().expect_child_in_pattern(pattern);
-                let front_offset = pre_width + back_index.width() + inner_width + <IndexFront as IndexSide<D>>::width_offset(&front_index, end.width());
+                let front_offset = pre_width + back_index.width() + inner_width + <IndexFront as IndexSide<D>>::width_offset(front_index, end.width());
                 let positions = child_patterns.into_iter()
                     .map(|(pid, pattern)| {
                         let (back_index, back_offset) = <IndexBack as IndexSide<D>>::token_offset_split(pattern.borrow(), back_offset).unwrap();
@@ -291,7 +291,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a>
         let inner = &pattern[range.clone()];
         let location = location.into_pattern_location().to_child_location(range.start());
         let inner = if inner.len() == 1 {
-            *inner.into_iter().next().unwrap()
+            *inner.iter().next().unwrap()
         } else {
             let mut graph = self.graph_mut();
             let inner = graph.index_pattern(inner);
@@ -503,7 +503,7 @@ pub(crate) trait IndexSide<D: IndexDirection> {
     fn range_front(range: &Range<usize>) -> usize;
     fn limited_inner_range(range: &Range<usize>) -> Range<usize>;
     fn max_range(pattern: impl IntoPattern, pos: usize) -> Range<usize>;
-    fn split_context<'a>(pattern: &'a impl IntoPattern, pos: usize) -> &'a [Child];
+    fn split_context(pattern: &'_ impl IntoPattern, pos: usize) -> &'_ [Child];
     fn sub_ranges(inner: &Range<usize>, limited: &Range<usize>) -> Range<usize>;
     fn token_offset_split(
         pattern: impl IntoPattern,
@@ -532,7 +532,7 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
         (front, back)
     }
     #[track_caller]
-    fn split_context<'a>(pattern: &'a impl IntoPattern, pos: usize) -> &'a [Child] {
+    fn split_context(pattern: &'_ impl IntoPattern, pos: usize) -> &'_ [Child] {
         &pattern.borrow()[..pos]
     }
     fn width_offset(parent: &Child, width: usize) -> usize {
@@ -573,7 +573,7 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
         D::index_next(pos).unwrap()..
     }
     #[track_caller]
-    fn split_context<'a>(pattern: &'a impl IntoPattern, pos: usize) -> &'a [Child] {
+    fn split_context(pattern: &'_ impl IntoPattern, pos: usize) -> &'_ [Child] {
         &pattern.borrow()[D::index_next(pos).unwrap()..]
     }
     fn context_inner_order<

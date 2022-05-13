@@ -38,7 +38,7 @@ impl Parent {
         self.width
     }
     pub fn any_pattern_index(&self) -> PatternIndex {
-        self.pattern_indices.iter().next().unwrap().clone()
+        *self.pattern_indices.iter().next().unwrap()
     }
     pub fn add_pattern_index(
         &mut self,

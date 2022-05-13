@@ -90,12 +90,12 @@ pub trait AsToken<T: Tokenize> {
 }
 impl<T: Tokenize> AsToken<T> for Token<T> {
     fn as_token(&self) -> Token<T> {
-        self.clone()
+        *self
     }
 }
 impl<T: Tokenize> AsToken<T> for T {
     fn as_token(&self) -> Token<T> {
-        Token::Element(self.clone())
+        Token::Element(*self)
     }
 }
 

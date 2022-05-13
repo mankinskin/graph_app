@@ -48,7 +48,7 @@ impl IntoChildLocation for ChildLocation {
 }
 impl IntoChildLocation for &ChildLocation {
     fn into_child_location(self) -> ChildLocation {
-        self.clone()
+        *self
     }
 }
 impl IntoPatternLocation for ChildLocation {
@@ -62,8 +62,8 @@ impl IntoPatternLocation for ChildLocation {
 impl IntoPatternLocation for &ChildLocation {
     fn into_pattern_location(self) -> PatternLocation {
         PatternLocation {
-            parent: self.parent.clone(),
-            pattern_id: self.pattern_id.clone(),
+            parent: self.parent,
+            pattern_id: self.pattern_id,
         }
     }
 }
@@ -73,7 +73,7 @@ pub trait TraversalOrder: Wide {
     fn cmp(&self, other: impl TraversalOrder) -> Ordering {
         match self.width().cmp(&other.width()) {
             Ordering::Equal => self.sub_index().cmp(&other.sub_index()),
-            r@_ => r,
+            r => r,
         }
     }
 }

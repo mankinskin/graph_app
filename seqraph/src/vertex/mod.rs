@@ -42,7 +42,7 @@ pub type IndexPosition = usize;
 pub type IndexPattern = Vec<VertexIndex>;
 pub type VertexPatternView<'a> = Vec<&'a VertexData>;
 
-pub(crate) fn clone_child_patterns<'a>(children: &'a ChildPatterns) -> impl IntoIterator<Item=Pattern> + 'a {
+pub(crate) fn clone_child_patterns(children: &'_ ChildPatterns) -> impl IntoIterator<Item=Pattern> + '_ {
     children.iter().map(|(_, p)| p.clone())
 }
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
@@ -119,7 +119,7 @@ impl VertexData {
     ) -> Result<&<R as SliceIndex<[Child]>>::Output, NoMatch> {
         self.children
             .get(id)
-            .ok_or_else(|| NoMatch::InvalidPattern(*id))
+            .ok_or(NoMatch::InvalidPattern(*id))
             .and_then(|p|
                 p.get(range.clone())
                 .ok_or_else(|| NoMatch::InvalidPatternRange(*id, p.clone(), format!("{:#?}", range)))
@@ -186,7 +186,7 @@ impl VertexData {
     pub fn get_children(&self) -> &ChildPatterns {
         &self.children
     }
-    pub fn get_child_patterns<'a>(&'a self) -> impl IntoIterator<Item=Pattern> + 'a {
+    pub fn get_child_patterns(&'_ self) -> impl IntoIterator<Item=Pattern> + '_ {
         clone_child_patterns(&self.children)
     }
     pub fn get_child_pattern_set(&self) -> HashSet<Pattern> {
@@ -352,7 +352,7 @@ impl VertexData {
                 }
             )
             .unwrap();
-        (*id, c.clone())
+        (*id, *c)
     }
 }
 

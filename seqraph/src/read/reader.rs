@@ -61,9 +61,8 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                 next = next_index;
                 context = advanced;
             } else {
-                match self.overlap_index_path(&mut bands, end_bound, next, context) {
-                    Ok((
-                        _context_path,
+                match self.overlap_index_path(&mut bands, end_bound, next, &context) {
+                    Some((
                         expansion,
                         next_bound,
                         advanced,
@@ -73,11 +72,11 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                         end_bound = next_bound;
                         context = advanced;
                     },
-                    Err((_bundle, next_context)) => {
+                    None => {
                         // no overlap found, continue after last band
                         self.append_index(&mut bands, end_bound, next);
-                        let next_context = next_context.into_advanced::<_, D, _>(self);
-                        let (next_index, advanced) = self.get_next(next_context);
+                        context = context.into_advanced::<_, D, _>(self);
+                        let (next_index, advanced) = self.get_next(context);
                         next = next_index;
                         context = advanced;
                     }
@@ -104,10 +103,9 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         }
     }
     fn get_next(&mut self, context: PrefixPath) -> (Child, PrefixPath) {
-        let mut indexer = self.indexer();
-        match indexer.index_path_prefix(context.clone()) {
+        match self.indexer().index_path_prefix(context.clone()) {
             Ok((index, query)) => (index, query),
-            Err(_) => context.get_advance::<_, D, _>(&mut indexer),
+            Err(_) => context.get_advance::<_, D, _>(self),
         }
     }
     fn overlap_index_path(
@@ -115,13 +113,13 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         bands: &mut ReadingBands,
         end_bound: usize,
         index: Child,
-        context: PrefixPath,
-    ) -> Result<(ChildPath, Child, usize, PrefixPath), (Vec<Pattern>, PrefixPath)> {
+        context: &PrefixPath,
+    ) -> Option<(Child, usize, PrefixPath)> {
         let mut bundle = vec![vec![index]];
         // find largest expandable postfix
         let mut path = vec![];
         let end_bound = end_bound + index.width();
-        match PostfixIterator::<_, D, _>::new(&self.indexer(), index)
+        PostfixIterator::<_, D, _>::new(&self.indexer(), index)
             .find_map(|(path_segment, loc, postfix)| {
                 if let Some(segment) = path_segment {
                     path.push(segment);
@@ -155,7 +153,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                         };
                         let end_bound = start_bound + expansion.width();
                         bands.insert(end_bound, [&context[..], &[expansion]].concat());
-                        Some((loc, expansion, end_bound, advanced.into_prefix_path()))
+                        Some((expansion, end_bound, advanced.into_prefix_path()))
                     },
                     _ => {
                         // not expandable
@@ -166,13 +164,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                         None
                     }
                 }
-            }) {
-            Some((loc, expansion, end_bound, advanced)) => {
-                path.push(loc);
-                Ok((path, expansion, end_bound, advanced))
-            },
-            None => Err((bundle, context))
-        }
+            })
     }
     fn close_bands(
         &mut self,
@@ -199,7 +191,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                             None
                         }
                     )
-                    .filter_map(|item| item)
+                    .flatten()
                     .collect_vec();
                 if bundle.is_empty() {
                     finisher
@@ -234,7 +226,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         if let Some(root) = &mut self.root {
             let mut graph = self.graph.graph_mut();
             let vertex = (*root).vertex_mut(&mut graph);
-            *root = if vertex.children.len() == 1 && vertex.parents.len() == 0 {
+            *root = if vertex.children.len() == 1 && vertex.parents.is_empty() {
                 // if no old overlaps
                 // append to single pattern
                 // no overlaps because new
@@ -249,7 +241,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             match new.borrow().len() {
                 0 => {},
                 1 => {
-                    let new = new.borrow().into_iter().next().unwrap();
+                    let new = new.borrow().iter().next().unwrap();
                     self.root = Some(*new);
                 },
                 _ => {

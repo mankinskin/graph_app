@@ -45,7 +45,7 @@ where
         let vertex = self.get_vertex_data(location.parent)?;
         let child_patterns = vertex.get_children();
         child_patterns.get(&location.pattern_id).cloned()
-            .ok_or_else(|| NoMatch::NoChildPatterns) // todo: better error
+            .ok_or(NoMatch::NoChildPatterns) // todo: better error
     }
     pub fn expect_pattern_at(
         &self,
@@ -53,7 +53,7 @@ where
     ) -> Pattern {
         let location = location.into_pattern_location();
         self.get_pattern_at(location)
-            .expect(&format!("Pattern not found at location {:#?}", location))
+            .unwrap_or_else(|_| panic!("Pattern not found at location {:#?}", location))
     }
     pub fn get_child_at(
         &self,
@@ -63,7 +63,7 @@ where
         let pattern = self.get_pattern_at(&location)?;
         pattern.get(location.sub_index)
             .cloned()
-            .ok_or_else(|| NoMatch::NoChildPatterns) // todo: better error
+            .ok_or(NoMatch::NoChildPatterns) // todo: better error
     }
     pub fn expect_child_at(
         &self,
@@ -71,7 +71,7 @@ where
     ) -> Child {
         let location = location.into_child_location();
         self.get_child_at(location)
-            .expect(&format!("Child not found at location {:#?}", location))
+            .unwrap_or_else(|_| panic!("Child not found at location {:#?}", location))
     }
     pub fn get_children_of(
         &self,
