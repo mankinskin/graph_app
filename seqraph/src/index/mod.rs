@@ -3,7 +3,7 @@
 use crate::{
     vertex::*,
     search::*,
-    HypergraphRef, QueryRangePath, TraversalQuery,
+    HypergraphRef, QueryRangePath,
 };
 use std::ops::RangeFrom;
 

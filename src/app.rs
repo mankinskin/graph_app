@@ -5,6 +5,7 @@ use eframe::{
     },
     epi,
 };
+use seqraph::HypergraphRef;
 #[cfg(feature = "persistence")]
 use serde::*;
 use std::sync::{
@@ -35,6 +36,13 @@ impl Default for App {
     }
 }
 impl App {
+    pub fn new(graph: HypergraphRef<char>) -> Self {
+        Self {
+            graph_file: None,
+            graph: Graph::new_with_graph_ref(graph),
+            inserter: true,
+        }
+    }
     pub fn context_menu(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
             ui.label("Quick Insert:");

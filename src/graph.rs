@@ -20,7 +20,16 @@ use petgraph::{
     },
     visit::EdgeRef,
 };
-use seqraph::*;
+use seqraph::{
+    Hypergraph,
+    HypergraphRef,
+    Token,
+    VertexData,
+    VertexKey,
+    Tokenize,
+    Child,
+    PatternId,
+};
 use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::sync::{
@@ -55,7 +64,9 @@ pub struct Graph {
 }
 impl Graph {
     pub fn new_with_graph(graph: Hypergraph<char>) -> Self {
-        let graph = HypergraphRef::new(graph);
+        Self::new_with_graph_ref(HypergraphRef::from(graph))
+    }
+    pub fn new_with_graph_ref(graph: HypergraphRef<char>) -> Self {
         let vis = Arc::new(RwLock::new(GraphVis::default()));
         let new = Self {
             graph,

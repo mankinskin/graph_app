@@ -16,6 +16,7 @@ mod traversal;
 mod index;
 mod read;
 mod logger;
+mod gen_graph;
 
 pub use direction::*;
 #[cfg(test)]
@@ -26,6 +27,7 @@ pub use vertex::*;
 pub(crate) use traversal::*;
 pub use read::*;
 pub use logger::*;
+pub use gen_graph::*;
 
 #[allow(unused)]
 pub(crate) use {
@@ -44,3 +46,11 @@ pub(crate) use {
         },
     },
 };
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn fuzz1() {
+        crate::gen_graph::gen_graph();
+    }
+}

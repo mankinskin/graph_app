@@ -4,7 +4,6 @@
 mod app;
 pub use app::App;
 mod graph;
-
 // ----------------------------------------------------------------------------
 // When compiling for web:
 
@@ -13,6 +12,8 @@ use eframe::wasm_bindgen::{
     self,
     prelude::*,
 };
+use seqraph::HypergraphRef;
+
 
 /// This is the entry-point for all the web-assembly.
 /// This is called once from the HTML.
@@ -23,4 +24,10 @@ use eframe::wasm_bindgen::{
 pub fn start(canvas_id: &str) -> Result<(), eframe::wasm_bindgen::JsValue> {
     let app = App::default();
     eframe::start_web(canvas_id, Box::new(app))
+}
+
+pub fn open(graph: HypergraphRef<char>) {
+    let app = App::new(graph);
+    let native_options = eframe::NativeOptions::default();
+    eframe::run_native(Box::new(app), native_options);
 }

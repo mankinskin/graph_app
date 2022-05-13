@@ -452,6 +452,7 @@ pub(crate) trait IndexableSide<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection +
         }
     }
     fn index_offset_split(&'a mut self, parent: Child, offset: usize) -> IndexSplitResult {
+        assert!(offset != 0);
         let mut graph = self.graph_mut();
         let child_patterns = graph.expect_children_of(parent).clone();
         let len = child_patterns.len();
