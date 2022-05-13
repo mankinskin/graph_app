@@ -51,6 +51,8 @@ pub(crate) use {
 mod tests {
     #[test]
     fn fuzz1() {
-        crate::gen_graph::gen_graph();
+        if crate::gen_graph::gen_graph().is_err() {
+            panic!();
+        }
     }
 }

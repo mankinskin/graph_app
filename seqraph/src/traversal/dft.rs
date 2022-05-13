@@ -29,7 +29,6 @@ where
     Q: TraversalQuery + 'a,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
 {
-    #[inline]
     pub fn new(trav: &'a Trav, root: FolderNode<'a, 'g, T, D, Q, S>) -> Self {
         Self {
             stack: vec![],
@@ -50,7 +49,6 @@ where
 {
     type Item = (usize, FolderNode<'a, 'g, T, D, Q, S>);
 
-    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         let (last_depth, last_node) = &self.last;
         self.stack.extend(

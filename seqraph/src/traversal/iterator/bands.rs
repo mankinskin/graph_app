@@ -97,7 +97,6 @@ where
 {
     type Item = (Option<ChildLocation>, ChildLocation, Child);
 
-    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         let (last_location, last_node) = &mut self.last;
         let mut segment = None;

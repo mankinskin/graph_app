@@ -7,7 +7,7 @@ mod graph;
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() {
-    let graph = seqraph::gen_graph();
+    let graph = seqraph::gen_graph().unwrap_or_else(|g| g);
     let app = app::App::new(graph);
     let native_options = eframe::NativeOptions::default();
     eframe::run_native(Box::new(app), native_options);
