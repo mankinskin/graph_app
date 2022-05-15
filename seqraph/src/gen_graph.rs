@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use rand::{
-    seq::IteratorRandom, SeedableRng,
+    seq::IteratorRandom,
 };
 use rand_distr::{
     Distribution,

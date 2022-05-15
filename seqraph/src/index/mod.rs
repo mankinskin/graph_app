@@ -16,7 +16,7 @@ pub(crate) mod tests;
 
 pub use indexer::*;
 pub use index_direction::*;
-pub use side::*;
+pub(crate) use side::*;
 
 impl<'t, 'g, T> HypergraphRef<T>
 where

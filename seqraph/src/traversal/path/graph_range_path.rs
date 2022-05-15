@@ -103,30 +103,20 @@ impl TraversalPath for GraphRangePath {
         *wmut += width;
     }
 }
-impl EntryPos for GraphRangePath {
-    fn get_entry_pos(&self) -> usize {
-        self.start.entry().sub_index
-    }
-}
 impl GraphEntry for GraphRangePath {
     fn get_entry_location(&self) -> ChildLocation {
-        self.start.entry()
+        self.start.get_entry_location()
     }
 }
 impl HasStartPath for GraphRangePath {
     fn get_start_path(&self) -> &[ChildLocation] {
-        self.start.path()
+        self.start.get_start_path()
     }
 }
 impl GraphStart for GraphRangePath {}
-impl ExitPos for GraphRangePath {
-    fn get_exit_pos(&self) -> usize {
-        self.exit
-    }
-}
 impl GraphExit for GraphRangePath {
     fn get_exit_location(&self) -> ChildLocation {
-        self.start.entry()
+        self.start.get_entry_location()
             .into_pattern_location()
             .to_child_location(self.exit)
     }
