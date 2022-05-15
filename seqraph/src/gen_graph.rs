@@ -16,23 +16,29 @@ lazy_static::lazy_static! {
 }
 pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
     let mut graph = Some(HypergraphRef::default());
-    let fuzz_len = 3000;
+    let fuzz_len = 1000;
     let len_distr: Normal<f32> = Normal::new(20.0, 4.0).unwrap();
-    let mut rng = rand::rngs::StdRng::seed_from_u64(42);
+    //let mut rng = rand::rngs::StdRng::seed_from_u64(42);
+    let mut rng = rand::thread_rng();
     let mut panics = HashMap::new();
     let input_distr = "abcdefghi ".chars().collect_vec();
     let mut panic_count = 0;
+    let pb = indicatif::ProgressBar::with_draw_target(
+        fuzz_len,
+        indicatif::ProgressDrawTarget::stdout(),
+    );
     let prev_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(|info| {
         *PANIC_INFO.lock().unwrap() = info.location().map(|loc| format!("{}", loc));
     }));
     for i in 0..fuzz_len {
-        print!("{},", i);
+        //print!("{},", i);
+        pb.inc(1);
         let mut length = 0;
         while length < 1 {
             length = len_distr.sample(&mut rng) as usize;
         }
-        let input = input_distr.iter().choose_multiple(&mut rng, length).into_iter().collect::<String>();
+        let input = (0..length).map(|_| *input_distr.iter().choose(&mut rng).unwrap()).collect::<String>();
         match catch_unwind(|| {
             graph.clone().unwrap().read_sequence(input.chars())
         }) {
@@ -52,6 +58,7 @@ pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
         }
     }
     std::panic::set_hook(prev_hook);
+    pb.finish_and_clear();
     if panics.is_empty() {
         Ok(graph.unwrap())
     } else {

@@ -23,8 +23,6 @@ where
         key: VertexKey<T>,
         mut data: VertexData,
     ) -> Child {
-        // TODO: return error if exists (don't overwrite by default)
-        //let index = insert_full(key, data).0;
         let entry = self.graph.entry(key);
         data.index = entry.index();
         let c = Child::new(data.index, data.width);
@@ -66,6 +64,7 @@ where
         (width, a, b)
     }
     /// adds a parent to all nodes in a pattern
+    #[track_caller]
     fn add_parents_to_pattern_nodes(
         &mut self,
         pattern: Vec<VertexIndex>,
@@ -78,6 +77,7 @@ where
         }
     }
     /// add pattern to existing node
+    #[track_caller]
     pub fn add_pattern_with_update(
         &mut self,
         index: impl Indexed,
@@ -91,6 +91,7 @@ where
         pattern_id
     }
     /// add pattern to existing node
+    #[track_caller]
     pub fn add_patterns_with_update(
         &mut self,
         index: impl Indexed,
@@ -103,6 +104,7 @@ where
             .collect()
     }
     /// create new node from a pattern
+    #[track_caller]
     pub fn insert_pattern_with_id(
         &mut self,
         indices: impl IntoPattern,
@@ -118,6 +120,7 @@ where
         }
     }
     /// create new node from a pattern (even if single index)
+    #[track_caller]
     pub fn force_index_pattern_with_id(
         &mut self,
         indices: impl IntoPattern,
@@ -210,6 +213,7 @@ where
             let start = range.clone().next().unwrap();
             let new_end = start + replace.len();
             let old = replace_in_pattern(&mut *pattern, range.clone(), replace.clone());
+            assert!(pattern.len() > 1);
             (
                 old,
                 width,
@@ -303,29 +307,5 @@ where
                 }
             })
             .collect()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn insert_subpattern() {
-        let mut graph = Hypergraph::default();
-        if let [a, b, c, d] = graph.index_tokens([
-            Token::Element('a'),
-            Token::Element('b'),
-            Token::Element('c'),
-            Token::Element('d'),
-        ])[..]
-        {
-            let _abcd = graph.index_pattern([a, b, c, d]);
-            // read abcd
-            // then abe
-            // then bce
-            // then cde
-        } else {
-            panic!()
-        }
     }
 }

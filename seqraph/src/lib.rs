@@ -19,8 +19,6 @@ mod logger;
 mod gen_graph;
 
 pub use direction::*;
-#[cfg(test)]
-pub use graph::tests::*;
 pub use graph::*;
 pub use search::*;
 pub use vertex::*;
@@ -28,6 +26,11 @@ pub(crate) use traversal::*;
 pub use read::*;
 pub use logger::*;
 pub use gen_graph::*;
+
+#[cfg(test)]
+mod tests;
+#[cfg(test)]
+pub use graph::tests::*;
 
 #[allow(unused)]
 pub(crate) use {
@@ -39,20 +42,13 @@ pub(crate) use {
             Deref,
             DerefMut,
             ControlFlow,
+            Range,
+            RangeInclusive,
         },
         borrow::{
             Borrow,
             BorrowMut,
         },
     },
+    function_name::named,
 };
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn fuzz1() {
-        if crate::gen_graph::gen_graph().is_err() {
-            panic!();
-        }
-    }
-}

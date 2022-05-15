@@ -195,11 +195,12 @@ impl VertexData {
     pub fn get_child_pattern_vec(&self) -> Vec<Pattern> {
         self.get_child_patterns().into_iter().collect()
     }
+    #[track_caller]
     pub fn add_pattern_no_update<P: IntoPattern>(
         &mut self,
         pat: P,
     ) -> PatternId {
-        // TODO: detect unmatching pattern
+        assert!(pat.borrow().len() > 1);
         let id = Self::next_child_pattern_id();
         self.children.insert(id, pat.into_pattern());
         id
