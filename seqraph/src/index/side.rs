@@ -133,19 +133,33 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
 pub(crate) trait IndexableSide<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: IndexSide<D>>: Indexable<'a, 'g, T, D> {
     /// todo: a little bit dirty because width always points to a perfect split
     /// if the graph path segment it comes from is a leaf node
-    fn index_entry_split(&'a mut self, entry: ChildLocation, width: usize) -> IndexSplitResult {
+    fn index_entry_split(
+        &'a mut self,
+        entry: ChildLocation,
+        width: usize,
+    ) -> IndexSplitResult {
         let offset = Side::width_offset(&entry.parent, width);
         self.index_offset_split(entry.parent, offset)
     }
-    fn index_perfect_split(&'a mut self, entry: ChildLocation) -> IndexSplitResult {
+    fn index_perfect_split(
+        &'a mut self,
+        entry: ChildLocation
+    ) -> IndexSplitResult {
         let mut graph = self.graph_mut();
         let pattern = graph.expect_pattern_at(&entry);
         IndexableSide::<_, _, Side>::pattern_index_perfect_split(&mut *graph, pattern, entry)
     }
-    fn pattern_index_perfect_split(&'a mut self, pattern: Pattern, entry: ChildLocation) -> IndexSplitResult {
+    fn pattern_index_perfect_split(
+        &'a mut self,
+        pattern: Pattern,
+        entry: ChildLocation,
+    ) -> IndexSplitResult {
         Self::pattern_index_perfect_split_range(self, pattern, entry, Side::inner_range(entry.sub_index))
     }
-    fn index_context_path_segment(&'a mut self, location: ChildLocation) -> Child {
+    fn index_context_path_segment(
+        &'a mut self,
+        location: ChildLocation
+    ) -> Child {
         let mut graph = self.graph_mut();
         let pattern = graph.expect_pattern_at(&location);
         let context = Side::split_context(&pattern, location.sub_index);
@@ -155,7 +169,11 @@ pub(crate) trait IndexableSide<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
         context
     }
     #[named]
-    fn index_context_path(&'a mut self, entry: ChildLocation, mut context_path: Vec<ChildLocation>) -> Child {
+    fn index_context_path(
+        &'a mut self,
+        entry: ChildLocation,
+        mut context_path: Vec<ChildLocation>
+    ) -> Child {
         trace!(function_name!());
         let mut graph = self.graph_mut();
         let mut acc: Option<Child> = None;
@@ -238,7 +256,11 @@ pub(crate) trait IndexableSide<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
         }
     }
     #[named]
-    fn index_unperfect_splits(&'a mut self, parent: Child, positions: Vec<(PatternId, Pattern, usize, usize)>) -> IndexSplitResult {
+    fn index_unperfect_splits(
+        &'a mut self,
+        parent: Child,
+        positions: Vec<(PatternId, Pattern, usize, usize)>,
+    ) -> IndexSplitResult {
         trace!(function_name!());
         // todo: fix resulting locations, fix D order
         let mut graph = self.graph_mut();
@@ -278,7 +300,11 @@ pub(crate) trait IndexableSide<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
     }
     #[named]
     #[instrument(skip(self))]
-    fn index_offset_split(&'a mut self, parent: Child, offset: usize) -> IndexSplitResult {
+    fn index_offset_split(
+        &'a mut self,
+        parent: Child,
+        offset: usize,
+    ) -> IndexSplitResult {
         //assert!(offset != 0);
         trace!(function_name!());
         let mut graph = self.graph_mut();
