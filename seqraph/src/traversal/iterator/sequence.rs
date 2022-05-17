@@ -4,8 +4,8 @@ pub(crate) struct PathIter<
     'a: 'g,
     'g,
     P: AdvanceablePath,
-    T: Tokenize + 'a,
-    D: MatchDirection + 'a,
+    T: Tokenize,
+    D: MatchDirection,
     Trav: Traversable<'a, 'g, T>,
 > {
     path: P,
@@ -20,8 +20,8 @@ pub(crate) struct PathIter<
 //    'a: 'g,
 //    'g,
 //    P: AdvanceablePath,
-//    T: Tokenize + 'a,
-//    D: MatchDirection + 'a,
+//    T: Tokenize,
+//    D: MatchDirection,
 //    Trav: Traversable<'a, 'g, T>,
 //> SequenceIterator for PathIter<'a, 'g, P, T, D, Trav> {
 //    type Item = P;
@@ -36,8 +36,8 @@ pub(crate) struct PathIter<
 //pub(crate) trait IntoSequenceIterator<
 //    'a: 'g,
 //    'g,
-//    T: Tokenize + 'a,
-//    D: MatchDirection + 'a,
+//    T: Tokenize,
+//    D: MatchDirection,
 //    Trav: Traversable<'a, 'g, T>,
 //> {
 //    type Iter: SequenceIterator;
@@ -47,8 +47,8 @@ pub(crate) struct PathIter<
 //    'a: 'g,
 //    'g,
 //    P: AdvanceablePath,
-//    T: Tokenize + 'a,
-//    D: MatchDirection + 'a,
+//    T: Tokenize,
+//    D: MatchDirection,
 //    Trav: Traversable<'a, 'g, T>,
 //> IntoSequenceIterator<'a, 'g, T, D, Trav> for P {
 //    type Iter = PathIter<'a, 'g, P, T, D, Trav>;

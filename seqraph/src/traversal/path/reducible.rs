@@ -4,15 +4,15 @@ pub trait ReduciblePath: Clone + EndPathMut + ExitMut + End + PathFinished {
     fn prev_exit_pos<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Option<usize>;
     fn reduce_mismatch<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(mut self, trav: &'a Trav) -> Self {
         let graph = trav.graph();

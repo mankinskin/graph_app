@@ -4,8 +4,8 @@ pub trait AdvanceablePath: EndPathMut + AdvanceableExit + End + PathFinished + S
     fn try_advance<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(mut self, trav: &'a Trav) -> Result<Self, Self> {
         let graph = trav.graph();
@@ -27,8 +27,8 @@ pub trait AdvanceablePath: EndPathMut + AdvanceableExit + End + PathFinished + S
     fn into_advanced<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(self, trav: &'a Trav) -> Self {
         self.try_advance::<_, D, _>(trav).unwrap_or_else(|e| e)
@@ -36,8 +36,8 @@ pub trait AdvanceablePath: EndPathMut + AdvanceableExit + End + PathFinished + S
     fn get_advance<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(self, trav: &'a Trav) -> (Child, Self) {
         (
@@ -48,8 +48,8 @@ pub trait AdvanceablePath: EndPathMut + AdvanceableExit + End + PathFinished + S
     fn try_get_advance<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(self, trav: &'a Trav) -> Result<(Child, Self), Child> {
         let current = self.get_end::<_, D, _>(trav);

@@ -9,24 +9,24 @@ pub struct Searcher<T: Tokenize, D: MatchDirection> {
     graph: HypergraphRef<T>,
     _ty: std::marker::PhantomData<D>,
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> Traversable<'a, 'g, T> for Searcher<T, D> {
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection> Traversable<'a, 'g, T> for Searcher<T, D> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
     fn graph(&'g self) -> Self::Guard {
         self.graph.read().unwrap()
     }
 }
 
-trait SearchTraversalPolicy<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>:
+trait SearchTraversalPolicy<'a: 'g, 'g, T: Tokenize, D: MatchDirection>:
     DirectedTraversalPolicy<'a, 'g, T, D, QueryRangePath, Trav=Searcher<T, D>, Folder=Searcher<T, D>>
 {}
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
     SearchTraversalPolicy<'a, 'g, T, D> for AncestorSearch<T, D>
 {}
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
     SearchTraversalPolicy<'a, 'g, T, D> for ParentSearch<T, D>
 {}
 
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
     TraversalFolder<'a, 'g, T, D, QueryRangePath> for Searcher<T, D>
 {
     type Trav = Self;
@@ -61,7 +61,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>
 struct AncestorSearch<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<(T, D)>,
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
     DirectedTraversalPolicy<'a, 'g, T, D, QueryRangePath> for AncestorSearch<T, D>
 {
     type Trav = Searcher<T, D>;
@@ -70,7 +70,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>
 struct ParentSearch<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<(T, D)>,
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
     DirectedTraversalPolicy<'a, 'g, T, D, QueryRangePath> for ParentSearch<T, D>
 {
     type Trav = Searcher<T, D>;

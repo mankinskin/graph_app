@@ -45,7 +45,7 @@ pub(crate) trait BorderPath: Wide {
     fn pattern<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
+        T: Tokenize,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Pattern {
         trav.graph().expect_pattern_at(self.entry())
@@ -65,13 +65,13 @@ pub(crate) trait DirectedBorderPath<D: MatchDirection>: BorderPath {
     fn pattern_is_complete<P: IntoPattern>(&self, pattern: P) -> bool {
         self.is_perfect() && self.is_at_pattern_border(pattern)
     }
-    //fn outer_pos<'a: 'g, 'g, T: Tokenize + 'a, Trav: Traversable<'a, 'g, T>>(&self, trav: &'a Trav) -> Option<usize> {
+    //fn outer_pos<'a: 'g, 'g, T: Tokenize, Trav: Traversable<'a, 'g, T>>(&self, trav: &'a Trav) -> Option<usize> {
     //    self.pattern_outer_pos(self.pattern(trav))
     //}
-    //fn is_at_border<'a: 'g, 'g, T: Tokenize + 'a, Trav: Traversable<'a, 'g, T>>(&self, trav: &'a Trav) -> bool {
+    //fn is_at_border<'a: 'g, 'g, T: Tokenize, Trav: Traversable<'a, 'g, T>>(&self, trav: &'a Trav) -> bool {
     //    self.outer_pos(trav).is_none()
     //}
-    //fn is_complete<'a: 'g, 'g, T: Tokenize + 'a, Trav: Traversable<'a, 'g, T>>(&self, trav: &'a Trav) -> bool {
+    //fn is_complete<'a: 'g, 'g, T: Tokenize, Trav: Traversable<'a, 'g, T>>(&self, trav: &'a Trav) -> bool {
     //    self.is_perfect() && self.is_at_border(trav)
     //}
 }
@@ -99,7 +99,7 @@ pub trait GraphEntry {
     fn get_entry_pattern<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
+        T: Tokenize,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Pattern {
         trav.graph().expect_pattern_at(self.get_entry_location())
@@ -107,8 +107,8 @@ pub trait GraphEntry {
     fn get_entry<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child {
         trav.graph().expect_child_at(self.get_entry_location())
@@ -124,7 +124,7 @@ pub trait GraphExit {
     fn get_exit_pattern<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
+        T: Tokenize,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Pattern {
         trav.graph().expect_pattern_at(self.get_exit_location())
@@ -132,8 +132,8 @@ pub trait GraphExit {
     fn get_exit<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child {
         trav.graph().expect_child_at(self.get_exit_location())
@@ -158,8 +158,8 @@ pub trait PatternStart: PatternEntry + HasStartPath {
     fn get_start<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child {
         if let Some(next) = self.get_start_path().last() {
@@ -173,8 +173,8 @@ pub trait PatternEnd: PatternExit + HasEndPath + End {
     fn get_pattern_end<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child {
         if let Some(start) = self.get_end_path().last() {
@@ -195,8 +195,8 @@ pub trait GraphStart: GraphEntry + HasStartPath {
     fn get_start<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child {
         trav.graph().expect_child_at(self.get_start_location())
@@ -213,8 +213,8 @@ pub trait GraphEnd: GraphExit + HasEndPath + End {
     fn get_graph_end<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child {
         trav.graph().expect_child_at(self.get_end_location())
@@ -233,15 +233,15 @@ pub trait AdvanceableExit: ExitPos + ExitMut + PathFinished {
     fn next_exit_pos<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, _trav: &'a Trav) -> Option<usize>;
     fn advance_exit_pos<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&mut self, trav: &'a Trav) -> Result<(), ()> {
         if let Some(next) = self.next_exit_pos::<_, D, _>(trav) {
@@ -257,8 +257,8 @@ impl<P: ExitMut + PatternExit + PathFinished> AdvanceableExit for P {
     fn next_exit_pos<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, _trav: &'a Trav) -> Option<usize> {
         D::pattern_index_next(self.get_exit_pattern(), self.get_exit_pos())
@@ -268,8 +268,8 @@ pub trait End {
     fn get_end<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child;
 }

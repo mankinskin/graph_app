@@ -18,8 +18,8 @@ pub(crate) type FolderNode<'a, 'g, T, D, Q, Ty>
 pub(crate) trait FolderQ<
     'a: 'g,
     'g,
-    T: Tokenize + 'a,
-    D: MatchDirection + 'a,
+    T: Tokenize,
+    D: MatchDirection,
     Q: TraversalQuery,
 > {
     type Query: TraversalQuery;
@@ -28,9 +28,9 @@ pub(crate) trait FolderQ<
 impl<
     'a: 'g,
     'g,
-    T: Tokenize + 'a,
-    D: MatchDirection + 'a,
-    Q: TraversalQuery + 'a,
+    T: Tokenize,
+    D: MatchDirection,
+    Q: TraversalQuery,
     Ty: TraversalFolder<'a, 'g, T, D, Q>,
 > FolderQ<'a, 'g, T, D, Q> for Ty {
     type Query = Q;
@@ -48,9 +48,9 @@ pub(crate) type  FolderPathPair<'a, 'g, T, D, Q, Ty>
 pub(crate) trait DirectedTraversalPolicy<
     'a: 'g,
     'g,
-    T: Tokenize + 'a,
-    D: MatchDirection + 'a,
-    Q: TraversalQuery + 'a
+    T: Tokenize,
+    D: MatchDirection,
+    Q: TraversalQuery
 >: Sized {
 
     type Trav: Traversable<'a, 'g, T>;

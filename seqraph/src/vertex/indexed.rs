@@ -34,7 +34,7 @@ impl<'a, 'g, V: VertexedMut<'a, 'g>> VertexedMut<'a, 'g> for &'a mut V {
     }
 }
 
-pub trait Vertexed<'a, 'g>: AsChild + 'a + Sized {
+pub trait Vertexed<'a, 'g>: AsChild + Sized {
     fn vertex<T: Tokenize + 'g, R: Deref<Target=Hypergraph<T>> + 'g>(
         self,
         graph: &'g R,

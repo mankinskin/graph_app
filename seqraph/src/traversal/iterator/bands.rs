@@ -9,7 +9,7 @@ use super::*;
 pub(crate) trait BandExpandingPolicy<
     'a: 'g,
     'g,
-    T: Tokenize + 'a,
+    T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
 > {
     fn expand_band(location: PatternLocation, pattern: &Pattern) -> (ChildLocation, Child);
@@ -24,7 +24,7 @@ pub(crate) struct PostfixExpandingPolicy<D: MatchDirection> {
 pub(crate) trait BandIterator<
     'a: 'g,
     'g,
-    T: Tokenize + 'a,
+    T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
     P: BandExpandingPolicy<'a, 'g, T, Trav>,
 >: Iterator<Item = (Option<ChildLocation>, ChildLocation, Child)>
@@ -44,7 +44,7 @@ pub(crate) trait BandIterator<
 impl <
     'a: 'g,
     'g,
-    T: Tokenize + 'a,
+    T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
     D: MatchDirection,
 > BandExpandingPolicy<'a, 'g, T, Trav> for PostfixExpandingPolicy<D> {
@@ -62,7 +62,7 @@ impl <
 }
 pub(crate) struct BandExpandingIterator<'a: 'g, 'g, T, Trav, P>
 where
-    T: Tokenize + 'a,
+    T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
     P: BandExpandingPolicy<'a, 'g, T, Trav>,
 {
@@ -76,7 +76,7 @@ pub(crate) type PostfixIterator<'a, 'g, T, D, Trav>
 
 impl<'a: 'g, 'g, T, Trav, P> BandIterator<'a, 'g, T, Trav, P> for BandExpandingIterator<'a, 'g, T, Trav, P>
 where
-    T: Tokenize + 'a,
+    T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
     P: BandExpandingPolicy<'a, 'g, T, Trav>,
 {
@@ -91,7 +91,7 @@ where
 }
 impl<'a: 'g, 'g, T, Trav, P> Iterator for BandExpandingIterator<'a, 'g, T, Trav, P>
 where
-    T: Tokenize + 'a,
+    T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
     P: BandExpandingPolicy<'a, 'g, T, Trav>,
 {

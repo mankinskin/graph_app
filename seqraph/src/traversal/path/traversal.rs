@@ -35,16 +35,16 @@ pub(crate) trait TraversalPath:
     fn reduce_end<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(self, trav: &'a Trav) -> FoundPath;
     fn move_width_into_start(&mut self);
     fn on_match<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&mut self, trav: &'a Trav);
 }
@@ -96,8 +96,8 @@ impl<
     pub(crate) fn reduce_mismatch<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(self, trav: &'a Trav) -> QueryResult<Q> {
         match self {

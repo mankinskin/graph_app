@@ -9,10 +9,10 @@ use super::*;
 pub(crate) trait TraversalIterator<
     'a: 'g,
     'g,
-    T: Tokenize + 'a,
+    T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
-    D: MatchDirection + 'a,
-    Q: TraversalQuery + 'a,
+    D: MatchDirection,
+    Q: TraversalQuery,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
 >: Iterator<Item = (usize, FolderNode<'a, 'g, T, D, Q, S>)>
 {

@@ -12,8 +12,8 @@ pub(crate) trait IndexSide<D: IndexDirection> {
     /// returns back, front
     fn context_inner_order<
         'a,
-        C: AsRef<[Child]> + 'a,
-        I: AsRef<[Child]> + 'a
+        C: AsRef<[Child]>,
+        I: AsRef<[Child]>
     >(context: &'a C, inner: &'a I) -> (&'a [Child], &'a [Child]);
     fn inner_range(pos: usize) -> Self::InnerRange;
     fn context_range(pos: usize) -> Self::ContextRange;
@@ -41,8 +41,8 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
     }
     fn context_inner_order<
         'a,
-        C: AsRef<[Child]> + 'a,
-        I: AsRef<[Child]> + 'a
+        C: AsRef<[Child]>,
+        I: AsRef<[Child]>
     >(context: &'a C, inner: &'a I) -> (&'a [Child], &'a [Child]) {
         (context.as_ref(), inner.as_ref())
     }
@@ -96,8 +96,8 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
     }
     fn context_inner_order<
         'a,
-        C: AsRef<[Child]> + 'a,
-        I: AsRef<[Child]> + 'a
+        C: AsRef<[Child]>,
+        I: AsRef<[Child]>
     >(context: &'a C, inner: &'a I) -> (&'a [Child], &'a [Child]) {
         (inner.as_ref(), context.as_ref())
     }
@@ -130,7 +130,7 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
     }
 }
 
-pub(crate) trait IndexableSide<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D> + 'a>: Indexable<'a, 'g, T, D> {
+pub(crate) trait IndexableSide<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: IndexSide<D>>: Indexable<'a, 'g, T, D> {
     /// todo: a little bit dirty because width always points to a perfect split
     /// if the graph path segment it comes from is a leaf node
     fn index_entry_split(&'a mut self, entry: ChildLocation, width: usize) -> IndexSplitResult {
@@ -305,8 +305,8 @@ pub(crate) trait IndexableSide<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection +
 impl<
     'a: 'g,
     'g,
-    T: Tokenize + 'a,
-    D: IndexDirection + 'a,
+    T: Tokenize,
+    D: IndexDirection,
     Trav: Indexable<'a, 'g, T, D>,
-    S: IndexSide<D> + 'a,
+    S: IndexSide<D>,
 > IndexableSide<'a, 'g, T, D, S> for Trav {}

@@ -4,7 +4,7 @@ use crate::{Tokenize, MatchDirection};
 
 use super::*;
 
-pub(crate) trait TraversalFolder<'a: 'g, 'g, T: Tokenize, D: MatchDirection, Q: TraversalQuery + 'a>: Sized {
+pub(crate) trait TraversalFolder<'a: 'g, 'g, T: Tokenize, D: MatchDirection, Q: TraversalQuery>: Sized {
     type Trav: Traversable<'a, 'g, T>;
     type Path: TraversalPath;
     type Node: ToTraversalNode<Q, Self::Path>;

@@ -10,10 +10,10 @@ use super::*;
 #[derive(Clone)]
 pub(crate) struct Bft<'a: 'g, 'g, T, Trav, D, Q, S>
 where
-    T: Tokenize + 'a,
+    T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
-    D: MatchDirection + 'a,
-    Q: TraversalQuery + 'a,
+    D: MatchDirection,
+    Q: TraversalQuery,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
 {
     queue: VecDeque<(usize, FolderNode<'a, 'g, T, D, Q, S>)>,
@@ -24,10 +24,10 @@ where
 
 impl<'a: 'g, 'g, T, Trav, D, Q, S> Bft<'a, 'g, T, Trav, D, Q, S>
 where
-    T: Tokenize + 'a,
+    T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
-    D: MatchDirection + 'a,
-    Q: TraversalQuery + 'a,
+    D: MatchDirection,
+    Q: TraversalQuery,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
 {
     pub fn new(trav: &'a Trav, root: FolderNode<'a, 'g, T, D, Q, S>) -> Self {
@@ -42,10 +42,10 @@ where
 
 impl<'a: 'g, 'g, T, Trav, D, Q, S> Iterator for Bft<'a, 'g, T, Trav, D, Q, S>
 where
-    T: Tokenize + 'a,
+    T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
-    D: MatchDirection + 'a,
-    Q: TraversalQuery + 'a,
+    D: MatchDirection,
+    Q: TraversalQuery,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
 {
     type Item = (usize, FolderNode<'a, 'g, T, D, Q, S>);
@@ -68,20 +68,20 @@ where
 
 impl<'a: 'g, 'g, T, Trav, D, Q, S> FusedIterator for Bft<'a, 'g, T, Trav, D, Q, S>
 where
-    T: Tokenize + 'a,
+    T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
-    D: MatchDirection + 'a,
-    Q: TraversalQuery + 'a,
+    D: MatchDirection,
+    Q: TraversalQuery,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
 {
 }
 
 impl<'a: 'g, 'g, T, Trav, D, Q, S> TraversalIterator<'a, 'g, T, Trav, D, Q, S> for Bft<'a, 'g, T, Trav, D, Q, S>
 where
-    T: Tokenize + 'a,
+    T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
-    D: MatchDirection + 'a,
-    Q: TraversalQuery + 'a,
+    D: MatchDirection,
+    Q: TraversalQuery,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
 {
     fn new(trav: &'a Trav, root: FolderNode<'a, 'g, T, D, Q, S>) -> Self {

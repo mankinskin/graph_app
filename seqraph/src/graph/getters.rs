@@ -235,7 +235,7 @@ where
     }
     pub fn to_token_indices_iter(
         &'a self,
-        tokens: impl IntoIterator<Item = impl AsToken<T>> + 'a,
+        tokens: impl IntoIterator<Item = impl AsToken<T> + 'a> + 'a,
     ) -> impl Iterator<Item = Result<VertexIndex, NoMatch>> + 'a {
         tokens
             .into_iter()

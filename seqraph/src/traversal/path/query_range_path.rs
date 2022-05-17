@@ -26,7 +26,7 @@ impl<
         }
     }
     pub fn new_directed<
-        D: MatchDirection + 'a,
+        D: MatchDirection,
         P: IntoPattern,
     >(query: P) -> Result<Self, NoMatch> {
         let entry = D::head_index(query.borrow());
@@ -116,8 +116,8 @@ impl End for QueryRangePath {
     fn get_end<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child {
         self.get_pattern_end::<_, D, _>(trav)
@@ -127,8 +127,8 @@ impl ReduciblePath for QueryRangePath {
     fn prev_exit_pos<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Option<usize> {
         if self.end.is_empty() {

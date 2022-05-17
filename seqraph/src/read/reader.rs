@@ -12,13 +12,13 @@ pub struct Reader<T: Tokenize, D: IndexDirection> {
     root: Option<Child>,
     _ty: std::marker::PhantomData<D>,
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for Reader<T, D> {
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection> Traversable<'a, 'g, T> for Reader<T, D> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
     fn graph(&'g self) -> Self::Guard {
         self.graph.read().unwrap()
     }
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g, T> for Reader<T, D> {
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection> TraversableMut<'a, 'g, T> for Reader<T, D> {
     type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
     fn graph_mut(&'g mut self) -> Self::GuardMut {
         self.graph.write().unwrap()

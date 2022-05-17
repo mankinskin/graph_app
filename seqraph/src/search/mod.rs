@@ -96,8 +96,8 @@ impl<
     'g,
 > FoundPath {
     pub(crate) fn new<
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(trav: &'a Trav, range_path: GraphRangePath) -> Self {
         if range_path.is_complete::<_, D, _>(trav) {

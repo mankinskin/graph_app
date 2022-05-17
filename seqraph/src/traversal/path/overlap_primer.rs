@@ -55,8 +55,8 @@ impl End for OverlapPrimer {
     fn get_end<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child {
         if self.exit == 0 {
@@ -78,8 +78,8 @@ impl ReduciblePath for OverlapPrimer {
     fn prev_exit_pos<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Option<usize> {
         match self.exit {
@@ -97,8 +97,8 @@ impl AdvanceableExit for OverlapPrimer {
     fn next_exit_pos<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, _trav: &'a Trav) -> Option<usize> {
         if self.exit == 0 {
@@ -110,8 +110,8 @@ impl AdvanceableExit for OverlapPrimer {
     fn advance_exit_pos<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&mut self, trav: &'a Trav) -> Result<(), ()> {
         if let Some(next) = self.next_exit_pos::<_, D, _>(trav) {

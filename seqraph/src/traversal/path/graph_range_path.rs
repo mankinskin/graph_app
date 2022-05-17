@@ -39,8 +39,8 @@ impl<'a: 'g, 'g> GraphRangePath {
         )
     }
     pub(crate) fn is_complete<
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> bool {
         let pattern = self.start.pattern(trav);
@@ -49,8 +49,8 @@ impl<'a: 'g, 'g> GraphRangePath {
             <EndPath as DirectedBorderPath<D>>::pattern_entry_outer_pos(pattern, self.exit).is_none()
     }
     pub(crate) fn next_pos<
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Option<usize> {
         let location = self.get_end_location();
@@ -62,8 +62,8 @@ impl TraversalPath for GraphRangePath {
     fn reduce_end<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(mut self, trav: &'a Trav) -> FoundPath {
         let graph = trav.graph();
@@ -90,8 +90,8 @@ impl TraversalPath for GraphRangePath {
     fn on_match<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&mut self, trav: &'a Trav) {
         let width = self.get_end::<_, D, _>(trav).width;
@@ -141,8 +141,8 @@ impl End for GraphRangePath {
     fn get_end<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child {
         self.get_graph_end::<_, D, _>(trav)
@@ -160,8 +160,8 @@ impl ReduciblePath for GraphRangePath {
     fn prev_exit_pos<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Option<usize> {
         let location = self.get_end_location();
@@ -173,8 +173,8 @@ impl AdvanceableExit for GraphRangePath {
     fn next_exit_pos<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        D: MatchDirection + 'a,
+        T: Tokenize,
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Option<usize> {
         self.next_pos::<_, D, _>(trav)
