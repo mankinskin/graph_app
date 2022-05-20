@@ -65,15 +65,6 @@ pub(crate) trait DirectedBorderPath<D: MatchDirection>: BorderPath {
     fn pattern_is_complete<P: IntoPattern>(&self, pattern: P) -> bool {
         self.is_perfect() && self.is_at_pattern_border(pattern)
     }
-    //fn outer_pos<'a: 'g, 'g, T: Tokenize, Trav: Traversable<'a, 'g, T>>(&self, trav: &'a Trav) -> Option<usize> {
-    //    self.pattern_outer_pos(self.pattern(trav))
-    //}
-    //fn is_at_border<'a: 'g, 'g, T: Tokenize, Trav: Traversable<'a, 'g, T>>(&self, trav: &'a Trav) -> bool {
-    //    self.outer_pos(trav).is_none()
-    //}
-    //fn is_complete<'a: 'g, 'g, T: Tokenize, Trav: Traversable<'a, 'g, T>>(&self, trav: &'a Trav) -> bool {
-    //    self.is_perfect() && self.is_at_border(trav)
-    //}
 }
 
 pub trait EntryPos {
