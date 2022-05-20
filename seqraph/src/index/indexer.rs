@@ -18,7 +18,7 @@ use crate::{
     TraversalNode,
     TraversalIterator,
     TraversalFolder,
-    Bft, EndPath, GraphRangePath, DirectedBorderPath,
+    Bft, EndPath, IndexingPath, DirectedBorderPath,
 };
 
 #[derive(Debug, Clone)]
@@ -46,16 +46,16 @@ impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Q: IndexingQuery> DirectedTrave
     type Folder = Indexer<T, D>;
     fn after_match_end(
         trav: &'a Self::Trav,
-        start: StartPath,
-    ) -> StartPath {
+        path: SearchPath,
+    ) -> FolderStartPath<'a, 'g, T, D, Q, Self> {
         let mut ltrav = trav.clone();
         let IndexSplitResult {
             inner: post,
             location: entry,
             ..
             // should call leaf split and use known info of leaf position
-         } = SideIndexable::<_, D, IndexBack>::index_entry_split(&mut ltrav, start.entry(), start.width());
-        StartPath::First { entry, child: post, width: start.width() }
+        } = SideIndexable::<_, D, IndexBack>::index_entry_split(&mut ltrav, path.get_entry_location(), path.width());
+        StartLeaf { entry, child: post, width: path.width() }
     }
 }
 trait IndexingTraversalPolicy<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Q: IndexingQuery>:
@@ -69,8 +69,9 @@ impl<T: TraversalQuery + ReduciblePath> IndexingQuery for T {}
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> TraversalFolder<'a, 'g, T, D, Q> for Indexer<T, D> {
     type Trav = Self;
     type Break = (Child, Q);
-    type Continue = Option<QueryResult<Q>>;
-    type Path = GraphRangePath;
+    type Continue = Option<TraversalResult<IndexingPath, Q>>;
+    type Path = IndexingPath;
+    type StartPath = StartLeaf;
     type Node = IndexingNode<Q>;
     fn fold_found(
         trav: &Self::Trav,
@@ -89,7 +90,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> Traversa
                 Indexable::<_, D>::index_mismatch(&mut trav, acc, paths)
             },
             IndexingNode::Match(path, _, prev_query) => {
-                let found = QueryResult::new(
+                let found = TraversalResult::new(
                     path.reduce_end::<_, D, _>(&trav),
                     prev_query,
                 );
@@ -104,6 +105,17 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> Traversa
     }
 }
 pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: TraversableMut<'a, 'g, T> {
+    #[named]
+    fn index_found(
+        &'a mut self,
+        found: IndexingFoundPath,
+    ) -> Child {
+        trace!(function_name!());
+        match found {
+            FoundPath::Range(path) => self.index_range_path(path),
+            FoundPath::Complete(c) => c
+        }
+    }
     fn index_end_path(
         &'a mut self,
         end: EndPath,
@@ -131,13 +143,13 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
     fn index_mismatch<Acc, Q: TraversalQuery + ReduciblePath>(
         &'a mut self,
         acc: Acc,
-        paths: PathPair<Q, GraphRangePath>,
+        paths: PathPair<Q, IndexingPath>,
     ) -> ControlFlow<(Child, Q), Acc> {
         trace!(function_name!());
         let mut graph = self.graph_mut();
         let found = paths.reduce_mismatch::<_, D, _>(&*graph);
         if let FoundPath::Range(path) = &found.found {
-            if path.exit == path.start.entry().sub_index {
+            if path.get_exit_pos() == path.get_entry_pos() {
                 return ControlFlow::Continue(acc);
             }
         }
@@ -147,20 +159,9 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
         ))
     }
     #[named]
-    fn index_found(
-        &'a mut self,
-        found: FoundPath,
-    ) -> Child {
-        trace!(function_name!());
-        match found {
-            FoundPath::Range(path) => self.index_range_path(path),
-            FoundPath::Complete(c) => c
-        }
-    }
-    #[named]
     fn index_range_path(
         &'a mut self,
-        path: GraphRangePath,
+        path: IndexingPath,
     ) -> Child {
         trace!(function_name!());
         let offset = path.width();
@@ -169,7 +170,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
             sub_index: entry,
             ..
         } = path.start.entry();
-        let exit = path.exit;
+        let exit = path.get_exit_pos();
         let inner_width = path.inner_width;
         let (start, end) = path.into_paths();
         let mut graph = self.graph_mut();
@@ -182,7 +183,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
         ) {
             //   start         end
             // perf comp    perf   comp
-            (true, true, true, true) => panic!("GraphRangePath references complete index!"),
+            (true, true, true, true) => panic!("IndexingPath references complete index!"),
             // perfect back half split
             (true, _, true, true) =>
                 SideIndexable::<_, D, IndexBack>::pattern_index_perfect_split(&mut *graph, pattern, location),

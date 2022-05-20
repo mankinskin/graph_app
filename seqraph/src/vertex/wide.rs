@@ -30,3 +30,7 @@ impl<T: Wide> Wide for &'_ mut T {
         (**self).width()
     }
 }
+
+pub trait WideMut {
+    fn width_mut(&mut self) -> &mut usize;
+}

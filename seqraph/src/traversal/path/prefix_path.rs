@@ -90,7 +90,7 @@ impl End for PrefixPath {
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child {
-        self.get_pattern_end::<_, D, _>(trav)
+        self.get_pattern_end(trav)
     }
 }
 impl ReduciblePath for PrefixPath {

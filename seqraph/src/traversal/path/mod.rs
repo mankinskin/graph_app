@@ -1,47 +1,49 @@
 pub(crate) mod start;
 pub(crate) mod end;
 pub(crate) mod query_range_path;
-pub(crate) mod graph_range_path;
+pub(crate) mod search;
 pub(crate) mod overlap_primer;
 pub(crate) mod prefix_path;
 pub(crate) mod traversal;
 pub(crate) mod advanceable;
 pub(crate) mod reducible;
+pub(crate) mod indexing;
 
 pub(crate) use start::*;
 pub(crate) use end::*;
 pub(crate) use query_range_path::*;
-pub(crate) use graph_range_path::*;
+pub(crate) use search::*;
 pub(crate) use overlap_primer::*;
 pub(crate) use prefix_path::*;
 pub(crate) use traversal::*;
 pub(crate) use advanceable::*;
 pub(crate) use reducible::*;
+pub(crate) use indexing::*;
 
 use crate::{
     vertex::*,
     *,
 };
-pub trait RelativeDirection {
+pub trait RelativeDirection<D: MatchDirection> {
     type Direction: MatchDirection;
 }
 #[derive(Default)]
-pub(crate) struct Front<D: MatchDirection>(std::marker::PhantomData<D>);
-impl<D: MatchDirection> RelativeDirection for Front<D> {
+pub(crate) struct Front;
+impl<D: MatchDirection> RelativeDirection<D> for Front {
     type Direction = D;
 }
 #[derive(Default)]
-pub(crate) struct Back<D: MatchDirection>(std::marker::PhantomData<D>);
-impl<D: MatchDirection> RelativeDirection for Back<D> {
+pub(crate) struct Back;
+impl<D: MatchDirection> RelativeDirection<D> for Back {
     type Direction = <D as MatchDirection>::Opposite;
 }
 
 pub(crate) trait BorderPath: Wide {
     fn path(&self) -> &[ChildLocation];
-    fn entry(&self) -> ChildLocation;
     fn is_perfect(&self) -> bool {
         self.path().is_empty()
     }
+    fn entry(&self) -> ChildLocation;
     fn pattern<
         'a: 'g,
         'g,
@@ -52,9 +54,9 @@ pub(crate) trait BorderPath: Wide {
     }
 }
 pub(crate) trait DirectedBorderPath<D: MatchDirection>: BorderPath {
-    type BorderDirection: RelativeDirection;
+    type BorderDirection: RelativeDirection<D>;
     fn pattern_entry_outer_pos<P: IntoPattern>(pattern: P, entry: usize) -> Option<usize> {
-        <Self::BorderDirection as RelativeDirection>::Direction::pattern_index_next(pattern, entry)
+        <Self::BorderDirection as RelativeDirection<D>>::Direction::pattern_index_next(pattern, entry)
     }
     fn pattern_outer_pos<P: IntoPattern>(&self, pattern: P) -> Option<usize> {
         Self::pattern_entry_outer_pos(pattern, self.entry().sub_index)
@@ -66,7 +68,6 @@ pub(crate) trait DirectedBorderPath<D: MatchDirection>: BorderPath {
         self.is_perfect() && self.is_at_pattern_border(pattern)
     }
 }
-
 pub trait EntryPos {
     fn get_entry_pos(&self) -> usize;
 }
@@ -145,12 +146,25 @@ pub trait PathFinished {
     fn is_finished(&self) -> bool;
     fn set_finished(&mut self);
 }
+pub trait PathComplete: GraphEntry + HasStartPath + HasEndPath + ExitPos {
+    fn is_complete<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> bool {
+        let pattern = self.get_entry_pattern(trav);
+        DirectedBorderPath::pattern_is_complete(&self, &pattern[..]) &&
+            self.get_end_path().is_empty() &&
+            <EndPath as DirectedBorderPath<D>>::pattern_entry_outer_pos(pattern, self.get_exit_pos()).is_none()
+    }
+}
 pub trait PatternStart: PatternEntry + HasStartPath {
     fn get_start<
         'a: 'g,
         'g,
         T: Tokenize,
-        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child {
         if let Some(next) = self.get_start_path().last() {
@@ -165,7 +179,6 @@ pub trait PatternEnd: PatternExit + HasEndPath + End {
         'a: 'g,
         'g,
         T: Tokenize,
-        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child {
         if let Some(start) = self.get_end_path().last() {
@@ -187,7 +200,6 @@ pub trait GraphStart: GraphEntry + HasStartPath {
         'a: 'g,
         'g,
         T: Tokenize,
-        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child {
         trav.graph().expect_child_at(self.get_start_location())
@@ -205,7 +217,6 @@ pub trait GraphEnd: GraphExit + HasEndPath + End {
         'a: 'g,
         'g,
         T: Tokenize,
-        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child {
         trav.graph().expect_child_at(self.get_end_location())

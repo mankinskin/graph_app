@@ -6,11 +6,16 @@ pub(crate) struct EndPath {
     pub(crate) width: usize,
 }
 impl<D: MatchDirection> DirectedBorderPath<D> for EndPath {
-    type BorderDirection = Front<D>;
+    type BorderDirection = Front;
 }
 impl Wide for EndPath {
     fn width(&self) -> usize {
         self.width
+    }
+}
+impl WideMut for EndPath {
+    fn width_mut(&mut self) -> &mut usize {
+        &mut self.width
     }
 }
 impl GraphExit for EndPath {
@@ -20,14 +25,19 @@ impl GraphExit for EndPath {
 }
 impl HasEndPath for EndPath {
     fn get_end_path(&self) -> &[ChildLocation] {
-        self.path.as_slice()
+        self.path()
     }
 }
 impl BorderPath for EndPath {
     fn path(&self) -> &[ChildLocation] {
-        self.get_end_path()
+        self.path.borrow()
     }
     fn entry(&self) -> ChildLocation {
         self.get_exit_location()
+    }
+}
+impl ExitMut for EndPath {
+    fn exit_mut(&mut self) -> &mut usize {
+        &mut self.entry.sub_index
     }
 }

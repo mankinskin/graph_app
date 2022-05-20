@@ -45,10 +45,12 @@ pub(crate) use {
             Range,
             RangeInclusive,
         },
+        cmp::Ordering,
         borrow::{
             Borrow,
             BorrowMut,
         },
+        marker::PhantomData,
     },
     function_name::named,
 };

@@ -4,7 +4,7 @@ use super::*;
 use crate::{
     graph::tests::context,
     Child,
-    traversal::path::GraphRangePath,
+    traversal::path::SearchPath,
 };
 use pretty_assertions::{
     assert_eq,
@@ -198,7 +198,7 @@ fn find_ancestor2() {
     assert_eq!(
         byz_found,
         Ok(QueryFound {
-            found: FoundPath::Range(GraphRangePath {
+            found: FoundPath::Range(SearchPath {
                 start: StartPath::Path {
                     entry: xabyz.to_pattern_location(xaby_z_id)
                         .to_child_location(0),

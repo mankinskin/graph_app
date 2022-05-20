@@ -27,6 +27,7 @@ pub enum NoMatch {
     UnknownKey,
     UnknownIndex,
 }
+pub(crate) type SearchFoundPath = FoundPath<SearchPath>;
 
 pub trait ResultOrd: Wide {
     fn is_complete(&self) -> bool;
@@ -48,111 +49,22 @@ impl<T: ResultOrd> ResultOrd for &T {
         ResultOrd::is_complete(*self)
     }
 }
-impl ResultOrd for GraphRangePath {
+impl ResultOrd for SearchPath {
     fn is_complete(&self) -> bool {
         false
     }
 }
-impl ResultOrd for FoundPath {
-    fn is_complete(&self) -> bool {
-        matches!(self, FoundPath::Complete(_))
-    }
-}
-impl Wide for FoundPath {
-    fn width(&self) -> usize {
-        match self {
-            Self::Complete(c) => c.width,
-            Self::Range(r) => r.width(),
-        }
-    }
-}
-impl<Rhs: ResultOrd> PartialOrd<Rhs> for FoundPath {
+impl<Rhs: ResultOrd> PartialOrd<Rhs> for SearchPath {
     fn partial_cmp(&self, other: &Rhs) -> Option<Ordering> {
         Some(ResultOrd::cmp(self, other))
     }
 }
-impl<Rhs: ResultOrd> PartialEq<Rhs> for FoundPath {
+impl<Rhs: ResultOrd> PartialEq<Rhs> for SearchPath {
     fn eq(&self, other: &Rhs) -> bool {
         ResultOrd::eq(self, other)
     }
 }
-impl<Rhs: ResultOrd> PartialOrd<Rhs> for GraphRangePath {
-    fn partial_cmp(&self, other: &Rhs) -> Option<Ordering> {
-        Some(ResultOrd::cmp(self, other))
-    }
-}
-impl<Rhs: ResultOrd> PartialEq<Rhs> for GraphRangePath {
-    fn eq(&self, other: &Rhs) -> bool {
-        ResultOrd::eq(self, other)
-    }
-}
-#[derive(Debug, Clone, Eq)]
-pub(crate) enum FoundPath {
-    Complete(Child),
-    Range(GraphRangePath),
-}
-impl<
-    'a: 'g,
-    'g,
-> FoundPath {
-    pub(crate) fn new<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
-    >(trav: &'a Trav, range_path: GraphRangePath) -> Self {
-        if range_path.is_complete::<_, D, _>(trav) {
-            Self::Complete(Into::<StartPath>::into(range_path).entry().parent)
-        } else {
-            Self::Range(range_path)
-        }
-    }
-    #[track_caller]
-    pub fn unwrap_complete(self) -> Child {
-        match self {
-            Self::Complete(index) => index,
-            _ => panic!("Unable to unwrap {:?} as complete.", self),
-        }
-    }
-    #[track_caller]
-    pub fn expect_complete(self, msg: &str) -> Child {
-        match self {
-            Self::Complete(index) => index,
-            _ => panic!("Unable to unwrap {:?} as complete: {}", self, msg),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct QueryResult<Q: TraversalQuery> {
-    pub(crate) found: FoundPath,
-    pub(crate) query: Q,
-}
-
-impl<Q: TraversalQuery> QueryResult<Q> {
-    pub(crate) fn new(found: impl Into<FoundPath>, query: Q) -> Self {
-        Self {
-            found: found.into(),
-            query,
-        }
-    }
-    #[track_caller]
-    pub fn unwrap_complete(self) -> Child {
-        self.found.unwrap_complete()
-    }
-    #[track_caller]
-    pub fn expect_complete(self, msg: &str) -> Child {
-        self.found.expect_complete(msg)
-    }
-}
-impl<Q: QueryPath> QueryResult<Q> {
-    pub fn complete(query: impl IntoPattern, index: impl AsChild) -> Self {
-        Self {
-            found: FoundPath::Complete(index.as_child()),
-            query: Q::complete(query),
-        }
-    }
-}
-pub type QueryFound = QueryResult<QueryRangePath>;
+pub type QueryFound = TraversalResult<SearchPath, QueryRangePath>;
 pub type SearchResult = Result<QueryFound, NoMatch>;
 
 impl<'t, 'g, T> HypergraphRef<T>

@@ -90,7 +90,7 @@ impl PatternExit for QueryRangePath {
 }
 impl HasEndPath for QueryRangePath {
     fn get_end_path(&self) -> &[ChildLocation] {
-        self.end.borrow()
+        &self.end
     }
 }
 impl PatternEnd for QueryRangePath {}
@@ -120,7 +120,7 @@ impl End for QueryRangePath {
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child {
-        self.get_pattern_end::<_, D, _>(trav)
+        self.get_pattern_end(trav)
     }
 }
 impl ReduciblePath for QueryRangePath {

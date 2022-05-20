@@ -29,6 +29,7 @@ impl ExitPos for OverlapPrimer {
     }
 }
 impl HasEndPath for OverlapPrimer {
+    //type Path = [ChildLocation];
     fn get_end_path(&self) -> &[ChildLocation] {
         if self.exit == 0 {
             self.end.borrow()
@@ -62,7 +63,7 @@ impl End for OverlapPrimer {
         if self.exit == 0 {
             self.start
         } else {
-            self.context.get_pattern_end::<_, D, _>(trav)
+            self.context.get_pattern_end(trav)
         }
     }
 }

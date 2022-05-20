@@ -18,7 +18,8 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection> Traversable<'a, 'g, T> for
 
 trait SearchTraversalPolicy<'a: 'g, 'g, T: Tokenize, D: MatchDirection>:
     DirectedTraversalPolicy<'a, 'g, T, D, QueryRangePath, Trav=Searcher<T, D>, Folder=Searcher<T, D>>
-{}
+{
+}
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
     SearchTraversalPolicy<'a, 'g, T, D> for AncestorSearch<T, D>
 {}
@@ -33,7 +34,8 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
     type Break = Option<QueryFound>;
     type Continue = Option<QueryFound>;
     type Node = MatchNode;
-    type Path = GraphRangePath;
+    type Path = SearchPath;
+    type StartPath = StartPath;
     fn fold_found(
         trav: &Self::Trav,
         acc: Self::Continue,
@@ -46,7 +48,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
             MatchNode::Match(path, _, prev_query) => {
                 let found = QueryFound::new(
                     path.reduce_end::<_, D, _>(trav),
-                    prev_query,
+                    prev_query
                 );
                 if acc.as_ref().map(|f| found.found.gt(&f.found)).unwrap_or(true) {
                     ControlFlow::Continue(Some(found))
@@ -66,6 +68,12 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
 {
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
+    fn after_match_end(
+        trav: &'a Self::Trav,
+        path: SearchPath,
+    ) -> FolderStartPath<'a, 'g, T, D, QueryRangePath, Self> {
+        path.into()
+    }
 }
 struct ParentSearch<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<(T, D)>,
@@ -75,6 +83,12 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
 {
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
+    fn after_match_end(
+        trav: &'a Self::Trav,
+        path: SearchPath,
+    ) -> FolderStartPath<'a, 'g, T, D, QueryRangePath, Self> {
+        path.into()
+    }
     fn at_index_end(
         _trav: &'a Self::Trav,
         _query: QueryRangePath,

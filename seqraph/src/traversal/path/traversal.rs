@@ -1,11 +1,3 @@
-use crate::{
-    *,
-    ChildLocation,
-    Tokenize,
-    MatchDirection,
-    QueryResult,
-    FoundPath,
-};
 use super::*;
 
 pub trait TraversalQuery:
@@ -27,9 +19,7 @@ pub(crate) trait TraversalPath:
     + ReduciblePath
     + GraphStart
     + GraphEnd
-    + From<StartPath>
-    + Into<StartPath>
-    + Into<GraphRangePath>
+    + Wide
     + Debug
 {
     fn reduce_end<
@@ -38,7 +28,7 @@ pub(crate) trait TraversalPath:
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
-    >(self, trav: &'a Trav) -> FoundPath;
+    >(self, trav: &'a Trav) -> FoundPath<Self>;
     fn move_width_into_start(&mut self);
     fn on_match<
         'a: 'g,
@@ -49,6 +39,19 @@ pub(crate) trait TraversalPath:
     >(&mut self, trav: &'a Trav);
 }
 
+pub(crate) trait TraversalStartPath:
+    BorderPath
+    + PathAppend<Result=StartPath>
+    + Clone
+    + Debug
+{
+}
+impl<
+    T: BorderPath
+        + PathAppend<Result=StartPath>
+        + Clone
+        + Debug
+> TraversalStartPath for T {}
 #[derive(Clone, Debug)]
 pub(crate) enum PathPair<
     Q: TraversalQuery,
@@ -88,7 +91,6 @@ impl<
         }
     }
 }
-
 impl<
     Q: index::IndexingQuery,
     G: TraversalPath,
@@ -99,12 +101,12 @@ impl<
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
-    >(self, trav: &'a Trav) -> QueryResult<Q> {
+    >(self, trav: &'a Trav) -> TraversalResult<G, Q> {
         match self {
             Self::GraphMajor(path, query) |
             Self::QueryMajor(query, path) => {
-                QueryResult::new(
-                    FoundPath::new::<_, D, _>(trav, path.reduce_mismatch::<_, D, _>(trav).into()),
+                TraversalResult::new(
+                    FoundPath::new::<_, D, _>(trav, path.reduce_mismatch::<_, D, _>(trav)),
                     query.reduce_mismatch::<_, D, _>(trav),
                 )
             }
