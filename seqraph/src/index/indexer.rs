@@ -54,7 +54,7 @@ impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Q: IndexingQuery> DirectedTrave
             location: entry,
             ..
             // should call leaf split and use known info of leaf position
-         } = IndexableSide::<_, D, IndexBack>::index_entry_split(&mut ltrav, start.entry(), start.width());
+         } = SideIndexable::<_, D, IndexBack>::index_entry_split(&mut ltrav, start.entry(), start.width());
         StartPath::First { entry, child: post, width: start.width() }
     }
 }
@@ -115,13 +115,13 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
         } = end;
         let mut graph = self.graph_mut();
         while let Some(entry) = path.pop() {
-            IndexableSide::<_, D, IndexFront>::index_entry_split(
+            SideIndexable::<_, D, IndexFront>::index_entry_split(
                 &mut *graph,
                 entry,
                 width,
             );
         }
-        IndexableSide::<_, D, IndexFront>::index_entry_split(
+        SideIndexable::<_, D, IndexFront>::index_entry_split(
             &mut *graph,
             entry,
             width,
@@ -185,20 +185,20 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
             (true, true, true, true) => panic!("GraphRangePath references complete index!"),
             // perfect back half split
             (true, _, true, true) =>
-                IndexableSide::<_, D, IndexBack>::pattern_index_perfect_split(&mut *graph, pattern, location),
+                SideIndexable::<_, D, IndexBack>::pattern_index_perfect_split(&mut *graph, pattern, location),
             // perfect front half split
             (true, true, true, _) =>
-                IndexableSide::<_, D, IndexFront>::pattern_index_perfect_split(&mut *graph, pattern, end.entry()),
+                SideIndexable::<_, D, IndexFront>::pattern_index_perfect_split(&mut *graph, pattern, end.entry()),
             // unperfect back half split
             (false, _, true, true) =>
-                IndexableSide::<_, D, IndexBack>::index_offset_split(
+                SideIndexable::<_, D, IndexBack>::index_offset_split(
                     &mut *graph,
                     parent,
                     <IndexBack as IndexSide<D>>::width_offset(&parent, offset)
                 ),
             // unperfect front half split
             (true, true, false, _) =>
-                IndexableSide::<_, D, IndexFront>::index_offset_split(
+                SideIndexable::<_, D, IndexFront>::index_offset_split(
                     &mut *graph,
                     parent,
                     <IndexFront as IndexSide<D>>::width_offset(&parent, offset)
@@ -208,7 +208,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
                 Indexable::<_, D>::pattern_index_perfect_split_range(&mut *graph, pattern, location, entry..=exit),
             // unperfect/perfect inner split
             (false, _, true, false) =>
-                IndexableSide::<_, D, IndexBack>::pattern_range_unperfect_split(
+                SideIndexable::<_, D, IndexBack>::pattern_range_unperfect_split(
                     &mut *graph,
                     pattern,
                     location,
@@ -217,7 +217,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
                 ),
             // perfect/unperfect inner split
             (true, false, false, _) =>
-                IndexableSide::<_, D, IndexFront>::pattern_range_unperfect_split(
+                SideIndexable::<_, D, IndexFront>::pattern_range_unperfect_split(
                     &mut *graph,
                     pattern,
                     location,
@@ -247,15 +247,15 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
                             inner: back_inner,
                             context: back_context_path,
                             location: back_location,
-                        } = IndexableSide::<_, D, IndexBack>::index_offset_split(&mut *graph, *pattern.get(back_pos).unwrap(), back_offset);
-                        let back_context = IndexableSide::<_, D, IndexBack>::index_context_path(&mut *graph, back_location, back_context_path);
+                        } = SideIndexable::<_, D, IndexBack>::index_offset_split(&mut *graph, *pattern.get(back_pos).unwrap(), back_offset);
+                        let back_context = SideIndexable::<_, D, IndexBack>::index_context_path(&mut *graph, back_location, back_context_path);
 
                         let IndexSplitResult {
                             inner: front_inner,
                             context: front_context_path,
                             location: front_location,
-                        } = IndexableSide::<_, D, IndexFront>::index_offset_split(&mut *graph, *pattern.get(front_pos).unwrap(), front_offset);
-                        let front_context = IndexableSide::<_, D, IndexFront>::index_context_path(&mut *graph, front_location, front_context_path);
+                        } = SideIndexable::<_, D, IndexFront>::index_offset_split(&mut *graph, *pattern.get(front_pos).unwrap(), front_offset);
+                        let front_context = SideIndexable::<_, D, IndexFront>::index_context_path(&mut *graph, front_location, front_context_path);
 
                         let inner_context = pattern.get(D::inner_context_range(back_pos, front_pos)).and_then(|p| graph.insert_pattern(p));
                         let inner_context = inner_context.as_ref()

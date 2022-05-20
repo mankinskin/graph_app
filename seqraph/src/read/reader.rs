@@ -144,7 +144,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                             old
                         } else {
                             vec![
-                                IndexableSide::<T, D, IndexBack>::index_context_path(
+                                SideIndexable::<T, D, IndexBack>::index_context_path(
                                     self,
                                     loc,
                                     path.clone(),
