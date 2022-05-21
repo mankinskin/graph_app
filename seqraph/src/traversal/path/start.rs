@@ -2,9 +2,9 @@ use super::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct StartLeaf {
-    entry: ChildLocation,
-    child: Child,
-    width: usize,
+    pub(crate) entry: ChildLocation,
+    pub(crate) child: Child,
+    pub(crate) width: usize,
 }
 impl WideMut for StartLeaf {
     fn width_mut(&mut self) -> &mut usize {
@@ -70,7 +70,7 @@ impl From<IndexingPath> for StartPath {
 impl WideMut for StartPath {
     fn width_mut(&mut self) -> &mut usize {
         match self {
-            Self::Path { width, .. } => &mut width,
+            Self::Path { width, .. } => width,
             Self::Leaf(leaf) => leaf.width_mut(),
         }
     }

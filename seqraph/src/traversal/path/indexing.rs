@@ -1,12 +1,14 @@
 use super::*;
 
+pub(crate) type IndexingFoundPath = FoundPath<IndexingPath>;
+
 #[derive(Debug, Clone)]
 pub(crate) struct IndexingPath {
     pub(crate) start: StartLeaf,
     pub(crate) inner_width: usize,
     pub(crate) end: EndPath
 }
-pub(crate) type IndexingFoundPath = FoundPath<IndexingPath>;
+
 impl From<StartLeaf> for IndexingPath {
     fn from(start: StartLeaf) -> Self {
         Self::new(start)
@@ -14,11 +16,12 @@ impl From<StartLeaf> for IndexingPath {
 }
 impl<'a: 'g, 'g> IndexingPath {
     pub fn new(start: StartLeaf) -> Self {
+        let entry = start.entry();
         Self {
             start,
             inner_width: 0,
             end: EndPath {
-                entry: start.entry(),
+                entry,
                 width: 0,
                 path: vec![],
             }
@@ -35,6 +38,21 @@ impl<'a: 'g, 'g> IndexingPath {
         let location = self.get_end_location();
         let pattern = trav.graph().expect_pattern_at(&location);
         D::pattern_index_next(pattern, self.get_exit_pos())
+    }
+}
+impl HasStartMatchPath for IndexingPath {
+    fn get_start_match_path(&self) -> StartPath {
+        StartPath::Leaf(self.start.clone())
+    }
+}
+impl HasEndMatchPath for IndexingPath {
+    fn get_end_match_path(&self) -> EndPath {
+        self.end.clone()
+    }
+}
+impl HasMatchPaths for IndexingPath {
+    fn into_paths(self) -> (StartPath, EndPath) {
+        (StartPath::Leaf(self.start), self.end)
     }
 }
 impl TraversalPath for IndexingPath {
@@ -77,7 +95,7 @@ impl TraversalPath for IndexingPath {
         let wmut = if self.end.path().is_empty() {
             &mut self.inner_width
         } else {
-            &mut self.end.width()
+            self.end.width_mut()
         };
         *wmut += width;
     }

@@ -64,8 +64,8 @@ impl<Rhs: ResultOrd> PartialEq<Rhs> for SearchPath {
         ResultOrd::eq(self, other)
     }
 }
-pub type QueryFound = TraversalResult<SearchPath, QueryRangePath>;
-pub type SearchResult = Result<QueryFound, NoMatch>;
+pub(crate) type QueryFound = TraversalResult<SearchPath, QueryRangePath>;
+pub(crate) type SearchResult = Result<QueryFound, NoMatch>;
 
 impl<'t, 'g, T> HypergraphRef<T>
 where
@@ -93,14 +93,15 @@ where
         let pattern = self.read().unwrap().to_children(pattern);
         self.right_searcher().find_pattern_ancestor(pattern)
     }
-    pub fn find_parent(
+    #[allow(unused)]
+    pub(crate) fn find_parent(
         &self,
         pattern: impl IntoIterator<Item = impl Indexed>,
     ) -> SearchResult {
         let pattern = self.read().unwrap().to_children(pattern);
         self.right_searcher().find_pattern_parent(pattern)
     }
-    pub fn find_sequence(
+    pub(crate) fn find_sequence(
         &self,
         pattern: impl IntoIterator<Item = impl AsToken<T>>,
     ) -> SearchResult {

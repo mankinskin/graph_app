@@ -19,8 +19,8 @@ pub(crate) use folder::*;
 pub(crate) use iterator::*;
 pub(crate) use policy::*;
 
-#[derive(Debug, Clone)]
-pub struct TraversalResult<P: TraversalPath, Q: TraversalQuery> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct TraversalResult<P: TraversalPath, Q: TraversalQuery> {
     pub(crate) found: FoundPath<P>,
     pub(crate) query: Q,
 }
@@ -62,13 +62,13 @@ impl<
 > FoundPath<P> {
     pub(crate) fn new<
         T: Tokenize,
-        D: MatchDirection, 
+        D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
-    >(trav: &'a Trav, range_path: P) -> Self {
-        if range_path.is_complete::<_, D, _>(trav) {
-            Self::Complete(Into::<StartPath>::into(range_path).entry().parent)
+    >(trav: &'a Trav, path: P) -> Self {
+        if path.is_complete::<_, D, _>(trav) {
+            Self::Complete(path.get_start_match_path().entry().parent)
         } else {
-            Self::Range(range_path)
+            Self::Range(path)
         }
     }
     #[track_caller]

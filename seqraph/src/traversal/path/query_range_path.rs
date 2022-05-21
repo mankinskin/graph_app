@@ -45,7 +45,7 @@ impl<
         }
     }
 }
-pub trait QueryPath: TraversalQuery {
+pub(crate) trait QueryPath: TraversalQuery {
     fn complete(pattern: impl IntoPattern) -> Self;
 }
 

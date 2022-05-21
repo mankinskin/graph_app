@@ -51,6 +51,10 @@ pub(crate) use {
             BorrowMut,
         },
         marker::PhantomData,
+        sync::{
+            RwLockReadGuard,
+            RwLockWriteGuard,
+        },
     },
     function_name::named,
 };

@@ -15,11 +15,12 @@ impl From<StartPath> for SearchPath {
 }
 impl<'a: 'g, 'g> SearchPath {
     pub fn new(start: StartPath) -> Self {
+        let entry = start.entry();
         Self {
             start,
             inner_width: 0,
             end: EndPath {
-                entry: start.entry(),
+                entry,
                 width: 0,
                 path: vec![],
             },
@@ -31,16 +32,6 @@ impl<'a: 'g, 'g> SearchPath {
             self.end
         )
     }
-    pub(crate) fn is_complete<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> bool {
-        let pattern = self.start.pattern(trav);
-        DirectedBorderPath::<D>::pattern_is_complete(&self.start, &pattern[..]) &&
-            self.end.path.is_empty() &&
-            <EndPath as DirectedBorderPath<D>>::pattern_entry_outer_pos(pattern, self.get_exit_pos()).is_none()
-    }
     pub(crate) fn next_pos<
         T: Tokenize,
         D: MatchDirection,
@@ -49,6 +40,21 @@ impl<'a: 'g, 'g> SearchPath {
         let location = self.get_end_location();
         let pattern = trav.graph().expect_pattern_at(&location);
         D::pattern_index_next(pattern, self.get_exit_pos())
+    }
+}
+impl HasStartMatchPath for SearchPath {
+    fn get_start_match_path(&self) -> StartPath {
+        self.start.clone()
+    }
+}
+impl HasEndMatchPath for SearchPath {
+    fn get_end_match_path(&self) -> EndPath {
+        self.end.clone()
+    }
+}
+impl HasMatchPaths for SearchPath {
+    fn into_paths(self) -> (StartPath, EndPath) {
+        (self.start, self.end)
     }
 }
 impl TraversalPath for SearchPath {

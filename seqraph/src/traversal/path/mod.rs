@@ -136,17 +136,27 @@ impl<T: GraphExit> ExitPos for T {
         self.get_exit_location().sub_index
     }
 }
-pub trait HasStartPath {
+// TODO: Improve naming
+pub(crate) trait HasStartPath {
     fn get_start_path(&self) -> &[ChildLocation];
 }
-pub trait HasEndPath {
+pub(crate) trait HasEndPath {
     fn get_end_path(&self) -> &[ChildLocation];
+}
+pub(crate) trait HasStartMatchPath {
+    fn get_start_match_path(&self) -> StartPath;
+}
+pub(crate) trait HasEndMatchPath {
+    fn get_end_match_path(&self) -> EndPath;
+}
+pub(crate) trait HasMatchPaths: HasStartMatchPath + HasEndMatchPath {
+    fn into_paths(self) -> (StartPath, EndPath);
 }
 pub trait PathFinished {
     fn is_finished(&self) -> bool;
     fn set_finished(&mut self);
 }
-pub trait PathComplete: GraphEntry + HasStartPath + HasEndPath + ExitPos {
+pub(crate) trait PathComplete: GraphEntry + HasStartMatchPath + HasEndPath + ExitPos {
     fn is_complete<
         'a: 'g,
         'g,
@@ -155,12 +165,14 @@ pub trait PathComplete: GraphEntry + HasStartPath + HasEndPath + ExitPos {
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> bool {
         let pattern = self.get_entry_pattern(trav);
-        DirectedBorderPath::pattern_is_complete(&self, &pattern[..]) &&
+        DirectedBorderPath::<D>::pattern_is_complete(&self.get_start_match_path(), &pattern[..]) &&
             self.get_end_path().is_empty() &&
             <EndPath as DirectedBorderPath<D>>::pattern_entry_outer_pos(pattern, self.get_exit_pos()).is_none()
     }
 }
-pub trait PatternStart: PatternEntry + HasStartPath {
+impl<P: GraphEntry + HasStartMatchPath + HasEndPath + ExitPos> PathComplete for P {}
+
+pub(crate) trait PatternStart: PatternEntry + HasStartPath {
     fn get_start<
         'a: 'g,
         'g,
@@ -174,7 +186,7 @@ pub trait PatternStart: PatternEntry + HasStartPath {
         }
     }
 }
-pub trait PatternEnd: PatternExit + HasEndPath + End {
+pub(crate) trait PatternEnd: PatternExit + HasEndPath + End {
     fn get_pattern_end<
         'a: 'g,
         'g,
@@ -188,7 +200,7 @@ pub trait PatternEnd: PatternExit + HasEndPath + End {
         }
     }
 }
-pub trait GraphStart: GraphEntry + HasStartPath {
+pub(crate) trait GraphStart: GraphEntry + HasStartPath {
     fn get_start_location(&self) -> ChildLocation {
         if let Some(start) = self.get_start_path().last() {
             *start
@@ -205,7 +217,7 @@ pub trait GraphStart: GraphEntry + HasStartPath {
         trav.graph().expect_child_at(self.get_start_location())
     }
 }
-pub trait GraphEnd: GraphExit + HasEndPath + End {
+pub(crate) trait GraphEnd: GraphExit + HasEndPath + End {
     fn get_end_location(&self) -> ChildLocation {
         if let Some(end) = self.get_end_path().last() {
             *end
@@ -222,16 +234,16 @@ pub trait GraphEnd: GraphExit + HasEndPath + End {
         trav.graph().expect_child_at(self.get_end_location())
     }
 }
-pub trait EndPathMut {
+pub(crate) trait EndPathMut {
     fn end_path_mut(&mut self) -> &mut ChildPath;
     fn push_end(&mut self, next: ChildLocation) {
         self.end_path_mut().push(next)
     }
 }
-pub trait ExitMut: ExitPos {
+pub(crate) trait ExitMut: ExitPos {
     fn exit_mut(&mut self) -> &mut usize;
 }
-pub trait AdvanceableExit: ExitPos + ExitMut + PathFinished {
+pub(crate) trait AdvanceableExit: ExitPos + ExitMut + PathFinished {
     fn next_exit_pos<
         'a: 'g,
         'g,
@@ -266,7 +278,7 @@ impl<P: ExitMut + PatternExit + PathFinished> AdvanceableExit for P {
         D::pattern_index_next(self.get_exit_pattern(), self.get_exit_pos())
     }
 }
-pub trait End {
+pub(crate) trait End {
     fn get_end<
         'a: 'g,
         'g,

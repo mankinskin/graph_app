@@ -1,9 +1,6 @@
 #[allow(clippy::many_single_char_names)]
 use super::*;
-use crate::{
-    Hypergraph,
-    QueryRangePath,
-};
+use crate::*;
 use pretty_assertions::assert_eq;
 use itertools::*;
 use maplit::hashset;

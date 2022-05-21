@@ -1,6 +1,6 @@
 use super::*;
 
-pub trait AdvanceablePath: EndPathMut + AdvanceableExit + End + PathFinished + Sized {
+pub(crate) trait AdvanceablePath: EndPathMut + AdvanceableExit + End + PathFinished + Sized {
     fn try_advance<
         'a: 'g,
         'g,

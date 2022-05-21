@@ -105,7 +105,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
         }
     }
     // find largest matching direct parent
-    pub fn find_pattern_parent(
+    pub(crate) fn find_pattern_parent(
         &'a self,
         pattern: impl IntoPattern,
     ) -> SearchResult {
@@ -114,7 +114,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
         )
     }
     /// find largest matching ancestor for pattern
-    pub fn find_pattern_ancestor(
+    pub(crate) fn find_pattern_ancestor(
         &'a self,
         pattern: impl IntoPattern,
     ) -> SearchResult {

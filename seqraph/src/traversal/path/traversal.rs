@@ -1,6 +1,6 @@
 use super::*;
 
-pub trait TraversalQuery:
+pub(crate) trait TraversalQuery:
     AdvanceablePath
     + PathFinished
     + Debug
@@ -19,6 +19,8 @@ pub(crate) trait TraversalPath:
     + ReduciblePath
     + GraphStart
     + GraphEnd
+    + PathComplete
+    + HasMatchPaths
     + Wide
     + Debug
 {

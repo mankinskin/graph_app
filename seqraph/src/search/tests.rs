@@ -211,10 +211,13 @@ fn find_ancestor2() {
                     ],
                     width: 2,
                 },
-                end: vec![],
-                exit: 1,
                 inner_width: 0,
-                end_width: 1,
+                end: EndPath {
+                    path: vec![],
+                    entry: xabyz.to_pattern_location(xaby_z_id)
+                        .to_child_location(1),
+                    width: 1,
+                },
             }),
             query: QueryRangePath {
                 exit: query.len() - 1,
