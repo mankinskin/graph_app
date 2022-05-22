@@ -144,51 +144,49 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
         path: SearchPath,
     ) -> Child {
         trace!(function_name!());
-        let offset = path.width();
-        let location@ChildLocation {
+        
+        let entry@ChildLocation {
             parent,
-            sub_index: entry,
+            sub_index: entry_pos,
             ..
         } = path.start.entry();
-        let exit = path.get_exit_pos();
+        let start_width = path.start.width();
         let inner_width = path.inner_width;
+        let EndPath {
+            entry: ChildLocation {
+                sub_index: exit,
+                ..
+            },
+            width: end_width,
+            ..
+        } = path.end;
         let (start, end) = path.into_paths();
         let mut graph = self.graph_mut();
         let pattern = start.pattern(&*graph);
-        match (
-            start.is_perfect(),
-            DirectedBorderPath::<D>::is_at_pattern_border(&start, pattern.borrow()),
-            end.is_perfect(),
-            DirectedBorderPath::<D>::is_at_pattern_border(&end, pattern.borrow()),
+        match SplitRange::new(
+            start,
+            end,
+            &pattern,
         ) {
-            //   start         end
-            // perf comp    perf   comp
-            (true, true, true, true) => panic!("IndexingPath references complete index!"),
-            // perfect back half split
-            (true, _, true, true) =>
+            SplitRange::PerfectPostfix { pos } =>
                 SideIndexable::<_, D, IndexBack>::pattern_index_perfect_split(&mut *graph, pattern, location),
-            // perfect front half split
-            (true, true, true, _) =>
+            SplitRange::PerfectPrefix { pos } =>
                 SideIndexable::<_, D, IndexFront>::pattern_index_perfect_split(&mut *graph, pattern, end.entry()),
-            // unperfect back half split
-            (false, _, true, true) =>
+            SplitRange::PostfixOff { pos, offset } =>
                 SideIndexable::<_, D, IndexBack>::index_offset_split(
                     &mut *graph,
                     parent,
                     <IndexBack as IndexSide<D>>::width_offset(&parent, offset)
                 ),
-            // unperfect front half split
-            (true, true, false, _) =>
+            SplitRange::PrefixOff { pos, offset } =>
                 SideIndexable::<_, D, IndexFront>::index_offset_split(
                     &mut *graph,
                     parent,
                     <IndexFront as IndexSide<D>>::width_offset(&parent, offset)
                 ),
-            // perfect/perfect inner split
-            (true, _, true, _) =>
+            SplitRange::BothPerfect { start, end } =>
                 Indexable::<_, D>::pattern_index_perfect_split_range(&mut *graph, pattern, location, entry..=exit),
-            // unperfect/perfect inner split
-            (false, _, true, false) =>
+            SplitRange::InnerBackOff { start, offset, end } =>
                 SideIndexable::<_, D, IndexBack>::pattern_range_unperfect_split(
                     &mut *graph,
                     pattern,
@@ -196,8 +194,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
                     <IndexBack as IndexSide<D>>::width_offset(&parent, offset),
                     <IndexBack as IndexSide<D>>::limited_range(entry, exit),
                 ),
-            // perfect/unperfect inner split
-            (true, false, false, _) =>
+            SplitRange::InnerFrontOff { start, end, offset } =>
                 SideIndexable::<_, D, IndexFront>::pattern_range_unperfect_split(
                     &mut *graph,
                     pattern,
@@ -205,8 +202,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
                     <IndexFront as IndexSide<D>>::width_offset(&parent, offset),
                     <IndexFront as IndexSide<D>>::limited_range(entry, exit),
                 ),
-            // unperfect/unperfect inner split
-            (false, _, false, _) => {
+            SplitRange::InnerBothOff { start, start_offset, end, end_offset } => {
                 let child_patterns = graph.expect_children_of(parent).clone();
 
                 let pattern = start.entry().expect_pattern_in(&child_patterns);

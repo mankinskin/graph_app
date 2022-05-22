@@ -8,6 +8,7 @@ use std::ops::RangeFrom;
 mod indexer;
 mod index_direction;
 mod side;
+mod side_indexable;
 
 #[cfg(test)]
 #[macro_use]
@@ -17,6 +18,7 @@ pub(crate) mod tests;
 pub use indexer::*;
 pub use index_direction::*;
 pub(crate) use side::*;
+pub(crate) use side_indexable::*;
 
 impl<'t, 'g, T> HypergraphRef<T>
 where
