@@ -144,73 +144,70 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
         path: SearchPath,
     ) -> Child {
         trace!(function_name!());
-        
-        let entry@ChildLocation {
-            parent,
-            sub_index: entry_pos,
-            ..
-        } = path.start.entry();
+
         let start_width = path.start.width();
         let inner_width = path.inner_width;
-        let EndPath {
-            entry: ChildLocation {
-                sub_index: exit,
-                ..
-            },
-            width: end_width,
+        let end_width = path.end.width();
+        let entry_pos = path.start.get_entry_pos();
+        let exit_pos = path.end.get_exit_pos();
+        let root@PatternLocation {
+            parent,
             ..
-        } = path.end;
-        let (start, end) = path.into_paths();
+        } = path.start.entry().into_pattern_location();
+
         let mut graph = self.graph_mut();
-        let pattern = start.pattern(&*graph);
-        match SplitRange::new(
-            start,
-            end,
+        let pattern = root.expect_pattern(&*graph);
+        let (start_path, end_path) = path.into_paths();
+        match SplitRange::new::<D>(
+            start_path,
+            end_path,
             &pattern,
         ) {
             SplitRange::PerfectPostfix { pos } =>
-                SideIndexable::<_, D, IndexBack>::pattern_index_perfect_split(&mut *graph, pattern, location),
+                SideIndexable::<_, D, IndexBack>::pattern_index_perfect_split(&mut *graph, pattern, root, pos.get()),
             SplitRange::PerfectPrefix { pos } =>
-                SideIndexable::<_, D, IndexFront>::pattern_index_perfect_split(&mut *graph, pattern, end.entry()),
+                SideIndexable::<_, D, IndexFront>::pattern_index_perfect_split(&mut *graph, pattern, root, pos.get()),
             SplitRange::PostfixOff { pos, offset } =>
                 SideIndexable::<_, D, IndexBack>::index_offset_split(
                     &mut *graph,
                     parent,
-                    <IndexBack as IndexSide<D>>::width_offset(&parent, offset)
+                    <IndexBack as IndexSide<D>>::width_offset(&parent, offset.get())
                 ),
             SplitRange::PrefixOff { pos, offset } =>
                 SideIndexable::<_, D, IndexFront>::index_offset_split(
                     &mut *graph,
                     parent,
-                    <IndexFront as IndexSide<D>>::width_offset(&parent, offset)
+                    <IndexFront as IndexSide<D>>::width_offset(&parent, offset.get())
                 ),
-            SplitRange::BothPerfect { start, end } =>
-                Indexable::<_, D>::pattern_index_perfect_split_range(&mut *graph, pattern, location, entry..=exit),
+            SplitRange::InnerBothPerfect { start, end } =>
+                Indexable::<_, D>::pattern_index_perfect_split_range(&mut *graph, pattern, root, start.get()..=end.get()),
             SplitRange::InnerBackOff { start, offset, end } =>
                 SideIndexable::<_, D, IndexBack>::pattern_range_unperfect_split(
                     &mut *graph,
                     pattern,
-                    location,
-                    <IndexBack as IndexSide<D>>::width_offset(&parent, offset),
-                    <IndexBack as IndexSide<D>>::limited_range(entry, exit),
+                    root,
+                    offset.get(),
+                    <IndexBack as IndexSide<D>>::limited_range(start, end.get()),
                 ),
             SplitRange::InnerFrontOff { start, end, offset } =>
                 SideIndexable::<_, D, IndexFront>::pattern_range_unperfect_split(
                     &mut *graph,
                     pattern,
-                    location,
-                    <IndexFront as IndexSide<D>>::width_offset(&parent, offset),
-                    <IndexFront as IndexSide<D>>::limited_range(entry, exit),
+                    root,
+                    offset.get(),
+                    <IndexBack as IndexSide<D>>::limited_range(start.get(), end.get()),
                 ),
             SplitRange::InnerBothOff { start, start_offset, end, end_offset } => {
                 let child_patterns = graph.expect_children_of(parent).clone();
 
-                let pattern = start.entry().expect_pattern_in(&child_patterns);
-                let pre_width = pattern[..start.entry().sub_index].width();
-                let back_index = start.entry().expect_child_in_pattern(pattern);
-                let back_offset = pre_width + <IndexBack as IndexSide<D>>::width_offset(back_index, start.width());
-                let front_index = end.entry().expect_child_in_pattern(pattern);
-                let front_offset = pre_width + back_index.width() + inner_width + <IndexFront as IndexSide<D>>::width_offset(front_index, end.width());
+                let pattern = root.expect_pattern_in(&child_patterns);
+                let pre_width = pattern[..entry_pos].width();
+                let back_index = &pattern[start];
+                let back_offset = start_offset.get();
+                // pre_width + <IndexBack as IndexSide<D>>::width_offset(back_index, start_width);
+                let front_index = &pattern[end.get()];
+                let front_offset = end_offset.get();
+                //pre_width + back_index.width() + inner_width + <IndexFront as IndexSide<D>>::width_offset(front_index, end_width);
                 let positions = child_patterns.into_iter()
                     .map(|(pid, pattern)| {
                         let (back_index, back_offset) = <IndexBack as IndexSide<D>>::token_offset_split(pattern.borrow(), back_offset).unwrap();

@@ -16,28 +16,28 @@ pub(crate) enum SplitRange {
     },
     PostfixOff {
         pos: usize,
-        offset: NonZeroUsize, 
+        offset: NonZeroUsize,
     },
     PrefixOff {
         pos: usize,
-        offset: NonZeroUsize, 
+        offset: NonZeroUsize,
     },
     InnerBackOff {
         start: usize,
-        offset: NonZeroUsize, 
+        offset: NonZeroUsize,
         end: NonZeroUsize,
     },
     InnerFrontOff {
         start: NonZeroUsize,
         end: NonZeroUsize,
-        offset: NonZeroUsize, 
+        offset: NonZeroUsize,
     },
     InnerBothOff {
         start: usize,
-        start_offset: NonZeroUsize, 
+        start_offset: NonZeroUsize,
         // todo: how to handle direction in pattern indices
         end: NonZeroUsize,
-        end_offset: NonZeroUsize, 
+        end_offset: NonZeroUsize,
     },
 }
 impl SplitRange {
@@ -70,11 +70,15 @@ impl SplitRange {
                     pos: start.get_entry_pos(),
                     offset: NonZeroUsize::new(end.width()).unwrap(),
                 },
-            (true, _, true, _) =>
+            (true, _, true, _) => {
+                let entry = start.get_entry_pos();
+                let exit = end.get_exit_pos();
+                assert!(entry != exit);
                 Self::InnerBothPerfect {
-                    start: NonZeroUsize::new(start.get_entry_pos()).unwrap(),
-                    end: NonZeroUsize::new(end.get_exit_pos()).unwrap(),
-                },
+                    start: NonZeroUsize::new(entry).unwrap(),
+                    end: NonZeroUsize::new(exit).unwrap(),
+                }
+            },
             (false, _, true, false) =>
                 Self::InnerBackOff {
                     start: start.get_entry_pos(),
@@ -115,14 +119,15 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
     ) -> IndexSplitResult {
         let mut graph = self.graph_mut();
         let pattern = graph.expect_pattern_at(&entry);
-        SideIndexable::<_, _, Side>::pattern_index_perfect_split(&mut *graph, pattern, entry)
+        SideIndexable::<_, _, Side>::pattern_index_perfect_split(&mut *graph, pattern, entry, entry.sub_index)
     }
     fn pattern_index_perfect_split(
         &'a mut self,
         pattern: Pattern,
-        entry: ChildLocation,
+        root: impl IntoPatternLocation,
+        pos: usize,
     ) -> IndexSplitResult {
-        Self::pattern_index_perfect_split_range(self, pattern, entry, Side::inner_range(entry.sub_index))
+        Self::pattern_index_perfect_split_range(self, pattern, root, Side::inner_range(pos))
     }
     fn index_context_path_segment(
         &'a mut self,
@@ -290,7 +295,7 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
             });
         match perfect {
             ControlFlow::Break((pattern, pid, pos)) =>
-                SideIndexable::< _, _, Side>::pattern_index_perfect_split(&mut *graph, pattern, ChildLocation::new(parent, pid, pos)),
+                SideIndexable::< _, _, Side>::pattern_index_perfect_split(&mut *graph, pattern, PatternLocation::new(parent, pid), pos),
             ControlFlow::Continue(positions) =>
                 SideIndexable::< _, _, Side>::index_unperfect_splits(&mut *graph, parent, positions),
         }
