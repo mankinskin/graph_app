@@ -23,39 +23,25 @@ fn to_matching_iterator<'a, I: Indexed + 'a, J: Indexed + 'a>(
             _ => false,
         })
 }
-fn pattern_skip_offset(
-    pattern: impl IntoPattern,
-    mut offset: usize,
-) -> Option<(usize, usize)> {
-    pattern.into_iter()
-        .enumerate()
-        .find_map(|(i, c)|
-            if c.width() > offset {
-                Some((i, offset))
-            } else {
-                offset -= c.width();
-                None
-            }
-        )
-}
 fn pattern_find_offset_end(
     pattern: impl IntoPattern,
-    mut offset: usize,
-) -> Option<(usize, usize)> {
+    offset: NonZeroUsize,
+) -> Option<(usize, Option<NonZeroUsize>)> {
+    let mut offset = offset.get();
     pattern.into_iter()
         .enumerate()
         .find_map(|(i, c)|
             match c.width().cmp(&offset) {
-                Ordering::Greater => Some((i, offset)),
-                Ordering::Equal => Some((i, 0)),
                 Ordering::Less => {
                     offset -= c.width();
                     None
-                }
+                },
+                _ => Some((i, NonZeroUsize::new(offset))),
             }
         )
 }
 use std::fmt::Debug;
+use std::num::NonZeroUsize;
 
 pub trait MatchDirection : Clone + Debug {
     type Opposite: MatchDirection;
@@ -116,13 +102,13 @@ pub trait MatchDirection : Clone + Debug {
 
     fn pattern_offset_context_split(
         pattern: impl IntoPattern,
-        offset: usize,
-    ) -> Option<(usize, usize)>;
+        offset: NonZeroUsize,
+    ) -> Option<(usize, Option<NonZeroUsize>)>;
 
     fn pattern_offset_inner_split(
         pattern: impl IntoPattern,
-        offset: usize,
-    ) -> Option<(usize, usize)>;
+        offset: NonZeroUsize,
+    ) -> Option<(usize, Option<NonZeroUsize>)>;
 
     fn split_head_tail<T: AsChild + Clone>(pattern: &'_ [T]) -> Option<(T, &'_ [T])> {
         Self::pattern_head(pattern).map(|head| (head.clone(), Self::pattern_tail(pattern)))
@@ -222,15 +208,15 @@ impl MatchDirection for Right {
     }
     fn pattern_offset_context_split(
         pattern: impl IntoPattern,
-        offset: usize,
-    ) -> Option<(usize, usize)> {
-        pattern_skip_offset(pattern, offset)
+        offset: NonZeroUsize,
+    ) -> Option<(usize, Option<NonZeroUsize>)> {
+        pattern_find_offset_end(pattern, offset)
     }
 
     fn pattern_offset_inner_split(
         pattern: impl IntoPattern,
-        offset: usize,
-    ) -> Option<(usize, usize)> {
+        offset: NonZeroUsize,
+    ) -> Option<(usize, Option<NonZeroUsize>)> {
         pattern_find_offset_end(pattern, offset)
     }
 
@@ -312,16 +298,15 @@ impl MatchDirection for Left {
     }
     fn pattern_offset_context_split(
         pattern: impl IntoPattern,
-        offset: usize,
-    ) -> Option<(usize, usize)> {
+        offset: NonZeroUsize,
+    ) -> Option<(usize, Option<NonZeroUsize>)> {
         pattern_find_offset_end(pattern, offset)
     }
-
     fn pattern_offset_inner_split(
         pattern: impl IntoPattern,
-        offset: usize,
-    ) -> Option<(usize, usize)> {
-        pattern_skip_offset(pattern, offset)
+        offset: NonZeroUsize,
+    ) -> Option<(usize, Option<NonZeroUsize>)> {
+        pattern_find_offset_end(pattern, offset)
     }
     fn split_end<T: AsChild + Clone>(
         pattern: &'_ [T],

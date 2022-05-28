@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use itertools::Itertools;
 
-use crate::{PatternLocation, ChildLocation, Pattern, Child, Wide};
+use crate::{PatternLocation, ChildLocation, Child, Wide};
 
 use super::*;
 
@@ -12,7 +12,7 @@ pub(crate) trait BandExpandingPolicy<
     T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
 > {
-    fn expand_band(location: PatternLocation, pattern: &Pattern) -> (ChildLocation, Child);
+    fn expand_band(location: PatternLocation, pattern: impl IntoPattern) -> (ChildLocation, Child);
     fn map_batch(batch: impl IntoIterator<Item=(ChildLocation, Child)>) -> Vec<(ChildLocation, Child)> {
         batch.into_iter().collect_vec()
     }
@@ -36,7 +36,7 @@ pub(crate) trait BandIterator<
                 .expect_children_of(index)
                 .iter()
                 .map(|(pid, pattern)|
-                    P::expand_band(PatternLocation::new(index, *pid), pattern)
+                    P::expand_band(PatternLocation::new(index, *pid), pattern.borrow())
                 )
         )
     }
@@ -48,9 +48,9 @@ impl <
     Trav: Traversable<'a, 'g, T>,
     D: MatchDirection,
 > BandExpandingPolicy<'a, 'g, T, Trav> for PostfixExpandingPolicy<D> {
-    fn expand_band(location: PatternLocation, pattern: &Pattern) -> (ChildLocation, Child) {
-        let last = D::last_index(pattern);
-        (location.to_child_location(last), pattern[last])
+    fn expand_band(location: PatternLocation, pattern: impl IntoPattern) -> (ChildLocation, Child) {
+        let last = D::last_index(pattern.borrow());
+        (location.to_child_location(last), pattern.borrow()[last])
     }
     fn map_batch(batch: impl IntoIterator<Item=(ChildLocation, Child)>) -> Vec<(ChildLocation, Child)> {
         batch.into_iter()

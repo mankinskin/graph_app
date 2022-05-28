@@ -34,7 +34,11 @@ impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Q: IndexingQuery> DirectedTrave
             location: entry,
             ..
             // should call leaf split and use known info of leaf position
-        } = SideIndexable::<_, D, IndexBack>::index_entry_split(&mut ltrav, path.get_entry_location(), path.width());
+        } = SideIndexable::<_, D, IndexBack>::entry_split(
+            &mut ltrav,
+            path.get_entry_location(),
+            path.width()
+        );
         StartPath::Leaf(StartLeaf { entry, child: post, width: path.width() })
     }
 }
@@ -85,12 +89,10 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> Traversa
     }
 }
 pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: TraversableMut<'a, 'g, T> {
-    #[named]
     fn index_found(
         &'a mut self,
         found: SearchFoundPath,
     ) -> Child {
-        trace!(function_name!());
         match found {
             FoundPath::Range(path) => self.index_range_path(path),
             FoundPath::Complete(c) => c
@@ -107,25 +109,23 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
         } = end;
         let mut graph = self.graph_mut();
         while let Some(entry) = path.pop() {
-            SideIndexable::<_, D, IndexFront>::index_entry_split(
+            SideIndexable::<_, D, IndexFront>::entry_split(
                 &mut *graph,
                 entry,
                 width,
             );
         }
-        SideIndexable::<_, D, IndexFront>::index_entry_split(
+        SideIndexable::<_, D, IndexFront>::entry_split(
             &mut *graph,
             entry,
             width,
         )
     }
-    #[named]
     fn index_mismatch<Acc, Q: TraversalQuery + ReduciblePath>(
         &'a mut self,
         acc: Acc,
         paths: PathPair<Q, SearchPath>,
     ) -> ControlFlow<(Child, Q), Acc> {
-        trace!(function_name!());
         let mut graph = self.graph_mut();
         let found = paths.reduce_mismatch::<_, D, _>(&*graph);
         if let FoundPath::Range(path) = &found.found {
@@ -138,13 +138,10 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
             found.query
         ))
     }
-    #[named]
     fn index_range_path(
         &'a mut self,
         path: SearchPath,
     ) -> Child {
-        trace!(function_name!());
-
         let start_width = path.start.width();
         let inner_width = path.inner_width;
         let end_width = path.end.width();
@@ -154,165 +151,150 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
             parent,
             ..
         } = path.start.entry().into_pattern_location();
-
         let mut graph = self.graph_mut();
-        let (start_path, end_path) = path.into_paths();
-        match SplitRange::new::<D>(
-            start_path,
-            end_path,
-            &pattern,
-        ) {
-            SplitRange::PerfectPostfix { pos } =>
-                SideIndexable::<_, D, IndexBack>::single_perfect_split(
-                    &mut *graph,
-                    root.to_child_location(pos.get()),
-                ),
-            SplitRange::PerfectPrefix { pos } =>
-                SideIndexable::<_, D, IndexFront>::single_perfect_split(
-                    &mut *graph,
-                    root.to_child_location(pos.get()),
-                ),
-            SplitRange::PostfixOff { pos, offset } =>
-                SideIndexable::<_, D, IndexBack>::single_offset_split(
-                    &mut *graph,
-                    parent,
-                    pos,
-                    offset.get(),
-                ),
-            SplitRange::PrefixOff { pos, offset } =>
-                SideIndexable::<_, D, IndexFront>::single_offset_split(
-                    &mut *graph,
-                    parent,
-                    pos,
-                    offset.get(),
-                ),
-            SplitRange::InnerBothPerfect { start, end } =>
-                Indexable::<_, D>::range_perfect_split(
-                    &mut *graph,
-                    root,
-                    start.get()..=end.get()
-                ),
-            SplitRange::InnerBackOff { start, offset, end } =>
-                SideIndexable::<_, D, IndexBack>::range_single_offset_split(
-                    &mut *graph,
-                    pattern,
-                    root,
-                    offset.get(),
-                    <IndexBack as IndexSide<D>>::limited_range(start, end.get()),
-                ),
-            SplitRange::InnerFrontOff { start, end, offset } =>
-                SideIndexable::<_, D, IndexFront>::range_single_offset_split(
-                    &mut *graph,
-                    pattern,
-                    root,
-                    offset.get(),
-                    <IndexBack as IndexSide<D>>::limited_range(start.get(), end.get()),
-                ),
-            SplitRange::InnerBothOff { start, start_offset, end, end_offset } =>
-                Indexable::<_, D>::range_both_offset_split(
-                    &mut *graph,
-                )
-            ,
-        }.inner
-    }
-    #[named]
-    fn range_both_offset_split(
-        &'a mut self,
-        pattern: Pattern,
-        location: impl IntoPatternLocation,
-        range: impl PatternRangeIndex + StartInclusive,
-    ) -> IndexSplitResult {
-        let child_patterns = self.expect_children_of(parent).clone();
+        let pattern = path.start.pattern(&*graph);
 
-        let pattern = root.expect_pattern_in(&child_patterns);
-        let pre_width = pattern[..entry_pos].width();
-        let back_index = &pattern[start];
-        let back_offset = start_offset.get();
-        // pre_width + <IndexBack as IndexSide<D>>::width_offset(back_index, start_width);
-        let front_index = &pattern[end.get()];
-        let front_offset = end_offset.get();
-        //pre_width + back_index.width() + inner_width + <IndexFront as IndexSide<D>>::width_offset(front_index, end_width);
-        let positions = child_patterns.into_iter()
-            .map(|(pid, pattern)| {
-                let (back_index, back_offset) = <IndexBack as IndexSide<D>>::token_offset_split(pattern.borrow(), back_offset).unwrap();
-                let (front_index, front_offset) = <IndexFront as IndexSide<D>>::token_offset_split(pattern.borrow(), front_offset).unwrap();
-                (pid, pattern.into_pattern(), back_index, back_offset, front_index, front_offset)
-            })
-            .collect_vec();
-        let (backs, inners, fronts): (Vec<_>, Vec<_>, Vec<_>) = multiunzip(positions.into_iter()
-            .map(|(_, pattern, back_pos, back_offset, front_pos, front_offset)| {
-                let IndexSplitResult {
-                    inner: back_inner,
-                    context: back_context_path,
-                    location: back_location,
-                } = SideIndexable::<_, D, IndexBack>::index_offset_split(self, *pattern.get(back_pos).unwrap(), back_offset);
-                let back_context = SideIndexable::<_, D, IndexBack>::index_context_path(self, back_location, back_context_path);
-
-                let IndexSplitResult {
-                    inner: front_inner,
-                    context: front_context_path,
-                    location: front_location,
-                } = SideIndexable::<_, D, IndexFront>::index_offset_split(self, *pattern.get(front_pos).unwrap(), front_offset);
-                let front_context = SideIndexable::<_, D, IndexFront>::index_context_path(self, front_location, front_context_path);
-
-                let inner_context = pattern.get(D::inner_context_range(back_pos, front_pos)).and_then(|p| self.insert_pattern(p));
-                let inner_context = inner_context.as_ref()
-                    .map(std::slice::from_ref)
-                    .unwrap_or_default();
-                (
-                    // todo: order depends on D
-                    [&D::back_context(pattern.borrow(), back_pos)[..], &[back_context]].concat(),
-                    [&[back_inner], inner_context, &[front_inner]].concat(),
-                    [&[front_context], &D::front_context(pattern.borrow(), front_pos)[..]].concat(),
-                )
-            }));
-        let (back, inner, front) = (
-            self.index_patterns(backs),
-            self.index_patterns(inners),
-            self.index_patterns(fronts),
+        let IndexSplitResult {
+            inner: prefix,
+            path: prefix_path,
+            location: prefix_location,
+        } = SideIndexable::<_, D, IndexBack>::pattern_entry_split(
+            &mut *graph,
+            pattern.borrow(),
+            path.start.entry(),
+            start_width,
         );
-        let pid = self.add_pattern_with_update(parent, [back, inner, front]);
-        let location = ChildLocation::new(parent, pid, 1);
-        IndexSplitResult {
-            location,
-            context: vec![],
-            inner,
-        }
+        // todo: index inner
+
+        let IndexSplitResult {
+            inner: postfix,
+            path: postfix_path,
+            location: postfix_location,
+        } = SideIndexable::<_, D, IndexFront>::pattern_entry_split(
+            &mut *graph,
+            pattern.borrow(),
+            path.end.entry(),
+            end_width,
+        );
+        // todo: create index
+        end_split.inner
     }
-    #[named]
-    fn range_perfect_split(
-        &'a mut self,
-        root: impl IntoPatternLocation,
-        range: impl PatternRangeIndex + StartInclusive,
-    ) -> IndexSplitResult {
-        let root = root.into_pattern_location();
-        let pattern = root.expect_pattern(self);
-        self.pattern_range_perfect_split(pattern, root, range)
-    }
-    #[named]
     fn pattern_range_perfect_split(
         &'a mut self,
-        pattern: Pattern,
+        pattern: impl IntoPattern,
         location: impl IntoPatternLocation,
-        range: impl PatternRangeIndex + StartInclusive,
+        inner_range: impl PatternRangeIndex + StartInclusive,
     ) -> IndexSplitResult {
-        trace!(function_name!());
-        let inner = &pattern[range.clone()];
-        let location = location.into_pattern_location().to_child_location(range.start());
+        let pos = inner_range.start();
+        let inner = &pattern.borrow()[inner_range.clone()];
+        let location = location.into_pattern_location().to_child_location(pos);
         let inner = if inner.len() == 1 {
             *inner.iter().next().unwrap()
         } else {
+            assert!(inner.len() > 0);
             let mut graph = self.graph_mut();
             let inner = graph.index_pattern(inner);
-            graph.replace_in_pattern(&location, range, [inner]);
+            graph.replace_in_pattern(&location, inner_range, [inner]);
             inner
         };
         IndexSplitResult {
             location,
-            context: vec![],
+            path: vec![location],
             inner,
         }
     }
+    //fn range_both_offset_split(
+    //    &'a mut self,
+    //    pattern: Pattern,
+    //    root: impl IntoPatternLocation,
+    //    start: usize,
+    //    start_offset: NonZeroUsize,
+    //    end: usize,
+    //    end_offset: NonZeroUsize,
+    //) -> IndexSplitResult {
+    //    let root = root.into_pattern_location();
+    //    let child_patterns = self.graph().expect_children_of(root.parent).clone();
+    //    let pattern = root.expect_pattern_in(&child_patterns);
+    //    let pre_width = pattern[..start].width();
+    //    let back_index = &pattern[start];
+    //    // pre_width + <IndexBack as IndexSide<D>>::width_offset(back_index, start_width);
+    //    let front_index = &pattern[end];
+    //    //pre_width + back_index.width() + inner_width + <IndexFront as IndexSide<D>>::width_offset(front_index, end_width);
+    //    let positions = child_patterns.into_iter()
+    //        .map(|(pid, pattern)| {
+    //            let (back_index, back_offset) = <IndexBack as IndexSide<D>>::token_offset_split(pattern.borrow(), start_offset).unwrap();
+    //            let (front_index, front_offset) = <IndexFront as IndexSide<D>>::token_offset_split(pattern.borrow(), end_offset).unwrap();
+    //            (pid, pattern.into_pattern(), back_index, back_offset, front_index, front_offset)
+    //        })
+    //        .collect_vec();
+    //    let (backs, inners, fronts): (Vec<_>, Vec<_>, Vec<_>) = multiunzip(positions.into_iter()
+    //        .map(|(_, pattern, back_pos, back_offset, front_pos, front_offset)| {
+    //            let IndexSplitResult {
+    //                inner: back_inner,
+    //                context: back_context_path,
+    //                location: back_location,
+    //            } = SideIndexable::<_, D, IndexBack>::index_offset_split(
+    //                self,
+    //                *pattern.get(back_pos).unwrap(),
+    //                back_offset,
+    //            );
+    //            let back_context = SideIndexable::<_, D, IndexBack>::index_context_path(
+    //                self,
+    //                back_location,
+    //                back_context_path,
+    //            );
+
+    //            let IndexSplitResult {
+    //                inner: front_inner,
+    //                context: front_context_path,
+    //                location: front_location,
+    //            } = SideIndexable::<_, D, IndexFront>::index_offset_split(
+    //                self,
+    //                *pattern.get(front_pos).unwrap(),
+    //                front_offset,
+    //            );
+    //            let front_context = SideIndexable::<_, D, IndexFront>::index_context_path(
+    //                self,
+    //                front_location,
+    //                front_context_path,
+    //            );
+
+    //            let inner_context = pattern
+    //                .get(D::inner_context_range(back_pos, front_pos))
+    //                .and_then(|p| self.insert_pattern(p));
+    //            let inner_context = inner_context.as_ref()
+    //                .map(std::slice::from_ref)
+    //                .unwrap_or_default();
+    //            (
+    //                // todo: order depends on D
+    //                [&D::back_context(pattern.borrow(), back_pos)[..], &[back_context]].concat(),
+    //                [&[back_inner], inner_context, &[front_inner]].concat(),
+    //                [&[front_context], &D::front_context(pattern.borrow(), front_pos)[..]].concat(),
+    //            )
+    //        }));
+    //    let graph = self.graph_mut();
+    //    let (back, inner, front) = (
+    //        graph.index_patterns(backs),
+    //        graph.index_patterns(inners),
+    //        graph.index_patterns(fronts),
+    //    );
+    //    let pid = self.add_pattern_with_update(parent, [back, inner, front]);
+    //    let location = ChildLocation::new(parent, pid, 1);
+    //    IndexSplitResult {
+    //        location,
+    //        context: vec![],
+    //        inner,
+    //    }
+    //}
+    //fn range_perfect_split(
+    //    &'a mut self,
+    //    root: impl IntoPatternLocation,
+    //    range: impl PatternRangeIndex + StartInclusive,
+    //) -> IndexSplitResult {
+    //    let root = root.into_pattern_location();
+    //    let pattern = root.expect_pattern(self);
+    //    self.pattern_range_perfect_split(pattern, root, range)
+    //}
 }
 impl<
     'a: 'g,

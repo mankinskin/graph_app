@@ -46,5 +46,5 @@ where
 pub(crate) struct IndexSplitResult {
     inner: Child,
     location: ChildLocation,
-    context: Vec<ChildLocation>,
+    path: Vec<ChildLocation>,
 }

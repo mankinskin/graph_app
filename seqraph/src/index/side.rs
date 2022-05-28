@@ -1,3 +1,5 @@
+use std::num::NonZeroUsize;
+
 use super::*;
 use crate::*;
 
@@ -6,7 +8,7 @@ pub(crate) trait IndexSide<D: IndexDirection> {
     type Path: DirectedBorderPath<D>;
     type InnerRange: PatternRangeIndex + StartInclusive;
     type ContextRange: PatternRangeIndex + StartInclusive;
-    fn width_offset(parent: &Child, width: usize) -> usize;
+    fn inner_width_to_offset(child: &Child, width: usize) -> Option<NonZeroUsize>;
     /// returns inner, context
     fn back_front_order<A>(back: A, front: A) -> (A, A);
     /// returns back, front
@@ -25,8 +27,8 @@ pub(crate) trait IndexSide<D: IndexDirection> {
     fn sub_ranges(inner: &Range<usize>, limited: &Range<usize>) -> Range<usize>;
     fn token_offset_split(
         pattern: impl IntoPattern,
-        offset: usize,
-    ) -> Option<(usize, usize)>;
+        offset: NonZeroUsize,
+    ) -> Option<(usize, Option<NonZeroUsize>)>;
 }
 
 pub(crate) struct IndexBack;
@@ -54,9 +56,9 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
     fn split_context(pattern: &'_ impl IntoPattern, pos: usize) -> &'_ [Child] {
         &pattern.borrow()[..pos]
     }
-    fn width_offset(parent: &Child, width: usize) -> usize {
+    fn inner_width_to_offset(child: &Child, width: usize) -> Option<NonZeroUsize> {
         // todo: changes with index direction
-        parent.width() - width
+        NonZeroUsize::new(child.width() - width)
     }
     fn limited_range(start: usize, end: usize) -> Range<usize> {
         start..end
@@ -75,8 +77,8 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
     }
     fn token_offset_split(
         pattern: impl IntoPattern,
-        offset: usize,
-    ) -> Option<(usize, usize)> {
+        offset: NonZeroUsize,
+    ) -> Option<(usize, Option<NonZeroUsize>)> {
         D::pattern_offset_context_split(pattern, offset)
     }
 }
@@ -105,8 +107,8 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
     fn back_front_order<A>(back: A, front: A) -> (A, A) {
         (back, front)
     }
-    fn width_offset(_parent: &Child, width: usize) -> usize {
-        width
+    fn inner_width_to_offset(_child: &Child, width: usize) -> Option<NonZeroUsize> {
+        NonZeroUsize::new(width)
     }
     fn limited_range(start: usize, end: usize) -> Range<usize> {
         start..D::index_next(end).unwrap()
@@ -125,8 +127,8 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
     }
     fn token_offset_split(
         pattern: impl IntoPattern,
-        offset: usize,
-    ) -> Option<(usize, usize)> {
+        offset: NonZeroUsize,
+    ) -> Option<(usize, Option<NonZeroUsize>)> {
         D::pattern_offset_inner_split(pattern, offset)
     }
 }
