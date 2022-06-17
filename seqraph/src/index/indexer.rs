@@ -143,11 +143,10 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
         path: SearchPath,
     ) -> Child {
         let start_width = path.start.width();
-        let inner_width = path.inner_width;
         let end_width = path.end.width();
         let entry_pos = path.start.get_entry_pos();
         let exit_pos = path.end.get_exit_pos();
-        let root@PatternLocation {
+        let location@PatternLocation {
             parent,
             ..
         } = path.start.entry().into_pattern_location();
@@ -164,7 +163,11 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
             path.start.entry(),
             start_width,
         );
-        // todo: index inner
+
+        let inner = graph.index_range_in(
+            location,
+            D::inner_context_range(entry_pos, exit_pos),
+        ).ok();
 
         let IndexSplitResult {
             inner: postfix,
@@ -177,7 +180,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
             end_width,
         );
         // todo: create index
-        end_split.inner
+        postfix
     }
     fn pattern_range_perfect_split(
         &'a mut self,

@@ -26,6 +26,7 @@ impl<'a: 'g, 'g> SearchPath {
             },
         }
     }
+    #[allow(unused)]
     pub fn into_paths(self) -> (StartPath, EndPath) {
         (
             self.start,

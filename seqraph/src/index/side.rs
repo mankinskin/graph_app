@@ -2,9 +2,12 @@ use std::num::NonZeroUsize;
 
 use super::*;
 use crate::*;
+type OppositeContextRange<D, Ty> =
+    <<Ty as IndexSide<D>>::Opposite as IndexSide<<D as IndexDirection>::Opposite>>::ContextRange;
 
 /// Side refers to border (front is indexing before front border, back is indexing after back border)
 pub(crate) trait IndexSide<D: IndexDirection> {
+    type Opposite: IndexSide<<D as IndexDirection>::Opposite>;
     type Path: DirectedBorderPath<D>;
     type InnerRange: PatternRangeIndex + StartInclusive;
     type ContextRange: PatternRangeIndex + StartInclusive;
@@ -17,7 +20,14 @@ pub(crate) trait IndexSide<D: IndexDirection> {
         C: AsRef<[Child]>,
         I: AsRef<[Child]>
     >(context: &'a C, inner: &'a I) -> (&'a [Child], &'a [Child]);
+    fn concat_inner_and_context(
+        inner: Child,
+        context: impl IntoPattern,
+    ) -> Pattern;
     fn inner_range(pos: usize) -> Self::InnerRange;
+    fn inner_context_range(pos: usize) -> OppositeContextRange<D, Self> {
+        Self::Opposite::context_range(pos)
+    }
     fn context_range(pos: usize) -> Self::ContextRange;
     fn limited_range(start: usize, end: usize) -> Range<usize>;
     fn range_front(range: &Range<usize>) -> usize;
@@ -33,6 +43,7 @@ pub(crate) trait IndexSide<D: IndexDirection> {
 
 pub(crate) struct IndexBack;
 impl<D: IndexDirection> IndexSide<D> for IndexBack {
+    type Opposite = IndexFront;
     type Path = StartPath;
     type InnerRange = RangeFrom<usize>;
     type ContextRange = Range<usize>;
@@ -48,6 +59,12 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
         I: AsRef<[Child]>
     >(context: &'a C, inner: &'a I) -> (&'a [Child], &'a [Child]) {
         (context.as_ref(), inner.as_ref())
+    }
+    fn concat_inner_and_context(
+        inner: Child,
+        context: impl IntoPattern,
+    ) -> Pattern {
+        D::concat_context_and_inner(context, inner)
     }
     fn back_front_order<A>(back: A, front: A) -> (A, A) {
         (front, back)
@@ -84,6 +101,7 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
 }
 pub(crate) struct IndexFront;
 impl<D: IndexDirection> IndexSide<D> for IndexFront {
+    type Opposite = IndexBack;
     type Path = EndPath;
     type InnerRange = RangeInclusive<usize>;
     type ContextRange = RangeFrom<usize>;
@@ -103,6 +121,12 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
         I: AsRef<[Child]>
     >(context: &'a C, inner: &'a I) -> (&'a [Child], &'a [Child]) {
         (inner.as_ref(), context.as_ref())
+    }
+    fn concat_inner_and_context(
+        inner: Child,
+        context: impl IntoPattern,
+    ) -> Pattern {
+        D::concat_inner_and_context(inner, context)
     }
     fn back_front_order<A>(back: A, front: A) -> (A, A) {
         (back, front)

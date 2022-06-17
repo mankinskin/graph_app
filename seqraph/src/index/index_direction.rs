@@ -18,13 +18,17 @@ pub trait IndexDirection: MatchDirection + Clone {
     }
     fn concat_inner_and_context(
         inner: Child,
-        overlap: Option<Child>,
-        outer_context: Pattern,
+        context: impl IntoPattern,
     ) -> Pattern;
-    fn concat_inner_and_outer(
-        inner: Pattern,
-        outer: Pattern,
-    ) -> Pattern;
+    fn concat_context_and_inner(
+        context: impl IntoPattern,
+        inner: Child,
+    ) -> Pattern {
+        Self::concat_inner_and_context(
+            inner,
+            context
+        )
+    }
     fn merge_order(
         inner: Child,
         head: Child,
@@ -70,16 +74,9 @@ impl IndexDirection for Left {
     }
     fn concat_inner_and_context(
         inner: Child,
-        overlap: Option<Child>,
-        outer: Pattern,
+        context: impl IntoPattern,
     ) -> Pattern {
-        outer.into_iter().chain(overlap).chain(inner).collect()
-    }
-    fn concat_inner_and_outer(
-        inner: Pattern,
-        outer: Pattern,
-    ) -> Pattern {
-        [outer, inner].concat()
+        context.borrow().to_owned().into_iter().chain(inner).collect()
     }
     fn inner_context_range(
         back: usize,
@@ -101,16 +98,9 @@ impl IndexDirection for Right {
     }
     fn concat_inner_and_context(
         inner: Child,
-        overlap: Option<Child>,
-        outer: Pattern,
+        context: impl IntoPattern,
     ) -> Pattern {
-        std::iter::once(inner).chain(overlap).chain(outer).collect()
-    }
-    fn concat_inner_and_outer(
-        inner: Pattern,
-        outer: Pattern,
-    ) -> Pattern {
-        [inner, outer].concat()
+        std::iter::once(inner).chain(context.borrow().to_owned()).collect()
     }
     fn inner_context_range(
         back: usize,

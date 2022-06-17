@@ -178,22 +178,22 @@ where
         }
         node
     }
-    //#[track_caller]
-    //pub(crate) fn index_range_in(
-    //    &mut self,
-    //    location: impl IntoPatternLocation,
-    //    range: impl PatternRangeIndex,
-    //) -> Result<Child, NoMatch> {
-    //    let location = location.into_pattern_location();
-    //    let vertex = self.expect_vertex_data(location.parent);
-    //    vertex.get_child_pattern_range(&location.pattern_id, range.clone())
-    //        .map(|pattern| pattern.to_vec())
-    //        .map(|pattern| {
-    //            let c = self.index_pattern(pattern);
-    //            self.replace_in_pattern(location, range, c);
-    //            c
-    //        })
-    //}
+    #[track_caller]
+    pub(crate) fn index_range_in(
+        &mut self,
+        location: impl IntoPatternLocation,
+        range: impl PatternRangeIndex,
+    ) -> Result<Child, NoMatch> {
+        let location = location.into_pattern_location();
+        let vertex = self.expect_vertex_data(location.parent);
+        vertex.get_child_pattern_range(&location.pattern_id, range.clone())
+            .map(|pattern| pattern.to_vec())
+            .map(|pattern| {
+                let c = self.index_pattern(pattern);
+                self.replace_in_pattern(location, range, c);
+                c
+            })
+    }
     #[track_caller]
     pub fn replace_in_pattern(
         &'g mut self,

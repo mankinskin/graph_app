@@ -3,105 +3,6 @@ use std::num::NonZeroUsize;
 use crate::*;
 use super::*;
 
-//pub(crate) enum SplitRange {
-//    InnerBothPerfect {
-//        start: NonZeroUsize,
-//        end: NonZeroUsize,
-//    },
-//    PerfectPostfix {
-//        pos: NonZeroUsize,
-//    },
-//    PerfectPrefix {
-//        pos: NonZeroUsize,
-//    },
-//    PostfixOff {
-//        pos: usize,
-//        offset: NonZeroUsize,
-//    },
-//    PrefixOff {
-//        pos: usize,
-//        offset: NonZeroUsize,
-//    },
-//    InnerBackOff {
-//        start: usize,
-//        offset: NonZeroUsize,
-//        end: NonZeroUsize,
-//    },
-//    InnerFrontOff {
-//        start: NonZeroUsize,
-//        end: NonZeroUsize,
-//        offset: NonZeroUsize,
-//    },
-//    InnerBothOff {
-//        start: usize,
-//        start_offset: NonZeroUsize,
-//        // todo: how to handle direction in pattern indices
-//        end: NonZeroUsize,
-//        end_offset: NonZeroUsize,
-//    },
-//}
-//impl SplitRange {
-//    pub fn new<D: IndexDirection>(start: StartPath, end: EndPath, pattern: impl IntoPattern) -> Self {
-//        match (
-//            start.is_perfect(),
-//            DirectedBorderPath::<D>::is_at_pattern_border(&start, pattern.borrow()),
-//            end.is_perfect(),
-//            DirectedBorderPath::<D>::is_at_pattern_border(&end, pattern.borrow()),
-//        ) {
-//            //   start         end
-//            // perf comp    perf   comp
-//            (true, true, true, true) =>
-//                panic!("IndexingPath references complete index!"),
-//            (true, _, true, true) =>
-//                Self::PerfectPostfix {
-//                    pos: NonZeroUsize::new(start.get_entry_pos()).unwrap(),
-//                },
-//            (true, true, true, _) =>
-//                Self::PerfectPrefix {
-//                    pos: NonZeroUsize::new(end.get_exit_pos()).unwrap(),
-//                },
-//            (false, _, true, true) =>
-//                Self::PostfixOff {
-//                    pos: start.get_entry_pos(),
-//                    offset: NonZeroUsize::new(pattern[start.get_entry_pos()].width - start.width()).unwrap(),
-//                },
-//            (true, true, false, _) =>
-//                Self::PrefixOff {
-//                    pos: start.get_entry_pos(),
-//                    offset: NonZeroUsize::new(end.width()).unwrap(),
-//                },
-//            (true, _, true, _) => {
-//                let entry = start.get_entry_pos();
-//                let exit = end.get_exit_pos();
-//                assert!(entry != exit);
-//                Self::InnerBothPerfect {
-//                    start: NonZeroUsize::new(entry).unwrap(),
-//                    end: NonZeroUsize::new(exit).unwrap(),
-//                }
-//            },
-//            (false, _, true, false) =>
-//                Self::InnerBackOff {
-//                    start: start.get_entry_pos(),
-//                    offset: NonZeroUsize::new(pattern.borrow()[start.get_entry_pos()].width - start.width()).unwrap(),
-//                    end: NonZeroUsize::new(end.get_exit_pos()).unwrap(),
-//                },
-//            (true, false, false, _) =>
-//                Self::InnerFrontOff {
-//                    start: NonZeroUsize::new(start.get_entry_pos()).unwrap(),
-//                    end: NonZeroUsize::new(end.get_exit_pos()).unwrap(),
-//                    offset: NonZeroUsize::new(end.width()).unwrap(),
-//                },
-//            (false, _, false, _) =>
-//                Self::InnerBothOff {
-//                    start: start.get_entry_pos(),
-//                    start_offset: NonZeroUsize::new(pattern[start.get_entry_pos()].width - start.width()).unwrap(),
-//                    end: NonZeroUsize::new(end.get_exit_pos()).unwrap(),
-//                    end_offset: NonZeroUsize::new(end.width()).unwrap(),
-//                },
-//        }
-//    }
-//}
-
 pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: IndexSide<D>>: Indexable<'a, 'g, T, D> {
     fn entry_split(
         &'a mut self,
@@ -109,8 +10,8 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
         inner_width: usize,
     ) -> IndexSplitResult {
         let mut graph = self.graph_mut();
-        let pattern = graph.expect_pattern_at(&entry);
-        SideIndexable::<_, D, Side>::pattern_entry_split(
+        let pattern = graph.expect_pattern_at(&entry);       
+        SideIndexable::<_, D, Side>::pattern_entry_split(    
             &mut *graph,
             pattern.borrow(),
             entry,
@@ -195,48 +96,60 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
         offset: NonZeroUsize,
     ) -> IndexSplitResult {
         let mut graph = self.graph_mut();
-        let location@ChildLocation {
-            parent,
-            pattern_id: pid,
-            sub_index: pos,
-        } = location.into_child_location();
-        let sub = *pattern.borrow().get(pos).unwrap();
+        let location = location.into_child_location();
+        let pos = location.sub_index;
 
+        let sub = *pattern.borrow().get(pos).unwrap();
         // split index at pos with offset
         let IndexSplitResult {
-            inner: split_inner,
+            inner,
             path,
             location: split_location,
         } = SideIndexable::<_, _, Side>::single_offset_split(&mut *graph, sub, offset);
 
-        let split_context = SideIndexable::<_, _, Side>::context_path(
+        // index inner context
+        let _split_context = SideIndexable::<_, _, Side>::context_path(
             &mut *graph,
             split_location,
             path,
         );
-
-        let (split_back, split_front) = Side::context_inner_order(&split_context, &split_inner);
-        // includes split index
-        let mut old = pattern.borrow()[range.clone()].to_vec();
-        // range from indexing start (back) until split index (front)
-        let inner_range = Side::limited_inner_range(&range);
-        let old_inner = graph.index_pattern(&pattern.borrow()[inner_range.clone()]);
-        let old_inner_range = Side::sub_ranges(&range, &inner_range);
-        replace_in_pattern(&mut old, old_inner_range, old_inner);
-
-        let (inner_back, inner_front) = Side::context_inner_order(&split_back, &old_inner);
-        let new_inner = graph.index_pattern([inner_back[0], inner_front[0]]);
-        let (back, front) = Side::context_inner_order(&split_front, &new_inner);
-        let new = [back[0], front[0]];
-
-        let (inner, ids) = graph.index_patterns_with_ids([&new, &old[..]]);
-        let new_pid = ids[0];
-        graph.replace_in_pattern(location, range, inner);
-        let location = ChildLocation::new(parent, pid, pos);
-        IndexSplitResult {
-            location,
-            path: vec![ChildLocation::new(inner, new_pid, 1)],
-            inner: new_inner,
+        // inner part of child pattern (context of split index)
+        if let Some(parent_inner) = graph.index_range_in(
+                location,
+                Side::inner_context_range(pos)
+            ).ok()
+        {
+            let full_inner = graph.index_pattern(
+                Side::concat_inner_and_context(inner, parent_inner)
+            );
+            // index for inner half including split
+            let wrapper = graph.index_range_in(
+                location,
+                Side::inner_range(pos),
+            ).unwrap();
+            let wrapper_pid = graph.add_pattern_with_update(
+                wrapper,
+                Side::concat_inner_and_context(inner, parent_inner)
+            );
+            graph.replace_in_pattern(
+                split_location,
+                Side::inner_range(pos),
+                wrapper,
+            );
+            IndexSplitResult {
+                location,
+                path: vec![
+                    ChildLocation::new(inner, wrapper_pid, 1),
+                ],
+                inner: full_inner,
+            }
+        } else {
+            // no inner context
+            IndexSplitResult {
+                location,
+                path: vec![],
+                inner,
+            }
         }
     }
     fn unperfect_splits(

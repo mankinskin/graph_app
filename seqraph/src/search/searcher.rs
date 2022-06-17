@@ -69,7 +69,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
     fn after_match_end(
-        trav: &'a Self::Trav,
+        _trav: &'a Self::Trav,
         path: SearchPath,
     ) -> FolderStartPath<'a, 'g, T, D, QueryRangePath, Self> {
         path.into()
@@ -84,7 +84,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
     fn after_match_end(
-        trav: &'a Self::Trav,
+        _trav: &'a Self::Trav,
         path: SearchPath,
     ) -> FolderStartPath<'a, 'g, T, D, QueryRangePath, Self> {
         path.into()

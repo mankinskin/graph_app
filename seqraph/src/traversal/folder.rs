@@ -34,6 +34,7 @@ impl<
 pub(crate) type FolderQuery<'a, 'g, T, D, Q, Ty>
     = <Folder<'a, 'g, T, D, Q, Ty> as FolderQ<'a, 'g, T, D, Q>>::Query;
 
+#[allow(unused)]
 pub(crate) type FolderPath<'a, 'g, T, D, Q, Ty>
     = <Folder<'a, 'g, T, D, Q, Ty> as TraversalFolder<'a, 'g, T, D, Q>>::Path;
 

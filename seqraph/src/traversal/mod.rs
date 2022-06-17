@@ -36,12 +36,14 @@ impl<P: TraversalPath, Q: TraversalQuery> TraversalResult<P, Q> {
     pub fn unwrap_complete(self) -> Child {
         self.found.unwrap_complete()
     }
+    #[allow(unused)]
     #[track_caller]
     pub fn expect_complete(self, msg: &str) -> Child {
         self.found.expect_complete(msg)
     }
 }
 impl<P: TraversalPath, Q: QueryPath> TraversalResult<P, Q> {
+    #[allow(unused)]
     pub fn complete(query: impl IntoPattern, index: impl AsChild) -> Self {
         Self {
             found: FoundPath::Complete(index.as_child()),
