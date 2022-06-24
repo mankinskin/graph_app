@@ -96,17 +96,17 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
         pattern: impl IntoPattern,
         offset: NonZeroUsize,
     ) -> Option<(usize, Option<NonZeroUsize>)> {
-        D::pattern_offset_context_split(pattern, offset)
+        D::pattern_offset_split(pattern, offset)
     }
 }
 pub(crate) struct IndexFront;
 impl<D: IndexDirection> IndexSide<D> for IndexFront {
     type Opposite = IndexBack;
     type Path = EndPath;
-    type InnerRange = RangeInclusive<usize>;
+    type InnerRange = Range<usize>;
     type ContextRange = RangeFrom<usize>;
     fn inner_range(pos: usize) -> Self::InnerRange {
-        0..=pos
+        0..pos
     }
     fn context_range(pos: usize) -> Self::ContextRange {
         D::index_next(pos).unwrap()..
@@ -153,6 +153,49 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
         pattern: impl IntoPattern,
         offset: NonZeroUsize,
     ) -> Option<(usize, Option<NonZeroUsize>)> {
-        D::pattern_offset_inner_split(pattern, offset)
+        D::pattern_offset_split(pattern, offset)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::num::NonZeroUsize;
+    use crate::{
+        *,
+        pattern::*,
+        index::*,
+    };
+
+    #[test]
+    fn token_offset_split() {
+        let pattern = mock::pattern_from_widths([
+            1,
+            1,
+            3,
+            1,
+            1,
+        ]);
+        let width = pattern_width(&pattern);
+        assert_eq!(
+            <IndexBack as IndexSide<Right>>::token_offset_split(
+                pattern.borrow(),
+                NonZeroUsize::new(2).unwrap(),
+            ),
+            Some((2, None)),
+        );
+        assert_eq!(
+            <IndexFront as IndexSide<Right>>::token_offset_split(
+                pattern.borrow(),
+                NonZeroUsize::new(width-2).unwrap(),
+            ),
+            Some((3, None)),
+        );
+        assert_eq!(
+            <IndexFront as IndexSide<Right>>::token_offset_split(
+                pattern.borrow(),
+                NonZeroUsize::new(width-4).unwrap(),
+            ),
+            Some((2, NonZeroUsize::new(1))),
+        );
     }
 }

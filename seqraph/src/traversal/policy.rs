@@ -108,8 +108,8 @@ pub(crate) trait DirectedTraversalPolicy<
         match path.try_advance::<_, D, _>(trav) { 
             Ok(path) =>
                 vec![ToTraversalNode::to_match_node(PathPair::from_mode(path, query, mode))],
-            Err(mut path) => {
-                path.move_width_into_start();
+            Err(path) => {
+                //path.move_width_into_start();
                 Self::at_index_end(
                     trav,
                     query,

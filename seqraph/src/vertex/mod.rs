@@ -13,7 +13,7 @@ use std::{
     sync::atomic::{
         AtomicUsize,
         Ordering,
-    },
+    }, borrow::Borrow,
 };
 
 mod indexed;
@@ -112,17 +112,14 @@ impl VertexData {
     pub fn get_parents_mut(&mut self) -> &mut VertexParents {
         &mut self.parents
     }
-    pub fn get_child_pattern_range<R: PatternRangeIndex>(
-        &self,
+    pub fn get_child_pattern_range<'a, R: PatternRangeIndex>(
+        &'a self,
         id: &PatternId,
         range: R,
-    ) -> Result<&<R as SliceIndex<[Child]>>::Output, NoMatch> {
-        self.children
-            .get(id)
-            .ok_or(NoMatch::InvalidPattern(*id))
+    ) -> Result<&'a <R as SliceIndex<[Child]>>::Output, NoMatch> {
+        self.get_child_pattern(id)
             .and_then(|p|
-                p.get(range.clone())
-                .ok_or_else(|| NoMatch::InvalidPatternRange(*id, p.clone(), format!("{:#?}", range)))
+                pattern::get_child_pattern_range(id, p.borrow(), range.clone())
             )
     }
     pub fn get_child_pattern_position(
@@ -138,8 +135,9 @@ impl VertexData {
     pub fn get_child_pattern(
         &self,
         id: &PatternId,
-    ) -> Option<&Pattern> {
+    ) -> Result<&Pattern, NoMatch> {
         self.children.get(id)
+            .ok_or(NoMatch::InvalidPattern(*id))
     }
     pub fn expect_pattern_len(
         &self,
@@ -169,7 +167,7 @@ impl VertexData {
         &self,
         id: &PatternId,
     ) -> &Pattern {
-        self.get_child_pattern(id).unwrap_or_else(|| {
+        self.get_child_pattern(id).unwrap_or_else(|_| {
             panic!(
                 "Child pattern with id {} does not exist in in vertex {:#?}",
                 id, self,
@@ -195,10 +193,9 @@ impl VertexData {
     pub fn get_child_pattern_vec(&self) -> Vec<Pattern> {
         self.get_child_patterns().into_iter().collect()
     }
-    #[track_caller]
-    pub fn add_pattern_no_update<P: IntoPattern>(
+    pub fn add_pattern_no_update(
         &mut self,
-        pat: P,
+        pat: impl IntoPattern,
     ) -> PatternId {
         assert!(pat.borrow().len() > 1);
         let id = Self::next_child_pattern_id();

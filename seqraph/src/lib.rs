@@ -17,8 +17,10 @@ mod index;
 mod read;
 mod logger;
 mod gen_graph;
+mod mock;
 
 pub use direction::*;
+pub(crate) use mock::*;
 pub use graph::*;
 pub use search::*;
 pub use vertex::*;

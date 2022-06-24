@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::ops::{Range, RangeInclusive};
 
 use crate::{
     index::*,
@@ -37,6 +37,15 @@ pub trait IndexDirection: MatchDirection + Clone {
         back: usize,
         front: usize,
     ) -> Range<usize>;
+    fn wrapper_range(
+        back: usize,
+        front: usize,
+    ) -> RangeInclusive<usize>;
+    fn concat_context_inner_context(
+        head_context: Child,
+        inner: impl IntoPattern,
+        last_context: Child,
+    ) -> Pattern;
 }
 pub trait Merge {
     fn split_front(self) -> Option<(Child, Pattern)>;
@@ -84,6 +93,22 @@ impl IndexDirection for Left {
     ) -> Range<usize> {
         Self::index_prev(front).unwrap()..back
     }
+    fn wrapper_range(
+        back: usize,
+        front: usize,
+    ) -> RangeInclusive<usize> {
+        front..=back
+    }
+    fn concat_context_inner_context(
+        head_context: Child,
+        inner: impl IntoPattern,
+        last_context: Child,
+    ) -> Pattern {
+        std::iter::once(last_context)
+            .chain(inner.borrow().to_owned())
+            .chain(std::iter::once(head_context))
+            .collect()
+    }
 }
 impl IndexDirection for Right {
     type Opposite = Left;
@@ -102,10 +127,26 @@ impl IndexDirection for Right {
     ) -> Pattern {
         std::iter::once(inner).chain(context.borrow().to_owned()).collect()
     }
+    fn concat_context_inner_context(
+        head_context: Child,
+        inner: impl IntoPattern,
+        last_context: Child,
+    ) -> Pattern {
+        std::iter::once(head_context)
+            .chain(inner.borrow().to_owned())
+            .chain(std::iter::once(last_context))
+            .collect()
+    }
     fn inner_context_range(
         back: usize,
         front: usize,
     ) -> Range<usize> {
         Self::index_next(back).unwrap()..front
+    }
+    fn wrapper_range(
+        back: usize,
+        front: usize,
+    ) -> RangeInclusive<usize> {
+        back..=front
     }
 }

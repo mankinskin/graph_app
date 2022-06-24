@@ -4,6 +4,15 @@ use std::{
     slice::SliceIndex,
 };
 
+pub(crate) fn get_child_pattern_range<'a, R: PatternRangeIndex>(
+    id: &PatternId,
+    p: &'a Pattern,
+    range: R
+) -> Result<&'a <R as SliceIndex<[Child]>>::Output, NoMatch> {
+    p.get(range.clone()).ok_or_else(||
+        NoMatch::InvalidPatternRange(*id, p.clone(), format!("{:#?}", range))
+    )
+}
 pub trait PatternRangeIndex:
     SliceIndex<[Child], Output = [Child]> + RangeBounds<usize> + Iterator<Item = usize> + Debug + Clone
 {

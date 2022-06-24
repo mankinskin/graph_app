@@ -1,3 +1,5 @@
+use crate::traversal::traversable::Traversable;
+
 use super::*;
 use std::{
     fmt::Debug,
@@ -30,6 +32,14 @@ impl Child {
     }
     pub fn to_child_location(self, pattern_id: PatternId, sub_index: usize) -> ChildLocation {
         ChildLocation::new(self, pattern_id, sub_index)
+    }
+    pub fn patterns<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(&'a self, trav: &'a Trav) -> ChildPatterns {
+        trav.graph().expect_children_of(self).clone()
     }
 }
 impl std::cmp::PartialOrd for Child {

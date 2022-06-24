@@ -77,7 +77,6 @@ where
         }
     }
     /// add pattern to existing node
-    #[track_caller]
     pub fn add_pattern_with_update(
         &mut self,
         index: impl Indexed,
@@ -186,13 +185,24 @@ where
     ) -> Result<Child, NoMatch> {
         let location = location.into_pattern_location();
         let vertex = self.expect_vertex_data(location.parent);
-        vertex.get_child_pattern_range(&location.pattern_id, range.clone())
+        vertex.get_child_pattern(&location.pattern_id)
             .map(|pattern| pattern.to_vec())
-            .map(|pattern| {
-                let c = self.index_pattern(pattern);
-                self.replace_in_pattern(location, range, c);
-                c
-            })
+            .and_then(|pattern|
+                pattern::get_child_pattern_range(
+                    &location.pattern_id,
+                    pattern.borrow(),
+                    range.clone()
+                )
+                .map(|inner|
+                    if pattern.len() > inner.len() {
+                        let c = self.index_pattern(inner);
+                        self.replace_in_pattern(location, range, c);
+                        c
+                    } else {
+                        location.parent
+                    }
+                )
+            )
     }
     #[track_caller]
     pub fn replace_in_pattern(

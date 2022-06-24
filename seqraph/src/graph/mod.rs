@@ -90,7 +90,6 @@ impl<'t, 'a, T: Tokenize> Hypergraph<T> {
         (c.expect("Tried to index empty pattern!"), id)
     }
     /// create index from a pattern
-    #[track_caller]
     pub fn index_pattern(
         &mut self,
         indices: impl IntoPattern,
