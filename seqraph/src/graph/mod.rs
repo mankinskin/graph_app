@@ -90,6 +90,7 @@ impl<'t, 'a, T: Tokenize> Hypergraph<T> {
         (c.expect("Tried to index empty pattern!"), id)
     }
     /// create index from a pattern
+    #[track_caller]
     pub fn index_pattern(
         &mut self,
         indices: impl IntoPattern,
@@ -175,6 +176,17 @@ where
         pattern: impl IntoIterator<Item = impl Indexed>,
     ) -> String {
         self.pattern_string_with_separator(pattern, "")
+    }
+    pub fn pattern_strings(
+        &'a self,
+        patterns: impl IntoIterator<Item = impl IntoIterator<Item = impl Indexed>>,
+    ) -> Vec<String> {
+        patterns
+            .into_iter()
+            .map(|pattern|
+                self.pattern_string_with_separator(pattern, "")
+            )
+            .collect()
     }
     pub fn key_data_string(
         &self,

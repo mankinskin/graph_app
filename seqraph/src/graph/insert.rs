@@ -178,11 +178,11 @@ where
         node
     }
     #[track_caller]
-    pub(crate) fn index_range_in(
+    pub(crate) fn try_index_range_in(
         &mut self,
         location: impl IntoPatternLocation,
         range: impl PatternRangeIndex,
-    ) -> Result<Child, NoMatch> {
+    ) -> Result<Result<Child, Child>, NoMatch> {
         let location = location.into_pattern_location();
         let vertex = self.expect_vertex_data(location.parent);
         vertex.get_child_pattern(&location.pattern_id)
@@ -193,16 +193,45 @@ where
                     pattern.borrow(),
                     range.clone()
                 )
-                .map(|inner|
-                    if pattern.len() > inner.len() {
+                .and_then(|inner|
+                    if inner.is_empty() {
+                        Err(NoMatch::EmptyRange)
+                    } else if pattern.len() > inner.len() {
                         let c = self.index_pattern(inner);
                         self.replace_in_pattern(location, range, c);
-                        c
+                        Ok(Ok(c))
                     } else {
-                        location.parent
+                        Ok(Err(location.parent))
                     }
                 )
             )
+    }
+    #[track_caller]
+    pub(crate) fn index_range_in(
+        &mut self,
+        location: impl IntoPatternLocation,
+        range: impl PatternRangeIndex,
+    ) -> Result<Child, NoMatch> {
+        self.try_index_range_in(
+            location,
+            range,
+        )
+        .and_then(|c| c.or(Err(NoMatch::Unnecessary)))
+    }
+    #[track_caller]
+    pub(crate) fn index_range_in_or_default(
+        &mut self,
+        location: impl IntoPatternLocation,
+        range: impl PatternRangeIndex,
+    ) -> Result<Child, NoMatch> {
+        self.try_index_range_in(
+            location,
+            range,
+        )
+        .map(|c| match c {
+            Ok(c) => c,
+            Err(c) => c,
+        })
     }
     #[track_caller]
     pub fn replace_in_pattern(

@@ -3,11 +3,11 @@ use std::num::NonZeroUsize;
 use super::*;
 use crate::*;
 type OppositeContextRange<D, Ty> =
-    <<Ty as IndexSide<D>>::Opposite as IndexSide<<D as IndexDirection>::Opposite>>::ContextRange;
+    <<Ty as IndexSide<D>>::Opposite as IndexSide<D>>::ContextRange;
 
 /// Side refers to border (front is indexing before front border, back is indexing after back border)
 pub(crate) trait IndexSide<D: IndexDirection> {
-    type Opposite: IndexSide<<D as IndexDirection>::Opposite>;
+    type Opposite: IndexSide<D>;
     type Path: DirectedBorderPath<D>;
     type InnerRange: PatternRangeIndex + StartInclusive;
     type ContextRange: PatternRangeIndex + StartInclusive;

@@ -26,6 +26,8 @@ pub enum NoMatch {
     ParentMatchingPartially,
     UnknownKey,
     UnknownIndex,
+    Unnecessary,
+    EmptyRange,
 }
 pub(crate) type SearchFoundPath = FoundPath<SearchPath>;
 

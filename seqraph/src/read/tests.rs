@@ -301,8 +301,9 @@ fn read_infix2() {
     drop(g);
 
     let visub = graph.read_sequence("visub".chars());
+    let visub_patterns = visub.expect_child_patterns(&graph);
     assert_eq!(visub.width(), 5);
-    //println!("{:#?}", );
+    println!("{:#?}", graph.read().unwrap().pattern_strings(visub_patterns.values()));
     let vi = graph.find_sequence("vi".chars()).unwrap().expect_complete("vi");
     let sub = graph.find_sequence("sub".chars()).unwrap().expect_complete("sub");
     let g = graph.read().unwrap();

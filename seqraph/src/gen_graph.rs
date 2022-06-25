@@ -15,8 +15,9 @@ lazy_static::lazy_static! {
     static ref PANIC_INFO: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
 }
 pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
-    let mut graph = Some(HypergraphRef::default());
-    let fuzz_len = 1000;
+    let batch_size = 1;
+    let num_batches = 1000;
+    let fuzz_len = batch_size * num_batches;
     let len_distr: Normal<f32> = Normal::new(20.0, 4.0).unwrap();
     //let mut rng = rand::rngs::StdRng::seed_from_u64(42);
     let mut rng = rand::thread_rng();
@@ -31,30 +32,43 @@ pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
     std::panic::set_hook(Box::new(|info| {
         *PANIC_INFO.lock().unwrap() = info.location().map(|loc| format!("{}", loc));
     }));
-    for i in 0..fuzz_len {
-        //print!("{},", i);
-        pb.inc(1);
-        let mut length = 0;
-        while length < 1 {
-            length = len_distr.sample(&mut rng) as usize;
-        }
-        let input = (0..length).map(|_| *input_distr.iter().choose(&mut rng).unwrap()).collect::<String>();
-        match catch_unwind(|| {
-            graph.clone().unwrap().read_sequence(input.chars())
-        }) {
-            Ok(_) => {},
-            Err(_) => {
-                let inner = graph.take().unwrap();
-                graph = Some(HypergraphRef::from(
-                    Arc::try_unwrap(inner.0).unwrap()
-                    .into_inner()
-                    .unwrap_or_else(|p| p.into_inner()))
-                );
-                let msg = PANIC_INFO.lock().unwrap().take().unwrap();
-                panics.entry(msg).and_modify(|instances: &mut Vec<_>| instances.push((i, input.clone())))
-                    .or_insert_with(|| vec![(i, input)]);
-                panic_count += 1;
-            },
+    let fuzz_progress = indicatif::ProgressBar::with_draw_target(
+        num_batches,
+        indicatif::ProgressDrawTarget::stdout(),
+    );
+    let mut graph = None;
+    for _ in 0..num_batches {
+        graph = Some(HypergraphRef::default());
+        fuzz_progress.inc(1);
+        let batch_progress = indicatif::ProgressBar::with_draw_target(
+            batch_size,
+            indicatif::ProgressDrawTarget::stdout(),
+        );
+        for i in 0..batch_size {
+            //print!("{},", i);
+            batch_progress.inc(1);
+            let mut length = 0;
+            while length < 1 {
+                length = len_distr.sample(&mut rng) as usize;
+            }
+            let input = (0..length).map(|_| *input_distr.iter().choose(&mut rng).unwrap()).collect::<String>();
+            match catch_unwind(|| {
+                graph.clone().unwrap().read_sequence(input.chars())
+            }) {
+                Ok(_) => {},
+                Err(_) => {
+                    let inner = graph.take().unwrap();
+                    graph = Some(HypergraphRef::from(
+                        Arc::try_unwrap(inner.0).unwrap()
+                        .into_inner()
+                        .unwrap_or_else(|p| p.into_inner()))
+                    );
+                    let msg = PANIC_INFO.lock().unwrap().take().unwrap();
+                    panics.entry(msg).and_modify(|instances: &mut Vec<_>| instances.push((i, input.clone())))
+                        .or_insert_with(|| vec![(i, input)]);
+                    panic_count += 1;
+                },
+            }
         }
     }
     std::panic::set_hook(prev_hook);

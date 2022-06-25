@@ -230,6 +230,65 @@ fn find_ancestor2() {
         }),
         "by_z"
     );
+}#[test]
+fn find_ancestor3() {
+    let mut graph = Hypergraph::default();
+    let (a, b, _w, x, y, z) = graph.index_tokens([
+        Token::Element('a'),
+        Token::Element('b'),
+        Token::Element('w'),
+        Token::Element('x'),
+        Token::Element('y'),
+        Token::Element('z'),
+    ]).into_iter().next_tuple().unwrap();
+    let ab = graph.index_pattern([a, b]);
+    let by = graph.index_pattern([b, y]);
+    let yz = graph.index_pattern([y, z]);
+    let xa = graph.index_pattern([x, a]);
+    let (xab, xab_ids) = graph.index_patterns_with_ids([[x, ab], [xa, b]]);
+    let x_ab_id = xab_ids[0];
+    let (xaby, xaby_ids) = graph.index_patterns_with_ids([vec![xab, y], vec![xa, by]]);
+    let xab_y_id = xaby_ids[0];
+    let _xabyz = graph.index_patterns([vec![xaby, z], vec![xab, yz]]);
+
+    let graph = HypergraphRef::from(graph);
+    let query = vec![ab, y];
+    let aby_found = graph.find_ancestor(&query);
+    assert_eq!(
+        aby_found,
+        Ok(QueryFound {
+            found: FoundPath::Range(SearchPath {
+                start: StartPath::Path {
+                    entry: xaby.to_pattern_location(xab_y_id)
+                        .to_child_location(0),
+                    path: vec![
+                        ChildLocation {
+                            parent: xab,
+                            pattern_id: x_ab_id,
+                            sub_index: 1,
+                        },
+                    ],
+                    width: 2,
+                },
+                inner_width: 0,
+                end: EndPath {
+                    path: vec![],
+                    entry: xaby.to_pattern_location(xab_y_id)
+                        .to_child_location(1),
+                    width: 1,
+                },
+            }),
+            query: QueryRangePath {
+                exit: query.len() - 1,
+                query,
+                entry: 0,
+                start: vec![],
+                end: vec![],
+                finished: true,
+            },
+        }),
+        "ab_y"
+    );
 }
 #[test]
 fn find_sequence() {

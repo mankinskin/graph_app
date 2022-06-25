@@ -80,6 +80,22 @@ where
         self.get_vertex_data(index)
             .map(|vertex| vertex.get_children())
     }
+    pub fn get_pattern_of(
+        &self,
+        index: impl Indexed,
+        pid: PatternId
+    ) -> Result<&Pattern, NoMatch> {
+        self.get_vertex_data(index)
+            .and_then(|vertex| vertex.get_child_pattern(&pid))
+    }
+    pub fn expect_pattern_of(
+        &self,
+        index: impl Indexed,
+        pid: PatternId
+    ) -> &Pattern {
+        self.expect_vertex_data(index)
+            .expect_child_pattern(&pid)
+    }
     pub fn expect_children_of(
         &self,
         index: impl Indexed,

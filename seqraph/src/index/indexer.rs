@@ -153,13 +153,20 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
         let range = D::wrapper_range(entry_pos, exit_pos);
         assert!(range.end() - range.start() > 0, "No more than a single index in range path");
 
-        let wrapper = graph.index_range_in(
-            location,
-            range,
-        ).unwrap();
+        let (wrapper, pattern, location) = if let Ok(wrapper) =
+            graph.index_range_in(
+                location,
+                range,
+            ) {
+                let (pid, pattern) = wrapper.expect_child_patterns(&*graph).into_iter().next().unwrap();
+                let location = wrapper.to_pattern_location(pid);
+                (wrapper, pattern, location)
+            } else {
+                let wrapper = location.parent;
+                let pattern = wrapper.expect_child_pattern(&*graph, location.pattern_id);
+                (wrapper, pattern, location)
+            };
 
-        let (pid, pattern) = wrapper.patterns(&*graph).into_iter().next().unwrap();
-        let location = wrapper.to_pattern_location(pid);
 
         let head_pos = D::head_index(pattern.borrow());
         let last_pos = D::last_index(pattern.borrow());
@@ -214,12 +221,12 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
                 target
             },
             (Some((head_inner, head_context)), None) => {
-                let inner = graph.index_range_in(
+                let inner_context = graph.index_range_in_or_default(
                     location,
-                    <IndexBack as IndexSide<D>>::inner_range(head_pos),
+                    <IndexBack as IndexSide<D>>::inner_context_range(head_pos),
                 ).unwrap();
                 let target = graph.insert_pattern(
-                    D::concat_inner_and_context(head_inner, inner)
+                    D::concat_inner_and_context(head_inner, inner_context)
                 ).unwrap();
                 graph.add_pattern_with_update(
                     wrapper,
@@ -228,12 +235,12 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
                 target
             },
             (None, Some((last_inner, last_context))) => {
-                let inner = graph.index_range_in(
+                let inner_context = graph.index_range_in_or_default(
                     location,
-                    <IndexFront as IndexSide<D>>::inner_range(last_pos)
+                    <IndexFront as IndexSide<D>>::inner_context_range(last_pos)
                 ).unwrap();
                 let target = graph.insert_pattern(
-                    D::concat_context_and_inner(last_inner, inner)
+                    D::concat_context_and_inner(last_inner, inner_context)
                 ).unwrap();
                 graph.add_pattern_with_update(
                     wrapper,
@@ -296,11 +303,13 @@ impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
         &'a mut self,
         query_path: Q,
     ) -> Result<(Child, Q), NoMatch> {
-        let result = Ti::new(self, TraversalNode::query_node(query_path))
-            .try_fold(None, |acc, (_, node)|
-                S::Folder::fold_found(self, acc, node)
-            );
-        match result {
+        match Ti::new(self, TraversalNode::query_node(query_path))
+            .try_fold(
+                None,
+                |acc, (_, node)|
+                    S::Folder::fold_found(self, acc, node)
+            )
+        {
             ControlFlow::Continue(None) => Err(NoMatch::NotFound),
             ControlFlow::Continue(Some(found)) => Ok((Indexable::<_, D>::index_found(&mut self.clone(), found.found), found.query)),
             ControlFlow::Break((found, query)) => Ok((found, query))

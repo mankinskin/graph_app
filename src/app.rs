@@ -39,7 +39,7 @@ impl App {
     pub fn new(graph: HypergraphRef<char>) -> Self {
         Self {
             graph_file: None,
-            graph: Graph::new_with_graph_ref(graph),
+            graph: Graph::new_from_graph_ref(graph),
             inserter: true,
         }
     }

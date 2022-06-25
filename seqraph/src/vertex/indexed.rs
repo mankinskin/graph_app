@@ -1,3 +1,5 @@
+use crate::traversal::traversable::Traversable;
+
 use super::*;
 use std::ops::{
     Deref,
@@ -77,8 +79,28 @@ impl<'a, 'g, V: Vertexed<'a, 'g>> Vertexed<'a, 'g> for &'a mut V {
         V::vertex_ref(*self, graph)
     }
 }
-pub trait Indexed {
+pub trait Indexed: Sized {
     fn index(&self) -> VertexIndex;
+    fn expect_child_patterns<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(&'a self, trav: &'a Trav) -> ChildPatterns {
+        trav.graph().expect_children_of(self).clone()
+    }
+    fn expect_child_pattern<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        Trav: Traversable<'a, 'g, T>,
+    >(
+        &'a self,
+        trav: &'a Trav,
+        pid: PatternId
+    ) -> Pattern {
+        trav.graph().expect_pattern_of(self, pid).clone()
+    }
 }
 impl<I: Indexed> Indexed for &'_ I {
     fn index(&self) -> VertexIndex {

@@ -63,10 +63,10 @@ pub struct Graph {
     pub insert_text: String,
 }
 impl Graph {
-    pub fn new_with_graph(graph: Hypergraph<char>) -> Self {
-        Self::new_with_graph_ref(HypergraphRef::from(graph))
+    pub fn new_from_graph(graph: Hypergraph<char>) -> Self {
+        Self::new_from_graph_ref(HypergraphRef::from(graph))
     }
-    pub fn new_with_graph_ref(graph: HypergraphRef<char>) -> Self {
+    pub fn new_from_graph_ref(graph: HypergraphRef<char>) -> Self {
         let vis = Arc::new(RwLock::new(GraphVis::default()));
         let new = Self {
             graph,
@@ -79,7 +79,7 @@ impl Graph {
     }
     pub fn new() -> Self {
         let graph = Hypergraph::default();
-        Self::new_with_graph(graph)
+        Self::new_from_graph(graph)
     }
     pub(crate) fn graph(&self) -> std::sync::RwLockReadGuard<'_, Hypergraph<char>> {
         self.graph.read().unwrap()

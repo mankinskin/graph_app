@@ -77,9 +77,9 @@ impl TraversalPath for SearchPath {
                 break;
             }
         }
-        if self.end.path.is_empty() {
-            TraversalPath::move_width_into_start(&mut self);
-        }
+        //if self.end.path.is_empty() {
+        //    TraversalPath::move_width_into_start(&mut self);
+        //}
         FoundPath::new::<_, D, _>(trav, self)
     }
     fn move_width_into_start(&mut self) {
