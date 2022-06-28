@@ -8,47 +8,53 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
         &'a mut self,
         entry: ChildLocation,
         inner_width: usize,
-    ) -> IndexSplitResult {
+    ) -> Option<IndexSplitResult> {
         let mut graph = self.graph_mut();
         let pattern = graph.expect_pattern_at(&entry);       
         let target = pattern[entry.sub_index];
-        match Side::inner_width_to_offset(&target, inner_width) {
-            Some(offset) =>
+        Side::inner_width_to_offset(&target, inner_width)
+            .map(|offset|
                 SideIndexable::<_, D, Side>::single_offset_split(
                     &mut *graph,
                     target,
                     offset,
-                ),
-            None => SideIndexable::<_, D, Side>::pattern_perfect_split(
-                &mut *graph,
-                pattern,
-                entry,
-            ),
-        }
+                )
+            ).or_else(||
+                SideIndexable::<_, D, Side>::pattern_perfect_split(
+                    &mut *graph,
+                    pattern,
+                    entry,
+                )
+            )
     }
+    /// split pattern at location
     fn pattern_perfect_split(
         &'a mut self,
         pattern: impl IntoPattern,
-        entry: ChildLocation,
-    ) -> IndexSplitResult {
-        let range = Side::inner_range(entry.sub_index);
-        let pos = range.start();
-        let inner = &pattern.borrow()[range.clone()];
-        let location = entry.into_pattern_location().to_child_location(pos);
-        let inner = if inner.len() == 1 {
-            *inner.iter().next().unwrap()
-        } else {
+        location: ChildLocation,
+    ) -> Option<IndexSplitResult> {
+        Side::index_at_border(
+            location.sub_index,
+            pattern.borrow(),
+        )
+        .then(|| {
+            let range = Side::inner_range(location.sub_index);
+            let inner = &pattern.borrow()[range.clone()];
             assert!(inner.len() > 0);
-            let mut graph = self.graph_mut();
-            let inner = graph.insert_pattern(inner).unwrap();
-            graph.replace_in_pattern(&location, range, [inner]);
-            inner
-        };
-        IndexSplitResult {
-            location,
-            path: vec![],
-            inner,
-        }
+            let inner = if inner.len() == 1 {
+                *inner.iter().next().unwrap()
+            } else {
+                let mut graph = self.graph_mut();
+                let inner = graph.insert_pattern(inner).unwrap();
+                graph.replace_in_pattern(&location, range.clone(), [inner]);
+                inner
+            };
+            IndexSplitResult {
+                location: location.to_child_location(range.start()),
+                path: vec![],
+                inner,
+            }
+        })
     }
     fn single_offset_split(
         &'a mut self,

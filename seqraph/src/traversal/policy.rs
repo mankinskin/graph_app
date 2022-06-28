@@ -190,7 +190,7 @@ pub(crate) trait DirectedTraversalPolicy<
             .get_children().iter()
             .sorted_unstable_by_key(|(_, p)| p.first().unwrap().width)
             .map(|(&pid, child_pattern)| {
-                let sub_index = D::head_index(child_pattern);
+                let sub_index = D::head_index(child_pattern.borrow());
                 let mut paths = paths.clone();
                 paths.push_major(ChildLocation::new(index, pid, sub_index));
                 ToTraversalNode::to_match_node(paths)

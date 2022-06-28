@@ -98,7 +98,7 @@ impl PathAppend for StartLeaf {
         let pattern = graph.expect_pattern_at(self.entry);
         StartPath::Path {
             entry: parent_entry,
-            path: if self.entry.sub_index != D::head_index(&pattern) {
+            path: if self.entry.sub_index != D::head_index(pattern.borrow()) {
                 vec![self.entry]
             } else {
                 vec![]
@@ -122,7 +122,7 @@ impl PathAppend for StartPath {
                 let graph = trav.graph();
                 //println!("path {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
                 let pattern = graph.expect_pattern_at(entry);
-                if entry.sub_index != D::head_index(&pattern) || !path.is_empty() {
+                if entry.sub_index != D::head_index(pattern.borrow()) || !path.is_empty() {
                     path.push(entry);
                 }
                 StartPath::Path {

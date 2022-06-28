@@ -35,6 +35,12 @@ impl ChildLocation {
     pub fn expect_pattern_in<'a>(&self, patterns: &'a ChildPatterns) -> &'a Pattern {
         self.get_pattern_in(patterns).expect("Expected Pattern not present in ChildPatterns!")
     }
+    pub fn to_child_location(self, sub_index: usize) -> ChildLocation {
+        ChildLocation {
+            sub_index,
+            ..self
+        }
+    }
 }
 pub type ChildPath = Vec<ChildLocation>;
 

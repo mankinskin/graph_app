@@ -93,8 +93,8 @@ pub trait MatchDirection : Clone + Debug {
     ) -> Vec<T>;
     fn pattern_tail<T: AsChild>(pattern: &'_ [T]) -> &'_ [T];
     fn pattern_head<T: AsChild>(pattern: &'_ [T]) -> Option<&T>;
-    fn head_index<T: AsChild>(_pattern: &'_ [T]) -> usize;
-    fn last_index<T: AsChild>(pattern: &'_ [T]) -> usize {
+    fn head_index(pattern: impl IntoPattern) -> usize;
+    fn last_index(pattern: impl IntoPattern) -> usize {
         Self::Opposite::head_index(pattern)
     }
     fn normalize_index<T: AsChild>(
@@ -248,7 +248,7 @@ impl MatchDirection for Right {
     fn pattern_head<T: AsChild>(pattern: &'_ [T]) -> Option<&T> {
         pattern.first()
     }
-    fn head_index<T: AsChild>(_pattern: &'_ [T]) -> usize {
+    fn head_index(_pattern: impl IntoPattern) -> usize {
         0
     }
     fn tail_index<T: AsChild>(pattern:  &'_ [T], tail: &'_ [T]) -> usize {
@@ -336,8 +336,8 @@ impl MatchDirection for Left {
     fn pattern_head<T: AsChild>(pattern: &'_ [T]) -> Option<&T> {
         pattern.last()
     }
-    fn head_index<T: AsChild>(pattern: &'_ [T]) -> usize {
-        pattern.len() - 1
+    fn head_index(pattern: impl IntoPattern) -> usize {
+        pattern.borrow().len() - 1
     }
     fn tail_index<T: AsChild>(_pattern:  &'_ [T], tail: &'_ [T]) -> usize {
         tail.len()

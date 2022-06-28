@@ -25,6 +25,7 @@ pub(crate) trait IndexSide<D: IndexDirection> {
         context: impl IntoPattern,
     ) -> Pattern;
     fn inner_range(pos: usize) -> Self::InnerRange;
+    fn index_at_border(pos: usize, pattern: impl IntoPattern) -> bool;
     fn inner_context_range(pos: usize) -> OppositeContextRange<D, Self> {
         Self::Opposite::context_range(pos)
     }
@@ -49,6 +50,9 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
     type ContextRange = Range<usize>;
     fn inner_range(pos: usize) -> Self::InnerRange {
         pos..
+    }
+    fn index_at_border(pos: usize, pattern: impl IntoPattern) -> bool {
+        pos == D::head_index(pattern)
     }
     fn context_range(pos: usize) -> Self::ContextRange {
         0..pos
@@ -110,6 +114,9 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
     }
     fn context_range(pos: usize) -> Self::ContextRange {
         D::index_next(pos).unwrap()..
+    }
+    fn index_at_border(pos: usize, pattern: impl IntoPattern) -> bool {
+        pos == D::last_index(pattern)
     }
     #[track_caller]
     fn split_context(pattern: &'_ impl IntoPattern, pos: usize) -> &'_ [Child] {
