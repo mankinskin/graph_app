@@ -197,13 +197,15 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
         );
         let pid = graph.add_pattern_with_update(parent, [back, front]);
         let (inner, _) = Side::back_front_order(back, front);
-        let location = ChildLocation::new(parent, pid, 1);
+        let (pos, _) = Side::back_front_order(0, 1);
+        let location = ChildLocation::new(parent, pid, pos);
         IndexSplitResult {
             location,
             path: vec![],
             inner,
         }
     }
+    /// * `location` - Points to child to index the context of
     fn context_path_segment(
         &'a mut self,
         location: ChildLocation
@@ -211,11 +213,19 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
         let mut graph = self.graph_mut();
         let pattern = graph.expect_pattern_at(&location);
         let context = Side::split_context(&pattern, location.sub_index);
-        let context = graph.index_pattern(context);
-        // todo: skip if not needed
-        graph.replace_in_pattern(location, Side::context_range(location.sub_index), context);
-        context
+        if context.len() < 2 {
+            if context.is_empty() {
+                assert!(!context.is_empty());
+            }
+            *context.into_iter().next().unwrap()
+        } else {
+            let context = graph.index_pattern(context);
+            graph.replace_in_pattern(location, Side::context_range(location.sub_index), context);
+            context
+        }
     }
+    /// * `entry` - Points to child to index the context of
+    /// * `context_path` - List of locations pointing into entry to build the nested context structure
     fn context_path(
         &'a mut self,
         entry: ChildLocation,

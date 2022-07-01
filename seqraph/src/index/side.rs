@@ -79,6 +79,9 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
     }
     fn inner_width_to_offset(child: &Child, width: usize) -> Option<NonZeroUsize> {
         // todo: changes with index direction
+        if child.width() < width {
+            assert!(child.width() >= width);
+        }
         NonZeroUsize::new(child.width() - width)
     }
     fn limited_range(start: usize, end: usize) -> Range<usize> {

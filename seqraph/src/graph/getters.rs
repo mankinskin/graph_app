@@ -53,7 +53,9 @@ where
     ) -> Pattern {
         let location = location.into_pattern_location();
         self.get_pattern_at(location)
-            .unwrap_or_else(|_| panic!("Pattern not found at location {:#?}", location))
+            .unwrap_or_else(|_|
+                panic!("Pattern not found at location {:#?}", location)
+            )
     }
     pub fn get_child_at(
         &self,
