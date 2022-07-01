@@ -168,14 +168,22 @@ where
         &mut self,
         patterns: impl IntoIterator<Item = impl IntoPattern>,
     ) -> Child {
-        // todo handle token nodes
-        let mut patterns = patterns.into_iter();
-        let first = patterns.next().expect("Tried to insert no patterns");
-        let node = self.index_pattern(first);
-        for pat in patterns {
-            self.add_pattern_with_update(&node, pat);
-        }
-        node
+        let patterns = patterns.into_iter()
+            .map(IntoPattern::into_pattern)
+            .collect_vec();
+        patterns.iter().find(|p| p.len() == 1)
+            .map(|p| p.first().unwrap().clone())
+            .unwrap_or_else(|| {
+                // todo handle token nodes
+                let mut patterns = patterns.into_iter();
+                let first = patterns.next().expect("Tried to insert no patterns");
+                let node = self.index_pattern(first);
+                for pat in patterns {
+                    self.add_pattern_with_update(&node, pat);
+                }
+                node
+            })
+
     }
     #[track_caller]
     pub(crate) fn try_index_range_in(
@@ -233,7 +241,6 @@ where
             Err(c) => c,
         })
     }
-    #[track_caller]
     pub fn replace_in_pattern(
         &'g mut self,
         location: impl IntoPatternLocation,
@@ -252,7 +259,9 @@ where
             let start = range.clone().next().unwrap();
             let new_end = start + replace.len();
             let old = replace_in_pattern(&mut *pattern, range.clone(), replace.clone());
-            assert!(pattern.len() > 1);
+            if !(pattern.len() > 1) {
+                assert!(pattern.len() > 1);
+            }
             (
                 old,
                 width,

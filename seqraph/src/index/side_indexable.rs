@@ -4,28 +4,17 @@ use crate::*;
 use super::*;
 
 pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: IndexSide<D>>: Indexable<'a, 'g, T, D> {
-    fn entry_split(
+    fn entry_perfect_split(
         &'a mut self,
         entry: ChildLocation,
-        inner_width: usize,
     ) -> Option<IndexSplitResult> {
         let mut graph = self.graph_mut();
         let pattern = graph.expect_pattern_at(&entry);       
-        let target = pattern[entry.sub_index];
-        Side::inner_width_to_offset(&target, inner_width)
-            .map(|offset|
-                SideIndexable::<_, D, Side>::single_offset_split(
-                    &mut *graph,
-                    target,
-                    offset,
-                )
-            ).or_else(||
-                SideIndexable::<_, D, Side>::pattern_perfect_split(
-                    &mut *graph,
-                    pattern,
-                    entry,
-                )
-            )
+        SideIndexable::<_, D, Side>::pattern_perfect_split(
+            &mut *graph,
+            pattern,
+            entry,
+        )
     }
     /// split pattern at location
     fn pattern_perfect_split(
@@ -33,34 +22,38 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
         pattern: impl IntoPattern,
         location: ChildLocation,
     ) -> Option<IndexSplitResult> {
-        Side::index_at_border(
+        if Side::split_at_border(
             location.sub_index,
             pattern.borrow(),
-        )
-        .then(|| {
-            let range = Side::inner_range(location.sub_index);
-            let inner = &pattern.borrow()[range.clone()];
-            assert!(inner.len() > 0);
-            let inner = if inner.len() == 1 {
-                *inner.iter().next().unwrap()
-            } else {
-                let mut graph = self.graph_mut();
-                let inner = graph.insert_pattern(inner).unwrap();
-                graph.replace_in_pattern(&location, range.clone(), [inner]);
-                inner
-            };
-            IndexSplitResult {
-                location: location.to_child_location(range.start()),
-                path: vec![],
-                inner,
-            }
+        ) {
+            return None;
+        }
+        let range = Side::inner_range(location.sub_index);
+        let inner = &pattern.borrow()[range.clone()];
+        assert!(!inner.is_empty());
+        let inner = if inner.len() == 1 {
+            *inner.iter().next().unwrap()
+        } else {
+            let mut graph = self.graph_mut();
+            let inner = graph.insert_pattern(inner).unwrap();
+            graph.replace_in_pattern(&location, range.clone(), [inner]);
+            inner
+        };
+        Some(IndexSplitResult {
+            location: location.to_child_location(range.start()),
+            path: vec![],
+            inner,
         })
     }
+    /// split parent at token offset from direction start
     fn single_offset_split(
         &'a mut self,
         parent: Child,
         offset: NonZeroUsize,
-    ) -> IndexSplitResult {
+    ) -> Option<IndexSplitResult> {
+        if offset.get() >= parent.width() {
+            assert!(offset.get() < parent.width());
+        }
         let mut graph = self.graph_mut();
         let child_patterns = graph.expect_children_of(parent).clone();
         let len = child_patterns.len();
@@ -83,7 +76,7 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
                     ChildLocation::new(parent, pid, pos),
                 ),
             ControlFlow::Continue(positions) =>
-                if positions.len() == 1 {
+                Some(if positions.len() == 1 {
                     let (pid, pattern, pos, offset) = positions.into_iter().next().unwrap();
                     SideIndexable::<_, _, Side>::child_pattern_unperfect_split(
                         &mut *graph,
@@ -97,7 +90,7 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
                         parent,
                         positions,
                     )
-                },
+                }),
         }
     }
     fn child_pattern_unperfect_split(
@@ -116,7 +109,11 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
             inner,
             path,
             location: split_location,
-        } = SideIndexable::<_, _, Side>::single_offset_split(&mut *graph, sub, offset);
+        } = SideIndexable::<_, _, Side>::single_offset_split(
+            &mut *graph,
+            sub,
+            offset,
+        ).unwrap();
 
         // index inner context
         let _split_context = SideIndexable::<_, _, Side>::context_path(
@@ -182,7 +179,7 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
                     &mut *graph,
                     *pattern.get(pos).unwrap(),
                     offset,
-                );
+                ).unwrap();
                 let context = SideIndexable::<_, _, Side>::context_path(&mut *graph, location, path);
                 let (back, front) = Side::context_inner_order(&context, &inner);
                 (
@@ -192,8 +189,8 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
                 )
             }).unzip::<_, _, HashSet<_>, HashSet<_>>();
         
-        println!("{:#?}", backs);
-        println!("{:#?}", fronts);
+        //println!("{:#?}", backs);
+        //println!("{:#?}", fronts);
         let (back, front) = (
             graph.index_patterns(backs),
             graph.index_patterns(fronts),
@@ -206,7 +203,6 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
             path: vec![],
             inner,
         }
-        
     }
     fn context_path_segment(
         &'a mut self,

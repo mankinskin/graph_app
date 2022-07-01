@@ -27,19 +27,22 @@ impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Q: IndexingQuery> DirectedTrave
     fn after_match_end(
         trav: &'a Self::Trav,
         path: SearchPath,
-    ) -> FolderStartPath<'a, 'g, T, D, Q, Self> {
+    ) -> MatchEnd {
         let mut ltrav = trav.clone();
-        let IndexSplitResult {
+        let entry = path.get_entry_location();
+        if let Some(IndexSplitResult {
             inner: post,
             location: entry,
             ..
             // should call leaf split and use known info of leaf position
-        } = SideIndexable::<_, D, IndexBack>::entry_split(
+        }) = SideIndexable::<_, D, IndexBack>::entry_perfect_split(
             &mut ltrav,
-            path.get_entry_location(),
-            path.start.width()
-        );
-        StartPath::Leaf(StartLeaf { entry, child: post, width: path.width() })
+            entry,
+        ) {
+            MatchEnd::Path(StartPath::Leaf(StartLeaf { entry, child: post, width: path.width() }))
+        } else {
+            MatchEnd::Full(entry.parent)
+        }
     }
 }
 trait IndexingTraversalPolicy<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Q: IndexingQuery>:
@@ -55,7 +58,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> Traversa
     type Break = (Child, Q);
     type Continue = Option<TraversalResult<SearchPath, Q>>;
     type Path = SearchPath;
-    type StartPath = StartPath;
+    //type StartPath = StartPath;
     type Node = IndexingNode<Q>;
     fn fold_found(
         trav: &Self::Trav,
@@ -98,29 +101,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
             FoundPath::Complete(c) => c
         }
     }
-    //fn index_end_path(
-    //    &'a mut self,
-    //    end: EndPath,
-    //) -> IndexSplitResult {
-    //    let EndPath {
-    //        mut path,
-    //        entry,
-    //        width,
-    //    } = end;
-    //    let mut graph = self.graph_mut();
-    //    while let Some(entry) = path.pop() {
-    //        SideIndexable::<_, D, IndexFront>::entry_split(
-    //            &mut *graph,
-    //            entry,
-    //            width,
-    //        );
-    //    }
-    //    SideIndexable::<_, D, IndexFront>::entry_split(
-    //        &mut *graph,
-    //        entry,
-    //        width,
-    //    )
-    //}
+    
     fn index_mismatch<Acc, Q: TraversalQuery + ReduciblePath>(
         &'a mut self,
         acc: Acc,
@@ -167,7 +148,6 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
                 (wrapper, pattern, location)
             };
 
-
         let head_pos = D::head_index(pattern.borrow());
         let last_pos = D::last_index(pattern.borrow());
 
@@ -180,7 +160,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
                     &mut *graph,
                     head,
                     offset,
-                );
+                ).unwrap();
                 let head_context = SideIndexable::<_, D, IndexBack>::context_path(
                     &mut *graph,
                     head_split.location,
@@ -193,7 +173,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
                 &mut *graph,
                 last,
                 offset,
-            );
+            ).unwrap();
             let last_context = SideIndexable::<_, D, IndexFront>::context_path(
                 &mut *graph,
                 last_split.location,

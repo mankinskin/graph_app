@@ -23,44 +23,6 @@ fn to_matching_iterator<'a, I: Indexed + 'a, J: Indexed + 'a>(
             _ => false,
         })
 }
-fn pattern_find_offset_end(
-    pattern: impl IntoPattern,
-    offset: NonZeroUsize,
-) -> Option<(usize, Option<NonZeroUsize>)> {
-    let mut offset = offset.get();
-    pattern.into_iter()
-        .enumerate()
-        .find_map(|(i, c)|
-            match c.width().cmp(&offset) {
-                Ordering::Less => {
-                    offset -= c.width();
-                    None
-                },
-                Ordering::Equal => {
-                    offset = 0;
-                    None
-                },
-                Ordering::Greater => Some((i, NonZeroUsize::new(offset))),
-            }
-        )
-}
-//fn pattern_find_offset_end(
-//    pattern: impl IntoPattern,
-//    offset: NonZeroUsize,
-//) -> Option<(usize, Option<NonZeroUsize>)> {
-//    let mut offset = offset.get();
-//    pattern.into_iter()
-//        .enumerate()
-//        .find_map(|(i, c)|
-//            match c.width().cmp(&offset) {
-//                Ordering::Less => {
-//                    offset -= c.width();
-//                    None
-//                },
-//                _ => Some((i, NonZeroUsize::new(c.width() - offset))),
-//            }
-//        )
-//}
 use std::fmt::Debug;
 use std::num::NonZeroUsize;
 
@@ -121,10 +83,10 @@ pub trait MatchDirection : Clone + Debug {
         child_patterns: &HashMap<PatternId, Pattern>,
     ) -> HashSet<PatternIndex>;
 
-    fn pattern_offset_split(
-        pattern: impl IntoPattern,
-        offset: NonZeroUsize,
-    ) -> Option<(usize, Option<NonZeroUsize>)>;
+    //fn pattern_offset_split(
+    //    pattern: impl IntoPattern,
+    //    offset: NonZeroUsize,
+    //) -> Option<(usize, Option<NonZeroUsize>)>;
 
 
     fn split_head_tail<T: AsChild + Clone>(pattern: &'_ [T]) -> Option<(T, &'_ [T])> {
@@ -223,12 +185,6 @@ impl MatchDirection for Right {
     ) -> Vec<T> {
         postfix(pattern, index)
     }
-    fn pattern_offset_split(
-        pattern: impl IntoPattern,
-        offset: NonZeroUsize,
-    ) -> Option<(usize, Option<NonZeroUsize>)> {
-        pattern_find_offset_end(pattern, offset)
-    }
 
     fn front_context<T: AsChild + Clone>(
         pattern: &'_ [T],
@@ -305,12 +261,6 @@ impl MatchDirection for Left {
         b: impl DoubleEndedIterator<Item = &'a J>,
     ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)> {
         to_matching_iterator(a.rev(), b.rev()).next()
-    }
-    fn pattern_offset_split(
-        pattern: impl IntoPattern,
-        offset: NonZeroUsize,
-    ) -> Option<(usize, Option<NonZeroUsize>)> {
-        pattern_find_offset_end(pattern, offset)
     }
     fn split_end<T: AsChild + Clone>(
         pattern: &'_ [T],
@@ -399,49 +349,4 @@ impl MatchDirection for Left {
     //fn found_till_end(fr: &FoundRange) -> bool {
     //    matches!(fr, FoundRange::Prefix(_) | FoundRange::Complete)
     //}
-}
-
-#[cfg(test)]
-mod tests {
-    use std::num::NonZeroUsize;
-    use crate::*;
-
-    #[test]
-    fn pattern_offset_split() {
-        let pattern = mock::pattern_from_widths([
-            1,
-            1,
-            3,
-            1,
-            1,
-        ]);
-        assert_eq!(
-            <Right as MatchDirection>::pattern_offset_split(
-                pattern.borrow(),
-                NonZeroUsize::new(2).unwrap(),
-            ),
-            Some((2, None)),
-        );
-        assert_eq!(
-            <Right as MatchDirection>::pattern_offset_split(
-                pattern.borrow(),
-                NonZeroUsize::new(3).unwrap(),
-            ),
-            Some((2, NonZeroUsize::new(1))),
-        );
-        assert_eq!(
-            <Right as MatchDirection>::pattern_offset_split(
-                pattern.borrow(),
-                NonZeroUsize::new(4).unwrap(),
-            ),
-            Some((2, NonZeroUsize::new(2))),
-        );
-        assert_eq!(
-            <Right as MatchDirection>::pattern_offset_split(
-                pattern.borrow(),
-                NonZeroUsize::new(5).unwrap(),
-            ),
-            Some((3, None)),
-        );
-    }
 }

@@ -25,7 +25,7 @@ pub(crate) trait IndexSide<D: IndexDirection> {
         context: impl IntoPattern,
     ) -> Pattern;
     fn inner_range(pos: usize) -> Self::InnerRange;
-    fn index_at_border(pos: usize, pattern: impl IntoPattern) -> bool;
+    fn split_at_border(pos: usize, pattern: impl IntoPattern) -> bool;
     fn inner_context_range(pos: usize) -> OppositeContextRange<D, Self> {
         Self::Opposite::context_range(pos)
     }
@@ -51,7 +51,7 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
     fn inner_range(pos: usize) -> Self::InnerRange {
         pos..
     }
-    fn index_at_border(pos: usize, pattern: impl IntoPattern) -> bool {
+    fn split_at_border(pos: usize, pattern: impl IntoPattern) -> bool {
         pos == D::head_index(pattern)
     }
     fn context_range(pos: usize) -> Self::ContextRange {
@@ -100,7 +100,23 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
         pattern: impl IntoPattern,
         offset: NonZeroUsize,
     ) -> Option<(usize, Option<NonZeroUsize>)> {
-        D::pattern_offset_split(pattern, offset)
+        let mut offset = offset.get();
+        pattern.into_iter()
+            .enumerate()
+            .find_map(|(i, c)|
+                // returns current index when remaining offset is smaller than current child
+                match c.width().cmp(&offset) {
+                    Ordering::Less => {
+                        offset -= c.width();
+                        None
+                    },
+                    Ordering::Equal => {
+                        offset = 0;
+                        None
+                    },
+                    Ordering::Greater => Some((i, NonZeroUsize::new(offset))),
+                }
+            )
     }
 }
 pub(crate) struct IndexFront;
@@ -115,8 +131,8 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
     fn context_range(pos: usize) -> Self::ContextRange {
         D::index_next(pos).unwrap()..
     }
-    fn index_at_border(pos: usize, pattern: impl IntoPattern) -> bool {
-        pos == D::last_index(pattern)
+    fn split_at_border(pos: usize, pattern: impl IntoPattern) -> bool {
+        Some(pos) == D::index_next(D::last_index(pattern))
     }
     #[track_caller]
     fn split_context(pattern: &'_ impl IntoPattern, pos: usize) -> &'_ [Child] {
@@ -138,8 +154,12 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
     fn back_front_order<A>(back: A, front: A) -> (A, A) {
         (back, front)
     }
-    fn inner_width_to_offset(_child: &Child, width: usize) -> Option<NonZeroUsize> {
-        NonZeroUsize::new(width)
+    fn inner_width_to_offset(child: &Child, width: usize) -> Option<NonZeroUsize> {
+        if width < child.width() {
+            NonZeroUsize::new(width)
+        } else {
+            None
+        }
     }
     fn limited_range(start: usize, end: usize) -> Range<usize> {
         start..D::index_next(end).unwrap()
@@ -160,7 +180,23 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
         pattern: impl IntoPattern,
         offset: NonZeroUsize,
     ) -> Option<(usize, Option<NonZeroUsize>)> {
-        D::pattern_offset_split(pattern, offset)
+        let mut offset = offset.get();
+        pattern.into_iter()
+            .enumerate()
+            .find_map(|(i, c)|
+                // returns current index when remaining offset does not exceed current child
+                match c.width().cmp(&offset) {
+                    Ordering::Less => {
+                        offset -= c.width();
+                        None
+                    },
+                    Ordering::Equal => {
+                        offset = 0;
+                        None
+                    },
+                    Ordering::Greater => Some((i, NonZeroUsize::new(offset))),
+                }
+            )
     }
 }
 
@@ -169,9 +205,9 @@ mod tests {
     use std::num::NonZeroUsize;
     use crate::{
         *,
-        pattern::*,
         index::*,
     };
+
 
     #[test]
     fn token_offset_split() {

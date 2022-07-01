@@ -15,9 +15,9 @@ lazy_static::lazy_static! {
     static ref PANIC_INFO: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
 }
 pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
-    let batch_size = 1;
-    let num_batches = 1000;
-    let fuzz_len = batch_size * num_batches;
+    let batch_size = 2;
+    let fuzz_len = 1000;
+    let num_batches = fuzz_len/batch_size;
     let len_distr: Normal<f32> = Normal::new(20.0, 4.0).unwrap();
     //let mut rng = rand::rngs::StdRng::seed_from_u64(42);
     let mut rng = rand::thread_rng();

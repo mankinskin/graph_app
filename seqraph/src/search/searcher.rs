@@ -35,7 +35,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
     type Continue = Option<QueryFound>;
     type Node = MatchNode;
     type Path = SearchPath;
-    type StartPath = StartPath;
+    //type StartPath = StartPath;
     fn fold_found(
         trav: &Self::Trav,
         acc: Self::Continue,
@@ -71,8 +71,8 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
     fn after_match_end(
         _trav: &'a Self::Trav,
         path: SearchPath,
-    ) -> FolderStartPath<'a, 'g, T, D, QueryRangePath, Self> {
-        path.into()
+    ) -> MatchEnd {
+        StartPath::from(path).into()
     }
 }
 struct ParentSearch<T: Tokenize, D: MatchDirection> {
@@ -86,13 +86,13 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
     fn after_match_end(
         _trav: &'a Self::Trav,
         path: SearchPath,
-    ) -> FolderStartPath<'a, 'g, T, D, QueryRangePath, Self> {
-        path.into()
+    ) -> MatchEnd {
+        StartPath::from(path).into()
     }
     fn at_index_end(
         _trav: &'a Self::Trav,
         _query: QueryRangePath,
-        _start: StartPath,
+        _start: MatchEnd,
     ) -> Vec<FolderNode<'a, 'g, T, D, QueryRangePath, Self>> {
         vec![]
     }

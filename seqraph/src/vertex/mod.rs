@@ -197,7 +197,9 @@ impl VertexData {
         &mut self,
         pat: impl IntoPattern,
     ) -> PatternId {
-        assert!(pat.borrow().len() > 1);
+        if pat.borrow().len() < 2 {
+            assert!(pat.borrow().len() > 1);
+        }
         let id = Self::next_child_pattern_id();
         self.children.insert(id, pat.into_pattern());
         id

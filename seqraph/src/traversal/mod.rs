@@ -6,6 +6,7 @@ pub(crate) mod traversable;
 pub(crate) mod folder;
 pub(crate) mod iterator;
 pub(crate) mod policy;
+pub(crate) mod match_end;
 
 use std::cmp::Ordering;
 
@@ -18,6 +19,7 @@ pub(crate) use traversable::*;
 pub(crate) use folder::*;
 pub(crate) use iterator::*;
 pub(crate) use policy::*;
+pub(crate) use match_end::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct TraversalResult<P: TraversalPath, Q: TraversalQuery> {

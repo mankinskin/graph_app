@@ -116,6 +116,11 @@ impl Wide for Child {
         self.width
     }
 }
+impl WideMut for Child {
+    fn width_mut(&mut self) -> &mut usize {
+        &mut self.width
+    }
+}
 impl Borrow<[Child]> for Child {
     fn borrow(&self) -> &[Child] {
         std::slice::from_ref(self)
