@@ -132,8 +132,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
         let mut graph = self.graph_mut();
 
         let range = D::wrapper_range(entry_pos, exit_pos);
-        assert!(range.end() - range.start() > 0, "No more than a single index in range path");
-
+        graph.validate_pattern_indexing_range_at(&location, entry_pos, exit_pos).unwrap();
         let (wrapper, pattern, location) = if let Ok(wrapper) =
             graph.index_range_in(
                 location,

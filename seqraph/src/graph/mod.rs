@@ -9,6 +9,7 @@ use std::{
 mod child_strings;
 mod getters;
 mod insert;
+mod validation;
 #[cfg(test)]
 #[macro_use]
 pub(crate) mod tests;

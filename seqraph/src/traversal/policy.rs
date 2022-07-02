@@ -114,11 +114,24 @@ pub(crate) trait DirectedTraversalPolicy<
                 vec![ToTraversalNode::to_match_node(PathPair::from_mode(path, query, mode))],
             Err(path) => {
                 //path.move_width_into_start();
+                let match_end = Self::after_match_end(trav, path);
+                //std::iter::once(
+                //    ToTraversalNode::end_node(Some(
+                //        TraversalResult::new(
+                //            FoundPath::from(match_end.clone()),
+                //            query.clone(),
+                //        )
+                //    ))
+                //)
+                //    .chain(
                 Self::at_index_end(
                     trav,
                     query,
-                    Self::after_match_end(trav, path),
+                    match_end
                 )
+                //        .into_iter()
+                //    )
+                //    .collect_vec()
             }
         }
     }
