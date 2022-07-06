@@ -16,7 +16,6 @@ mod traversal;
 mod index;
 mod read;
 mod logger;
-mod gen_graph;
 mod mock;
 
 pub use direction::*;
@@ -26,7 +25,6 @@ pub use vertex::*;
 pub(crate) use traversal::*;
 pub use read::*;
 pub use logger::*;
-pub use gen_graph::*;
 
 #[cfg(test)]
 mod tests;

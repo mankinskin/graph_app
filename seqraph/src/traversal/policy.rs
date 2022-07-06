@@ -21,9 +21,11 @@ pub(crate) trait DirectedTraversalPolicy<
     type Folder: TraversalFolder<'a, 'g, T, D, Q, Trav=Self::Trav>;
 
     fn after_match_end(
-        trav: &'a Self::Trav,
+        _trav: &'a Self::Trav,
         path: SearchPath,
-    ) -> MatchEnd;
+    ) -> MatchEnd {
+        StartPath::from(path).into()
+    }
     fn query_start(
         trav: &'a Self::Trav,
         query: FolderQuery<'a, 'g, T, D, Q, Self>,
@@ -115,23 +117,12 @@ pub(crate) trait DirectedTraversalPolicy<
             Err(path) => {
                 //path.move_width_into_start();
                 let match_end = Self::after_match_end(trav, path);
-                //std::iter::once(
-                //    ToTraversalNode::end_node(Some(
-                //        TraversalResult::new(
-                //            FoundPath::from(match_end.clone()),
-                //            query.clone(),
-                //        )
-                //    ))
-                //)
-                //    .chain(
-                Self::at_index_end(
-                    trav,
-                    query,
-                    match_end
-                )
-                //        .into_iter()
-                //    )
-                //    .collect_vec()
+                vec![
+                    ToTraversalNode::match_end_node(
+                        match_end,
+                        query,
+                    )
+                ]
             }
         }
     }

@@ -257,7 +257,7 @@ where
             let vertex = self.expect_vertex_data_mut(parent);
             let width = vertex.width;
             let pattern = vertex.expect_child_pattern_mut(&pat);
-            let backup = pattern.clone();
+            let _backup = pattern.clone();
             let start = range.clone().next().unwrap();
             let new_end = start + replace.len();
             let old = replace_in_pattern(&mut *pattern, range.clone(), replace.clone());

@@ -14,8 +14,9 @@ use std::{panic::{
 lazy_static::lazy_static! {
     static ref PANIC_INFO: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
 }
+#[allow(unused)]
 pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
-    let batch_size = 2;
+    let batch_size = 5;
     let fuzz_len = 1000;
     let num_batches = fuzz_len/batch_size;
     let len_distr: Normal<f32> = Normal::new(20.0, 4.0).unwrap();

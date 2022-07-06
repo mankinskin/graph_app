@@ -76,17 +76,29 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> Traversa
             IndexingNode::Mismatch(paths) => {
                 Indexable::<_, D>::index_mismatch(&mut trav, acc, paths)
             },
-            IndexingNode::Match(path, _, prev_query) => {
+            IndexingNode::Match(path, _, query) => {
                 let found = TraversalResult::new(
                     path.reduce_end::<_, D, _>(&trav),
-                    prev_query,
+                    query,
                 );
                 if acc.as_ref().map(|f| found.found.gt(&f.found)).unwrap_or(true) {
                     ControlFlow::Continue(Some(found))
                 } else {
                     ControlFlow::Continue(acc)
                 }
-            }
+            },
+            IndexingNode::MatchEnd(match_end, query) => {
+                let found = TraversalResult::new(
+                    match_end,
+                    query,
+                );
+                ControlFlow::Continue(Some(found))
+                //if acc.as_ref().map(|f| found.found.ge(&f.found)).unwrap_or(true) {
+                //    ControlFlow::Continue(Some(found))
+                //} else {
+                //    ControlFlow::Continue(acc)
+                //}
+            },
             _ => ControlFlow::Continue(acc)
         }
     }
@@ -127,9 +139,14 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
         let end_width = path.end.width();
         let entry_pos = path.start.get_entry_pos();
         let exit_pos = path.end.get_exit_pos();
-        let location = path.start.entry().into_pattern_location();
-
+        let location = path.start.entry();
         let mut graph = self.graph_mut();
+
+        // a little bit dirty, path should have typing for this
+        if entry_pos == exit_pos && path.start.path().is_empty() && path.end.path().is_empty() {
+            return graph.expect_child_at(&location);
+        }
+        let location = location.into_pattern_location();
 
         let range = D::wrapper_range(entry_pos, exit_pos);
         graph.validate_pattern_indexing_range_at(&location, entry_pos, exit_pos).unwrap();

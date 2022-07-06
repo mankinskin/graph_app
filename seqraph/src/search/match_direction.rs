@@ -11,6 +11,7 @@ use std::collections::{
     HashMap,
     HashSet,
 };
+use std::fmt::Debug;
 
 fn to_matching_iterator<'a, I: Indexed + 'a, J: Indexed + 'a>(
     a: impl Iterator<Item = &'a I>,
@@ -23,8 +24,6 @@ fn to_matching_iterator<'a, I: Indexed + 'a, J: Indexed + 'a>(
             _ => false,
         })
 }
-use std::fmt::Debug;
-use std::num::NonZeroUsize;
 
 pub trait MatchDirection : Clone + Debug {
     type Opposite: MatchDirection;

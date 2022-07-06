@@ -40,6 +40,12 @@ pub(crate) trait TraversalIterator<
                     trav,
                     PathPair::GraphMajor(path, query),
                 ),
+            TraversalNode::MatchEnd(match_end, query) =>
+                S::at_index_end(
+                    trav,
+                    query,
+                    match_end
+                ),
             _ => vec![],
         }
     }

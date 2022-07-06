@@ -1,6 +1,7 @@
 use crate::*;
 use super::*;
 
+/// very similar to FoundPath
 #[derive(Clone, Debug)]
 pub(crate) enum MatchEnd {
     Path(StartPath),

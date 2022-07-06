@@ -68,12 +68,6 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
 {
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
-    fn after_match_end(
-        _trav: &'a Self::Trav,
-        path: SearchPath,
-    ) -> MatchEnd {
-        StartPath::from(path).into()
-    }
 }
 struct ParentSearch<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<(T, D)>,
@@ -83,12 +77,6 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
 {
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
-    fn after_match_end(
-        _trav: &'a Self::Trav,
-        path: SearchPath,
-    ) -> MatchEnd {
-        StartPath::from(path).into()
-    }
     fn at_index_end(
         _trav: &'a Self::Trav,
         _query: QueryRangePath,

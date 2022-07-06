@@ -28,9 +28,9 @@ pub(crate) struct TraversalResult<P: TraversalPath, Q: TraversalQuery> {
 }
 
 impl<P: TraversalPath, Q: TraversalQuery> TraversalResult<P, Q> {
-    pub(crate) fn new(found: FoundPath<P>, query: Q) -> Self {
+    pub(crate) fn new(found: impl Into<FoundPath<P>>, query: Q) -> Self {
         Self {
-            found,
+            found: found.into(),
             query,
         }
     }
