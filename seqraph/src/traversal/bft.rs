@@ -52,6 +52,9 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         let (last_depth, last_node) = &self.last;
+        if *last_depth >= 1000 {
+            assert!(*last_depth < 1000);
+        }
         self.queue.extend(
             <Self as TraversalIterator<T, Trav, D, Q, S>>::iter_children(self.trav, last_node)
                 .into_iter()

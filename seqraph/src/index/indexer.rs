@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate:: *;
 use super::*;
 
@@ -301,11 +303,18 @@ impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
         &'a mut self,
         query_path: Q,
     ) -> Result<(Child, Q), NoMatch> {
+        let mut visited = HashSet::new();
         match Ti::new(self, TraversalNode::query_node(query_path))
             .try_fold(
                 None,
-                |acc, (_, node)|
+                |acc, (_, node)| {
+                    if visited.contains(&node) {
+                        println!("cycle detected")
+                    } else {
+                        visited.insert(node.clone());
+                    }
                     S::Folder::fold_found(self, acc, node)
+                }
             )
         {
             ControlFlow::Continue(None) => Err(NoMatch::NotFound),
