@@ -1,6 +1,6 @@
-#[test]
+//#[test]
 fn fuzz1() {
-    if crate::mock::gen_graph::gen_graph().is_err() {
-        panic!();
+    if let Err(_) = crate::mock::gen_graph::gen_graph() {
+        panic!("Encountered panics when generating graph!");
     }
 }

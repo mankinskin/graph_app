@@ -2,7 +2,7 @@ use super::*;
 
 use std::cmp::Ordering;
 
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(Clone, Debug, PartialEq, Eq, Copy, Hash)]
 pub struct ChildLocation {
     pub(crate) parent: Child,
     pub(crate) pattern_id: PatternId,

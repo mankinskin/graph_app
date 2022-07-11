@@ -1,4 +1,5 @@
 use super::*;
+use std::hash::Hash;
 
 pub(crate) trait ToTraversalNode<
     Q: TraversalQuery,
@@ -12,7 +13,7 @@ pub(crate) trait ToTraversalNode<
     fn match_end_node(match_end: MatchEnd, query: Q) -> Self;
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub(crate) enum TraversalNode<
     Q: TraversalQuery,
 > {

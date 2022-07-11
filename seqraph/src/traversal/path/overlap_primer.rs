@@ -1,7 +1,7 @@
 use std::borrow::Borrow;
 use crate::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Hash, Eq)]
 pub struct OverlapPrimer {
     pub(crate) start: Child,
     context: PrefixPath,

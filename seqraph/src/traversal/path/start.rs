@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(crate) struct StartLeaf {
     pub(crate) entry: ChildLocation,
     pub(crate) child: Child,
@@ -43,7 +43,7 @@ impl From<IndexingPath> for StartLeaf {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(crate) enum StartPath {
     Leaf(StartLeaf),
     Path {

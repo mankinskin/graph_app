@@ -43,27 +43,12 @@ pub trait ResultOrd: Wide {
         }
     }
     fn eq(&self, other: impl ResultOrd) -> bool {
-        self.cmp(other) == Ordering::Equal
+        self.cmp(other).is_eq()
     }
 }
 impl<T: ResultOrd> ResultOrd for &T {
     fn is_complete(&self) -> bool {
         ResultOrd::is_complete(*self)
-    }
-}
-impl ResultOrd for SearchPath {
-    fn is_complete(&self) -> bool {
-        false
-    }
-}
-impl<Rhs: ResultOrd> PartialOrd<Rhs> for SearchPath {
-    fn partial_cmp(&self, other: &Rhs) -> Option<Ordering> {
-        Some(ResultOrd::cmp(self, other))
-    }
-}
-impl<Rhs: ResultOrd> PartialEq<Rhs> for SearchPath {
-    fn eq(&self, other: &Rhs) -> bool {
-        ResultOrd::eq(self, other)
     }
 }
 pub(crate) type QueryFound = TraversalResult<SearchPath, QueryRangePath>;

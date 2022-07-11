@@ -187,13 +187,3 @@ impl ResultOrd for IndexingPath {
         false
     }
 }
-impl<Rhs: ResultOrd> PartialOrd<Rhs> for IndexingPath {
-    fn partial_cmp(&self, other: &Rhs) -> Option<Ordering> {
-        Some(ResultOrd::cmp(self, other))
-    }
-}
-impl<Rhs: ResultOrd> PartialEq<Rhs> for IndexingPath {
-    fn eq(&self, other: &Rhs) -> bool {
-        ResultOrd::eq(self, other)
-    }
-}

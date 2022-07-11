@@ -1,7 +1,7 @@
 use std::borrow::Borrow;
 use crate::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Hash, Eq)]
 pub struct PrefixPath {
     pub(crate) pattern: Pattern,
     pub(crate) exit: usize,

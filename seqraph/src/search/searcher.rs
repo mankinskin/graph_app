@@ -50,7 +50,9 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
                     path.reduce_end::<_, D, _>(trav),
                     prev_query
                 );
-                if acc.as_ref().map(|f| found.found.gt(&f.found)).unwrap_or(true) {
+                if acc.as_ref().map(|f|
+                    ResultOrd::cmp(&found.found, &f.found).is_gt()
+                ).unwrap_or(true) {
                     ControlFlow::Continue(Some(found))
                 } else {
                     ControlFlow::Continue(acc)

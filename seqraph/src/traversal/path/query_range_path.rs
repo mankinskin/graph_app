@@ -1,7 +1,7 @@
 use std::borrow::Borrow;
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct QueryRangePath {
     pub(crate) query: Pattern,
     pub(crate) entry: usize,

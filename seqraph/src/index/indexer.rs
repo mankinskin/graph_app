@@ -81,7 +81,9 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> Traversa
                     path.reduce_end::<_, D, _>(&trav),
                     query,
                 );
-                if acc.as_ref().map(|f| found.found.gt(&f.found)).unwrap_or(true) {
+                if acc.as_ref().map(|f|
+                    ResultOrd::cmp(&found.found, &f.found).is_gt()
+                ).unwrap_or(true) {
                     ControlFlow::Continue(Some(found))
                 } else {
                     ControlFlow::Continue(acc)

@@ -1,11 +1,16 @@
 use std::borrow::Borrow;
 use crate::*;
 
-#[derive(Debug, Clone, Eq)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub(crate) struct SearchPath {
     pub(crate) start: StartPath,
     pub(crate) inner_width: usize,
     pub(crate) end: EndPath,
+}
+impl ResultOrd for SearchPath {
+    fn is_complete(&self) -> bool {
+        false
+    }
 }
 
 impl From<StartPath> for SearchPath {

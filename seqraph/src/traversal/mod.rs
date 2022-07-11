@@ -8,8 +8,6 @@ pub(crate) mod iterator;
 pub(crate) mod policy;
 pub(crate) mod match_end;
 
-use std::cmp::Ordering;
-
 pub(crate) use super::*;
 pub(crate) use bft::*;
 pub(crate) use dft::*;
@@ -21,7 +19,7 @@ pub(crate) use iterator::*;
 pub(crate) use policy::*;
 pub(crate) use match_end::*;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct TraversalResult<P: TraversalPath, Q: TraversalQuery> {
     pub(crate) found: FoundPath<P>,
     pub(crate) query: Q,
@@ -54,7 +52,7 @@ impl<P: TraversalPath, Q: QueryPath> TraversalResult<P, Q> {
     }
 }
 
-#[derive(Debug, Clone, Eq)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub(crate) enum FoundPath<P: TraversalPath> {
     Complete(Child),
     Range(P),
@@ -109,15 +107,5 @@ impl<P: TraversalPath> Wide for FoundPath<P> {
             Self::Complete(c) => c.width,
             Self::Range(r) => r.width(),
         }
-    }
-}
-impl<Rhs: ResultOrd, P: TraversalPath> PartialOrd<Rhs> for FoundPath<P> {
-    fn partial_cmp(&self, other: &Rhs) -> Option<Ordering> {
-        Some(ResultOrd::cmp(self, other))
-    }
-}
-impl<Rhs: ResultOrd, P: TraversalPath> PartialEq<Rhs> for FoundPath<P> {
-    fn eq(&self, other: &Rhs) -> bool {
-        ResultOrd::eq(self, other)
     }
 }
