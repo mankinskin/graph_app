@@ -25,13 +25,13 @@ pub(crate) trait TraversalIterator<
                     query,
                 ),
             TraversalNode::Parent(path, query) =>
-                S::context_nodes(
+                S::after_parent_nodes(
                     trav,
                     path,
                     query,
                 ),
             TraversalNode::ToMatch(paths) =>
-                S::match_end(
+                S::to_match(
                     trav,
                     paths,
                 ),

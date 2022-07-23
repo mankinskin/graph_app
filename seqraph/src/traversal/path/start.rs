@@ -22,7 +22,7 @@ impl GraphEntry for StartLeaf {
     }
 }
 impl HasStartPath for StartLeaf {
-    fn get_start_path(&self) -> &[ChildLocation] {
+    fn start_path(&self) -> &[ChildLocation] {
         self.path()
     }
 }
@@ -37,11 +37,11 @@ impl BorderPath for StartLeaf {
 impl<D: MatchDirection> DirectedBorderPath<D> for StartLeaf {
     type BorderDirection = Back;
 }
-impl From<IndexingPath> for StartLeaf {
-    fn from(p: IndexingPath) -> Self {
-        p.start
-    }
-}
+//impl From<IndexingPath> for StartLeaf {
+//    fn from(p: IndexingPath) -> Self {
+//        p.start
+//    }
+//}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(crate) enum StartPath {
@@ -62,11 +62,11 @@ impl From<StartLeaf> for StartPath {
         StartPath::Leaf(leaf)
     }
 }
-impl From<IndexingPath> for StartPath {
-    fn from(p: IndexingPath) -> Self {
-        p.into_start_path()
-    }
-}
+//impl From<IndexingPath> for StartPath {
+//    fn from(p: IndexingPath) -> Self {
+//        p.into_start_path()
+//    }
+//}
 impl WideMut for StartPath {
     fn width_mut(&mut self) -> &mut usize {
         match self {
@@ -166,7 +166,7 @@ impl GraphEntry for StartPath {
     }
 }
 impl HasStartPath for StartPath {
-    fn get_start_path(&self) -> &[ChildLocation] {
+    fn start_path(&self) -> &[ChildLocation] {
         self.path()
     }
 }

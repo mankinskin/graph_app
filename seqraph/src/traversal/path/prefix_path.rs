@@ -6,6 +6,7 @@ pub struct PrefixPath {
     pub(crate) pattern: Pattern,
     pub(crate) exit: usize,
     pub(crate) end: ChildPath,
+    pub(crate) width: usize,
     pub(crate) finished: bool,
 }
 
@@ -25,6 +26,7 @@ impl<
             _ => Ok(Self {
                     pattern,
                     exit,
+                    width: 0,
                     end: vec![],
                     finished: false,
                 })
@@ -42,7 +44,7 @@ impl PatternEntry for PrefixPath {
     }
 }
 impl HasStartPath for PrefixPath {
-    fn get_start_path(&self) -> &[ChildLocation] {
+    fn start_path(&self) -> &[ChildLocation] {
         &[]
     }
 }
@@ -68,7 +70,7 @@ impl PatternExit for PrefixPath {
     }
 }
 impl HasEndPath for PrefixPath {
-    fn get_end_path(&self) -> &[ChildLocation] {
+    fn end_path(&self) -> &[ChildLocation] {
         self.end.borrow()
     }
 }
@@ -108,6 +110,16 @@ impl ReduciblePath for PrefixPath {
             let pattern = trav.graph().expect_pattern_at(location);
             D::pattern_index_prev(pattern, location.sub_index)
         }
+    }
+}
+impl Wide for PrefixPath {
+    fn width(&self) -> usize {
+        self.width
+    }
+}
+impl WideMut for PrefixPath {
+    fn width_mut(&mut self) -> &mut usize {
+        &mut self.width
     }
 }
 impl AdvanceablePath for PrefixPath {}

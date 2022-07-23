@@ -8,6 +8,7 @@ pub struct QueryRangePath {
     pub(crate) start: ChildPath,
     pub(crate) exit: usize,
     pub(crate) end: ChildPath,
+    pub(crate) width: usize,
     pub(crate) finished: bool,
 }
 impl<
@@ -22,6 +23,7 @@ impl<
             query,
             start: vec![],
             end: vec![],
+            width: 0,
             finished: true
         }
     }
@@ -40,6 +42,7 @@ impl<
                     start: vec![],
                     exit: entry,
                     end: vec![],
+                    width: 0,
                     finished: false
                 })
         }
@@ -58,6 +61,7 @@ impl QueryPath for QueryRangePath {
             query,
             start: vec![],
             end: vec![],
+            width: 0,
             finished: true,
         }
     }
@@ -73,7 +77,7 @@ impl PatternEntry for QueryRangePath {
     }
 }
 impl HasStartPath for QueryRangePath {
-    fn get_start_path(&self) -> &[ChildLocation] {
+    fn start_path(&self) -> &[ChildLocation] {
         self.start.borrow()
     }
 }
@@ -89,7 +93,7 @@ impl PatternExit for QueryRangePath {
     }
 }
 impl HasEndPath for QueryRangePath {
-    fn get_end_path(&self) -> &[ChildLocation] {
+    fn end_path(&self) -> &[ChildLocation] {
         &self.end
     }
 }
@@ -138,6 +142,16 @@ impl ReduciblePath for QueryRangePath {
             let pattern = trav.graph().expect_pattern_at(&location);
             D::pattern_index_prev(pattern, location.sub_index)
         }
+    }
+}
+impl Wide for QueryRangePath {
+    fn width(&self) -> usize {
+        self.width
+    }
+}
+impl WideMut for QueryRangePath {
+    fn width_mut(&mut self) -> &mut usize {
+        &mut self.width
     }
 }
 impl AdvanceablePath for QueryRangePath {}

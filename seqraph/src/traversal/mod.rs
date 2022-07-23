@@ -76,7 +76,7 @@ impl<
         Trav: Traversable<'a, 'g, T>,
     >(trav: &'a Trav, path: P) -> Self {
         if path.is_complete::<_, D, _>(trav) {
-            Self::Complete(path.get_start_match_path().entry().parent)
+            Self::Complete(path.start_match_path().entry().parent)
         } else {
             Self::Range(path)
         }

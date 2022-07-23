@@ -6,6 +6,7 @@ pub struct OverlapPrimer {
     pub(crate) start: Child,
     context: PrefixPath,
     context_offset: usize,
+    width: usize,
     exit: usize,
     end: ChildPath,
 }
@@ -15,6 +16,7 @@ impl OverlapPrimer {
             start,
             context_offset: context.exit,
             context,
+            width: 0,
             exit: 0,
             end: vec![],
         }
@@ -30,7 +32,7 @@ impl ExitPos for OverlapPrimer {
 }
 impl HasEndPath for OverlapPrimer {
     //type Path = [ChildLocation];
-    fn get_end_path(&self) -> &[ChildLocation] {
+    fn end_path(&self) -> &[ChildLocation] {
         if self.exit == 0 {
             self.end.borrow()
         } else {
@@ -95,6 +97,12 @@ impl ReduciblePath for OverlapPrimer {
     }
 }
 impl AdvanceableExit for OverlapPrimer {
+    fn pattern_next_exit_pos<
+        D: MatchDirection,
+        P: IntoPattern,
+    >(&self, _pattern: P) -> Option<usize> {
+        None
+    }
     fn next_exit_pos<
         'a: 'g,
         'g,
@@ -123,4 +131,22 @@ impl AdvanceableExit for OverlapPrimer {
         }
     }
 }
+impl Wide for OverlapPrimer {
+    fn width(&self) -> usize {
+        self.width
+    }
+}
+impl WideMut for OverlapPrimer {
+    fn width_mut(&mut self) -> &mut usize {
+        &mut self.width
+    }
+}
+//impl HasEndWidth for OverlapPrimer {
+//    fn end_width(&self) -> usize {
+//        self.context.end_width()
+//    }
+//    fn end_width_mut(&mut self) -> &mut usize {
+//        self.context.end_width_mut()
+//    }
+//}
 impl AdvanceablePath for OverlapPrimer {}

@@ -8,7 +8,7 @@ pub(crate) trait ToTraversalNode<
     fn match_node(path: SearchPath, query: Q, old_query: Q) -> Self;
     fn to_match_node(paths: PathPair<Q, SearchPath>) -> Self;
     fn parent_node(path: StartPath, query: Q) -> Self;
-    fn end_node(found: Option<TraversalResult<SearchPath, Q>>) -> Self;
+    fn query_end_node(found: Option<TraversalResult<SearchPath, Q>>) -> Self;
     fn mismatch_node(paths: PathPair<Q, SearchPath>) -> Self;
     fn match_end_node(match_end: MatchEnd, query: Q) -> Self;
 }
@@ -19,7 +19,7 @@ pub(crate) enum TraversalNode<
 > {
     Query(Q),
     Parent(StartPath, Q),
-    End(Option<TraversalResult<SearchPath, Q>>),
+    QueryEnd(Option<TraversalResult<SearchPath, Q>>),
     ToMatch(PathPair<Q, SearchPath>),
     Match(SearchPath, Q, Q),
     Mismatch(PathPair<Q, SearchPath>),
@@ -40,8 +40,8 @@ impl<
     fn parent_node(path: StartPath, query: Q) -> Self {
         Self::Parent(path, query)
     }
-    fn end_node(found: Option<TraversalResult<SearchPath, Q>>) -> Self {
-        Self::End(found)
+    fn query_end_node(found: Option<TraversalResult<SearchPath, Q>>) -> Self {
+        Self::QueryEnd(found)
     }
     fn mismatch_node(paths: PathPair<Q, SearchPath>) -> Self {
         Self::Mismatch(paths)

@@ -69,7 +69,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> Traversa
     ) -> ControlFlow<Self::Break, Self::Continue> {
         let mut trav = trav.clone();
         match node {
-            IndexingNode::End(Some(found)) => {
+            IndexingNode::QueryEnd(Some(found)) => {
                 ControlFlow::Break((
                     Indexable::<_, D>::index_found(&mut trav, found.found),
                     found.query,
@@ -140,7 +140,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
         path: SearchPath,
     ) -> Child {
         let start_width = path.start.width();
-        let end_width = path.end.width();
+        //let end_width = path.end.width();
         let entry_pos = path.start.get_entry_pos();
         let exit_pos = path.end.get_exit_pos();
         let location = path.start.entry();
@@ -309,7 +309,7 @@ impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
                 None,
                 |acc, (_, node)| {
                     if visited.contains(&node) {
-                        println!("cycle detected")
+                        panic!("cycle detected")
                     } else {
                         visited.insert(node.clone());
                     }

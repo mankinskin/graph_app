@@ -89,6 +89,7 @@ fn index_prefix2() {
                 exit: 2,
                 start: vec![],
                 end: vec![],
+                width: 0,
                 query,
                 finished: true,
             }
@@ -138,6 +139,7 @@ fn index_infix1() {
                 exit: 2,
                 start: vec![],
                 end: vec![],
+                width: 0,
                 query: vec![a, b, y],
                 finished: true,
             }

@@ -1,10 +1,8 @@
-use std::borrow::Borrow;
 use crate::*;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub(crate) struct SearchPath {
     pub(crate) start: StartPath,
-    pub(crate) inner_width: usize,
     pub(crate) end: EndPath,
 }
 impl ResultOrd for SearchPath {
@@ -23,12 +21,24 @@ impl<'a: 'g, 'g> SearchPath {
         let entry = start.entry();
         Self {
             start,
-            inner_width: 0,
             end: EndPath {
                 entry,
-                width: 0,
                 path: vec![],
             },
+        }
+    }
+    pub fn new_advanced<
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>
+    >(
+        trav: &'a Trav,
+        start: StartPath,
+    ) -> Result<Self, StartPath> {
+        let mut new = Self::new(start);
+        match new.advance_exit_pos::<_, D, _>(trav) {
+            Ok(()) => Ok(new),
+            Err(()) => Err(new.start)
         }
     }
     #[allow(unused)]
@@ -38,75 +48,37 @@ impl<'a: 'g, 'g> SearchPath {
             self.end
         )
     }
-    pub(crate) fn next_pos<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Option<usize> {
-        let location = self.get_end_location();
-        let pattern = trav.graph().expect_pattern_at(&location);
-        D::pattern_index_next(pattern, self.get_exit_pos())
-    }
 }
 impl HasStartMatchPath for SearchPath {
-    fn get_start_match_path(&self) -> StartPath {
-        self.start.clone()
+    fn start_match_path(&self) -> &StartPath {
+        &self.start
+    }
+    fn start_match_path_mut(&mut self) -> &mut StartPath {
+        &mut self.start
     }
 }
 impl HasEndMatchPath for SearchPath {
-    fn get_end_match_path(&self) -> EndPath {
-        self.end.clone()
+    fn end_match_path(&self) -> &EndPath {
+        &self.end
+    }
+    fn end_match_path_mut(&mut self) -> &mut EndPath {
+        &mut self.end
     }
 }
+//impl HasInnerWidth for SearchPath {
+//    fn inner_width(&self) -> usize {
+//        self.inner_width
+//    }
+//    fn inner_width_mut(&mut self) -> &mut usize {
+//        &mut self.inner_width
+//    }
+//}
 impl HasMatchPaths for SearchPath {
     fn into_paths(self) -> (StartPath, EndPath) {
         (self.start, self.end)
     }
 }
 impl TraversalPath for SearchPath {
-    fn reduce_end<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
-    >(mut self, trav: &'a Trav) -> SearchFoundPath {
-        let graph = trav.graph();
-        //self.reduce_end_path::<T, D>(&*graph);
-        // remove segments pointing to mismatch at pattern head
-        while let Some(location) = self.end.path.pop() {
-            let pattern = graph.expect_pattern_at(&location);
-            // skip segments at end of pattern
-            if D::pattern_index_next(pattern.borrow(), location.sub_index).is_some() {
-                self.end.path.push(location);
-                break;
-            }
-        }
-        //if self.end.path.is_empty() {
-        //    TraversalPath::move_width_into_start(&mut self);
-        //}
-        FoundPath::new::<_, D, _>(trav, self)
-    }
-    fn move_width_into_start(&mut self) {
-        *self.start.width_mut() += self.inner_width + self.end.width();
-        self.inner_width = 0;
-        *self.end.width_mut() = 0;
-    }
-    fn on_match<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
-    >(&mut self, trav: &'a Trav) {
-        let width = self.get_end::<_, D, _>(trav).width;
-        let wmut = if self.end.path().is_empty() {
-            &mut self.inner_width
-        } else {
-            self.end.width_mut()
-        };
-        *wmut += width;
-    }
 }
 impl GraphEntry for SearchPath {
     fn get_entry_location(&self) -> ChildLocation {
@@ -114,7 +86,7 @@ impl GraphEntry for SearchPath {
     }
 }
 impl HasStartPath for SearchPath {
-    fn get_start_path(&self) -> &[ChildLocation] {
+    fn start_path(&self) -> &[ChildLocation] {
         self.start.path()
     }
 }
@@ -125,7 +97,7 @@ impl GraphExit for SearchPath {
     }
 }
 impl HasEndPath for SearchPath {
-    fn get_end_path(&self) -> &[ChildLocation] {
+    fn end_path(&self) -> &[ChildLocation] {
         self.end.path()
     }
 }
@@ -173,6 +145,12 @@ impl ReduciblePath for SearchPath {
     }
 }
 impl AdvanceableExit for SearchPath {
+    fn pattern_next_exit_pos<
+        D: MatchDirection,
+        P: IntoPattern
+    >(&self, pattern: P) -> Option<usize> {
+        D::pattern_index_next(pattern, self.get_exit_pos())
+    }
     fn next_exit_pos<
         'a: 'g,
         'g,
@@ -180,12 +158,21 @@ impl AdvanceableExit for SearchPath {
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Option<usize> {
-        self.next_pos::<_, D, _>(trav)
+        let location = self.get_end_location();
+        let pattern = trav.graph().expect_pattern_at(&location);
+        self.pattern_next_exit_pos::<D, _>(pattern)
     }
 }
 impl Wide for SearchPath {
     fn width(&self) -> usize {
-        self.start.width() + self.inner_width + self.end.width()
+        self.start.width()
+        //+ self.inner_width + self.end.width()
+    }
+}
+impl WideMut for SearchPath {
+    fn width_mut(&mut self) -> &mut usize {
+        &mut self.start.width()
+        //+ self.inner_width + self.end.width()
     }
 }
 impl AdvanceablePath for SearchPath {}

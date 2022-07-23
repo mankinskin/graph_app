@@ -1,6 +1,13 @@
 use super::*;
 
-pub(crate) trait AdvanceablePath: EndPathMut + AdvanceableExit + End + PathFinished + Sized {
+pub(crate) trait AdvanceablePath:
+    EndPathMut
+    + AdvanceableExit
+    + End
+    + PathFinished
+    //+ HasEndWidth
+    + WideMut
+    + Sized {
     fn try_advance<
         'a: 'g,
         'g,
@@ -12,7 +19,8 @@ pub(crate) trait AdvanceablePath: EndPathMut + AdvanceableExit + End + PathFinis
         // skip path segments with no successors
         while let Some(mut location) = self.end_path_mut().pop() {
             let pattern = graph.expect_pattern_at(&location);
-            if let Some(next) = D::pattern_index_next(pattern, location.sub_index) {
+            if let Some(next) = D::pattern_index_next(pattern.borrow(), location.sub_index) {
+                *self.width_mut() += pattern[next].width;
                 location.sub_index = next;
                 self.push_end(location);
                 return Ok(self);
@@ -56,5 +64,74 @@ pub(crate) trait AdvanceablePath: EndPathMut + AdvanceableExit + End + PathFinis
         self.try_advance::<_, D, _>(trav)
             .map(|ad| (current, ad))
             .map_err(|_| current)
+    }
+}
+pub(crate) trait AdvanceableExit: ExitPos + ExitMut + PathFinished {
+    fn pattern_next_exit_pos<
+        D: MatchDirection,
+        P: IntoPattern,
+    >(&self, pattern: P) -> Option<usize>;
+    fn next_exit_pos<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, _trav: &'a Trav) -> Option<usize>;
+    fn advance_exit_pos<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(&mut self, trav: &'a Trav) -> Result<(), ()> {
+        if let Some(next) = self.next_exit_pos::<_, D, _>(trav) {
+            *self.exit_mut() = next;
+            Ok(())
+        } else {
+            self.set_finished();
+            Err(())
+        }
+    }
+}
+impl<M:
+    ExitMut
+    + PatternExit
+    + PathFinished
+    //+ HasInnerWidth
+    //+ HasEndWidth
+> AdvanceableExit for M {
+    fn pattern_next_exit_pos<
+        D: MatchDirection,
+        P: IntoPattern,
+    >(&self, pattern: P) -> Option<usize> {
+        D::pattern_index_next(pattern, self.get_exit_pos())
+    }
+    fn next_exit_pos<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, _trav: &'a Trav) -> Option<usize> {
+        self.pattern_next_exit_pos::<D, _>(self.get_exit_pattern())
+    }
+    fn advance_exit_pos<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(&mut self, trav: &'a Trav) -> Result<(), ()> {
+        let pattern = self.get_exit_pattern();
+        if let Some(next) = self.pattern_next_exit_pos::<D, _>(pattern.borrow()) {
+            //*self.inner_width_mut() += self.end_width();
+            //*self.end_width_mut() = pattern[next].width;
+            *self.exit_mut() = next;
+            Ok(())
+        } else {
+            self.set_finished();
+            Err(())
+        }
     }
 }

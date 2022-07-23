@@ -42,7 +42,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
         node: Self::Node,
     ) -> ControlFlow<Self::Break, Self::Continue> {
         match node {
-            MatchNode::End(found) => {
+            MatchNode::QueryEnd(found) => {
                 ControlFlow::Break(found)
             },
             MatchNode::Match(path, _, prev_query) => {
