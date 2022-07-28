@@ -111,7 +111,7 @@ fn read_prefix_postfix1() {
         assert_eq!(pats, hashset![
             vec![h, y, p, e, r, g, r, a, p, h],
         ]);
-        let pid = *ind_hypergraph.vertex(&gr).get_children().into_iter().next().unwrap().0;
+        let pid = *ind_hypergraph.vertex(&gr).get_child_patterns().into_iter().next().unwrap().0;
         assert_child_of_at(&gr, h, ind_hypergraph,
             [
                 PatternIndex::new(pid, 0),
@@ -188,7 +188,7 @@ fn read_infix1() {
         assert_eq!(pats, hashset![
             vec![s, u, b, d, i, v, i, s, i, o, n],
         ]);
-        let pid = *subdivision.vertex(&graph).get_children().into_iter().next().unwrap().0;
+        let pid = *subdivision.vertex(&graph).get_child_patterns().into_iter().next().unwrap().0;
         assert_child_of_at(&graph, s, subdivision,
             [
                 PatternIndex::new(pid, 0),

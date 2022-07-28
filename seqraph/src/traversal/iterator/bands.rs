@@ -33,7 +33,7 @@ pub(crate) trait BandIterator<
     fn next_children(trav: &'a Trav, index: Child) -> Vec<(ChildLocation, Child)> {
         P::map_batch(
             trav.graph()
-                .expect_children_of(index)
+                .expect_child_patterns_of(index)
                 .iter()
                 .map(|(pid, pattern)|
                     P::expand_band(PatternLocation::new(index, *pid), pattern.borrow())

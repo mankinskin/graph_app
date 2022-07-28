@@ -206,7 +206,7 @@ pub(crate) trait DirectedTraversalPolicy<
     ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
         trav.graph()
             .expect_vertex_data(index)
-            .get_children().iter()
+            .get_child_patterns().iter()
             .sorted_unstable_by_key(|(_, p)| p.first().unwrap().width)
             .map(|(&pid, child_pattern)| {
                 let sub_index = D::head_index(child_pattern.borrow());

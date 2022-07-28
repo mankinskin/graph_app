@@ -87,7 +87,7 @@ pub trait Indexed: Sized {
         T: Tokenize + 'a,
         Trav: Traversable<'a, 'g, T>,
     >(&'a self, trav: &'a Trav) -> ChildPatterns {
-        trav.graph().expect_children_of(self).clone()
+        trav.graph().expect_child_patterns_of(self).clone()
     }
     fn expect_child_pattern<
         'a: 'g,

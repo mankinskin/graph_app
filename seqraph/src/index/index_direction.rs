@@ -16,10 +16,12 @@ pub trait IndexDirection: MatchDirection + Clone {
         <Self as IndexDirection>::Opposite::split_context_head(context)
             .expect("Empty inner pattern!")
     }
+    // first inner, then context
     fn concat_inner_and_context(
         inner: Child,
         context: impl IntoPattern,
     ) -> Pattern;
+    // first context, then inner
     fn concat_context_and_inner(
         context: impl IntoPattern,
         inner: Child,

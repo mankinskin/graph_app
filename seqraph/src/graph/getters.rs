@@ -1,3 +1,5 @@
+use std::slice::SliceIndex;
+
 use crate::{
     vertex::*,
     search::*,
@@ -43,7 +45,7 @@ where
     ) -> Result<Pattern, NoMatch> {
         let location = location.into_pattern_location();
         let vertex = self.get_vertex_data(location.parent)?;
-        let child_patterns = vertex.get_children();
+        let child_patterns = vertex.get_child_patterns();
         child_patterns.get(&location.pattern_id).cloned()
             .ok_or(NoMatch::NoChildPatterns) // todo: better error
     }
@@ -75,12 +77,12 @@ where
         self.get_child_at(location)
             .unwrap_or_else(|_| panic!("Child not found at location {:#?}", location))
     }
-    pub fn get_children_of(
+    pub fn get_child_patterns_of(
         &self,
         index: impl Indexed,
     ) -> Result<&ChildPatterns, NoMatch> {
         self.get_vertex_data(index)
-            .map(|vertex| vertex.get_children())
+            .map(|vertex| vertex.get_child_patterns())
     }
     pub fn get_pattern_of(
         &self,
@@ -98,11 +100,11 @@ where
         self.expect_vertex_data(index)
             .expect_child_pattern(&pid)
     }
-    pub fn expect_children_of(
+    pub fn expect_child_patterns_of(
         &self,
         index: impl Indexed,
     ) -> &ChildPatterns {
-        self.expect_vertex_data(index).get_children()
+        self.expect_vertex_data(index).get_child_patterns()
     }
     pub fn expect_vertex_mut(
         &mut self,
@@ -387,6 +389,32 @@ where
     ) -> PatternIndex {
         self.get_common_pattern_in_parent(pattern, parent)
             .expect("No common pattern in parent for children.")
+    }
+    pub fn get_child_pattern_range<R: PatternRangeIndex>(
+        &'a self,
+        id: impl IntoPatternLocation,
+        range: R,
+    ) -> Result<&'a <R as SliceIndex<[Child]>>::Output, NoMatch> {
+        let loc = id.into_pattern_location();
+        self
+            .get_vertex_data(loc.parent)?
+            .get_child_pattern_range(
+                &loc.pattern_id,
+                range,
+            )
+    }
+    pub fn expect_child_pattern_range<R: PatternRangeIndex>(
+        &'a self,
+        id: impl IntoPatternLocation,
+        range: R,
+    ) -> &'a <R as SliceIndex<[Child]>>::Output {
+        let loc = id.into_pattern_location();
+        self
+            .expect_vertex_data(loc.parent)
+            .expect_child_pattern_range(
+                &loc.pattern_id,
+                range,
+            )
     }
 }
 impl<'t, 'a, T> Hypergraph<T>

@@ -20,10 +20,21 @@ pub(crate) trait IndexSide<D: IndexDirection> {
         C: AsRef<[Child]>,
         I: AsRef<[Child]>
     >(context: &'a C, inner: &'a I) -> (&'a [Child], &'a [Child]);
+    /// inner index and outer context
     fn concat_inner_and_context(
         inner: Child,
         context: impl IntoPattern,
     ) -> Pattern;
+    /// inner index and inner context
+    fn concat_inner_and_inner_context(
+        inner: Child,
+        inner_context: impl IntoPattern,
+    ) -> Pattern {
+        Self::Opposite::concat_inner_and_context(
+            inner,
+            inner_context
+        )
+    }
     fn inner_range(pos: usize) -> Self::InnerRange;
     fn split_at_border(pos: usize, pattern: impl IntoPattern) -> bool;
     fn inner_context_range(pos: usize) -> OppositeContextRange<D, Self> {

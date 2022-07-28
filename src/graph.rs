@@ -388,7 +388,7 @@ impl NodeVis {
         node_indices: &HashMap<VertexKey<T>, NodeIndex>,
         data: &VertexData,
     ) -> ChildPatternsVis {
-        data.get_children()
+        data.get_child_patterns()
             .iter()
             .map(|(&id, pat)| {
                 (

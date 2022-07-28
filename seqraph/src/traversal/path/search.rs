@@ -171,7 +171,7 @@ impl Wide for SearchPath {
 }
 impl WideMut for SearchPath {
     fn width_mut(&mut self) -> &mut usize {
-        &mut self.start.width()
+        self.start.width_mut()
         //+ self.inner_width + self.end.width()
     }
 }

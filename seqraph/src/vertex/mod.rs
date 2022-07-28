@@ -42,7 +42,7 @@ pub type IndexPosition = usize;
 pub type IndexPattern = Vec<VertexIndex>;
 pub type VertexPatternView<'a> = Vec<&'a VertexData>;
 
-pub(crate) fn clone_child_patterns(children: &'_ ChildPatterns) -> impl IntoIterator<Item=Pattern> + '_ {
+pub(crate) fn clone_child_patterns(children: &'_ ChildPatterns) -> impl Iterator<Item=Pattern> + '_ {
     children.iter().map(|(_, p)| p.clone())
 }
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
@@ -122,6 +122,15 @@ impl VertexData {
                 pattern::get_child_pattern_range(id, p.borrow(), range.clone())
             )
     }
+    pub fn expect_child_pattern_range<'a, R: PatternRangeIndex>(
+        &'a self,
+        id: &PatternId,
+        range: R,
+    ) -> &'a <R as SliceIndex<[Child]>>::Output {
+        let p = self.expect_child_pattern(id);
+        pattern::get_child_pattern_range(id, p.borrow(), range.clone())
+            .expect("Range in pattern")
+    }
     pub fn get_child_pattern_position(
         &self,
         id: &PatternId,
@@ -181,17 +190,17 @@ impl VertexData {
         self.get_child_pattern_mut(id)
             .unwrap_or_else(|_| panic!("Child pattern with id {} does not exist in in vertex", id,))
     }
-    pub fn get_children(&self) -> &ChildPatterns {
+    pub fn get_child_patterns(&self) -> &ChildPatterns {
         &self.children
     }
-    pub fn get_child_patterns(&'_ self) -> impl IntoIterator<Item=Pattern> + '_ {
+    pub fn get_child_pattern_iter(&'_ self) -> impl Iterator<Item=Pattern> + '_ {
         clone_child_patterns(&self.children)
     }
     pub fn get_child_pattern_set(&self) -> HashSet<Pattern> {
-        self.get_child_patterns().into_iter().collect()
+        self.get_child_pattern_iter().into_iter().collect()
     }
     pub fn get_child_pattern_vec(&self) -> Vec<Pattern> {
-        self.get_child_patterns().into_iter().collect()
+        self.get_child_pattern_iter().into_iter().collect()
     }
     pub fn add_pattern_no_update(
         &mut self,
@@ -258,8 +267,7 @@ impl VertexData {
         &self,
         g: &Hypergraph<T>,
     ) -> Vec<Vec<String>> {
-        self.get_children()
-            .values()
+        self.get_child_pattern_iter()
             .map(|pat| {
                 pat.iter()
                     .map(|c| g.index_string(c.index))
