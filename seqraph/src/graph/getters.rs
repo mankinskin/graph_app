@@ -31,6 +31,7 @@ where
             .get_index_mut(index.index())
             .ok_or(NoMatch::UnknownIndex)
     }
+    #[track_caller]
     pub fn expect_vertex(
         &self,
         index: impl Indexed,
@@ -49,6 +50,7 @@ where
         child_patterns.get(&location.pattern_id).cloned()
             .ok_or(NoMatch::NoChildPatterns) // todo: better error
     }
+    #[track_caller]
     pub fn expect_pattern_at(
         &self,
         location: impl IntoPatternLocation,
@@ -69,6 +71,7 @@ where
             .cloned()
             .ok_or(NoMatch::NoChildPatterns) // todo: better error
     }
+    #[track_caller]
     pub fn expect_child_at(
         &self,
         location: impl IntoChildLocation,
@@ -92,6 +95,7 @@ where
         self.get_vertex_data(index)
             .and_then(|vertex| vertex.get_child_pattern(&pid))
     }
+    #[track_caller]
     pub fn expect_pattern_of(
         &self,
         index: impl Indexed,
@@ -100,12 +104,14 @@ where
         self.expect_vertex_data(index)
             .expect_child_pattern(&pid)
     }
+    #[track_caller]
     pub fn expect_child_patterns_of(
         &self,
         index: impl Indexed,
     ) -> &ChildPatterns {
         self.expect_vertex_data(index).get_child_patterns()
     }
+    #[track_caller]
     pub fn expect_vertex_mut(
         &mut self,
         index: impl Indexed,
@@ -120,6 +126,7 @@ where
     ) -> Result<&VertexKey<T>, NoMatch> {
         self.get_vertex(index).map(|entry| entry.0)
     }
+    #[track_caller]
     pub fn expect_vertex_key(
         &self,
         index: impl Indexed,
@@ -138,12 +145,14 @@ where
     ) -> Result<&mut VertexData, NoMatch> {
         self.get_vertex_mut(index).map(|(_, v)| v)
     }
+    #[track_caller]
     pub fn expect_vertex_data(
         &self,
         index: impl Indexed,
     ) -> &VertexData {
         self.expect_vertex(index).1
     }
+    #[track_caller]
     pub fn expect_vertex_data_mut(
         &mut self,
         index: impl Indexed,
@@ -162,12 +171,14 @@ where
     ) -> Result<&mut VertexData, NoMatch> {
         self.graph.get_mut(key).ok_or(NoMatch::UnknownKey)
     }
+    #[track_caller]
     pub fn expect_vertex_data_by_key(
         &self,
         key: &VertexKey<T>,
     ) -> &VertexData {
         self.graph.get(key).expect("Key does not exist")
     }
+    #[track_caller]
     pub fn expect_vertex_data_by_key_mut(
         &mut self,
         key: &VertexKey<T>,
@@ -189,6 +200,7 @@ where
     pub fn vertex_data_iter_mut(&mut self) -> impl Iterator<Item = &mut VertexData> {
         self.graph.values_mut()
     }
+    #[track_caller]
     pub fn expect_vertices(
         &self,
         indices: impl Iterator<Item = impl Indexed>,
@@ -223,6 +235,7 @@ where
     ) -> Result<VertexIndex, NoMatch> {
         self.graph.get_index_of(key).ok_or(NoMatch::UnknownKey)
     }
+    #[track_caller]
     pub fn expect_index_by_key(
         &self,
         key: &VertexKey<T>,
@@ -241,12 +254,14 @@ where
     ) -> Result<Child, NoMatch> {
         self.get_token_index(token).map(|i| Child::new(i, 1))
     }
+    #[track_caller]
     pub fn expect_token_index(
         &self,
         token: impl AsToken<T>,
     ) -> VertexIndex {
         self.expect_index_by_key(&VertexKey::Token(token.as_token()))
     }
+    #[track_caller]
     pub fn expect_token_child(
         &self,
         token: impl AsToken<T>,
@@ -284,6 +299,7 @@ where
         self.to_token_children_iter(tokens)
             .collect::<Result<Pattern, _>>()
     }
+    #[track_caller]
     pub fn expect_token_pattern(
         &self,
         tokens: impl IntoIterator<Item = impl AsToken<T>>,
@@ -303,6 +319,7 @@ where
         }
         Ok(v)
     }
+    #[track_caller]
     pub fn expect_parent(
         &self,
         index: impl Indexed,
@@ -310,6 +327,7 @@ where
     ) -> &Parent {
         self.expect_vertex_data(index).expect_parent(parent)
     }
+    #[track_caller]
     pub fn expect_parent_mut(
         &mut self,
         index: impl Indexed,
@@ -317,12 +335,14 @@ where
     ) -> &mut Parent {
         self.expect_vertex_data_mut(index).expect_parent_mut(parent)
     }
+    #[track_caller]
     pub fn expect_parents(
         &self,
         index: impl Indexed,
     ) -> &VertexParents {
         self.expect_vertex_data(index).get_parents()
     }
+    #[track_caller]
     pub fn expect_parents_mut(
         &mut self,
         index: impl Indexed,
@@ -382,6 +402,7 @@ where
             })
             .ok_or(NoMatch::NoChildPatterns)
     }
+    #[track_caller]
     pub fn expect_common_pattern_in_parent(
         &self,
         pattern: impl IntoIterator<Item = impl Indexed>,
@@ -403,6 +424,7 @@ where
                 range,
             )
     }
+    #[track_caller]
     pub fn expect_child_pattern_range<R: PatternRangeIndex>(
         &'a self,
         id: impl IntoPatternLocation,

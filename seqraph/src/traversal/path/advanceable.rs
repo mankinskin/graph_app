@@ -5,8 +5,7 @@ pub(crate) trait AdvanceablePath:
     + AdvanceableExit
     + End
     + PathFinished
-    //+ HasEndWidth
-    + WideMut
+    + AdvanceableWidth
     + Sized {
     fn try_advance<
         'a: 'g,
@@ -20,7 +19,7 @@ pub(crate) trait AdvanceablePath:
         while let Some(mut location) = self.end_path_mut().pop() {
             let pattern = graph.expect_pattern_at(&location);
             if let Some(next) = D::pattern_index_next(pattern.borrow(), location.sub_index) {
-                *self.width_mut() += pattern[next].width;
+                self.advance_width(pattern[next].width);
                 location.sub_index = next;
                 self.push_end(location);
                 return Ok(self);
@@ -64,6 +63,14 @@ pub(crate) trait AdvanceablePath:
         self.try_advance::<_, D, _>(trav)
             .map(|ad| (current, ad))
             .map_err(|_| current)
+    }
+}
+pub(crate) trait AdvanceableWidth {
+    fn advance_width(&mut self, width: usize);
+}
+impl <T: WideMut> AdvanceableWidth for T {
+    fn advance_width(&mut self, width: usize) {
+        *self.width_mut() += width;
     }
 }
 pub(crate) trait AdvanceableExit: ExitPos + ExitMut + PathFinished {
@@ -122,11 +129,9 @@ impl<M:
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
-    >(&mut self, trav: &'a Trav) -> Result<(), ()> {
+    >(&mut self, _trav: &'a Trav) -> Result<(), ()> {
         let pattern = self.get_exit_pattern();
         if let Some(next) = self.pattern_next_exit_pos::<D, _>(pattern.borrow()) {
-            //*self.inner_width_mut() += self.end_width();
-            //*self.end_width_mut() = pattern[next].width;
             *self.exit_mut() = next;
             Ok(())
         } else {

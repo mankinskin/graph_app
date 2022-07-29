@@ -139,8 +139,6 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
         &'a mut self,
         path: SearchPath,
     ) -> Child {
-        let start_width = path.start.width();
-        //let end_width = path.end.width();
         let entry_pos = path.start.get_entry_pos();
         let exit_pos = path.end.get_exit_pos();
         let location = path.start.entry();
@@ -171,36 +169,30 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
         let head_pos = D::head_index(pattern.borrow());
         let last_pos = D::last_index(pattern.borrow());
 
-        let head = pattern[head_pos];
-        let last = pattern[last_pos];
+        let head_split = SideIndexable::<_, D, IndexBack>::single_path_split(
+            &mut *graph,
+            path.start.path().to_vec()
+        ).map(|split| (
+            split.inner,
+            SideIndexable::<_, D, IndexBack>::context_path(
+                &mut *graph,
+                split.location,
+                split.path,
+            )
+        ));
+        let last_split =
+            SideIndexable::<_, D, IndexFront>::single_path_split(
+                &mut *graph,
+                path.end.path().to_vec()
+            ).map(|split| (
+                split.inner,
+                SideIndexable::<_, D, IndexFront>::context_path(
+                    &mut *graph,
+                    split.location,
+                    split.path,
+                )
+            ));
 
-        let head_split = <IndexBack as IndexSide<D>>::inner_width_to_offset(&head, start_width)
-            .map(|offset| {
-                let head_split = SideIndexable::<_, D, IndexBack>::single_offset_split(
-                    &mut *graph,
-                    head,
-                    offset,
-                ).unwrap();
-                let head_context = SideIndexable::<_, D, IndexBack>::context_path(
-                    &mut *graph,
-                    head_split.location,
-                    head_split.path,
-                );
-                (head_split.inner, head_context)
-            });
-        let last_split = <IndexFront as IndexSide<D>>::inner_width_to_offset(&last, end_width).map(|offset| {
-            let last_split = SideIndexable::<_, D, IndexFront>::single_offset_split(
-                &mut *graph,
-                last,
-                offset,
-            ).unwrap();
-            let last_context = SideIndexable::<_, D, IndexFront>::context_path(
-                &mut *graph,
-                last_split.location,
-                last_split.path,
-            );
-            (last_split.inner, last_context)
-        });
         match (head_split, last_split) {
             (Some((head_inner, head_context)), Some((last_inner, last_context))) => {
                 let inner = graph.index_range_in(

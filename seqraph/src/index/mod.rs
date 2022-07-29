@@ -43,6 +43,7 @@ where
     }
 }
 
+#[derive(Debug, Clone)]
 pub(crate) struct IndexSplitResult {
     inner: Child,
     location: ChildLocation,

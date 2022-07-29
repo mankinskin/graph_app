@@ -8,7 +8,6 @@ pub struct QueryRangePath {
     pub(crate) start: ChildPath,
     pub(crate) exit: usize,
     pub(crate) end: ChildPath,
-    pub(crate) width: usize,
     pub(crate) finished: bool,
 }
 impl<
@@ -23,7 +22,6 @@ impl<
             query,
             start: vec![],
             end: vec![],
-            width: 0,
             finished: true
         }
     }
@@ -42,7 +40,6 @@ impl<
                     start: vec![],
                     exit: entry,
                     end: vec![],
-                    width: 0,
                     finished: false
                 })
         }
@@ -61,7 +58,6 @@ impl QueryPath for QueryRangePath {
             query,
             start: vec![],
             end: vec![],
-            width: 0,
             finished: true,
         }
     }
@@ -144,14 +140,18 @@ impl ReduciblePath for QueryRangePath {
         }
     }
 }
-impl Wide for QueryRangePath {
-    fn width(&self) -> usize {
-        self.width
-    }
-}
-impl WideMut for QueryRangePath {
-    fn width_mut(&mut self) -> &mut usize {
-        &mut self.width
-    }
-}
+//impl Wide for QueryRangePath {
+//    fn width(&self) -> usize {
+//        self.width
+//    }
+//}
+//impl WideMut for QueryRangePath {
+//    fn width_mut(&mut self) -> &mut usize {
+//        &mut self.width
+//    }
+//}
 impl AdvanceablePath for QueryRangePath {}
+impl AdvanceableWidth for QueryRangePath {
+    fn advance_width(&mut self, _width: usize) {
+    }
+}

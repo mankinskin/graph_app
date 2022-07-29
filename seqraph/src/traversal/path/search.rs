@@ -166,13 +166,11 @@ impl AdvanceableExit for SearchPath {
 impl Wide for SearchPath {
     fn width(&self) -> usize {
         self.start.width()
-        //+ self.inner_width + self.end.width()
     }
 }
 impl WideMut for SearchPath {
     fn width_mut(&mut self) -> &mut usize {
         self.start.width_mut()
-        //+ self.inner_width + self.end.width()
     }
 }
 impl AdvanceablePath for SearchPath {}

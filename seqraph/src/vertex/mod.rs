@@ -94,12 +94,14 @@ impl VertexData {
             .get_mut(&index)
             .ok_or(NoMatch::NoMatchingParent(index))
     }
+    #[track_caller]
     pub fn expect_parent(
         &self,
         index: impl Indexed,
     ) -> &Parent {
         self.get_parent(index).unwrap()
     }
+    #[track_caller]
     pub fn expect_parent_mut(
         &mut self,
         index: impl Indexed,
@@ -122,6 +124,7 @@ impl VertexData {
                 pattern::get_child_pattern_range(id, p.borrow(), range.clone())
             )
     }
+    #[track_caller]
     pub fn expect_child_pattern_range<'a, R: PatternRangeIndex>(
         &'a self,
         id: &PatternId,
@@ -148,6 +151,7 @@ impl VertexData {
         self.children.get(id)
             .ok_or(NoMatch::InvalidPattern(*id))
     }
+    #[track_caller]
     pub fn expect_pattern_len(
         &self,
         id: &PatternId,
@@ -166,12 +170,14 @@ impl VertexData {
     ) -> Result<&mut Pattern, NoMatch> {
         self.children.get_mut(id).ok_or(NoMatch::NoChildPatterns)
     }
+    #[track_caller]
     pub fn expect_any_pattern(&self) -> (&PatternId, &Pattern) {
         self.children
             .iter()
             .next()
             .unwrap_or_else(|| panic!("Pattern vertex has no children {:#?}", self,))
     }
+    #[track_caller]
     pub fn expect_child_pattern(
         &self,
         id: &PatternId,
@@ -183,6 +189,7 @@ impl VertexData {
             )
         })
     }
+    #[track_caller]
     pub fn expect_child_pattern_mut(
         &mut self,
         id: &PatternId,

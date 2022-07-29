@@ -140,7 +140,7 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
     type InnerRange = Range<usize>;
     type ContextRange = RangeFrom<usize>;
     fn inner_range(pos: usize) -> Self::InnerRange {
-        0..pos
+        0..D::index_next(pos).unwrap()
     }
     fn context_range(pos: usize) -> Self::ContextRange {
         D::index_next(pos).unwrap()..
