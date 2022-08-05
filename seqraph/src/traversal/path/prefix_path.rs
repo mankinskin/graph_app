@@ -123,3 +123,46 @@ impl WideMut for PrefixPath {
     }
 }
 impl AdvanceablePath for PrefixPath {}
+
+
+#[cfg(test)]
+mod tests {
+    use std::borrow::Borrow;
+
+    use super::PrefixPath;
+    use crate::{index::Right, Hypergraph, Token, traversal::AdvanceablePath};
+    use itertools::Itertools;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn prefix_path_reconstruct1() {
+        let mut graph = Hypergraph::new();
+        let (a, b, c, d, e, f, g) = graph.index_tokens([
+            Token::Element('a'),
+            Token::Element('b'),
+            Token::Element('c'),
+            Token::Element('d'),
+            Token::Element('e'),
+            Token::Element('f'),
+            Token::Element('g'),
+        ]).into_iter().next_tuple().unwrap();
+
+        let pattern = vec![c,d,d,e,f,g,a,c,d,e,f,a,g,f,g,g,e,d,b,d];
+        let mut path = PrefixPath::new_directed::<Right, _>(pattern.borrow()).unwrap();
+        let mut rec = vec![];
+        loop {
+            match path.try_get_advance::<_, Right, _>(&graph) {
+                Ok((next, adv)) => {
+                    path = adv;
+                    rec.push(next);
+                    continue
+                },
+                Err(next) => {
+                    rec.push(next);
+                    break
+                }
+            }
+        }
+        assert_eq!(rec, pattern);
+    }
+}
