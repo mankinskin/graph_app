@@ -5,13 +5,13 @@ use super::*;
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
 pub(crate) enum MatchEnd {
     Path(StartPath),
-    Full(Child),
+    Complete(Child),
 }
 impl MatchEnd {
     pub fn root(&self) -> Child {
         match self {
             MatchEnd::Path(start) => start.entry().parent,
-            MatchEnd::Full(c) => *c,
+            MatchEnd::Complete(c) => *c,
         }
     }
 }
@@ -31,7 +31,7 @@ impl PathAppend for MatchEnd {
     >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
         match self {
             MatchEnd::Path(path) => path.append::<_, D, _>(trav, parent_entry),
-            MatchEnd::Full(child) => StartLeaf {
+            MatchEnd::Complete(child) => StartLeaf {
                 entry: parent_entry,
                 width: child.width(),
                 child,

@@ -105,8 +105,6 @@ impl<M:
     ExitMut
     + PatternExit
     + PathFinished
-    //+ HasInnerWidth
-    //+ HasEndWidth
 > AdvanceableExit for M {
     fn pattern_next_exit_pos<
         D: MatchDirection,

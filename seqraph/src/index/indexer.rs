@@ -43,7 +43,7 @@ impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Q: IndexingQuery> DirectedTrave
         ) {
             MatchEnd::Path(StartPath::Leaf(StartLeaf { entry, child: post, width: path.width() }))
         } else {
-            MatchEnd::Full(entry.parent)
+            MatchEnd::Complete(entry.parent)
         }
     }
 }
@@ -260,26 +260,15 @@ impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
             _ty: Default::default(),
         }
     }
-    pub(crate) fn index_prefix(
+    pub(crate) fn index_pattern(
         &mut self,
-        pattern: impl IntoPattern,
-    ) -> Result<(Child, QueryRangePath), NoMatch> {
-        self.indexing::<Bft<_, _, _, _, _>, Indexing<T, D, QueryRangePath>, _>(pattern)
-    }
-    /// creates an IndexingNode::Parent for each parent of root, extending its start path
-    fn indexing<
-        Ti: TraversalIterator<'a, 'g, T, Self, D, QueryRangePath, S>,
-        S: IndexingTraversalPolicy<'a, 'g, T, D, QueryRangePath>,
-        P: IntoPattern,
-    >(
-        &'a mut self,
-        query: P,
+        query: impl IntoPattern,
     ) -> Result<(Child, QueryRangePath), NoMatch> {
         let query = query.into_pattern();
         let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())?;
-        self.path_indexing::<_, Ti, S>(query_path)
+        self.index_query(query_path)
     }
-    pub(crate) fn index_path_prefix<
+    pub(crate) fn index_query<
         Q: IndexingQuery,
     >(
         &mut self,
@@ -295,17 +284,18 @@ impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
         &'a mut self,
         query_path: Q,
     ) -> Result<(Child, Q), NoMatch> {
-        let mut visited = HashSet::new();
+        let mut visited = Vec::new();
         match Ti::new(self, TraversalNode::query_node(query_path))
             .try_fold(
                 None,
-                |acc, (_, node)| {
-                    if visited.contains(&node) {
-                        panic!("cycle detected")
+                |acc, (depth, node)| {
+                    if visited.iter().find(|(_, n)| *n == node).is_some() {
+                        //panic!("cycle detected")
+                        ControlFlow::Continue(acc)
                     } else {
-                        visited.insert(node.clone());
+                        visited.push((depth, node.clone()));
+                        S::Folder::fold_found(self, acc, node)
                     }
-                    S::Folder::fold_found(self, acc, node)
                 }
             )
         {

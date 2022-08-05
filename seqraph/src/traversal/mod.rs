@@ -60,7 +60,7 @@ pub(crate) enum FoundPath<P: TraversalPath> {
 impl From<MatchEnd> for FoundPath<SearchPath> {
     fn from(match_end: MatchEnd) -> Self {
         match match_end {
-            MatchEnd::Full(c) => FoundPath::Complete(c),
+            MatchEnd::Complete(c) => FoundPath::Complete(c),
             MatchEnd::Path(path) => FoundPath::Range(SearchPath::from(path)),
         }
     }

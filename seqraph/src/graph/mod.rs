@@ -72,6 +72,9 @@ impl<T: Tokenize> Default for Hypergraph<T> {
     }
 }
 impl<'t, 'a, T: Tokenize> Hypergraph<T> {
+    pub fn new() -> Self {
+        Self::default()
+    }
     pub fn index_width(
         &self,
         index: &impl Indexed,

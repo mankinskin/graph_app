@@ -27,19 +27,19 @@ where
     pub fn indexer(&self) -> Indexer<T, Right> {
         Indexer::new(self.clone())
     }
-    pub fn index_prefix(
+    pub fn index_pattern(
         &self,
         pattern: impl IntoPattern,
     ) -> Result<(Child, QueryRangePath), NoMatch> {
-        self.indexer().index_prefix(pattern)
+        self.indexer().index_pattern(pattern)
     }
-    pub(crate) fn index_path_prefix<
+    pub(crate) fn index_query<
         Q: IndexingQuery
     >(
         &self,
         query: Q,
     ) -> Result<(Child, Q), NoMatch> {
-        self.indexer().index_path_prefix(query)
+        self.indexer().index_query(query)
     }
 }
 

@@ -103,7 +103,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         }
     }
     fn get_next(&mut self, context: PrefixPath) -> (Child, PrefixPath) {
-        match self.indexer().index_path_prefix(context.clone()) {
+        match self.indexer().index_query(context.clone()) {
             Ok((index, query)) => (index, query),
             Err(_) => context.get_advance::<_, D, _>(self),
         }
@@ -126,7 +126,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                 }
                 let start_bound = end_bound - postfix.width();
                 let old = bands.remove(&start_bound);
-                match self.graph.index_path_prefix(OverlapPrimer::new(postfix, context.clone().into_advanced::<_, D, _>(self))) {
+                match self.graph.index_query(OverlapPrimer::new(postfix, context.clone().into_advanced::<_, D, _>(self))) {
                     Ok((expansion, advanced)) => {
                         // expanded
                         match bundle.len() {
