@@ -74,12 +74,11 @@ fn find_parent1() {
         Ok(QueryFound {
             found: FoundPath::Complete(*abc),
             query: QueryRangePath {
-                exit: query.len() - 2,
+                exit: query.len() - 1,
                 query,
                 entry: 0,
                 start: vec![],
                 end: vec![],
-                finished: false,
             },
         }),
         "a_b_c_c"
@@ -161,12 +160,11 @@ fn find_ancestor1() {
         Ok(QueryFound {
             found: FoundPath::Complete(*abc),
             query: QueryRangePath {
-                exit: query.len() - 2,
+                exit: query.len() - 1,
                 query,
                 entry: 0,
                 start: vec![],
                 end: vec![],
-                finished: false,
             },
         }),
         "a_b_c_c"
@@ -217,14 +215,7 @@ fn find_ancestor2() {
                         .to_child_location(1),
                 },
             }),
-            query: QueryRangePath {
-                exit: query.len() - 1,
-                query,
-                entry: 0,
-                start: vec![],
-                end: vec![],
-                finished: true,
-            },
+            query: QueryRangePath::complete(query),
         }),
         "by_z"
     );
@@ -274,14 +265,7 @@ fn find_ancestor3() {
                         .to_child_location(1),
                 },
             }),
-            query: QueryRangePath {
-                exit: query.len() - 1,
-                query,
-                entry: 0,
-                start: vec![],
-                end: vec![],
-                finished: true,
-            },
+            query: QueryRangePath::complete(query),
         }),
         "ab_y"
     );

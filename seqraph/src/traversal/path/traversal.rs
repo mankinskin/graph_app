@@ -3,7 +3,6 @@ use std::hash::Hash;
 
 pub(crate) trait TraversalQuery:
     AdvanceablePath
-    + PathFinished
     + Debug
     + Clone
     + Hash
@@ -13,7 +12,6 @@ pub(crate) trait TraversalQuery:
 impl<
     T: AdvanceablePath
         + ReduciblePath
-        + PathFinished
         + Debug
         + Clone
         + Hash
@@ -28,7 +26,6 @@ pub(crate) trait TraversalPath:
     + GraphEnd
     + PathComplete
     + HasMatchPaths
-    //+ HasInnerWidth
     + Wide
     + WideMut
     + Debug
@@ -41,7 +38,6 @@ pub(crate) trait TraversalPath:
         Trav: Traversable<'a, 'g, T>,
     >(mut self, trav: &'a Trav) -> FoundPath<Self> {
         let graph = trav.graph();
-        //self.reduce_end_path::<T, D>(&*graph);
         // remove segments pointing to mismatch at pattern head
         while let Some(location) = self.end_path_mut().pop() {
             let pattern = graph.expect_pattern_at(&location);
@@ -51,17 +47,9 @@ pub(crate) trait TraversalPath:
                 break;
             }
         }
-        //if self.end_path().is_empty() {
-        //    TraversalPath::move_width_into_start(&mut self);
-        //}
         FoundPath::new::<_, D, _>(trav, self)
     }
 
-    //fn move_width_into_start(&mut self) {
-    //    *self.width_mut() += self.inner_width() + self.end_width();
-    //    *self.inner_width_mut() = 0;
-    //    *self.end_width_mut() = 0;
-    //}
     fn add_match_width<
         'a: 'g,
         'g,
@@ -69,20 +57,10 @@ pub(crate) trait TraversalPath:
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&mut self, trav: &'a Trav) {
-        let width = self.get_end::<_, D, _>(trav).width;
-        let wmut = self.width_mut();
-        //if
-        ////D::index_next(self.get_entry_pos())
-        ////    .map(|i| i == self.get_exit_pos())
-        ////    .unwrap_or_default() &&
-        //    self.end_path().is_empty()
-        //{
-        //    //self.inner_width_mut()
-        //} else {
-        //    // match is somewhere at end path
-        //    self.width_mut()
-        //};
-        *wmut += width;
+        if let Some(end) = self.get_end::<_, D, _>(trav) {
+            let wmut = self.width_mut();
+            *wmut += end.width;
+        }
     }
 }
 
@@ -154,7 +132,7 @@ impl<
             Self::QueryMajor(query, path) => {
                 TraversalResult::new(
                     FoundPath::new::<_, D, _>(trav, path.reduce_mismatch::<_, D, _>(trav)),
-                    query.reduce_mismatch::<_, D, _>(trav),
+                    query,
                 )
             }
         }

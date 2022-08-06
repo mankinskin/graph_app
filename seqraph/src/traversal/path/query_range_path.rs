@@ -8,7 +8,6 @@ pub struct QueryRangePath {
     pub(crate) start: ChildPath,
     pub(crate) exit: usize,
     pub(crate) end: ChildPath,
-    pub(crate) finished: bool,
 }
 impl<
     'a: 'g,
@@ -22,7 +21,6 @@ impl<
             query,
             start: vec![],
             end: vec![],
-            finished: true
         }
     }
     pub fn new_directed<
@@ -35,13 +33,12 @@ impl<
             0 => Err(NoMatch::EmptyPatterns),
             1 => Err(NoMatch::SingleIndex),
             _ => Ok(Self {
-                    query,
-                    entry,
-                    start: vec![],
-                    exit: entry,
-                    end: vec![],
-                    finished: false
-                })
+                query,
+                entry,
+                start: vec![],
+                exit: entry,
+                end: vec![],
+            })
         }
     }
 }
@@ -54,11 +51,10 @@ impl QueryPath for QueryRangePath {
         let query = query.into_pattern();
         Self {
             entry: 0,
-            exit: query.len() - 1,
+            exit: query.len(),
             query,
             start: vec![],
             end: vec![],
-            finished: true,
         }
     }
 }
@@ -94,14 +90,6 @@ impl HasEndPath for QueryRangePath {
     }
 }
 impl PatternEnd for QueryRangePath {}
-impl PathFinished for QueryRangePath {
-    fn is_finished(&self) -> bool {
-        self.finished
-    }
-    fn set_finished(&mut self) {
-        self.finished = true;
-    }
-}
 impl EndPathMut for QueryRangePath {
     fn end_path_mut(&mut self) -> &mut ChildPath {
         &mut self.end
@@ -119,7 +107,7 @@ impl End for QueryRangePath {
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Child {
+    >(&self, trav: &'a Trav) -> Option<Child> {
         self.get_pattern_end(trav)
     }
 }
@@ -140,16 +128,6 @@ impl ReduciblePath for QueryRangePath {
         }
     }
 }
-//impl Wide for QueryRangePath {
-//    fn width(&self) -> usize {
-//        self.width
-//    }
-//}
-//impl WideMut for QueryRangePath {
-//    fn width_mut(&mut self) -> &mut usize {
-//        &mut self.width
-//    }
-//}
 impl AdvanceablePath for QueryRangePath {}
 impl AdvanceableWidth for QueryRangePath {
     fn advance_width(&mut self, _width: usize) {

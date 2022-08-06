@@ -40,50 +40,59 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         self.root.unwrap()
     }
     fn read_known(&mut self, known: Pattern) {
-        match known.len() {
-            0 => {},
-            1 => self.append_to_root(known),
-            _ => if let Ok(known) = PrefixPath::new_directed::<D, _>(known)
-                .and_then(|path| self.read_context_path(path))
-            {
-                self.append_to_root(known);
-            }
+        if let Ok(known) = PrefixPath::new_directed::<D, _>(known.borrow())
+            .and_then(|path| self.read_context_path(path))
+            .or_else(|err|
+                (err == NoMatch::SingleIndex)
+                    .then(|| known)
+                    .ok_or(())
+            )
+        {
+            self.append_to_root(known);
         }
     }
-    fn read_context_path(&mut self, context: PrefixPath) -> Result<Pattern, NoMatch> {
+    fn read_context_path(&mut self, mut context: PrefixPath) -> Result<Pattern, NoMatch> {
         let mut bands = ReadingBands::new();
         let mut end_bound = 0;
-        let (mut next, mut context) = self.get_next(context);
-        while !context.is_finished() {
-            if next.width() == 1 {
-                end_bound = self.append_index(&mut bands, end_bound, next);
-                let (next_index, advanced) = self.get_next(context);
-                next = next_index;
-                context = advanced;
+        let mut last = self.get_next(&mut context).unwrap();
+        while !context.is_finished(self) {
+            if last.width() == 1 {
+                end_bound = self.append_index(&mut bands, end_bound, last);
+                last = self.get_next(&mut context).unwrap();
             } else {
-                match self.overlap_index_path(&mut bands, end_bound, next, &context) {
+                match self.overlap_index_path(&mut bands, end_bound, last, &context) {
                     Some((
                         expansion,
                         next_bound,
                         advanced,
                     )) => {
                         // expanded, continue overlapping
-                        next = expansion;
+                        last = expansion;
                         end_bound = next_bound;
                         context = advanced;
                     },
                     None => {
-                        // no overlap found, continue after last band
-                        self.append_index(&mut bands, end_bound, next);
-                        context = context.into_advanced::<_, D, _>(self);
-                        let (next_index, advanced) = self.get_next(context);
-                        next = next_index;
-                        context = advanced;
+                        self.append_index(&mut bands, end_bound, last);
+                        last = context.advance::<_, D, _>(self).unwrap();
+                        if let Some(next) = self.get_next(&mut context) {
+                            last = next;
+                        }
                     }
                 }
             }
         }
-        Ok(self.close_bands(&mut bands, end_bound, next))
+        Ok(self.close_bands(&mut bands, end_bound, last))
+    }
+    fn get_next(&mut self, context: &mut PrefixPath) -> Option<Child> {
+        match self.indexer().index_query(context.clone()) {
+            Ok((index, advanced)) => {
+                *context = advanced;
+                Some(index)
+            },
+            Err(_) => {
+                context.advance::<_, D, _>(self)
+            }
+        }
     }
     fn expand_bands(bands: &mut ReadingBands, end_bound: usize, next: Child) -> usize {
         let (end_bound, band) = if let Some(old) = bands.remove(&end_bound) {
@@ -100,12 +109,6 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             end_bound
         } else {
             Self::expand_bands(bands, end_bound, index)
-        }
-    }
-    fn get_next(&mut self, context: PrefixPath) -> (Child, PrefixPath) {
-        match self.indexer().index_query(context.clone()) {
-            Ok((index, query)) => (index, query),
-            Err(_) => context.get_advance::<_, D, _>(self),
         }
     }
     fn overlap_index_path(
@@ -126,7 +129,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                 }
                 let start_bound = end_bound - postfix.width();
                 let old = bands.remove(&start_bound);
-                match self.graph.index_query(OverlapPrimer::new(postfix, context.clone().into_advanced::<_, D, _>(self))) {
+                match self.graph.index_query(OverlapPrimer::new(postfix, context.clone())) {
                     Ok((expansion, advanced)) => {
                         // expanded
                         match bundle.len() {

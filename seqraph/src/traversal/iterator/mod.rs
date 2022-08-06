@@ -23,7 +23,7 @@ pub(crate) trait TraversalIterator<
                 S::query_start(
                     trav,
                     query,
-                ),
+                ).unwrap_or_default(),
             TraversalNode::Parent(path, query) =>
                 S::after_parent_nodes(
                     trav,
@@ -35,7 +35,7 @@ pub(crate) trait TraversalIterator<
                     trav,
                     paths,
                 ),
-            TraversalNode::Match(path, query, _prev_query) =>
+            TraversalNode::Match(path, query) =>
                 S::after_match(
                     trav,
                     PathPair::GraphMajor(path, query),
@@ -43,8 +43,8 @@ pub(crate) trait TraversalIterator<
             TraversalNode::MatchEnd(match_end, query) =>
                 S::at_index_end(
                     trav,
-                    query,
-                    match_end
+                    &query,
+                    &match_end
                 ),
             _ => vec![],
         }

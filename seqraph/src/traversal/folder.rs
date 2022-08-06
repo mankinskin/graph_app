@@ -38,16 +38,12 @@ pub(crate) type FolderQuery<'a, 'g, T, D, Q, Ty>
 pub(crate) type FolderPath<'a, 'g, T, D, Q, Ty>
     = <Folder<'a, 'g, T, D, Q, Ty> as TraversalFolder<'a, 'g, T, D, Q>>::Path;
 
-//pub(crate) type FolderStartPath<'a, 'g, T, D, Q, Ty>
-//    = <Folder<'a, 'g, T, D, Q, Ty> as TraversalFolder<'a, 'g, T, D, Q>>::StartPath;
-
 pub(crate) type FolderPathPair<'a, 'g, T, D, Q, Ty>
     = PathPair<FolderQuery<'a, 'g, T, D, Q, Ty>, SearchPath>;
 
 pub(crate) trait TraversalFolder<'a: 'g, 'g, T: Tokenize, D: MatchDirection, Q: TraversalQuery>: Sized {
     type Trav: Traversable<'a, 'g, T>;
     type Path: TraversalPath;
-    //type StartPath: TraversalStartPath + From<Self::Path> + Into<StartPath>;
     type Node: ToTraversalNode<Q>;
     type Break;
     type Continue;

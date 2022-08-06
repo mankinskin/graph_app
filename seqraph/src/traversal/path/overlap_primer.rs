@@ -61,20 +61,12 @@ impl End for OverlapPrimer {
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Child {
+    >(&self, trav: &'a Trav) -> Option<Child> {
         if self.exit == 0 {
-            self.start
+            Some(self.start)
         } else {
             self.context.get_pattern_end(trav)
         }
-    }
-}
-impl PathFinished for OverlapPrimer {
-    fn is_finished(&self) -> bool {
-        self.context.finished
-    }
-    fn set_finished(&mut self) {
-        self.context.finished = true;
     }
 }
 impl ReduciblePath for OverlapPrimer {
@@ -100,8 +92,8 @@ impl AdvanceableExit for OverlapPrimer {
     fn pattern_next_exit_pos<
         D: MatchDirection,
         P: IntoPattern,
-    >(&self, _pattern: P) -> Option<usize> {
-        None
+    >(&self, _pattern: P) -> Result<Option<usize>, ()> {
+        Ok(None)
     }
     fn next_exit_pos<
         'a: 'g,
@@ -109,12 +101,20 @@ impl AdvanceableExit for OverlapPrimer {
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
-    >(&self, _trav: &'a Trav) -> Option<usize> {
-        if self.exit == 0 {
+    >(&self, _trav: &'a Trav) -> Result<Option<usize>, ()> {
+        Ok(if self.exit == 0 {
             Some(1)
         } else {
             None
-        }
+        })
+    }
+    fn is_finished<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> bool {
+        self.context.is_finished(trav)
     }
     fn advance_exit_pos<
         'a: 'g,
@@ -123,7 +123,7 @@ impl AdvanceableExit for OverlapPrimer {
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&mut self, trav: &'a Trav) -> Result<(), ()> {
-        if let Some(next) = self.next_exit_pos::<_, D, _>(trav) {
+        if let Some(next) = self.next_exit_pos::<_, D, _>(trav)? {
             *self.exit_mut() = next;
             Ok(())
         } else {
@@ -141,12 +141,4 @@ impl WideMut for OverlapPrimer {
         &mut self.width
     }
 }
-//impl HasEndWidth for OverlapPrimer {
-//    fn end_width(&self) -> usize {
-//        self.context.end_width()
-//    }
-//    fn end_width_mut(&mut self) -> &mut usize {
-//        self.context.end_width_mut()
-//    }
-//}
 impl AdvanceablePath for OverlapPrimer {}

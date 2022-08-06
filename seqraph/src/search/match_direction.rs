@@ -81,13 +81,6 @@ pub trait MatchDirection : Clone + Debug {
         parent: &Parent,
         child_patterns: &HashMap<PatternId, Pattern>,
     ) -> HashSet<PatternIndex>;
-
-    //fn pattern_offset_split(
-    //    pattern: impl IntoPattern,
-    //    offset: NonZeroUsize,
-    //) -> Option<(usize, Option<NonZeroUsize>)>;
-
-
     fn split_head_tail<T: AsChild + Clone>(pattern: &'_ [T]) -> Option<(T, &'_ [T])> {
         Self::pattern_head(pattern).map(|head| (head.clone(), Self::pattern_tail(pattern)))
     }
@@ -125,13 +118,6 @@ pub trait MatchDirection : Clone + Debug {
             (i < pattern.borrow().len()).then(|| i)
         )
     }
-    //fn to_found_range(
-    //    p: Option<Pattern>,
-    //    context: Pattern,
-    //) -> FoundRange;
-    //fn found_from_start(fr: &FoundRange) -> bool;
-    //fn found_till_end(fr: &FoundRange) -> bool;
-    //fn get_remainder(found_range: FoundRange) -> Option<Pattern>;
     fn directed_pattern_split<T: AsChild + Clone>(
         pattern: &'_ [T],
         index: usize,
@@ -325,27 +311,4 @@ impl MatchDirection for Left {
             .cloned()
             .collect()
     }
-    //fn to_found_range(
-    //    p: Option<Pattern>,
-    //    context: Pattern,
-    //) -> FoundRange {
-    //    match (context.is_empty(), p) {
-    //        (false, Some(rem)) => FoundRange::Infix(rem, context),
-    //        (true, Some(rem)) => FoundRange::Postfix(rem),
-    //        (false, None) => FoundRange::Prefix(context),
-    //        (true, None) => FoundRange::Complete,
-    //    }
-    //}
-    //fn get_remainder(found_range: FoundRange) -> Option<Pattern> {
-    //    match found_range {
-    //        FoundRange::Postfix(rem) => Some(rem),
-    //        _ => None,
-    //    }
-    //}
-    //fn found_from_start(fr: &FoundRange) -> bool {
-    //    matches!(fr, FoundRange::Postfix(_) | FoundRange::Complete)
-    //}
-    //fn found_till_end(fr: &FoundRange) -> bool {
-    //    matches!(fr, FoundRange::Prefix(_) | FoundRange::Complete)
-    //}
 }

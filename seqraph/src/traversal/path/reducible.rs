@@ -1,6 +1,6 @@
 use super::*;
 
-pub(crate) trait ReduciblePath: Clone + EndPathMut + ExitMut + End + PathFinished {
+pub(crate) trait ReduciblePath: Clone + EndPathMut + ExitMut + End {
     fn prev_exit_pos<
         'a: 'g,
         'g,

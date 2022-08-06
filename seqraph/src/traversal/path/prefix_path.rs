@@ -7,7 +7,6 @@ pub struct PrefixPath {
     pub(crate) exit: usize,
     pub(crate) end: ChildPath,
     pub(crate) width: usize,
-    pub(crate) finished: bool,
 }
 
 impl<
@@ -28,7 +27,6 @@ impl<
                     exit,
                     width: 0,
                     end: vec![],
-                    finished: false,
                 })
         }
     }
@@ -76,14 +74,6 @@ impl HasEndPath for PrefixPath {
 }
 impl PatternEnd for PrefixPath {}
 
-impl PathFinished for PrefixPath {
-    fn is_finished(&self) -> bool {
-        self.finished
-    }
-    fn set_finished(&mut self) {
-        self.finished = true;
-    }
-}
 impl End for PrefixPath {
     fn get_end<
         'a: 'g,
@@ -91,7 +81,7 @@ impl End for PrefixPath {
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Child {
+    >(&self, trav: &'a Trav) -> Option<Child> {
         self.get_pattern_end(trav)
     }
 }
@@ -150,18 +140,8 @@ mod tests {
         let pattern = vec![c,d,d,e,f,g,a,c,d,e,f,a,g,f,g,g,e,d,b,d];
         let mut path = PrefixPath::new_directed::<Right, _>(pattern.borrow()).unwrap();
         let mut rec = vec![];
-        loop {
-            match path.try_get_advance::<_, Right, _>(&graph) {
-                Ok((next, adv)) => {
-                    path = adv;
-                    rec.push(next);
-                    continue
-                },
-                Err(next) => {
-                    rec.push(next);
-                    break
-                }
-            }
+        while let Some(next) = path.advance::<_, Right, _>(&graph) {
+            rec.push(next);
         }
         assert_eq!(rec, pattern);
     }

@@ -112,7 +112,6 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
     /// split parent at token offset from direction start
     fn single_path_split(
         &'a mut self,
-        //entry: ChildLocation,
         mut path: ChildPath,
     ) -> Option<IndexSplitResult> {
         let mut prev: Option<IndexSplitResult> = None;
@@ -125,11 +124,6 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
             )
         }
         prev
-        //SideIndexable::< _, _, Side>::path_segment_split(
-        //    &mut *graph,
-        //    prev,
-        //    entry,
-        //)
     }
     fn child_pattern_offset_splits(
         &'a mut self,

@@ -220,11 +220,6 @@ impl<T: Tokenize> From<T> for Token<T> {
         Token::Element(e)
     }
 }
-//impl<T: Tokenize> PartialEq<Token<T>> for &Token<T> {
-//    fn eq(&self, rhs: &Token<T>) -> bool {
-//        **self == *rhs
-//    }
-//}
 impl<T: Tokenize> PartialEq<T> for Token<T> {
     fn eq(
         &self,
@@ -236,16 +231,3 @@ impl<T: Tokenize> PartialEq<T> for Token<T> {
         }
     }
 }
-//impl<T: Tokenize> PartialEq<Node<T>> for Token<T> {
-//    fn eq(&self, rhs: &Node<T>) -> bool {
-//        *self == *<Node<T> as TokenContext<T, Edge>>::token(rhs)
-//    }
-//}
-//impl PartialEq<Token<char>> for char {
-//    fn eq(
-//        &self,
-//        rhs: &Token<char>,
-//    ) -> bool {
-//        *rhs == *self
-//    }
-//}

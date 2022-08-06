@@ -84,14 +84,7 @@ fn index_pattern2() {
         aby_found,
         Ok(QueryFound {
             found: FoundPath::Complete(aby),
-            query: QueryRangePath {
-                entry: 0,
-                exit: 2,
-                start: vec![],
-                end: vec![],
-                query,
-                finished: true,
-            }
+            query: QueryRangePath::complete(query),
         }),
         "aby"
     );
@@ -128,19 +121,13 @@ fn index_infix1() {
         "aby"
     );
     drop(graph);
-    let aby_found = graph_ref.find_ancestor([a, b, y]);
+    let query = vec![a, b, y];
+    let aby_found = graph_ref.find_ancestor(&query);
     assert_eq!(
         aby_found,
         Ok(QueryFound {
             found: FoundPath::Complete(aby),
-            query: QueryRangePath {
-                entry: 0,
-                exit: 2,
-                start: vec![],
-                end: vec![],
-                query: vec![a, b, y],
-                finished: true,
-            }
+            query: QueryRangePath::complete(query),
         }),
         "aby"
     );

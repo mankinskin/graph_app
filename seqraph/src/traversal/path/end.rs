@@ -7,16 +7,6 @@ pub(crate) struct EndPath {
 impl<D: MatchDirection> DirectedBorderPath<D> for EndPath {
     type BorderDirection = Front;
 }
-//impl Wide for EndPath {
-//    fn width(&self) -> usize {
-//        self.width
-//    }
-//}
-//impl WideMut for EndPath {
-//    fn width_mut(&mut self) -> &mut usize {
-//        &mut self.width
-//    }
-//}
 impl GraphExit for EndPath {
     fn get_exit_location(&self) -> ChildLocation {
         self.entry

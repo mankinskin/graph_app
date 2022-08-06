@@ -92,7 +92,7 @@ fn sync_read_text2() {
     ]);
 }
 #[test]
-fn read_prefix_postfix1() {
+fn read_sequence1() {
     let mut graph = HypergraphRef::default();
     let ind_hypergraph = graph.read_sequence("hypergraph".chars());
     let gr = graph.read().unwrap();
@@ -301,9 +301,9 @@ fn read_infix2() {
     drop(g);
 
     let visub = graph.read_sequence("visub".chars());
-    let visub_patterns = visub.expect_child_patterns(&graph);
+    //let visub_patterns = visub.expect_child_patterns(&graph);
+    //println!("{:#?}", graph.read().unwrap().pattern_strings(visub_patterns.values()));
     assert_eq!(visub.width(), 5);
-    println!("{:#?}", graph.read().unwrap().pattern_strings(visub_patterns.values()));
     let vi = graph.find_sequence("vi".chars()).unwrap().expect_complete("vi");
     let sub = graph.find_sequence("sub".chars()).unwrap().expect_complete("sub");
     let g = graph.read().unwrap();

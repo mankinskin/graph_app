@@ -65,14 +65,6 @@ impl HasEndMatchPath for SearchPath {
         &mut self.end
     }
 }
-//impl HasInnerWidth for SearchPath {
-//    fn inner_width(&self) -> usize {
-//        self.inner_width
-//    }
-//    fn inner_width_mut(&mut self) -> &mut usize {
-//        &mut self.inner_width
-//    }
-//}
 impl HasMatchPaths for SearchPath {
     fn into_paths(self) -> (StartPath, EndPath) {
         (self.start, self.end)
@@ -119,16 +111,8 @@ impl End for SearchPath {
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Child {
+    >(&self, trav: &'a Trav) -> Option<Child> {
         self.get_graph_end(trav)
-    }
-}
-
-impl PathFinished for SearchPath {
-    fn is_finished(&self) -> bool {
-        false
-    }
-    fn set_finished(&mut self) {
     }
 }
 impl ReduciblePath for SearchPath {
@@ -145,11 +129,15 @@ impl ReduciblePath for SearchPath {
     }
 }
 impl AdvanceableExit for SearchPath {
-    fn pattern_next_exit_pos<
-        D: MatchDirection,
-        P: IntoPattern
-    >(&self, pattern: P) -> Option<usize> {
-        D::pattern_index_next(pattern, self.get_exit_pos())
+    fn is_finished<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> bool {
+        let location = self.get_exit_location();
+        let pattern = trav.graph().expect_pattern_at(&location);
+        self.is_pattern_finished(pattern)
     }
     fn next_exit_pos<
         'a: 'g,
@@ -157,7 +145,7 @@ impl AdvanceableExit for SearchPath {
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Option<usize> {
+    >(&self, trav: &'a Trav) -> Result<Option<usize>, ()> {
         let location = self.get_end_location();
         let pattern = trav.graph().expect_pattern_at(&location);
         self.pattern_next_exit_pos::<D, _>(pattern)

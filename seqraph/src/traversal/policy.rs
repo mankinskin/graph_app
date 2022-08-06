@@ -31,29 +31,30 @@ pub(crate) trait DirectedTraversalPolicy<
     /// (query end or start parent nodes)
     fn query_start(
         trav: &'a Self::Trav,
-        query: FolderQuery<'a, 'g, T, D, Q, Self>,
-    ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
-        match query.try_get_advance::<_, D, _>(trav) {
-            Ok((start_index, query)) => {
-                Self::gen_parent_nodes(
-                    trav,
-                    query,
-                    start_index,
-                    |p|
-                        StartPath::Leaf(StartLeaf {
-                            entry: p,
-                            child: start_index,
-                            width: start_index.width,
-                        })
+        mut query: FolderQuery<'a, 'g, T, D, Q, Self>,
+    ) -> Option<Vec<FolderNode<'a, 'g, T, D, Q, Self>>> {
+        let start_index = query.get_end::<_, D, _>(trav)?;
+        query.advance::<_, D, _>(trav)
+            .and_then(|_|
+                (!query.is_finished(trav)).then(||
+                    Self::gen_parent_nodes(
+                        trav,
+                        &query,
+                        start_index,
+                        |p|
+                            StartPath::Leaf(StartLeaf {
+                                entry: p,
+                                child: start_index,
+                                width: start_index.width,
+                            })
+                    )
                 )
-            },
-            _ => vec![ToTraversalNode::query_end_node(None)],
-        }
+            )
     }
     /// generates parent nodes
     fn gen_parent_nodes(
         trav: &'a Self::Trav,
-        query: FolderQuery<'a, 'g, T, D, Q, Self>,
+        query: &FolderQuery<'a, 'g, T, D, Q, Self>,
         index: Child,
         build_start: impl Fn(ChildLocation) -> StartPath,
     ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
@@ -83,8 +84,8 @@ pub(crate) trait DirectedTraversalPolicy<
     /// (parent nodes)
     fn at_index_end(
         trav: &'a Self::Trav,
-        query: FolderQuery<'a, 'g, T, D, Q, Self>,
-        match_end: MatchEnd,
+        query: &FolderQuery<'a, 'g, T, D, Q, Self>,
+        match_end: &MatchEnd,
     ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
         Self::gen_parent_nodes(
             trav,
@@ -101,6 +102,7 @@ pub(crate) trait DirectedTraversalPolicy<
         start: StartPath,
         query: FolderQuery<'a, 'g, T, D, Q, Self>,
     ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
+        assert!(!query.is_finished(trav));
         match SearchPath::new_advanced::<_, D, _>(trav, start) {
             Ok(path) =>
                 vec![
@@ -111,8 +113,8 @@ pub(crate) trait DirectedTraversalPolicy<
             Err(path) =>
                 Self::at_index_end(
                     trav,
-                    query,
-                    MatchEnd::from(path)
+                    &query,
+                    &MatchEnd::from(path)
                 ),
         }
     }
@@ -121,19 +123,26 @@ pub(crate) trait DirectedTraversalPolicy<
         paths: FolderPathPair<'a, 'g, T, D, Q, Self>,
     ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
         let mode = paths.mode();
-        let (path, query) = paths.unpack();
-        match path.try_advance::<_, D, _>(trav) { 
-            Ok(path) =>
-                vec![ToTraversalNode::to_match_node(PathPair::from_mode(path, query, mode))],
-            Err(path) => {
-                //path.move_width_into_start();
-                let match_end = Self::after_match_end(trav, path);
+        let (mut path, query) = paths.unpack();
+        assert!(!query.is_finished(trav));
+        if path.advance::<_, D, _>(trav).is_some() && !path.is_finished(trav) {
+            vec![ToTraversalNode::to_match_node(PathPair::from_mode(path, query, mode))]
+        } else {
+            let match_end = Self::after_match_end(trav, path);
+            let parents = Self::at_index_end(
+                trav,
+                &query,
+                &match_end
+            );
+            if parents.is_empty() {
                 vec![
                     ToTraversalNode::match_end_node(
                         match_end,
                         query,
                     )
                 ]
+            } else {
+                parents
             }
         }
     }
@@ -141,9 +150,12 @@ pub(crate) trait DirectedTraversalPolicy<
         trav: &'a Self::Trav,
         paths: FolderPathPair<'a, 'g, T, D, Q, Self>,
     ) -> Vec<FolderNode<'a, 'g, T, D, Q, Self>> {
-        let (mut path, query) = paths.unpack();
-        let path_next = path.get_end::<_, D, _>(trav);
-        let query_next = query.get_end::<_, D, _>(trav);
+        let (mut path, mut query) = paths.unpack();
+        if path.is_finished(trav) || query.is_finished(trav) {
+            println!("uh oh");
+        }
+        let path_next = path.get_end::<_, D, _>(trav).expect("Path at end");
+        let query_next = query.get_end::<_, D, _>(trav).expect("Query at end");
         match path_next.width.cmp(&query_next.width) {
             Ordering::Greater =>
                 // continue in prefix of child
@@ -162,18 +174,16 @@ pub(crate) trait DirectedTraversalPolicy<
                 if path_next == query_next {
                     path.add_match_width::<_, D, _>(trav);
                     vec![
-                        match query.clone().try_advance::<_, D, _>(trav) {
-                            Ok(next_query) =>
-                                ToTraversalNode::match_node(
-                                    path,
-                                    next_query,
-                                    query,
-                                ),
-                            Err(query) =>
-                                ToTraversalNode::query_end_node(Some(TraversalResult::new(
-                                    path.reduce_end::<_, D, _>(trav),
-                                    query,
-                                )))
+                        if query.advance::<_, D, _>(trav).is_some() && !query.is_finished(trav) {
+                            ToTraversalNode::match_node(
+                                path,
+                                query,
+                            )
+                        } else {
+                            ToTraversalNode::query_end_node(Some(TraversalResult::new(
+                                path.reduce_end::<_, D, _>(trav),
+                                query,
+                            )))
                         }
                     ]
                 } else if path_next.width == 1 {

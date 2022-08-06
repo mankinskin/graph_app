@@ -58,7 +58,6 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> Traversa
     type Break = (Child, Q);
     type Continue = Option<TraversalResult<SearchPath, Q>>;
     type Path = SearchPath;
-    //type StartPath = StartPath;
     type Node = IndexingNode<Q>;
     fn fold_found(
         trav: &Self::Trav,
@@ -76,7 +75,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> Traversa
             IndexingNode::Mismatch(paths) => {
                 Indexable::<_, D>::index_mismatch(&mut trav, acc, paths)
             },
-            IndexingNode::Match(path, _, query) => {
+            IndexingNode::Match(path, query) => {
                 let found = TraversalResult::new(
                     path.reduce_end::<_, D, _>(&trav),
                     query,
@@ -95,11 +94,6 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> Traversa
                     query,
                 );
                 ControlFlow::Continue(Some(found))
-                //if acc.as_ref().map(|f| found.found.ge(&f.found)).unwrap_or(true) {
-                //    ControlFlow::Continue(Some(found))
-                //} else {
-                //    ControlFlow::Continue(acc)
-                //}
             },
             _ => ControlFlow::Continue(acc)
         }
@@ -288,8 +282,8 @@ impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
                 None,
                 |acc, (depth, node)| {
                     if visited.iter().find(|(_, n)| *n == node).is_some() {
-                        //panic!("cycle detected")
-                        ControlFlow::Continue(acc)
+                        panic!("cycle detected");
+                        //ControlFlow::Continue(acc)
                     } else {
                         visited.push((depth, node.clone()));
                         S::Folder::fold_found(self, acc, node)

@@ -35,7 +35,6 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
     type Continue = Option<QueryFound>;
     type Node = MatchNode;
     type Path = SearchPath;
-    //type StartPath = StartPath;
     fn fold_found(
         trav: &Self::Trav,
         acc: Self::Continue,
@@ -45,10 +44,10 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
             MatchNode::QueryEnd(found) => {
                 ControlFlow::Break(found)
             },
-            MatchNode::Match(path, _, prev_query) => {
+            MatchNode::Match(path, query) => {
                 let found = QueryFound::new(
                     path.reduce_end::<_, D, _>(trav),
-                    prev_query
+                    query
                 );
                 if acc.as_ref().map(|f|
                     ResultOrd::cmp(&found.found, &f.found).is_gt()
@@ -81,8 +80,8 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
     type Folder = Searcher<T, D>;
     fn at_index_end(
         _trav: &'a Self::Trav,
-        _query: QueryRangePath,
-        _start: MatchEnd,
+        _query: &QueryRangePath,
+        _start: &MatchEnd,
     ) -> Vec<FolderNode<'a, 'g, T, D, QueryRangePath, Self>> {
         vec![]
     }
