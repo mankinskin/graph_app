@@ -44,27 +44,41 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
             MatchNode::QueryEnd(found) => {
                 ControlFlow::Break(found)
             },
-            MatchNode::Match(path, query) => {
-                let found = QueryFound::new(
-                    path.reduce_end::<_, D, _>(trav),
-                    query
-                );
-                ControlFlow::Continue(Some(
-                    if let Some(acc) = acc {
-                        std::cmp::max_by(
-                            found,
-                            acc,
-                            |found, acc|
-                                found.found.cmp(&acc.found)
-                        )
-                    } else {
-                        found
-                    }
-                ))
-            }
+            MatchNode::Match(path, query) =>
+                ControlFlow::Continue(fold_match::<_, _, _, Self>(trav, acc, path, query)),
             _ => ControlFlow::Continue(acc)
         }
     }
+}
+pub(crate) fn fold_match<
+    'a: 'g,
+    'g,
+    T: Tokenize + 'a,
+    D: MatchDirection + 'a,
+    Q: TraversalQuery,
+    Folder: TraversalFolder<'a, 'g, T, D, Q, Continue=Option<TraversalResult<SearchPath, Q>>>
+>(
+    trav: &'a Folder::Trav,
+    acc: Folder::Continue,
+    path: SearchPath,
+    query: Q
+) -> Option<TraversalResult<SearchPath, Q>> {
+    let found = TraversalResult::new(
+        path.reduce_end::<_, D, _>(trav),
+        query
+    );
+    Some(
+        if let Some(acc) = acc {
+            std::cmp::max_by(
+                found,
+                acc,
+                |found, acc|
+                    found.found.cmp(&acc.found)
+            )
+        } else {
+            found
+        }
+    )
 }
 struct AncestorSearch<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<(T, D)>,

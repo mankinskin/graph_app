@@ -80,21 +80,8 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> Traversa
                     query
                 ))
             },
-            IndexingNode::Match(path, query) => {
-                let found = TraversalResult::new(
-                    path.reduce_end::<_, D, _>(&trav),
-                    query,
-                );
-                ControlFlow::Continue(
-                    acc.map(|f|
-                        std::cmp::max_by(
-                            found,
-                            f,
-                            |found, f|
-                                found.found.cmp(&f.found))
-                    )
-                )
-            },
+            IndexingNode::Match(path, query) =>
+                ControlFlow::Continue(search::fold_match::<_, _, _, Self>(&trav, acc, path, query)),
             IndexingNode::MatchEnd(match_end, query) => {
                 let found = TraversalResult::new(
                     match_end,
