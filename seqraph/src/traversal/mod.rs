@@ -89,6 +89,21 @@ impl<
         }
     }
     #[track_caller]
+    #[allow(unused)]
+    pub fn unwrap_range(self) -> P {
+        match self {
+            Self::Range(path) => path,
+            _ => panic!("Unable to unwrap {:?} as range.", self),
+        }
+    }
+    #[track_caller]
+    pub fn get_range(&self) -> Option<&P> {
+        match self {
+            Self::Range(path) => Some(path),
+            _ => None,
+        }
+    }
+    #[track_caller]
     pub fn expect_complete(self, msg: &str) -> Child {
         match self {
             Self::Complete(index) => index,
@@ -103,10 +118,17 @@ impl<P: TraversalPath + PartialEq> PartialOrd for FoundPath<P> {
     fn partial_cmp(&self, other: &FoundPath<P>) -> Option<Ordering> {
         let l = self.is_complete();
         let r = other.is_complete();
-        if l == r {
-            self.width().partial_cmp(&other.width())
-        } else {
-            Some(l.cmp(&r))
+        match (l, r) {
+            (true, true) => self.width().partial_cmp(&other.width()),
+            (false, false) => {
+                let l = self.get_range().unwrap();
+                let r = other.get_range().unwrap();
+                l.partial_cmp(&r)
+                    .or_else(||
+                        self.width().partial_cmp(&other.width())
+                    )
+            },
+            _ => Some(l.cmp(&r))
         }
     }
 }

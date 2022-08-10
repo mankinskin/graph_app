@@ -156,3 +156,11 @@ impl WideMut for SearchPath {
     }
 }
 impl AdvanceablePath for SearchPath {}
+
+impl PartialOrd for SearchPath {
+    fn partial_cmp(&self, other: &SearchPath) -> Option<Ordering> {
+        self.num_path_segments().partial_cmp(
+            &other.num_path_segments()
+        ).map(Ordering::reverse)
+    }
+}

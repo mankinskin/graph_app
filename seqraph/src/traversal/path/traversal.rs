@@ -29,6 +29,7 @@ pub(crate) trait TraversalPath:
     + Wide
     + WideMut
     + Debug
+    + PartialOrd
 {
     fn reduce_end<
         'a: 'g,

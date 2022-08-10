@@ -176,6 +176,9 @@ pub(crate) trait HasEndMatchPath {
 //}
 pub(crate) trait HasMatchPaths: HasStartMatchPath + HasEndMatchPath {
     fn into_paths(self) -> (StartPath, EndPath);
+    fn num_path_segments(&self) -> usize {
+        self.start_match_path().path().len() + self.end_match_path().path().len()
+    }
 }
 //pub trait PathFinished {
 //    fn is_finished(&self) -> bool;
