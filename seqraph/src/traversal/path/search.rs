@@ -5,12 +5,6 @@ pub(crate) struct SearchPath {
     pub(crate) start: StartPath,
     pub(crate) end: EndPath,
 }
-impl ResultOrd for SearchPath {
-    fn is_complete(&self) -> bool {
-        false
-    }
-}
-
 impl From<StartPath> for SearchPath {
     fn from(start: StartPath) -> Self {
         Self::new(start)

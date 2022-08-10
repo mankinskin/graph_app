@@ -31,26 +31,6 @@ pub enum NoMatch {
 }
 pub(crate) type SearchFoundPath = FoundPath<SearchPath>;
 
-pub trait ResultOrd: Wide {
-    fn is_complete(&self) -> bool;
-    fn cmp(&self, other: impl ResultOrd) -> Ordering {
-        let l = self.is_complete();
-        let r = other.is_complete();
-        if l == r {
-            self.width().cmp(&other.width())
-        } else {
-            l.cmp(&r)
-        }
-    }
-    fn eq(&self, other: impl ResultOrd) -> bool {
-        self.cmp(other).is_eq()
-    }
-}
-impl<T: ResultOrd> ResultOrd for &T {
-    fn is_complete(&self) -> bool {
-        ResultOrd::is_complete(*self)
-    }
-}
 pub(crate) type QueryFound = TraversalResult<SearchPath, QueryRangePath>;
 pub(crate) type SearchResult = Result<QueryFound, NoMatch>;
 

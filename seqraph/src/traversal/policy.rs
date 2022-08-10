@@ -91,8 +91,7 @@ pub(crate) trait DirectedTraversalPolicy<
             trav,
             query,
             match_end.root(),
-            |p|
-                match_end.clone().append::<_, D, _>(trav, p)
+            |p| match_end.clone().append::<_, D, _>(trav, p)
         )
     }
     /// nodes generated from a parent node
@@ -187,9 +186,14 @@ pub(crate) trait DirectedTraversalPolicy<
                         }
                     ]
                 } else if path_next.width == 1 {
-                    vec![
-                        ToTraversalNode::mismatch_node(PathPair::GraphMajor(path, query))
-                    ]
+                    let path = path.reduce_mismatch::<_, D, _>(trav);
+                    if path.get_exit_pos() == path.get_entry_pos() {
+                        vec![]
+                    } else {
+                        vec![
+                            ToTraversalNode::mismatch_node(PathPair::GraphMajor(path, query))
+                        ]
+                    }
                 } else {
                     Self::prefix_nodes(
                         trav,

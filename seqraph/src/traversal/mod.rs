@@ -95,10 +95,25 @@ impl<
             _ => panic!("Unable to unwrap {:?} as complete: {}", self, msg),
         }
     }
-}
-impl<P: TraversalPath> ResultOrd for FoundPath<P> {
     fn is_complete(&self) -> bool {
         matches!(self, FoundPath::Complete(_))
+    }
+}
+impl<P: TraversalPath + PartialEq> PartialOrd for FoundPath<P> {
+    fn partial_cmp(&self, other: &FoundPath<P>) -> Option<Ordering> {
+        let l = self.is_complete();
+        let r = other.is_complete();
+        if l == r {
+            self.width().partial_cmp(&other.width())
+        } else {
+            Some(l.cmp(&r))
+        }
+    }
+}
+impl<P: TraversalPath + Eq> Ord for FoundPath<P> {
+    fn cmp(&self, other: &FoundPath<P>) -> Ordering {
+        self.partial_cmp(&other)
+            .unwrap_or(Ordering::Equal)
     }
 }
 impl<P: TraversalPath> Wide for FoundPath<P> {

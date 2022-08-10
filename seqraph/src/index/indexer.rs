@@ -73,20 +73,27 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> Traversa
                 ))
             },
             IndexingNode::Mismatch(paths) => {
-                Indexable::<_, D>::index_mismatch(&mut trav, acc, paths)
+                let (path, query) = paths.unpack();
+                let found = FoundPath::new::<_, D, _>(&trav, path);
+                ControlFlow::Break((
+                    Indexable::<_, D>::index_found(&mut trav, found),
+                    query
+                ))
             },
             IndexingNode::Match(path, query) => {
                 let found = TraversalResult::new(
                     path.reduce_end::<_, D, _>(&trav),
                     query,
                 );
-                if acc.as_ref().map(|f|
-                    ResultOrd::cmp(&found.found, &f.found).is_gt()
-                ).unwrap_or(true) {
-                    ControlFlow::Continue(Some(found))
-                } else {
-                    ControlFlow::Continue(acc)
-                }
+                ControlFlow::Continue(
+                    acc.map(|f|
+                        std::cmp::max_by(
+                            found,
+                            f,
+                            |found, f|
+                                found.found.cmp(&f.found))
+                    )
+                )
             },
             IndexingNode::MatchEnd(match_end, query) => {
                 let found = TraversalResult::new(
@@ -110,23 +117,6 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
         }
     }
     
-    fn index_mismatch<Acc, Q: TraversalQuery + ReduciblePath>(
-        &'a mut self,
-        acc: Acc,
-        paths: PathPair<Q, SearchPath>,
-    ) -> ControlFlow<(Child, Q), Acc> {
-        let mut graph = self.graph_mut();
-        let found = paths.reduce_mismatch::<_, D, _>(&*graph);
-        if let FoundPath::Range(path) = &found.found {
-            if path.get_exit_pos() == path.get_entry_pos() {
-                return ControlFlow::Continue(acc);
-            }
-        }
-        ControlFlow::Break((
-            Indexable::<_, D>::index_found(&mut *graph, found.found),
-            found.query
-        ))
-    }
     fn index_range_path(
         &'a mut self,
         path: SearchPath,

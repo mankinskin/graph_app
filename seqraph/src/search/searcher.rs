@@ -49,13 +49,18 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
                     path.reduce_end::<_, D, _>(trav),
                     query
                 );
-                if acc.as_ref().map(|f|
-                    ResultOrd::cmp(&found.found, &f.found).is_gt()
-                ).unwrap_or(true) {
-                    ControlFlow::Continue(Some(found))
-                } else {
-                    ControlFlow::Continue(acc)
-                }
+                ControlFlow::Continue(Some(
+                    if let Some(acc) = acc {
+                        std::cmp::max_by(
+                            found,
+                            acc,
+                            |found, acc|
+                                found.found.cmp(&acc.found)
+                        )
+                    } else {
+                        found
+                    }
+                ))
             }
             _ => ControlFlow::Continue(acc)
         }
