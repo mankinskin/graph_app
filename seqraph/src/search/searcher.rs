@@ -3,6 +3,7 @@ use crate::{
     Hypergraph,
 };
 use std::{sync::RwLockReadGuard, ops::ControlFlow};
+use rayon::iter::*;
 
 #[derive(Clone, Debug)]
 pub struct Searcher<T: Tokenize, D: MatchDirection> {
@@ -131,7 +132,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
         )
     }
     fn dft_search<
-        S: SearchTraversalPolicy<'a, 'g, T, D>,
+        S: SearchTraversalPolicy<'a, 'g, T, D> + Send,
         P: IntoPattern,
     >(
         &'a self,
@@ -142,7 +143,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
         )
     }
     fn search<
-        Ti: TraversalIterator<'a, 'g, T, Self, D, QueryRangePath, S>,
+        Ti: TraversalIterator<'a, 'g, T, Self, D, QueryRangePath, S> + Send,
         S: SearchTraversalPolicy<'a, 'g, T, D>,
         P: IntoPattern,
     >(
@@ -151,8 +152,32 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
     ) -> SearchResult {
         let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())?;
         match Ti::new(self, TraversalNode::query_node(query_path))
-            .try_fold(None, |acc: Option<QueryFound>, (_, node)|
+            .par_bridge()
+            .try_fold_with(None, |acc, (_, node)|
                 S::Folder::fold_found(self, acc, node)
+            )
+            .reduce(|| ControlFlow::Continue(None), |a, b|
+                match (a, b) {
+                    (ControlFlow::Break(b), ControlFlow::Continue(c)) |
+                    (ControlFlow::Continue(c), ControlFlow::Break(b)) =>
+                        ControlFlow::Break(b),
+                    (ControlFlow::Break(a), ControlFlow::Break(b)) =>
+                        ControlFlow::Break(match (a, b) {
+                            (None, None) => None,
+                            (None, Some(found)) |
+                            (Some(found), None) => Some(found),
+                            (Some(a), Some(b)) =>
+                                Some(std::cmp::max_by(a, b, |a, b| a.found.cmp(&b.found)))
+                        }),
+                    (ControlFlow::Continue(a), ControlFlow::Continue(b)) =>
+                        ControlFlow::Continue(match (a, b) {
+                            (None, None) => None,
+                            (None, Some(found)) |
+                            (Some(found), None) => Some(found),
+                            (Some(a), Some(b)) =>
+                                Some(std::cmp::max_by(a, b, |a, b| a.found.cmp(&b.found)))
+                        })
+                }
             )
         {
             ControlFlow::Continue(None) => Err(NoMatch::NotFound),

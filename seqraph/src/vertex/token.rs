@@ -16,7 +16,7 @@ pub fn tokenizing_iter<T: Tokenize, C: AsToken<T>>(
     seq.map(|c| c.as_token())
 }
 /// Trait for token that can be mapped in a sequence
-pub trait Tokenize: TokenData + Wide + Hash + Eq + Copy + Debug {
+pub trait Tokenize: TokenData + Wide + Hash + Eq + Copy + Debug + Send + Sync {
     fn tokenize<T: AsToken<Self>, I: Iterator<Item = T>>(seq: I) -> Vec<Token<Self>> {
         let mut v = vec![];
         v.extend(tokenizing_iter(seq));
@@ -27,7 +27,7 @@ pub trait Tokenize: TokenData + Wide + Hash + Eq + Copy + Debug {
         Token::Element(self)
     }
 }
-impl<T: TokenData + Wide + Hash + Eq + Copy + Debug> Tokenize for T {}
+impl<T: TokenData + Wide + Hash + Eq + Copy + Debug + Send + Sync> Tokenize for T {}
 
 pub trait TokenData: Debug + PartialEq + Clone + Wide {}
 impl<T: Debug + PartialEq + Clone + Wide> TokenData for T {}

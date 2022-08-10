@@ -25,7 +25,7 @@ fn to_matching_iterator<'a, I: Indexed + 'a, J: Indexed + 'a>(
         })
 }
 
-pub trait MatchDirection : Clone + Debug {
+pub trait MatchDirection : Clone + Debug + Send + Sync {
     type Opposite: MatchDirection;
     /// get the parent where vertex is at the relevant position
     fn get_match_parent_to(
