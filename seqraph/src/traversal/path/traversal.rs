@@ -116,6 +116,20 @@ impl<
                 (path, query),
         }
     }
+    pub fn get_path(&self) -> &G {
+        match self {
+            Self::GraphMajor(path, _) |
+            Self::QueryMajor(_, path) =>
+                path,
+        }
+    }
+    pub fn get_query(&self) -> &Q {
+        match self {
+            Self::GraphMajor(_, query) |
+            Self::QueryMajor(query, _) =>
+                query,
+        }
+    }
 }
 impl<
     Q: index::IndexingQuery,

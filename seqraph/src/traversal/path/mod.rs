@@ -147,43 +147,20 @@ pub(crate) trait HasEndPath {
 pub(crate) trait HasStartMatchPath {
     fn start_match_path(&self) -> &StartPath;
     fn start_match_path_mut(&mut self) -> &mut StartPath;
-    //fn start_width(&self) -> usize {
-    //    self.start_match_path().width()
-    //}
-    //fn start_width_mut(&mut self) -> &mut usize {
-    //    self.start_match_path_mut().width_mut()
-    //}
 }
 pub(crate) trait HasEndMatchPath {
     fn end_match_path(&self) -> &EndPath;
     fn end_match_path_mut(&mut self) -> &mut EndPath;
 }
-//pub(crate) trait HasEndWidth {
-//    fn end_width(&self) -> usize;
-//    fn end_width_mut(&mut self) -> &mut usize;
-//}
-//impl<T: HasEndMatchPath> HasEndWidth for T {
-//    fn end_width(&self) -> usize {
-//        self.end_match_path().width()
-//    }
-//    fn end_width_mut(&mut self) -> &mut usize {
-//        self.end_match_path_mut().width_mut()
-//    }
-//}
-//pub(crate) trait HasInnerWidth {
-//    fn inner_width(&self) -> usize;
-//    fn inner_width_mut(&mut self) -> &mut usize;
-//}
 pub(crate) trait HasMatchPaths: HasStartMatchPath + HasEndMatchPath {
     fn into_paths(self) -> (StartPath, EndPath);
     fn num_path_segments(&self) -> usize {
         self.start_match_path().path().len() + self.end_match_path().path().len()
     }
+    fn root(&self) -> Child {
+        self.start_match_path().entry().parent
+    }
 }
-//pub trait PathFinished {
-//    fn is_finished(&self) -> bool;
-//    fn set_finished(&mut self);
-//}
 pub(crate) trait PathComplete: GraphEntry + HasStartMatchPath + HasEndPath + ExitPos {
     fn is_complete<
         'a: 'g,

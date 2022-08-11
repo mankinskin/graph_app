@@ -23,10 +23,10 @@ lazy_static::lazy_static! {
 }
 #[allow(unused)]
 pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
-    let batch_size = 20;
+    let batch_size = 50;
     let fuzz_len = 100;
     let num_batches = fuzz_len/batch_size;
-    let mean_length = 50;
+    let mean_length = 100;
     let len_distr: Normal<f32> = Normal::new(mean_length as f32, 4.0).unwrap();
     //let mut rng = rand::rngs::StdRng::seed_from_u64(42);
     let mut rng = rand::thread_rng();

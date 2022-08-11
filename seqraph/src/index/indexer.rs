@@ -21,10 +21,17 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection> TraversableMut<'a, 'g, T> 
         self.graph.write().unwrap()
     }
 }
-impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Q: IndexingQuery> DirectedTraversalPolicy<'a, 'g, T, D, Q> for Indexing<'a, T, D, Q> {
+impl<
+    'a: 'g,
+    'g,
+    T: Tokenize + 'a,
+    D: IndexDirection + 'a,
+    Q: IndexingQuery,
+>
+DirectedTraversalPolicy<'a, 'g, T, D, Q> for Indexing<'a, T, D, Q> {
     type Trav = Indexer<T, D>;
     type Folder = Indexer<T, D>;
-    fn after_match_end(
+    fn after_end_match(
         trav: &'a Self::Trav,
         path: SearchPath,
     ) -> MatchEnd {
@@ -45,10 +52,22 @@ impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Q: IndexingQuery> DirectedTrave
         }
     }
 }
-trait IndexingTraversalPolicy<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Q: IndexingQuery>:
+trait IndexingTraversalPolicy<
+    'a: 'g,
+    'g,
+    T: Tokenize,
+    D: IndexDirection,
+    Q: IndexingQuery,
+>:
     DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Indexer<T, D>, Folder=Indexer<T, D>>
 { }
-impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Q: IndexingQuery> IndexingTraversalPolicy<'a, 'g, T, D, Q> for Indexing<'a, T, D, Q> {}
+impl<
+    'a: 'g,
+    'g,
+    T: Tokenize + 'a,
+    D: IndexDirection + 'a,
+    Q: IndexingQuery,
+> IndexingTraversalPolicy<'a, 'g, T, D, Q> for Indexing<'a, T, D, Q> {}
 
 pub(crate) trait IndexingQuery: TraversalQuery + ReduciblePath {}
 impl<T: TraversalQuery + ReduciblePath> IndexingQuery for T {}
@@ -58,11 +77,10 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> Traversa
     type Break = (Child, Q);
     type Continue = Option<TraversalResult<SearchPath, Q>>;
     type Path = SearchPath;
-    type Node = IndexingNode<Q>;
     fn fold_found(
         trav: &Self::Trav,
         acc: Self::Continue,
-        node: Self::Node,
+        node: TraversalNode<Q>,
     ) -> ControlFlow<Self::Break, Self::Continue> {
         let mut trav = trav.clone();
         match node {
@@ -74,7 +92,11 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> Traversa
             },
             IndexingNode::Mismatch(paths) => {
                 let (path, query) = paths.unpack();
-                let found = FoundPath::new::<_, D, _>(&trav, path);
+                let found = FoundPath::new::<_, D, _>(
+                    &trav,
+                    path
+                );
+                // TODO: many panics due to wrong positions, probably due to mismatch reduction
                 ControlFlow::Break((
                     Indexable::<_, D>::index_found(&mut trav, found),
                     query
@@ -247,24 +269,17 @@ impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
     }
     fn path_indexing<
         Q: IndexingQuery,
-        Ti: TraversalIterator<'a, 'g, T, Self, D, Q, S>,
+        Ti: TraversalIterator<'a, 'g, T, D, Self, Q, S>,
         S: IndexingTraversalPolicy<'a, 'g, T, D, Q>,
     >(
         &'a mut self,
         query_path: Q,
     ) -> Result<(Child, Q), NoMatch> {
-        let mut visited = Vec::new();
         match Ti::new(self, TraversalNode::query_node(query_path))
             .try_fold(
                 None,
-                |acc, (depth, node)| {
-                    if visited.iter().find(|(_, n)| *n == node).is_some() {
-                        panic!("cycle detected");
-                        //ControlFlow::Continue(acc)
-                    } else {
-                        visited.push((depth, node.clone()));
-                        S::Folder::fold_found(self, acc, node)
-                    }
+                |acc, (_depth, node)| {
+                    S::Folder::fold_found(self, acc, node)
                 }
             )
         {

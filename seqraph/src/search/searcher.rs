@@ -17,14 +17,29 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection> Traversable<'a, 'g, T> for
     }
 }
 
-trait SearchTraversalPolicy<'a: 'g, 'g, T: Tokenize, D: MatchDirection>:
+trait SearchTraversalPolicy<
+    'a: 'g,
+    'g,
+    T: Tokenize + 'a,
+    D: MatchDirection + 'a,
+>:
     DirectedTraversalPolicy<'a, 'g, T, D, QueryRangePath, Trav=Searcher<T, D>, Folder=Searcher<T, D>>
 {
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
+impl<
+    'a: 'g,
+    'g,
+    T: Tokenize + 'a,
+    D: MatchDirection + 'a,
+>
     SearchTraversalPolicy<'a, 'g, T, D> for AncestorSearch<T, D>
 {}
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
+impl<
+    'a: 'g,
+    'g,
+    T: Tokenize + 'a,
+    D: MatchDirection + 'a,
+>
     SearchTraversalPolicy<'a, 'g, T, D> for ParentSearch<T, D>
 {}
 
@@ -34,12 +49,11 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
     type Trav = Self;
     type Break = Option<QueryFound>;
     type Continue = Option<QueryFound>;
-    type Node = MatchNode;
     type Path = SearchPath;
     fn fold_found(
         trav: &Self::Trav,
         acc: Self::Continue,
-        node: Self::Node,
+        node: MatchNode,
     ) -> ControlFlow<Self::Break, Self::Continue> {
         match node {
             MatchNode::QueryEnd(found) => {
@@ -84,7 +98,12 @@ pub(crate) fn fold_match<
 struct AncestorSearch<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<(T, D)>,
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
+impl<
+    'a: 'g,
+    'g,
+    T: Tokenize + 'a,
+    D: MatchDirection + 'a,
+>
     DirectedTraversalPolicy<'a, 'g, T, D, QueryRangePath> for AncestorSearch<T, D>
 {
     type Trav = Searcher<T, D>;
@@ -93,16 +112,21 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
 struct ParentSearch<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<(T, D)>,
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
+impl<
+    'a: 'g,
+    'g,
+    T: Tokenize + 'a,
+    D: MatchDirection + 'a,
+>
     DirectedTraversalPolicy<'a, 'g, T, D, QueryRangePath> for ParentSearch<T, D>
 {
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
-    fn at_index_end(
+    fn next_parents(
         _trav: &'a Self::Trav,
         _query: &QueryRangePath,
         _start: &MatchEnd,
-    ) -> Vec<FolderNode<'a, 'g, T, D, QueryRangePath, Self>> {
+    ) -> Vec<MatchNode> {
         vec![]
     }
 }
@@ -132,18 +156,38 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
         )
     }
     fn dft_search<
-        S: SearchTraversalPolicy<'a, 'g, T, D> + Send,
+        S: SearchTraversalPolicy<'a, 'g, T, D, > + Send,
         P: IntoPattern,
     >(
         &'a self,
         query: P,
     ) -> SearchResult {
-        self.search::<Dft<_, _, _, _, _>, S, _>(
+        self.par_search::<Dft<'a, 'g, T, D, Self, QueryRangePath, S>, S, _>(
             query,
         )
     }
     fn search<
-        Ti: TraversalIterator<'a, 'g, T, Self, D, QueryRangePath, S> + Send,
+        Ti: TraversalIterator<'a, 'g, T, D, Self, QueryRangePath, S> + Send,
+        S: SearchTraversalPolicy<'a, 'g, T, D>,
+        P: IntoPattern,
+    >(
+        &'a self,
+        query: P,
+    ) -> SearchResult {
+        let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())?;
+        match Ti::new(self, TraversalNode::query_node(query_path))
+            .try_fold(None, |acc, (_, node)|
+                S::Folder::fold_found(self, acc, node)
+            )
+        {
+            ControlFlow::Continue(None) => Err(NoMatch::NotFound),
+            ControlFlow::Continue(Some(found)) => Ok(found),
+            ControlFlow::Break(found) => found.ok_or(NoMatch::SingleIndex)
+        }
+    }
+    #[allow(unused)]
+    fn par_search<
+        Ti: TraversalIterator<'a, 'g, T, D, Self, QueryRangePath, S> + Send,
         S: SearchTraversalPolicy<'a, 'g, T, D>,
         P: IntoPattern,
     >(
@@ -158,8 +202,8 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
             )
             .reduce(|| ControlFlow::Continue(None), |a, b|
                 match (a, b) {
-                    (ControlFlow::Break(b), ControlFlow::Continue(c)) |
-                    (ControlFlow::Continue(c), ControlFlow::Break(b)) =>
+                    (ControlFlow::Break(b), ControlFlow::Continue(_)) |
+                    (ControlFlow::Continue(_), ControlFlow::Break(b)) =>
                         ControlFlow::Break(b),
                     (ControlFlow::Break(a), ControlFlow::Break(b)) =>
                         ControlFlow::Break(match (a, b) {

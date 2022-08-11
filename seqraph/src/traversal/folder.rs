@@ -7,9 +7,6 @@ use super::*;
 pub(crate) type Folder<'a, 'g, T, D, Q, Ty>
     = <Ty as DirectedTraversalPolicy<'a, 'g, T, D, Q>>::Folder;
 
-pub(crate) type FolderNode<'a, 'g, T, D, Q, Ty>
-    = <Folder<'a, 'g, T, D, Q, Ty> as TraversalFolder<'a, 'g, T, D, Q>>::Node;
-
 pub(crate) trait FolderQ<
     'a: 'g,
     'g,
@@ -44,12 +41,11 @@ pub(crate) type FolderPathPair<'a, 'g, T, D, Q, Ty>
 pub(crate) trait TraversalFolder<'a: 'g, 'g, T: Tokenize, D: MatchDirection, Q: TraversalQuery>: Sized {
     type Trav: Traversable<'a, 'g, T>;
     type Path: TraversalPath;
-    type Node: ToTraversalNode<Q>;
     type Break;
     type Continue;
     fn fold_found(
         trav: &'a Self::Trav,
         acc: Self::Continue,
-        node: Self::Node
+        node: TraversalNode<Q>
     ) -> ControlFlow<Self::Break, Self::Continue>;
 }

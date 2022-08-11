@@ -7,6 +7,7 @@ pub(crate) mod folder;
 pub(crate) mod iterator;
 pub(crate) mod policy;
 pub(crate) mod match_end;
+pub(crate) mod cache;
 
 pub(crate) use super::*;
 pub(crate) use bft::*;
@@ -18,6 +19,7 @@ pub(crate) use folder::*;
 pub(crate) use iterator::*;
 pub(crate) use policy::*;
 pub(crate) use match_end::*;
+pub(crate) use cache::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct TraversalResult<P: TraversalPath, Q: TraversalQuery> {

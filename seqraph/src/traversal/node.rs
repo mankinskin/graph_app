@@ -1,19 +1,6 @@
 use super::*;
 use std::hash::Hash;
 
-pub(crate) trait ToTraversalNode<
-    Q: TraversalQuery,
->: Clone + Into<TraversalNode<Q>> {
-    fn query_node(query: Q) -> Self;
-    fn match_node(path: SearchPath, query: Q) -> Self;
-    fn to_match_node(paths: PathPair<Q, SearchPath>) -> Self;
-    fn parent_node(path: StartPath, query: Q) -> Self;
-    fn query_end_node(found: Option<TraversalResult<SearchPath, Q>>) -> Self;
-    fn mismatch_node(paths: PathPair<Q, SearchPath>) -> Self;
-    fn match_end_node(match_end: MatchEnd, query: Q) -> Self;
-    fn is_match(&self) -> bool;
-}
-
 /// nodes generated during traversal.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub(crate) enum TraversalNode<
@@ -37,30 +24,37 @@ pub(crate) enum TraversalNode<
 }
 impl<
     Q: TraversalQuery,
-> ToTraversalNode<Q> for TraversalNode<Q> {
-    fn query_node(query: Q) -> Self {
+> TraversalNode<Q> {
+    pub fn query_node(query: Q) -> Self {
         Self::Query(query)
     }
-    fn match_node(path: SearchPath, query: Q) -> Self {
+    pub fn match_node(path: SearchPath, query: Q) -> Self {
         Self::Match(path, query)
     }
-    fn to_match_node(paths: PathPair<Q, SearchPath>) -> Self {
+    pub fn to_match_node(paths: PathPair<Q, SearchPath>) -> Self {
         Self::ToMatch(paths)
     }
-    fn parent_node(path: StartPath, query: Q) -> Self {
+    pub fn parent_node(path: StartPath, query: Q) -> Self {
         Self::Parent(path, query)
     }
-    fn query_end_node(found: Option<TraversalResult<SearchPath, Q>>) -> Self {
+    pub fn query_end_node(found: Option<TraversalResult<SearchPath, Q>>) -> Self {
         Self::QueryEnd(found)
     }
-    fn mismatch_node(paths: PathPair<Q, SearchPath>) -> Self {
+    pub fn mismatch_node(paths: PathPair<Q, SearchPath>) -> Self {
         Self::Mismatch(paths)
     }
-    fn match_end_node(match_end: MatchEnd, query: Q) -> Self {
+    pub fn match_end_node(match_end: MatchEnd, query: Q) -> Self {
         Self::MatchEnd(match_end, query)
     }
-    fn is_match(&self) -> bool {
+    #[allow(unused)]
+    pub fn is_match(&self) -> bool {
         matches!(self, TraversalNode::Match(_, _))
+    }
+    pub fn get_parent_path(&self) -> Option<&StartPath> {
+        match self {
+            TraversalNode::Parent(path, _) => Some(path),
+            _ => None
+        }
     }
 }
 
