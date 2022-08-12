@@ -208,6 +208,7 @@ fn find_ancestor2() {
                         },
                     ],
                     width: 3,
+                    child: by
                 },
                 end: EndPath {
                     path: vec![],
@@ -258,6 +259,7 @@ fn find_ancestor3() {
                         },
                     ],
                     width: 3,
+                    child: ab
                 },
                 end: EndPath {
                     path: vec![],

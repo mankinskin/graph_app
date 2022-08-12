@@ -27,9 +27,7 @@ pub enum NoMatch {
     Unnecessary,
     EmptyRange,
 }
-pub(crate) type SearchFoundPath = FoundPath<SearchPath>;
-
-pub(crate) type QueryFound = TraversalResult<SearchPath, QueryRangePath>;
+pub(crate) type QueryFound = TraversalResult<QueryRangePath>;
 pub(crate) type SearchResult = Result<QueryFound, NoMatch>;
 
 impl<'t, 'g, T> HypergraphRef<T>

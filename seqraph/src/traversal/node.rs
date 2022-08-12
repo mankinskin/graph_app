@@ -11,14 +11,14 @@ pub(crate) enum TraversalNode<
     /// at a parent.
     Parent(StartPath, Q),
     /// when the query has ended.
-    QueryEnd(Option<TraversalResult<SearchPath, Q>>),
+    QueryEnd(TraversalResult<Q>),
     /// at a position to be matched.
     /// (needed to enable breadth-first traversal)
-    ToMatch(PathPair<Q, SearchPath>),
+    ToMatch(PathPair<Q>),
     /// at a match.
     Match(SearchPath, Q),
     /// at a mismatch.
-    Mismatch(PathPair<Q, SearchPath>),
+    Mismatch(TraversalResult<Q>),
     /// when a match was at the end of an index without parents.
     MatchEnd(MatchEnd, Q),
 }
@@ -31,17 +31,17 @@ impl<
     pub fn match_node(path: SearchPath, query: Q) -> Self {
         Self::Match(path, query)
     }
-    pub fn to_match_node(paths: PathPair<Q, SearchPath>) -> Self {
+    pub fn to_match_node(paths: PathPair<Q>) -> Self {
         Self::ToMatch(paths)
     }
     pub fn parent_node(path: StartPath, query: Q) -> Self {
         Self::Parent(path, query)
     }
-    pub fn query_end_node(found: Option<TraversalResult<SearchPath, Q>>) -> Self {
+    pub fn query_end_node(found: TraversalResult<Q>) -> Self {
         Self::QueryEnd(found)
     }
-    pub fn mismatch_node(paths: PathPair<Q, SearchPath>) -> Self {
-        Self::Mismatch(paths)
+    pub fn mismatch_node(found: TraversalResult<Q>) -> Self {
+        Self::Mismatch(found)
     }
     pub fn match_end_node(match_end: MatchEnd, query: Q) -> Self {
         Self::MatchEnd(match_end, query)

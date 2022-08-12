@@ -69,25 +69,30 @@ impl End for OverlapPrimer {
         }
     }
 }
-impl ReduciblePath for OverlapPrimer {
-    fn prev_exit_pos<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Option<usize> {
-        match self.exit {
-            0 => None,
-            1 => if self.context.get_exit_pos() > self.context_offset {
-                self.context.prev_exit_pos::<_, D, _>(trav)
-            } else {
-                Some(0)
-            },
-            _ => Some(1),
-        }
+impl EntryPos for OverlapPrimer {
+    fn get_entry_pos(&self) -> usize {
+        0
     }
 }
+//impl TraversalPath for OverlapPrimer {
+//    fn prev_exit_pos<
+//        'a: 'g,
+//        'g,
+//        T: Tokenize,
+//        D: MatchDirection,
+//        Trav: Traversable<'a, 'g, T>,
+//    >(&self, trav: &'a Trav) -> Option<usize> {
+//        match self.exit {
+//            0 => None,
+//            1 => if self.context.get_exit_pos() > self.context_offset {
+//                self.context.prev_exit_pos::<_, D, _>(trav)
+//            } else {
+//                Some(0)
+//            },
+//            _ => Some(1),
+//        }
+//    }
+//}
 impl AdvanceableExit for OverlapPrimer {
     fn pattern_next_exit_pos<
         D: MatchDirection,

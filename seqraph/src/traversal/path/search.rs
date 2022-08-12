@@ -42,6 +42,68 @@ impl<'a: 'g, 'g> SearchPath {
             self.end
         )
     }
+    pub fn prev_exit_pos<
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> Option<usize> {
+        let location = self.get_end_location();
+        let pattern = trav.graph().expect_pattern_at(&location);
+        D::pattern_index_prev(pattern, location.sub_index)
+    }
+    pub fn reduce_mismatch<
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(mut self, trav: &'a Trav) -> FoundPath {
+        let graph = trav.graph();
+        // remove segments pointing to mismatch at pattern head
+        while let Some(mut location) = self.end_path_mut().pop() {
+            let pattern = graph.expect_pattern_at(&location);
+            // skip segments at end of pattern
+            if let Some(prev) = D::pattern_index_prev(pattern.borrow(), location.sub_index) {
+                location.sub_index = prev;
+                self.end_path_mut().push(location);
+                break;
+            }
+        }
+        if self.end_path_mut().is_empty() && {
+            *self.exit_mut() = self.prev_exit_pos::<_, D, _>(trav).unwrap();
+            self.get_entry_pos() == self.get_exit_pos()
+        } {
+            self.start.pop_path::<_, D, _>(&*graph).into()
+        } else {
+            FoundPath::new::<_, D, _>(&*graph, self)
+        }
+    }
+    pub fn reduce_end<
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(mut self, trav: &'a Trav) -> FoundPath {
+        let graph = trav.graph();
+        // remove segments pointing to mismatch at pattern head
+        while let Some(location) = self.end_path_mut().pop() {
+            let pattern = graph.expect_pattern_at(&location);
+            // skip segments at end of pattern
+            if D::pattern_index_next(pattern.borrow(), location.sub_index).is_some() {
+                self.end_path_mut().push(location);
+                break;
+            }
+        }
+        FoundPath::new::<_, D, _>(&*graph, self)
+    }
+
+    pub fn add_match_width<
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(&mut self, trav: &'a Trav) {
+        if let Some(end) = self.get_end::<_, D, _>(trav) {
+            let wmut = self.width_mut();
+            *wmut += end.width;
+        }
+    }
 }
 impl HasStartMatchPath for SearchPath {
     fn start_match_path(&self) -> &StartPath {
@@ -63,8 +125,6 @@ impl HasMatchPaths for SearchPath {
     fn into_paths(self) -> (StartPath, EndPath) {
         (self.start, self.end)
     }
-}
-impl TraversalPath for SearchPath {
 }
 impl GraphEntry for SearchPath {
     fn get_entry_location(&self) -> ChildLocation {
@@ -109,19 +169,8 @@ impl End for SearchPath {
         self.get_graph_end(trav)
     }
 }
-impl ReduciblePath for SearchPath {
-    fn prev_exit_pos<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Option<usize> {
-        let location = self.get_end_location();
-        let pattern = trav.graph().expect_pattern_at(&location);
-        D::pattern_index_prev(pattern, location.sub_index)
-    }
-}
+//impl TraversalPath for SearchPath {
+//}
 impl AdvanceableExit for SearchPath {
     fn is_finished<
         'a: 'g,
@@ -159,8 +208,10 @@ impl AdvanceablePath for SearchPath {}
 
 impl PartialOrd for SearchPath {
     fn partial_cmp(&self, other: &SearchPath) -> Option<Ordering> {
-        self.num_path_segments().partial_cmp(
-            &other.num_path_segments()
-        ).map(Ordering::reverse)
+        self.width().partial_cmp(&other.width()).or_else(||
+            self.num_path_segments().partial_cmp(
+                &other.num_path_segments()
+            ).map(Ordering::reverse)
+        )
     }
 }

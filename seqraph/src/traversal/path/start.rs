@@ -44,8 +44,17 @@ pub(crate) enum StartPath {
     Path {
         entry: ChildLocation,
         path: ChildPath,
-        width: usize
+        width: usize,
+        child: Child,
     },
+}
+impl StartPath {
+    pub fn get_leaf(&self) -> Option<&StartLeaf> {
+        match self {
+            Self::Leaf(leaf) => Some(leaf),
+            _ => None,
+        }
+    }
 }
 impl From<SearchPath> for StartPath {
     fn from(p: SearchPath) -> Self {
@@ -86,14 +95,19 @@ impl PathAppend for StartLeaf {
     >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(self.entry);
-        StartPath::Path {
-            entry: parent_entry,
-            path: if self.entry.sub_index != D::head_index(pattern.borrow()) {
-                vec![self.entry]
-            } else {
-                vec![]
-            },
-            width: self.width,
+        if self.entry.sub_index == D::head_index(pattern.borrow()) {
+            StartPath::Leaf(StartLeaf {
+                entry: parent_entry,
+                child: self.entry.parent,
+                width: self.width,
+            })
+        } else {
+            StartPath::Path {
+                entry: parent_entry,
+                path: vec![self.entry],
+                width: self.width,
+                child: self.child,
+            }
         }
     }
 }
@@ -108,7 +122,7 @@ impl PathAppend for StartPath {
     >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
         match self {
             StartPath::Leaf(leaf) => leaf.append::<_, D, _>(trav, parent_entry),
-            StartPath::Path { entry, mut path, width } => {
+            StartPath::Path { entry, mut path, width , child} => {
                 let graph = trav.graph();
                 //println!("path {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
                 let pattern = graph.expect_pattern_at(entry);
@@ -119,7 +133,55 @@ impl PathAppend for StartPath {
                     entry: parent_entry,
                     path,
                     width,
+                    child,
                 }
+            },
+        }
+    }
+}
+pub(crate) trait PathPop {
+    fn pop_path<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>
+    >(self, trav: &'a Trav) -> MatchEnd;
+}
+impl PathPop for StartPath {
+    fn pop_path<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>
+    >(self, trav: &'a Trav) -> MatchEnd {
+        match self {
+            StartPath::Leaf(leaf) => MatchEnd::Complete(leaf.child),
+            StartPath::Path { entry, mut path, width, child } => {
+                MatchEnd::Path(if let Some(seg) = path.pop() {
+                    if path.is_empty() {
+                        StartPath::Leaf(StartLeaf {
+                            entry: seg,
+                            child,
+                            width,
+                        })
+                    } else {
+                        StartPath::Path {
+                            entry: seg,
+                            path,
+                            width,
+                            child,
+                        }
+                    }
+                } else {
+                    let graph = trav.graph();
+                    StartPath::Leaf(StartLeaf {
+                        child: graph.expect_child_at(&entry),
+                        entry,
+                        width,
+                    })
+                })
             },
         }
     }

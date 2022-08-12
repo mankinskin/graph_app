@@ -101,7 +101,7 @@ pub(crate) trait TraversalIterator<
             if parents.is_empty() {
                 vec![
                     TraversalNode::match_end_node(
-                        match_end,
+                        match_end.reduce_start::<_, D, _>(self.trav()),
                         query,
                     )
                 ]
@@ -165,22 +165,25 @@ pub(crate) trait TraversalIterator<
                                 query,
                             )
                         } else {
-                            TraversalNode::query_end_node(Some(TraversalResult::new(
+                            TraversalNode::query_end_node(TraversalResult::new(
                                 path.reduce_end::<_, D, _>(self.trav()),
                                 query,
-                            )))
+                            ))
                         }
                     ]
                 } else if path_next.width == 1 {
+                    let prev_root = path.root().index;
+                    let continued = self.cache_mut().bu_mismatch(prev_root);
                     let path = path.reduce_mismatch::<_, D, _>(self.trav());
-                    let continued = self.cache_mut().bu_mismatch(path.root().index);
-                    if path.get_exit_pos() == path.get_entry_pos() {
-                        continued.into_iter().collect_vec()
-                    } else {
-                        std::iter::once(
-                            TraversalNode::mismatch_node(PathPair::GraphMajor(path, query))
-                        ).chain(continued).collect()
-                    }
+                    (path.width() > 1).then(||
+                        TraversalNode::mismatch_node(TraversalResult::new(
+                            path,
+                            query,
+                        ))
+                    )
+                    .into_iter()
+                    .chain(continued)
+                    .collect()
                 } else {
                     self.prefix_nodes(
                         path_next,

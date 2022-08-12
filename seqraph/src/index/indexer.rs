@@ -69,14 +69,13 @@ impl<
     Q: IndexingQuery,
 > IndexingTraversalPolicy<'a, 'g, T, D, Q> for Indexing<'a, T, D, Q> {}
 
-pub(crate) trait IndexingQuery: TraversalQuery + ReduciblePath {}
-impl<T: TraversalQuery + ReduciblePath> IndexingQuery for T {}
+pub(crate) trait IndexingQuery: TraversalQuery {}
+impl<T: TraversalQuery> IndexingQuery for T {}
 
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> TraversalFolder<'a, 'g, T, D, Q> for Indexer<T, D> {
     type Trav = Self;
     type Break = (Child, Q);
-    type Continue = Option<TraversalResult<SearchPath, Q>>;
-    type Path = SearchPath;
+    type Continue = Option<TraversalResult<Q>>;
     fn fold_found(
         trav: &Self::Trav,
         acc: Self::Continue,
@@ -84,29 +83,19 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> Traversa
     ) -> ControlFlow<Self::Break, Self::Continue> {
         let mut trav = trav.clone();
         match node {
-            IndexingNode::QueryEnd(Some(found)) => {
+            IndexingNode::QueryEnd(found) => {
                 ControlFlow::Break((
                     Indexable::<_, D>::index_found(&mut trav, found.found),
                     found.query,
                 ))
             },
-            IndexingNode::Mismatch(paths) => {
-                let (path, query) = paths.unpack();
-                let found = FoundPath::new::<_, D, _>(
-                    &trav,
-                    path
-                );
-                // TODO: many panics due to wrong positions, probably due to mismatch reduction
-                ControlFlow::Break((
-                    Indexable::<_, D>::index_found(&mut trav, found),
-                    query
-                ))
-            },
-            IndexingNode::Match(path, query) =>
-                ControlFlow::Continue(search::fold_match::<_, _, _, Self>(&trav, acc, path, query)),
+            IndexingNode::Mismatch(found) =>
+                ControlFlow::Continue(search::pick_max_result(acc, found)),
+            //IndexingNode::Match(path, query) =>
+            //    ControlFlow::Continue(search::fold_match::<_, _, _, Self>(&trav, acc, path, query)),
             IndexingNode::MatchEnd(match_end, query) => {
                 let found = TraversalResult::new(
-                    match_end,
+                    FoundPath::from(match_end),
                     query,
                 );
                 ControlFlow::Continue(Some(found))
@@ -118,7 +107,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> Traversa
 pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: TraversableMut<'a, 'g, T> {
     fn index_found(
         &'a mut self,
-        found: SearchFoundPath,
+        found: FoundPath,
     ) -> Child {
         match found {
             FoundPath::Range(path) => self.index_range_path(path),

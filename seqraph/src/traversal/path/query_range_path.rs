@@ -111,23 +111,23 @@ impl End for QueryRangePath {
         self.get_pattern_end(trav)
     }
 }
-impl ReduciblePath for QueryRangePath {
-    fn prev_exit_pos<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Option<usize> {
-        if self.end.is_empty() {
-            D::pattern_index_prev(self.query.borrow(), self.exit)
-        } else {
-            let location = *self.end.last().unwrap();
-            let pattern = trav.graph().expect_pattern_at(&location);
-            D::pattern_index_prev(pattern, location.sub_index)
-        }
-    }
-}
+//impl TraversalPath for QueryRangePath {
+//    fn prev_exit_pos<
+//        'a: 'g,
+//        'g,
+//        T: Tokenize,
+//        D: MatchDirection,
+//        Trav: Traversable<'a, 'g, T>,
+//    >(&self, trav: &'a Trav) -> Option<usize> {
+//        if self.end.is_empty() {
+//            D::pattern_index_prev(self.query.borrow(), self.exit)
+//        } else {
+//            let location = *self.end.last().unwrap();
+//            let pattern = trav.graph().expect_pattern_at(&location);
+//            D::pattern_index_prev(pattern, location.sub_index)
+//        }
+//    }
+//}
 impl AdvanceablePath for QueryRangePath {}
 impl AdvanceableWidth for QueryRangePath {
     fn advance_width(&mut self, _width: usize) {

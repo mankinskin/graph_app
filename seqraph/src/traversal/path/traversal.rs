@@ -11,7 +11,6 @@ pub(crate) trait TraversalQuery:
 {}
 impl<
     T: AdvanceablePath
-        + ReduciblePath
         + Debug
         + Clone
         + Hash
@@ -19,51 +18,40 @@ impl<
         + Eq
 > TraversalQuery for T {}
 
-pub(crate) trait TraversalPath:
-    AdvanceablePath
-    + ReduciblePath
-    + GraphStart
-    + GraphEnd
-    + PathComplete
-    + HasMatchPaths
-    + Wide
-    + WideMut
-    + Debug
-    + PartialOrd
-{
-    fn reduce_end<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
-    >(mut self, trav: &'a Trav) -> FoundPath<Self> {
-        let graph = trav.graph();
-        // remove segments pointing to mismatch at pattern head
-        while let Some(location) = self.end_path_mut().pop() {
-            let pattern = graph.expect_pattern_at(&location);
-            // skip segments at end of pattern
-            if D::pattern_index_next(pattern.borrow(), location.sub_index).is_some() {
-                self.end_path_mut().push(location);
-                break;
-            }
-        }
-        FoundPath::new::<_, D, _>(trav, self)
-    }
-
-    fn add_match_width<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
-    >(&mut self, trav: &'a Trav) {
-        if let Some(end) = self.get_end::<_, D, _>(trav) {
-            let wmut = self.width_mut();
-            *wmut += end.width;
-        }
-    }
-}
+//pub(crate) trait ReduciblePath:
+//    AdvanceablePath
+//    + EndPathMut
+//    + GraphStart
+//    + GraphEnd
+//    + PathComplete
+//    + HasMatchPaths
+//    + ExitMut
+//    + End
+//    + EntryPos
+//    + WideMut
+//    + Wide
+//    + Debug
+//    + PartialOrd
+//    + Clone
+//{
+//}
+//pub(crate) trait TraversalPath:
+//    AdvanceablePath
+//    + EndPathMut
+//    + GraphStart
+//    + GraphEnd
+//    + PathComplete
+//    + HasMatchPaths
+//    + ExitMut
+//    + End
+//    + EntryPos
+//    + WideMut
+//    + Wide
+//    + Debug
+//    + PartialOrd
+//    + Clone
+//{
+//}
 
 pub(crate) trait TraversalStartPath:
     BorderPath
@@ -81,16 +69,14 @@ impl<
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
 pub(crate) enum PathPair<
     Q: TraversalQuery,
-    G: TraversalPath,
 > {
-    GraphMajor(G, Q),
-    QueryMajor(Q, G),
+    GraphMajor(SearchPath, Q),
+    QueryMajor(Q, SearchPath),
 }
 impl<
     Q: TraversalQuery,
-    G: TraversalPath,
-> PathPair<Q, G> {
-    pub fn from_mode(path: G, query: Q, mode: bool) -> Self {
+> PathPair<Q> {
+    pub fn from_mode(path: SearchPath, query: Q, mode: bool) -> Self {
         if mode {
             Self::GraphMajor(path, query)
         } else {
@@ -108,7 +94,7 @@ impl<
                 query.push_end(location),
         }
     }
-    pub fn unpack(self) -> (G, Q) {
+    pub fn unpack(self) -> (SearchPath, Q) {
         match self {
             Self::GraphMajor(path, query) =>
                 (path, query),
@@ -116,13 +102,15 @@ impl<
                 (path, query),
         }
     }
-    pub fn get_path(&self) -> &G {
+    #[allow(unused)]
+    pub fn get_path(&self) -> &SearchPath {
         match self {
             Self::GraphMajor(path, _) |
             Self::QueryMajor(_, path) =>
                 path,
         }
     }
+    #[allow(unused)]
     pub fn get_query(&self) -> &Q {
         match self {
             Self::GraphMajor(_, query) |
@@ -131,25 +119,25 @@ impl<
         }
     }
 }
-impl<
-    Q: index::IndexingQuery,
-    G: TraversalPath,
-> PathPair<Q, G> {
-    pub(crate) fn reduce_mismatch<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
-    >(self, trav: &'a Trav) -> TraversalResult<G, Q> {
-        match self {
-            Self::GraphMajor(path, query) |
-            Self::QueryMajor(query, path) => {
-                TraversalResult::new(
-                    FoundPath::new::<_, D, _>(trav, path.reduce_mismatch::<_, D, _>(trav)),
-                    query,
-                )
-            }
-        }
-    }
-}
+//impl<
+//    Q: index::IndexingQuery,
+//    G: TraversalPath,
+//> PathPair<Q, G> {
+//    pub(crate) fn reduce_mismatch<
+//        'a: 'g,
+//        'g,
+//        T: Tokenize,
+//        D: MatchDirection,
+//        Trav: Traversable<'a, 'g, T>,
+//    >(self, trav: &'a Trav) -> TraversalResult<G, Q> {
+//        match self {
+//            Self::GraphMajor(path, query) |
+//            Self::QueryMajor(query, path) => {
+//                TraversalResult::new(
+//                    FoundPath::new::<_, D, _>(trav, path.reduce_mismatch::<_, D, _>(trav)),
+//                    query,
+//                )
+//            }
+//        }
+//    }
+//}

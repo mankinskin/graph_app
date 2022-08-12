@@ -6,7 +6,6 @@ pub(crate) mod overlap_primer;
 pub(crate) mod prefix_path;
 pub(crate) mod traversal;
 pub(crate) mod advanceable;
-pub(crate) mod reducible;
 //pub(crate) mod indexing;
 
 pub(crate) use start::*;
@@ -17,7 +16,6 @@ pub(crate) use overlap_primer::*;
 pub(crate) use prefix_path::*;
 pub(crate) use traversal::*;
 pub(crate) use advanceable::*;
-pub(crate) use reducible::*;
 //pub(crate) use indexing::*;
 
 use crate::{
@@ -88,7 +86,7 @@ pub trait PatternExit: ExitPos {
             .cloned()
     }
 }
-pub trait GraphEntry {
+pub trait GraphEntry: EntryPos {
     fn get_entry_location(&self) -> ChildLocation;
     fn get_entry_pattern<
         'a: 'g,
@@ -113,7 +111,7 @@ impl<T: GraphEntry> EntryPos for T {
         self.get_entry_location().sub_index
     }
 }
-pub trait GraphExit {
+pub trait GraphExit: ExitPos {
     fn get_exit_location(&self) -> ChildLocation;
     fn get_exit_pattern<
         'a: 'g,

@@ -47,9 +47,8 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
     TraversalFolder<'a, 'g, T, D, QueryRangePath> for Searcher<T, D>
 {
     type Trav = Self;
-    type Break = Option<QueryFound>;
+    type Break = QueryFound;
     type Continue = Option<QueryFound>;
-    type Path = SearchPath;
     fn fold_found(
         trav: &Self::Trav,
         acc: Self::Continue,
@@ -59,11 +58,39 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
             MatchNode::QueryEnd(found) => {
                 ControlFlow::Break(found)
             },
-            MatchNode::Match(path, query) =>
-                ControlFlow::Continue(fold_match::<_, _, _, Self>(trav, acc, path, query)),
+            IndexingNode::MatchEnd(match_end, query) => {
+                let found = TraversalResult::new(
+                    FoundPath::from(match_end),
+                    query,
+                );
+                ControlFlow::Continue(Some(found))
+            },
+            //MatchNode::Match(path, query) =>
+            //    ControlFlow::Continue(fold_match::<_, _, _, Self>(trav, acc, path, query)),
+            IndexingNode::Mismatch(found) =>
+                ControlFlow::Continue(search::pick_max_result(acc, found)),
             _ => ControlFlow::Continue(acc)
         }
     }
+}
+pub(crate) fn pick_max_result<
+    Q: TraversalQuery,
+>(
+    acc: Option<TraversalResult<Q>>,
+    res: TraversalResult<Q>,
+) -> Option<TraversalResult<Q>> {
+    Some(
+        if let Some(acc) = acc {
+            std::cmp::max_by(
+                res,
+                acc,
+                |res, acc|
+                    res.found.cmp(&acc.found)
+            )
+        } else {
+            res
+        }
+    )
 }
 pub(crate) fn fold_match<
     'a: 'g,
@@ -71,29 +98,18 @@ pub(crate) fn fold_match<
     T: Tokenize + 'a,
     D: MatchDirection + 'a,
     Q: TraversalQuery,
-    Folder: TraversalFolder<'a, 'g, T, D, Q, Continue=Option<TraversalResult<SearchPath, Q>>>
+    Folder: TraversalFolder<'a, 'g, T, D, Q, Continue=Option<TraversalResult<Q>>>
 >(
     trav: &'a Folder::Trav,
     acc: Folder::Continue,
     path: SearchPath,
     query: Q
-) -> Option<TraversalResult<SearchPath, Q>> {
+) -> Option<TraversalResult<Q>> {
     let found = TraversalResult::new(
         path.reduce_end::<_, D, _>(trav),
         query
     );
-    Some(
-        if let Some(acc) = acc {
-            std::cmp::max_by(
-                found,
-                acc,
-                |found, acc|
-                    found.found.cmp(&acc.found)
-            )
-        } else {
-            found
-        }
-    )
+    pick_max_result(acc, found)
 }
 struct AncestorSearch<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<(T, D)>,
@@ -162,10 +178,11 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
         &'a self,
         query: P,
     ) -> SearchResult {
-        self.par_search::<Dft<'a, 'g, T, D, Self, QueryRangePath, S>, S, _>(
+        self.search::<Dft<'a, 'g, T, D, Self, QueryRangePath, S>, S, _>(
             query,
         )
     }
+    #[allow(unused)]
     fn search<
         Ti: TraversalIterator<'a, 'g, T, D, Self, QueryRangePath, S> + Send,
         S: SearchTraversalPolicy<'a, 'g, T, D>,
@@ -181,8 +198,8 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
             )
         {
             ControlFlow::Continue(None) => Err(NoMatch::NotFound),
-            ControlFlow::Continue(Some(found)) => Ok(found),
-            ControlFlow::Break(found) => found.ok_or(NoMatch::SingleIndex)
+            ControlFlow::Continue(Some(found)) |
+            ControlFlow::Break(found) => Ok(found)
         }
     }
     #[allow(unused)]
@@ -206,13 +223,14 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
                     (ControlFlow::Continue(_), ControlFlow::Break(b)) =>
                         ControlFlow::Break(b),
                     (ControlFlow::Break(a), ControlFlow::Break(b)) =>
-                        ControlFlow::Break(match (a, b) {
-                            (None, None) => None,
-                            (None, Some(found)) |
-                            (Some(found), None) => Some(found),
-                            (Some(a), Some(b)) =>
-                                Some(std::cmp::max_by(a, b, |a, b| a.found.cmp(&b.found)))
-                        }),
+                        ControlFlow::Break(
+                            std::cmp::max_by(
+                                a,
+                                b,
+                                |a, b|
+                                    a.found.cmp(&b.found)
+                            )
+                        ),
                     (ControlFlow::Continue(a), ControlFlow::Continue(b)) =>
                         ControlFlow::Continue(match (a, b) {
                             (None, None) => None,
@@ -225,8 +243,8 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
             )
         {
             ControlFlow::Continue(None) => Err(NoMatch::NotFound),
-            ControlFlow::Continue(Some(found)) => Ok(found),
-            ControlFlow::Break(found) => found.ok_or(NoMatch::SingleIndex)
+            ControlFlow::Continue(Some(found)) |
+            ControlFlow::Break(found) => Ok(found)
         }
     }
 }
