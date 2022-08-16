@@ -55,6 +55,25 @@ impl StartPath {
             _ => None,
         }
     }
+    /// returns child if reduced to single child
+    pub fn reduce<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> Option<Child> {
+        match self {
+            Self::Leaf(leaf) => {
+                let graph = trav.graph();
+                let pattern = graph.expect_pattern_at(leaf.entry);
+                (leaf.entry.sub_index == D::head_index(pattern.borrow()))
+                    .then(|| leaf.entry.parent)
+            },
+            // TODO: maybe skip path segments starting at pattern head
+            Self::Path { .. } => None,
+        }
+    }
 }
 impl From<SearchPath> for StartPath {
     fn from(p: SearchPath) -> Self {

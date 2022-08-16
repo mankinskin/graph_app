@@ -17,16 +17,16 @@ pub trait IndexDirection: MatchDirection + Clone {
             .expect("Empty inner pattern!")
     }
     // first inner, then context
-    fn concat_inner_and_context(
+    fn inner_then_context(
         inner: Child,
         context: impl IntoPattern,
     ) -> Pattern;
     // first context, then inner
-    fn concat_context_and_inner(
+    fn context_then_inner(
         context: impl IntoPattern,
         inner: Child,
     ) -> Pattern {
-        Self::concat_inner_and_context(
+        <Self as IndexDirection>::Opposite::inner_then_context(
             inner,
             context
         )
@@ -83,7 +83,7 @@ impl IndexDirection for Left {
     ) -> (Child, Child) {
         (head, inner)
     }
-    fn concat_inner_and_context(
+    fn inner_then_context(
         inner: Child,
         context: impl IntoPattern,
     ) -> Pattern {
@@ -123,7 +123,7 @@ impl IndexDirection for Right {
     ) -> (Child, Child) {
         (inner, head)
     }
-    fn concat_inner_and_context(
+    fn inner_then_context(
         inner: Child,
         context: impl IntoPattern,
     ) -> Pattern {

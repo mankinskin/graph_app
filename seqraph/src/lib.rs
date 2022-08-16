@@ -54,6 +54,20 @@ pub(crate) use {
             RwLockReadGuard,
             RwLockWriteGuard,
         },
+        collections::{
+            HashSet,
+            HashMap,
+            hash_map::DefaultHasher,
+        },
+        hash::{
+            BuildHasherDefault,
+        },
     },
     function_name::named,
 };
+pub(crate) type DeterministicHashSet<T> =
+    HashSet<T,
+        BuildHasherDefault<DefaultHasher>
+    >;
+pub(crate) type DeterministicHashMap<K, V> =
+    HashMap<K, V, BuildHasherDefault<DefaultHasher>>;

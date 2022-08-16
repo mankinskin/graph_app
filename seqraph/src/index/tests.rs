@@ -4,6 +4,7 @@ use crate::*;
 use pretty_assertions::assert_eq;
 use itertools::*;
 use maplit::hashset;
+use std::collections::HashSet;
 use std::borrow::Borrow;
 
 #[test]
@@ -114,7 +115,7 @@ fn index_infix1() {
     assert_eq!(aby_vertex.parents.len(), 1, "aby");
     assert_eq!(aby_vertex.children.len(), 1, "aby");
     assert_eq!(
-        aby_vertex.get_child_pattern_set(),
+        aby_vertex.get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
         hashset![
             vec![ab, y]
         ],
@@ -135,7 +136,7 @@ fn index_infix1() {
     let graph = graph_ref.read().unwrap();
     let abyz_vertex = graph.expect_vertex_data(abyz);
     assert_eq!(
-        abyz_vertex.get_child_pattern_set(),
+        abyz_vertex.get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
         hashset![
             vec![aby, z],
             vec![ab, yz]
@@ -144,7 +145,7 @@ fn index_infix1() {
     );
     let xxabyzw_vertex = graph.expect_vertex_data(xxabyzw);
     assert_eq!(
-        xxabyzw_vertex.get_child_pattern_set(),
+        xxabyzw_vertex.get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
         hashset![
             vec![x, x, abyz, w]
         ],

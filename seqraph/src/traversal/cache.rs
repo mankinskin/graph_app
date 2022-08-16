@@ -1,7 +1,8 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use super::*;
 
 
+type HashMap<K, V> = DeterministicHashMap<K, V>;
 /// Bottom-Up Cache Entry
 #[derive(Clone, Debug)]
 pub(crate) struct BUCacheEntry<Q: TraversalQuery> {

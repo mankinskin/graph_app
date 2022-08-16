@@ -214,6 +214,7 @@ fn find_ancestor2() {
                     path: vec![],
                     entry: xabyz.to_pattern_location(xaby_z_id)
                         .to_child_location(1),
+                    width: 0,
                 },
             }),
             query: QueryRangePath::complete(query),
@@ -265,6 +266,7 @@ fn find_ancestor3() {
                     path: vec![],
                     entry: xaby.to_pattern_location(xab_y_id)
                         .to_child_location(1),
+                    width: 0,
                 },
             }),
             query: QueryRangePath::complete(query),

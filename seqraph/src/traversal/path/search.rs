@@ -5,11 +5,11 @@ pub(crate) struct SearchPath {
     pub(crate) start: StartPath,
     pub(crate) end: EndPath,
 }
-impl From<StartPath> for SearchPath {
-    fn from(start: StartPath) -> Self {
-        Self::new(start)
-    }
-}
+//impl From<StartPath> for SearchPath {
+//    fn from(start: StartPath) -> Self {
+//        Self::new(start)
+//    }
+//}
 impl<'a: 'g, 'g> SearchPath {
     pub fn new(start: StartPath) -> Self {
         let entry = start.entry();
@@ -18,6 +18,7 @@ impl<'a: 'g, 'g> SearchPath {
             end: EndPath {
                 entry,
                 path: vec![],
+                width: 0,
             },
         }
     }
@@ -60,9 +61,10 @@ impl<'a: 'g, 'g> SearchPath {
         // remove segments pointing to mismatch at pattern head
         while let Some(mut location) = self.end_path_mut().pop() {
             let pattern = graph.expect_pattern_at(&location);
-            // skip segments at end of pattern
+            // skip segments at start of pattern
             if let Some(prev) = D::pattern_index_prev(pattern.borrow(), location.sub_index) {
                 location.sub_index = prev;
+                *self.width_mut() -= pattern[prev].width();
                 self.end_path_mut().push(location);
                 break;
             }
@@ -80,19 +82,30 @@ impl<'a: 'g, 'g> SearchPath {
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
-    >(mut self, trav: &'a Trav) -> FoundPath {
+    >(&mut self, trav: &'a Trav) {
         let graph = trav.graph();
-        // remove segments pointing to mismatch at pattern head
-        while let Some(location) = self.end_path_mut().pop() {
-            let pattern = graph.expect_pattern_at(&location);
-            // skip segments at end of pattern
-            if D::pattern_index_next(pattern.borrow(), location.sub_index).is_some() {
-                self.end_path_mut().push(location);
-                break;
-            }
-        }
-        FoundPath::new::<_, D, _>(&*graph, self)
+        self.end.reduce::<_, D, _>(&*graph);
+        //FoundPath::new::<_, D, _>(&*graph, self)
     }
+    //pub fn reduce_start<
+    //    T: Tokenize,
+    //    D: MatchDirection,
+    //    Trav: Traversable<'a, 'g, T>,
+    //>(mut self, trav: &'a Trav) -> FoundPath {
+    //    let graph = trav.graph();
+    //    self.start.reduce::<_, D, _>(&*graph);
+    //    FoundPath::new::<_, D, _>(&*graph, self)
+    //}
+    //pub fn reduce<
+    //    T: Tokenize,
+    //    D: MatchDirection,
+    //    Trav: Traversable<'a, 'g, T>,
+    //>(mut self, trav: &'a Trav) -> FoundPath {
+    //    let graph = trav.graph();
+    //    self.start.reduce::<_, D, _>(&*graph);
+    //    self.end.reduce::<_, D, _>(&*graph);
+    //    FoundPath::new::<_, D, _>(&*graph, self)
+    //}
 
     pub fn add_match_width<
         T: Tokenize,

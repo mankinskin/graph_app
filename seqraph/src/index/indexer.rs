@@ -1,3 +1,5 @@
+use std::hash::Hasher;
+
 use crate:: *;
 use super::*;
 
@@ -75,10 +77,10 @@ impl<T: TraversalQuery> IndexingQuery for T {}
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> TraversalFolder<'a, 'g, T, D, Q> for Indexer<T, D> {
     type Trav = Self;
     type Break = (Child, Q);
-    type Continue = Option<TraversalResult<Q>>;
+    type Continue = Vec<TraversalResult<Q>>;
     fn fold_found(
         trav: &Self::Trav,
-        acc: Self::Continue,
+        mut acc: Self::Continue,
         node: TraversalNode<Q>,
     ) -> ControlFlow<Self::Break, Self::Continue> {
         let mut trav = trav.clone();
@@ -89,8 +91,11 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> Traversa
                     found.query,
                 ))
             },
-            IndexingNode::Mismatch(found) =>
-                ControlFlow::Continue(search::pick_max_result(acc, found)),
+            IndexingNode::Mismatch(found) => {
+                acc.push(found);
+                //search::pick_max_result(acc, found)
+                ControlFlow::Continue(acc)
+            },
             //IndexingNode::Match(path, query) =>
             //    ControlFlow::Continue(search::fold_match::<_, _, _, Self>(&trav, acc, path, query)),
             IndexingNode::MatchEnd(match_end, query) => {
@@ -98,7 +103,12 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> Traversa
                     FoundPath::from(match_end),
                     query,
                 );
-                ControlFlow::Continue(Some(found))
+                if let Some(r) = found.found.get_range() {
+                    assert!(r.get_entry_pos() != r.get_exit_pos());
+                }
+                acc.push(found);
+                //ControlFlow::Continue(search::pick_max_result(acc, found))
+                ControlFlow::Continue(acc)
             },
             _ => ControlFlow::Continue(acc)
         }
@@ -111,24 +121,50 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
     ) -> Child {
         match found {
             FoundPath::Range(path) => self.index_range_path(path),
+            FoundPath::Prefix(path) => self.index_prefix_path(path),
+            FoundPath::Postfix(path) => self.index_postfix_path(path),
             FoundPath::Complete(c) => c
         }
     }
     
+    fn index_prefix_path(
+        &'a mut self,
+        path: EndPath,
+    ) -> Child {
+        SideIndexable::<_, D, IndexFront>::single_entry_split(
+            self,
+            path.entry(),
+            path.path().to_vec()
+        )
+        .map(|split| split.inner)
+        .expect("EndPath for complete path!")
+    }
+    fn index_postfix_path(
+        &'a mut self,
+        path: StartPath,
+    ) -> Child {
+        SideIndexable::<_, D, IndexBack>::single_entry_split(
+            self,
+            path.entry(),
+            path.path().to_vec()
+        )
+        .map(|split| split.inner)
+        .expect("StartPath for complete path!")
+    }
     fn index_range_path(
         &'a mut self,
         path: SearchPath,
     ) -> Child {
+        let entry = path.start.entry();
         let entry_pos = path.start.get_entry_pos();
         let exit_pos = path.end.get_exit_pos();
-        let location = path.start.entry();
         let mut graph = self.graph_mut();
 
-        // a little bit dirty, path should have typing for this
-        if entry_pos == exit_pos && path.start.path().is_empty() && path.end.path().is_empty() {
-            return graph.expect_child_at(&location);
-        }
-        let location = location.into_pattern_location();
+        //// a little bit dirty, path should have typing for this
+        //if entry_pos == exit_pos && path.start.path().is_empty() && path.end.path().is_empty() {
+        //    return graph.expect_child_at(&location);
+        //}
+        let location = entry.into_pattern_location();
 
         let range = D::wrapper_range(entry_pos, exit_pos);
         graph.validate_pattern_indexing_range_at(&location, entry_pos, exit_pos).unwrap();
@@ -158,7 +194,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
                 &mut *graph,
                 split.location,
                 split.path,
-            )
+            ).0
         ));
         let last_split =
             SideIndexable::<_, D, IndexFront>::single_path_split(
@@ -170,7 +206,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
                     &mut *graph,
                     split.location,
                     split.path,
-                )
+                ).0
             ));
 
         match (head_split, last_split) {
@@ -193,30 +229,38 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
                 target
             },
             (Some((head_inner, head_context)), None) => {
+                let range = 
+                    <IndexBack as IndexSide<D>>::inner_context_range(head_pos);
                 let inner_context = graph.index_range_in_or_default(
                     location,
-                    <IndexBack as IndexSide<D>>::inner_context_range(head_pos),
+                    range,
                 ).unwrap();
+                // |context, [inner, inner_context]|
                 let target = graph.insert_pattern(
-                    D::concat_inner_and_context(head_inner, inner_context)
+                    D::inner_then_context(head_inner, inner_context)
                 ).unwrap();
+                // |context, target|
                 graph.add_pattern_with_update(
                     wrapper,
-                    D::concat_context_and_inner(head_context, target)
+                    D::context_then_inner(head_context, target)
                 );
                 target
             },
             (None, Some((last_inner, last_context))) => {
+                let range = 
+                    <IndexFront as IndexSide<D>>::inner_context_range(last_pos);
                 let inner_context = graph.index_range_in_or_default(
                     location,
-                    <IndexFront as IndexSide<D>>::inner_context_range(last_pos)
+                    range,
                 ).unwrap();
+                // |[inner_context, inner], context|
                 let target = graph.insert_pattern(
-                    D::concat_context_and_inner(last_inner, inner_context)
+                    D::context_then_inner(inner_context, last_inner)
                 ).unwrap();
+                // |target, context|
                 graph.add_pattern_with_update(
                     wrapper,
-                    D::concat_inner_and_context(target, last_context)
+                    D::inner_then_context(target, last_context)
                 );
                 target
             },
@@ -264,16 +308,26 @@ impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
         &'a mut self,
         query_path: Q,
     ) -> Result<(Child, Q), NoMatch> {
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        query_path.hash(&mut hasher);
+        let h = hasher.finish();
         match Ti::new(self, TraversalNode::query_node(query_path))
             .try_fold(
-                None,
+                Vec::new(),
                 |acc, (_depth, node)| {
                     S::Folder::fold_found(self, acc, node)
                 }
             )
         {
-            ControlFlow::Continue(None) => Err(NoMatch::NotFound),
-            ControlFlow::Continue(Some(found)) => Ok((Indexable::<_, D>::index_found(&mut self.clone(), found.found), found.query)),
+            //ControlFlow::Continue(None) => Err(NoMatch::NotFound),
+            ControlFlow::Continue(found) => {
+                let founds = found.clone();
+                found.into_iter().fold(None, |acc, f|
+                    search::pick_max_result(acc, f)
+                ).map(|f|
+                    (Indexable::<_, D>::index_found(&mut self.clone(), f.found), f.query)
+                ).ok_or(NoMatch::NotFound)
+            },
             ControlFlow::Break((found, query)) => Ok((found, query))
         }
     }

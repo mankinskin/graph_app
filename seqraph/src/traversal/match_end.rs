@@ -25,6 +25,12 @@ impl MatchEnd {
     //        MatchEnd::Complete(c) => *c,
     //    }
     //}
+    pub fn into_path(self) -> Option<StartPath> {
+        match self {
+            Self::Path(path) => Some(path),
+            _ => None,
+        }
+    }
     pub fn get_path(&self) -> Option<&StartPath> {
         match self {
             Self::Path(path) => Some(path),
@@ -39,13 +45,8 @@ impl MatchEnd {
         Trav: Traversable<'a, 'g, T>,
     >(self, trav: &'a Trav) -> Self {
         self.get_path()
-            .and_then(StartPath::get_leaf)
-            .and_then(|leaf| {
-                let graph = trav.graph();
-                let pattern = graph.expect_pattern_at(leaf.entry);
-                (leaf.entry.sub_index == D::head_index(pattern.borrow()))
-                    .then(|| Self::Complete(leaf.entry.parent))
-            })
+            .and_then(|p| p.reduce::<_, D, _>(trav))
+            .map(Self::Complete)
             .unwrap_or_else(|| self)
         
     }

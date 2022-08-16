@@ -1,4 +1,4 @@
-use std::{sync::{RwLockReadGuard, RwLockWriteGuard}, collections::HashMap, borrow::Borrow};
+use std::sync::{RwLockReadGuard, RwLockWriteGuard};
 
 use crate::{
     index::*,
@@ -24,7 +24,10 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection> TraversableMut<'a, 'g, T> 
         self.graph.write().unwrap()
     }
 }
+type HashMap<K, V> = DeterministicHashMap<K, V>;
+
 type ReadingBands = HashMap<usize, Pattern>;
+
 impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     pub(crate) fn read_sequence<N, S: ToNewTokenIndices<N, T>>(
         &mut self,
@@ -52,7 +55,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         }
     }
     fn read_context_path(&mut self, mut context: PrefixPath) -> Result<Pattern, NoMatch> {
-        let mut bands = ReadingBands::new();
+        let mut bands = ReadingBands::default();
         let mut end_bound = 0;
         let mut last = self.get_next(&mut context).unwrap();
         while !context.is_finished(self) {
@@ -151,7 +154,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                                     self,
                                     loc,
                                     path.clone(),
-                                )
+                                ).0
                             ]
                         };
                         let end_bound = start_bound + expansion.width();
@@ -251,8 +254,8 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                     // insert new pattern so it can be found in later queries
                     // any new indicies afterwards need to be appended
                     // to the pattern inside this index
-                    let new = self.graph_mut().index_pattern(new);
-                    self.root = Some(new);
+                    let c = self.graph_mut().index_pattern(new);
+                    self.root = Some(c);
                 }
             }
         }

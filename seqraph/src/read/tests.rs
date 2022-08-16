@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use pretty_assertions::assert_eq;
 
 fn assert_child_of_at<T: Tokenize>(graph: &Hypergraph<T>, child: impl AsChild, parent: impl AsChild, pattern_indices: impl IntoIterator<Item=PatternIndex>) {
-    assert_eq!(*graph.expect_parents(child), hashmap![
+    assert_eq!(graph.expect_parents(child).clone().into_iter().collect::<HashMap<_, _>>(), hashmap![
         parent.index() => Parent {
             pattern_indices: pattern_indices.into_iter().collect(),
             width: parent.width(),
@@ -30,11 +30,11 @@ fn sync_read_text1() {
     drop(g);
     let ld = graph.find_sequence("ld".chars()).unwrap().expect_complete("ld");
     let g = graph.read().unwrap();
-    let pats: HashSet<_> = ld.vertex(&g).get_child_pattern_set();
+    let pats: HashSet<_> = ld.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![
         vec![l, d],
     ]);
-    let pats: HashSet<_> = result.vertex(&g).get_child_pattern_set();
+    let pats: HashSet<_> = result.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![
         vec![h, e, ld, ld, o, space, w, o, r, ld, exclam],
     ]);
@@ -51,11 +51,11 @@ fn sync_read_text2() {
     drop(g);
     let ld = graph.find_sequence("ld".chars()).unwrap().expect_complete("ld");
     let g = graph.read().unwrap();
-    let pats: HashSet<_> = ld.vertex(&g).get_child_pattern_set();
+    let pats: HashSet<_> = ld.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![
         vec![l, d],
     ]);
-    let pats: HashSet<_> = heldld.vertex(&g).get_child_pattern_set();
+    let pats: HashSet<_> = heldld.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![
         vec![h, e, ld, ld],
     ]);
@@ -63,30 +63,30 @@ fn sync_read_text2() {
     let hell = graph.read_sequence("hell".chars());
     let he = graph.find_sequence("he".chars()).unwrap().expect_complete("he");
     let g = graph.read().unwrap();
-    let pats: HashSet<_> = he.vertex(&g).get_child_pattern_set();
+    let pats: HashSet<_> = he.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![
         vec![h, e],
     ]);
     drop(g);
     let hel = graph.find_sequence("hel".chars()).unwrap().expect_complete("hel");
     let g = graph.read().unwrap();
-    let pats: HashSet<_> = hel.vertex(&g).get_child_pattern_set();
+    let pats: HashSet<_> = hel.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![
         vec![he, l],
     ]);
-    let pats: HashSet<_> = hell.vertex(&g).get_child_pattern_set();
+    let pats: HashSet<_> = hell.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![
         vec![hel, l],
     ]);
     drop(g);
     let held = graph.find_sequence("held".chars()).unwrap().expect_complete("held");
     let g = graph.read().unwrap();
-    let pats: HashSet<_> = held.vertex(&g).get_child_pattern_set();
+    let pats: HashSet<_> = held.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![
         vec![hel, d],
         vec![he, ld],
     ]);
-    let pats: HashSet<_> = heldld.vertex(&g).get_child_pattern_set();
+    let pats: HashSet<_> = heldld.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![
         vec![held, ld],
     ]);
@@ -106,7 +106,7 @@ fn read_sequence1() {
     drop(gr);
     {
         let gr = graph.read().unwrap();
-        let pats = ind_hypergraph.vertex(&gr).get_child_pattern_set();
+        let pats: HashSet<_> = ind_hypergraph.vertex(&gr).get_child_pattern_set().into_iter().collect();
         //println!("{:#?}", );
         assert_eq!(pats, hashset![
             vec![h, y, p, e, r, g, r, a, p, h],
@@ -144,12 +144,12 @@ fn read_sequence1() {
     let hyper = graph.read_sequence("hyper".chars());
     {
         let graph = graph.read().unwrap();
-        let pats = hyper.vertex(&graph).get_child_pattern_set();
+        let pats: HashSet<_> = hyper.vertex(&graph).get_child_pattern_set().into_iter().collect();
         assert_eq!(pats, hashset![
             vec![h, y, p, e, r],
         ]);
         assert_eq!(hyper.width(), 5);
-        let pats = ind_hypergraph.vertex(&graph).get_child_pattern_set();
+        let pats: HashSet<_> = ind_hypergraph.vertex(&graph).get_child_pattern_set().into_iter().collect();
         assert_eq!(pats, hashset![
             vec![hyper, g, r, a, p, h],
         ]);
@@ -157,12 +157,12 @@ fn read_sequence1() {
     }
     let ind_graph = graph.read_sequence("graph".chars());
     let graph = graph.read().unwrap();
-    let pats = ind_graph.vertex(&graph).get_child_pattern_set();
+    let pats: HashSet<_> = ind_graph.vertex(&graph).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![
         vec![g, r, a, p, h],
     ]);
     assert_eq!(ind_graph.width(), 5);
-    let pats = ind_hypergraph.vertex(&graph).get_child_pattern_set();
+    let pats: HashSet<_> = ind_hypergraph.vertex(&graph).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![
         vec![hyper, ind_graph],
     ]);
@@ -183,7 +183,7 @@ fn read_infix1() {
     let n = graph.read().unwrap().expect_token_child('n');
     {
         let graph = graph.read().unwrap();
-        let pats = subdivision.vertex(&graph).get_child_pattern_set();
+        let pats: HashSet<_> = subdivision.vertex(&graph).get_child_pattern_set().into_iter().collect();
         //println!("{:#?}", );
         assert_eq!(pats, hashset![
             vec![s, u, b, d, i, v, i, s, i, o, n],
@@ -238,14 +238,14 @@ fn read_infix1() {
         let vis = graph.find_sequence("vis".chars()).unwrap().expect_complete("vis");
         let su = graph.find_sequence("su".chars()).unwrap().expect_complete("su");
         let g = graph.read().unwrap();
-        let pats = su.vertex(&g).get_child_pattern_set();
+        let pats: HashSet<_> = su.vertex(&g).get_child_pattern_set().into_iter().collect();
         assert_eq!(pats, hashset![
             vec![s, u],
         ]);
         drop(g);
         let vi = graph.find_sequence("vi".chars()).unwrap().expect_complete("vi");
         let g = graph.read().unwrap();
-        let pats = vis.vertex(&g).get_child_pattern_set();
+        let pats: HashSet<_> = vis.vertex(&g).get_child_pattern_set().into_iter().collect();
         assert_eq!(pats, hashset![
             vec![vi, s],
         ]);
@@ -254,7 +254,7 @@ fn read_infix1() {
 
         let visu = graph.find_sequence("visu".chars()).unwrap().expect_complete("visu");
         let g = graph.read().unwrap();
-        let pats = visu.vertex(&g).get_child_pattern_set();
+        let pats: HashSet<_> = visu.vertex(&g).get_child_pattern_set().into_iter().collect();
         assert_eq!(pats, hashset![
             vec![vis, u],
             vec![vi, su],
@@ -263,11 +263,11 @@ fn read_infix1() {
 
         let ion = graph.find_sequence("ion".chars()).unwrap().expect_complete("ion");
         let g = graph.read().unwrap();
-        let pats = visualization.vertex(&g).get_child_pattern_set();
+        let pats: HashSet<_> = visualization.vertex(&g).get_child_pattern_set().into_iter().collect();
         assert_eq!(pats, hashset![
             vec![visu, a, l, i, z, a, t, ion],
         ]);
-        let pats = subdivision.vertex(&g).get_child_pattern_set();
+        let pats: HashSet<_> = subdivision.vertex(&g).get_child_pattern_set().into_iter().collect();
         //println!("{:#?}", );
         assert_eq!(pats, hashset![
             vec![su, b, d, i, vis, ion],
@@ -289,11 +289,11 @@ fn read_infix2() {
 
     let su = graph.find_sequence("su".chars()).unwrap().expect_complete("su");
     let g = graph.read().unwrap();
-    let pats = su.vertex(&g).get_child_pattern_set();
+    let pats: HashSet<_> = su.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![
         vec![s, u],
     ]);
-    let pats = subvisu.vertex(&g).get_child_pattern_set();
+    let pats: HashSet<_> = subvisu.vertex(&g).get_child_pattern_set().into_iter().collect();
     //println!("{:#?}", );
     assert_eq!(pats, hashset![
         vec![su, b, v, i, su],
@@ -307,7 +307,7 @@ fn read_infix2() {
     let vi = graph.find_sequence("vi".chars()).unwrap().expect_complete("vi");
     let sub = graph.find_sequence("sub".chars()).unwrap().expect_complete("sub");
     let g = graph.read().unwrap();
-    let pats = sub.vertex(&g).get_child_pattern_set();
+    let pats: HashSet<_> = sub.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![
         vec![su, b],
     ]);
@@ -315,16 +315,16 @@ fn read_infix2() {
 
     let visu = graph.find_sequence("visu".chars()).unwrap().expect_complete("visu");
     let g = graph.read().unwrap();
-    let pats = visu.vertex(&g).get_child_pattern_set();
+    let pats: HashSet<_> = visu.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![
         vec![vi, su],
     ]);
-    let pats = visub.vertex(&g).get_child_pattern_set();
+    let pats: HashSet<_> = visub.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![
         vec![visu, b],
         vec![vi, sub],
     ]);
-    let pats = subvisu.vertex(&g).get_child_pattern_set();
+    let pats: HashSet<_> = subvisu.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![
         vec![sub, visu],
     ]);
@@ -339,7 +339,7 @@ fn read_loose_sequence1() {
     let b = g.expect_token_child('b');
     let x = g.expect_token_child('x');
 
-    let pats = abxaxxb.vertex(&g).get_child_pattern_set();
+    let pats: HashSet<_> = abxaxxb.vertex(&g).get_child_pattern_set().into_iter().collect();
     //println!("{:#?}", );
     assert_eq!(pats, hashset![
         vec![a, b, x, a, x, x, b],
@@ -358,11 +358,11 @@ fn read_repeating_known1() {
     let xy = graph.find_sequence("xy".chars()).unwrap().expect_complete("xy");
     let g = graph.read().unwrap();
 
-    let pats = xy.vertex(&g).get_child_pattern_set();
+    let pats: HashSet<_> = xy.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![
         vec![x, y],
     ]);
-    let pats = xyyxy.vertex(&g).get_child_pattern_set();
+    let pats: HashSet<_> = xyyxy.vertex(&g).get_child_pattern_set().into_iter().collect();
     //println!("{:#?}", );
     assert_eq!(pats, hashset![
         vec![xy, y, xy],

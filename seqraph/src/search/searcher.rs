@@ -63,7 +63,8 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
                     FoundPath::from(match_end),
                     query,
                 );
-                ControlFlow::Continue(Some(found))
+                //ControlFlow::Continue(Some(found))
+                ControlFlow::Continue(search::pick_max_result(acc, found))
             },
             //MatchNode::Match(path, query) =>
             //    ControlFlow::Continue(fold_match::<_, _, _, Self>(trav, acc, path, query)),
@@ -102,11 +103,12 @@ pub(crate) fn fold_match<
 >(
     trav: &'a Folder::Trav,
     acc: Folder::Continue,
-    path: SearchPath,
+    mut path: SearchPath,
     query: Q
 ) -> Option<TraversalResult<Q>> {
+    path.reduce_end::<_, D, _>(trav);
     let found = TraversalResult::new(
-        path.reduce_end::<_, D, _>(trav),
+        FoundPath::new::<_, D, _>(trav, path),
         query
     );
     pick_max_result(acc, found)

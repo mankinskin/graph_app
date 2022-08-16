@@ -1,16 +1,10 @@
-use crate::{
-    graph::*,
-    vertex::*,
-    search::*,
-};
+use crate::*;
 use itertools::{
     EitherOrBoth,
     Itertools,
 };
-use std::collections::{
-    HashMap,
-    HashSet,
-};
+type HashMap<K, V> = DeterministicHashMap<K, V>;
+type HashSet<T> = DeterministicHashSet<T>;
 use std::fmt::Debug;
 
 fn to_matching_iterator<'a, I: Indexed + 'a, J: Indexed + 'a>(

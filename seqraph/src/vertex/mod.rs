@@ -1,13 +1,6 @@
-use crate::{
-    graph::*,
-    search::*,
-};
+use crate::*;
 use either::Either;
 use std::{
-    collections::{
-        HashMap,
-        HashSet,
-    },
     fmt::Debug,
     slice::SliceIndex,
     sync::atomic::{
@@ -15,6 +8,8 @@ use std::{
         Ordering,
     }, borrow::Borrow,
 };
+type HashSet<T> = DeterministicHashSet<T>;
+type HashMap<K, V> = DeterministicHashMap<K, V>;
 
 mod indexed;
 mod parent;
@@ -69,8 +64,8 @@ impl VertexData {
         Self {
             index,
             width,
-            parents: VertexParents::new(),
-            children: ChildPatterns::new(),
+            parents: VertexParents::default(),
+            children: ChildPatterns::default(),
         }
     }
     pub fn get_width(&self) -> TokenPosition {
@@ -218,7 +213,37 @@ impl VertexData {
         }
         let id = Self::next_child_pattern_id();
         self.children.insert(id, pat.into_pattern());
+        self.validate();
         id
+    }
+    pub fn validate_links(&self) {
+        assert!(self.children.len() != 1 || self.parents.len() != 1);
+    }
+    pub fn validate_patterns(&self) {
+        self.children
+            .iter()
+            .fold(Vec::new(), |mut acc: Vec<Vec<usize>>, (_pid, p)| {
+                let mut offset = 0;
+                let mut p = p.iter().fold(Vec::new(), |mut pa, c| {
+                    offset += c.width();
+                    assert!(acc.iter().find(|pr|
+                        pr.contains(&offset)
+                    ).is_none());
+                    pa.push(offset);
+                    pa
+                });
+                p.pop().expect("Empty pattern!");
+                assert!(!p.is_empty(), "Single index pattern");
+                assert!(offset == self.width);
+                acc.push(p);
+                acc
+            });
+    }
+    pub fn validate(&self) {
+        //self.validate_links();
+        if !self.children.is_empty() {
+            self.validate_patterns();
+        }
     }
     pub fn add_parent(
         &mut self,
@@ -233,12 +258,16 @@ impl VertexData {
             parent_rel.add_pattern_index(pattern, index);
             self.parents.insert(parent.index(), parent_rel);
         }
+        // not while indexing
+        //self.validate_links();
     }
     pub fn remove_parent(
         &mut self,
         vertex: impl Indexed,
     ) {
         self.parents.remove(&vertex.index());
+        // not while indexing
+        //self.validate_links();
     }
     pub fn remove_parent_index(
         &mut self,
@@ -253,6 +282,8 @@ impl VertexData {
                 self.parents.remove(&vertex.index());
             }
         }
+        // not while indexing
+        //self.validate_links();
     }
     pub fn get_parents_below_width(
         &self,

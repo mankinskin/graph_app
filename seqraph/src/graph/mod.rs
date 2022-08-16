@@ -2,10 +2,10 @@ use crate::*;
 use itertools::Itertools;
 use petgraph::graph::DiGraph;
 use std::{
-    collections::HashMap,
     fmt::Debug, sync::{Arc, RwLock},
 };
 
+type HashMap<K, V> = DeterministicHashMap<K, V>;
 mod child_strings;
 mod getters;
 mod insert;

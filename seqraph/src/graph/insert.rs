@@ -2,12 +2,12 @@ use itertools::Itertools;
 
 use crate::*;
 use std::{
-    collections::HashSet,
     sync::atomic::{
         AtomicUsize,
         Ordering,
     },
 };
+type HashSet<T> = DeterministicHashSet<T>;
 
 impl<'t, 'g, T> Hypergraph<T>
 where
@@ -23,6 +23,7 @@ where
         key: VertexKey<T>,
         mut data: VertexData,
     ) -> Child {
+        assert!(!self.graph.contains_key(&key));
         let entry = self.graph.entry(key);
         data.index = entry.index();
         let c = Child::new(data.index, data.width);
@@ -75,6 +76,12 @@ where
             let node = self.expect_vertex_data_mut(child_index);
             node.add_parent(parent.as_child(), pattern_id, i);
         }
+    }
+    pub fn validate_vertex(
+        &self,
+        index: impl Indexed,
+    ) {
+        self.expect_vertex_data(index).validate()
     }
     /// add pattern to existing node
     pub fn add_pattern_with_update(
@@ -241,39 +248,38 @@ where
             Err(c) => c,
         })
     }
-    #[track_caller]
+    //#[track_caller]
     pub fn replace_in_pattern(
         &'g mut self,
         location: impl IntoPatternLocation,
         range: impl PatternRangeIndex,
-        rep: impl IntoPattern + Clone,
+        replace: impl IntoPattern + Clone,
     ) {
         let location = location.into_pattern_location();
         let parent = location.parent;
         let parent_index = parent.index();
         let pat = location.pattern_id;
-        let replace: Pattern = rep.into_pattern();
-        let (old, width, start, new_end, rem) = {
+        let (replaced, width, start, new_end, rem) = {
             let vertex = self.expect_vertex_data_mut(parent);
             let width = vertex.width;
             let pattern = vertex.expect_child_pattern_mut(&pat);
             let _backup = pattern.clone();
             let start = range.clone().next().unwrap();
-            let new_end = start + replace.len();
-            let old = replace_in_pattern(&mut *pattern, range.clone(), replace.clone());
-            if !(pattern.len() > 1) {
-                assert!(pattern.len() > 1);
-            }
+            let new_end = start + replace.borrow().len();
+            let _old = pattern.clone();
+            let replaced = replace_in_pattern(&mut *pattern, range.clone(), replace.clone());
+            let rem = pattern.iter().skip(new_end).cloned().collect::<Pattern>();
+            vertex.validate();
             (
-                old,
+                replaced,
                 width,
                 start,
                 new_end,
-                pattern.iter().skip(new_end).cloned().collect::<Pattern>(),
+                rem,
             )
         };
-        let old_end = start + old.len();
-        range.clone().zip(old.into_iter()).for_each(|(pos, c)| {
+        let old_end = start + replaced.len();
+        range.clone().zip(replaced.into_iter()).for_each(|(pos, c)| {
             let c = self.expect_vertex_data_mut(c);
             c.remove_parent_index(parent_index, pat, pos);
         });

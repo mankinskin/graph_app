@@ -96,6 +96,9 @@ pub trait GraphEntry: EntryPos {
     >(&self, trav: &'a Trav) -> Pattern {
         trav.graph().expect_pattern_at(self.get_entry_location())
     }
+    fn root(&self) -> Child {
+        self.get_entry_location().parent
+    }
     fn get_entry<
         'a: 'g,
         'g,
@@ -120,6 +123,9 @@ pub trait GraphExit: ExitPos {
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Pattern {
         trav.graph().expect_pattern_at(self.get_exit_location())
+    }
+    fn root(&self) -> Child {
+        self.get_exit_location().parent
     }
     fn get_exit<
         'a: 'g,
@@ -156,7 +162,7 @@ pub(crate) trait HasMatchPaths: HasStartMatchPath + HasEndMatchPath {
         self.start_match_path().path().len() + self.end_match_path().path().len()
     }
     fn root(&self) -> Child {
-        self.start_match_path().entry().parent
+        self.start_match_path().root()
     }
 }
 pub(crate) trait PathComplete: GraphEntry + HasStartMatchPath + HasEndPath + ExitPos {

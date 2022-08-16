@@ -41,6 +41,7 @@ pub(crate) trait IndexSide<D: IndexDirection> {
         Self::Opposite::context_range(pos)
     }
     fn context_range(pos: usize) -> Self::ContextRange;
+    fn inner_pos_after_context_indexed(pos: usize) -> usize;
     fn limited_range(start: usize, end: usize) -> Range<usize>;
     fn range_front(range: &Range<usize>) -> usize;
     fn limited_inner_range(range: &Range<usize>) -> Range<usize>;
@@ -68,6 +69,9 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
     fn context_range(pos: usize) -> Self::ContextRange {
         0..pos
     }
+    fn inner_pos_after_context_indexed(_pos: usize) -> usize {
+        1
+    }
     fn context_inner_order<
         'a,
         C: AsRef<[Child]>,
@@ -79,7 +83,7 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
         inner: Child,
         context: impl IntoPattern,
     ) -> Pattern {
-        D::concat_context_and_inner(context, inner)
+        D::context_then_inner(context, inner)
     }
     fn back_front_order<A>(back: A, front: A) -> (A, A) {
         (front, back)
@@ -145,6 +149,9 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
     fn context_range(pos: usize) -> Self::ContextRange {
         D::index_next(pos).unwrap()..
     }
+    fn inner_pos_after_context_indexed(pos: usize) -> usize {
+        pos
+    }
     fn split_at_border(pos: usize, pattern: impl IntoPattern) -> bool {
         Some(pos) == D::index_next(D::last_index(pattern))
     }
@@ -163,7 +170,7 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
         inner: Child,
         context: impl IntoPattern,
     ) -> Pattern {
-        D::concat_inner_and_context(inner, context)
+        D::inner_then_context(inner, context)
     }
     fn back_front_order<A>(back: A, front: A) -> (A, A) {
         (back, front)
@@ -206,7 +213,7 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
                     },
                     Ordering::Equal => {
                         offset = 0;
-                        None
+                        Some((i, NonZeroUsize::new(offset)))
                     },
                     Ordering::Greater => Some((i, NonZeroUsize::new(offset))),
                 }
@@ -245,7 +252,7 @@ mod tests {
                 pattern.borrow(),
                 NonZeroUsize::new(width-2).unwrap(),
             ),
-            Some((3, None)),
+            Some((2, None)),
         );
         assert_eq!(
             <IndexFront as IndexSide<Right>>::token_offset_split(

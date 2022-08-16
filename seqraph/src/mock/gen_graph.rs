@@ -1,6 +1,7 @@
 use itertools::Itertools;
 use rand::{
-    seq::IteratorRandom,
+    rngs::StdRng,
+    seq::IteratorRandom, SeedableRng,
 };
 use rand_distr::{
     Distribution,
@@ -29,7 +30,7 @@ pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
     let mean_length = 100;
     let len_distr: Normal<f32> = Normal::new(mean_length as f32, 4.0).unwrap();
     //let mut rng = rand::rngs::StdRng::seed_from_u64(42);
-    let mut rng = rand::thread_rng();
+    let mut rng = StdRng::seed_from_u64(1);
     let mut panics = HashMap::new();
     let input_distr = "abcdefghi ".chars().collect_vec();
     let mut panic_count = 0;

@@ -74,18 +74,11 @@ pub fn postfix<T: AsChild + Clone>(
 #[track_caller]
 #[tracing::instrument]
 pub fn replace_in_pattern(
-    mut pattern: impl AsPatternMut ,
+    mut pattern: impl AsPatternMut,
     range: impl PatternRangeIndex,
     replace: impl IntoPattern,
 ) -> Pattern {
-    //print!("replacing {:?} in {:?}[{:#?}]",
-    //    replace.borrow().iter().map(|c| c.index()).collect_vec(),
-    //    pattern.borrow().iter().map(|c| c.index()).collect_vec(),
-    //    range
-    //);
-    let old = pattern.borrow_mut().splice(range, replace.into_pattern()).collect();
-    //println!(" -> {:?}", pattern.borrow().iter().map(|c| c.index()).collect_vec());
-    old
+    pattern.borrow_mut().splice(range, replace.into_pattern()).collect()
 }
 pub fn single_child_patterns(halves: Vec<Pattern>) -> Result<Child, Vec<Pattern>> {
     match (halves.len(), halves.first()) {
