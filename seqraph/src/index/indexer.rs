@@ -11,13 +11,13 @@ pub struct Indexer<T: Tokenize, D: IndexDirection> {
 struct Indexing<'a, T: Tokenize, D: IndexDirection, Q: IndexingQuery> {
     _ty: std::marker::PhantomData<(&'a T, D, Q)>,
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection> Traversable<'a, 'g, T> for Indexer<T, D> {
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for Indexer<T, D> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
     fn graph(&'g self) -> Self::Guard {
         self.graph.read().unwrap()
     }
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection> TraversableMut<'a, 'g, T> for Indexer<T, D> {
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g, T> for Indexer<T, D> {
     type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
     fn graph_mut(&'g mut self) -> Self::GuardMut {
         self.graph.write().unwrap()
@@ -74,7 +74,7 @@ impl<
 pub(crate) trait IndexingQuery: TraversalQuery {}
 impl<T: TraversalQuery> IndexingQuery for T {}
 
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection, Q: IndexingQuery> TraversalFolder<'a, 'g, T, D, Q> for Indexer<T, D> {
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: IndexingQuery> TraversalFolder<'a, 'g, T, D, Q> for Indexer<T, D> {
     type Trav = Self;
     type Break = (Child, Q);
     type Continue = Vec<TraversalResult<Q>>;
@@ -194,6 +194,7 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
                 &mut *graph,
                 split.location,
                 split.path,
+                split.inner,
             ).0
         ));
         let last_split =
@@ -206,14 +207,16 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
                     &mut *graph,
                     split.location,
                     split.path,
+                    split.inner,
                 ).0
             ));
 
-        match (head_split, last_split) {
+        let res = match (head_split, last_split) {
             (Some((head_inner, head_context)), Some((last_inner, last_context))) => {
+                let range = D::inner_context_range(head_pos, last_pos);
                 let inner = graph.index_range_in(
                     location,
-                    D::inner_context_range(head_pos, last_pos),
+                    range,
                 ).ok();
                 let target = graph.insert_pattern(
                     D::concat_context_inner_context(
@@ -265,7 +268,9 @@ pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversa
                 target
             },
             (None, None) => wrapper,
-        }
+        };
+        graph.validate_expansion(entry.parent);
+        res
     }
 }
 impl<
@@ -310,13 +315,12 @@ impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
     ) -> Result<(Child, Q), NoMatch> {
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         query_path.hash(&mut hasher);
-        let h = hasher.finish();
+        let _h = hasher.finish();
         match Ti::new(self, TraversalNode::query_node(query_path))
             .try_fold(
                 Vec::new(),
-                |acc, (_depth, node)| {
+                |acc, (_depth, node)|
                     S::Folder::fold_found(self, acc, node)
-                }
             )
         {
             //ControlFlow::Continue(None) => Err(NoMatch::NotFound),

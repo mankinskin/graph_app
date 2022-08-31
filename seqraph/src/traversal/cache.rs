@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::BinaryHeap;
 use super::*;
 
 
@@ -8,7 +8,7 @@ type HashMap<K, V> = DeterministicHashMap<K, V>;
 pub(crate) struct BUCacheEntry<Q: TraversalQuery> {
     finished: bool,
     mismatch: bool,
-    waiting: VecDeque<TraversalNode<Q>>,
+    waiting: BinaryHeap<WaitingNode<Q>>,
 }
 impl<Q: TraversalQuery> Default for BUCacheEntry<Q> {
     fn default() -> Self {
@@ -17,6 +17,26 @@ impl<Q: TraversalQuery> Default for BUCacheEntry<Q> {
             mismatch: false,
             waiting: Default::default()
         }
+    }
+}
+/// ordered according to priority
+#[derive(Clone, Debug, Eq)]
+struct WaitingNode<Q: TraversalQuery>(usize, TraversalNode<Q>);
+
+impl<Q: TraversalQuery> PartialEq for WaitingNode<Q> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.eq(&other.0)
+    }
+}
+impl<Q: TraversalQuery> Ord for WaitingNode<Q> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.partial_cmp(&other.0)
+            .unwrap_or(Ordering::Equal)
+    }
+}
+impl<Q: TraversalQuery> PartialOrd for WaitingNode<Q> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.0.partial_cmp(&other.0).map(Ordering::reverse)
     }
 }
 
@@ -35,7 +55,7 @@ impl<Q: TraversalQuery> TraversalCache<Q> {
     pub fn bu_mismatch(&mut self, root: usize) -> Option<TraversalNode<Q>> {
         self.bu.get_mut(&root).and_then(|e| {
             e.mismatch = true;
-            e.waiting.pop_front()
+            e.waiting.pop().map(|w| w.1)
         })
     }
     pub fn bu_finished(&mut self, root: usize) {
@@ -46,14 +66,14 @@ impl<Q: TraversalQuery> TraversalCache<Q> {
     }
     pub fn bu_node(&mut self, last_node: &TraversalNode<Q>, entry: ChildLocation) -> Option<()> {
         self.bu.get_mut(&entry.parent.index)
-            .and_then(|entry|
-                match (entry.finished, entry.mismatch) {
+            .and_then(|e|
+                match (e.finished, e.mismatch) {
                     (false, false) => {
-                        entry.waiting.push_back(last_node.clone());
+                        e.waiting.push(WaitingNode(entry.sub_index, last_node.clone()));
                         Some(())
                     }
                     (false, true) => {
-                        entry.mismatch = false;
+                        e.mismatch = false;
                         None
                     },
                     _ => Some(())

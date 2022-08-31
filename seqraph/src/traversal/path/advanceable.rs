@@ -23,8 +23,8 @@ pub(crate) trait AdvanceablePath:
                 let pattern = graph.expect_pattern_at(&location);
                 if let Some(next) = D::pattern_index_next(pattern.borrow(), location.sub_index) {
                     location.sub_index = next;
-                    let next = pattern[next];
-                    self.advance_width(next.width);
+                    //let next = pattern[next];
+                    //self.advance_width(next.width);
                     self.push_end(location);
                     return Some(current);
                 }

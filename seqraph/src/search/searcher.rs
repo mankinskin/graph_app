@@ -10,7 +10,7 @@ pub struct Searcher<T: Tokenize, D: MatchDirection> {
     graph: HypergraphRef<T>,
     _ty: std::marker::PhantomData<D>,
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection> Traversable<'a, 'g, T> for Searcher<T, D> {
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> Traversable<'a, 'g, T> for Searcher<T, D> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
     fn graph(&'g self) -> Self::Guard {
         self.graph.read().unwrap()
@@ -43,14 +43,14 @@ impl<
     SearchTraversalPolicy<'a, 'g, T, D> for ParentSearch<T, D>
 {}
 
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection>
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a>
     TraversalFolder<'a, 'g, T, D, QueryRangePath> for Searcher<T, D>
 {
     type Trav = Self;
     type Break = QueryFound;
     type Continue = Option<QueryFound>;
     fn fold_found(
-        trav: &Self::Trav,
+        _trav: &Self::Trav,
         acc: Self::Continue,
         node: MatchNode,
     ) -> ControlFlow<Self::Break, Self::Continue> {

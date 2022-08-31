@@ -5,7 +5,6 @@ mod pattern_range;
 use super::{
     *,
 };
-use crate::*;
 pub use {
     pattern_range::*,
     pattern_location::*,

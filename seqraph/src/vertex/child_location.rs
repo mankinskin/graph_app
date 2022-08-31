@@ -73,6 +73,16 @@ impl IntoPatternLocation for &ChildLocation {
         }
     }
 }
+impl Indexed for ChildLocation {
+    fn index(&self) -> VertexIndex {
+        self.parent.index
+    }
+}
+impl Wide for ChildLocation {
+    fn width(&self) -> usize {
+        self.parent.width
+    }
+}
 
 pub trait TraversalOrder: Wide {
     fn sub_index(&self) -> usize;
@@ -91,10 +101,5 @@ impl<T: TraversalOrder> TraversalOrder for &T {
 impl TraversalOrder for ChildLocation {
     fn sub_index(&self) -> usize {
         self.sub_index
-    }
-}
-impl Wide for ChildLocation {
-    fn width(&self) -> usize {
-        self.parent.width
     }
 }

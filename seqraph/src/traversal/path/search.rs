@@ -64,7 +64,6 @@ impl<'a: 'g, 'g> SearchPath {
             // skip segments at start of pattern
             if let Some(prev) = D::pattern_index_prev(pattern.borrow(), location.sub_index) {
                 location.sub_index = prev;
-                *self.width_mut() -= pattern[prev].width();
                 self.end_path_mut().push(location);
                 break;
             }
@@ -221,10 +220,17 @@ impl AdvanceablePath for SearchPath {}
 
 impl PartialOrd for SearchPath {
     fn partial_cmp(&self, other: &SearchPath) -> Option<Ordering> {
-        self.width().partial_cmp(&other.width()).or_else(||
-            self.num_path_segments().partial_cmp(
-                &other.num_path_segments()
-            ).map(Ordering::reverse)
-        )
+        match self.width().cmp(&other.width()) {
+            Ordering::Equal =>
+                match (self.min_path_segments(), other.min_path_segments()) {
+                    (1, 2..) => Some(Ordering::Greater),
+                    (2.., 1) => Some(Ordering::Less),
+                    _ =>
+                        HasMatchPaths::num_path_segments(self).partial_cmp(
+                            &HasMatchPaths::num_path_segments(other)
+                        ).map(Ordering::reverse),
+                },
+            o => Some(o),
+        }
     }
 }

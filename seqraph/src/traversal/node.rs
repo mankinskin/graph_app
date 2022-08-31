@@ -57,6 +57,5 @@ impl<
         }
     }
 }
-
 pub(crate) type MatchNode = TraversalNode<QueryRangePath>;
 pub(crate) type IndexingNode<Q> = TraversalNode<Q>;

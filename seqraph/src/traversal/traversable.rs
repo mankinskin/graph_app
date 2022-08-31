@@ -5,7 +5,7 @@ use crate::{
     Hypergraph,
     HypergraphRef,
 };
-pub trait Traversable<'a: 'g, 'g, T: Tokenize>: Sized + std::fmt::Debug {
+pub trait Traversable<'a: 'g, 'g, T: Tokenize>: 'a + Sized + std::fmt::Debug {
     type Guard: Traversable<'g, 'g, T> + Deref<Target=Hypergraph<T>>;
     fn graph(&'g self) -> Self::Guard;
 }

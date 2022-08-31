@@ -193,6 +193,20 @@ where
 
     }
     #[track_caller]
+    pub fn try_index_patterns(
+        &mut self,
+        patterns: impl IntoIterator<Item = impl IntoPattern>,
+    ) -> Option<Child> {
+        let patterns = patterns.into_iter()
+            .map(IntoPattern::into_pattern)
+            .collect_vec();
+        if patterns.is_empty() {
+            None
+        } else {
+            Some(self.index_patterns(patterns))
+        }
+    }
+    #[track_caller]
     pub(crate) fn try_index_range_in(
         &mut self,
         location: impl IntoPatternLocation,
@@ -301,6 +315,7 @@ where
             }
         }
         self.add_pattern_parent(Child::new(parent_index, width), replace, pat, start);
+        self.validate_expansion(parent_index);
     }
     pub(crate) fn add_pattern_parent(
         &mut self,

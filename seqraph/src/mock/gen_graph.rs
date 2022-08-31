@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use rand::{
     rngs::StdRng,
-    seq::IteratorRandom, SeedableRng,
+    seq::IteratorRandom, SeedableRng, RngCore,
 };
 use rand_distr::{
     Distribution,
@@ -24,13 +24,17 @@ lazy_static::lazy_static! {
 }
 #[allow(unused)]
 pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
-    let batch_size = 50;
-    let fuzz_len = 100;
-    let num_batches = fuzz_len/batch_size;
-    let mean_length = 100;
+    let batch_size = 10;
+    let batch_count = 1;
+    let fuzz_len = batch_size * batch_count;
+    let mean_length = 50;
     let len_distr: Normal<f32> = Normal::new(mean_length as f32, 4.0).unwrap();
-    //let mut rng = rand::rngs::StdRng::seed_from_u64(42);
     let mut rng = StdRng::seed_from_u64(1);
+    //let mut rng = StdRng::from_seed([
+    //    63, 104, 23, 252, 201, 228, 199, 24, 104, 10,
+    //    207, 224, 132, 156, 25, 149, 104, 185, 78, 117,
+    //    231, 247, 115, 133, 119, 203, 168, 44, 31, 31, 54, 42
+    //]);
     let mut panics = HashMap::new();
     let input_distr = "abcdefghi ".chars().collect_vec();
     let mut panic_count = 0;
@@ -43,14 +47,14 @@ pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
         *PANIC_INFO.lock().unwrap() = info.location().map(|loc| format!("{}", loc));
     }));
     let fuzz_progress = indicatif::ProgressBar::with_draw_target(
-        num_batches,
+        batch_count,
         indicatif::ProgressDrawTarget::stdout(),
     );
     let mut len_histo = histo::Histogram::with_buckets(10);
     let mut time_histo = histo::Histogram::with_buckets(10);
     let mut graph = None;
     let mut total_time = Duration::ZERO;
-    for _ in 0..num_batches {
+    for _ in 0..batch_count {
         graph = Some(HypergraphRef::default());
         fuzz_progress.inc(1);
         let batch_progress = indicatif::ProgressBar::with_draw_target(
@@ -61,6 +65,8 @@ pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
         let mut batch_time = Duration::ZERO;
         for i in 0..batch_size {
             //print!("{},", i);
+            let mut seed = <StdRng as SeedableRng>::Seed::default();
+            rng.try_fill_bytes(seed.as_mut()).unwrap();
             batch_progress.inc(1);
             let mut length = 0;
             while length < 1 {
@@ -84,8 +90,11 @@ pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
                         .unwrap_or_else(|p| p.into_inner()))
                     );
                     let msg = PANIC_INFO.lock().unwrap().take().unwrap();
-                    panics.entry(msg).and_modify(|instances: &mut Vec<_>| instances.push((i, input.clone())))
-                        .or_insert_with(|| vec![(i, input)]);
+                    let new = (i, input, seed);
+                    panics.entry(msg).and_modify(|instances: &mut Vec<_>|
+                        instances.push(new.clone())
+                    )
+                    .or_insert_with(|| vec![new]);
                 },
             }
         }
@@ -101,16 +110,17 @@ pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
         Ok(graph.unwrap())
     } else {
         println!("\nPanic locations:");
-        for (err, instances) in panics {
+        for (err, instances) in panics.iter() {
             let percent = ((instances.len() as f32/panic_count as f32) * 100.0) as u32;
             println!("\nPanic at {}: {}%", err, percent);
         }
         println!("Panics: {}/{}", panic_count, fuzz_len);
+        println!("Seeds: {:?}", panics.into_values().flat_map(|inst| inst.into_iter().map(|inst| inst.2)).collect_vec());
         println!("lengths:\n{}", len_histo);
         println!("times:\n{}", time_histo);
         println!("Total time:\n{} ms", total_time.as_millis());
         println!("Average character rate:\n{} chars/sec", if total_time.as_millis() > 0 {
-            (1000 * mean_length * num_batches)/total_time.as_millis() as u64
+            (1000 * mean_length * batch_count)/total_time.as_millis() as u64
         } else {
             0
         });

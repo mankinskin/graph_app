@@ -105,6 +105,50 @@ impl<'t, 'a, T: Tokenize> Hypergraph<T> {
     //    let pattern = self.to_token_children(tokens);
     //    self.index_pattern(&pattern[..])
     //}
+    pub fn index_token_indices(
+        &self,
+        index: impl AsChild,
+    ) -> Vec<VertexIndex> {
+        if index.width() == 1 {
+            vec![index.index()]
+        } else {
+            let data = self.expect_vertex_data(index);
+            assert!(!data.children.is_empty());
+            data.children.values().fold(Vec::new(), |mut acc, p| {
+                let exp = self.pattern_token_indices(p.borrow());
+                if acc.is_empty() {
+                    acc = exp;
+                } else {
+                    assert_eq!(acc, exp)
+                }
+                acc
+            })
+        }
+    }
+    pub fn pattern_token_indices(
+        &self,
+        pattern: impl IntoPattern,
+    ) -> Vec<VertexIndex> {
+        pattern.into_iter().flat_map(|c|
+            self.index_token_indices(c)
+        ).collect_vec()
+    }
+    pub fn validate_expansion(&self, index: impl Indexed) {
+        let root = index.index();
+        let data = self.expect_vertex_data(index);
+        data.children
+            .iter()
+            .fold(Vec::new(), |mut acc: Vec<VertexIndex>, (_pid, p)| {
+                assert!(!p.is_empty());
+                let exp = self.pattern_token_indices(p.borrow());
+                if acc.is_empty() {
+                    acc = exp;
+                } else {
+                    assert_eq!(acc, exp);
+                }
+                acc
+            });
+    }
 }
 impl<'t, 'a, T> Hypergraph<T>
 where
@@ -222,4 +266,5 @@ where
         let data = self.expect_vertex_data_by_key(key);
         self.key_data_string(key, data)
     }
+
 }

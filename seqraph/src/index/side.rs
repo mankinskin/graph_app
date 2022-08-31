@@ -11,6 +11,7 @@ pub(crate) trait IndexSide<D: IndexDirection> {
     type Path: DirectedBorderPath<D>;
     type InnerRange: PatternRangeIndex + StartInclusive;
     type ContextRange: PatternRangeIndex + StartInclusive;
+    type BottomUpPathIter: Iterator<Item=ChildLocation>;
     fn inner_width_to_offset(child: &Child, width: usize) -> Option<NonZeroUsize>;
     /// returns inner, context
     fn back_front_order<A>(back: A, front: A) -> (A, A);
@@ -41,6 +42,7 @@ pub(crate) trait IndexSide<D: IndexDirection> {
         Self::Opposite::context_range(pos)
     }
     fn context_range(pos: usize) -> Self::ContextRange;
+    fn bottom_up_path_iter(path: ChildPath) -> Self::BottomUpPathIter;
     fn inner_pos_after_context_indexed(pos: usize) -> usize;
     fn limited_range(start: usize, end: usize) -> Range<usize>;
     fn range_front(range: &Range<usize>) -> usize;
@@ -60,6 +62,7 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
     type Path = StartPath;
     type InnerRange = RangeFrom<usize>;
     type ContextRange = Range<usize>;
+    type BottomUpPathIter = std::vec::IntoIter<ChildLocation>;
     fn inner_range(pos: usize) -> Self::InnerRange {
         pos..
     }
@@ -71,6 +74,9 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
     }
     fn inner_pos_after_context_indexed(_pos: usize) -> usize {
         1
+    }
+    fn bottom_up_path_iter(path: ChildPath) -> Self::BottomUpPathIter {
+        path.into_iter()
     }
     fn context_inner_order<
         'a,
@@ -143,11 +149,15 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
     type Path = EndPath;
     type InnerRange = Range<usize>;
     type ContextRange = RangeFrom<usize>;
+    type BottomUpPathIter = std::iter::Rev<<Self::Opposite as IndexSide<D>>::BottomUpPathIter>;
     fn inner_range(pos: usize) -> Self::InnerRange {
         0..D::index_next(pos).unwrap()
     }
     fn context_range(pos: usize) -> Self::ContextRange {
         D::index_next(pos).unwrap()..
+    }
+    fn bottom_up_path_iter(path: ChildPath) -> Self::BottomUpPathIter {
+        path.into_iter().rev()
     }
     fn inner_pos_after_context_indexed(pos: usize) -> usize {
         pos

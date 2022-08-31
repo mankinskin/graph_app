@@ -224,6 +224,7 @@ impl VertexData {
             .iter()
             .fold(Vec::new(), |mut acc: Vec<Vec<usize>>, (_pid, p)| {
                 let mut offset = 0;
+                assert!(!p.is_empty());
                 let mut p = p.iter().fold(Vec::new(), |mut pa, c| {
                     offset += c.width();
                     assert!(acc.iter().find(|pr|

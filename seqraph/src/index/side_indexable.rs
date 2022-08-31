@@ -61,6 +61,7 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
                 &mut *graph,
                 prev.location,
                 prev.path.clone(),
+                prev.inner,
             );
             let inner_context_range = Side::inner_context_range(seg.sub_index);
             let inner_context = graph.expect_child_pattern_range(
@@ -89,7 +90,7 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
                     .filter(|(id, _)| **id != seg.pattern_id)
                     .map(|(id, p)| (*id, p.clone()))
                     .collect::<HashMap<_, _>>();
-                let s = format!("{:#?}", child_patterns);
+                let _s = format!("{:#?}", child_patterns);
                 let mut splits =
                     SideIndexable::< _, _, Side>::child_pattern_offset_splits(
                         &mut* graph,
@@ -115,17 +116,13 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
     fn single_entry_split(
         &'a mut self,
         entry: ChildLocation,
-        mut path: ChildPath,
+        path: ChildPath,
     ) -> Option<IndexSplitResult> {
-        let mut prev: Option<IndexSplitResult> = None;
         let mut graph = self.graph_mut();
-        while let Some(seg) = path.pop() {
-            prev = SideIndexable::< _, _, Side>::path_segment_split(
-                &mut *graph,
-                prev,
-                seg,
-            )
-        }
+        let prev = SideIndexable::< _, _, Side>::single_path_split(
+            &mut *graph,
+            path,
+        );
         SideIndexable::< _, _, Side>::path_segment_split(
             &mut *graph,
             prev,
@@ -134,11 +131,12 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
     }
     fn single_path_split(
         &'a mut self,
-        mut path: ChildPath,
+        path: ChildPath,
     ) -> Option<IndexSplitResult> {
-        let mut prev: Option<IndexSplitResult> = None;
         let mut graph = self.graph_mut();
-        while let Some(seg) = path.pop() {
+        let mut prev: Option<IndexSplitResult> = None;
+        let mut path = Side::bottom_up_path_iter(path);
+        while let Some(seg) = path.next() {
             prev = SideIndexable::< _, _, Side>::path_segment_split(
                 &mut *graph,
                 prev,
@@ -192,6 +190,7 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
                                 &mut *graph,
                                 split.location,
                                 split.path.clone(),
+                                split.inner,
                             );
                             (parent.to_child_location(pid, pos), pattern, split, context)
                         })
@@ -358,7 +357,8 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
     fn context_path(
         &'a mut self,
         entry: ChildLocation,
-        mut context_path: Vec<ChildLocation>
+        mut context_path: Vec<ChildLocation>,
+        inner: Child,
     ) -> (Child, ChildLocation) {
         let mut graph = self.graph_mut();
         let mut acc: Option<Child> = None;
@@ -366,21 +366,28 @@ pub(crate) trait SideIndexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side:
             let (context, _inner_location) = SideIndexable::<_, _, Side>::context_path_segment(&mut *graph, location);
             if let Some(acc) = &mut acc {
                 let (back, front) = Side::context_inner_order(&context, &acc);
-                *acc = graph.index_pattern([back[0], front[0]]);
+                let context = graph.index_pattern([back[0], front[0]]);
+                graph.add_pattern_with_update(location, Side::concat_inner_and_context(inner, context));
+                *acc = context;
             } else {
                 acc = Some(context);
             }
         }
         let (context, inner_location)
             = SideIndexable::<_, _, Side>::context_path_segment(&mut *graph, entry);
-        let context =
-            if let Some(acc) = acc {
-                let (back, front) = Side::context_inner_order(&context, &acc);
-                graph.index_pattern([back[0], front[0]])
-            } else {
-                context
-            };
-        (context, inner_location)
+        if let Some(acc) = acc {
+            let (back, front) = Side::context_inner_order(&context, &acc);
+            let context = graph.index_pattern([back[0], front[0]]);
+            let pid = graph.add_pattern_with_update(entry, Side::concat_inner_and_context(inner, context));
+            let (sub_index, _) = Side::back_front_order(0, 1);
+            (context, ChildLocation {
+                parent: inner_location.parent,
+                pattern_id: pid,
+                sub_index,
+            })
+        } else {
+            (context, inner_location)
+        }
     }
 }
 impl<

@@ -14,17 +14,7 @@ impl MatchEnd {
             MatchEnd::Complete(c) => *c,
         }
     }
-    //pub fn root<
-    //    'a: 'g,
-    //    'g,
-    //    T: Tokenize,
-    //    Trav: Traversable<'a, 'g, T>
-    //>(self, trav: &Trav) -> FoundPath {
-    //    match self {
-    //        MatchEnd::Path(start) => FoundPath::from(start),
-    //        MatchEnd::Complete(c) => *c,
-    //    }
-    //}
+    #[allow(unused)]
     pub fn into_path(self) -> Option<StartPath> {
         match self {
             Self::Path(path) => Some(path),

@@ -169,6 +169,43 @@ fn read_sequence1() {
     assert_eq!(ind_hypergraph.width(), 10);
 }
 #[test]
+fn read_sequence2() {
+    let mut graph = HypergraphRef::default();
+    let ind_abab = graph.read_sequence("abab".chars());
+    let gr = graph.read().unwrap();
+    let a = gr.expect_token_child('a');
+    let b = gr.expect_token_child('b');
+    drop(gr);
+    let ab = graph.find_ancestor([a, b]).unwrap().expect_complete("ab");
+    {
+        let gr = graph.read().unwrap();
+        let pats: HashSet<_> = ind_abab.vertex(&gr).get_child_pattern_set().into_iter().collect();
+        //println!("{:#?}", );
+        assert_eq!(pats, hashset![
+            vec![ab, ab],
+        ]);
+        let pid = *ab.vertex(&gr).get_child_patterns().into_iter().next().unwrap().0;
+        assert_child_of_at(&gr, a, ab,
+            [
+                PatternIndex::new(pid, 0),
+            ]);
+        assert_child_of_at(&gr, b, ab,
+            [
+                PatternIndex::new(pid, 1),
+            ]);
+        let pid = *ind_abab.vertex(&gr).get_child_patterns().into_iter().next().unwrap().0;
+        assert_child_of_at(&gr, ab, ind_abab,
+            [
+                PatternIndex::new(pid, 0),
+                PatternIndex::new(pid, 1),
+            ]);
+    }
+    let ind_a = graph.read_sequence("a".chars());
+    assert_eq!(ab.width(), 2);
+    assert_eq!(ind_abab.width(), 4);
+    assert_eq!(ind_a, a);
+}
+#[test]
 fn read_infix1() {
     let mut graph = HypergraphRef::default();
     let subdivision = graph.read_sequence("subdivision".chars());
@@ -226,7 +263,6 @@ fn read_infix1() {
             ]);
     }
     let visualization = graph.read_sequence("visualization".chars());
-    assert_eq!(visualization.width(), 13);
     {
         let g = graph.read().unwrap();
         let a = g.expect_token_child('a');
@@ -253,6 +289,7 @@ fn read_infix1() {
 
 
         let visu = graph.find_sequence("visu".chars()).unwrap().expect_complete("visu");
+        assert!(visu.width() == 4);
         let g = graph.read().unwrap();
         let pats: HashSet<_> = visu.vertex(&g).get_child_pattern_set().into_iter().collect();
         assert_eq!(pats, hashset![
@@ -273,6 +310,7 @@ fn read_infix1() {
             vec![su, b, d, i, vis, ion],
         ]);
     }
+    assert_eq!(visualization.width(), 13);
 }
 #[test]
 fn read_infix2() {

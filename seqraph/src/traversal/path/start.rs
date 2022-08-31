@@ -49,6 +49,7 @@ pub(crate) enum StartPath {
     },
 }
 impl StartPath {
+    #[allow(unused)]
     pub fn get_leaf(&self) -> Option<&StartLeaf> {
         match self {
             Self::Leaf(leaf) => Some(leaf),
