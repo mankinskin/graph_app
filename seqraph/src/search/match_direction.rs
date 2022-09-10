@@ -5,7 +5,7 @@ use itertools::{
 };
 type HashMap<K, V> = DeterministicHashMap<K, V>;
 type HashSet<T> = DeterministicHashSet<T>;
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::RangeFrom};
 
 fn to_matching_iterator<'a, I: Indexed + 'a, J: Indexed + 'a>(
     a: impl Iterator<Item = &'a I>,
@@ -21,6 +21,7 @@ fn to_matching_iterator<'a, I: Indexed + 'a, J: Indexed + 'a>(
 
 pub trait MatchDirection : Clone + Debug + Send + Sync {
     type Opposite: MatchDirection;
+    type PostfixRange<T>: PatternRangeIndex<T>;
     /// get the parent where vertex is at the relevant position
     fn get_match_parent_to(
         graph: &Hypergraph<impl Tokenize>,
@@ -33,11 +34,6 @@ pub trait MatchDirection : Clone + Debug + Send + Sync {
     ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)>;
     /// get remaining pattern in matching direction including index
     fn split_end<T: AsChild + Clone>(
-        pattern: &'_ [T],
-        index: PatternId,
-    ) -> Vec<T>;
-    /// get remaining pattern in matching direction excluding index
-    fn front_context<T: AsChild + Clone>(
         pattern: &'_ [T],
         index: PatternId,
     ) -> Vec<T>;
@@ -83,6 +79,16 @@ pub trait MatchDirection : Clone + Debug + Send + Sync {
         index: PatternId,
     ) -> Vec<T> {
         Self::split_end(pattern, Self::normalize_index(pattern, index))
+    }
+    fn front_context_range<T>(
+        index: PatternId,
+    ) -> Self::PostfixRange<T>;
+    /// get remaining pattern in matching direction excluding index
+    fn front_context<T: AsChild + Clone>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T> {
+        pattern.get(Self::front_context_range::<T>(index)).unwrap_or(&[]).to_vec()
     }
     fn front_context_normalized<T: AsChild + Clone>(
         pattern: &'_ [T],
@@ -145,6 +151,7 @@ pub trait MatchDirection : Clone + Debug + Send + Sync {
 }
 impl MatchDirection for Right {
     type Opposite = Left;
+    type PostfixRange<T> = RangeFrom<PatternId>;
     fn get_match_parent_to(
         _graph: &Hypergraph<impl Tokenize>,
         vertex: &VertexData,
@@ -165,11 +172,10 @@ impl MatchDirection for Right {
         postfix(pattern, index)
     }
 
-    fn front_context<T: AsChild + Clone>(
-        pattern: &'_ [T],
+    fn front_context_range<T>(
         index: PatternId,
-    ) -> Vec<T> {
-        postfix(pattern, index + 1)
+    ) -> Self::PostfixRange<T> {
+        (index + 1)..
     }
     fn back_context<T: AsChild + Clone>(
         pattern: &'_ [T],
@@ -227,6 +233,7 @@ impl MatchDirection for Right {
 
 impl MatchDirection for Left {
     type Opposite = Left;
+    type PostfixRange<T> = Range<PatternId>;
     fn get_match_parent_to(
         graph: &Hypergraph<impl Tokenize>,
         vertex: &VertexData,
@@ -247,11 +254,10 @@ impl MatchDirection for Left {
     ) -> Vec<T> {
         prefix(pattern, index + 1)
     }
-    fn front_context<T: AsChild + Clone>(
-        pattern: &'_ [T],
+    fn front_context_range<T>(
         index: PatternId,
-    ) -> Vec<T> {
-        prefix(pattern, index)
+    ) -> Self::PostfixRange<T> {
+        0..index
     }
     fn back_context<T: AsChild + Clone>(
         pattern: &'_ [T],

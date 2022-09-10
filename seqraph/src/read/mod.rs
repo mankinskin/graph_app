@@ -4,10 +4,15 @@ use crate::{
     HypergraphRef,
 };
 mod reader;
+mod overlap_bands;
+mod overlaps;
 #[cfg(test)]
 mod tests;
 
-pub use reader::*;
+pub use {
+    reader::*,
+    overlap_bands::*,
+};
 //mod async_reader;
 //pub use async_reader::*;
 

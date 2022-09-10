@@ -25,6 +25,7 @@ pub use vertex::*;
 pub(crate) use traversal::*;
 pub use read::*;
 pub use logger::*;
+pub use index::*;
 
 #[cfg(test)]
 mod tests;
@@ -64,6 +65,7 @@ pub(crate) use {
         },
     },
     function_name::named,
+    tap::Tap,
 };
 pub(crate) type DeterministicHashSet<T> =
     HashSet<T,

@@ -13,7 +13,7 @@ use std::{
         catch_unwind,
     },
     sync::{Arc, Mutex},
-    collections::HashMap,
+    collections::HashMap, hash::{Hash, Hasher},
 };
 use std::time::{
     Duration,
@@ -74,6 +74,9 @@ pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
             }
             len_histo.add(length as u64);
             let input = (0..length).map(|_| *input_distr.iter().choose(&mut rng).unwrap()).collect::<String>();
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            input.hash(&mut hasher);
+            let _h = hasher.finish();
             let now = std::time::Instant::now();
             match catch_unwind(|| {
                 graph.clone().unwrap().read_sequence(input.chars());

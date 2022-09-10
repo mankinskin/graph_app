@@ -5,12 +5,11 @@ use crate::{
     *,
 };
 use itertools::*;
-use tap::Tap;
 
 #[derive(Debug)]
 pub struct Reader<T: Tokenize, D: IndexDirection> {
-    graph: HypergraphRef<T>,
-    root: Option<Child>,
+    pub(crate) graph: HypergraphRef<T>,
+    pub(crate) root: Option<Child>,
     _ty: std::marker::PhantomData<D>,
 }
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for Reader<T, D> {
@@ -25,76 +24,8 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g
         self.graph.write().unwrap()
     }
 }
-type HashMap<K, V> = DeterministicHashMap<K, V>;
+//type HashMap<K, V> = DeterministicHashMap<K, V>;
 
-struct ReadingBands {
-    bands: HashMap<usize, Vec<Pattern>>,
-}
-impl Deref for ReadingBands {
-    type Target = HashMap<usize, Vec<Pattern>>;
-    fn deref(&self) -> &Self::Target {
-        &self.bands
-    }
-}
-impl DerefMut for ReadingBands {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.bands
-    }
-}
-impl ReadingBands {
-    pub fn new(first: Child) -> Self {
-        let mut bands = HashMap::default();
-        bands.insert(first.width(), vec![vec![first]]);
-        Self {
-            bands,
-        }
-    }
-    pub fn take_band<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        Trav: TraversableMut<'a, 'g, T> + 'a,
-    >(&mut self, trav: &'a mut Trav, end_bound: usize) -> Option<Pattern> {
-        let bundle = self.bands.remove(&end_bound)?;
-        Some(match bundle.len() {
-            0 => panic!("Empty bundle in bands!"),
-            1 => bundle.into_iter().next().unwrap(),
-            _ => {
-                let mut graph = trav.graph_mut();
-                let bundle = graph.index_patterns(bundle);
-                vec![bundle]
-            }
-        })
-    }
-    pub fn append_index<
-        'a: 'g,
-        'g,
-        T: Tokenize + 'a,
-        Trav: TraversableMut<'a, 'g, T> + 'a,
-    >(&mut self, trav: &'a mut Trav, end_bound: usize, index: Child) -> usize {
-        let (end_bound, bundle) = self.take_band(trav, end_bound)
-            .map(|mut bundle|
-                (
-                    end_bound + index.width(),
-                    vec![{
-                        bundle.push(index);
-                        bundle
-                    }]
-                )
-            )
-            .unwrap_or_else(|| (index.width(), vec![vec![index]]));
-        self.bands.insert(end_bound, bundle);
-        end_bound
-    }
-    pub fn add_band(&mut self, end_bound: usize, band: Pattern) {
-        self.bands.insert(end_bound, vec![band]);
-    }
-}
-struct OverlapNode {
-    end_bound: usize,
-    back_context: Pattern,
-    index: Child,
-}
 impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     pub(crate) fn read_sequence<N, S: ToNewTokenIndices<N, T>>(
         &mut self,
@@ -137,126 +68,13 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         context: &mut PrefixPath,
     ) -> Option<Child> {
         let next = self.get_next(context)?;
-        let next = (next.width() != 1)
-            .then(||
-                self.read_overlaps(
-                    ReadingBands::new(next),
-                    OverlapNode {
-                        end_bound: next.width(),
-                        back_context: vec![],
-                        index: next
-                    },
-                    context,
-                )
-            )
-            .flatten()
-            .unwrap_or_else(|| {
-                next
-            });
-        self.append_index(next);
-        Some(next)
-    }
-    fn read_overlaps(
-        &mut self,
-        mut bands: ReadingBands,
-        node: OverlapNode,
-        context: &mut PrefixPath,
-    ) -> Option<Child> {
-        let end_bound = node.end_bound;
-        if let Some(node) = self.find_index_overlap(
-            &mut bands,
-            node,
-            context,
-        ) {
-            self.read_overlaps(
-                bands,
-                node,
+        let next = self.read_overlaps(
+                next,
                 context,
             )
-        } else {
-            self.close_bands(bands, end_bound)
-        }
-    }
-    /// finds the earliest overlap
-    fn find_index_overlap(
-        &mut self,
-        bands: &mut ReadingBands,
-        node: OverlapNode,
-        prefix_path: &mut PrefixPath,
-    ) -> Option<OverlapNode> {
-        let OverlapNode {
-            end_bound,
-            back_context,
-            index,
-        } = node;
-        // find largest expandable postfix
-        let mut path = vec![];
-        // bundles of bands with same lengths for new index
-        PostfixIterator::<_, D, _>::new(&self.indexer(), index)
-            .find_map(|(path_segment, loc, postfix)| {
-                if let Some(segment) = path_segment {
-                    path.push(segment);
-                }
-                let start_bound = end_bound - postfix.width();
-                // if at band boundary and bundle exists, index band
-                let band = bands.take_band(&mut self.indexer(), start_bound);
-                // expand
-                match self.graph.index_query(OverlapPrimer::new(postfix, prefix_path.clone()))
-                    .map(|(expansion, advanced)| {
-                        *prefix_path = advanced.into_prefix_path();
-                        expansion
-                    }) {
-                        Ok(expansion) => {
-                            let next_bound = start_bound + expansion.width();
-                            let node =
-                            OverlapNode {
-                                end_bound: next_bound,
-                                back_context: band.unwrap_or_else(||
-                                    // create band with generated back context
-                                    vec![
-                                        SideIndexable::<T, D, IndexBack>::context_path(
-                                            self,
-                                            loc,
-                                            path.clone(),
-                                            postfix,
-                                        ).0,
-                                    ]
-                                ),
-                                index: expansion,
-                            };
-                            bands.add_band(
-                                node.end_bound,
-                                node.back_context.clone().tap_mut(|b| b.push(node.index)),
-                            );
-                            Some(node)
-                        },
-                        Err(_) => {
-                            // if not expandable, at band boundary and no bundle exists, create bundle
-                            if let Some(mut band) = band {
-                                band.push(postfix);
-                                bands.insert(
-                                    end_bound,
-                                    vec![
-                                        back_context.clone().tap_mut(|b| b.push(index)),
-                                        band,
-                                    ]
-                                );
-                            }
-                            None
-                        },
-                    }
-            })
-    }
-    fn close_bands(
-        &mut self,
-        mut bands: ReadingBands,
-        end_bound: usize,
-    ) -> Option<Child> {
-        (!bands.is_empty()).then(|| {
-            let bundle = bands.remove(&end_bound).expect("Bands not finished at end_bound!");
-            assert!(bands.is_empty(), "Bands not finished!");
-            self.indexer().graph_mut().index_patterns(bundle)
-        })
+            .unwrap_or(next);
+        self.append_index(next);
+        Some(next)
     }
     fn get_next(&mut self, context: &mut PrefixPath) -> Option<Child> {
         match self.indexer().index_query(context.clone()) {

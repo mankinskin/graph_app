@@ -12,7 +12,7 @@ pub(crate) trait BandExpandingPolicy<
     T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
 > {
-    fn expand_band(location: PatternLocation, pattern: impl IntoPattern) -> (ChildLocation, Child);
+    fn map_band(location: PatternLocation, pattern: impl IntoPattern) -> (ChildLocation, Child);
     fn map_batch(batch: impl IntoIterator<Item=(ChildLocation, Child)>) -> Vec<(ChildLocation, Child)> {
         batch.into_iter().collect_vec()
     }
@@ -30,13 +30,14 @@ pub(crate) trait BandIterator<
 >: Iterator<Item = (Option<ChildLocation>, ChildLocation, Child)>
 {
     fn new(trav: &'a Trav, root: Child) -> Self;
+    /// get all postfixes of index with their locations
     fn next_children(trav: &'a Trav, index: Child) -> Vec<(ChildLocation, Child)> {
         P::map_batch(
             trav.graph()
                 .expect_child_patterns_of(index)
                 .iter()
                 .map(|(pid, pattern)|
-                    P::expand_band(PatternLocation::new(index, *pid), pattern.borrow())
+                    P::map_band(PatternLocation::new(index, *pid), pattern.borrow())
                 )
         )
     }
@@ -48,7 +49,8 @@ impl <
     Trav: Traversable<'a, 'g, T>,
     D: MatchDirection,
 > BandExpandingPolicy<'a, 'g, T, Trav> for PostfixExpandingPolicy<D> {
-    fn expand_band(location: PatternLocation, pattern: impl IntoPattern) -> (ChildLocation, Child) {
+    // 
+    fn map_band(location: PatternLocation, pattern: impl IntoPattern) -> (ChildLocation, Child) {
         let last = D::last_index(pattern.borrow());
         (location.to_child_location(last), pattern.borrow()[last])
     }
@@ -106,12 +108,11 @@ where
                 <Self as BandIterator<T, Trav, P>>::next_children(self.trav, *last_node)
             )
         }
-        if let Some((location, node)) = self.queue.pop_front() {
-            *last_location = Some(location);
-            *last_node = node;
-            Some((segment, location, node))
-        } else {
-            None
-        }
+        self.queue.pop_front()
+            .map(|(location, node)| { 
+                *last_location = Some(location);
+                *last_node = node;
+                (segment, location, node)
+            })
     }
 }

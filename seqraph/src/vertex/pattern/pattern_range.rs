@@ -13,13 +13,14 @@ pub(crate) fn get_child_pattern_range<'a, R: PatternRangeIndex>(
         NoMatch::InvalidPatternRange(*id, p.clone(), format!("{:#?}", range))
     )
 }
-pub trait PatternRangeIndex:
-    SliceIndex<[Child], Output = [Child]> + RangeBounds<usize> + Iterator<Item = usize> + Debug + Clone
+pub trait PatternRangeIndex<T = Child>:
+    SliceIndex<[T], Output = [T]> + RangeBounds<usize> + Iterator<Item = usize> + Debug + Clone
 {
 }
 impl<
-        T: SliceIndex<[Child], Output = [Child]> + RangeBounds<usize> + Iterator<Item = usize> + Debug + Clone,
-    > PatternRangeIndex for T
+        T,
+        R: SliceIndex<[T], Output = [T]> + RangeBounds<usize> + Iterator<Item = usize> + Debug + Clone,
+    > PatternRangeIndex<T> for R
 {
 }
 pub trait StartInclusive {
