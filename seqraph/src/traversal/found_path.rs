@@ -8,79 +8,21 @@ pub(crate) enum FoundPath {
     Postfix(StartPath),
     Prefix(EndPath),
 }
-impl From<MatchEnd> for FoundPath {
-    fn from(match_end: MatchEnd) -> Self {
+impl From<MatchEnd<StartPath>> for FoundPath {
+    fn from(match_end: MatchEnd<StartPath>) -> Self {
         match match_end {
             MatchEnd::Complete(c) => FoundPath::Complete(c),
             MatchEnd::Path(path) => FoundPath::Postfix(path),
         }
     }
 }
-impl<
-    'a: 'g,
-    'g,
-> FoundPath {
-    pub(crate) fn new<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
-    >(trav: &'a Trav, path: SearchPath) -> Self {
-        if path.is_complete::<_, D, _>(trav) {
-            Self::Complete(path.start_match_path().entry().parent)
-        } else {
-            //path.reduce_end::<_, D, _>(trav);
-            Self::Range(path)
-        }
-    }
-    #[allow(unused)]
-    pub fn root(&self) -> Child {
+impl RootChild for FoundPath {
+    fn root_child(&self) -> Child {
         match self {
-            Self::Range(path) => HasMatchPaths::root(path),
-            Self::Postfix(path) => path.root(),
-            Self::Prefix(path) => path.root(),
+            Self::Range(path) => path.root_child(),
+            Self::Postfix(path) => path.root_child(),
+            Self::Prefix(path) => path.root_child(),
             Self::Complete(c) => *c,
-        }
-    }
-    #[track_caller]
-    pub fn unwrap_complete(self) -> Child {
-        match self {
-            Self::Complete(index) => index,
-            _ => panic!("Unable to unwrap {:?} as complete.", self),
-        }
-    }
-    #[allow(unused)]
-    #[track_caller]
-    pub fn unwrap_range(self) -> SearchPath {
-        match self {
-            Self::Range(path) => path,
-            _ => panic!("Unable to unwrap {:?} as range.", self),
-        }
-    }
-    #[allow(unused)]
-    #[track_caller]
-    pub fn get_range(&self) -> Option<&SearchPath> {
-        match self {
-            Self::Range(path) => Some(path),
-            _ => None,
-        }
-    }
-    #[track_caller]
-    pub fn expect_complete(self, msg: &str) -> Child {
-        match self {
-            Self::Complete(index) => index,
-            _ => panic!("Unable to unwrap {:?} as complete: {}", self, msg),
-        }
-    }
-    #[allow(unused)]
-    fn is_complete(&self) -> bool {
-        matches!(self, FoundPath::Complete(_))
-    }
-    fn num_path_segments(&self) -> usize {
-        match self {
-            Self::Complete(_) => 0,
-            Self::Range(p) => HasMatchPaths::num_path_segments(p),
-            Self::Prefix(p) => p.num_path_segments(),
-            Self::Postfix(p) => p.num_path_segments(),
         }
     }
 }
@@ -119,5 +61,64 @@ impl Wide for FoundPath {
             Self::Prefix(p) => p.width(),
             Self::Postfix(p) => p.width(),
         }
+    }
+}
+impl<
+    'a: 'g,
+    'g,
+> FoundPath {
+    pub(crate) fn new<
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(trav: &'a Trav, path: SearchPath) -> Self {
+        if path.is_complete::<_, D, _>(trav) {
+            Self::Complete(path.start_match_path().get_entry_location().parent)
+        } else {
+            //path.reduce_end::<_, D, _>(trav);
+            Self::Range(path)
+        }
+    }
+    #[track_caller]
+    pub fn unwrap_complete(self) -> Child {
+        match self {
+            Self::Complete(index) => index,
+            _ => panic!("Unable to unwrap {:?} as complete.", self),
+        }
+    }
+    #[track_caller]
+    pub fn expect_complete(self, msg: &str) -> Child {
+        match self {
+            Self::Complete(index) => index,
+            _ => panic!("Unable to unwrap {:?} as complete: {}", self, msg),
+        }
+    }
+    fn num_path_segments(&self) -> usize {
+        match self {
+            Self::Complete(_) => 0,
+            Self::Range(p) => HasMatchPaths::num_path_segments(p),
+            Self::Prefix(p) => p.num_path_segments(),
+            Self::Postfix(p) => p.num_path_segments(),
+        }
+    }
+    #[allow(unused)]
+    #[track_caller]
+    pub fn unwrap_range(self) -> SearchPath {
+        match self {
+            Self::Range(path) => path,
+            _ => panic!("Unable to unwrap {:?} as range.", self),
+        }
+    }
+    #[allow(unused)]
+    #[track_caller]
+    pub fn get_range(&self) -> Option<&SearchPath> {
+        match self {
+            Self::Range(path) => Some(path),
+            _ => None,
+        }
+    }
+    #[allow(unused)]
+    fn is_complete(&self) -> bool {
+        matches!(self, FoundPath::Complete(_))
     }
 }

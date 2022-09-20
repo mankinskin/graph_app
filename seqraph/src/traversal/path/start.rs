@@ -23,19 +23,30 @@ impl GraphEntry for StartLeaf {
 }
 impl HasStartPath for StartLeaf {
     fn start_path(&self) -> &[ChildLocation] {
-        self.path()
-    }
-}
-impl BorderPath for StartLeaf {
-    fn path(&self) -> &[ChildLocation] {
         &[]
     }
-    fn entry(&self) -> ChildLocation {
+}
+impl PathRoot for StartLeaf {
+    fn root(&self) -> ChildLocation {
         self.get_entry_location()
     }
 }
-impl<D: MatchDirection> DirectedBorderPath<D> for StartLeaf {
-    type BorderDirection = Back;
+impl From<StartPath> for StartLeaf {
+    fn from(path: StartPath) -> Self {
+        match path {
+            StartPath::Leaf(leaf) => leaf,
+            StartPath::Path {
+                entry,
+                child,
+                width,
+                ..
+            } => StartLeaf {
+                entry,
+                child,
+                width,
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -56,8 +67,25 @@ impl StartPath {
             _ => None,
         }
     }
+}
+impl PathComplete for StartLeaf {
     /// returns child if reduced to single child
-    pub fn reduce<
+    fn complete<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> Option<Child> {
+        let graph = trav.graph();
+        let pattern = graph.expect_pattern_at(self.entry);
+        (self.entry.sub_index == D::head_index(pattern.borrow()))
+            .then(|| self.entry.parent)
+    }
+}
+impl PathComplete for StartPath {
+    /// returns child if reduced to single child
+    fn complete<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -65,12 +93,7 @@ impl StartPath {
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Option<Child> {
         match self {
-            Self::Leaf(leaf) => {
-                let graph = trav.graph();
-                let pattern = graph.expect_pattern_at(leaf.entry);
-                (leaf.entry.sub_index == D::head_index(pattern.borrow()))
-                    .then(|| leaf.entry.parent)
-            },
+            Self::Leaf(leaf) => leaf.complete::<_, D, _>(trav),
             // TODO: maybe skip path segments starting at pattern head
             Self::Path { .. } => None,
         }
@@ -166,7 +189,7 @@ pub(crate) trait PathPop {
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>
-    >(self, trav: &'a Trav) -> MatchEnd;
+    >(self, trav: &'a Trav) -> MatchEnd<StartPath>;
 }
 impl PathPop for StartPath {
     fn pop_path<
@@ -175,7 +198,7 @@ impl PathPop for StartPath {
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>
-    >(self, trav: &'a Trav) -> MatchEnd {
+    >(self, trav: &'a Trav) -> MatchEnd<StartPath> {
         match self {
             StartPath::Leaf(leaf) => MatchEnd::Complete(leaf.child),
             StartPath::Path { entry, mut path, width, child } => {
@@ -206,19 +229,13 @@ impl PathPop for StartPath {
         }
     }
 }
-impl BorderPath for StartPath {
-    fn path(&self) -> &[ChildLocation] {
-        match self {
-            StartPath::Leaf(leaf) => leaf.path(),
-            StartPath::Path{ path, ..} => path.borrow(),
-        }
-    }
-    fn entry(&self) -> ChildLocation {
-        self.get_entry_location()
-    }
-}
-impl<D: MatchDirection> DirectedBorderPath<D> for StartPath {
+impl<D: MatchDirection> PathBorder<D> for StartPath {
     type BorderDirection = Back;
+}
+impl HasSinglePath for StartPath {
+    fn single_path(&self) -> &[ChildLocation] {
+        self.start_path()
+    }
 }
 impl Wide for StartPath {
     fn width(&self) -> usize {
@@ -226,6 +243,11 @@ impl Wide for StartPath {
             Self::Path { width, .. } |
             Self::Leaf(StartLeaf { width, .. }) => *width,
         }
+    }
+}
+impl PathRoot for StartPath {
+    fn root(&self) -> ChildLocation {
+        self.get_entry_location()
     }
 }
 impl GraphEntry for StartPath {
@@ -239,6 +261,9 @@ impl GraphEntry for StartPath {
 }
 impl HasStartPath for StartPath {
     fn start_path(&self) -> &[ChildLocation] {
-        self.path()
+        match self {
+            StartPath::Leaf(leaf) => leaf.start_path(),
+            StartPath::Path{ path, ..} => path.borrow(),
+        }
     }
 }

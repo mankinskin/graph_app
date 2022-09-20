@@ -27,7 +27,7 @@ pub(crate) trait BandIterator<
     T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
     P: BandExpandingPolicy<'a, 'g, T, Trav>,
->: Iterator<Item = (Option<ChildLocation>, ChildLocation, Child)>
+>: Iterator<Item = (ChildLocation, Child)>
 {
     fn new(trav: &'a Trav, root: Child) -> Self;
     /// get all postfixes of index with their locations
@@ -97,7 +97,7 @@ where
     Trav: Traversable<'a, 'g, T>,
     P: BandExpandingPolicy<'a, 'g, T, Trav>,
 {
-    type Item = (Option<ChildLocation>, ChildLocation, Child);
+    type Item = (ChildLocation, Child);
 
     fn next(&mut self) -> Option<Self::Item> {
         let (last_location, last_node) = &mut self.last;
@@ -112,7 +112,7 @@ where
             .map(|(location, node)| { 
                 *last_location = Some(location);
                 *last_node = node;
-                (segment, location, node)
+                (location, node)
             })
     }
 }

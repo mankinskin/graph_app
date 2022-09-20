@@ -8,29 +8,31 @@ use std::iter::{Extend, FusedIterator};
 use super::*;
 
 #[derive(Clone, Debug)]
-pub(crate) struct Bft<'a: 'g, 'g, T, D, Trav, Q, S>
+pub(crate) struct Bft<'a: 'g, 'g, T, D, Trav, Q, R, S>
 where
     T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
     D: MatchDirection,
     Q: TraversalQuery,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
+    R: ResultKind,
+    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
 {
-    queue: VecDeque<(usize, TraversalNode<Q>)>,
-    cache: TraversalCache<Q>,
-    last: (usize, TraversalNode<Q>),
+    queue: VecDeque<(usize, TraversalNode<S::AfterEndMatch, Q>)>,
+    cache: TraversalCache<S::AfterEndMatch, Q>,
+    last: (usize, TraversalNode<S::AfterEndMatch, Q>),
     trav: &'a Trav,
-    _ty: std::marker::PhantomData<(&'g T, D, S)>
+    _ty: std::marker::PhantomData<(&'g T, D, S, R)>
 }
-impl<'a: 'g, 'g, T, D, Trav, Q, S> Bft<'a, 'g, T, D, Trav, Q, S>
+impl<'a: 'g, 'g, T, D, Trav, Q, R, S> Bft<'a, 'g, T, D, Trav, Q, R, S>
 where
     T: Tokenize,
     D: MatchDirection,
     Trav: Traversable<'a, 'g, T>,
     Q: TraversalQuery,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
+    R: ResultKind,
+    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
 {
-    pub fn new(trav: &'a Trav, root: TraversalNode<Q>) -> Self {
+    pub fn new(trav: &'a Trav, root: TraversalNode<S::AfterEndMatch, Q>) -> Self {
         Self {
             queue: VecDeque::new(),
             last: (0, root),
@@ -41,15 +43,16 @@ where
     }
 }
 
-impl<'a: 'g, 'g, T, D, Trav, Q, S> Iterator for Bft<'a, 'g, T, D, Trav, Q, S>
+impl<'a: 'g, 'g, T, D, Trav, Q, R, S> Iterator for Bft<'a, 'g, T, D, Trav, Q, R, S>
 where
     T: Tokenize,
     D: MatchDirection,
     Trav: Traversable<'a, 'g, T>,
     Q: TraversalQuery,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
+    R: ResultKind,
+    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
 {
-    type Item = (usize, TraversalNode<Q>);
+    type Item = (usize, TraversalNode<S::AfterEndMatch, Q>);
 
     fn next(&mut self) -> Option<Self::Item> {
         let (last_depth, last_node) = self.last.clone();
@@ -63,34 +66,36 @@ where
     }
 }
 
-impl<'a: 'g, 'g, T, Trav, D, Q, S> FusedIterator for Bft<'a, 'g, T, D, Trav, Q, S>
+impl<'a: 'g, 'g, T, Trav, D, Q, R, S> FusedIterator for Bft<'a, 'g, T, D, Trav, Q, R, S>
 where
     T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
     D: MatchDirection,
     Q: TraversalQuery,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
+    R: ResultKind,
+    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
 {
 }
 
-impl<'a: 'g, 'g, T, Trav, D, Q, S> TraversalIterator<'a, 'g, T, D, Trav, Q, S> for Bft<'a, 'g, T, D, Trav, Q, S>
+impl<'a: 'g, 'g, T, Trav, D, Q, S, R> TraversalIterator<'a, 'g, T, D, Trav, Q, S, R> for Bft<'a, 'g, T, D, Trav, Q, R, S>
 where
     T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
     D: MatchDirection,
     Q: TraversalQuery,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
+    R: ResultKind,
+    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
 {
-    fn new(trav: &'a Trav, root: TraversalNode<Q>) -> Self {
+    fn new(trav: &'a Trav, root: TraversalNode<S::AfterEndMatch, Q>) -> Self {
         Self::new(trav, root)
     }
     fn trav(&self) -> &'a Trav {
         self.trav
     }
-    fn cache_mut(&mut self) -> &mut TraversalCache<Q> {
+    fn cache_mut(&mut self) -> &mut TraversalCache<S::AfterEndMatch, Q> {
         &mut self.cache
     }
-    fn extend_nodes(&mut self, next_nodes: impl DoubleEndedIterator<Item=(usize, TraversalNode<Q>)>) {
+    fn extend_nodes(&mut self, next_nodes: impl DoubleEndedIterator<Item=(usize, TraversalNode<S::AfterEndMatch, Q>)>) {
         self.queue.extend(next_nodes);
     }
 }

@@ -41,37 +41,37 @@ fn find_parent1() {
     let query = b_c_pattern;
     assert_eq!(
         graph.find_parent(&query),
-        Ok(QueryFound::complete(query, bc)),
+        Ok(TraversalResult::complete(query, bc)),
         "b_c"
     );
     let query = a_bc_pattern;
     assert_eq!(
         graph.find_parent(&query),
-        Ok(QueryFound::complete(query, abc)),
+        Ok(TraversalResult::complete(query, abc)),
         "a_bc"
     );
     let query = ab_c_pattern;
     assert_eq!(
         graph.find_parent(&query),
-        Ok(QueryFound::complete(query, abc)),
+        Ok(TraversalResult::complete(query, abc)),
         "ab_c"
     );
     let query = a_bc_d_pattern;
     assert_eq!(
         graph.find_parent(&query),
-        Ok(QueryFound::complete(query, abcd)),
+        Ok(TraversalResult::complete(query, abcd)),
         "a_bc_d"
     );
     let query = a_b_c_pattern.clone();
     assert_eq!(
         graph.find_parent(&query),
-        Ok(QueryFound::complete(query, abc)),
+        Ok(TraversalResult::complete(query, abc)),
         "a_b_c"
     );
     let query = [&a_b_c_pattern[..], &[Child::new(c, 1)]].concat();
     assert_eq!(
         graph.find_parent(&query),
-        Ok(QueryFound {
+        Ok(TraversalResult {
             found: FoundPath::Complete(*abc),
             query: QueryRangePath {
                 exit: query.len() - 1,
@@ -120,44 +120,44 @@ fn find_ancestor1() {
     let query = b_c_pattern;
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(QueryFound::complete(query, bc)),
+        Ok(TraversalResult::complete(query, bc)),
         "b_c"
     );
     let query = a_bc_pattern;
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(QueryFound::complete(query, abc)),
+        Ok(TraversalResult::complete(query, abc)),
         "a_bc"
     );
     let query = ab_c_pattern;
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(QueryFound::complete(query, abc)),
+        Ok(TraversalResult::complete(query, abc)),
         "ab_c"
     );
     let query = a_bc_d_pattern;
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(QueryFound::complete(query, abcd)),
+        Ok(TraversalResult::complete(query, abcd)),
         "a_bc_d"
     );
     let query = a_b_c_pattern.clone();
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(QueryFound::complete(query, abc)),
+        Ok(TraversalResult::complete(query, abc)),
         "a_b_c"
     );
     let query =
         vec![*a, *b, *a, *b, *a, *b, *a, *b, *c, *d, *e, *f, *g, *h, *i];
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(QueryFound::complete(query, ababababcdefghi)),
+        Ok(TraversalResult::complete(query, ababababcdefghi)),
         "a_b_a_b_a_b_a_b_c_d_e_f_g_h_i"
     );
     let query = [&a_b_c_pattern[..], &[Child::new(c, 1)]].concat();
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(QueryFound {
+        Ok(TraversalResult {
             found: FoundPath::Complete(*abc),
             query: QueryRangePath {
                 exit: query.len() - 1,
@@ -195,7 +195,7 @@ fn find_ancestor2() {
     let byz_found = graph.find_ancestor(&query);
     assert_eq!(
         byz_found,
-        Ok(QueryFound {
+        Ok(TraversalResult {
             found: FoundPath::Range(SearchPath {
                 start: StartPath::Path {
                     entry: xabyz.to_pattern_location(xaby_z_id)
@@ -247,7 +247,7 @@ fn find_ancestor3() {
     let aby_found = graph.find_ancestor(&query);
     assert_eq!(
         aby_found,
-        Ok(QueryFound {
+        Ok(TraversalResult {
             found: FoundPath::Range(SearchPath {
                 start: StartPath::Path {
                     entry: xaby.to_pattern_location(xab_y_id)
@@ -290,14 +290,14 @@ fn find_sequence() {
     let abc_found = graph.find_ancestor(&query);
     assert_eq!(
         abc_found,
-        Ok(QueryFound::complete(query, abc)),
+        Ok(TraversalResult::complete(query, abc)),
         "abc"
     );
     let query = graph.read().unwrap().expect_token_pattern("ababababcdefghi".chars());
     let ababababcdefghi_found = graph.find_ancestor(&query);
     assert_eq!(
         ababababcdefghi_found,
-        Ok(QueryFound::complete(query, ababababcdefghi)),
+        Ok(TraversalResult::complete(query, ababababcdefghi)),
         "ababababcdefghi"
     );
 }

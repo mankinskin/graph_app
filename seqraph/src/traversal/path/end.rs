@@ -1,13 +1,13 @@
 use super::*;
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(crate) struct EndPath {
     pub(crate) entry: ChildLocation,
     pub(crate) path: ChildPath,
     pub(crate) width: usize,
 }
-impl EndPath {
-
-    pub fn reduce<
+impl PathReduce for EndPath {
+    fn reduce<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -26,8 +26,26 @@ impl EndPath {
         }
     }
 }
-impl<D: MatchDirection> DirectedBorderPath<D> for EndPath {
+//impl BorderPath for EndPath {
+//    fn path(&self) -> &[ChildLocation] {
+//        self.path.borrow()
+//    }
+//    fn entry(&self) -> ChildLocation {
+//        self.get_exit_location()
+//    }
+//}
+impl<D: MatchDirection> PathBorder<D> for EndPath {
     type BorderDirection = Front;
+}
+impl HasSinglePath for EndPath {
+    fn single_path(&self) -> &[ChildLocation] {
+        self.end_path()
+    }
+}
+impl PathRoot for EndPath {
+    fn root(&self) -> ChildLocation {
+        self.get_exit_location()
+    }
 }
 impl GraphExit for EndPath {
     fn get_exit_location(&self) -> ChildLocation {
@@ -36,15 +54,7 @@ impl GraphExit for EndPath {
 }
 impl HasEndPath for EndPath {
     fn end_path(&self) -> &[ChildLocation] {
-        self.path()
-    }
-}
-impl BorderPath for EndPath {
-    fn path(&self) -> &[ChildLocation] {
         self.path.borrow()
-    }
-    fn entry(&self) -> ChildLocation {
-        self.get_exit_location()
     }
 }
 impl ExitMut for EndPath {

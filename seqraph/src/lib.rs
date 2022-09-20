@@ -5,6 +5,7 @@
 #![feature(hash_drain_filter)]
 #![feature(slice_pattern)]
 #![feature(generic_associated_types)]
+#![feature(map_first_last)]
 
 extern crate test;
 
@@ -14,18 +15,18 @@ mod search;
 mod vertex;
 mod traversal;
 mod index;
-mod read;
 mod logger;
 mod mock;
+//mod read;
 
 pub use direction::*;
 pub use graph::*;
 pub use search::*;
 pub use vertex::*;
 pub(crate) use traversal::*;
-pub use read::*;
 pub use logger::*;
 pub use index::*;
+//pub use read::*;
 
 #[cfg(test)]
 mod tests;
@@ -63,6 +64,7 @@ pub(crate) use {
         hash::{
             BuildHasherDefault,
         },
+        num::NonZeroUsize,
     },
     function_name::named,
     tap::Tap,

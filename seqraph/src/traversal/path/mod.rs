@@ -6,6 +6,8 @@ pub(crate) mod overlap_primer;
 pub(crate) mod prefix_path;
 pub(crate) mod traversal;
 pub(crate) mod advanceable;
+pub(crate) mod reduce;
+pub(crate) mod complete;
 //pub(crate) mod indexing;
 
 pub(crate) use start::*;
@@ -16,6 +18,8 @@ pub(crate) use overlap_primer::*;
 pub(crate) use prefix_path::*;
 pub(crate) use traversal::*;
 pub(crate) use advanceable::*;
+pub(crate) use reduce::*;
+pub(crate) use complete::*;
 //pub(crate) use indexing::*;
 
 use crate::{
@@ -36,34 +40,20 @@ impl<D: MatchDirection> RelativeDirection<D> for Back {
     type Direction = <D as MatchDirection>::Opposite;
 }
 
-pub(crate) trait BorderPath {
-    fn path(&self) -> &[ChildLocation];
-    fn is_perfect(&self) -> bool {
-        self.path().is_empty()
-    }
-    fn entry(&self) -> ChildLocation;
-    fn pattern<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Pattern {
-        trav.graph().expect_pattern_at(self.entry())
-    }
-}
-pub(crate) trait DirectedBorderPath<D: MatchDirection>: BorderPath {
+pub(crate) trait PathBorder<D: MatchDirection>: PathRoot + HasSinglePath {
     type BorderDirection: RelativeDirection<D>;
+
     fn pattern_entry_outer_pos<P: IntoPattern>(pattern: P, entry: usize) -> Option<usize> {
         <Self::BorderDirection as RelativeDirection<D>>::Direction::pattern_index_next(pattern, entry)
     }
     fn pattern_outer_pos<P: IntoPattern>(&self, pattern: P) -> Option<usize> {
-        Self::pattern_entry_outer_pos(pattern, self.entry().sub_index)
+        Self::pattern_entry_outer_pos(pattern, self.root().sub_index)
     }
     fn is_at_pattern_border<P: IntoPattern>(&self, pattern: P) -> bool {
         self.pattern_outer_pos(pattern).is_none()
     }
     fn pattern_is_complete<P: IntoPattern>(&self, pattern: P) -> bool {
-        self.is_perfect() && self.is_at_pattern_border(pattern)
+        self.single_path().is_empty() && self.is_at_pattern_border(pattern)
     }
 }
 pub trait EntryPos {
@@ -86,6 +76,20 @@ pub trait PatternExit: ExitPos {
             .cloned()
     }
 }
+pub trait RootChild {
+    fn root_child(&self) -> Child;
+}
+pub trait PathRoot {
+    fn root(&self) -> ChildLocation;
+}
+pub trait HasSinglePath {
+    fn single_path(&self) -> &[ChildLocation];
+}
+impl<T: PathRoot> RootChild for T {
+    fn root_child(&self) -> Child {
+        self.root().parent
+    }
+}
 pub trait GraphEntry: EntryPos {
     fn get_entry_location(&self) -> ChildLocation;
     fn get_entry_pattern<
@@ -95,9 +99,6 @@ pub trait GraphEntry: EntryPos {
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Pattern {
         trav.graph().expect_pattern_at(self.get_entry_location())
-    }
-    fn root(&self) -> Child {
-        self.get_entry_location().parent
     }
     fn get_entry<
         'a: 'g,
@@ -109,6 +110,11 @@ pub trait GraphEntry: EntryPos {
         trav.graph().expect_child_at(self.get_entry_location())
     }
 }
+//impl<T: GraphEntry> GraphRoot for T {
+//    fn root(&self) -> Child {
+//        self.get_entry_location().parent
+//    }
+//}
 impl<T: GraphEntry> EntryPos for T {
     fn get_entry_pos(&self) -> usize {
         self.get_entry_location().sub_index
@@ -170,25 +176,10 @@ pub(crate) trait HasMatchPaths: HasStartMatchPath + HasEndMatchPath {
     fn min_path_segments(&self) -> usize {
         self.start_match_path().num_path_segments().min(self.end_match_path().num_path_segments())
     }
-    fn root(&self) -> Child {
-        self.start_match_path().root()
-    }
+    //fn root(&self) -> Child {
+    //    self.start_match_path().root()
+    //}
 }
-pub(crate) trait PathComplete: GraphEntry + HasStartMatchPath + HasEndPath + ExitPos {
-    fn is_complete<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> bool {
-        let pattern = self.get_entry_pattern(trav);
-        DirectedBorderPath::<D>::pattern_is_complete(self.start_match_path(), &pattern[..]) &&
-            self.end_path().is_empty() &&
-            <EndPath as DirectedBorderPath<D>>::pattern_entry_outer_pos(pattern, self.get_exit_pos()).is_none()
-    }
-}
-impl<P: GraphEntry + HasStartMatchPath + HasEndPath + ExitPos> PathComplete for P {}
 
 pub(crate) trait PatternStart: PatternEntry + HasStartPath {
     fn get_start<

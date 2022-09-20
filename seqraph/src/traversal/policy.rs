@@ -8,35 +8,41 @@ use crate::{
     TraversalOrder,
 };
 
+pub(crate) trait NodePath: RootChild + PathAppend<Result = StartPath> + Send + Clone + Eq {}
+impl<T: RootChild + PathAppend<Result = StartPath> + Send + Clone + Eq> NodePath for T {}
+
+pub(crate) trait PostfixPath: NodePath + PathReduce + IntoMatchEndStartPath {}
+impl<T: NodePath + PathReduce + IntoMatchEndStartPath> PostfixPath for T {}
+
 pub(crate) trait DirectedTraversalPolicy<
     'a: 'g,
     'g,
     T: Tokenize,
     D: MatchDirection,
     Q: TraversalQuery,
+    R: ResultKind,
 >: Sized {
 
     type Trav: Traversable<'a, 'g, T> + 'a;
-    type Folder: TraversalFolder<'a, 'g, T, D, Q, Trav=Self::Trav>;
+    type AfterEndMatch: PostfixPath;
+    type Folder: TraversalFolder<'a, 'g, T, D, Q, R, Trav=Self::Trav, AfterEndMatch=Self::AfterEndMatch>;
 
-    /// generates start node
+    /// Executed after last child of index matched
     fn after_end_match(
         _trav: &'a Self::Trav,
-        path: SearchPath,
-    ) -> MatchEnd {
-        StartPath::from(path).into()
-    }
+        path: StartPath,
+    ) -> Self::AfterEndMatch;
     /// nodes generated when an index ended
     /// (parent nodes)
     fn next_parents(
         trav: &'a Self::Trav,
         query: &Q,
-        match_end: &MatchEnd,
-    ) -> Vec<TraversalNode<Q>> {
+        match_end: &MatchEnd<StartPath>,
+    ) -> Vec<TraversalNode<Self::AfterEndMatch, Q>> {
         Self::gen_parent_nodes(
             trav,
             query,
-            match_end.root(),
+            match_end.root_child(),
             |p| match_end.clone().append::<_, D, _>(trav, p)
         )
     }
@@ -46,7 +52,7 @@ pub(crate) trait DirectedTraversalPolicy<
         query: &Q,
         index: Child,
         build_start: impl Fn(ChildLocation) -> StartPath,
-    ) -> Vec<TraversalNode<Q>> {
+    ) -> Vec<TraversalNode<Self::AfterEndMatch, Q>> {
         trav.graph()
             .expect_vertex_data(index)
             .get_parents()

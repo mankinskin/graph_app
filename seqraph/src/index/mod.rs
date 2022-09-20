@@ -9,6 +9,10 @@ mod indexer;
 mod index_direction;
 mod side;
 mod side_indexable;
+mod context;
+mod split;
+mod indexing;
+mod origin_path;
 
 #[cfg(test)]
 #[macro_use]
@@ -18,7 +22,10 @@ pub(crate) mod tests;
 pub use indexer::*;
 pub use index_direction::*;
 pub(crate) use side::*;
-pub(crate) use side_indexable::*;
+pub(crate) use split::*;
+pub(crate) use context::*;
+pub(crate) use indexing::*;
+pub(crate) use origin_path::*;
 
 impl<'t, 'g, T> HypergraphRef<T>
 where
@@ -45,7 +52,7 @@ where
 
 #[derive(Debug, Clone)]
 pub(crate) struct IndexSplitResult {
-    inner: Child,
-    location: ChildLocation,
-    path: Vec<ChildLocation>,
+    pub(crate) inner: Child,
+    pub(crate) location: ChildLocation,
+    pub(crate) path: Vec<ChildLocation>,
 }

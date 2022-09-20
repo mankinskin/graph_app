@@ -2,7 +2,7 @@ pub mod bands;
 
 pub(crate) use bands::*;
 
-use crate::{MatchDirection, Tokenize};
+use crate::*;
 
 use super::*;
 
@@ -13,18 +13,19 @@ pub(crate) trait TraversalIterator<
     D: MatchDirection,
     Trav: Traversable<'a, 'g, T> + 'a,
     Q: TraversalQuery,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Trav>,
->: Iterator<Item = (usize, TraversalNode<Q>)> + Sized
+    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
+    R: ResultKind = MatchEndResult,
+>: Iterator<Item = (usize, TraversalNode<S::AfterEndMatch, Q>)> + Sized
 {
 
-    fn new(trav: &'a Trav, root: TraversalNode<Q>) -> Self;
+    fn new(trav: &'a Trav, root: TraversalNode<S::AfterEndMatch, Q>) -> Self;
     fn trav(&self) -> &'a Trav;
-    fn cache_mut(&mut self) -> &mut TraversalCache<Q>;
-    fn extend_nodes(&mut self, next_nodes: impl DoubleEndedIterator<Item=(usize, TraversalNode<Q>)>);
-    fn cached_extend(&mut self, last_depth: usize, last_node: TraversalNode<Q>) {
+    fn cache_mut(&mut self) -> &mut TraversalCache<S::AfterEndMatch, Q>;
+    fn extend_nodes(&mut self, next_nodes: impl DoubleEndedIterator<Item=(usize, TraversalNode<S::AfterEndMatch, Q>)>);
+    fn cached_extend(&mut self, last_depth: usize, last_node: TraversalNode<S::AfterEndMatch, Q>) {
         last_node.get_parent_path()
             .and_then(|path|
-                self.cache_mut().bu_node(&last_node, path.entry())
+                self.cache_mut().bu_node(&last_node, path.get_entry_location())
                 //None as Option<()>
             )
             .or_else(|| {
@@ -37,7 +38,7 @@ pub(crate) trait TraversalIterator<
                 None
             });
     }
-    fn iter_children(&mut self, node: &TraversalNode<Q>) -> Vec<TraversalNode<Q>> {
+    fn iter_children(&mut self, node: &TraversalNode<S::AfterEndMatch, Q>) -> Vec<TraversalNode<S::AfterEndMatch, Q>> {
         match node.clone().into() {
             TraversalNode::Query(query) =>
                 self.query_start(
@@ -59,7 +60,7 @@ pub(crate) trait TraversalIterator<
             TraversalNode::MatchEnd(match_end, query) =>
                 self.at_index_end(
                     &query,
-                    &match_end
+                    &match_end.into_mesp()
                 ),
             _ => vec![],
         }
@@ -68,40 +69,42 @@ pub(crate) trait TraversalIterator<
     /// (parent nodes)
     fn at_index_end(
         &mut self,
-        query: &FolderQuery<'a, 'g, T, D, Q, S>,
-        match_end: &MatchEnd,
-    ) -> Vec<TraversalNode<Q>> {
-        self.cache_mut().bu_finished(match_end.root().index);
+        query: &FolderQuery<'a, 'g, T, D, Q, R, S>,
+        match_end: &MatchEnd<StartPath>,
+    ) -> Vec<TraversalNode<S::AfterEndMatch, Q>> {
+        self.cache_mut().bu_finished(match_end.root_child().index);
         S::next_parents(
             self.trav(),
             query,
             match_end,
         )
     }
+    /// runs after each index/query match
     fn after_match(
         &mut self,
-        paths: FolderPathPair<'a, 'g, T, D, Q, S>,
-    ) -> Vec<TraversalNode<Q>> {
+        paths: FolderPathPair<'a, 'g, T, D, Q, R, S>,
+    ) -> Vec<TraversalNode<S::AfterEndMatch, Q>> {
         let mode = paths.mode();
         let (mut path, query) = paths.unpack();
         assert!(!query.is_finished(self.trav()));
         if path.advance::<_, D, _>(self.trav()).is_some() && !path.is_finished(self.trav()) {
             vec![TraversalNode::to_match_node(PathPair::from_mode(path, query, mode))]
         } else {
+            // at end of index
             // possibly perform indexing
             let match_end = S::after_end_match(
                 self.trav(),
-                path,
+                path.start,
             );
             // get next parents
             let parents = self.at_index_end(
                 &query,
-                &match_end
+                &match_end.clone().into_mesp()
             );
             if parents.is_empty() {
                 vec![
                     TraversalNode::match_end_node(
-                        match_end.reduce_start::<_, D, _>(self.trav()),
+                        match_end.into_reduced::<_, D, _>(self.trav()),
                         query,
                     )
                 ]
@@ -115,8 +118,8 @@ pub(crate) trait TraversalIterator<
     fn after_parent_nodes(
         &mut self,
         start: StartPath,
-        query: FolderQuery<'a, 'g, T, D, Q, S>,
-    ) -> Vec<TraversalNode<Q>> {
+        query: FolderQuery<'a, 'g, T, D, Q, R, S>,
+    ) -> Vec<TraversalNode<S::AfterEndMatch, Q>> {
         assert!(!query.is_finished(self.trav()));
         match SearchPath::new_advanced::<_, D, _>(self.trav(), start) {
             Ok(path) =>
@@ -135,8 +138,8 @@ pub(crate) trait TraversalIterator<
     /// match query position with graph position
     fn to_match(
         &mut self,
-        paths: FolderPathPair<'a, 'g, T, D, Q, S>,
-    ) -> Vec<TraversalNode<Q>> {
+        paths: FolderPathPair<'a, 'g, T, D, Q, R, S>,
+    ) -> Vec<TraversalNode<S::AfterEndMatch, Q>> {
         let (mut path, mut query) = paths.unpack();
         if path.is_finished(self.trav()) || query.is_finished(self.trav()) {
             println!("uh oh");
@@ -173,7 +176,7 @@ pub(crate) trait TraversalIterator<
                         }
                     ]
                 } else if path_next.width == 1 {
-                    let prev_root = HasMatchPaths::root(&path).index;
+                    let prev_root = path.root_child().index;
                     let continued = self.cache_mut().bu_mismatch(prev_root);
                     let path = path.reduce_mismatch::<_, D, _>(self.trav());
                     (path.width() > 1).then(||
@@ -205,8 +208,8 @@ pub(crate) trait TraversalIterator<
     fn prefix_nodes(
         &self,
         index: Child,
-        paths: FolderPathPair<'a, 'g, T, D, Q, S>,
-    ) -> Vec<TraversalNode<Q>> {
+        paths: FolderPathPair<'a, 'g, T, D, Q, R, S>,
+    ) -> Vec<TraversalNode<S::AfterEndMatch, Q>> {
         self.trav().graph()
             .expect_vertex_data(index)
             .get_child_patterns().iter()
@@ -223,8 +226,8 @@ pub(crate) trait TraversalIterator<
     /// (query end or start parent nodes)
     fn query_start(
         &self,
-        mut query: FolderQuery<'a, 'g, T, D, Q, S>,
-    ) -> Option<Vec<TraversalNode<Q>>> {
+        mut query: FolderQuery<'a, 'g, T, D, Q, R, S>,
+    ) -> Option<Vec<TraversalNode<S::AfterEndMatch, Q>>> {
         let start_index = query.get_end::<_, D, _>(self.trav())?;
         query.advance::<_, D, _>(self.trav())
             .and_then(|_|

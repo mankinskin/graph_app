@@ -4,6 +4,7 @@ use std::hash::Hash;
 /// nodes generated during traversal.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub(crate) enum TraversalNode<
+    P: PostfixPath,
     Q: TraversalQuery,
 > {
     /// a query is given.
@@ -20,11 +21,12 @@ pub(crate) enum TraversalNode<
     /// at a mismatch.
     Mismatch(TraversalResult<Q>),
     /// when a match was at the end of an index without parents.
-    MatchEnd(MatchEnd, Q),
+    MatchEnd(P, Q),
 }
 impl<
+    P: PostfixPath,
     Q: TraversalQuery,
-> TraversalNode<Q> {
+> TraversalNode<P, Q> {
     pub fn query_node(query: Q) -> Self {
         Self::Query(query)
     }
@@ -43,7 +45,7 @@ impl<
     pub fn mismatch_node(found: TraversalResult<Q>) -> Self {
         Self::Mismatch(found)
     }
-    pub fn match_end_node(match_end: MatchEnd, query: Q) -> Self {
+    pub fn match_end_node(match_end: P, query: Q) -> Self {
         Self::MatchEnd(match_end, query)
     }
     #[allow(unused)]
@@ -57,5 +59,5 @@ impl<
         }
     }
 }
-pub(crate) type MatchNode = TraversalNode<QueryRangePath>;
-pub(crate) type IndexingNode<Q> = TraversalNode<Q>;
+//pub(crate) type MatchNode = TraversalNode<MatchEnd, QueryRangePath>;
+//pub(crate) type IndexingNode<Q> = TraversalNode<MatchEnd, Q>;

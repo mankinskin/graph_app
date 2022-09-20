@@ -12,7 +12,7 @@ pub(crate) struct SearchPath {
 //}
 impl<'a: 'g, 'g> SearchPath {
     pub fn new(start: StartPath) -> Self {
-        let entry = start.entry();
+        let entry = start.get_entry_location();
         Self {
             start,
             end: EndPath {
@@ -117,6 +117,31 @@ impl<'a: 'g, 'g> SearchPath {
         }
     }
 }
+impl PathComplete for SearchPath {
+    fn is_complete<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> bool {
+        let pattern = self.get_entry_pattern(trav);
+        <StartPath as PathBorder<D>>::pattern_is_complete(self.start_match_path(), &pattern[..]) &&
+            self.end_path().is_empty() &&
+            <EndPath as PathBorder<D>>::pattern_entry_outer_pos(pattern, self.get_exit_pos()).is_none()
+    }
+    fn complete<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> Option<Child> {
+        self.is_complete::<_, D, _>(trav).then(||
+            self.root_child()
+        )
+    }
+}
 impl HasStartMatchPath for SearchPath {
     fn start_match_path(&self) -> &StartPath {
         &self.start
@@ -138,6 +163,11 @@ impl HasMatchPaths for SearchPath {
         (self.start, self.end)
     }
 }
+impl PathRoot for SearchPath {
+    fn root(&self) -> ChildLocation {
+        self.get_entry_location()
+    }
+}
 impl GraphEntry for SearchPath {
     fn get_entry_location(&self) -> ChildLocation {
         self.start.get_entry_location()
@@ -145,7 +175,7 @@ impl GraphEntry for SearchPath {
 }
 impl HasStartPath for SearchPath {
     fn start_path(&self) -> &[ChildLocation] {
-        self.start.path()
+        self.start.start_path()
     }
 }
 impl GraphStart for SearchPath {}
@@ -156,7 +186,7 @@ impl GraphExit for SearchPath {
 }
 impl HasEndPath for SearchPath {
     fn end_path(&self) -> &[ChildLocation] {
-        self.end.path()
+        self.end.end_path()
     }
 }
 impl GraphEnd for SearchPath {}
@@ -181,8 +211,6 @@ impl End for SearchPath {
         self.get_graph_end(trav)
     }
 }
-//impl TraversalPath for SearchPath {
-//}
 impl AdvanceableExit for SearchPath {
     fn is_finished<
         'a: 'g,

@@ -5,12 +5,12 @@ use super::*;
 type HashMap<K, V> = DeterministicHashMap<K, V>;
 /// Bottom-Up Cache Entry
 #[derive(Clone, Debug)]
-pub(crate) struct BUCacheEntry<Q: TraversalQuery> {
+pub(crate) struct BUCacheEntry<P: PostfixPath, Q: TraversalQuery> {
     finished: bool,
     mismatch: bool,
-    waiting: BinaryHeap<WaitingNode<Q>>,
+    waiting: BinaryHeap<WaitingNode<P, Q>>,
 }
-impl<Q: TraversalQuery> Default for BUCacheEntry<Q> {
+impl<P: PostfixPath + Eq, Q: TraversalQuery> Default for BUCacheEntry<P, Q> {
     fn default() -> Self {
         Self {
             finished: false,
@@ -21,38 +21,38 @@ impl<Q: TraversalQuery> Default for BUCacheEntry<Q> {
 }
 /// ordered according to priority
 #[derive(Clone, Debug, Eq)]
-struct WaitingNode<Q: TraversalQuery>(usize, TraversalNode<Q>);
+struct WaitingNode<P: PostfixPath + Eq, Q: TraversalQuery>(usize, TraversalNode<P, Q>);
 
-impl<Q: TraversalQuery> PartialEq for WaitingNode<Q> {
+impl<P: PostfixPath, Q: TraversalQuery> PartialEq for WaitingNode<P, Q> {
     fn eq(&self, other: &Self) -> bool {
         self.0.eq(&other.0)
     }
 }
-impl<Q: TraversalQuery> Ord for WaitingNode<Q> {
+impl<P: PostfixPath + Eq, Q: TraversalQuery> Ord for WaitingNode<P, Q> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.0.partial_cmp(&other.0)
             .unwrap_or(Ordering::Equal)
     }
 }
-impl<Q: TraversalQuery> PartialOrd for WaitingNode<Q> {
+impl<P: PostfixPath, Q: TraversalQuery> PartialOrd for WaitingNode<P, Q> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.0.partial_cmp(&other.0).map(Ordering::reverse)
     }
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct TraversalCache<Q: TraversalQuery> {
-    bu: HashMap<usize, BUCacheEntry<Q>>,
+pub(crate) struct TraversalCache<P: PostfixPath, Q: TraversalQuery> {
+    bu: HashMap<usize, BUCacheEntry<P, Q>>,
 }
-impl<Q: TraversalQuery> Default for TraversalCache<Q> {
+impl<P: PostfixPath, Q: TraversalQuery> Default for TraversalCache<P, Q> {
     fn default() -> Self {
         Self {
             bu: Default::default()
         }
     }
 }
-impl<Q: TraversalQuery> TraversalCache<Q> {
-    pub fn bu_mismatch(&mut self, root: usize) -> Option<TraversalNode<Q>> {
+impl<P: PostfixPath, Q: TraversalQuery> TraversalCache<P, Q> {
+    pub fn bu_mismatch(&mut self, root: usize) -> Option<TraversalNode<P, Q>> {
         self.bu.get_mut(&root).and_then(|e| {
             e.mismatch = true;
             e.waiting.pop().map(|w| w.1)
@@ -64,7 +64,7 @@ impl<Q: TraversalQuery> TraversalCache<Q> {
             e.waiting.clear();
         });
     }
-    pub fn bu_node(&mut self, last_node: &TraversalNode<Q>, entry: ChildLocation) -> Option<()> {
+    pub fn bu_node(&mut self, last_node: &TraversalNode<P, Q>, entry: ChildLocation) -> Option<()> {
         self.bu.get_mut(&entry.parent.index)
             .and_then(|e|
                 match (e.finished, e.mismatch) {

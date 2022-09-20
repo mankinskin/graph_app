@@ -73,5 +73,5 @@ features = [
   "io-util",
 ]
 
-[dev-dependencies.graph_app]
-path = "../"
+#[dev-dependencies.graph_app]
+#path = "../"

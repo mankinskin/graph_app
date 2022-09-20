@@ -3,6 +3,10 @@ use std::collections::BTreeMap;
 pub struct OverlapBands {
     bands: BTreeMap<usize, Vec<Pattern>>,
 }
+pub enum PastBand {
+    Before(usize, Pattern),
+    At(usize, Pattern),
+}
 impl Deref for OverlapBands {
     type Target = BTreeMap<usize, Vec<Pattern>>;
     fn deref(&self) -> &Self::Target {
@@ -27,19 +31,23 @@ impl OverlapBands {
         'g,
         T: Tokenize + 'a,
         Trav: TraversableMut<'a, 'g, T> + 'a,
-    >(&mut self, trav: &'a mut Trav, start_bound: usize) -> Option<(usize, Pattern)> {
+    >(&mut self, trav: &'a mut Trav, start_bound: usize) -> Option<PastBand> {
         let &key = self.bands.keys().find(|k| **k <= start_bound)?;
         let bundle = self.bands.remove(&key).unwrap();
-        let bundle = match bundle.len() {
+        let band = match bundle.len() {
             0 => panic!("Empty bundle in bands!"),
             1 => bundle.into_iter().next().unwrap(),
             _ => {
                 let mut graph = trav.graph_mut();
-                let bundle = graph.index_patterns(bundle);
-                vec![bundle]
+                let symbol = graph.index_patterns(bundle);
+                vec![symbol]
             }
         };
-        Some((key, bundle))
+        match key.cmp(&start_bound) {
+            Ordering::Equal => Some(PastBand::At(key, band)),
+            Ordering::Less => Some(PastBand::Before(key, band)),
+            Ordering::Greater => None,
+        }
     }
     //pub fn append_index<
     //    'a: 'g,

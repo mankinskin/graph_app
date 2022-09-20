@@ -1,15 +1,12 @@
 use std::hash::Hasher;
 
-use crate:: *;
+use crate::*;
 use super::*;
 
 #[derive(Debug, Clone)]
 pub struct Indexer<T: Tokenize, D: IndexDirection> {
     graph: HypergraphRef<T>,
     _ty: std::marker::PhantomData<D>,
-}
-struct Indexing<'a, T: Tokenize, D: IndexDirection, Q: IndexingQuery> {
-    _ty: std::marker::PhantomData<(&'a T, D, Q)>,
 }
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for Indexer<T, D> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
@@ -23,266 +20,116 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g
         self.graph.write().unwrap()
     }
 }
+pub(crate) struct IndexingPolicy<'a, T: Tokenize, D: IndexDirection, Q: IndexingQuery, R: ResultKind> {
+    _ty: std::marker::PhantomData<(&'a T, D, Q, R)>,
+}
 impl<
     'a: 'g,
     'g,
     T: Tokenize + 'a,
     D: IndexDirection + 'a,
     Q: IndexingQuery,
+    R: ResultKind,
 >
-DirectedTraversalPolicy<'a, 'g, T, D, Q> for Indexing<'a, T, D, Q> {
+DirectedTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R> {
     type Trav = Indexer<T, D>;
     type Folder = Indexer<T, D>;
+    type AfterEndMatch = <R as ResultKind>::Result<StartLeaf>;
+
     fn after_end_match(
         trav: &'a Self::Trav,
-        path: SearchPath,
-    ) -> MatchEnd {
+        path: StartPath,
+    ) -> Self::AfterEndMatch {
         let mut ltrav = trav.clone();
         let entry = path.get_entry_location();
-        if let Some(IndexSplitResult {
+        // index postfix of match
+        Self::AfterEndMatch::from_match_end(if let Some(IndexSplitResult {
             inner: post,
             location: entry,
             ..
-            // should call leaf split and use known info of leaf position
-        }) = SideIndexable::<_, D, IndexBack>::entry_perfect_split(
+        }) = IndexSplit::<_, D, IndexBack>::entry_perfect_split(
             &mut ltrav,
             entry,
         ) {
-            MatchEnd::Path(StartPath::Leaf(StartLeaf { entry, child: post, width: path.width() }))
+            MatchEnd::Path(StartLeaf { entry, child: post, width: path.width() })
         } else {
+            
             MatchEnd::Complete(entry.parent)
-        }
+        }, path)
     }
 }
-trait IndexingTraversalPolicy<
+pub(crate) trait IndexerTraversalPolicy<
     'a: 'g,
     'g,
     T: Tokenize,
     D: IndexDirection,
     Q: IndexingQuery,
+    R: ResultKind,
 >:
-    DirectedTraversalPolicy<'a, 'g, T, D, Q, Trav=Indexer<T, D>, Folder=Indexer<T, D>>
-{ }
+    DirectedTraversalPolicy<
+        'a, 'g, T, D, Q, R,
+        Trav=Indexer<T, D>,
+        Folder=Indexer<T, D>,
+        AfterEndMatch = R::Result<StartLeaf>
+    >
+{
+}
 impl<
     'a: 'g,
     'g,
     T: Tokenize + 'a,
     D: IndexDirection + 'a,
     Q: IndexingQuery,
-> IndexingTraversalPolicy<'a, 'g, T, D, Q> for Indexing<'a, T, D, Q> {}
+    R: ResultKind,
+> IndexerTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R> {}
 
 pub(crate) trait IndexingQuery: TraversalQuery {}
 impl<T: TraversalQuery> IndexingQuery for T {}
 
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Q: IndexingQuery> TraversalFolder<'a, 'g, T, D, Q> for Indexer<T, D> {
+impl<'a: 'g, 'g, T, D, Q, R> TraversalFolder<'a, 'g, T, D, Q, R> for Indexer<T, D>
+where 
+    T: Tokenize + 'a,
+    D: IndexDirection + 'a,
+    Q: IndexingQuery,
+    R: ResultKind
+{
     type Trav = Self;
     type Break = (Child, Q);
-    type Continue = Vec<TraversalResult<Q>>;
+    type Continue = Option<TraversalResult<Q>>;
+    type AfterEndMatch = <IndexingPolicy<'a, T, D, Q, R> as DirectedTraversalPolicy<'a, 'g, T, D, Q, R>>::AfterEndMatch;
+
     fn fold_found(
         trav: &Self::Trav,
-        mut acc: Self::Continue,
-        node: TraversalNode<Q>,
+        acc: Self::Continue,
+        node: TraversalNode<Self::AfterEndMatch, Q>,
     ) -> ControlFlow<Self::Break, Self::Continue> {
         let mut trav = trav.clone();
         match node {
-            IndexingNode::QueryEnd(found) => {
+            TraversalNode::QueryEnd(found) => {
                 ControlFlow::Break((
-                    Indexable::<_, D>::index_found(&mut trav, found.found),
+                    Indexing::<_, D>::index_found(&mut trav, found.found),
                     found.query,
                 ))
             },
-            IndexingNode::Mismatch(found) => {
-                acc.push(found);
-                //search::pick_max_result(acc, found)
-                ControlFlow::Continue(acc)
+            TraversalNode::Mismatch(found) => {
+                ControlFlow::Continue(search::pick_max_result(acc, found))
             },
-            //IndexingNode::Match(path, query) =>
-            //    ControlFlow::Continue(search::fold_match::<_, _, _, Self>(&trav, acc, path, query)),
-            IndexingNode::MatchEnd(match_end, query) => {
+            TraversalNode::MatchEnd(match_end, query) => {
                 let found = TraversalResult::new(
-                    FoundPath::from(match_end),
+                    FoundPath::from(match_end.into_mesp()),
                     query,
                 );
                 if let Some(r) = found.found.get_range() {
                     assert!(r.get_entry_pos() != r.get_exit_pos());
                 }
-                acc.push(found);
-                //ControlFlow::Continue(search::pick_max_result(acc, found))
-                ControlFlow::Continue(acc)
+                ControlFlow::Continue(search::pick_max_result(acc, found))
             },
             _ => ControlFlow::Continue(acc)
         }
     }
 }
-pub(crate) trait Indexable<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: TraversableMut<'a, 'g, T> {
-    fn index_found(
-        &'a mut self,
-        found: FoundPath,
-    ) -> Child {
-        match found {
-            FoundPath::Range(path) => self.index_range_path(path),
-            FoundPath::Prefix(path) => self.index_prefix_path(path),
-            FoundPath::Postfix(path) => self.index_postfix_path(path),
-            FoundPath::Complete(c) => c
-        }
-    }
-    
-    fn index_prefix_path(
-        &'a mut self,
-        path: EndPath,
-    ) -> Child {
-        SideIndexable::<_, D, IndexFront>::single_entry_split(
-            self,
-            path.entry(),
-            path.path().to_vec()
-        )
-        .map(|split| split.inner)
-        .expect("EndPath for complete path!")
-    }
-    fn index_postfix_path(
-        &'a mut self,
-        path: StartPath,
-    ) -> Child {
-        SideIndexable::<_, D, IndexBack>::single_entry_split(
-            self,
-            path.entry(),
-            path.path().to_vec()
-        )
-        .map(|split| split.inner)
-        .expect("StartPath for complete path!")
-    }
-    fn index_range_path(
-        &'a mut self,
-        path: SearchPath,
-    ) -> Child {
-        let entry = path.start.entry();
-        let entry_pos = path.start.get_entry_pos();
-        let exit_pos = path.end.get_exit_pos();
-        let mut graph = self.graph_mut();
 
-        //// a little bit dirty, path should have typing for this
-        //if entry_pos == exit_pos && path.start.path().is_empty() && path.end.path().is_empty() {
-        //    return graph.expect_child_at(&location);
-        //}
-        let location = entry.into_pattern_location();
-
-        let range = D::wrapper_range(entry_pos, exit_pos);
-        graph.validate_pattern_indexing_range_at(&location, entry_pos, exit_pos).unwrap();
-        let (wrapper, pattern, location) = if let Ok(wrapper) =
-            graph.index_range_in(
-                location,
-                range,
-            ) {
-                let (pid, pattern) = wrapper.expect_child_patterns(&*graph).into_iter().next().unwrap();
-                let location = wrapper.to_pattern_location(pid);
-                (wrapper, pattern, location)
-            } else {
-                let wrapper = location.parent;
-                let pattern = wrapper.expect_child_pattern(&*graph, location.pattern_id);
-                (wrapper, pattern, location)
-            };
-
-        let head_pos = D::head_index(pattern.borrow());
-        let last_pos = D::last_index(pattern.borrow());
-
-        let head_split = SideIndexable::<_, D, IndexBack>::single_path_split(
-            &mut *graph,
-            path.start.path().to_vec()
-        ).map(|split| (
-            split.inner,
-            SideIndexable::<_, D, IndexBack>::context_path(
-                &mut *graph,
-                split.location,
-                split.path,
-                split.inner,
-            ).0
-        ));
-        let last_split =
-            SideIndexable::<_, D, IndexFront>::single_path_split(
-                &mut *graph,
-                path.end.path().to_vec()
-            ).map(|split| (
-                split.inner,
-                SideIndexable::<_, D, IndexFront>::context_path(
-                    &mut *graph,
-                    split.location,
-                    split.path,
-                    split.inner,
-                ).0
-            ));
-
-        let res = match (head_split, last_split) {
-            (Some((head_inner, head_context)), Some((last_inner, last_context))) => {
-                let range = D::inner_context_range(head_pos, last_pos);
-                let inner = graph.index_range_in(
-                    location,
-                    range,
-                ).ok();
-                let target = graph.insert_pattern(
-                    D::concat_context_inner_context(
-                        head_inner,
-                        inner.as_ref().map(std::slice::from_ref).unwrap_or_default(),
-                        last_inner
-                    )
-                ).unwrap();
-                graph.add_pattern_with_update(
-                    wrapper,
-                    D::concat_context_inner_context(head_context, target, last_context)
-                );
-                target
-            },
-            (Some((head_inner, head_context)), None) => {
-                let range = 
-                    <IndexBack as IndexSide<D>>::inner_context_range(head_pos);
-                let inner_context = graph.index_range_in_or_default(
-                    location,
-                    range,
-                ).unwrap();
-                // |context, [inner, inner_context]|
-                let target = graph.insert_pattern(
-                    D::inner_then_context(head_inner, inner_context)
-                ).unwrap();
-                // |context, target|
-                graph.add_pattern_with_update(
-                    wrapper,
-                    D::context_then_inner(head_context, target)
-                );
-                target
-            },
-            (None, Some((last_inner, last_context))) => {
-                let range = 
-                    <IndexFront as IndexSide<D>>::inner_context_range(last_pos);
-                let inner_context = graph.index_range_in_or_default(
-                    location,
-                    range,
-                ).unwrap();
-                // |[inner_context, inner], context|
-                let target = graph.insert_pattern(
-                    D::context_then_inner(inner_context, last_inner)
-                ).unwrap();
-                // |target, context|
-                graph.add_pattern_with_update(
-                    wrapper,
-                    D::inner_then_context(target, last_context)
-                );
-                target
-            },
-            (None, None) => wrapper,
-        };
-        graph.validate_expansion(entry.parent);
-        res
-    }
-}
-impl<
-    'a: 'g,
-    'g,
-    T: Tokenize,
-    D: IndexDirection,
-    Trav: TraversableMut<'a, 'g, T>,
-> Indexable<'a, 'g, T, D> for Trav {}
-
-
-impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
     pub fn new(graph: HypergraphRef<T>) -> Self {
         Self {
             graph,
@@ -303,36 +150,57 @@ impl<'a: 'g, 'g, T: Tokenize, D: IndexDirection> Indexer<T, D> {
         &mut self,
         query: Q,
     ) -> Result<(Child, Q), NoMatch> {
-        self.path_indexing::<_, Bft<_, _, _, _, _>, Indexing<T, D, Q>>(query)
+        self.path_indexing::<_, IndexingPolicy<T, D, Q, OriginPathResult>, Bft<_, _, _, _, _, _>>(query)
     }
-    fn path_indexing<
+    //pub(crate) fn find_index_path<
+    //    Q: IndexingQuery,
+    //>(
+    //    &mut self,
+    //    query: Q,
+    //) -> Result<TraversalResult<Q>, NoMatch> {
+    //    self.index_path_search::<_, IndexingPolicy<T, D, Q>, Bft<_, _, _, _, _>>(query)
+    //        .map(|r| match r {
+    //            ControlFlow::Continue(f) => f,
+    //            ControlFlow::Break((found, query)) => TraversalResult::new(FoundPath::Complete(found), query),
+    //        })
+    //}
+    pub(crate) fn index_path_search<
         Q: IndexingQuery,
-        Ti: TraversalIterator<'a, 'g, T, D, Self, Q, S>,
-        S: IndexingTraversalPolicy<'a, 'g, T, D, Q>,
+        S: IndexerTraversalPolicy<'a, 'g, T, D, Q, OriginPathResult>,
+        Ti: TraversalIterator<'a, 'g, T, D, Self, Q, S, OriginPathResult>,
     >(
-        &'a mut self,
+        &'a self,
         query_path: Q,
-    ) -> Result<(Child, Q), NoMatch> {
+    ) -> Result<ControlFlow<(Child, Q), TraversalResult<Q>>, NoMatch> {
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         query_path.hash(&mut hasher);
         let _h = hasher.finish();
         match Ti::new(self, TraversalNode::query_node(query_path))
             .try_fold(
-                Vec::new(),
+                None,
                 |acc, (_depth, node)|
-                    S::Folder::fold_found(self, acc, node)
+                    <S::Folder as TraversalFolder<_, _, _, OriginPathResult>>::fold_found(self, acc, node)
             )
         {
-            //ControlFlow::Continue(None) => Err(NoMatch::NotFound),
-            ControlFlow::Continue(found) => {
-                let founds = found.clone();
-                found.into_iter().fold(None, |acc, f|
-                    search::pick_max_result(acc, f)
-                ).map(|f|
-                    (Indexable::<_, D>::index_found(&mut self.clone(), f.found), f.query)
-                ).ok_or(NoMatch::NotFound)
-            },
-            ControlFlow::Break((found, query)) => Ok((found, query))
+            ControlFlow::Continue(found) =>
+                found.map(ControlFlow::Continue).ok_or(NoMatch::NotFound),
+            ControlFlow::Break((found, query)) => Ok(ControlFlow::Break((found, query)))
+        }
+    }
+    fn path_indexing<
+        Q: IndexingQuery,
+        S: IndexerTraversalPolicy<'a, 'g, T, D, Q, OriginPathResult>,
+        Ti: TraversalIterator<'a, 'g, T, D, Self, Q, S, OriginPathResult>,
+    >(
+        &'a mut self,
+        query_path: Q,
+    ) -> Result<(Child, Q), NoMatch> {
+        let mut indexer = self.clone();
+        match self.index_path_search::<_, S, Ti>(query_path) {
+            Ok(ControlFlow::Continue(f)) =>
+                Ok((Indexing::<_, D>::index_found(&mut indexer, f.found), f.query)),
+            Ok(ControlFlow::Break((found, query))) => Ok((found, query)),
+            Err(err) => Err(err)
         }
     }
 }

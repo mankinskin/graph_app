@@ -1,4 +1,3 @@
-use std::num::NonZeroUsize;
 
 use super::*;
 use crate::*;
@@ -8,7 +7,7 @@ type OppositeContextRange<D, Ty> =
 /// Side refers to border (front is indexing before front border, back is indexing after back border)
 pub(crate) trait IndexSide<D: IndexDirection> {
     type Opposite: IndexSide<D>;
-    type Path: DirectedBorderPath<D>;
+    //type Path: DirectedBorderPath<D>;
     type InnerRange: PatternRangeIndex + StartInclusive;
     type ContextRange: PatternRangeIndex + StartInclusive;
     type BottomUpPathIter: Iterator<Item=ChildLocation>;
@@ -48,7 +47,10 @@ pub(crate) trait IndexSide<D: IndexDirection> {
     fn range_front(range: &Range<usize>) -> usize;
     fn limited_inner_range(range: &Range<usize>) -> Range<usize>;
     fn max_range(pattern: impl IntoPattern, pos: usize) -> Range<usize>;
-    fn split_context(pattern: &'_ impl IntoPattern, pos: usize) -> &'_ [Child];
+    #[track_caller]
+    fn split_context(pattern: &'_ impl IntoPattern, pos: usize) -> &'_ [Child] {
+        &pattern.borrow()[Self::context_range(pos)]
+    }
     fn sub_ranges(inner: &Range<usize>, limited: &Range<usize>) -> Range<usize>;
     fn token_offset_split(
         pattern: impl IntoPattern,
@@ -59,7 +61,7 @@ pub(crate) trait IndexSide<D: IndexDirection> {
 pub(crate) struct IndexBack;
 impl<D: IndexDirection> IndexSide<D> for IndexBack {
     type Opposite = IndexFront;
-    type Path = StartPath;
+    //type Path = StartPath;
     type InnerRange = RangeFrom<usize>;
     type ContextRange = Range<usize>;
     type BottomUpPathIter = std::vec::IntoIter<ChildLocation>;
@@ -93,10 +95,6 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
     }
     fn back_front_order<A>(back: A, front: A) -> (A, A) {
         (front, back)
-    }
-    #[track_caller]
-    fn split_context(pattern: &'_ impl IntoPattern, pos: usize) -> &'_ [Child] {
-        &pattern.borrow()[..pos]
     }
     fn inner_width_to_offset(child: &Child, width: usize) -> Option<NonZeroUsize> {
         // todo: changes with index direction
@@ -146,7 +144,7 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
 pub(crate) struct IndexFront;
 impl<D: IndexDirection> IndexSide<D> for IndexFront {
     type Opposite = IndexBack;
-    type Path = EndPath;
+    //type Path = EndPath;
     type InnerRange = Range<usize>;
     type ContextRange = RangeFrom<usize>;
     type BottomUpPathIter = std::iter::Rev<<Self::Opposite as IndexSide<D>>::BottomUpPathIter>;
@@ -164,10 +162,6 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
     }
     fn split_at_border(pos: usize, pattern: impl IntoPattern) -> bool {
         Some(pos) == D::index_next(D::last_index(pattern))
-    }
-    #[track_caller]
-    fn split_context(pattern: &'_ impl IntoPattern, pos: usize) -> &'_ [Child] {
-        &pattern.borrow()[D::index_next(pos).unwrap()..]
     }
     fn context_inner_order<
         'a,

@@ -54,27 +54,14 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             .unwrap()
     }
     fn read_bands(&mut self, mut sequence: PrefixPath) {
-        self.read_recursive(sequence)
-    }
-    fn read_recursive(&mut self, mut context: PrefixPath) {
-        //bands.insert(end_bound, vec![back_context.push(last)
-        if let Some(next) = self.read_single(&mut context) {
-            self.read_recursive(context)
+        while let Some(next) = self.get_next(&mut sequence) {
+            let next = self.read_overlaps(
+                    next,
+                    &mut sequence,
+                )
+                .unwrap_or(next);
+            self.append_index(next);
         }
-        //self.close_bands(bands, end_bound)
-    }
-    fn read_single(
-        &mut self,
-        context: &mut PrefixPath,
-    ) -> Option<Child> {
-        let next = self.get_next(context)?;
-        let next = self.read_overlaps(
-                next,
-                context,
-            )
-            .unwrap_or(next);
-        self.append_index(next);
-        Some(next)
     }
     fn get_next(&mut self, context: &mut PrefixPath) -> Option<Child> {
         match self.indexer().index_query(context.clone()) {
@@ -97,10 +84,10 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             _ty: Default::default(),
         }
     }
-    fn append_next(&mut self, end_bound: usize, index: Child) -> usize {
-        self.append_index(index);
-        0
-    }
+    //fn append_next(&mut self, end_bound: usize, index: Child) -> usize {
+    //    self.append_index(index);
+    //    0
+    //}
     fn append_index(
         &mut self,
         index: impl ToChild,
