@@ -67,6 +67,18 @@ impl StartPath {
             _ => None,
         }
     }
+    pub fn into_context_path(self) -> ChildPath {
+        match self {
+            Self::Leaf(leaf) => vec![leaf.entry],
+            Self::Path {
+                entry,
+                path,
+                ..
+            } => path.tap_mut(|p|
+                p.push(entry)
+            ),
+        }
+    }
 }
 impl From<SearchPath> for StartPath {
     fn from(p: SearchPath) -> Self {

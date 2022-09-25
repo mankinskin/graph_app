@@ -40,8 +40,16 @@ pub(crate) trait ResultKind: Eq + Clone + Debug {
     type Primer: PathPrimer<Self>;
     type Postfix: Postfix + PathAppend<Result=Self::Primer> + From<Self::Primer>;
     type Advanced: Advanced + PathPop<Result=Self::Postfix> + From<Self::Primer>;
+    type Indexed;
     //type Result: From<Self::Found>;
     fn into_postfix(primer: Self::Primer, match_end: MatchEnd<StartLeaf>) -> Self::Postfix;
+    fn index_found<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: IndexDirection,
+        Trav: TraversableMut<'a, 'g, T>,
+    >(found: Self::Found, trav: &'a mut Trav) -> Self::Indexed;
 }
 pub(crate) trait Found<R: ResultKind>: RangePath + FromAdvanced<<R as ResultKind>::Advanced> + From<<R as ResultKind>::Postfix> + Wide + Ord {
 }
@@ -132,8 +140,18 @@ impl ResultKind for BaseResult {
     type Primer = StartPath;
     type Postfix = MatchEnd<StartPath>;
     type Advanced = SearchPath;
+    type Indexed = Child;
     fn into_postfix(_primer: Self::Primer, match_end: MatchEnd<StartLeaf>) -> Self::Postfix {
         match_end.into()
+    }
+    fn index_found<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: IndexDirection,
+        Trav: TraversableMut<'a, 'g, T>,
+    >(found: Self::Found, trav: &'a mut Trav) -> Self::Indexed {
+        Indexing::<_, D>::index_found(trav, found.into_range_path().into())
     }
 }
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -143,10 +161,23 @@ impl ResultKind for OriginPathResult {
     type Primer = OriginPath<StartPath>;
     type Postfix = OriginPath<MatchEnd<StartPath>>;
     type Advanced = OriginPath<SearchPath>;
+    type Indexed = OriginPath<Child>;
     fn into_postfix(primer: Self::Primer, match_end: MatchEnd<StartLeaf>) -> Self::Postfix {
         OriginPath {
             postfix: match_end.into(),
             origin: primer.origin,
+        }
+    }
+    fn index_found<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: IndexDirection,
+        Trav: TraversableMut<'a, 'g, T>,
+    >(found: Self::Found, trav: &'a mut Trav) -> Self::Indexed {
+        OriginPath {
+            origin: found.origin,
+            postfix: BaseResult::index_found::<_, D, _>(found.postfix, trav)
         }
     }
 }

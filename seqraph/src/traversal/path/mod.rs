@@ -321,7 +321,7 @@ impl EndPathMut for OverlapPrimer {
         }
     }
 }
-impl EndPathMut for PrefixPath {
+impl EndPathMut for PrefixQuery {
     fn end_path_mut(&mut self) -> &mut ChildPath {
         &mut self.end
     }
@@ -349,7 +349,7 @@ impl ExitMut for QueryRangePath {
         &mut self.exit
     }
 }
-impl ExitMut for PrefixPath {
+impl ExitMut for PrefixQuery {
     fn exit_mut(&mut self) -> &mut usize {
         &mut self.exit
     }

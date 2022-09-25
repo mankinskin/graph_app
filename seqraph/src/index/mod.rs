@@ -48,6 +48,14 @@ where
     ) -> Result<(Child, Q), NoMatch> {
         self.indexer().index_query(query)
     }
+    pub(crate) fn index_query_with_origin<
+        Q: IndexingQuery
+    >(
+        &self,
+        query: Q,
+    ) -> Result<(OriginPath<Child>, Q), NoMatch> {
+        self.indexer().index_query_with_origin(query)
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -39,7 +39,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         self.root.unwrap()
     }
     fn read_known(&mut self, known: Pattern) {
-        PrefixPath::new_directed::<D, _>(known.borrow())
+        PrefixQuery::new_directed::<D, _>(known.borrow())
             .map(|path| self.read_bands(path))
             .or_else(|err|
                 match err {
@@ -53,7 +53,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             )
             .unwrap()
     }
-    fn read_bands(&mut self, mut sequence: PrefixPath) {
+    fn read_bands(&mut self, mut sequence: PrefixQuery) {
         while let Some(next) = self.get_next(&mut sequence) {
             let next = self.read_overlaps(
                     next,
@@ -63,7 +63,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             self.append_index(next);
         }
     }
-    fn get_next(&mut self, context: &mut PrefixPath) -> Option<Child> {
+    fn get_next(&mut self, context: &mut PrefixQuery) -> Option<Child> {
         match self.indexer().index_query(context.clone()) {
             Ok((index, advanced)) => {
                 *context = advanced;

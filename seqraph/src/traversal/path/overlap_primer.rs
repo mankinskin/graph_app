@@ -4,14 +4,14 @@ use crate::*;
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
 pub struct OverlapPrimer {
     pub(crate) start: Child,
-    pub(crate) context: PrefixPath,
+    pub(crate) context: PrefixQuery,
     pub(crate) context_offset: usize,
     pub(crate) width: usize,
     pub(crate) exit: usize,
     pub(crate) end: ChildPath,
 }
 impl OverlapPrimer {
-    pub fn new(start: Child, context: PrefixPath) -> Self {
+    pub fn new(start: Child, context: PrefixQuery) -> Self {
         Self {
             start,
             context_offset: context.exit,
@@ -21,7 +21,7 @@ impl OverlapPrimer {
             end: vec![],
         }
     }
-    pub fn into_prefix_path(self) -> PrefixPath {
+    pub fn into_prefix_path(self) -> PrefixQuery {
         self.context
     }
 }

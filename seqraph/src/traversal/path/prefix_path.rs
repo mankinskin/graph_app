@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
-pub struct PrefixPath {
+pub struct PrefixQuery {
     pub(crate) pattern: Pattern,
     pub(crate) exit: usize,
     pub(crate) end: ChildPath,
@@ -12,7 +12,7 @@ pub struct PrefixPath {
 impl<
     'a: 'g,
     'g,
-> PrefixPath {
+> PrefixQuery {
     pub fn new_directed<
         D: MatchDirection,
         P: IntoPattern,
@@ -31,40 +31,40 @@ impl<
         }
     }
 }
-impl EntryPos for PrefixPath {
+impl EntryPos for PrefixQuery {
     fn get_entry_pos(&self) -> usize {
         0
     }
 }
-impl PatternEntry for PrefixPath {
+impl PatternEntry for PrefixQuery {
     fn get_entry_pattern(&self) -> &[Child] {
         self.pattern.borrow()
     }
 }
-impl HasStartPath for PrefixPath {
+impl HasStartPath for PrefixQuery {
     fn start_path(&self) -> &[ChildLocation] {
         &[]
     }
 }
-impl PatternStart for PrefixPath {}
-impl ExitPos for PrefixPath {
+impl PatternStart for PrefixQuery {}
+impl ExitPos for PrefixQuery {
     fn get_exit_pos(&self) -> usize {
         self.exit
     }
 }
-impl PatternExit for PrefixPath {
+impl PatternExit for PrefixQuery {
     fn get_exit_pattern(&self) -> &[Child] {
         &self.pattern
     }
 }
-impl HasEndPath for PrefixPath {
+impl HasEndPath for PrefixQuery {
     fn end_path(&self) -> &[ChildLocation] {
         self.end.borrow()
     }
 }
-impl PatternEnd for PrefixPath {}
+impl PatternEnd for PrefixQuery {}
 
-impl End for PrefixPath {
+impl End for PrefixQuery {
     fn get_end<
         'a: 'g,
         'g,
@@ -75,7 +75,7 @@ impl End for PrefixPath {
         self.get_pattern_end(trav)
     }
 }
-//impl TraversalPath for PrefixPath {
+//impl TraversalPath for PrefixQuery {
 //    fn prev_exit_pos<
 //        'a: 'g,
 //        'g,
@@ -92,12 +92,12 @@ impl End for PrefixPath {
 //        }
 //    }
 //}
-impl Wide for PrefixPath {
+impl Wide for PrefixQuery {
     fn width(&self) -> usize {
         self.width
     }
 }
-impl WideMut for PrefixPath {
+impl WideMut for PrefixQuery {
     fn width_mut(&mut self) -> &mut usize {
         &mut self.width
     }
@@ -108,7 +108,7 @@ impl WideMut for PrefixPath {
 mod tests {
     use std::borrow::Borrow;
 
-    use super::PrefixPath;
+    use super::PrefixQuery;
     use crate::{index::Right, Hypergraph, Token, traversal::Advance};
     use itertools::Itertools;
     use pretty_assertions::assert_eq;
@@ -127,7 +127,7 @@ mod tests {
         ]).into_iter().next_tuple().unwrap();
 
         let pattern = vec![c,d,d,e,f,g,a,c,d,e,f,a,g,f,g,g,e,d,b,d];
-        let mut path = PrefixPath::new_directed::<Right, _>(pattern.borrow()).unwrap();
+        let mut path = PrefixQuery::new_directed::<Right, _>(pattern.borrow()).unwrap();
         let mut rec = vec![];
         while let Some(next) = path.advance::<_, Right, _>(&graph) {
             rec.push(next);
