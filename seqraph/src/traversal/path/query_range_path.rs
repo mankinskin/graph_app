@@ -90,27 +90,6 @@ impl HasEndPath for QueryRangePath {
     }
 }
 impl PatternEnd for QueryRangePath {}
-impl EndPathMut for QueryRangePath {
-    fn end_path_mut(&mut self) -> &mut ChildPath {
-        &mut self.end
-    }
-}
-impl ExitMut for QueryRangePath {
-    fn exit_mut(&mut self) -> &mut usize {
-        &mut self.exit
-    }
-}
-impl End for QueryRangePath {
-    fn get_end<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Option<Child> {
-        self.get_pattern_end(trav)
-    }
-}
 //impl TraversalPath for QueryRangePath {
 //    fn prev_exit_pos<
 //        'a: 'g,
@@ -128,8 +107,7 @@ impl End for QueryRangePath {
 //        }
 //    }
 //}
-impl AdvanceablePath for QueryRangePath {}
-impl AdvanceableWidth for QueryRangePath {
+impl AdvanceWidth for QueryRangePath {
     fn advance_width(&mut self, _width: usize) {
     }
 }

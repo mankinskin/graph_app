@@ -1,10 +1,31 @@
 use super::*;
 
-pub(crate) trait AdvanceablePath:
+pub(crate) trait NewAdvanced: Advance {
+    fn new_advanced<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+        A: Into<Self> + Clone,
+    >(
+        trav: &'a Trav,
+        start: A,
+    ) -> Result<Self, A> {
+        let mut new = start.clone().into();
+        match new.advance_exit_pos::<_, D, _>(trav) {
+            Ok(()) => Ok(new),
+            Err(()) => Err(start)
+        }
+    }
+}
+impl<T: Advance> NewAdvanced for T {
+}
+pub(crate) trait Advance:
     EndPathMut
-    + AdvanceableExit
+    + AdvanceExit
     + End
-    + AdvanceableWidth
+    + AdvanceWidth
     + Sized {
     fn advance<
         'a: 'g,
@@ -35,15 +56,38 @@ pub(crate) trait AdvanceablePath:
         }
     }
 }
-pub(crate) trait AdvanceableWidth {
+impl<T: 
+    EndPathMut
+    + AdvanceExit
+    + End
+    + AdvanceWidth
+    + Sized
+> Advance for T {
+}
+pub(crate) trait AdvanceWidth {
     fn advance_width(&mut self, width: usize);
 }
-impl <T: WideMut> AdvanceableWidth for T {
+impl <T: WideMut> AdvanceWidth for T {
     fn advance_width(&mut self, width: usize) {
         *self.width_mut() += width;
     }
 }
-pub(crate) trait AdvanceableExit: ExitPos + ExitMut {
+pub(crate) trait AddMatchWidth: AdvanceWidth + End {
+    fn add_match_width<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(&mut self, trav: &'a Trav) {
+        if let Some(end) = self.get_end::<_, D, _>(trav) {
+            self.advance_width(end.width);
+        }
+    }
+}
+impl<T: AdvanceWidth + End> AddMatchWidth for T {
+}
+pub(crate) trait AdvanceExit: ExitPos + ExitMut {
     fn is_pattern_finished<
         P: IntoPattern,
     >(&self, pattern: P) -> bool {
@@ -90,10 +134,28 @@ pub(crate) trait AdvanceableExit: ExitPos + ExitMut {
         }
     }
 }
-impl<M:
-    ExitMut
+impl<P: AdvanceExit> AdvanceExit for OriginPath<P> {
+    fn is_finished<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> bool {
+        self.postfix.is_finished(trav)
+    }
+    fn next_exit_pos<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> Result<Option<usize>, ()> {
+        self.postfix.next_exit_pos::<_, D, _>(trav)
+    }
+}
+impl<M: ExitMut
     + PatternExit
-> AdvanceableExit for M {
+> AdvanceExit for M {
     fn pattern_next_exit_pos<
         D: MatchDirection,
         P: IntoPattern,

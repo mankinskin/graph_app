@@ -5,10 +5,9 @@ pub(crate) mod search;
 pub(crate) mod overlap_primer;
 pub(crate) mod prefix_path;
 pub(crate) mod traversal;
-pub(crate) mod advanceable;
+pub(crate) mod advance;
 pub(crate) mod reduce;
 pub(crate) mod complete;
-//pub(crate) mod indexing;
 
 pub(crate) use start::*;
 pub(crate) use end::*;
@@ -17,10 +16,9 @@ pub(crate) use search::*;
 pub(crate) use overlap_primer::*;
 pub(crate) use prefix_path::*;
 pub(crate) use traversal::*;
-pub(crate) use advanceable::*;
+pub(crate) use advance::*;
 pub(crate) use reduce::*;
 pub(crate) use complete::*;
-//pub(crate) use indexing::*;
 
 use crate::{
     vertex::*,
@@ -62,6 +60,26 @@ pub trait EntryPos {
 pub trait ExitPos {
     fn get_exit_pos(&self) -> usize;
 }
+impl ExitPos for EndPath {
+    fn get_exit_pos(&self) -> usize {
+        self.entry.sub_index
+    }
+}
+impl ExitPos for SearchPath {
+    fn get_exit_pos(&self) -> usize {
+        self.end.get_exit_pos()
+    }
+}
+impl<P: ExitPos> ExitPos for OriginPath<P> {
+    fn get_exit_pos(&self) -> usize {
+        self.postfix.get_exit_pos()
+    }
+}
+//impl<T: GraphExit> ExitPos for T {
+//    fn get_exit_pos(&self) -> usize {
+//        self.get_exit_location().sub_index
+//    }
+//}
 pub trait PatternEntry: EntryPos {
     fn get_entry_pattern(&self) -> &[Child];
     fn get_entry(&self) -> Child {
@@ -143,9 +161,9 @@ pub trait GraphExit: ExitPos {
         trav.graph().get_child_at(self.get_exit_location()).ok()
     }
 }
-impl<T: GraphExit> ExitPos for T {
-    fn get_exit_pos(&self) -> usize {
-        self.get_exit_location().sub_index
+impl<P: GraphExit> GraphExit for OriginPath<P> {
+    fn get_exit_location(&self) -> ChildLocation {
+        self.postfix.get_exit_location()
     }
 }
 pub(crate) trait HasStartPath {
@@ -154,19 +172,62 @@ pub(crate) trait HasStartPath {
         1 + self.start_path().len()
     }
 }
+impl<P: HasStartPath> HasStartPath for OriginPath<P> {
+    fn start_path(&self) -> &[ChildLocation] {
+        self.postfix.start_path()
+    }
+}
+
 pub(crate) trait HasEndPath {
     fn end_path(&self) -> &[ChildLocation];
     fn num_path_segments(&self) -> usize {
         1 + self.end_path().len()
     }
 }
+impl<P: HasEndPath> HasEndPath for OriginPath<P> {
+    fn end_path(&self) -> &[ChildLocation] {
+        self.postfix.end_path()
+    }
+}
 pub(crate) trait HasStartMatchPath {
     fn start_match_path(&self) -> &StartPath;
     fn start_match_path_mut(&mut self) -> &mut StartPath;
 }
+impl HasStartMatchPath for SearchPath {
+    fn start_match_path(&self) -> &StartPath {
+        &self.start
+    }
+    fn start_match_path_mut(&mut self) -> &mut StartPath {
+        &mut self.start
+    }
+}
+impl<P: HasStartMatchPath> HasStartMatchPath for OriginPath<P> {
+    fn start_match_path(&self) -> &StartPath {
+        self.postfix.start_match_path()
+    }
+    fn start_match_path_mut(&mut self) -> &mut StartPath {
+        self.postfix.start_match_path_mut()
+    }
+}
 pub(crate) trait HasEndMatchPath {
     fn end_match_path(&self) -> &EndPath;
     fn end_match_path_mut(&mut self) -> &mut EndPath;
+}
+impl HasEndMatchPath for SearchPath {
+    fn end_match_path(&self) -> &EndPath {
+        &self.end
+    }
+    fn end_match_path_mut(&mut self) -> &mut EndPath {
+        &mut self.end
+    }
+}
+impl<P: HasEndMatchPath> HasEndMatchPath for OriginPath<P> {
+    fn end_match_path(&self) -> &EndPath {
+        self.postfix.end_match_path()
+    }
+    fn end_match_path_mut(&mut self) -> &mut EndPath {
+        self.postfix.end_match_path_mut()
+    }
 }
 pub(crate) trait HasMatchPaths: HasStartMatchPath + HasEndMatchPath {
     fn into_paths(self) -> (StartPath, EndPath);
@@ -243,14 +304,65 @@ pub(crate) trait GraphEnd: GraphExit + HasEndPath + End {
         trav.graph().get_child_at(self.get_end_location()).ok()
     }
 }
+impl<T: GraphExit + HasEndPath> GraphEnd for T {}
+
 pub(crate) trait EndPathMut {
     fn end_path_mut(&mut self) -> &mut ChildPath;
     fn push_end(&mut self, next: ChildLocation) {
         self.end_path_mut().push(next)
     }
 }
+impl EndPathMut for OverlapPrimer {
+    fn end_path_mut(&mut self) -> &mut ChildPath {
+        if self.exit == 0 {
+            &mut self.end
+        } else {
+            &mut self.context.end
+        }
+    }
+}
+impl EndPathMut for PrefixPath {
+    fn end_path_mut(&mut self) -> &mut ChildPath {
+        &mut self.end
+    }
+}
+impl EndPathMut for QueryRangePath {
+    fn end_path_mut(&mut self) -> &mut ChildPath {
+        &mut self.end
+    }
+}
 pub(crate) trait ExitMut: ExitPos {
     fn exit_mut(&mut self) -> &mut usize;
+}
+impl ExitMut for EndPath {
+    fn exit_mut(&mut self) -> &mut usize {
+        &mut self.entry.sub_index
+    }
+}
+impl ExitMut for OverlapPrimer {
+    fn exit_mut(&mut self) -> &mut usize {
+        &mut self.exit
+    }
+}
+impl ExitMut for QueryRangePath {
+    fn exit_mut(&mut self) -> &mut usize {
+        &mut self.exit
+    }
+}
+impl ExitMut for PrefixPath {
+    fn exit_mut(&mut self) -> &mut usize {
+        &mut self.exit
+    }
+}
+impl ExitMut for SearchPath {
+    fn exit_mut(&mut self) -> &mut usize {
+        self.end.exit_mut()
+    }
+}
+impl<P: ExitMut> ExitMut for OriginPath<P> {
+    fn exit_mut(&mut self) -> &mut usize {
+        self.postfix.exit_mut()
+    }
 }
 pub(crate) trait End {
     fn get_end<
@@ -260,4 +372,73 @@ pub(crate) trait End {
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Option<Child>;
+}
+impl End for QueryRangePath {
+    fn get_end<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> Option<Child> {
+        self.get_pattern_end(trav)
+    }
+}
+impl EndPathMut for SearchPath {
+    fn end_path_mut(&mut self) -> &mut ChildPath {
+        &mut self.end.path
+    }
+}
+impl<P: EndPathMut> EndPathMut for OriginPath<P> {
+    fn end_path_mut(&mut self) -> &mut ChildPath {
+        self.postfix.end_path_mut()
+    }
+}
+impl<A: GraphEnd> End for A {
+    fn get_end<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> Option<Child> {
+        self.get_graph_end(trav)
+    }
+}
+
+
+impl HasSinglePath for EndPath {
+    fn single_path(&self) -> &[ChildLocation] {
+        self.end_path()
+    }
+}
+impl PathRoot for EndPath {
+    fn root(&self) -> ChildLocation {
+        self.get_exit_location()
+    }
+}
+impl GraphExit for EndPath {
+    fn get_exit_location(&self) -> ChildLocation {
+        self.entry
+    }
+}
+impl HasEndPath for EndPath {
+    fn end_path(&self) -> &[ChildLocation] {
+        self.path.borrow()
+    }
+}
+impl EndPathMut for EndPath {
+    fn end_path_mut(&mut self) -> &mut ChildPath {
+        self.path.borrow_mut()
+    }
+}
+impl WideMut for EndPath {
+    fn width_mut(&mut self) -> &mut usize {
+        &mut self.width
+    }
+}
+impl Wide for EndPath {
+    fn width(&self) -> usize {
+        self.width
+    }
 }

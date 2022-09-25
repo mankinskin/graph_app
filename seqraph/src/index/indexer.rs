@@ -31,19 +31,20 @@ impl<
     Q: IndexingQuery,
     R: ResultKind,
 >
-DirectedTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R> {
+DirectedTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R>
+{
     type Trav = Indexer<T, D>;
     type Folder = Indexer<T, D>;
-    type AfterEndMatch = <R as ResultKind>::Result<StartLeaf>;
+    //type Primer = StartLeaf;
 
     fn after_end_match(
         trav: &'a Self::Trav,
-        path: StartPath,
-    ) -> Self::AfterEndMatch {
+        primer: R::Primer,
+    ) -> R::Postfix {
         let mut ltrav = trav.clone();
-        let entry = path.get_entry_location();
+        let entry = primer.get_entry_location();
         // index postfix of match
-        Self::AfterEndMatch::from_match_end(if let Some(IndexSplitResult {
+        let match_end = if let Some(IndexSplitResult {
             inner: post,
             location: entry,
             ..
@@ -51,11 +52,11 @@ DirectedTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R> {
             &mut ltrav,
             entry,
         ) {
-            MatchEnd::Path(StartLeaf { entry, child: post, width: path.width() })
+            MatchEnd::Path(StartLeaf { entry, child: post, width: primer.width() })
         } else {
-            
             MatchEnd::Complete(entry.parent)
-        }, path)
+        };
+        R::into_postfix(primer, match_end)
     }
 }
 pub(crate) trait IndexerTraversalPolicy<
@@ -70,7 +71,7 @@ pub(crate) trait IndexerTraversalPolicy<
         'a, 'g, T, D, Q, R,
         Trav=Indexer<T, D>,
         Folder=Indexer<T, D>,
-        AfterEndMatch = R::Result<StartLeaf>
+        //Primer = StartLeaf
     >
 {
 }
@@ -81,7 +82,8 @@ impl<
     D: IndexDirection + 'a,
     Q: IndexingQuery,
     R: ResultKind,
-> IndexerTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R> {}
+> IndexerTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R>
+{}
 
 pub(crate) trait IndexingQuery: TraversalQuery {}
 impl<T: TraversalQuery> IndexingQuery for T {}
@@ -95,34 +97,32 @@ where
 {
     type Trav = Self;
     type Break = (Child, Q);
-    type Continue = Option<TraversalResult<Q>>;
-    type AfterEndMatch = <IndexingPolicy<'a, T, D, Q, R> as DirectedTraversalPolicy<'a, 'g, T, D, Q, R>>::AfterEndMatch;
+    type Continue = Option<TraversalResult<<R as ResultKind>::Found, Q>>;
+    //type Primer = <IndexingPolicy<'a, T, D, Q, R> as DirectedTraversalPolicy<'a, 'g, T, D, Q, R>>::Primer;
 
     fn fold_found(
         trav: &Self::Trav,
         acc: Self::Continue,
-        node: TraversalNode<Self::AfterEndMatch, Q>,
+        node: TraversalNode<R, Q>,
     ) -> ControlFlow<Self::Break, Self::Continue> {
         let mut trav = trav.clone();
         match node {
             TraversalNode::QueryEnd(found) => {
                 ControlFlow::Break((
-                    Indexing::<_, D>::index_found(&mut trav, found.found),
+                    Indexing::<_, D>::index_found(&mut trav, found.found.into_range_path().into()),
                     found.query,
                 ))
             },
             TraversalNode::Mismatch(found) => {
-                ControlFlow::Continue(search::pick_max_result(acc, found))
+                ControlFlow::Continue(search::pick_max_result::<R, _>(acc, found))
             },
-            TraversalNode::MatchEnd(match_end, query) => {
-                let found = TraversalResult::new(
-                    FoundPath::from(match_end.into_mesp()),
-                    query,
-                );
-                if let Some(r) = found.found.get_range() {
-                    assert!(r.get_entry_pos() != r.get_exit_pos());
-                }
-                ControlFlow::Continue(search::pick_max_result(acc, found))
+            TraversalNode::MatchEnd(postfix, query) => {
+                //let found = match_end
+                //    .into_range_path().into_result(query);
+                //if let Some(r) = found.found.get_range() {
+                //    assert!(r.get_entry_pos() != r.get_exit_pos());
+                //}
+                ControlFlow::Continue(search::pick_max_result::<R, _>(acc, <R as ResultKind>::Found::from(postfix).into_result(query)))
             },
             _ => ControlFlow::Continue(acc)
         }
@@ -150,7 +150,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
         &mut self,
         query: Q,
     ) -> Result<(Child, Q), NoMatch> {
-        self.path_indexing::<_, IndexingPolicy<T, D, Q, OriginPathResult>, Bft<_, _, _, _, _, _>>(query)
+        self.path_indexing::<_, IndexingPolicy<T, D, Q, BaseResult>, Bft<_, _, _, _, _, _>>(query)
     }
     //pub(crate) fn find_index_path<
     //    Q: IndexingQuery,
@@ -166,12 +166,12 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
     //}
     pub(crate) fn index_path_search<
         Q: IndexingQuery,
-        S: IndexerTraversalPolicy<'a, 'g, T, D, Q, OriginPathResult>,
-        Ti: TraversalIterator<'a, 'g, T, D, Self, Q, S, OriginPathResult>,
+        S: IndexerTraversalPolicy<'a, 'g, T, D, Q, BaseResult>,
+        Ti: TraversalIterator<'a, 'g, T, D, Self, Q, S, BaseResult>,
     >(
         &'a self,
         query_path: Q,
-    ) -> Result<ControlFlow<(Child, Q), TraversalResult<Q>>, NoMatch> {
+    ) -> Result<ControlFlow<(Child, Q), TraversalResult<<BaseResult as ResultKind>::Found, Q>>, NoMatch> {
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         query_path.hash(&mut hasher);
         let _h = hasher.finish();
@@ -179,7 +179,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
             .try_fold(
                 None,
                 |acc, (_depth, node)|
-                    <S::Folder as TraversalFolder<_, _, _, OriginPathResult>>::fold_found(self, acc, node)
+                    <S::Folder as TraversalFolder<_, _, _, BaseResult>>::fold_found(self, acc, node)
             )
         {
             ControlFlow::Continue(found) =>
@@ -189,8 +189,8 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
     }
     fn path_indexing<
         Q: IndexingQuery,
-        S: IndexerTraversalPolicy<'a, 'g, T, D, Q, OriginPathResult>,
-        Ti: TraversalIterator<'a, 'g, T, D, Self, Q, S, OriginPathResult>,
+        S: IndexerTraversalPolicy<'a, 'g, T, D, Q, BaseResult>,
+        Ti: TraversalIterator<'a, 'g, T, D, Self, Q, S, BaseResult>,
     >(
         &'a mut self,
         query_path: Q,

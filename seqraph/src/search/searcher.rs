@@ -29,10 +29,10 @@ trait SearchTraversalPolicy<
     DirectedTraversalPolicy<
         'a, 'g, T, D,
         QueryRangePath,
-        MatchEndResult,
+        BaseResult,
         Trav=Searcher<T, D>,
         Folder=Searcher<T, D>,
-        AfterEndMatch=<MatchEndResult as ResultKind>::Result<StartPath>,
+        //Primer=StartPath,
     >
 {
 }
@@ -57,13 +57,13 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a, Q: TraversalQuery, R:
     TraversalFolder<'a, 'g, T, D, Q, R> for Searcher<T, D>
 {
     type Trav = Self;
-    type Break = TraversalResult<Q>;
-    type Continue = Option<TraversalResult<Q>>;
-    type AfterEndMatch = R::Result<StartPath>;
+    type Break = TraversalResult<<R as ResultKind>::Found, Q>;
+    type Continue = Option<TraversalResult<<R as ResultKind>::Found, Q>>;
+
     fn fold_found(
         _trav: &Self::Trav,
         acc: Self::Continue,
-        node: TraversalNode<R::Result<StartPath>, Q>,
+        node: TraversalNode<R, Q>,
     ) -> ControlFlow<Self::Break, Self::Continue> {
         match node {
             TraversalNode::QueryEnd(found) => {
@@ -71,23 +71,24 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a, Q: TraversalQuery, R:
             },
             TraversalNode::MatchEnd(match_end, query) => {
                 let found = TraversalResult::new(
-                    FoundPath::from(match_end.into_mesp()),
+                    match_end,
                     query,
                 );
-                ControlFlow::Continue(search::pick_max_result(acc, found))
+                ControlFlow::Continue(search::pick_max_result::<R, _>(acc, found))
             },
             TraversalNode::Mismatch(found) =>
-                ControlFlow::Continue(search::pick_max_result(acc, found)),
+                ControlFlow::Continue(search::pick_max_result::<R, _>(acc, found)),
             _ => ControlFlow::Continue(acc)
         }
     }
 }
 pub(crate) fn pick_max_result<
+    R: ResultKind,
     Q: TraversalQuery,
 >(
-    acc: Option<TraversalResult<Q>>,
-    res: TraversalResult<Q>,
-) -> Option<TraversalResult<Q>> {
+    acc: Option<TraversalResult<<R as ResultKind>::Found, Q>>,
+    res: TraversalResult<<R as ResultKind>::Found, Q>,
+) -> Option<TraversalResult<<R as ResultKind>::Found, Q>> {
     Some(
         if let Some(acc) = acc {
             std::cmp::max_by(
@@ -101,26 +102,25 @@ pub(crate) fn pick_max_result<
         }
     )
 }
-pub(crate) fn fold_match<
-    'a: 'g,
-    'g,
-    T: Tokenize + 'a,
-    D: MatchDirection + 'a,
-    Q: TraversalQuery,
-    Folder: TraversalFolder<'a, 'g, T, D, Q, MatchEndResult, Continue=Option<TraversalResult<Q>>>
->(
-    trav: &'a Folder::Trav,
-    acc: Folder::Continue,
-    mut path: SearchPath,
-    query: Q
-) -> Option<TraversalResult<Q>> {
-    path.reduce_end::<_, D, _>(trav);
-    let found = TraversalResult::new(
-        FoundPath::new::<_, D, _>(trav, path),
-        query
-    );
-    pick_max_result(acc, found)
-}
+//pub(crate) fn fold_match<
+//    'a: 'g,
+//    'g,
+//    T: Tokenize + 'a,
+//    D: MatchDirection + 'a,
+//    Q: TraversalQuery,
+//    R: ResultKind,
+//    Folder: TraversalFolder<'a, 'g, T, D, Q, R, Continue=Option<TraversalResult<<R as ResultKind>::Found, Q>>>
+//>(
+//    trav: &'a Folder::Trav,
+//    acc: Folder::Continue,
+//    mut path: SearchPath,
+//    query: Q
+//) -> Option<TraversalResult<<R as ResultKind>::Found, Q>> {
+//    path.end_match_path_mut().reduce::<_, D, _>(trav);
+//    //let found = 
+//    //    path.into_range_path().into_result(query);
+//    pick_max_result(acc, path)
+//}
 struct AncestorSearch<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<(T, D)>,
 }
@@ -135,13 +135,13 @@ impl<
 {
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
-    type AfterEndMatch = R::Result<StartPath>;
+    //type Primer = R::Result<StartPath>;
 
     fn after_end_match(
         _trav: &'a Self::Trav,
-        path: StartPath,
-    ) -> Self::AfterEndMatch {
-        Self::AfterEndMatch::from(path)
+        path: R::Primer,
+    ) -> R::Postfix {
+        R::Postfix::from(path)
     }
 }
 struct ParentSearch<T: Tokenize, D: MatchDirection> {
@@ -159,18 +159,18 @@ impl<
 {
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
-    type AfterEndMatch = R::Result<StartPath>;
+    //type Primer = StartPath;
     fn after_end_match(
         _trav: &'a Self::Trav,
-        path: StartPath,
-    ) -> Self::AfterEndMatch {
-        Self::AfterEndMatch::from(path)
+        path: R::Primer,
+    ) -> R::Postfix {
+        R::Postfix::from(path)
     }
     fn next_parents(
         _trav: &'a Self::Trav,
         _query: &Q,
-        _start: &MatchEnd<StartPath>,
-    ) -> Vec<TraversalNode<Self::AfterEndMatch, Q>> {
+        _start: &R::Postfix,
+    ) -> Vec<TraversalNode<R, Q>> {
         vec![]
     }
 }
@@ -206,13 +206,13 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
         &'a self,
         query: P,
     ) -> SearchResult {
-        self.search::<Dft<'a, 'g, T, D, Self, QueryRangePath, MatchEndResult, S>, S, _>(
+        self.search::<Dft<'a, 'g, T, D, Self, QueryRangePath, BaseResult, S>, S, _>(
             query,
         )
     }
     #[allow(unused)]
     fn search<
-        Ti: TraversalIterator<'a, 'g, T, D, Self, QueryRangePath, S, MatchEndResult> + Send,
+        Ti: TraversalIterator<'a, 'g, T, D, Self, QueryRangePath, S, BaseResult> + Send,
         S: SearchTraversalPolicy<'a, 'g, T, D>,
         P: IntoPattern,
     >(
@@ -222,7 +222,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
         let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())?;
         match Ti::new(self, TraversalNode::query_node(query_path))
             .try_fold(None, |acc, (_, node)|
-                <S::Folder as TraversalFolder<_, _, _, MatchEndResult>>::fold_found(self, acc, node)
+                <S::Folder as TraversalFolder<_, _, _, BaseResult>>::fold_found(self, acc, node)
             )
         {
             ControlFlow::Continue(None) => Err(NoMatch::NotFound),
@@ -232,7 +232,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
     }
     #[allow(unused)]
     fn par_search<
-        Ti: TraversalIterator<'a, 'g, T, D, Self, QueryRangePath, S, MatchEndResult> + Send,
+        Ti: TraversalIterator<'a, 'g, T, D, Self, QueryRangePath, S, BaseResult> + Send,
         S: SearchTraversalPolicy<'a, 'g, T, D>,
         P: IntoPattern,
     >(
@@ -244,7 +244,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
             Ti::new(self, TraversalNode::query_node(query_path))
                 .par_bridge()
                 .try_fold_with(None, |acc, (_, node)|
-                    <S::Folder as TraversalFolder<_, _, _, MatchEndResult>>::fold_found(self, acc, node)
+                    <S::Folder as TraversalFolder<_, _, _, BaseResult>>::fold_found(self, acc, node)
                 ),
                 || ControlFlow::Continue(None), |a, b|
                     match (a, b) {

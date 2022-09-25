@@ -1,58 +1,61 @@
 use super::*;
 use std::hash::Hash;
 
+//pub(crate) type NodeTraversalResult<R, Q> =
+//    TraversalResult<<R as ResultKind>::Found, Q>;
+
 /// nodes generated during traversal.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub(crate) enum TraversalNode<
-    P: PostfixPath,
+    R: ResultKind,
     Q: TraversalQuery,
 > {
     /// a query is given.
     Query(Q),
     /// at a parent.
-    Parent(StartPath, Q),
+    Parent(R::Primer, Q),
     /// when the query has ended.
-    QueryEnd(TraversalResult<Q>),
+    QueryEnd(TraversalResult<<R as ResultKind>::Found, Q>),
     /// at a position to be matched.
     /// (needed to enable breadth-first traversal)
-    ToMatch(PathPair<Q>),
+    ToMatch(PathPair<R::Advanced, Q>),
     /// at a match.
-    Match(SearchPath, Q),
+    Match(R::Advanced, Q),
     /// at a mismatch.
-    Mismatch(TraversalResult<Q>),
+    Mismatch(TraversalResult<<R as ResultKind>::Found, Q>),
     /// when a match was at the end of an index without parents.
-    MatchEnd(P, Q),
+    MatchEnd(R::Postfix, Q),
 }
 impl<
-    P: PostfixPath,
+    R: ResultKind,
     Q: TraversalQuery,
-> TraversalNode<P, Q> {
+> TraversalNode<R, Q> {
     pub fn query_node(query: Q) -> Self {
         Self::Query(query)
     }
-    pub fn match_node(path: SearchPath, query: Q) -> Self {
+    pub fn match_node(path: R::Advanced, query: Q) -> Self {
         Self::Match(path, query)
     }
-    pub fn to_match_node(paths: PathPair<Q>) -> Self {
+    pub fn to_match_node(paths: PathPair<R::Advanced, Q>) -> Self {
         Self::ToMatch(paths)
     }
-    pub fn parent_node(path: StartPath, query: Q) -> Self {
+    pub fn parent_node(path: R::Primer, query: Q) -> Self {
         Self::Parent(path, query)
     }
-    pub fn query_end_node(found: TraversalResult<Q>) -> Self {
+    pub fn query_end_node(found: TraversalResult<<R as ResultKind>::Found, Q>) -> Self {
         Self::QueryEnd(found)
     }
-    pub fn mismatch_node(found: TraversalResult<Q>) -> Self {
+    pub fn mismatch_node(found: TraversalResult<<R as ResultKind>::Found, Q>) -> Self {
         Self::Mismatch(found)
     }
-    pub fn match_end_node(match_end: P, query: Q) -> Self {
+    pub fn match_end_node(match_end: R::Postfix, query: Q) -> Self {
         Self::MatchEnd(match_end, query)
     }
     #[allow(unused)]
     pub fn is_match(&self) -> bool {
         matches!(self, TraversalNode::Match(_, _))
     }
-    pub fn get_parent_path(&self) -> Option<&StartPath> {
+    pub fn get_parent_path(&self) -> Option<&R::Primer> {
         match self {
             TraversalNode::Parent(path, _) => Some(path),
             _ => None

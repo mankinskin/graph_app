@@ -8,11 +8,8 @@ use crate::{
     TraversalOrder,
 };
 
-pub(crate) trait NodePath: RootChild + PathAppend<Result = StartPath> + Send + Clone + Eq {}
-impl<T: RootChild + PathAppend<Result = StartPath> + Send + Clone + Eq> NodePath for T {}
-
-pub(crate) trait PostfixPath: NodePath + PathReduce + IntoMatchEndStartPath {}
-impl<T: NodePath + PathReduce + IntoMatchEndStartPath> PostfixPath for T {}
+pub(crate) trait NodePath: RootChild + Send + Clone + Eq + Debug {}
+impl<T: RootChild + Send + Clone + Eq + Debug> NodePath for T {}
 
 pub(crate) trait DirectedTraversalPolicy<
     'a: 'g,
@@ -24,26 +21,28 @@ pub(crate) trait DirectedTraversalPolicy<
 >: Sized {
 
     type Trav: Traversable<'a, 'g, T> + 'a;
-    type AfterEndMatch: PostfixPath;
-    type Folder: TraversalFolder<'a, 'g, T, D, Q, R, Trav=Self::Trav, AfterEndMatch=Self::AfterEndMatch>;
+    //type Primer: PathPrimer + From<R::Result<StartPath>> + GraphEntry;
+    type Folder: TraversalFolder<'a, 'g, T, D, Q, R, Trav=Self::Trav,
+    // Primer=StartPath
+    >;
 
     /// Executed after last child of index matched
     fn after_end_match(
         _trav: &'a Self::Trav,
-        path: StartPath,
-    ) -> Self::AfterEndMatch;
+        path: R::Primer,
+    ) -> R::Postfix;
     /// nodes generated when an index ended
     /// (parent nodes)
     fn next_parents(
         trav: &'a Self::Trav,
         query: &Q,
-        match_end: &MatchEnd<StartPath>,
-    ) -> Vec<TraversalNode<Self::AfterEndMatch, Q>> {
+        primer: &R::Postfix,
+    ) -> Vec<TraversalNode<R, Q>> {
         Self::gen_parent_nodes(
             trav,
             query,
-            match_end.root_child(),
-            |p| match_end.clone().append::<_, D, _>(trav, p)
+            primer.root_child(),
+            |p| primer.clone().append::<_, D, _>(trav, p)
         )
     }
     /// generates parent nodes
@@ -51,8 +50,8 @@ pub(crate) trait DirectedTraversalPolicy<
         trav: &'a Self::Trav,
         query: &Q,
         index: Child,
-        build_start: impl Fn(ChildLocation) -> StartPath,
-    ) -> Vec<TraversalNode<Self::AfterEndMatch, Q>> {
+        build_start: impl Fn(ChildLocation) -> R::Primer,
+    ) -> Vec<TraversalNode<R, Q>> {
         trav.graph()
             .expect_vertex_data(index)
             .get_parents()

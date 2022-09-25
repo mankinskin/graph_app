@@ -47,19 +47,9 @@ impl HasStartPath for PrefixPath {
     }
 }
 impl PatternStart for PrefixPath {}
-impl EndPathMut for PrefixPath {
-    fn end_path_mut(&mut self) -> &mut ChildPath {
-        &mut self.end
-    }
-}
 impl ExitPos for PrefixPath {
     fn get_exit_pos(&self) -> usize {
         self.exit
-    }
-}
-impl ExitMut for PrefixPath {
-    fn exit_mut(&mut self) -> &mut usize {
-        &mut self.exit
     }
 }
 impl PatternExit for PrefixPath {
@@ -112,7 +102,6 @@ impl WideMut for PrefixPath {
         &mut self.width
     }
 }
-impl AdvanceablePath for PrefixPath {}
 
 
 #[cfg(test)]
@@ -120,7 +109,7 @@ mod tests {
     use std::borrow::Borrow;
 
     use super::PrefixPath;
-    use crate::{index::Right, Hypergraph, Token, traversal::AdvanceablePath};
+    use crate::{index::Right, Hypergraph, Token, traversal::Advance};
     use itertools::Itertools;
     use pretty_assertions::assert_eq;
 

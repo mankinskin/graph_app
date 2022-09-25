@@ -34,3 +34,8 @@ impl<T: Wide> Wide for &'_ mut T {
 pub trait WideMut: Wide {
     fn width_mut(&mut self) -> &mut usize;
 }
+impl<P: WideMut> WideMut for OriginPath<P> {
+    fn width_mut(&mut self) -> &mut usize {
+        self.postfix.width_mut()
+    }
+}

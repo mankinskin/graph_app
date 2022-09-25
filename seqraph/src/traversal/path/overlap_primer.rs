@@ -4,11 +4,11 @@ use crate::*;
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
 pub struct OverlapPrimer {
     pub(crate) start: Child,
-    context: PrefixPath,
-    context_offset: usize,
-    width: usize,
-    exit: usize,
-    end: ChildPath,
+    pub(crate) context: PrefixPath,
+    pub(crate) context_offset: usize,
+    pub(crate) width: usize,
+    pub(crate) exit: usize,
+    pub(crate) end: ChildPath,
 }
 impl OverlapPrimer {
     pub fn new(start: Child, context: PrefixPath) -> Self {
@@ -38,20 +38,6 @@ impl HasEndPath for OverlapPrimer {
         } else {
             self.context.end.borrow()
         }
-    }
-}
-impl EndPathMut for OverlapPrimer {
-    fn end_path_mut(&mut self) -> &mut ChildPath {
-        if self.exit == 0 {
-            &mut self.end
-        } else {
-            &mut self.context.end
-        }
-    }
-}
-impl ExitMut for OverlapPrimer {
-    fn exit_mut(&mut self) -> &mut usize {
-        &mut self.exit
     }
 }
 impl End for OverlapPrimer {
@@ -93,7 +79,7 @@ impl EntryPos for OverlapPrimer {
 //        }
 //    }
 //}
-impl AdvanceableExit for OverlapPrimer {
+impl AdvanceExit for OverlapPrimer {
     fn pattern_next_exit_pos<
         D: MatchDirection,
         P: IntoPattern,
@@ -146,4 +132,3 @@ impl WideMut for OverlapPrimer {
         &mut self.width
     }
 }
-impl AdvanceablePath for OverlapPrimer {}

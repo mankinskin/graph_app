@@ -26,6 +26,45 @@ impl PathReduce for EndPath {
         }
     }
 }
+pub(crate) trait Retract: GraphEnd + EndPathMut + ExitMut {
+    fn prev_exit_pos<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+    >(&self, trav: &'a Trav) -> Option<usize> {
+        let location = self.get_end_location();
+        let pattern = trav.graph().expect_pattern_at(&location);
+        D::pattern_index_prev(pattern, location.sub_index)
+    }
+    fn retract<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>,
+        R: ResultKind,
+    >(&mut self, trav: &'a Trav) {
+        let graph = trav.graph();
+        // remove segments pointing to mismatch at pattern head
+        while let Some(mut location) = self.end_path_mut().pop() {
+            let pattern = graph.expect_pattern_at(&location);
+            // skip segments at start of pattern
+            if let Some(prev) = D::pattern_index_prev(pattern.borrow(), location.sub_index) {
+                location.sub_index = prev;
+                self.end_path_mut().push(location);
+                break;
+            }
+        }
+        if self.end_path_mut().is_empty() {
+            *self.exit_mut() = self.prev_exit_pos::<_, D, _>(trav).unwrap();
+        }
+
+    }
+}
+impl<T: GraphEnd + EndPathMut + ExitMut> Retract for T {
+}
 //impl BorderPath for EndPath {
 //    fn path(&self) -> &[ChildLocation] {
 //        self.path.borrow()
@@ -36,39 +75,4 @@ impl PathReduce for EndPath {
 //}
 impl<D: MatchDirection> PathBorder<D> for EndPath {
     type BorderDirection = Front;
-}
-impl HasSinglePath for EndPath {
-    fn single_path(&self) -> &[ChildLocation] {
-        self.end_path()
-    }
-}
-impl PathRoot for EndPath {
-    fn root(&self) -> ChildLocation {
-        self.get_exit_location()
-    }
-}
-impl GraphExit for EndPath {
-    fn get_exit_location(&self) -> ChildLocation {
-        self.entry
-    }
-}
-impl HasEndPath for EndPath {
-    fn end_path(&self) -> &[ChildLocation] {
-        self.path.borrow()
-    }
-}
-impl ExitMut for EndPath {
-    fn exit_mut(&mut self) -> &mut usize {
-        &mut self.entry.sub_index
-    }
-}
-impl WideMut for EndPath {
-    fn width_mut(&mut self) -> &mut usize {
-        &mut self.width
-    }
-}
-impl Wide for EndPath {
-    fn width(&self) -> usize {
-        self.width
-    }
 }

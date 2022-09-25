@@ -41,31 +41,31 @@ fn find_parent1() {
     let query = b_c_pattern;
     assert_eq!(
         graph.find_parent(&query),
-        Ok(TraversalResult::complete(query, bc)),
+        Ok(TraversalResult::new_complete(query, bc)),
         "b_c"
     );
     let query = a_bc_pattern;
     assert_eq!(
         graph.find_parent(&query),
-        Ok(TraversalResult::complete(query, abc)),
+        Ok(TraversalResult::new_complete(query, abc)),
         "a_bc"
     );
     let query = ab_c_pattern;
     assert_eq!(
         graph.find_parent(&query),
-        Ok(TraversalResult::complete(query, abc)),
+        Ok(TraversalResult::new_complete(query, abc)),
         "ab_c"
     );
     let query = a_bc_d_pattern;
     assert_eq!(
         graph.find_parent(&query),
-        Ok(TraversalResult::complete(query, abcd)),
+        Ok(TraversalResult::new_complete(query, abcd)),
         "a_bc_d"
     );
     let query = a_b_c_pattern.clone();
     assert_eq!(
         graph.find_parent(&query),
-        Ok(TraversalResult::complete(query, abc)),
+        Ok(TraversalResult::new_complete(query, abc)),
         "a_b_c"
     );
     let query = [&a_b_c_pattern[..], &[Child::new(c, 1)]].concat();
@@ -120,38 +120,38 @@ fn find_ancestor1() {
     let query = b_c_pattern;
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(TraversalResult::complete(query, bc)),
+        Ok(TraversalResult::new_complete(query, bc)),
         "b_c"
     );
     let query = a_bc_pattern;
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(TraversalResult::complete(query, abc)),
+        Ok(TraversalResult::new_complete(query, abc)),
         "a_bc"
     );
     let query = ab_c_pattern;
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(TraversalResult::complete(query, abc)),
+        Ok(TraversalResult::new_complete(query, abc)),
         "ab_c"
     );
     let query = a_bc_d_pattern;
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(TraversalResult::complete(query, abcd)),
+        Ok(TraversalResult::new_complete(query, abcd)),
         "a_bc_d"
     );
     let query = a_b_c_pattern.clone();
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(TraversalResult::complete(query, abc)),
+        Ok(TraversalResult::new_complete(query, abc)),
         "a_b_c"
     );
     let query =
         vec![*a, *b, *a, *b, *a, *b, *a, *b, *c, *d, *e, *f, *g, *h, *i];
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(TraversalResult::complete(query, ababababcdefghi)),
+        Ok(TraversalResult::new_complete(query, ababababcdefghi)),
         "a_b_a_b_a_b_a_b_c_d_e_f_g_h_i"
     );
     let query = [&a_b_c_pattern[..], &[Child::new(c, 1)]].concat();
@@ -290,14 +290,14 @@ fn find_sequence() {
     let abc_found = graph.find_ancestor(&query);
     assert_eq!(
         abc_found,
-        Ok(TraversalResult::complete(query, abc)),
+        Ok(TraversalResult::new_complete(query, abc)),
         "abc"
     );
     let query = graph.read().unwrap().expect_token_pattern("ababababcdefghi".chars());
     let ababababcdefghi_found = graph.find_ancestor(&query);
     assert_eq!(
         ababababcdefghi_found,
-        Ok(TraversalResult::complete(query, ababababcdefghi)),
+        Ok(TraversalResult::new_complete(query, ababababcdefghi)),
         "ababababcdefghi"
     );
 }

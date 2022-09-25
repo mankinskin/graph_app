@@ -3,7 +3,7 @@ use super::*;
 pub(crate) struct PathIter<
     'a: 'g,
     'g,
-    P: AdvanceablePath,
+    P: Advance,
     T: Tokenize,
     D: MatchDirection,
     Trav: Traversable<'a, 'g, T>,
@@ -19,7 +19,7 @@ pub(crate) struct PathIter<
 //impl<
 //    'a: 'g,
 //    'g,
-//    P: AdvanceablePath,
+//    P: Advance,
 //    T: Tokenize,
 //    D: MatchDirection,
 //    Trav: Traversable<'a, 'g, T>,
@@ -46,7 +46,7 @@ pub(crate) struct PathIter<
 //impl<
 //    'a: 'g,
 //    'g,
-//    P: AdvanceablePath,
+//    P: Advance,
 //    T: Tokenize,
 //    D: MatchDirection,
 //    Trav: Traversable<'a, 'g, T>,

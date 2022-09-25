@@ -28,7 +28,13 @@ pub enum NoMatch {
     EmptyRange,
 }
 //pub(crate) type QueryFound = TraversalResult<QueryRangePath>;
-pub(crate) type SearchResult = Result<TraversalResult<QueryRangePath>, NoMatch>;
+pub(crate) type SearchResult = Result<
+    TraversalResult<
+        <BaseResult as ResultKind>::Found,
+        QueryRangePath
+    >,
+    NoMatch
+>;
 
 impl<'t, 'g, T> HypergraphRef<T>
 where

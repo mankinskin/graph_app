@@ -16,9 +16,9 @@ where
     R: ResultKind,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
 {
-    stack: Vec<(usize, TraversalNode<S::AfterEndMatch, Q>)>,
-    last: (usize, TraversalNode<S::AfterEndMatch, Q>),
-    cache: TraversalCache<S::AfterEndMatch, Q>,
+    stack: Vec<(usize, TraversalNode<R, Q>)>,
+    last: (usize, TraversalNode<R, Q>),
+    cache: TraversalCache<R, Q>,
     trav: &'a Trav,
     _ty: std::marker::PhantomData<(&'g T, D, Q, R, S)>
 }
@@ -32,7 +32,7 @@ where
     R: ResultKind,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
 {
-    pub fn new(trav: &'a Trav, root: TraversalNode<S::AfterEndMatch, Q>) -> Self {
+    pub fn new(trav: &'a Trav, root: TraversalNode<R, Q>) -> Self {
         Self {
             stack: vec![],
             last: (0, root),
@@ -52,7 +52,7 @@ where
     R: ResultKind,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
 {
-    type Item = (usize, TraversalNode<S::AfterEndMatch, Q>);
+    type Item = (usize, TraversalNode<R, Q>);
 
     fn next(&mut self) -> Option<Self::Item> {
         let (last_depth, last_node) = self.last.clone();
@@ -86,16 +86,16 @@ where
     R: ResultKind,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
 {
-    fn new(trav: &'a Trav, root: TraversalNode<S::AfterEndMatch, Q>) -> Self {
+    fn new(trav: &'a Trav, root: TraversalNode<R, Q>) -> Self {
         Dft::new(trav, root)
     }
     fn trav(&self) -> &'a Trav {
         self.trav
     }
-    fn cache_mut(&mut self) -> &mut TraversalCache<S::AfterEndMatch, Q> {
+    fn cache_mut(&mut self) -> &mut TraversalCache<R, Q> {
         &mut self.cache
     }
-    fn extend_nodes(&mut self, next_nodes: impl DoubleEndedIterator<Item=(usize, TraversalNode<S::AfterEndMatch, Q>)>) {
+    fn extend_nodes(&mut self, next_nodes: impl DoubleEndedIterator<Item=(usize, TraversalNode<R, Q>)>) {
         self.stack.extend(next_nodes.rev());
     }
 }

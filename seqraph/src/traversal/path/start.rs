@@ -68,37 +68,6 @@ impl StartPath {
         }
     }
 }
-impl PathComplete for StartLeaf {
-    /// returns child if reduced to single child
-    fn complete<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Option<Child> {
-        let graph = trav.graph();
-        let pattern = graph.expect_pattern_at(self.entry);
-        (self.entry.sub_index == D::head_index(pattern.borrow()))
-            .then(|| self.entry.parent)
-    }
-}
-impl PathComplete for StartPath {
-    /// returns child if reduced to single child
-    fn complete<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Option<Child> {
-        match self {
-            Self::Leaf(leaf) => leaf.complete::<_, D, _>(trav),
-            // TODO: maybe skip path segments starting at pattern head
-            Self::Path { .. } => None,
-        }
-    }
-}
 impl From<SearchPath> for StartPath {
     fn from(p: SearchPath) -> Self {
         p.start
@@ -118,7 +87,7 @@ impl WideMut for StartPath {
     }
 }
 pub(crate) trait PathAppend {
-    type Result: PathAppend;
+    type Result;
     fn append<
         'a: 'g,
         'g,
@@ -183,22 +152,51 @@ impl PathAppend for StartPath {
     }
 }
 pub(crate) trait PathPop {
+    type Result;
     fn pop_path<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>
-    >(self, trav: &'a Trav) -> MatchEnd<StartPath>;
+    >(self, trav: &'a Trav) -> Self::Result;
+}
+impl PathPop for OriginPath<SearchPath> {
+    type Result = OriginPath<<SearchPath as PathPop>::Result>;
+    fn pop_path<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>
+    >(self, trav: &'a Trav) -> Self::Result {
+        OriginPath {
+            postfix: self.postfix.pop_path::<_, D, _>(trav),
+            origin: self.origin.pop_path::<_, D, _>(trav).unwrap_path(),
+        }
+    }
+}
+impl PathPop for SearchPath {
+    type Result = <StartPath as PathPop>::Result;
+    fn pop_path<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>
+    >(self, trav: &'a Trav) -> Self::Result {
+        self.start.pop_path::<_, D, _>(trav)
+    }
 }
 impl PathPop for StartPath {
+    type Result = MatchEnd<StartPath>;
     fn pop_path<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>
-    >(self, trav: &'a Trav) -> MatchEnd<StartPath> {
+    >(self, trav: &'a Trav) -> Self::Result {
         match self {
             StartPath::Leaf(leaf) => MatchEnd::Complete(leaf.child),
             StartPath::Path { entry, mut path, width, child } => {

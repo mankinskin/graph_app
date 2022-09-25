@@ -134,7 +134,7 @@ impl<'t, 'a, T: Tokenize> Hypergraph<T> {
         ).collect_vec()
     }
     pub fn validate_expansion(&self, index: impl Indexed) {
-        let root = index.index();
+        //let root = index.index();
         let data = self.expect_vertex_data(index);
         data.children
             .iter()

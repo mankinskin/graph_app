@@ -4,8 +4,8 @@ use super::*;
 //pub(crate) trait NotStartPath {}
 //impl NotStartPath for StartLeaf {}
 
-pub(crate) trait MatchEndPath: NodePath + PathComplete + Into<StartPath> + From<StartPath> {}
-impl<T: NodePath + PathComplete + Into<StartPath> + From<StartPath>> MatchEndPath for T {}
+pub(crate) trait MatchEndPath: NodePath + PathComplete + PathAppend<Result=StartPath> + Into<StartPath> + From<StartPath> + From<StartLeaf> + Into<FoundPath> + Hash {}
+impl<T: NodePath + PathComplete + PathAppend<Result=StartPath> + Into<StartPath> + From<StartPath> + From<StartLeaf> + Into<FoundPath> + Hash> MatchEndPath for T {}
 
 /// Used to represent results after traversal with only a start path
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
@@ -16,22 +16,49 @@ pub(crate) enum MatchEnd<P: MatchEndPath> {
 pub(crate) trait IntoMatchEndStartPath {
     fn into_mesp(self) -> MatchEnd<StartPath>;
 }
-pub(crate) trait FromMatchEnd<P: MatchEndPath> {
-    fn from_match_end(match_end: MatchEnd<P>, start: StartPath) -> Self;
-}
-impl<P: MatchEndPath> FromMatchEnd<P> for MatchEnd<P> {
-    fn from_match_end(match_end: MatchEnd<P>, start: StartPath) -> Self {
-        match_end
-    }
-}
-impl<P: MatchEndPath> FromMatchEnd<P> for OriginPath<P> {
-    fn from_match_end(match_end: MatchEnd<P>, origin: StartPath) -> Self {
-        OriginPath {
-            match_end,
-            origin,
+impl<P: MatchEndPath> RangePath for MatchEnd<P> {
+    fn into_complete(self) -> Option<Child> {
+        match self {
+            Self::Complete(index) => Some(index),
+            _ => None,
         }
     }
 }
+//impl<P: RangePath> Into<FoundPath> for MatchEnd<P> {
+//    fn into(self) -> FoundPath {
+//        match self {
+//            MatchEnd::Path(path) => p.into(),
+//            MatchEnd::Complete(c) => FoundPath::Complete(c),
+//        }
+//    }
+//}
+//impl<P: RangePath> Into<FoundPath> for OriginPath<P> {
+//    fn into(self) -> FoundPath {
+//        self.postfix.into()
+//    }
+//}
+//impl<P: MatchEndPath> FromSearchPath for MatchEnd<P> {
+//    fn from_search_path<
+//        'a: 'g,
+//        'g,
+//        T: Tokenize,
+//        D: MatchDirection,
+//        Trav: Traversable<'a, 'g, T>
+//    >(path: SearchPath, trav: &'a Trav) -> Self {
+//        Self {
+//            origin: path.start_match_path().clone(),
+//            postfix: P::from_search_path(path, trav),
+//        }
+//    }
+//}
+//impl<P: MatchEndPath> FromMatchEnd<P> for OriginPath<MatchEnd<P>> {
+//    fn from_match_end(match_end: MatchEnd<P>, origin: StartPath) -> Self {
+//        OriginPath {
+//            postfix: match_end,
+//            origin,
+//        }
+//    }
+//}
 impl<P: MatchEndPath> IntoMatchEndStartPath for MatchEnd<P> {
     fn into_mesp(self) -> MatchEnd<StartPath> {
         match self {
@@ -40,19 +67,33 @@ impl<P: MatchEndPath> IntoMatchEndStartPath for MatchEnd<P> {
         }
     }
 }
-impl<P: MatchEndPath> IntoMatchEndStartPath for OriginPath<P> {
+impl<P: MatchEndPath> IntoRangePath for MatchEnd<P> {
+    type Result = FoundPath;
+    fn into_range_path(self) -> Self::Result {
+        FoundPath::from(self.into_mesp())
+    }
+}
+impl<P: MatchEndPath> IntoMatchEndStartPath for OriginPath<MatchEnd<P>> {
     fn into_mesp(self) -> MatchEnd<StartPath> {
-        self.match_end.into_mesp()
+        self.postfix.into_mesp()
     }
 }
-impl From<OriginPath<StartPath>> for MatchEnd<StartPath> {
-    fn from(start: OriginPath<StartPath>) -> Self {
-        start.match_end
+impl From<OriginPath<MatchEnd<StartPath>>> for MatchEnd<StartPath> {
+    fn from(start: OriginPath<MatchEnd<StartPath>>) -> Self {
+        start.postfix
     }
 }
-impl<P: MatchEndPath> From<P> for MatchEnd<P> {
-    fn from(start: P) -> Self {
-        MatchEnd::Path(start)
+impl From<MatchEnd<StartLeaf>> for MatchEnd<StartPath> {
+    fn from(start: MatchEnd<StartLeaf>) -> Self {
+        match start {
+            MatchEnd::Path(leaf) => MatchEnd::Path(leaf.into()),
+            MatchEnd::Complete(c) => MatchEnd::Complete(c)
+        }
+    }
+}
+impl<P: MatchEndPath + From<Q>, Q: Into<StartPath>> From<Q> for MatchEnd<P> {
+    fn from(start: Q) -> Self {
+        MatchEnd::Path(P::from(start))
     }
 }
 impl<P: MatchEndPath> RootChild for MatchEnd<P> {
@@ -64,13 +105,12 @@ impl<P: MatchEndPath> RootChild for MatchEnd<P> {
     }
 }
 impl<P: MatchEndPath> MatchEnd<P> {
-    //#[allow(unused)]
-    //pub fn into_path(self) -> Option<StartPath> {
-    //    match self {
-    //        Self::Path(path) => Some(path),
-    //        _ => None,
-    //    }
-    //}
+    pub fn unwrap_path(self) -> P {
+        match self {
+            Self::Path(path) => Some(path),
+            _ => None,
+        }.unwrap()
+    }
     pub fn get_path(&self) -> Option<&P> {
         match self {
             Self::Path(start) => Some(start),
@@ -91,7 +131,7 @@ impl<P: MatchEndPath> PathComplete for MatchEnd<P> {
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
-    >(&self, trav: &'a Trav) -> Option<Child> {
+    >(&self, _trav: &'a Trav) -> Option<Child> {
         match self {
             Self::Complete(c) => Some(*c),
             _ => None,
@@ -113,8 +153,8 @@ impl<P: MatchEndPath> PathReduce for MatchEnd<P> {
         }
     }
 }
-impl<P: MatchEndPath> PathAppend for MatchEnd<P> {
-    type Result = StartPath;
+impl<P: MatchEndPath + PathAppend> PathAppend for MatchEnd<P> {
+    type Result = <P as PathAppend>::Result;
     fn append<
         'a: 'g,
         'g,

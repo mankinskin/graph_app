@@ -1,5 +1,99 @@
 use super::*;
 
+pub(crate) trait RangePath: RootChild + IntoRangePath + Into<FoundPath> + Clone + Debug + Hash + Eq// + PathComplete
+{
+    fn into_complete(self) -> Option<Child>;
+
+    fn unwrap_complete(self) -> Child {
+        self.clone().into_complete()
+            .expect(&format!("Unable to unwrap {:?} as complete.", self))
+    }
+    fn expect_complete(self, msg: &str) -> Child {
+        self.clone().into_complete()
+            .expect(&format!("Unable to unwrap {:?} as complete: {}", self, msg))
+    }
+}
+impl RangePath for FoundPath {
+    fn into_complete(self) -> Option<Child> {
+        match self {
+            Self::Complete(index) => Some(index),
+            _ => None,
+        }
+    }
+}
+impl RangePath for StartPath {
+    fn into_complete(self) -> Option<Child> {
+        None
+    }
+}
+impl FromAdvanced<SearchPath> for FoundPath {
+    fn from_advanced<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>
+    >(mut path: SearchPath, trav: &'a Trav) -> Self {
+        if path.is_complete::<_, D, _>(trav) {
+            Self::Complete(path.start_match_path().get_entry_location().parent)
+        } else {
+            Self::Range(path)
+        }
+        
+    }
+}
+impl FromAdvanced<OriginPath<SearchPath>> for OriginPath<FoundPath> {
+    fn from_advanced<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>
+    >(path: OriginPath<SearchPath>, trav: &'a Trav) -> Self {
+        Self {
+            postfix: FoundPath::from_advanced::<_, D, _>(path.postfix, trav),
+            origin: path.origin,
+        }
+    }
+}
+pub(crate) trait FromAdvanced<A: Advanced> {
+    fn from_advanced<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>
+    >(path: A, trav: &'a Trav) -> Self;
+}
+pub(crate) trait IntoRangePath {
+    type Result: RangePath;
+    fn into_range_path(self) -> Self::Result;
+}
+impl IntoRangePath for FoundPath {
+    type Result = Self;
+    fn into_range_path(self) -> Self::Result {
+        self
+    }
+}
+impl IntoRangePath for StartPath {
+    type Result = FoundPath;
+    fn into_range_path(self) -> Self::Result {
+        FoundPath::from(self)
+    }
+}
+impl IntoRangePath for StartLeaf {
+    type Result = FoundPath;
+    fn into_range_path(self) -> Self::Result {
+        FoundPath::from(StartPath::from(self))
+    }
+}
+//impl IntoRangePath for SearchPath {
+//    type Result = FoundPath;
+//    fn into_range_path(self) -> Self::Result {
+//        self
+//    }
+//}
+
 /// used to represent results after traversal with any path
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub(crate) enum FoundPath {
@@ -8,11 +102,21 @@ pub(crate) enum FoundPath {
     Postfix(StartPath),
     Prefix(EndPath),
 }
-impl From<MatchEnd<StartPath>> for FoundPath {
-    fn from(match_end: MatchEnd<StartPath>) -> Self {
+impl<P: Into<StartPath>> From<P> for FoundPath {
+    fn from(path: P) -> Self {
+        FoundPath::Postfix(path.into())
+    }
+}
+impl<P: Into<FoundPath>> From<OriginPath<P>> for FoundPath {
+    fn from(path: OriginPath<P>) -> Self {
+        path.postfix.into()
+    }
+}
+impl<P: MatchEndPath> From<MatchEnd<P>> for FoundPath {
+    fn from(match_end: MatchEnd<P>) -> Self {
         match match_end {
+            MatchEnd::Path(path) => path.into(),
             MatchEnd::Complete(c) => FoundPath::Complete(c),
-            MatchEnd::Path(path) => FoundPath::Postfix(path),
         }
     }
 }
@@ -67,32 +171,6 @@ impl<
     'a: 'g,
     'g,
 > FoundPath {
-    pub(crate) fn new<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
-    >(trav: &'a Trav, path: SearchPath) -> Self {
-        if path.is_complete::<_, D, _>(trav) {
-            Self::Complete(path.start_match_path().get_entry_location().parent)
-        } else {
-            //path.reduce_end::<_, D, _>(trav);
-            Self::Range(path)
-        }
-    }
-    #[track_caller]
-    pub fn unwrap_complete(self) -> Child {
-        match self {
-            Self::Complete(index) => index,
-            _ => panic!("Unable to unwrap {:?} as complete.", self),
-        }
-    }
-    #[track_caller]
-    pub fn expect_complete(self, msg: &str) -> Child {
-        match self {
-            Self::Complete(index) => index,
-            _ => panic!("Unable to unwrap {:?} as complete: {}", self, msg),
-        }
-    }
     fn num_path_segments(&self) -> usize {
         match self {
             Self::Complete(_) => 0,
@@ -101,24 +179,24 @@ impl<
             Self::Postfix(p) => p.num_path_segments(),
         }
     }
-    #[allow(unused)]
-    #[track_caller]
-    pub fn unwrap_range(self) -> SearchPath {
-        match self {
-            Self::Range(path) => path,
-            _ => panic!("Unable to unwrap {:?} as range.", self),
-        }
-    }
-    #[allow(unused)]
-    #[track_caller]
-    pub fn get_range(&self) -> Option<&SearchPath> {
-        match self {
-            Self::Range(path) => Some(path),
-            _ => None,
-        }
-    }
-    #[allow(unused)]
-    fn is_complete(&self) -> bool {
-        matches!(self, FoundPath::Complete(_))
-    }
+    //#[allow(unused)]
+    //#[track_caller]
+    //pub fn unwrap_range(self) -> SearchPath {
+    //    match self {
+    //        Self::Range(path) => path,
+    //        _ => panic!("Unable to unwrap {:?} as range.", self),
+    //    }
+    //}
+    //#[allow(unused)]
+    //#[track_caller]
+    //pub fn get_range(&self) -> Option<&SearchPath> {
+    //    match self {
+    //        Self::Range(path) => Some(path),
+    //        _ => None,
+    //    }
+    //}
+    //#[allow(unused)]
+    //fn is_complete(&self) -> bool {
+    //    matches!(self, FoundPath::Complete(_))
+    //}
 }

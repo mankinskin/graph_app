@@ -63,6 +63,7 @@ pub(crate) use {
         },
         hash::{
             BuildHasherDefault,
+            Hash,
         },
         num::NonZeroUsize,
     },

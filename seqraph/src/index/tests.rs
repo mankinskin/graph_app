@@ -36,7 +36,7 @@ fn index_pattern1() {
     let byz_found = graph.find_ancestor(&query);
     assert_eq!(
         byz_found,
-        Ok(TraversalResult::complete(query, byz)),
+        Ok(TraversalResult::new_complete(query, byz)),
         "byz"
     );
     let query = vec![ab, y];
@@ -44,7 +44,7 @@ fn index_pattern1() {
     let aby_found = graph.find_parent(&query);
     assert_eq!(
         aby_found,
-        Ok(TraversalResult::complete(query, aby)),
+        Ok(TraversalResult::new_complete(query, aby)),
         "aby"
     );
 }

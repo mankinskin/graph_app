@@ -2,7 +2,7 @@ use super::*;
 use std::hash::Hash;
 
 pub(crate) trait TraversalQuery:
-    AdvanceablePath
+    Advance
     + Debug
     + Clone
     + Hash
@@ -10,7 +10,7 @@ pub(crate) trait TraversalQuery:
     + Eq
 {}
 impl<
-    T: AdvanceablePath
+    T: Advance
         + Debug
         + Clone
         + Hash
@@ -31,17 +31,20 @@ impl<
         + Clone
         + Debug
 > TraversalStartPath for T {}
+
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
 pub(crate) enum PathPair<
+    P: NewAdvanced,
     Q: TraversalQuery,
 > {
-    GraphMajor(SearchPath, Q),
-    QueryMajor(Q, SearchPath),
+    GraphMajor(P, Q),
+    QueryMajor(Q, P),
 }
 impl<
+    P: NewAdvanced,
     Q: TraversalQuery,
-> PathPair<Q> {
-    pub fn from_mode(path: SearchPath, query: Q, mode: bool) -> Self {
+> PathPair<P, Q> {
+    pub fn from_mode(path: P, query: Q, mode: bool) -> Self {
         if mode {
             Self::GraphMajor(path, query)
         } else {
@@ -59,7 +62,7 @@ impl<
                 query.push_end(location),
         }
     }
-    pub fn unpack(self) -> (SearchPath, Q) {
+    pub fn unpack(self) -> (P, Q) {
         match self {
             Self::GraphMajor(path, query) =>
                 (path, query),
@@ -68,7 +71,7 @@ impl<
         }
     }
     #[allow(unused)]
-    pub fn get_path(&self) -> &SearchPath {
+    pub fn get_path(&self) -> &P {
         match self {
             Self::GraphMajor(path, _) |
             Self::QueryMajor(_, path) =>
