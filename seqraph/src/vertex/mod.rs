@@ -6,17 +6,18 @@ use std::{
     sync::atomic::{
         AtomicUsize,
         Ordering,
-    }, borrow::Borrow,
+    },
+    borrow::Borrow,
 };
 type HashSet<T> = DeterministicHashSet<T>;
 type HashMap<K, V> = DeterministicHashMap<K, V>;
 
-mod indexed;
-mod parent;
-mod child;
-mod child_location;
-mod token;
-mod wide;
+pub mod indexed;
+pub mod parent;
+pub mod child;
+pub mod child_location;
+pub mod token;
+pub mod wide;
 pub mod pattern;
 pub use {
     indexed::*,

@@ -172,3 +172,18 @@ impl<P: MatchEndPath + PathAppend> PathAppend for MatchEnd<P> {
         }
     }
 }
+impl<P: MatchEndPath + PathPop<Result=Self>> PathPop for MatchEnd<P> {
+    type Result = Result<Self, Child>;
+    fn pop_path<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<'a, 'g, T>
+    >(self, trav: &'a Trav) -> Self::Result {
+        match self {
+            MatchEnd::Path(path) => Ok(path.pop_path::<_, D, _>(trav)),
+            MatchEnd::Complete(child) => Err(child),
+        }
+    }
+}

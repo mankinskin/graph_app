@@ -1,7 +1,5 @@
-use crate::{
-    vertex::*,
-    *,
-};
+use crate::*;
+
 mod searcher;
 mod match_direction;
 #[macro_use]

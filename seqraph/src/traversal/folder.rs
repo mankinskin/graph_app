@@ -93,13 +93,13 @@ impl<P: Postfix + RangePath> Postfix for OriginPath<P> {
     fn new_complete(c: Child, origin: StartPath) -> Self {
         Self {
             postfix: P::new_complete(c, origin.clone()),
-            origin,
+            origin: MatchEnd::Path(origin),
         }
     }
     fn new_path(start: impl Into<StartPath>, origin: StartPath) -> Self {
         Self {
             postfix: P::new_path(start, origin.clone()),
-            origin,
+            origin: MatchEnd::Path(origin),
         }
     }
 }

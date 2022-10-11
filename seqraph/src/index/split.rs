@@ -59,7 +59,7 @@ pub(crate) trait IndexSplit<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: In
         let mut graph = self.graph_mut();
         if let Some(mut prev) = prev {
             // index lower context
-            let (split_context, split_location) = IndexContext::<_, _, Side>::context_path(
+            let (split_context, split_location) = IndexContext::<_, _, Side>::context_entry_path(
                 &mut *graph,
                 prev.location,
                 prev.path.clone(),
@@ -188,7 +188,7 @@ pub(crate) trait IndexSplit<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: In
                             );
 
                             // index inner context
-                            let (context, _) = IndexContext::<_, _, Side>::context_path(
+                            let (context, _) = IndexContext::<_, _, Side>::context_entry_path(
                                 &mut *graph,
                                 split.location,
                                 split.path.clone(),

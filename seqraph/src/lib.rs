@@ -6,33 +6,46 @@
 #![feature(slice_pattern)]
 #![feature(generic_associated_types)]
 #![feature(map_first_last)]
+#![feature(control_flow_enum)]
 
 extern crate test;
 
-mod direction;
-mod graph;
-mod search;
-mod vertex;
-mod traversal;
-mod index;
-mod logger;
-mod mock;
+pub mod direction;
+pub mod graph;
+pub mod search;
+pub mod vertex;
+pub mod traversal;
+pub mod index;
+pub mod logger;
+pub mod mock;
 mod read;
 
-pub use direction::*;
-pub use graph::*;
-pub use search::*;
-pub use vertex::*;
+pub(crate) use direction::*;
+pub(crate) use graph::*;
+pub(crate) use search::*;
+pub(crate) use vertex::*;
 pub(crate) use traversal::*;
-pub use logger::*;
-pub use index::*;
-pub use read::*;
+pub(crate) use logger::*;
+pub(crate) use index::*;
+pub(crate) use read::*;
 
-#[cfg(test)]
-mod tests;
 #[cfg(test)]
 pub use graph::tests::*;
 
+pub use {
+    graph::{
+        HypergraphRef,
+        Hypergraph,
+    },
+    vertex::{
+        Token,
+        VertexKey,
+        VertexData,
+        Tokenize,
+        Child,
+        PatternId,
+    },
+};
 #[allow(unused)]
 pub(crate) use {
     tracing::*,

@@ -29,4 +29,10 @@ impl<T: Tokenize + Send> HypergraphRef<T> {
     ) -> Child {
         self.right_reader().read_sequence(sequence)
     }
+    pub fn read_pattern(
+        &mut self,
+        pattern: Pattern,
+    ) -> Child {
+        self.right_reader().read_pattern(pattern)
+    }
 }

@@ -6,6 +6,15 @@ pub(crate) struct StartLeaf {
     pub(crate) child: Child,
     pub(crate) width: usize,
 }
+impl StartLeaf {
+    pub fn new(child: Child, entry: ChildLocation) -> Self {
+        Self {
+            entry,
+            child,
+            width: child.width(),
+        }
+    }
+}
 impl WideMut for StartLeaf {
     fn width_mut(&mut self) -> &mut usize {
         &mut self.width
@@ -65,6 +74,12 @@ impl StartPath {
         match self {
             Self::Leaf(leaf) => Some(leaf),
             _ => None,
+        }
+    }
+    pub fn into_path(self) -> ChildPath {
+        match self {
+            Self::Leaf(leaf) => Vec::new(),
+            Self::Path { path, .. } => path,
         }
     }
     pub fn into_context_path(self) -> ChildPath {
@@ -184,7 +199,8 @@ impl PathPop for OriginPath<SearchPath> {
     >(self, trav: &'a Trav) -> Self::Result {
         OriginPath {
             postfix: self.postfix.pop_path::<_, D, _>(trav),
-            origin: self.origin.pop_path::<_, D, _>(trav).unwrap_path(),
+            origin: self.origin.pop_path::<_, D, _>(trav)
+                .unwrap_or_else(|err| MatchEnd::Complete(err))
         }
     }
 }

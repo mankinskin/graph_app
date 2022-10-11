@@ -24,6 +24,24 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g
         self.graph.write().unwrap()
     }
 }
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for &'a Reader<T, D> {
+    type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
+    fn graph(&'g self) -> Self::Guard {
+        self.graph.read().unwrap()
+    }
+}
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for &'a mut Reader<T, D> {
+    type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
+    fn graph(&'g self) -> Self::Guard {
+        self.graph.read().unwrap()
+    }
+}
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g, T> for &'a mut Reader<T, D> {
+    type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
+    fn graph_mut(&'g mut self) -> Self::GuardMut {
+        self.graph.write().unwrap()
+    }
+}
 //type HashMap<K, V> = DeterministicHashMap<K, V>;
 
 impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
@@ -38,7 +56,11 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         }
         self.root.unwrap()
     }
-    fn read_known(&mut self, known: Pattern) {
+    pub(crate) fn read_pattern(&mut self, known: Pattern) -> Child {
+        self.read_known(known);
+        self.root.unwrap()
+    }
+    pub(crate) fn read_known(&mut self, known: Pattern) {
         PrefixQuery::new_directed::<D, _>(known.borrow())
             .map(|path| self.read_bands(path))
             .or_else(|err|

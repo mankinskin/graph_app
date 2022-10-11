@@ -1,7 +1,19 @@
+use crate::*;
 use super::*;
 
+trait ContextLocation {
+    fn index<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: IndexDirection,
+        Side: IndexSide<D>,
+        Trav: TraversableMut<'a, 'g, T>,
+        >(self, trav: Trav) -> (Child, ChildLocation);
+}
+
 pub(crate) trait IndexContext<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: IndexSide<D>>: Indexing<'a, 'g, T, D> {
-    /// * `location` - Points to child to index the context of
+    /// replaces context in pattern at location with child and returns it with new location
     fn context_path_segment(
         &'a mut self,
         location: ChildLocation
@@ -21,42 +33,41 @@ pub(crate) trait IndexContext<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: 
             (c, location.to_child_location(Side::inner_pos_after_context_indexed(location.sub_index)))
         }
     }
-    /// * `entry` - Points to child to index the context of
-    /// * `context_path` - List of child locations pointing to entry to build the nested context structure
-    fn context_path(
+    fn try_context_path(
+        &'a mut self,
+        mut context_path: Vec<ChildLocation>,
+        inner: Child,
+    ) -> Option<(Child, ChildLocation)> {
+        let mut graph = self.graph_mut();
+        context_path.into_iter().rev().fold(None, |acc, location| {
+            let (context, inner_location) = IndexContext::<_, _, Side>::context_path_segment(&mut *graph, location);
+            Some(if let Some((acc_ctx, _)) = acc {
+                let (back, front) = Side::context_inner_order(&context, &acc_ctx);
+                let context = graph.index_pattern([back[0], front[0]]);
+                let pid = graph.add_pattern_with_update(location, Side::concat_inner_and_context(inner, context));
+                let (sub_index, _) = Side::back_front_order(0, 1);
+                (context, ChildLocation {
+                    parent: inner_location.parent,
+                    pattern_id: pid,
+                    sub_index,
+                })
+            } else {
+                (context, inner_location)
+            })
+        })
+    }
+    /// indexes context patterns along a path and accumulates nested contexts
+    fn context_entry_path(
         &'a mut self,
         entry: ChildLocation,
         mut context_path: Vec<ChildLocation>,
         inner: Child,
     ) -> (Child, ChildLocation) {
-        let mut graph = self.graph_mut();
-        let mut acc: Option<Child> = None;
-        while let Some(location) = context_path.pop() {
-            let (context, _inner_location) = IndexContext::<_, _, Side>::context_path_segment(&mut *graph, location);
-            if let Some(acc) = &mut acc {
-                let (back, front) = Side::context_inner_order(&context, &acc);
-                let context = graph.index_pattern([back[0], front[0]]);
-                graph.add_pattern_with_update(location, Side::concat_inner_and_context(inner, context));
-                *acc = context;
-            } else {
-                acc = Some(context);
-            }
-        }
-        let (context, inner_location)
-            = IndexContext::<_, _, Side>::context_path_segment(&mut *graph, entry);
-        if let Some(acc) = acc {
-            let (back, front) = Side::context_inner_order(&context, &acc);
-            let context = graph.index_pattern([back[0], front[0]]);
-            let pid = graph.add_pattern_with_update(entry, Side::concat_inner_and_context(inner, context));
-            let (sub_index, _) = Side::back_front_order(0, 1);
-            (context, ChildLocation {
-                parent: inner_location.parent,
-                pattern_id: pid,
-                sub_index,
-            })
-        } else {
-            (context, inner_location)
-        }
+        context_path.push(entry);
+        self.try_context_path(
+            context_path,
+            inner,
+        ).unwrap()
     }
 }
 impl<

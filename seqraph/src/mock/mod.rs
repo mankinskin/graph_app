@@ -1,7 +1,10 @@
 use crate::*;
 
-//pub mod gen_graph;
-//pub use gen_graph::*;
+pub mod gen_graph;
+pub use gen_graph::*;
+
+#[cfg(test)]
+mod tests;
 
 #[allow(unused)]
 pub fn pattern_from_widths(widths: impl IntoIterator<Item=usize>) -> Pattern {

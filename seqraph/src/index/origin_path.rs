@@ -3,7 +3,7 @@ use crate::*;
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub(crate) struct OriginPath<P> {
     pub(crate) postfix: P,
-    pub(crate) origin: StartPath,
+    pub(crate) origin: MatchEnd<StartPath>,
 }
 
 impl<P: Into<StartPath>> From<P> for OriginPath<StartPath> {
@@ -11,7 +11,7 @@ impl<P: Into<StartPath>> From<P> for OriginPath<StartPath> {
         let origin = start.into();
         OriginPath {
             postfix: origin.clone(),
-            origin,
+            origin: MatchEnd::Path(origin),
         }
     }
 }
@@ -61,10 +61,10 @@ impl From<OriginPath<StartLeaf>> for OriginPath<StartPath> {
     }
 }
 pub(crate) trait Origin {
-    fn into_origin(self) -> StartPath;
+    fn into_origin(self) -> MatchEnd<StartPath>;
 }
 impl<P> Origin for OriginPath<P> {
-    fn into_origin(self) -> StartPath {
+    fn into_origin(self) -> MatchEnd<StartPath> {
         self.origin
     }
 }
@@ -106,7 +106,7 @@ impl<A: Advanced, F: FromAdvanced<A>> FromAdvanced<A> for OriginPath<F> {
         Trav: Traversable<'a, 'g, T>
     >(path: A, trav: &'a Trav) -> Self {
         Self {
-            origin: path.start_match_path().clone(),
+            origin: MatchEnd::Path(path.start_match_path().clone()),
             postfix: F::from_advanced::<_, D, _>(path, trav),
         }
     }
@@ -145,7 +145,7 @@ impl<P: PathAppend> PathAppend for OriginPath<P>
         Trav: Traversable<'a, 'g, T>
     >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
         OriginPath {
-            origin: self.origin.append::<_, D, _>(trav, parent_entry),
+            origin: MatchEnd::Path(self.origin.append::<_, D, _>(trav, parent_entry)),
             postfix: self.postfix.append::<_, D, _>(trav, parent_entry),
         }
     }

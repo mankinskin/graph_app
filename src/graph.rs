@@ -101,7 +101,7 @@ impl Graph {
         *self = Self::new();
     }
     pub fn read(&mut self, text: impl ToString) {
-        self.graph.read_sequence(text.to_string().chars());
+        //self.graph.read_sequence(text.to_string().chars());
     }
     pub fn show(&self, ui: &mut Ui) {
         self.vis_mut().update();
@@ -172,6 +172,76 @@ pub fn build_graph2() -> Hypergraph<char> {
             [abab, ababcdefghi],
             [ababab, abcdefghi],
         ]);
+    } else {
+        panic!("Inserting tokens failed!");
+    }
+    graph
+}
+pub fn build_graph3() -> Hypergraph<char> {
+    let mut graph = Hypergraph::default();
+    if let [
+        d, i, e, space,
+        k, a, t, z,
+        m, c, u, r,
+        h, n, w, f,
+    ] = graph.index_tokens([
+        Token::Element('d'),
+        Token::Element('i'),
+        Token::Element('e'),
+        Token::Element(' '),
+        Token::Element('k'),
+        Token::Element('a'),
+        Token::Element('t'),
+        Token::Element('z'),
+        Token::Element('m'),
+        Token::Element('c'),
+        Token::Element('u'),
+        Token::Element('r'),
+        Token::Element('h'),
+        Token::Element('n'),
+        Token::Element('w'),
+        Token::Element('f'),
+    ])[..]
+    {
+        let _mach = graph.index_pattern([space, m, a, c, h]);
+        let _macht = graph.index_pattern([_mach, t]);
+        let t_ = graph.index_pattern([t, space]);
+        let _macht_ = graph.index_patterns([
+            [_macht, space],
+            [_mach, t_],
+        ]);
+        let en = graph.index_pattern([e, n]);
+        let _machen = graph.index_pattern([_mach, en]);
+        let e_mach = graph.index_pattern([e, _mach]);
+        let e_macht_ = graph.index_patterns([
+            [e_mach, t_],
+            [e, _macht_],
+        ]);
+        let e_machen = graph.index_patterns([
+            [e_mach, en],
+            [e, _machen],
+        ]);
+
+        let die = graph.index_pattern([d, i, e]);
+        let die_ = graph.index_pattern([die, space]);
+
+        let hund = graph.index_pattern([h, u, n, d]);
+
+        let wuff = graph.index_pattern([w, u, f, f]);
+        let _wuff = graph.index_pattern([space, wuff]);
+        let _macht_wuff = graph.index_patterns([
+            [_macht_, wuff],
+            [_macht, _wuff],
+        ]);
+
+        let _hund = graph.index_pattern([space, hund]);
+        let die_hund = graph.index_patterns([
+            [die, _hund],
+            [die_, hund],
+        ]);
+        let s1 = graph.index_pattern([die_, k, a, t, z, e_macht_, m, i, a, u]);
+        let s2 = graph.index_pattern([d, e, r, _hund, _macht_wuff]);
+        let s2 = graph.index_pattern([die_hund, e_machen, _wuff]);
     } else {
         panic!("Inserting tokens failed!");
     }

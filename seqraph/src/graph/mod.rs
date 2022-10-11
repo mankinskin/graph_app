@@ -93,7 +93,7 @@ impl<'t, 'a, T: Tokenize> Hypergraph<T> {
         (c.expect("Tried to index empty pattern!"), id)
     }
     /// create index from a pattern
-    pub fn index_pattern(
+    pub(crate) fn index_pattern(
         &mut self,
         indices: impl IntoPattern,
     ) -> Child {
@@ -114,15 +114,13 @@ impl<'t, 'a, T: Tokenize> Hypergraph<T> {
         } else {
             let data = self.expect_vertex_data(index);
             assert!(!data.children.is_empty());
-            data.children.values().fold(Vec::new(), |mut acc, p| {
+            data.children.values().fold(None, |acc, p| {
                 let exp = self.pattern_token_indices(p.borrow());
-                if acc.is_empty() {
-                    acc = exp;
-                } else {
-                    assert_eq!(acc, exp)
-                }
-                acc
-            })
+                acc.map(|acc| {
+                    assert_eq!(acc, exp);
+                    acc
+                }).or(Some(exp.clone()))
+            }).unwrap()
         }
     }
     pub fn pattern_token_indices(

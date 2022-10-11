@@ -40,7 +40,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a> Traversable<'a, 'g, T> for HypergraphRef<T> {
     }
 }
 
-pub(crate) trait TraversableMut<'a: 'g, 'g, T: Tokenize> : Traversable<'a, 'g, T> {
+pub trait TraversableMut<'a: 'g, 'g, T: Tokenize> : Traversable<'a, 'g, T> {
     type GuardMut: TraversableMut<'g, 'g, T> + Deref<Target=Hypergraph<T>> + DerefMut;
     fn graph_mut(&'g mut self) -> Self::GuardMut;
 }

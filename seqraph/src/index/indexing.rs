@@ -76,7 +76,7 @@ pub(crate) trait Indexing<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversab
             path.start.start_path().to_vec()
         ).map(|split| (
             split.inner,
-            IndexContext::<_, D, IndexBack>::context_path(
+            IndexContext::<_, D, IndexBack>::context_entry_path(
                 &mut *graph,
                 split.location,
                 split.path,
@@ -89,7 +89,7 @@ pub(crate) trait Indexing<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversab
                 path.end.end_path().to_vec()
             ).map(|split| (
                 split.inner,
-                IndexContext::<_, D, IndexFront>::context_path(
+                IndexContext::<_, D, IndexFront>::context_entry_path(
                     &mut *graph,
                     split.location,
                     split.path,

@@ -74,6 +74,10 @@ impl App {
                 self.graph.set_graph(build_graph2());
                 ui.close_menu();
             }
+            if ui.button("Graph 3").clicked() {
+                self.graph.set_graph(build_graph3());
+                ui.close_menu();
+            }
         });
         if ui.button("Clear").clicked() {
             self.graph.clear();
