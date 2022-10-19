@@ -4,128 +4,178 @@ use std::collections::BTreeMap;
 use crate::*;
 use super::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
+pub(crate) enum BandEnd {
+    Index(Child),
+    Chain(OverlapChain),
+}
+impl BandEnd {
+    pub fn into_index<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: IndexDirection,
+    >(self, reader: &mut Reader<T, D>) -> Child {
+        match self {
+            Self::Index(c) => c,
+            Self::Chain(c) => c.close(reader).expect("Empty chain in BandEnd!"),
+        }
+    }
+    fn index(&self) -> Option<&Child> {
+        match self {
+            Self::Index(c) => Some(c),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Debug)]
 pub(crate) struct OverlapBand {
-    //end_bound: usize,
-    index: Child,
+    end: BandEnd,
     back_context: Pattern,
 }
-impl IntoIterator for OverlapBand {
-    type Item = Child;
-    type IntoIter = std::iter::Chain<std::vec::IntoIter<Child>, std::iter::Once<Child>>;
-    fn into_iter(self) -> Self::IntoIter {
-        self.back_context.into_iter().chain(std::iter::once(self.index))
-    }
-}
-impl<'a> IntoIterator for &'a OverlapBand {
-    type Item = &'a Child;
-    type IntoIter = std::iter::Chain<std::slice::Iter<'a, Child>, std::iter::Once<&'a Child>>;
-    fn into_iter(self) -> Self::IntoIter {
-        self.back_context.iter().chain(std::iter::once(&self.index))
-    }
-}
+//impl IntoIterator for OverlapBand {
+//    type Item = Child;
+//    type IntoIter = std::iter::Chain<std::vec::IntoIter<Child>, std::iter::Once<Child>>;
+//    fn into_iter(self) -> Self::IntoIter {
+//        self.back_context.into_iter().chain(std::iter::once(self.index))
+//    }
+//}
+//impl<'a> IntoIterator for &'a OverlapBand {
+//    type Item = &'a Child;
+//    type IntoIter = std::iter::Chain<std::slice::Iter<'a, Child>, std::iter::Once<&'a Child>>;
+//    fn into_iter(self) -> Self::IntoIter {
+//        self.back_context.iter().chain(std::iter::once(&self.index))
+//    }
+//}
 impl OverlapBand {
-    pub fn appended(mut self, postfix: Child) -> Self {
-        self.append(postfix);
+    pub fn appended<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: IndexDirection,
+    >(mut self, reader: &mut Reader<T, D>, end: BandEnd) -> Self {
+        self.append(reader, end);
         self
     }
-    pub fn append(&mut self, postfix: Child) {
-        self.back_context.push(self.index);
-        self.index = postfix;
+    pub fn append<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: IndexDirection,
+    >(&mut self, reader: &mut Reader<T, D>, end: BandEnd) {
+        self.back_context.push(self.end.clone().into_index(reader));
+        self.end = end;
+    }
+    fn into_pattern<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: IndexDirection,
+    >(self, reader: &mut Reader<T, D>) -> Pattern {
+        self.back_context.into_iter()
+            .chain(std::iter::once(self.end.into_index(reader)))
+            .collect()
     }
 }
-#[derive(Clone)]
-pub(crate) struct OverlapNode {
+#[derive(Clone, Debug)]
+pub(crate) struct OverlapLink {
     postfix_path: StartPath, // location of postfix/overlap in first index
     prefix_path: MatchEnd<StartPath>, // location of prefix/overlap in second index
     overlap: Child,
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct Overlap {
-    node: Option<OverlapNode>,
+    link: Option<OverlapLink>,
     band: OverlapBand,
 }
 impl Overlap {
-    pub fn appended_index(mut self, index: Child) -> Self {
-        self.append_index(index);
+    pub fn appended<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: IndexDirection,
+    >(mut self, reader: &mut Reader<T, D>, end: BandEnd) -> Self {
+        self.append(reader, end);
         self
     }
-    pub fn append_index(&mut self, index: Child) {
-        self.band.append(index);
-        self.node = None;
+    pub fn append<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: IndexDirection,
+    >(&mut self, reader: &mut Reader<T, D>, end: BandEnd) {
+        self.band.append(reader, end);
+        self.link = None;
     }
 }
-#[derive(Clone, Default)]
+#[derive(Default, Clone, Debug)]
 pub(crate) struct OverlapBundle {
-    bundle: Vec<Overlap>,
+    bundle: Vec<OverlapBand>,
 }
-impl From<Overlap> for OverlapBundle {
-    fn from(overlap: Overlap) -> Self {
+impl From<OverlapBand> for OverlapBundle {
+    fn from(overlap: OverlapBand) -> Self {
         Self {
             bundle: vec![overlap],
         }
     }
 }
-impl From<Vec<Overlap>> for OverlapBundle {
-    fn from(bundle: Vec<Overlap>) -> Self {
+impl From<Vec<OverlapBand>> for OverlapBundle {
+    fn from(bundle: Vec<OverlapBand>) -> Self {
         Self {
             bundle,
         }
     }
 }
 impl OverlapBundle {
-    fn add_overlap(&mut self, overlap: Overlap) {
+    fn add_band(&mut self, overlap: OverlapBand) {
         self.bundle.push(overlap)
     }
-    pub fn append_index<
+    pub fn append<
         'a: 'g,
         'g,
         T: Tokenize,
         D: IndexDirection,
-    >(&mut self, reader: &mut Reader<T, D>, index: Child) {
+    >(&mut self, reader: &mut Reader<T, D>, end: BandEnd) {
         if self.bundle.len() > 1 {
             self.bundle.first_mut()
                 .expect("Empty bundle in overlap chain!")
-                .append_index(index);
+                .append(reader, end);
         } else {
-            self.bundle = vec![self.clone().into_overlap(reader).appended_index(index)];
+            self.bundle = vec![self.clone().into_band(reader).appended(reader, end)];
         }
     }
-    pub fn into_overlap<
+    pub fn appended<
         'a: 'g,
         'g,
         T: Tokenize,
         D: IndexDirection,
-    >(self, reader: &mut Reader<T, D>) -> Overlap {
-        assert!(!self.bundle.is_empty());
-        Overlap {
-            node: None,
-            band: OverlapBand {
-                index: reader.graph_mut().index_patterns(
-                    self.bundle.into_iter().map(|overlap| overlap.band.into_iter().collect_vec())
-                ),
-                back_context: vec![],
-            },
-        }
-    }
-    pub fn appended_index<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: IndexDirection,
-    >(mut self, reader: &mut Reader<T, D>, index: Child) -> OverlapBundle {
-        self.append_index(reader, index);
+    >(mut self, reader: &mut Reader<T, D>, end: BandEnd) -> OverlapBundle {
+        self.append(reader, end);
         self
     }
+    pub fn into_band<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: IndexDirection,
+    >(self, reader: &mut Reader<T, D>) -> OverlapBand {
+        assert!(!self.bundle.is_empty());
+
+        let bundle = self.bundle.into_iter().map(|band| band.into_pattern(reader)).collect_vec();
+        OverlapBand {
+            end: BandEnd::Index(reader.graph_mut().index_patterns(bundle)),
+            back_context: vec![],
+        }
+    }
 }
-#[derive(Default)]
+#[derive(Default, Clone, Debug)]
 pub(crate) struct OverlapChain {
     path: BTreeMap<usize, Overlap>,
 }
 impl From<Child> for OverlapBand {
     fn from(next: Child) -> Self {
         OverlapBand {
-            index: next,
+            end: BandEnd::Index(next),
             back_context: vec![],
         }
     }
@@ -136,12 +186,13 @@ impl OverlapChain {
         'g,
         T: Tokenize,
         D: IndexDirection,
-    >(&mut self, reader: &mut Reader<T, D>, start_bound: usize, index: Child) -> Option<Overlap> {
+    >(&mut self, reader: &mut Reader<T, D>, start_bound: usize, end: BandEnd) -> Option<Overlap> {
         // postfixes should always be first in the chain
         self.path.remove(&start_bound).map(|band| {
+            let index = end.into_index(reader);
             let end_bound = start_bound + index.width();
             // might want to pass postfix_path
-            band.appended_index(index)
+            band.appended(reader, BandEnd::Index(index))
         })
     }
     pub fn append_index<
@@ -149,11 +200,11 @@ impl OverlapChain {
         'g,
         T: Tokenize,
         D: IndexDirection,
-    >(&mut self, reader: &mut Reader<T, D>, start_bound: usize, index: Child) {
-        self.take_appended(reader, start_bound, index)
-            .map(|overlap| 
+    >(&mut self, reader: &mut Reader<T, D>, start_bound: usize, end: BandEnd) {
+        self.take_appended(reader, start_bound, end)
+            .map(|overlap|
                 self.add_overlap(
-                    start_bound + index.width(), // end_bound
+                    start_bound + overlap.band.end.index().unwrap().width(), // end_bound
                     overlap,
                 )
             );
@@ -170,14 +221,14 @@ impl OverlapChain {
         'g,
         T: Tokenize,
         D: IndexDirection,
-    >(mut self, reader: &'a mut Reader<T, D>) -> Option<Child> {
+    >(self, reader: &'a mut Reader<T, D>) -> Option<Child> {
         let mut path = self.path.into_iter();
         let first_band: Overlap = path.next()?.1;
         let (mut bundle, prev_band, prev_ctx) =
             path.fold(
                 (vec![], first_band, None),
-                |(mut bundle, prev_band, prev_ctx), (end_bound, overlap)| {
-                    let ctx = overlap.node.as_ref().and_then(|node| 
+                |(mut bundle, prev_band, prev_ctx), (_end_bound, overlap)| {
+                    let ctx = overlap.link.as_ref().and_then(|node| 
                         IndexContext::<T, D, IndexFront>::try_context_path(
                             reader,
                             node.prefix_path.get_path().unwrap().clone().into_context_path(),
@@ -199,7 +250,10 @@ impl OverlapChain {
             );
 
         bundle.push(prev_band);
-        Some(reader.graph_mut().index_patterns(bundle.into_iter().map(|overlap| overlap.band.into_iter().collect_vec())))
+        let bundle = bundle.into_iter()
+            .map(|overlap| overlap.band.into_pattern(reader))
+            .collect_vec();
+        Some(reader.graph_mut().index_patterns(bundle))
     }
     pub fn take_past(&mut self, end_bound: usize) -> OverlapChain {
         let mut past = self.path.split_off(&end_bound);
@@ -207,7 +261,58 @@ impl OverlapChain {
         Self { path: past }
     }
 }
-
+#[derive(Default, Clone, Debug)]
+pub(crate) struct OverlapCache {
+    chain: OverlapChain,
+    end_bound: usize,
+    last: Option<Overlap>,
+}
+impl OverlapCache {
+    pub fn new(first: Child) -> Self {
+        Self {
+            end_bound: first.width(),
+            last: Overlap {
+                link: None,
+                band: OverlapBand::from(first),
+            }.into(),
+            chain: OverlapChain::default(),
+        }
+    }
+    fn add_last_bundle<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: IndexDirection,
+    >(
+        &mut self,
+        reader: &mut Reader<T, D>,
+        bundle: OverlapBundle
+    ) {
+        self.chain.path.insert(
+            self.end_bound,
+            Overlap {
+                link: None,
+                band: bundle.into_band(reader),
+            }
+        );
+    }
+    pub fn append<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: IndexDirection,
+    >(&mut self,
+        _reader: &mut Reader<T, D>,
+        start_bound: usize,
+        overlap: Overlap,
+    ) {
+        let width = overlap.band.end.index().unwrap().width();
+        if let Some(last) = self.last.replace(overlap) {
+            self.chain.add_overlap(self.end_bound, last).unwrap()
+        }
+        self.end_bound = start_bound + width;
+    }
+}
 impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     pub(crate) fn read_overlaps(
         &mut self,
@@ -217,87 +322,160 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         (first.width() > 1)
             .then(||
                 self.read_next_overlap(
-                    first.width(),
-                    Overlap {
-                        node: None,
-                        band: OverlapBand::from(first),
-                    }.into(),
-                    OverlapChain::default(),
+                    OverlapCache::new(first),
                     context,
                 )
             )?
     }
+    /// next bands generated when next overlap starts after a past bundle with a gap
+    pub(crate) fn odd_overlap_next_bands(
+        &mut self,
+        cache: &mut OverlapCache,
+        past_end_bound: usize,
+        next_link: &OverlapLink,
+        expansion: Child,
+        past_ctx: Pattern,
+    ) -> Overlap {
+        let last = cache.last.as_mut().unwrap();
+        let prev = last.band.end.clone().into_index(self);
+        last.band.end = BandEnd::Index(prev);
+        // split last band to get overlap with past bundle
+        let IndexSplitResult {
+            inner,
+            location,
+            path,
+        } = IndexSplit::<_, D, IndexFront>::single_offset_split(
+            &mut *self.graph.graph_mut(),
+            prev,
+            NonZeroUsize::new(cache.end_bound - past_end_bound).unwrap(),
+        );
+        assert!(path.is_empty());
+
+        // build new context path (to overlap)
+        let context_path = {
+            // entry in last band (could be handled by IndexSplit
+            let inner_entry = {
+                let graph = self.graph.graph();
+                let (pid, pattern) = graph.expect_vertex_data(inner).expect_any_pattern();
+                ChildLocation {
+                    parent: inner,
+                    pattern_id: *pid,
+                    sub_index: D::last_index(pattern.borrow()),
+                }
+            };
+            let postfix_path = next_link.postfix_path.clone().into_context_path();
+            Vec::with_capacity(postfix_path.len() + 2).tap_mut(|v| {
+                v.push(location);
+                v.push(inner_entry);
+                v.extend(postfix_path.into_iter().skip(1));
+            })
+        };
+        // get index between past and next overlap
+        let (inner_back_ctx, _loc) = IndexContext::<T, D, IndexBack>::try_context_path(
+            self,
+            context_path,
+            next_link.overlap,
+        ).unwrap();
+
+        let past = self.graph.graph_mut().index_pattern(past_ctx);
+        let past_inner = self.graph.graph_mut().index_pattern([past, inner_back_ctx]);
+        let inner_expansion = self.graph.graph_mut().index_pattern([inner_back_ctx, expansion]);
+        let index = self.graph.graph_mut().index_patterns([
+            vec![past_inner, expansion],
+            vec![past, inner_expansion],
+        ]);
+        Overlap {
+            band: OverlapBand {
+                end: BandEnd::Index(index),
+                back_context: vec![],
+            },
+            link: None, // todo
+        }
+    }
     pub(crate) fn read_next_overlap(
         &mut self,
-        end_bound: usize,
-        last: OverlapBundle,
-        mut overlaps: OverlapChain,
+        cache: OverlapCache,
         context: &mut PrefixQuery,
     ) -> Option<Child> {
         // find expandable postfix, may append postfixes in overlap chain
         match self.find_next_overlap(
-                end_bound,
-                last,
-                &mut overlaps,
+                cache,
                 context,
             ) {
-            Ok((start_bound, next, expansion, bundle)) => {
-                    overlaps.path.insert(
-                        end_bound,
-                        bundle.into_overlap(self),
-                    );
-                    let ctx = self.take_past_context_pattern(
-                        start_bound,
-                        &next,
-                        &mut overlaps,
-                    )
-                    .map(|(end_bound, ctx)|
-                        if end_bound == start_bound {
-                            ctx
+            Ok((start_bound, next_link, expansion, mut cache)) => {
+
+                    if let Some(ctx) =
+                        if let Some((past_end_bound, past_ctx)) = self.take_past_context_pattern(
+                            start_bound,
+                            &mut cache.chain,
+                        ) {
+                            if past_end_bound == start_bound {
+                                Some(past_ctx)
+                            } else {
+                                assert!(past_end_bound < start_bound);
+                                let next = self.odd_overlap_next_bands(
+                                    &mut cache,
+                                    past_end_bound,
+                                    &next_link,
+                                    expansion,
+                                    past_ctx,
+                                );
+                                cache.append(
+                                    self,
+                                    start_bound,
+                                    next,
+                                );
+
+                                //OverlapBand {
+                                //    end: BandEnd::Chain(expansion),
+                                //    back_context: vec![inner_back_ctx],
+                                //}
+                                // use postfix_path of next to index inner context in previous
+                                // index overlap between previous and new coming index
+                                // create new bundle to start with
+
+                                // - remember to bundle latest bands 
+                                // - until after band where odd overlap ocurred
+                                // - add extra band with postfix of previous band
+                                // - if overlap after previous band 
+                                None
+                            }
                         } else {
-                            assert!(end_bound < start_bound);
-                            // use postfix_path of next to index inner context in previous
-                            // index overlap between previous and new coming index
-                            // create new bundle to start with
-                            ctx
+                            Some(self.back_context_from_path(&mut cache.chain, &next_link))
                         }
-                    )
-                    .unwrap_or_else(||
-                        self.back_context_from_path(&mut overlaps, &next)
-                    );
-                    let band = OverlapBand {
-                        index: expansion,
-                        back_context: ctx,
-                    };
-                    let next_bound = start_bound + expansion.width();
-                    self.read_next_overlap(
-                        next_bound,
+                {
+                    cache.append(
+                        self,
+                        start_bound,
                         Overlap {
-                            node: Some(next),
-                            band
-                        }.into(),
-                        overlaps,
+                            band: OverlapBand {
+                                end: BandEnd::Index(expansion),
+                                back_context: ctx,
+                            },
+                            link: Some(next_link), // todo
+                        }
+                    );
+                }
+
+                    self.read_next_overlap(
+                        cache,
                         context,
                     )
                 },
-            Err(bundle) => {
-                overlaps.path.insert(
-                    end_bound,
-                    bundle.into_overlap(self),
-                );
-                overlaps.close(self)
+            Err(cache) => {
+                cache.chain.close(self)
             }
         }
     }
     fn back_context_from_path(
         &mut self,
         overlaps: &mut OverlapChain,
-        node: &OverlapNode,
+        link: &OverlapLink,
     ) -> Pattern {
         let (inner_back_ctx, _loc) = IndexContext::<T, D, IndexBack>::try_context_path(
             self,
-            node.postfix_path.clone().into_context_path(),
-            node.overlap,
+            link.postfix_path.clone().into_context_path(),
+            link.overlap,
         ).unwrap();
         D::context_then_inner(
             overlaps.path.iter_mut().last()
@@ -315,7 +493,6 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     fn take_past_context_pattern(
         &mut self,
         start_bound: usize,
-        node: &OverlapNode,
         overlaps: &mut OverlapChain,
     ) -> Option<(usize, Pattern)> {
         let mut past = overlaps.take_past(start_bound);
@@ -323,7 +500,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             0 => None,
             1 => {
                 let (end_bound, past) = past.path.pop_last().unwrap();
-                Some((end_bound, past.band.into_iter().collect()))
+                Some((end_bound, past.band.into_pattern(self)))
             },
             _ => Some((*past.path.keys().last().unwrap(), vec![past.close(self).unwrap()])),
         }
@@ -331,35 +508,20 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     /// find largest expandable postfix
     fn find_next_overlap(
         &mut self,
-        end_bound: usize,
-        last: OverlapBundle,
-        overlaps: &mut OverlapChain,
+        mut cache: OverlapCache,
         prefix_query: &mut PrefixQuery,
-    ) -> Result<(usize, OverlapNode, Child, OverlapBundle), OverlapBundle> {
-        // determine first overlap
-        //let root = overlaps.path.iter()
-        //    .next()
-        //    .map(|(_, n)| n)
-        //    .unwrap_or_else(|| &last)
-        //    .clone();
-        //let band = last.into_band();
-        
-        //let mut postfix_path = None; // remember path to current postfix
-
-        match PostfixIterator::<_, D, _>::new(&self.indexer(), last)
-            .try_fold((None as Option<StartPath>, last), |(path, mut bundle), (postfix_location, postfix)| {
-                let start_bound = end_bound - postfix.width();
-
-                //// all bands ending before or at current start_bound
-                //let (next_overlaps, new_context) = self.get_past_context(start_bound, overlaps);
+    ) -> Result<(usize, OverlapLink, Child, OverlapCache), OverlapCache> {
+        let last = cache.last.take().expect("No last overlap to take!");
+        match PostfixIterator::<_, D, _>::new(&self.indexer(), *last.band.end.index().unwrap())
+            .try_fold((None as Option<StartPath>, OverlapBundle::from(last.band)), |(path, mut bundle), (postfix_location, postfix)| {
+                let start_bound = cache.end_bound - postfix.width();
 
                 let postfix_path = if let Some(path) = path {
                     path.append::<_, D, _>(&self.graph, postfix_location)
                 } else {
                     StartPath::from(StartLeaf::new(postfix, postfix_location))
                 };
-                // expand
-                // todo: get prefix_location
+                // try expand
                 match self.graph.index_query_with_origin(OverlapPrimer::new(postfix, prefix_query.clone())) {
                     Ok((
                         OriginPath {
@@ -372,7 +534,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
 
                         ControlFlow::Break((
                             start_bound,
-                            OverlapNode {
+                            OverlapLink {
                                 postfix_path,
                                 prefix_path,
                                 overlap: postfix,
@@ -382,90 +544,25 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                         ))
                     },
                     Err(_) => {
-                        // if not expandable, at band boundary and no bundle exists, create bundle
-                        if let Some(overlap) = overlaps.take_appended(self, start_bound, postfix) {
-                            bundle.add_overlap(overlap)
+                        // if not expandable, at band boundary -> add to bundle
+                        if let Some(overlap) = cache.chain.take_appended(self, start_bound, BandEnd::Index(postfix)) {
+                            bundle.add_band(overlap.band)
                         }
                         ControlFlow::Continue((Some(postfix_path), bundle))
                     },
                 }
             }) {
-                ControlFlow::Break(b) => Ok(b),
-                ControlFlow::Continue((_, bundle)) => Err(bundle.into()),
+                ControlFlow::Break((start_bound, next, expansion, bundle)) => {
+                    cache.add_last_bundle(self, bundle);
+                    Ok((start_bound, next, expansion, cache))
+                },
+                ControlFlow::Continue((_, bundle)) => {
+                    cache.add_last_bundle(self, bundle);
+                    Err(cache)
+                }
             }
     }
-        //{
-        //        ControlFlow::Break((
-        //            postfix_path,
-        //            prefix_path,
-        //            start_bound,
-        //            expansion,
-        //            postfix,
-        //            new_context,
-        //        )) => {
-        //            let postfix_path = postfix_path.unwrap();
-        //            let new_context = if let Some((end_bound, band)) = new_context {
-        //                // use past band
-        //                self.graph_mut().index_pattern(band)
-        //            } else {
-        //                // get from parent
-        //                let (ictx, l) = IndexContext::<T, D, IndexBack>::context_path(
-        //                    &mut self.graph,
-        //                    postfix_path.get_entry_location(),
-        //                    postfix_path.into_path(),
-        //                    postfix,
-        //                );
-        //                let bctx = self.graph_mut().index_pattern(band.back_context.borrow());
-        //                let new_ctx = self.graph_mut().index_pattern([bctx, ictx]);
-        //                if root.postfix_path().is_none() {
-        //                    let root_inner = 
-        //                        IndexSplit::<T, D, IndexBack>::single_offset_split(
-        //                            &mut self.graph,
-        //                            band.index,
-        //                            NonZeroUsize::new(root.band().end_bound - start_bound).unwrap(),
-        //                        );
-        //                    self.graph_mut().add_pattern_with_update(
-        //                        postfix_path.get_entry_location(),
-        //                        <IndexBack as IndexSide<D>>::concat_inner_and_context(root_inner.inner, new_ctx)
-        //                    );
-        //                }
-        //                new_ctx
-        //            };
-        //            Some(OverlapNode::Node {
-        //                overlap: postfix,
-        //                postfix_path,
-        //                prefix_path,
-        //                band: OverlapBand {
-        //                    //end_bound: start_bound + expansion.width(),
-        //                    index: expansion,
-        //                    back_context: vec![new_context],
-        //                },
-        //            })
-        //        },
-        //        _ => None,
-        //};
-        //let overlap = if bundle.is_empty() {
-        //    if let Some((postfix_path, prefix_path)) = root.paths() {
-        //        OverlapNode::Node {
-        //            overlap: postfix,
-        //            postfix_path,
-        //            prefix_path,
-        //            band
-        //        }
-        //    } else {
-        //        OverlapNode::Band(band)
-        //    }
-        //} else {
-        //    bundle.push(band.into_iter().collect_vec());
-        //    let index = self.graph_mut().index_patterns(bundle);
-        //    OverlapNode::Band(OverlapBand {
-        //        index,
-        //        back_context: vec![],
-        //        //end_bound,
-        //    })
-        //};
-        //overlaps.path.insert(end_bound, overlap);
-        //next.map(|n| (end_bound, n))
+        
     //pub fn postfix_context_path(&self) -> Vec<StartPath> {
     //    self.path.values()
     //        .flat_map(|n| n.postfix_path().cloned())

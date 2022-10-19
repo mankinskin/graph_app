@@ -214,7 +214,7 @@ impl VertexData {
         }
         let id = Self::next_child_pattern_id();
         self.children.insert(id, pat.into_pattern());
-        self.validate();
+        //self.validate();
         id
     }
     pub fn validate_links(&self) {
