@@ -57,7 +57,7 @@ impl <
     fn map_batch(batch: impl IntoIterator<Item=(ChildLocation, Child)>) -> Vec<(ChildLocation, Child)> {
         batch.into_iter()
             .sorted_by(|a, b|
-                a.1.width().cmp(&b.1.width())
+                b.1.width().cmp(&a.1.width())
             )
             .collect_vec()
     }

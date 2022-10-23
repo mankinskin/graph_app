@@ -69,8 +69,8 @@ impl<P> Origin for OriginPath<P> {
     }
 }
 impl<P: GraphEntry> GraphEntry for OriginPath<P> {
-    fn get_entry_location(&self) -> ChildLocation {
-        self.postfix.get_entry_location()
+    fn entry(&self) -> ChildLocation {
+        self.postfix.entry()
     }
 }
 impl<P: RootChild> RootChild for OriginPath<P> {
@@ -123,14 +123,15 @@ impl<A: Advanced, F: FromAdvanced<A>> FromAdvanced<A> for OriginPath<F> {
 //    }
 //}
 impl<P: PathReduce> PathReduce for OriginPath<P> {
-    fn reduce<
+    fn into_reduced<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
-    >(&mut self, trav: &'a Trav) {
-        self.postfix.reduce::<_, D, _>(trav)
+    >(mut self, trav: &'a Trav) -> Self {
+        self.postfix.reduce::<_, D, _>(trav);
+        self
     }
 }
 impl<P: PathAppend> PathAppend for OriginPath<P>

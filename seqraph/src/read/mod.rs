@@ -25,7 +25,7 @@ impl<T: Tokenize + Send> HypergraphRef<T> {
     }
     pub fn read_sequence(
         &mut self,
-        sequence: impl IntoIterator<Item = T>,
+        sequence: impl IntoIterator<Item = T> + std::fmt::Debug,
     ) -> Child {
         self.right_reader().read_sequence(sequence)
     }

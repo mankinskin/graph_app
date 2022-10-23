@@ -109,14 +109,14 @@ impl<T: PathRoot> RootChild for T {
     }
 }
 pub trait GraphEntry: EntryPos {
-    fn get_entry_location(&self) -> ChildLocation;
+    fn entry(&self) -> ChildLocation;
     fn get_entry_pattern<
         'a: 'g,
         'g,
         T: Tokenize,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Pattern {
-        trav.graph().expect_pattern_at(self.get_entry_location())
+        trav.graph().expect_pattern_at(self.entry())
     }
     fn get_entry<
         'a: 'g,
@@ -125,17 +125,17 @@ pub trait GraphEntry: EntryPos {
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Child {
-        trav.graph().expect_child_at(self.get_entry_location())
+        trav.graph().expect_child_at(self.entry())
     }
 }
 //impl<T: GraphEntry> GraphRoot for T {
 //    fn root(&self) -> Child {
-//        self.get_entry_location().parent
+//        self.entry().parent
 //    }
 //}
 impl<T: GraphEntry> EntryPos for T {
     fn get_entry_pos(&self) -> usize {
-        self.get_entry_location().sub_index
+        self.entry().sub_index
     }
 }
 pub trait GraphExit: ExitPos {
@@ -189,9 +189,17 @@ impl<P: HasEndPath> HasEndPath for OriginPath<P> {
         self.postfix.end_path()
     }
 }
-pub(crate) trait HasStartMatchPath {
+pub(crate) trait HasStartMatchPath: GraphEntry {
     fn start_match_path(&self) -> &StartPath;
     fn start_match_path_mut(&mut self) -> &mut StartPath;
+}
+impl HasStartMatchPath for StartPath {
+    fn start_match_path(&self) -> &StartPath {
+        self
+    }
+    fn start_match_path_mut(&mut self) -> &mut StartPath {
+        self
+    }
 }
 impl HasStartMatchPath for SearchPath {
     fn start_match_path(&self) -> &StartPath {
@@ -209,9 +217,17 @@ impl<P: HasStartMatchPath> HasStartMatchPath for OriginPath<P> {
         self.postfix.start_match_path_mut()
     }
 }
-pub(crate) trait HasEndMatchPath {
+pub(crate) trait HasEndMatchPath: GraphEntry {
     fn end_match_path(&self) -> &EndPath;
     fn end_match_path_mut(&mut self) -> &mut EndPath;
+}
+impl HasEndMatchPath for EndPath {
+    fn end_match_path(&self) -> &EndPath {
+        self
+    }
+    fn end_match_path_mut(&mut self) -> &mut EndPath {
+        self
+    }
 }
 impl HasEndMatchPath for SearchPath {
     fn end_match_path(&self) -> &EndPath {
@@ -275,7 +291,7 @@ pub(crate) trait GraphStart: GraphEntry + HasStartPath {
         if let Some(start) = self.start_path().last() {
             *start
         } else {
-            self.get_entry_location()
+            self.entry()
         }
     }
     fn get_start<

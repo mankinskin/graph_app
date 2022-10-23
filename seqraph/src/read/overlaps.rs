@@ -222,12 +222,14 @@ impl OverlapChain {
         T: Tokenize,
         D: IndexDirection,
     >(self, reader: &'a mut Reader<T, D>) -> Option<Child> {
+        println!("closing {:#?}", self);
         let mut path = self.path.into_iter();
         let first_band: Overlap = path.next()?.1;
-        let (mut bundle, prev_band, prev_ctx) =
+        let (mut bundle, prev_band, _) =
             path.fold(
                 (vec![], first_band, None),
                 |(mut bundle, prev_band, prev_ctx), (_end_bound, overlap)| {
+                    // index context of prefix
                     let ctx = overlap.link.as_ref().and_then(|node| 
                         IndexContext::<T, D, IndexFront>::try_context_path(
                             reader,
@@ -235,11 +237,11 @@ impl OverlapChain {
                             node.overlap,
                         )
                     ).map(|(ctx, _)| ctx);
-
                     bundle.push(prev_band);
                     (
                         bundle,
                         overlap,
+                        // join previous and current context into 
                         prev_ctx.map(|prev|
                             ctx.map(|ctx|
                                 reader.read_pattern(vec![prev, ctx])
@@ -253,7 +255,9 @@ impl OverlapChain {
         let bundle = bundle.into_iter()
             .map(|overlap| overlap.band.into_pattern(reader))
             .collect_vec();
-        Some(reader.graph_mut().index_patterns(bundle))
+        let index = reader.graph_mut().index_patterns(bundle);
+        println!("close result: {:?}", index);
+        Some(index)
     }
     pub fn take_past(&mut self, end_bound: usize) -> OverlapChain {
         let mut past = self.path.split_off(&end_bound);
@@ -336,6 +340,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         expansion: Child,
         past_ctx: Pattern,
     ) -> Overlap {
+        println!("odd overlap");
         let last = cache.last.as_mut().unwrap();
         let prev = last.band.end.clone().into_index(self);
         last.band.end = BandEnd::Index(prev);
@@ -381,8 +386,8 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         let past_inner = self.graph.graph_mut().index_pattern([past, inner_back_ctx]);
         let inner_expansion = self.graph.graph_mut().index_pattern([inner_back_ctx, expansion]);
         let index = self.graph.graph_mut().index_patterns([
-            vec![past_inner, expansion],
-            vec![past, inner_expansion],
+            [past_inner, expansion],
+            [past, inner_expansion],
         ]);
         Overlap {
             band: OverlapBand {
@@ -398,17 +403,19 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         context: &mut PrefixQuery,
     ) -> Option<Child> {
         // find expandable postfix, may append postfixes in overlap chain
+        println!("read next overlap with {:#?}", cache.last);
         match self.find_next_overlap(
                 cache,
                 context,
             ) {
             Ok((start_bound, next_link, expansion, mut cache)) => {
-
+                    println!("found overlap at {}: {:?}", start_bound, expansion);
                     if let Some(ctx) =
                         if let Some((past_end_bound, past_ctx)) = self.take_past_context_pattern(
                             start_bound,
                             &mut cache.chain,
                         ) {
+                            println!("reusing back context {past_end_bound}: {:#?}", past_ctx);
                             if past_end_bound == start_bound {
                                 Some(past_ctx)
                             } else {
@@ -441,6 +448,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                                 None
                             }
                         } else {
+                            println!("building back context from path");
                             Some(self.back_context_from_path(&mut cache.chain, &next_link))
                         }
                 {
@@ -463,6 +471,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                     )
                 },
             Err(cache) => {
+                println!("No overlap found");
                 cache.chain.close(self)
             }
         }

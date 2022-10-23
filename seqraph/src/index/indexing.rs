@@ -6,6 +6,7 @@ pub(crate) trait Indexing<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversab
         &'a mut self,
         found: FoundPath,
     ) -> Child {
+        println!("indexing found path {:#?}", found);
         match found {
             FoundPath::Range(path) => self.index_range_path(path),
             FoundPath::Prefix(path) => self.index_prefix_path(path),
@@ -31,7 +32,7 @@ pub(crate) trait Indexing<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversab
     ) -> Child {
         IndexSplit::<_, D, IndexBack>::single_entry_split(
             self,
-            path.get_entry_location(),
+            path.entry(),
             path.start_path().to_vec()
         )
         .map(|split| split.inner)
@@ -41,7 +42,7 @@ pub(crate) trait Indexing<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversab
         &'a mut self,
         path: SearchPath,
     ) -> Child {
-        let entry = path.start.get_entry_location();
+        let entry = path.start.entry();
         let entry_pos = path.start.get_entry_pos();
         let exit_pos = path.end.get_exit_pos();
         let mut graph = self.graph_mut();
@@ -144,7 +145,7 @@ pub(crate) trait Indexing<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: Traversab
                 ).unwrap();
                 // |[inner_context, inner], context|
                 let target = graph.insert_pattern(
-                    D::context_then_inner(inner_context, last_inner)
+                    D::inner_then_context(inner_context, last_inner)
                 ).unwrap();
                 // |target, context|
                 graph.add_pattern_with_update(

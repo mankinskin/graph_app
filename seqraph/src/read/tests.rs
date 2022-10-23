@@ -406,6 +406,238 @@ fn read_repeating_known1() {
         vec![xy, y, xy],
     ]);
 }
+#[test]
+fn read_multiple_overlaps1() {
+    let mut graph = HypergraphRef::default();
+    let abcde = graph.read_sequence("abcde".chars());
+    let bcdea = graph.read_sequence("bcdea".chars());
+    // abcde
+    //  bcde
+    //  bcdea
+    let bcde = graph.find_sequence("bcde".chars()).unwrap().expect_complete("bcde");
+
+    let g = graph.read().unwrap();
+    let a = g.expect_token_child('a');
+    let b = g.expect_token_child('b');
+    let c = g.expect_token_child('c');
+    let d = g.expect_token_child('d');
+    let e = g.expect_token_child('e');
+    assert_eq!(
+        abcde.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![a, bcde],
+        ]
+    );
+    assert_eq!(
+        bcdea.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![bcde, a],
+        ]
+    );
+    assert_eq!(
+        bcde.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![b, c, d, e],
+        ]
+    );
+    drop(g);
+
+    let cdeab = graph.read_sequence("cdeab".chars());
+    // abcde
+    //  bcde
+    //  bcdea
+    //   cdea
+    //   cdeab
+    let cde = graph.find_sequence("cde".chars()).unwrap().expect_complete("cde");
+    let ab = graph.find_sequence("ab".chars()).unwrap().expect_complete("ab");
+    let cdea = graph.find_sequence("cdea".chars()).unwrap().expect_complete("cdea");
+
+    let g = graph.read().unwrap();
+    assert_eq!(
+        ab.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![a, b],
+        ]
+    );
+    assert_eq!(
+        cde.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![c, d, e],
+        ]
+    );
+    assert_eq!(
+        cdea.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![cde, a],
+        ]
+    );
+    assert_eq!(
+        bcde.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![b, cde],
+        ]
+    );
+    assert_eq!(
+        abcde.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![a, bcde],
+            vec![ab, cde],
+        ]
+    );
+    assert_eq!(
+        bcdea.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![bcde, a],
+            vec![b, cdea],
+        ]
+    );
+    assert_eq!(
+        cdeab.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![cde, ab],
+            vec![cdea, b],
+        ]
+    );
+    drop(g);
+    let deabc = graph.read_sequence("deabc".chars());
+
+    // abcde
+    //  bcde
+    // a
+    //  bcdea
+    //   cdea
+    //   cdeab
+    // ab
+    //   cde
+    //   cdea
+    //    deab
+    //    deabc
+    // abc
+    //    de
+    //    dea
+    let de = graph.find_sequence("de".chars()).unwrap().expect_complete("de");
+    let dea = graph.find_sequence("dea".chars()).unwrap().expect_complete("dea");
+    let bc = graph.find_sequence("bc".chars()).unwrap().expect_complete("bc");
+    let deab = graph.find_sequence("deab".chars()).unwrap().expect_complete("deab");
+    let abc = graph.find_sequence("abc".chars()).unwrap().expect_complete("abc");
+
+    let g = graph.read().unwrap();
+    assert_eq!(
+        de.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![d, e],
+        ]
+    );
+    assert_eq!(
+        dea.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![de, a],
+        ]
+    );
+    assert_eq!(
+        deab.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![dea, b],
+            vec![de, ab],
+        ]
+    );
+    assert_eq!(
+        abc.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![ab, c],
+            //vec![a, bc],
+        ]
+    );
+    assert_eq!(
+        bcde.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![b, cde],
+            vec![bc, de],
+        ]
+    );
+    assert_eq!(
+        abcde.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![a, bcde],
+            vec![ab, cde],
+            vec![abc, de],
+        ]
+    );
+    assert_eq!(
+        bcdea.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![bcde, a],
+            vec![b, cdea],
+            vec![bc, dea],
+        ]
+    );
+    assert_eq!(
+        deabc.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![de, abc],
+            //vec![dea, bc],
+            vec![deab, c],
+        ]
+    );
+    //let eabcd = graph.read_sequence("eabcd".chars());
+    //let abcdeabcde = graph.read_sequence("abcdeabcde".chars());
+
+    //let abcd = graph.find_sequence("abcd".chars()).unwrap().expect_complete("abcd");
+    //let bcd = graph.find_sequence("bcd".chars()).unwrap().expect_complete("bcd");
+    //let bc = graph.find_sequence("bc".chars()).unwrap().expect_complete("bc");
+    //let cd = graph.find_sequence("cd".chars()).unwrap().expect_complete("cd");
+
+
+    //assert_eq!(
+    //    bc.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+    //    hashset![
+    //        vec![b, c],
+    //    ]
+    //);
+    //assert_eq!(
+    //    cd.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+    //    hashset![
+    //        vec![c, d],
+    //    ]
+    //);
+    //assert_eq!(
+    //    bcd.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+    //    hashset![
+    //        vec![b, cd],
+    //        vec![bc, d],
+    //    ]
+    //);
+    //assert_eq!(
+    //    abc.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+    //    hashset![
+    //        vec![ab, c],
+    //        vec![a, bc],
+    //    ]
+    //);
+    //assert_eq!(
+    //    abcd.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+    //    hashset![
+    //        vec![abc, d],
+    //        vec![a, bcd],
+    //    ]
+    //);
+    //assert_eq!(
+    //    de.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+    //    hashset![
+    //        vec![d, e],
+    //    ]
+    //);
+    //let pats: HashSet<_> = abcdeabcde.vertex(&g).get_child_pattern_set().into_iter().collect();
+    //assert_eq!(pats, hashset![
+    //    vec![abcde, abcde],
+    //    vec![a,bcdea, bcde],
+    //    vec![ab, cdeab, cde],
+    //    vec![abc, deabc, de],
+    //    vec![abcd, eabcd, e],
+    //]);
+
+    //assert_eq!(abcdeabcde.width(), 10);
+}
 //#[tokio::test]
 //async fn async_read_text() {
 //    let (mut tx, mut rx) = mpsc::unbounded_channel::<char>();

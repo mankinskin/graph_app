@@ -26,7 +26,7 @@ impl Wide for StartLeaf {
     }
 }
 impl GraphEntry for StartLeaf {
-    fn get_entry_location(&self) -> ChildLocation {
+    fn entry(&self) -> ChildLocation {
         self.entry
     }
 }
@@ -37,7 +37,7 @@ impl HasStartPath for StartLeaf {
 }
 impl PathRoot for StartLeaf {
     fn root(&self) -> ChildLocation {
-        self.get_entry_location()
+        self.entry()
     }
 }
 impl From<StartPath> for StartLeaf {
@@ -76,9 +76,10 @@ impl StartPath {
             _ => None,
         }
     }
+    #[allow(unused)]
     pub fn into_path(self) -> ChildPath {
         match self {
-            Self::Leaf(leaf) => Vec::new(),
+            Self::Leaf(_leaf) => Vec::new(),
             Self::Path { path, .. } => path,
         }
     }
@@ -273,11 +274,11 @@ impl Wide for StartPath {
 }
 impl PathRoot for StartPath {
     fn root(&self) -> ChildLocation {
-        self.get_entry_location()
+        self.entry()
     }
 }
 impl GraphEntry for StartPath {
-    fn get_entry_location(&self) -> ChildLocation {
+    fn entry(&self) -> ChildLocation {
         match self {
             Self::Path { entry, .. } |
             Self::Leaf(StartLeaf { entry, .. })

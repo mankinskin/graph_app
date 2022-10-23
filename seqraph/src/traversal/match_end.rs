@@ -105,6 +105,7 @@ impl<P: MatchEndPath> RootChild for MatchEnd<P> {
     }
 }
 impl<P: MatchEndPath> MatchEnd<P> {
+    #[allow(unused)]
     pub fn unwrap_path(self) -> P {
         match self {
             Self::Path(path) => Some(path),
@@ -138,19 +139,26 @@ impl<P: MatchEndPath> PathComplete for MatchEnd<P> {
         }
     }
 }
-impl<P: MatchEndPath> PathReduce for MatchEnd<P> {
-    fn reduce<
+impl<P: MatchEndPath + PathPop<Result=Self>> PathReduce for MatchEnd<P> {
+    fn into_reduced<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
-    >(&mut self, trav: &'a Trav) {
-        if let Some(c) = self.get_path()
-            .and_then(|p| p.complete::<_, D, _>(trav))
-        {
-            *self = Self::Complete(c);
+    >(self, trav: &'a Trav) -> Self {
+        if let Some(c) = self.get_path().and_then(
+            |p| p.complete::<_, D, _>(trav)
+        ) {
+            MatchEnd::Complete(c)
+        } else {
+            self    
         }
+        //if let MatchEnd::Path(path) = self {
+        //    path.pop_path::<_, D, _>(trav)
+        //} else {
+        //    self    
+        //}
     }
 }
 impl<P: MatchEndPath + PathAppend> PathAppend for MatchEnd<P> {

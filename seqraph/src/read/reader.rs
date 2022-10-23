@@ -49,12 +49,15 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         &mut self,
         sequence: S,
     ) -> Child {
+        println!("start reading: {:?}", sequence);
         let mut sequence = sequence.to_new_token_indices(self).into_iter().peekable();
         while let Some((unknown, known)) = self.find_known_block(&mut sequence) {
             self.append_pattern(unknown);
             self.read_known(known)
         }
-        self.root.unwrap()
+        let index = self.root.unwrap();
+        println!("reading result: {:?}", index);
+        index
     }
     pub(crate) fn read_pattern(&mut self, known: Pattern) -> Child {
         self.read_known(known);
@@ -76,7 +79,9 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             .unwrap()
     }
     fn read_bands(&mut self, mut sequence: PrefixQuery) {
+        println!("reading known bands");
         while let Some(next) = self.get_next(&mut sequence) {
+            println!("found next {:?}", next);
             let next = self.read_overlaps(
                     next,
                     &mut sequence,
@@ -183,7 +188,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         }
     }
 }
-pub(crate) trait ToNewTokenIndices<N, T: Tokenize> {
+pub(crate) trait ToNewTokenIndices<N, T: Tokenize>: Debug {
     fn to_new_token_indices<
         'a: 'g,
         'g,
@@ -208,7 +213,7 @@ impl<T: Tokenize> ToNewTokenIndices<NewTokenIndex, T> for NewTokenIndices {
 //        graph.graph_mut().new_token_indices(self)
 //    }
 //}
-impl<T: Tokenize, Iter: IntoIterator<Item=T>> ToNewTokenIndices<T, T> for Iter {
+impl<T: Tokenize, Iter: IntoIterator<Item=T> + Debug> ToNewTokenIndices<T, T> for Iter {
     fn to_new_token_indices<
         'a: 'g,
         'g,

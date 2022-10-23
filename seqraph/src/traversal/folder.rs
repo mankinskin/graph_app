@@ -51,12 +51,26 @@ pub(crate) trait ResultKind: Eq + Clone + Debug {
         Trav: TraversableMut<'a, 'g, T>,
     >(found: Self::Found, trav: &'a mut Trav) -> Self::Indexed;
 }
-pub(crate) trait Found<R: ResultKind>: RangePath + FromAdvanced<<R as ResultKind>::Advanced> + From<<R as ResultKind>::Postfix> + Wide + Ord {
+pub(crate) trait Found<R: ResultKind>
+    : RangePath
+    + FromAdvanced<<R as ResultKind>::Advanced>
+    + From<<R as ResultKind>::Postfix>
+    + Wide
+    + Ord
+{
 }
-impl<R: ResultKind, T: RangePath + FromAdvanced<<R as ResultKind>::Advanced> + From<<R as ResultKind>::Postfix> + Wide + Ord> Found<R> for T {
+impl<
+    R: ResultKind,
+    T: RangePath
+    + FromAdvanced<<R as ResultKind>::Advanced>
+    + From<<R as ResultKind>::Postfix>
+    + Wide
+    + Ord
+> Found<R> for T {
 }
 pub(crate) trait PathPrimer<R: ResultKind>:
     NodePath
+    + HasStartMatchPath
     + GraphEntry
     + PathAppend
     + From<StartLeaf>
@@ -67,8 +81,9 @@ pub(crate) trait PathPrimer<R: ResultKind>:
 impl<
     R: ResultKind,
     T: NodePath
-    + PathAppend
+    + HasStartMatchPath
     + GraphEntry
+    + PathAppend
     + PathAppend
     + From<StartLeaf>
     + From<<R as ResultKind>::Advanced>
@@ -81,7 +96,7 @@ pub(crate) trait Postfix: NodePath + PathReduce + IntoRangePath {
     fn new_complete(child: Child, origin: StartPath) -> Self;
     fn new_path(start: impl Into<StartPath>, origin: StartPath) -> Self;
 }
-impl<P: MatchEndPath> Postfix for MatchEnd<P> {
+impl<P: MatchEndPath + PathPop<Result=Self>> Postfix for MatchEnd<P> {
     fn new_complete(c: Child, _origin: StartPath) -> Self {
         Self::Complete(c)
     }

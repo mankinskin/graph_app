@@ -225,6 +225,8 @@ where
                 .and_then(|inner|
                     if inner.is_empty() {
                         Err(NoMatch::EmptyRange)
+                    } else if inner.len() == 1 {
+                        Ok(Ok(*inner.first().unwrap()))
                     } else if pattern.len() > inner.len() {
                         let c = self.index_pattern(inner);
                         self.replace_in_pattern(location, range, c);

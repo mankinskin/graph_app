@@ -7,13 +7,13 @@ pub(crate) struct EndPath {
     pub(crate) width: usize,
 }
 impl PathReduce for EndPath {
-    fn reduce<
+    fn into_reduced<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
-    >(&mut self, trav: &'a Trav) {
+    >(mut self, trav: &'a Trav) -> Self {
         let graph = trav.graph();
         // remove segments pointing to mismatch at pattern head
         while let Some(location) = self.path.pop() {
@@ -24,6 +24,7 @@ impl PathReduce for EndPath {
                 break;
             }
         }
+        self
     }
 }
 pub(crate) trait Retract: GraphEnd + EndPathMut + ExitMut {
@@ -64,6 +65,11 @@ pub(crate) trait Retract: GraphEnd + EndPathMut + ExitMut {
     }
 }
 impl<T: GraphEnd + EndPathMut + ExitMut> Retract for T {
+}
+impl GraphEntry for EndPath {
+    fn entry(&self) -> ChildLocation {
+        self.entry
+    }
 }
 //impl BorderPath for EndPath {
 //    fn path(&self) -> &[ChildLocation] {

@@ -42,20 +42,23 @@ DirectedTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R>
         primer: R::Primer,
     ) -> R::Postfix {
         let mut ltrav = trav.clone();
-        let entry = primer.get_entry_location();
+        let path = primer.start_match_path();
+        println!("after end match {:?}", path);
         // index postfix of match
         let match_end = if let Some(IndexSplitResult {
             inner: post,
             location: entry,
             ..
-        }) = IndexSplit::<_, D, IndexBack>::entry_perfect_split(
+        }) = IndexSplit::<_, D, IndexBack>::single_entry_split(
             &mut ltrav,
-            entry,
+            path.entry(),
+            path.start_path(),
         ) {
-            MatchEnd::Path(StartLeaf { entry, child: post, width: primer.width() })
+            MatchEnd::Path(StartLeaf { entry, child: post, width: post.width() })
         } else {
-            MatchEnd::Complete(entry.parent)
+            MatchEnd::Complete(path.entry().parent)
         };
+        println!("after end match result {:?}", match_end);
         R::into_postfix(primer, match_end)
     }
 }
@@ -108,6 +111,7 @@ where
         let mut trav = trav.clone();
         match node {
             TraversalNode::QueryEnd(res) => {
+                //println!("fold query end {:#?}", res);
                 ControlFlow::Break((
                     R::index_found::<_, D, _>(
                         res.found,
@@ -117,15 +121,20 @@ where
                 ))
             },
             TraversalNode::Mismatch(res) => {
+                println!("fold mismatch {:#?}", res);
                 ControlFlow::Continue(search::pick_max_result::<R, _>(acc, res))
             },
             TraversalNode::MatchEnd(postfix, query) => {
+                println!("fold match end {:#?}", postfix);
                 //let found = match_end
                 //    .into_range_path().into_result(query);
                 //if let Some(r) = found.found.get_range() {
                 //    assert!(r.get_entry_pos() != r.get_exit_pos());
                 //}
-                ControlFlow::Continue(search::pick_max_result::<R, _>(acc, <R as ResultKind>::Found::from(postfix).into_result(query)))
+                ControlFlow::Continue(search::pick_max_result::<R, _>(
+                    acc,
+                    <R as ResultKind>::Found::from(postfix).into_result(query)
+                ))
             },
             _ => ControlFlow::Continue(acc)
         }

@@ -29,10 +29,11 @@ rand = "^0.8"
 rand_distr = "^0.4"
 itertools = "^0.10"
 function_name = "^0.3"
-indicatif = "^0.16"
-histo = "^0.1"
+indicatif = "^0.17"
+histo = "^1"
 rayon = "^1.5.3"
 tap = "^1"
+replace_with = "0.1.7"
 
 [dependencies.tracing]
 version = "^0.1"
@@ -43,7 +44,7 @@ version = "^0.3"
 features = ["json"]
 
 [dependencies.nalgebra]
-version = "^0.24"
+version = "^0.27"
 
 [dependencies.petgraph]
 git = "https://github.com/mankinskin/petgraph"

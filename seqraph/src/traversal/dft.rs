@@ -95,7 +95,7 @@ where
     fn cache_mut(&mut self) -> &mut TraversalCache<R, Q> {
         &mut self.cache
     }
-    fn extend_nodes(&mut self, next_nodes: impl DoubleEndedIterator<Item=(usize, TraversalNode<R, Q>)>) {
-        self.stack.extend(next_nodes.rev());
+    fn extend_nodes(&mut self, next_nodes: impl IntoIterator<IntoIter=impl DoubleEndedIterator<Item=(usize, TraversalNode<R, Q>)>>) {
+        self.stack.extend(next_nodes.into_iter().rev());
     }
 }

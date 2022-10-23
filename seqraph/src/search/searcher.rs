@@ -186,7 +186,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
         &'a self,
         pattern: impl IntoPattern,
     ) -> SearchResult {
-        self.dft_search::<ParentSearch<T, D>, _>(
+        self.bft_search::<ParentSearch<T, D>, _>(
             pattern,
         )
     }
@@ -195,18 +195,18 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
         &'a self,
         pattern: impl IntoPattern,
     ) -> SearchResult {
-        self.dft_search::<AncestorSearch<T, D>, _>(
+        self.bft_search::<AncestorSearch<T, D>, _>(
             pattern,
         )
     }
-    fn dft_search<
+    fn bft_search<
         S: SearchTraversalPolicy<'a, 'g, T, D> + Send,
         P: IntoPattern,
     >(
         &'a self,
         query: P,
     ) -> SearchResult {
-        self.search::<Dft<'a, 'g, T, D, Self, QueryRangePath, BaseResult, S>, S, _>(
+        self.search::<Bft<'a, 'g, T, D, Self, QueryRangePath, BaseResult, S>, S, _>(
             query,
         )
     }

@@ -39,7 +39,7 @@ pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
     let input_distr = "abcdefghi ".chars().collect_vec();
     let mut panic_count = 0;
     let pb = indicatif::ProgressBar::with_draw_target(
-        fuzz_len,
+        Some(fuzz_len),
         indicatif::ProgressDrawTarget::stdout(),
     );
     let prev_hook = std::panic::take_hook();
@@ -47,7 +47,7 @@ pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
         *PANIC_INFO.lock().unwrap() = info.location().map(|loc| format!("{}", loc));
     }));
     let fuzz_progress = indicatif::ProgressBar::with_draw_target(
-        batch_count,
+        Some(batch_count),
         indicatif::ProgressDrawTarget::stdout(),
     );
     let mut len_histo = histo::Histogram::with_buckets(10);
@@ -58,7 +58,7 @@ pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
         graph = Some(HypergraphRef::default());
         fuzz_progress.inc(1);
         let batch_progress = indicatif::ProgressBar::with_draw_target(
-            batch_size,
+            Some(batch_size),
             indicatif::ProgressDrawTarget::stdout(),
         );
         let mut successful = 0;

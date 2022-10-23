@@ -4,10 +4,12 @@ pub(crate) trait RangePath: RootChild + IntoRangePath + Into<FoundPath> + Clone 
 {
     fn into_complete(self) -> Option<Child>;
 
+    #[track_caller]
     fn unwrap_complete(self) -> Child {
         self.clone().into_complete()
             .expect(&format!("Unable to unwrap {:?} as complete.", self))
     }
+    #[track_caller]
     fn expect_complete(self, msg: &str) -> Child {
         self.clone().into_complete()
             .expect(&format!("Unable to unwrap {:?} as complete: {}", self, msg))
@@ -33,9 +35,9 @@ impl FromAdvanced<SearchPath> for FoundPath {
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>
-    >(mut path: SearchPath, trav: &'a Trav) -> Self {
+    >(path: SearchPath, trav: &'a Trav) -> Self {
         if path.is_complete::<_, D, _>(trav) {
-            Self::Complete(path.start_match_path().get_entry_location().parent)
+            Self::Complete(path.start_match_path().entry().parent)
         } else {
             Self::Range(path)
         }

@@ -35,7 +35,7 @@ pub(crate) trait IndexContext<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: 
     }
     fn try_context_path(
         &'a mut self,
-        mut context_path: Vec<ChildLocation>,
+        context_path: Vec<ChildLocation>,
         inner: Child,
     ) -> Option<(Child, ChildLocation)> {
         let mut graph = self.graph_mut();
@@ -60,10 +60,10 @@ pub(crate) trait IndexContext<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: 
     fn context_entry_path(
         &'a mut self,
         entry: ChildLocation,
-        mut context_path: Vec<ChildLocation>,
+        context_path: Vec<ChildLocation>,
         inner: Child,
     ) -> (Child, ChildLocation) {
-        context_path.push(entry);
+        let context_path = vec![entry].tap_mut(|v| v.extend(context_path));
         self.try_context_path(
             context_path,
             inner,

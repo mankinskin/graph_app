@@ -70,14 +70,18 @@ fn index_pattern2() {
 
     let query = vec![a, b, y, x];
     let (aby, _) = graph_ref.index_pattern(query.borrow()).expect("Indexing failed");
-    assert_eq!(aby, Child {
-        index: 12,
-        width: 3,
-    }, "aby");
+    assert_eq!(aby.width(), 3);
+    let ab = graph_ref.find_sequence("ab".chars()).unwrap().expect_complete("ab");
+
     let graph = graph_ref.read().unwrap();
     let aby_vertex = graph.expect_vertex_data(aby);
     assert_eq!(aby_vertex.parents.len(), 1, "aby");
-    assert_eq!(aby_vertex.children.len(), 1, "aby");
+    assert_eq!(
+        aby_vertex.get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![ab, y],
+        ]
+    );
     drop(graph);
     let query = vec![a, b, y];
     let aby_found = graph_ref.find_ancestor(&query);

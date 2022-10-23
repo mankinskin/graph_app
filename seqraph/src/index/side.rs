@@ -41,7 +41,9 @@ pub(crate) trait IndexSide<D: IndexDirection> {
         Self::Opposite::context_range(pos)
     }
     fn context_range(pos: usize) -> Self::ContextRange;
-    fn bottom_up_path_iter(path: ChildPath) -> Self::BottomUpPathIter;
+    fn bottom_up_path_iter(
+        path: impl IntoIterator<Item=impl Borrow<ChildLocation>>,
+    ) -> Self::BottomUpPathIter;
     fn inner_pos_after_context_indexed(pos: usize) -> usize;
     fn limited_range(start: usize, end: usize) -> Range<usize>;
     fn range_front(range: &Range<usize>) -> usize;
@@ -77,8 +79,10 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
     fn inner_pos_after_context_indexed(_pos: usize) -> usize {
         1
     }
-    fn bottom_up_path_iter(path: ChildPath) -> Self::BottomUpPathIter {
-        path.into_iter()
+    fn bottom_up_path_iter(
+        path: impl IntoIterator<Item=impl Borrow<ChildLocation>>,
+    ) -> Self::BottomUpPathIter {
+        path.into_iter().map(|loc| loc.borrow().clone()).collect_vec().into_iter()
     }
     fn context_inner_order<
         'a,
@@ -154,8 +158,8 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
     fn context_range(pos: usize) -> Self::ContextRange {
         D::index_next(pos).unwrap()..
     }
-    fn bottom_up_path_iter(path: ChildPath) -> Self::BottomUpPathIter {
-        path.into_iter().rev()
+    fn bottom_up_path_iter(path: impl IntoIterator<Item=impl Borrow<ChildLocation>>) -> Self::BottomUpPathIter {
+        path.into_iter().map(|loc| loc.borrow().clone()).collect_vec().into_iter().rev()
     }
     fn inner_pos_after_context_indexed(pos: usize) -> usize {
         pos

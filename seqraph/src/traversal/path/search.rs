@@ -7,7 +7,7 @@ pub(crate) struct SearchPath {
 }
 impl From<StartPath> for SearchPath {
     fn from(start: StartPath) -> Self {
-        let entry = start.get_entry_location();
+        let entry = start.entry();
         Self {
             start,
             end: EndPath {
@@ -56,12 +56,12 @@ impl HasMatchPaths for SearchPath {
 }
 impl PathRoot for SearchPath {
     fn root(&self) -> ChildLocation {
-        self.get_entry_location()
+        self.entry()
     }
 }
 impl GraphEntry for SearchPath {
-    fn get_entry_location(&self) -> ChildLocation {
-        self.start.get_entry_location()
+    fn entry(&self) -> ChildLocation {
+        self.start.entry()
     }
 }
 impl HasStartPath for SearchPath {

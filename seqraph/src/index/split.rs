@@ -87,21 +87,24 @@ pub(crate) trait IndexSplit<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: In
                     &seg.parent,
                     pattern::pattern_width(inner_pat),
                 ).unwrap();
-                let child_patterns = graph.expect_child_patterns_of(seg.parent)
+                // split other patterns at offset
+                let other_patterns = graph.expect_child_patterns_of(seg.parent)
                     .into_iter()
                     .filter(|(id, _)| **id != seg.pattern_id)
                     .map(|(id, p)| (*id, p.clone()))
                     .collect::<HashMap<_, _>>();
-                let _s = format!("{:#?}", child_patterns);
+                let _s = format!("{:#?}", other_patterns);
                 let mut splits =
                     IndexSplit::< _, _, Side>::child_pattern_offset_splits(
                         &mut* graph,
                         seg.parent,
-                        child_patterns.clone(),
+                        other_patterns,
                         offset,
                     ).expect_err("Other pattern with split at same offset!");
+
                 prev.location = split_location;
                 splits.push((seg, graph.expect_pattern_at(seg), prev, split_context));
+
                 Some(IndexSplit::< _, _, Side>::unperfect_splits(
                     &mut *graph,
                     seg.parent,
@@ -118,8 +121,9 @@ pub(crate) trait IndexSplit<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: In
     fn single_entry_split(
         &'a mut self,
         entry: ChildLocation,
-        path: ChildPath,
+        path: impl IntoIterator<Item=impl Borrow<ChildLocation>>,
     ) -> Option<IndexSplitResult> {
+        let path = path.into_iter().collect_vec();
         let mut graph = self.graph_mut();
         let prev = IndexSplit::< _, _, Side>::single_path_split(
             &mut *graph,
@@ -133,8 +137,9 @@ pub(crate) trait IndexSplit<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: In
     }
     fn single_path_split(
         &'a mut self,
-        path: ChildPath,
+        path: impl IntoIterator<Item=impl Borrow<ChildLocation>>,
     ) -> Option<IndexSplitResult> {
+        let path = path.into_iter().collect_vec();
         let mut graph = self.graph_mut();
         let mut prev: Option<IndexSplitResult> = None;
         let mut path = Side::bottom_up_path_iter(path);
@@ -154,7 +159,6 @@ pub(crate) trait IndexSplit<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: In
         offset: NonZeroUsize,
     ) -> Result<IndexSplitResult, Vec<(ChildLocation, Pattern, IndexSplitResult, Child)>> {
         let len = child_patterns.len();
-        assert!(len > 0);
         let mut graph = self.graph_mut();
         match child_patterns.into_iter()
             .try_fold(Vec::with_capacity(len), |mut acc, (pid, pattern)| {
@@ -228,10 +232,11 @@ pub(crate) trait IndexSplit<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: In
                 ),
         }
     }
-    fn child_pattern_unperfect_split(
+    fn entry_unperfect_split(
         &'a mut self,
         location: ChildLocation,
         split: IndexSplitResult,
+        split_ctx: Child,
     ) -> IndexSplitResult {
         let mut graph = self.graph_mut();
         // split index at pos with offset
@@ -248,29 +253,47 @@ pub(crate) trait IndexSplit<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: In
                 Side::inner_context_range(pos)
             ).ok()
         {
+            // split_inner + split inner context
             let full_inner = graph.index_pattern(
-                Side::concat_inner_and_context(inner, parent_inner)
+                // context on opposite side than usual (inner side)
+                <Side as IndexSide<_>>::Opposite::concat_inner_and_context(inner, parent_inner),
             );
+            // ||    |     ||      |
+            //       ^^^^^^^^^^^^^^
             // index for inner half including split
-            let wrapper = graph.index_range_in(
+            if let Ok(wrapper) = graph.index_range_in(
                 location,
                 Side::inner_range(pos),
-            ).unwrap();
-            let wrapper_pid = graph.add_pattern_with_update(
-                wrapper,
-                Side::concat_inner_and_context(inner, parent_inner)
-            );
-            graph.replace_in_pattern(
-                split_location,
-                Side::inner_range(pos),
-                wrapper,
-            );
-            IndexSplitResult {
-                location,
-                path: vec![
-                    ChildLocation::new(inner, wrapper_pid, 1),
-                ],
-                inner: full_inner,
+            ) {
+                // more context before split, need wrapper
+                let wrapper_pid = graph.add_pattern_with_update(
+                    wrapper,
+                    Side::concat_inner_and_context(full_inner, split_ctx),
+                );
+                graph.replace_in_pattern(
+                    split_location,
+                    Side::inner_range(pos),
+                    wrapper,
+                );
+                IndexSplitResult {
+                    location,
+                    path: vec![
+                        ChildLocation::new(inner, wrapper_pid, 1),
+                    ],
+                    inner: full_inner,
+                }
+            } else {
+                // no context before split
+                let pid = graph.add_pattern_with_update(
+                    location.parent,
+                    Side::concat_inner_and_context(full_inner, split_ctx),
+                );
+                let (pos, _) = Side::back_front_order(0, 1);
+                IndexSplitResult {
+                    location: ChildLocation::new(location.parent, pid, pos),
+                    path: vec![],
+                    inner: full_inner,
+                }
             }
         } else {
             // no inner context
@@ -290,11 +313,12 @@ pub(crate) trait IndexSplit<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: In
     ) -> IndexSplitResult {
         let mut graph = self.graph_mut();
         if splits.len() == 1 {
-            let (location, _, split, _context) = splits.into_iter().next().unwrap();
-            IndexSplit::<_, _, Side>::child_pattern_unperfect_split(
+            let (location, _, split, context) = splits.into_iter().next().unwrap();
+            IndexSplit::<_, _, Side>::entry_unperfect_split(
                 &mut *graph,
                 location,
                 split,
+                context,
             )
         } else {
             // add contexts
