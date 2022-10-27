@@ -9,12 +9,12 @@ use super::*;
 pub(crate) trait TraversalIterator<
     'a: 'g,
     'g,
-    T: Tokenize,
-    D: MatchDirection,
+    T: Tokenize + 'a,
+    D: MatchDirection + 'a,
     Trav: Traversable<'a, 'g, T> + 'a,
-    Q: TraversalQuery,
+    Q: TraversalQuery + 'a,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
-    R: ResultKind = BaseResult,
+    R: ResultKind + 'a = BaseResult,
 >: Iterator<Item = (usize, TraversalNode<R, Q>)> + Sized
 {
 
@@ -81,7 +81,7 @@ pub(crate) trait TraversalIterator<
         postfix: &R::Postfix,
     ) -> Vec<TraversalNode<R, Q>> {
         let root = postfix.root_child();
-        println!("at index end {:?}", root);
+        //println!("at index end {:?}", root);
         self.cache_mut().bu_finished(root.index);
         S::next_parents(
             self.trav(),
@@ -112,7 +112,7 @@ pub(crate) trait TraversalIterator<
                 &match_end.clone()
             );
             if parents.is_empty() {
-                println!("no more parents {:#?}", match_end);
+                //println!("no more parents {:#?}", match_end);
                 vec![
                     TraversalNode::match_end_node(
                         match_end.into_reduced::<_, D, _>(self.trav()),
@@ -158,7 +158,7 @@ pub(crate) trait TraversalIterator<
         let path_next = path.get_end::<_, D, _>(self.trav()).expect("Path at end");
         let query_next = query.get_end::<_, D, _>(self.trav()).expect("Query at end");
 
-        println!("matching query {:?}", query_next);
+        //println!("matching query {:?}", query_next);
         match path_next.width.cmp(&query_next.width) {
             Ordering::Greater =>
                 // continue in prefix of child
@@ -189,10 +189,6 @@ pub(crate) trait TraversalIterator<
                                 } else {
                                     R::Found::from_advanced::<_, D, _>(path, self.trav())
                                 }.into_result(query)
-                                //R::Found::from_advanced::<_, D, _>(
-                                //    path,
-                                //    self.trav()
-                                //).into_result(query)
                             )
                         }
                     ]

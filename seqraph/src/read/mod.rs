@@ -4,14 +4,12 @@ use crate::{
     HypergraphRef,
 };
 mod reader;
-mod overlap_bands;
-mod overlaps;
+mod overlap;
 #[cfg(test)]
 mod tests;
 
-pub use {
+pub(crate) use {
     reader::*,
-    overlap_bands::*,
 };
 //mod async_reader;
 //pub use async_reader::*;
@@ -31,7 +29,7 @@ impl<T: Tokenize + Send> HypergraphRef<T> {
     }
     pub fn read_pattern(
         &mut self,
-        pattern: Pattern,
+        pattern: impl IntoPattern,
     ) -> Child {
         self.right_reader().read_pattern(pattern)
     }

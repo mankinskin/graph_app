@@ -144,7 +144,7 @@ pub trait GraphExit: ExitPos {
         'a: 'g,
         'g,
         T: Tokenize,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<'a, 'g, T> + 'a,
     >(&self, trav: &'a Trav) -> Pattern {
         trav.graph().expect_pattern_at(self.get_exit_location())
     }
@@ -156,7 +156,7 @@ pub trait GraphExit: ExitPos {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<'a, 'g, T> + 'a,
     >(&self, trav: &'a Trav) -> Option<Child> {
         trav.graph().get_child_at(self.get_exit_location()).ok()
     }

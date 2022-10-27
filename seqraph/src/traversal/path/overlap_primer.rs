@@ -67,7 +67,7 @@ impl EntryPos for OverlapPrimer {
 //        T: Tokenize,
 //        D: MatchDirection,
 //        Trav: Traversable<'a, 'g, T>,
-//    >(&self, trav: &'a Trav) -> Option<usize> {
+//    >(&self, trav: Trav) -> Option<usize> {
 //        match self.exit {
 //            0 => None,
 //            1 => if self.context.get_exit_pos() > self.context_offset {

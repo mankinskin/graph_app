@@ -35,7 +35,7 @@ fn find_parent1() {
     let query = bc_pattern;
     assert_eq!(
         graph.find_parent(&query),
-        Err(NoMatch::SingleIndex),
+        Err(NoMatch::SingleIndex(*bc)),
         "bc"
     );
     let query = b_c_pattern;
@@ -114,7 +114,7 @@ fn find_ancestor1() {
     let query = bc_pattern;
     assert_eq!(
         graph.find_ancestor(&query),
-        Err(NoMatch::SingleIndex),
+        Err(NoMatch::SingleIndex(*bc)),
         "bc"
     );
     let query = b_c_pattern;
@@ -173,7 +173,7 @@ fn find_ancestor1() {
 #[test]
 fn find_ancestor2() {
     let mut graph = Hypergraph::default();
-    let (a, b, _w, x, y, z) = graph.index_tokens([
+    let (a, b, _w, x, y, z) = graph.insert_tokens([
         Token::Element('a'),
         Token::Element('b'),
         Token::Element('w'),
@@ -181,14 +181,14 @@ fn find_ancestor2() {
         Token::Element('y'),
         Token::Element('z'),
     ]).into_iter().next_tuple().unwrap();
-    let ab = graph.index_pattern([a, b]);
-    let by = graph.index_pattern([b, y]);
-    let yz = graph.index_pattern([y, z]);
-    let xa = graph.index_pattern([x, a]);
-    let xab = graph.index_patterns([[x, ab], [xa, b]]);
-    let (xaby, xaby_ids) = graph.index_patterns_with_ids([vec![xab, y], vec![xa, by]]);
+    let ab = graph.insert_pattern([a, b]);
+    let by = graph.insert_pattern([b, y]);
+    let yz = graph.insert_pattern([y, z]);
+    let xa = graph.insert_pattern([x, a]);
+    let xab = graph.insert_patterns([[x, ab], [xa, b]]);
+    let (xaby, xaby_ids) = graph.insert_patterns_with_ids([vec![xab, y], vec![xa, by]]);
     let xa_by_id = xaby_ids[1];
-    let (xabyz, xabyz_ids) = graph.index_patterns_with_ids([vec![xaby, z], vec![xab, yz]]);
+    let (xabyz, xabyz_ids) = graph.insert_patterns_with_ids([vec![xaby, z], vec![xab, yz]]);
     let xaby_z_id = xabyz_ids[0];
     let graph = HypergraphRef::from(graph);
     let query = vec![by, z];
@@ -224,7 +224,7 @@ fn find_ancestor2() {
 }#[test]
 fn find_ancestor3() {
     let mut graph = Hypergraph::default();
-    let (a, b, _w, x, y, z) = graph.index_tokens([
+    let (a, b, _w, x, y, z) = graph.insert_tokens([
         Token::Element('a'),
         Token::Element('b'),
         Token::Element('w'),
@@ -232,15 +232,15 @@ fn find_ancestor3() {
         Token::Element('y'),
         Token::Element('z'),
     ]).into_iter().next_tuple().unwrap();
-    let ab = graph.index_pattern([a, b]);
-    let by = graph.index_pattern([b, y]);
-    let yz = graph.index_pattern([y, z]);
-    let xa = graph.index_pattern([x, a]);
-    let (xab, xab_ids) = graph.index_patterns_with_ids([[x, ab], [xa, b]]);
+    let ab = graph.insert_pattern([a, b]);
+    let by = graph.insert_pattern([b, y]);
+    let yz = graph.insert_pattern([y, z]);
+    let xa = graph.insert_pattern([x, a]);
+    let (xab, xab_ids) = graph.insert_patterns_with_ids([[x, ab], [xa, b]]);
     let x_ab_id = xab_ids[0];
-    let (xaby, xaby_ids) = graph.index_patterns_with_ids([vec![xab, y], vec![xa, by]]);
+    let (xaby, xaby_ids) = graph.insert_patterns_with_ids([vec![xab, y], vec![xa, by]]);
     let xab_y_id = xaby_ids[0];
-    let _xabyz = graph.index_patterns([vec![xaby, z], vec![xab, yz]]);
+    let _xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
 
     let graph = HypergraphRef::from(graph);
     let query = vec![ab, y];
@@ -280,11 +280,12 @@ fn find_sequence() {
         graph,
         abc,
         ababababcdefghi,
+        a,
         ..
      } = &*context();
     assert_eq!(
         graph.find_sequence("a".chars()),
-        Err(NoMatch::SingleIndex),
+        Err(NoMatch::SingleIndex(*a)),
     );
     let query = graph.read().unwrap().expect_token_pattern("abc".chars());
     let abc_found = graph.find_ancestor(&query);

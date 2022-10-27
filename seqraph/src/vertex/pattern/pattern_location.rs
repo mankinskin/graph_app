@@ -19,10 +19,22 @@ impl PatternLocation {
             sub_index,
         }
     }
-    pub(crate) fn get_pattern<'a: 'g, 'g, T: Tokenize, Trav: Traversable<'a, 'g, T>>(&self, trav: &'a Trav) -> Option<Pattern> {
+    #[allow(unused)]
+    pub(crate) fn get_pattern<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        Trav: Traversable<'a, 'g, T> + 'a,
+    >(&self, trav: &'a Trav) -> Option<Pattern> {
         trav.graph().get_pattern_at(self).ok()
     }
-    pub(crate) fn expect_pattern<'a: 'g, 'g, T: Tokenize, Trav: Traversable<'a, 'g, T>>(&self, trav: &'a Trav) -> Pattern {
+    #[allow(unused)]
+    pub(crate) fn expect_pattern<
+        'a: 'g,
+        'g,
+        T: Tokenize + 'a,
+        Trav: Traversable<'a, 'g, T> + 'a,
+    >(&self, trav: &'a Trav) -> Pattern {
         trav.graph().expect_pattern_at(self)
     }
     pub fn get_pattern_in<'a>(&self, patterns: &'a ChildPatterns) -> Option<&'a Pattern> {

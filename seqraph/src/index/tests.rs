@@ -10,7 +10,7 @@ use std::borrow::Borrow;
 #[test]
 fn index_pattern1() {
     let mut graph = Hypergraph::default();
-    let (a, b, _w, x, y, z) = graph.index_tokens([
+    let (a, b, _w, x, y, z) = graph.insert_tokens([
         Token::Element('a'),
         Token::Element('b'),
         Token::Element('w'),
@@ -19,13 +19,13 @@ fn index_pattern1() {
         Token::Element('z'),
     ]).into_iter().next_tuple().unwrap();
     // index 6
-    let ab = graph.index_pattern([a, b]);
-    let by = graph.index_pattern([b, y]);
-    let yz = graph.index_pattern([y, z]);
-    let xa = graph.index_pattern([x, a]);
-    let xab = graph.index_patterns([[x, ab], [xa, b]]);
-    let xaby = graph.index_patterns([vec![xab, y], vec![xa, by]]);
-    let _xabyz = graph.index_patterns([vec![xaby, z], vec![xab, yz]]);
+    let ab = graph.insert_pattern([a, b]);
+    let by = graph.insert_pattern([b, y]);
+    let yz = graph.insert_pattern([y, z]);
+    let xa = graph.insert_pattern([x, a]);
+    let xab = graph.insert_patterns([[x, ab], [xa, b]]);
+    let xaby = graph.insert_patterns([vec![xab, y], vec![xa, by]]);
+    let _xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
     let graph = HypergraphRef::from(graph);
     let query = vec![by, z];
     let (byz, _) = graph.index_pattern(query.borrow()).expect("Indexing failed");
@@ -51,7 +51,7 @@ fn index_pattern1() {
 #[test]
 fn index_pattern2() {
     let mut graph = Hypergraph::default();
-    let (a, b, _w, x, y, z) = graph.index_tokens([
+    let (a, b, _w, x, y, z) = graph.insert_tokens([
         Token::Element('a'),
         Token::Element('b'),
         Token::Element('w'),
@@ -60,11 +60,11 @@ fn index_pattern2() {
         Token::Element('z'),
     ]).into_iter().next_tuple().unwrap();
     // index 6
-    let yz = graph.index_pattern([y, z]);
-    let xab = graph.index_pattern([x, a, b]);
-    let _xyz = graph.index_pattern([x, yz]);
-    let _xabz = graph.index_pattern([xab, z]);
-    let _xabyz = graph.index_pattern([xab, yz]);
+    let yz = graph.insert_pattern([y, z]);
+    let xab = graph.insert_pattern([x, a, b]);
+    let _xyz = graph.insert_pattern([x, yz]);
+    let _xabz = graph.insert_pattern([xab, z]);
+    let _xabyz = graph.insert_pattern([xab, yz]);
 
     let graph_ref = HypergraphRef::from(graph);
 
@@ -97,7 +97,7 @@ fn index_pattern2() {
 #[test]
 fn index_infix1() {
     let mut graph = Hypergraph::default();
-    let (a, b, w, x, y, z) = graph.index_tokens([
+    let (a, b, w, x, y, z) = graph.insert_tokens([
         Token::Element('a'),
         Token::Element('b'),
         Token::Element('w'),
@@ -106,8 +106,8 @@ fn index_infix1() {
         Token::Element('z'),
     ]).into_iter().next_tuple().unwrap();
     // index 6
-    let yz = graph.index_pattern([y, z]);
-    let xxabyzw = graph.index_pattern([x, x, a, b, yz, w]);
+    let yz = graph.insert_pattern([y, z]);
+    let xxabyzw = graph.insert_pattern([x, x, a, b, yz, w]);
 
     let graph_ref = HypergraphRef::from(graph);
 

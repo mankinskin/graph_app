@@ -44,7 +44,7 @@ impl<P: MatchEndPath> RangePath for MatchEnd<P> {
 //        T: Tokenize,
 //        D: MatchDirection,
 //        Trav: Traversable<'a, 'g, T>
-//    >(path: SearchPath, trav: &'a Trav) -> Self {
+//    >(path: SearchPath, trav: Trav) -> Self {
 //        Self {
 //            origin: path.start_match_path().clone(),
 //            postfix: P::from_search_path(path, trav),

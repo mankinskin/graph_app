@@ -7,7 +7,7 @@ use std::iter::{Extend, FusedIterator};
 
 use super::*;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub(crate) struct Bft<'a: 'g, 'g, T, D, Trav, Q, R, S>
 where
     T: Tokenize,
@@ -21,35 +21,17 @@ where
     cache: TraversalCache<R, Q>,
     last: (usize, TraversalNode<R, Q>),
     trav: &'a Trav,
-    _ty: std::marker::PhantomData<(&'g T, D, S, R)>
+    _ty: std::marker::PhantomData<(&'g T, &'a D, S, R)>
 }
-impl<'a: 'g, 'g, T, D, Trav, Q, R, S> Bft<'a, 'g, T, D, Trav, Q, R, S>
-where
-    T: Tokenize,
-    D: MatchDirection,
-    Trav: Traversable<'a, 'g, T>,
-    Q: TraversalQuery,
-    R: ResultKind,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
-{
-    pub fn new(trav: &'a Trav, root: TraversalNode<R, Q>) -> Self {
-        Self {
-            queue: VecDeque::new(),
-            last: (0, root),
-            cache: Default::default(),
-            trav,
-            _ty: Default::default(),
-        }
-    }
-}
+
 
 impl<'a: 'g, 'g, T, D, Trav, Q, R, S> Iterator for Bft<'a, 'g, T, D, Trav, Q, R, S>
 where
-    T: Tokenize,
-    D: MatchDirection,
+    T: Tokenize + 'a,
+    D: MatchDirection + 'a,
     Trav: Traversable<'a, 'g, T>,
-    Q: TraversalQuery,
-    R: ResultKind,
+    Q: TraversalQuery + 'a,
+    R: ResultKind + 'a,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
 {
     type Item = (usize, TraversalNode<R, Q>);
@@ -68,26 +50,32 @@ where
 
 impl<'a: 'g, 'g, T, Trav, D, Q, R, S> FusedIterator for Bft<'a, 'g, T, D, Trav, Q, R, S>
 where
-    T: Tokenize,
+    T: Tokenize + 'a,
     Trav: Traversable<'a, 'g, T>,
-    D: MatchDirection,
-    Q: TraversalQuery,
-    R: ResultKind,
+    D: MatchDirection + 'a,
+    Q: TraversalQuery + 'a,
+    R: ResultKind + 'a,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
 {
 }
 
 impl<'a: 'g, 'g, T, Trav, D, Q, S, R> TraversalIterator<'a, 'g, T, D, Trav, Q, S, R> for Bft<'a, 'g, T, D, Trav, Q, R, S>
 where
-    T: Tokenize,
+    T: Tokenize + 'a,
     Trav: Traversable<'a, 'g, T>,
-    D: MatchDirection,
-    Q: TraversalQuery,
-    R: ResultKind,
+    D: MatchDirection + 'a,
+    Q: TraversalQuery + 'a,
+    R: ResultKind + 'a,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
 {
     fn new(trav: &'a Trav, root: TraversalNode<R, Q>) -> Self {
-        Self::new(trav, root)
+        Self {
+            queue: VecDeque::new(),
+            last: (0, root),
+            cache: Default::default(),
+            trav,
+            _ty: Default::default(),
+        }
     }
     fn trav(&self) -> &'a Trav {
         self.trav

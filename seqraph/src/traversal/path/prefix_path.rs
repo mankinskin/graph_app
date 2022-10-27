@@ -21,7 +21,7 @@ impl<
         let pattern = pattern.into_pattern();
         match pattern.len() {
             0 => Err(NoMatch::EmptyPatterns),
-            1 => Err(NoMatch::SingleIndex),
+            1 => Err(NoMatch::SingleIndex(pattern.into_iter().next().unwrap())),
             _ => Ok(Self {
                     pattern,
                     exit,
@@ -82,7 +82,7 @@ impl End for PrefixQuery {
 //        T: Tokenize,
 //        D: MatchDirection,
 //        Trav: Traversable<'a, 'g, T>,
-//    >(&self, trav: &'a Trav) -> Option<usize> {
+//    >(&self, trav: Trav) -> Option<usize> {
 //        if self.end.is_empty() {
 //            D::pattern_index_prev(self.pattern.borrow(), self.exit)
 //        } else {
@@ -116,7 +116,7 @@ mod tests {
     #[test]
     fn prefix_path_reconstruct1() {
         let mut graph = Hypergraph::new();
-        let (a, b, c, d, e, f, g) = graph.index_tokens([
+        let (a, b, c, d, e, f, g) = graph.insert_tokens([
             Token::Element('a'),
             Token::Element('b'),
             Token::Element('c'),

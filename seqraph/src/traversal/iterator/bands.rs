@@ -34,7 +34,7 @@ pub(crate) trait BandIterator<
     fn next_children(trav: &'a Trav, index: Child) -> Vec<(ChildLocation, Child)> {
         P::map_batch(
             trav.graph()
-                .expect_child_patterns_of(index)
+                .expect_child_patterns(index)
                 .iter()
                 .map(|(pid, pattern)|
                     P::map_band(PatternLocation::new(index, *pid), pattern.borrow())
@@ -71,7 +71,7 @@ where
     trav: &'a Trav,
     queue: VecDeque<(ChildLocation, Child)>,
     last: (Option<ChildLocation>, Child),
-    _ty: std::marker::PhantomData<(&'g T, P)>
+    _ty: std::marker::PhantomData<(&'g T, &'a P)>
 }
 pub(crate) type PostfixIterator<'a, 'g, T, D, Trav>
     = BandExpandingIterator<'a, 'g, T, Trav, PostfixExpandingPolicy<D>>;
@@ -101,9 +101,9 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         let (last_location, last_node) = &mut self.last;
-        let mut segment = None;
+        //let mut segment = None;
         if self.queue.is_empty() {
-            segment = last_location.take();
+            //segment = last_location.take();
             self.queue.extend(
                 <Self as BandIterator<T, Trav, P>>::next_children(self.trav, *last_node)
             )
@@ -114,5 +114,8 @@ where
                 *last_node = node;
                 (location, node)
             })
+            .map(|(location, node)|
+                (location, node)
+            )
     }
 }

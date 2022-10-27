@@ -26,19 +26,20 @@ impl<
     pub fn new_directed<
         D: MatchDirection,
         P: IntoPattern,
-    >(query: P) -> Result<Self, NoMatch> {
+    >(query: P) -> Result<Self, (NoMatch, Self)> {
         let entry = D::head_index(query.borrow());
         let query = query.into_pattern();
-        match query.len() {
-            0 => Err(NoMatch::EmptyPatterns),
-            1 => Err(NoMatch::SingleIndex),
-            _ => Ok(Self {
+        let mk_path = |query| Self {
                 query,
                 entry,
                 start: vec![],
                 exit: entry,
                 end: vec![],
-            })
+            };
+        match query.len() {
+            0 => Err((NoMatch::EmptyPatterns, mk_path(query))),
+            1 => Err((NoMatch::SingleIndex(*query.first().unwrap()), mk_path(query))),
+            _ => Ok(mk_path(query))
         }
     }
 }
@@ -97,7 +98,7 @@ impl PatternEnd for QueryRangePath {}
 //        T: Tokenize,
 //        D: MatchDirection,
 //        Trav: Traversable<'a, 'g, T>,
-//    >(&self, trav: &'a Trav) -> Option<usize> {
+//    >(&self, trav: Trav) -> Option<usize> {
 //        if self.end.is_empty() {
 //            D::pattern_index_prev(self.query.borrow(), self.exit)
 //        } else {

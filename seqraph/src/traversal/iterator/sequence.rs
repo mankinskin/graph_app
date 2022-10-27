@@ -9,7 +9,7 @@ pub(crate) struct PathIter<
     Trav: Traversable<'a, 'g, T>,
 > {
     path: P,
-    trav: &'a Trav,
+    trav: Trav,
     _ty: std::marker::PhantomData<(&'g T, D)>
 }
 //pub(crate) trait SequenceIterator: Sized {
@@ -41,7 +41,7 @@ pub(crate) struct PathIter<
 //    Trav: Traversable<'a, 'g, T>,
 //> {
 //    type Iter: SequenceIterator;
-//    fn into_seq_iter(self, trav: &'a Trav) -> Self::Iter;
+//    fn into_seq_iter(self, trav: Trav) -> Self::Iter;
 //}
 //impl<
 //    'a: 'g,
@@ -52,7 +52,7 @@ pub(crate) struct PathIter<
 //    Trav: Traversable<'a, 'g, T>,
 //> IntoSequenceIterator<'a, 'g, T, D, Trav> for P {
 //    type Iter = PathIter<'a, 'g, P, T, D, Trav>;
-//    fn into_seq_iter(self, trav: &'a Trav) -> Self::Iter {
+//    fn into_seq_iter(self, trav: Trav) -> Self::Iter {
 //        PathIter {
 //            path: self,
 //            trav,

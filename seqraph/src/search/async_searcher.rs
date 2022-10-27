@@ -151,7 +151,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
             async_std::task::block_on(async {
                 let vert = self.graph.read().await.expect_vertex_data(*index);
                 let child_patterns = vert.get_children();
-                //print!("matching parent \"{}\" ", self.index_string(parent.index));
+                //print!("matching parent \"{}\" ", self.insert_string(parent.index));
                 // get child pattern indices able to match at all
                 D::candidate_parent_pattern_indices(parent, child_patterns)
                     .into_iter()

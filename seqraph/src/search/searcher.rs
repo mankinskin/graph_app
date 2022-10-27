@@ -19,6 +19,12 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> Traversable<'a, 'g, T
         self.graph.read().unwrap()
     }
 }
+impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> Traversable<'a, 'g, T> for &'a Searcher<T, D> {
+    type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
+    fn graph(&'g self) -> Self::Guard {
+        self.graph.read().unwrap()
+    }
+}
 
 trait SearchTraversalPolicy<
     'a: 'g,
@@ -159,7 +165,7 @@ impl<
 {
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
-    //type Primer = StartPath;
+
     fn after_end_match(
         _trav: &'a Self::Trav,
         path: R::Primer,
@@ -219,9 +225,10 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
         &'a self,
         query: P,
     ) -> SearchResult {
-        let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())?;
+        let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())
+            .map_err(|(err, _)| err)?;
         match Ti::new(self, TraversalNode::query_node(query_path))
-            .try_fold(None, |acc, (_, node)|
+            .try_fold(None, |acc, (_depth, node)|
                 <S::Folder as TraversalFolder<_, _, _, BaseResult>>::fold_found(self, acc, node)
             )
         {
@@ -239,11 +246,12 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
         &'a self,
         query: P,
     ) -> SearchResult {
-        let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())?;
+        let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())
+            .map_err(|(err, _)| err)?;
         match ParallelIterator::reduce(
             Ti::new(self, TraversalNode::query_node(query_path))
                 .par_bridge()
-                .try_fold_with(None, |acc, (_, node)|
+                .try_fold_with(None, |acc, (_depth, node)|
                     <S::Folder as TraversalFolder<_, _, _, BaseResult>>::fold_found(self, acc, node)
                 ),
                 || ControlFlow::Continue(None), |a, b|

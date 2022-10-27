@@ -48,8 +48,8 @@ pub(crate) trait ResultKind: Eq + Clone + Debug {
         'g,
         T: Tokenize,
         D: IndexDirection,
-        Trav: TraversableMut<'a, 'g, T>,
-    >(found: Self::Found, trav: &'a mut Trav) -> Self::Indexed;
+        //Trav: TraversableMut<'a, 'g, T>,
+    >(found: Self::Found, indexer: &'a mut Indexer<T, D>) -> Self::Indexed;
 }
 pub(crate) trait Found<R: ResultKind>
     : RangePath
@@ -164,9 +164,9 @@ impl ResultKind for BaseResult {
         'g,
         T: Tokenize,
         D: IndexDirection,
-        Trav: TraversableMut<'a, 'g, T>,
-    >(found: Self::Found, trav: &'a mut Trav) -> Self::Indexed {
-        Indexing::<_, D>::index_found(trav, found.into_range_path().into())
+        //Trav: TraversableMut<'a, 'g, T>,
+    >(found: Self::Found, indexer: &'a mut Indexer<T, D>) -> Self::Indexed {
+        indexer.index_found(found.into_range_path().into())
     }
 }
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -188,11 +188,11 @@ impl ResultKind for OriginPathResult {
         'g,
         T: Tokenize,
         D: IndexDirection,
-        Trav: TraversableMut<'a, 'g, T>,
-    >(found: Self::Found, trav: &'a mut Trav) -> Self::Indexed {
+        //Trav: TraversableMut<'a, 'g, T>,
+    >(found: Self::Found, indexer: &'a mut Indexer<T, D>) -> Self::Indexed {
         OriginPath {
             origin: found.origin,
-            postfix: BaseResult::index_found::<_, D, _>(found.postfix, trav)
+            postfix: BaseResult::index_found::<_, D>(found.postfix, indexer)
         }
     }
 }
@@ -200,9 +200,9 @@ pub(crate) trait TraversalFolder<'a: 'g, 'g, T: Tokenize, D: MatchDirection, Q: 
     type Trav: Traversable<'a, 'g, T>;
     type Break;
     type Continue;
-    //type Primer: PathPrimer;
+
     fn fold_found(
-        trav: &'a Self::Trav,
+        trav: &Self::Trav,
         acc: Self::Continue,
         node: TraversalNode<R, Q>
     ) -> ControlFlow<Self::Break, Self::Continue>;

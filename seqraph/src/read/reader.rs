@@ -49,18 +49,18 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         &mut self,
         sequence: S,
     ) -> Child {
-        println!("start reading: {:?}", sequence);
+        //println!("start reading: {:?}", sequence);
         let mut sequence = sequence.to_new_token_indices(self).into_iter().peekable();
         while let Some((unknown, known)) = self.find_known_block(&mut sequence) {
             self.append_pattern(unknown);
             self.read_known(known)
         }
         let index = self.root.unwrap();
-        println!("reading result: {:?}", index);
+        //println!("reading result: {:?}", index);
         index
     }
-    pub(crate) fn read_pattern(&mut self, known: Pattern) -> Child {
-        self.read_known(known);
+    pub(crate) fn read_pattern(&mut self, known: impl IntoPattern) -> Child {
+        self.read_known(known.into_pattern());
         self.root.unwrap()
     }
     pub(crate) fn read_known(&mut self, known: Pattern) {
@@ -68,8 +68,8 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             .map(|path| self.read_bands(path))
             .or_else(|err|
                 match err {
-                    NoMatch::SingleIndex => {
-                        self.append_index(*known.first().unwrap());
+                    NoMatch::SingleIndex(c) => {
+                        self.append_index(c);
                         Ok(())
                     },
                     NoMatch::EmptyPatterns => Ok(()),
@@ -79,9 +79,9 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             .unwrap()
     }
     fn read_bands(&mut self, mut sequence: PrefixQuery) {
-        println!("reading known bands");
+        //println!("reading known bands");
         while let Some(next) = self.get_next(&mut sequence) {
-            println!("found next {:?}", next);
+            //println!("found next {:?}", next);
             let next = self.read_overlaps(
                     next,
                     &mut sequence,
@@ -103,6 +103,12 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     }
     pub(crate) fn indexer(&self) -> Indexer<T, D> {
         Indexer::new(self.graph.clone())
+    }
+    pub(crate) fn contexter<Side: IndexSide<D>>(&self) -> Contexter<T, D, Side> {
+        Contexter::new(self.indexer())
+    }
+    pub(crate) fn splitter<Side: IndexSide<D>>(&self) -> Splitter<T, D, Side> {
+        Splitter::new(self.indexer())
     }
     pub(crate) fn new(graph: HypergraphRef<T>) -> Self {
         Self {
@@ -128,10 +134,10 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                 vertex.children.len() == 1 &&
                 vertex.parents.is_empty()
             {
-                let (&pid, _) = vertex.expect_any_pattern();
+                let (&pid, _) = vertex.expect_any_child_pattern();
                 graph.append_to_pattern(*root, pid, index)
             } else {
-                graph.index_pattern([*root, index])
+                graph.insert_pattern([*root, index])
             };
         } else {
             self.root = Some(index);
@@ -153,15 +159,15 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                     let mut graph = self.graph.graph_mut();
                     let vertex = (*root).vertex_mut(&mut graph);
                     *root = if vertex.children.len() == 1 && vertex.parents.is_empty() {
-                        let (&pid, _) = vertex.expect_any_pattern();
+                        let (&pid, _) = vertex.expect_any_child_pattern();
                         graph.append_to_pattern(*root, pid, new)
                     } else {
                         // some old overlaps though
                         let new = new.into_pattern();
-                        graph.index_pattern([&[*root], new.as_slice()].concat())
+                        graph.insert_pattern([&[*root], new.as_slice()].concat())
                     };
                 } else {
-                    let c = self.graph_mut().index_pattern(new);
+                    let c = self.graph_mut().insert_pattern(new);
                     self.root = Some(c);
                 }
         }

@@ -20,14 +20,11 @@ pub mod logger;
 pub mod mock;
 mod read;
 
-pub(crate) use direction::*;
-pub(crate) use graph::*;
 pub(crate) use search::*;
 pub(crate) use vertex::*;
 pub(crate) use traversal::*;
 pub(crate) use logger::*;
 pub(crate) use index::*;
-pub(crate) use read::*;
 
 #[cfg(test)]
 pub use graph::tests::*;
@@ -81,7 +78,10 @@ pub(crate) use {
         num::NonZeroUsize,
     },
     function_name::named,
-    tap::Tap,
+    tap::{
+        Tap,
+        Pipe,
+    },
 };
 pub(crate) type DeterministicHashSet<T> =
     HashSet<T,

@@ -1,7 +1,7 @@
 use super::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub(crate) struct EndPath {
+pub struct EndPath {
     pub(crate) entry: ChildLocation,
     pub(crate) path: ChildPath,
     pub(crate) width: usize,

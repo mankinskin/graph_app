@@ -5,7 +5,7 @@ type OppositeContextRange<D, Ty> =
     <<Ty as IndexSide<D>>::Opposite as IndexSide<D>>::ContextRange;
 
 /// Side refers to border (front is indexing before front border, back is indexing after back border)
-pub(crate) trait IndexSide<D: IndexDirection> {
+pub trait IndexSide<D: IndexDirection>: std::fmt::Debug {
     type Opposite: IndexSide<D>;
     //type Path: DirectedBorderPath<D>;
     type InnerRange: PatternRangeIndex + StartInclusive;
@@ -60,6 +60,7 @@ pub(crate) trait IndexSide<D: IndexDirection> {
     ) -> Option<(usize, Option<NonZeroUsize>)>;
 }
 
+#[derive(Debug)]
 pub(crate) struct IndexBack;
 impl<D: IndexDirection> IndexSide<D> for IndexBack {
     type Opposite = IndexFront;
@@ -145,6 +146,7 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
             )
     }
 }
+#[derive(Debug)]
 pub(crate) struct IndexFront;
 impl<D: IndexDirection> IndexSide<D> for IndexFront {
     type Opposite = IndexBack;

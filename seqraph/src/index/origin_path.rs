@@ -118,7 +118,7 @@ impl<A: Advanced, F: FromAdvanced<A>> FromAdvanced<A> for OriginPath<F> {
 //        T: Tokenize,
 //        D: MatchDirection,
 //        Trav: Traversable<'a, 'g, T>,
-//    >(&self, trav: &'a Trav) -> Option<Child> {
+//    >(&self, trav: Trav) -> Option<Child> {
 //        self.postfix.complete::<_, D, _>(trav)
 //    }
 //}

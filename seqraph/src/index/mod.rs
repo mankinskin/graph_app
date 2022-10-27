@@ -8,7 +8,6 @@ use std::ops::RangeFrom;
 mod indexer;
 mod index_direction;
 mod side;
-mod side_indexable;
 mod context;
 mod split;
 mod indexing;
@@ -24,7 +23,6 @@ pub use index_direction::*;
 pub(crate) use side::*;
 pub(crate) use split::*;
 pub(crate) use context::*;
-pub(crate) use indexing::*;
 pub(crate) use origin_path::*;
 
 impl<'t, 'g, T> HypergraphRef<T>
@@ -40,14 +38,6 @@ where
     ) -> Result<(Child, QueryRangePath), NoMatch> {
         self.indexer().index_pattern(pattern)
     }
-    pub(crate) fn index_query<
-        Q: IndexingQuery
-    >(
-        &self,
-        query: Q,
-    ) -> Result<(Child, Q), NoMatch> {
-        self.indexer().index_query(query)
-    }
     pub(crate) fn index_query_with_origin<
         Q: IndexingQuery
     >(
@@ -59,7 +49,7 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct IndexSplitResult {
+pub struct IndexSplitResult {
     pub(crate) inner: Child,
     pub(crate) location: ChildLocation,
     pub(crate) path: Vec<ChildLocation>,

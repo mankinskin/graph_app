@@ -96,7 +96,7 @@ where
             .and_then(|vertex| vertex.get_child_pattern(&pid))
     }
     #[track_caller]
-    pub fn expect_pattern_of(
+    pub fn expect_child_pattern(
         &self,
         index: impl Indexed,
         pid: PatternId
@@ -105,11 +105,15 @@ where
             .expect_child_pattern(&pid)
     }
     #[track_caller]
-    pub fn expect_child_patterns_of(
+    pub fn expect_child_patterns(
         &self,
         index: impl Indexed,
     ) -> &ChildPatterns {
         self.expect_vertex_data(index).get_child_patterns()
+    }
+    #[track_caller]
+    pub fn expect_any_child_pattern(&self, index: impl Indexed) -> (&PatternId, &Pattern) {
+        self.expect_vertex_data(index).expect_any_child_pattern()
     }
     #[track_caller]
     pub fn expect_vertex_mut(

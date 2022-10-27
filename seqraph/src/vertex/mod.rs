@@ -167,7 +167,7 @@ impl VertexData {
         self.children.get_mut(id).ok_or(NoMatch::NoChildPatterns)
     }
     #[track_caller]
-    pub fn expect_any_pattern(&self) -> (&PatternId, &Pattern) {
+    pub fn expect_any_child_pattern(&self) -> (&PatternId, &Pattern) {
         self.children
             .iter()
             .next()
@@ -310,7 +310,7 @@ impl VertexData {
         self.get_child_pattern_iter()
             .map(|pat| {
                 pat.iter()
-                    .map(|c| g.index_string(c.index))
+                    .map(|c| g.insert_string(c.index))
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>()

@@ -107,21 +107,21 @@ pub(crate) trait AdvanceExit: ExitPos + ExitMut {
         'a: 'g,
         'g,
         T: Tokenize,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<'a, 'g, T> + 'a,
     >(&self, _trav: &'a Trav) -> bool;
     fn next_exit_pos<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<'a, 'g, T> + 'a,
     >(&self, _trav: &'a Trav) -> Result<Option<usize>, ()>;
     fn advance_exit_pos<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<'a, 'g, T> + 'a,
     >(&mut self, trav: &'a Trav) -> Result<(), ()> {
         if let Some(next) = self.next_exit_pos::<_, D, _>(trav)? {
             *self.exit_mut() = next;
@@ -139,7 +139,7 @@ impl<P: AdvanceExit> AdvanceExit for OriginPath<P> {
         'a: 'g,
         'g,
         T: Tokenize,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<'a, 'g, T> + 'a,
     >(&self, trav: &'a Trav) -> bool {
         self.postfix.is_finished(trav)
     }
@@ -148,7 +148,7 @@ impl<P: AdvanceExit> AdvanceExit for OriginPath<P> {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<'a, 'g, T> + 'a,
     >(&self, trav: &'a Trav) -> Result<Option<usize>, ()> {
         self.postfix.next_exit_pos::<_, D, _>(trav)
     }
@@ -170,7 +170,7 @@ impl<M: ExitMut
         'a: 'g,
         'g,
         T: Tokenize,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<'a, 'g, T> + 'a,
     >(&self, _trav: &'a Trav) -> bool {
         self.is_pattern_finished(self.get_exit_pattern())
     }
@@ -179,7 +179,7 @@ impl<M: ExitMut
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<'a, 'g, T> + 'a,
     >(&self, _trav: &'a Trav) -> Result<Option<usize>, ()> {
         self.pattern_next_exit_pos::<D, _>(self.get_exit_pattern())
     }
@@ -188,7 +188,7 @@ impl<M: ExitMut
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<'a, 'g, T> + 'a,
     >(&mut self, _trav: &'a Trav) -> Result<(), ()> {
         let pattern = self.get_exit_pattern();
         if let Some(next) = self.pattern_next_exit_pos::<D, _>(pattern.borrow())? {

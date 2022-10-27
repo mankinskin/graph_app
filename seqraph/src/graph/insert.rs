@@ -31,14 +31,14 @@ where
         c
     }
     /// insert single token node
-    pub fn index_token(
+    pub fn insert_token(
         &mut self,
         token: Token<T>,
     ) -> Child {
         self.insert_vertex(VertexKey::Token(token), VertexData::new(0, 1))
     }
     /// insert multiple token nodes
-    pub fn index_tokens(
+    pub fn insert_tokens(
         &mut self,
         tokens: impl IntoIterator<Item = Token<T>>,
     ) -> Vec<Child> {
@@ -114,20 +114,21 @@ where
     pub fn insert_pattern_with_id(
         &mut self,
         indices: impl IntoPattern,
-    ) -> (Option<Child>, Option<PatternId>) {
+    ) -> (Child, Option<PatternId>) {
         let indices = indices.into_pattern();
-        match indices.len() {
+        let (c, id) = match indices.len() {
             0 => (None, None),
             1 => (Some(self.to_child(indices.first().unwrap().index())), None),
             _ => {
-                let (c, id) = self.force_index_pattern_with_id(indices);
+                let (c, id) = self.force_insert_pattern_with_id(indices);
                 (Some(c), Some(id))
             }
-        }
+        };
+        (c.expect("Tried to index empty pattern!"), id)
     }
     /// create new node from a pattern (even if single index)
     #[track_caller]
-    pub fn force_index_pattern_with_id(
+    pub fn force_insert_pattern_with_id(
         &mut self,
         indices: impl IntoPattern,
     ) -> (Child, PatternId) {
@@ -143,17 +144,17 @@ where
     pub fn insert_pattern(
         &mut self,
         indices: impl IntoPattern,
-    ) -> Option<Child> {
+    ) -> Child {
         self.insert_pattern_with_id(indices).0
     }
     /// create new node from a pattern
-    pub fn force_index_pattern(
+    pub fn force_insert_pattern(
         &mut self,
         indices: impl IntoPattern,
     ) -> Child {
-        self.force_index_pattern_with_id(indices).0
+        self.force_insert_pattern_with_id(indices).0
     }
-    pub fn index_patterns_with_ids(
+    pub fn insert_patterns_with_ids(
         &mut self,
         patterns: impl IntoIterator<Item = impl IntoPattern>,
     ) -> (Child, Vec<PatternId>) {
@@ -162,7 +163,7 @@ where
         let mut ids = Vec::with_capacity(patterns.len());
         let mut patterns = patterns.into_iter();
         let first = patterns.next().expect("Tried to insert no patterns");
-        let (node, first_id) = self.index_pattern_with_id(first);
+        let (node, first_id) = self.insert_pattern_with_id(first);
         ids.push(first_id.unwrap());
         for pat in patterns {
             ids.push(self.add_pattern_with_update(&node, pat));
@@ -171,7 +172,7 @@ where
     }
     /// create new node from multiple patterns
     #[track_caller]
-    pub fn index_patterns(
+    pub fn insert_patterns(
         &mut self,
         patterns: impl IntoIterator<Item = impl IntoPattern>,
     ) -> Child {
@@ -184,7 +185,7 @@ where
                 // todo handle token nodes
                 let mut patterns = patterns.into_iter();
                 let first = patterns.next().expect("Tried to insert no patterns");
-                let node = self.index_pattern(first);
+                let node = self.insert_pattern(first);
                 for pat in patterns {
                     self.add_pattern_with_update(&node, pat);
                 }
@@ -193,7 +194,7 @@ where
 
     }
     #[track_caller]
-    pub fn try_index_patterns(
+    pub fn try_insert_patterns(
         &mut self,
         patterns: impl IntoIterator<Item = impl IntoPattern>,
     ) -> Option<Child> {
@@ -203,11 +204,11 @@ where
         if patterns.is_empty() {
             None
         } else {
-            Some(self.index_patterns(patterns))
+            Some(self.insert_patterns(patterns))
         }
     }
     #[track_caller]
-    pub(crate) fn try_index_range_in(
+    pub fn try_insert_range_in(
         &mut self,
         location: impl IntoPatternLocation,
         range: impl PatternRangeIndex,
@@ -228,7 +229,7 @@ where
                     } else if inner.len() == 1 {
                         Ok(Ok(*inner.first().unwrap()))
                     } else if pattern.len() > inner.len() {
-                        let c = self.index_pattern(inner);
+                        let c = self.insert_pattern(inner);
                         self.replace_in_pattern(location, range, c);
                         Ok(Ok(c))
                     } else {
@@ -238,24 +239,24 @@ where
             )
     }
     #[track_caller]
-    pub(crate) fn index_range_in(
+    pub fn insert_range_in(
         &mut self,
         location: impl IntoPatternLocation,
         range: impl PatternRangeIndex,
     ) -> Result<Child, NoMatch> {
-        self.try_index_range_in(
+        self.try_insert_range_in(
             location,
             range,
         )
         .and_then(|c| c.or(Err(NoMatch::Unnecessary)))
     }
     #[track_caller]
-    pub(crate) fn index_range_in_or_default(
+    pub fn insert_range_in_or_default(
         &mut self,
         location: impl IntoPatternLocation,
         range: impl PatternRangeIndex,
     ) -> Result<Child, NoMatch> {
-        self.try_index_range_in(
+        self.try_insert_range_in(
             location,
             range,
         )
@@ -375,7 +376,7 @@ where
             } {
                 Ok(i) => NewTokenIndex::Known(i),
                 Err(_) => {
-                    let i = self.index_token(t);
+                    let i = self.insert_token(t);
                     NewTokenIndex::New(i.index)
                 }
             })

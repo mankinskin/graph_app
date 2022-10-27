@@ -1,7 +1,7 @@
 use crate::*;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
-pub(crate) struct SearchPath {
+pub struct SearchPath {
     pub(crate) start: StartPath,
     pub(crate) end: EndPath,
 }
@@ -30,7 +30,7 @@ impl<'a: 'g, 'g> SearchPath {
     //    T: Tokenize,
     //    D: MatchDirection,
     //    Trav: Traversable<'a, 'g, T>,
-    //>(mut self, trav: &'a Trav) -> FoundPath {
+    //>(mut self, trav: Trav) -> FoundPath {
     //    let graph = trav.graph();
     //    self.start.reduce::<_, D, _>(&*graph);
     //    FoundPath::new::<_, D, _>(&*graph, self)
@@ -39,7 +39,7 @@ impl<'a: 'g, 'g> SearchPath {
     //    T: Tokenize,
     //    D: MatchDirection,
     //    Trav: Traversable<'a, 'g, T>,
-    //>(mut self, trav: &'a Trav) -> FoundPath {
+    //>(mut self, trav: Trav) -> FoundPath {
     //    let graph = trav.graph();
     //    self.start.reduce::<_, D, _>(&*graph);
     //    self.end.reduce::<_, D, _>(&*graph);

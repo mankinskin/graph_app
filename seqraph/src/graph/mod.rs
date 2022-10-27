@@ -84,28 +84,13 @@ impl<'t, 'a, T: Tokenize> Hypergraph<T> {
     pub fn vertex_count(&self) -> usize {
         self.graph.len()
     }
-    /// create index from a pattern and return its pattern id
-    pub fn index_pattern_with_id(
-        &mut self,
-        indices: impl IntoPattern,
-    ) -> (Child, Option<PatternId>) {
-        let (c, id) = self.insert_pattern_with_id(indices);
-        (c.expect("Tried to index empty pattern!"), id)
-    }
-    /// create index from a pattern
-    pub(crate) fn index_pattern(
-        &mut self,
-        indices: impl IntoPattern,
-    ) -> Child {
-        self.index_pattern_with_id(indices).0
-    }
     //pub fn index_sequence<N: Into<T>, I: IntoIterator<Item = N>>(&mut self, seq: I) -> VertexIndex {
     //    let seq = seq.into_iter();
     //    let tokens = T::tokenize(seq);
     //    let pattern = self.to_token_children(tokens);
     //    self.index_pattern(&pattern[..])
     //}
-    pub fn index_token_indices(
+    pub fn insert_token_indices(
         &self,
         index: impl AsChild,
     ) -> Vec<VertexIndex> {
@@ -128,7 +113,7 @@ impl<'t, 'a, T: Tokenize> Hypergraph<T> {
         pattern: impl IntoPattern,
     ) -> Vec<VertexIndex> {
         pattern.into_iter().flat_map(|c|
-            self.index_token_indices(c)
+            self.insert_token_indices(c)
         ).collect_vec()
     }
     pub fn validate_expansion(&self, index: impl Indexed) {
@@ -191,7 +176,7 @@ where
     ) -> ChildStrings {
         let nodes = pattern.into_iter().map(|child| {
             (
-                self.index_string(child.index()),
+                self.insert_string(child.index()),
                 self.expect_vertex_data(child.index())
                     .to_pattern_strings(self),
             )
@@ -206,7 +191,7 @@ where
     ) -> String {
         pattern
             .into_iter()
-            .map(|child| self.index_string(child.index()))
+            .map(|child| self.insert_string(child.index()))
             .join(separator)
     }
     pub fn separated_pattern_string(
@@ -247,10 +232,10 @@ where
     ) -> String {
         match key {
             VertexKey::Token(token) => f(token),
-            VertexKey::Pattern(_) => self.pattern_string(data.expect_any_pattern().1),
+            VertexKey::Pattern(_) => self.pattern_string(data.expect_any_child_pattern().1),
         }
     }
-    pub fn index_string(
+    pub fn insert_string(
         &self,
         index: impl Indexed,
     ) -> String {

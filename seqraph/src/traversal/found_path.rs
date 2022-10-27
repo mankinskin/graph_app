@@ -98,7 +98,7 @@ impl IntoRangePath for StartLeaf {
 
 /// used to represent results after traversal with any path
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
-pub(crate) enum FoundPath {
+pub enum FoundPath {
     Complete(Child),
     Range(SearchPath),
     Postfix(StartPath),
