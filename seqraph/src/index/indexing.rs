@@ -77,22 +77,22 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
             path.start.start_path().to_vec()
         ).map(|split| (
             split.inner,
-            self.contexter::<IndexBack>().context_entry_path(
+            self.contexter::<IndexBack>().try_context_entry_path(
                 split.location,
                 split.path,
                 split.inner,
-            ).0
+            ).unwrap().0
         ));
         let last_split =
             self.splitter::<IndexFront>().single_path_split(
                 path.end.end_path().to_vec()
             ).map(|split| (
                 split.inner,
-                self.contexter::<IndexFront>().context_entry_path(
+                self.contexter::<IndexFront>().try_context_entry_path(
                     split.location,
                     split.path,
                     split.inner,
-                ).0
+                ).unwrap().0
             ));
         let mut graph = self.graph_mut();
         let res = match (head_split, last_split) {

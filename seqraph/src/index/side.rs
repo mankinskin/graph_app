@@ -4,13 +4,45 @@ use crate::*;
 type OppositeContextRange<D, Ty> =
     <<Ty as IndexSide<D>>::Opposite as IndexSide<D>>::ContextRange;
 
+pub trait RelativeSide<D: IndexDirection, S: IndexSide<D>> {
+    type Opposite: RelativeSide<D, S>;
+    type Range: PatternRangeIndex + StartInclusive;
+    fn map_index(index: usize) -> usize;
+    fn range(index: usize) -> Self::Range;
+    fn split_range(pattern: &'_ impl IntoPattern, pos: usize) -> &'_ [Child] {
+        &pattern.borrow()[Self::range(pos)]
+    }
+}
+
+pub struct ContextSide;
+impl<D: IndexDirection, S: IndexSide<D>> RelativeSide<D, S> for ContextSide {
+    type Opposite = InnerSide;
+    type Range = <S as IndexSide<D>>::ContextRange;
+    fn map_index(index: usize) -> usize {
+        D::index_next(index).unwrap()
+    }
+    fn range(index: usize) -> Self::Range {
+        S::context_range(index)
+    }
+}
+pub struct InnerSide;
+impl<D: IndexDirection, S: IndexSide<D>> RelativeSide<D, S> for InnerSide {
+    type Opposite = ContextSide;
+    type Range = <S as IndexSide<D>>::InnerRange;
+    fn map_index(index: usize) -> usize {
+        index
+    }
+    fn range(index: usize) -> Self::Range {
+        S::inner_range(index)
+    }
+}
 /// Side refers to border (front is indexing before front border, back is indexing after back border)
 pub trait IndexSide<D: IndexDirection>: std::fmt::Debug {
     type Opposite: IndexSide<D>;
-    //type Path: DirectedBorderPath<D>;
     type InnerRange: PatternRangeIndex + StartInclusive;
     type ContextRange: PatternRangeIndex + StartInclusive;
     type BottomUpPathIter: Iterator<Item=ChildLocation>;
+
     fn inner_width_to_offset(child: &Child, width: usize) -> Option<NonZeroUsize>;
     /// returns inner, context
     fn back_front_order<A>(back: A, front: A) -> (A, A);
@@ -36,7 +68,7 @@ pub trait IndexSide<D: IndexDirection>: std::fmt::Debug {
         )
     }
     fn inner_range(pos: usize) -> Self::InnerRange;
-    fn split_at_border(pos: usize, pattern: impl IntoPattern) -> bool;
+    fn is_split_at_border(pos: usize, pattern: impl IntoPattern) -> bool;
     fn inner_context_range(pos: usize) -> OppositeContextRange<D, Self> {
         Self::Opposite::context_range(pos)
     }
@@ -52,6 +84,10 @@ pub trait IndexSide<D: IndexDirection>: std::fmt::Debug {
     #[track_caller]
     fn split_context(pattern: &'_ impl IntoPattern, pos: usize) -> &'_ [Child] {
         &pattern.borrow()[Self::context_range(pos)]
+    }
+    #[track_caller]
+    fn split_inner(pattern: &'_ impl IntoPattern, pos: usize) -> &'_ [Child] {
+        &pattern.borrow()[Self::inner_range(pos)]
     }
     fn sub_ranges(inner: &Range<usize>, limited: &Range<usize>) -> Range<usize>;
     fn token_offset_split(
@@ -71,7 +107,7 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
     fn inner_range(pos: usize) -> Self::InnerRange {
         pos..
     }
-    fn split_at_border(pos: usize, pattern: impl IntoPattern) -> bool {
+    fn is_split_at_border(pos: usize, pattern: impl IntoPattern) -> bool {
         pos == D::head_index(pattern)
     }
     fn context_range(pos: usize) -> Self::ContextRange {
@@ -166,7 +202,7 @@ impl<D: IndexDirection> IndexSide<D> for IndexFront {
     fn inner_pos_after_context_indexed(pos: usize) -> usize {
         pos
     }
-    fn split_at_border(pos: usize, pattern: impl IntoPattern) -> bool {
+    fn is_split_at_border(pos: usize, pattern: impl IntoPattern) -> bool {
         Some(pos) == D::index_next(D::last_index(pattern))
     }
     fn context_inner_order<

@@ -70,6 +70,13 @@ pub enum StartPath {
 }
 impl StartPath {
     #[allow(unused)]
+    pub fn get_child(&self) -> Child {
+        match self {
+            Self::Leaf(leaf) => leaf.child,
+            Self::Path { child, .. } => *child,
+        }
+    }
+    #[allow(unused)]
     pub fn get_leaf(&self) -> Option<&StartLeaf> {
         match self {
             Self::Leaf(leaf) => Some(leaf),

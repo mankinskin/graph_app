@@ -63,18 +63,16 @@ DirectedTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R>
         let path = primer.start_match_path();
         //println!("after end match {:?}", path);
         // index postfix of match
-        let match_end = if let Some(IndexSplitResult {
-            inner: post,
-            location: entry,
-            ..
-        }) = trav.splitter::<IndexBack>().single_entry_split(
-            path.entry(),
-            path.start_path(),
-        ) {
-            MatchEnd::Path(StartLeaf { entry, child: post, width: post.width() })
-        } else {
-            MatchEnd::Complete(path.entry().parent)
-        };
+        let match_end =
+            if let Some((post, entry)) = trav.contexter::<IndexBack>().try_context_entry_path(
+                path.entry(),
+                path.start_path(),
+                path.get_child(),
+            ) {
+                MatchEnd::Path(StartLeaf { entry, child: post, width: post.width() })
+            } else {
+                MatchEnd::Complete(path.entry().parent)
+            };
         //println!("after end match result {:?}", match_end);
         R::into_postfix(primer, match_end)
     }

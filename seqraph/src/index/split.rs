@@ -36,39 +36,47 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> S
     pub(crate) fn contexter(&self) -> Contexter<T, D, Side> {
         Contexter::new(self.indexer.clone())
     }
-    fn entry_perfect_split(
+    pub fn entry_perfect_split<
+        S: RelativeSide<D, Side>,
+        L: Borrow<ChildLocation>,
+    >(
         &'a mut self,
-        entry: ChildLocation,
+        entry: L,
     ) -> Option<IndexSplitResult> {
-        let pattern = self.graph().expect_pattern_at(&entry);       
-        self.pattern_perfect_split(
+        let pattern = self.graph().expect_pattern_at(entry.borrow());       
+        self.pattern_perfect_split::<S, _, _>(
             pattern,
             entry,
         )
     }
-    /// split pattern at location
-    fn pattern_perfect_split(
+    /// index inner half of pattern
+    fn pattern_perfect_split<
+        S: RelativeSide<D, Side>,
+        P: IntoPattern,
+        L: Borrow<ChildLocation>
+    >(
         &'a mut self,
-        pattern: impl IntoPattern,
-        location: ChildLocation,
+        pattern: P,
+        location: L,
     ) -> Option<IndexSplitResult> {
-        if Side::split_at_border(
-            location.sub_index,
-            pattern.borrow(),
-        ) {
-            return None;
-        }
-        let range = Side::inner_range(location.sub_index);
+        //if Side::is_split_at_border(
+        //    location.sub_index,
+        //    pattern.borrow(),
+        //) {
+        //    return None;
+        //}
+        let location = location.borrow();
+        let range = S::range(location.sub_index);
         let inner = &pattern.borrow()[range.clone()];
         if inner.is_empty() {
-            assert!(!inner.is_empty());
+            return None;
         }
-        let inner = if inner.len() == 1 {
+        let inner = if inner.len() < 2 {
             *inner.iter().next().unwrap()
         } else {
             let mut graph = self.graph_mut();
             let inner = graph.insert_pattern(inner);
-            graph.replace_in_pattern(&location, range.clone(), [inner]);
+            graph.replace_in_pattern(location, range.clone(), [inner]);
             inner
         };
         Some(IndexSplitResult {
@@ -76,6 +84,32 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> S
             path: vec![],
             inner,
         })
+    }
+    pub fn single_entry_split(
+        &'a mut self,
+        entry: ChildLocation,
+        path: impl IntoIterator<Item=impl Borrow<ChildLocation>>,
+    ) -> Option<IndexSplitResult> {
+        let path = path.into_iter().collect_vec();
+        let prev = self.single_path_split(
+            path,
+        );
+        self.path_segment_split(
+            prev,
+            entry,
+        )
+    }
+    pub fn single_path_split(
+        &'a mut self,
+        path: impl IntoIterator<Item=impl Borrow<ChildLocation>>,
+    ) -> Option<IndexSplitResult> {
+        //let path = path.into_iter().collect_vec();
+        Side::bottom_up_path_iter(path).fold(None, |prev, seg|
+            self.path_segment_split(
+                prev,
+                seg,
+            )
+        )
     }
     /// split parent at token offset from direction start
     fn path_segment_split(
@@ -86,11 +120,12 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> S
         //let mut graph = self.graph_mut();
         if let Some(mut prev) = prev {
             // index lower context
-            let (split_context, split_location) = self.contexter().context_entry_path(
-                prev.location,
-                prev.path.clone(),
-                prev.inner,
-            );
+            let (split_context, split_location) = self.contexter()
+                .try_context_entry_path(
+                    prev.location,
+                    prev.path.clone(),
+                    prev.inner,
+                );
             let inner_context_range = Side::inner_context_range(seg.sub_index);
             let inner_context = self.graph().expect_child_pattern_range(
                 seg,
@@ -141,35 +176,6 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> S
             )
         }
     }
-    pub fn single_entry_split(
-        &'a mut self,
-        entry: ChildLocation,
-        path: impl IntoIterator<Item=impl Borrow<ChildLocation>>,
-    ) -> Option<IndexSplitResult> {
-        let path = path.into_iter().collect_vec();
-        let prev = self.single_path_split(
-            path,
-        );
-        self.path_segment_split(
-            prev,
-            entry,
-        )
-    }
-    pub fn single_path_split(
-        &'a mut self,
-        path: impl IntoIterator<Item=impl Borrow<ChildLocation>>,
-    ) -> Option<IndexSplitResult> {
-        let path = path.into_iter().collect_vec();
-        let mut prev: Option<IndexSplitResult> = None;
-        let mut path = Side::bottom_up_path_iter(path);
-        while let Some(seg) = path.next() {
-            prev = self.path_segment_split(
-                prev,
-                seg,
-            )
-        }
-        prev
-    }
     fn child_pattern_offset_splits(
         &'a mut self,
         parent: Child,
@@ -207,7 +213,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> S
                             );
 
                             // index inner context
-                            let (context, _) = self.contexter().context_entry_path(
+                            let (context, _) = self.contexter().try_context_entry_path(
                                 split.location,
                                 split.path.clone(),
                                 split.inner,
