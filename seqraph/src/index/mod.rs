@@ -12,6 +12,7 @@ mod context;
 mod split;
 mod indexing;
 mod origin_path;
+mod path;
 
 #[cfg(test)]
 #[macro_use]
@@ -24,6 +25,7 @@ pub(crate) use side::*;
 pub(crate) use split::*;
 pub(crate) use context::*;
 pub(crate) use origin_path::*;
+pub(crate) use path::*;
 
 impl<'t, 'g, T> HypergraphRef<T>
 where

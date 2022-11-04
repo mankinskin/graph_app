@@ -72,7 +72,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         // get index between past and next overlap
         let (inner_back_ctx, _loc) = self.contexter::<IndexBack>().try_context_path(
             context_path,
-            next_link.overlap,
+            //next_link.overlap,
         ).unwrap();
 
         let past = self.graph.graph_mut().insert_pattern(past_ctx);

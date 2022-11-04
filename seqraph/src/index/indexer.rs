@@ -63,11 +63,19 @@ DirectedTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R>
         let path = primer.start_match_path();
         //println!("after end match {:?}", path);
         // index postfix of match
+
         let match_end =
-            if let Some((post, entry)) = trav.contexter::<IndexBack>().try_context_entry_path(
-                path.entry(),
-                path.start_path(),
-                path.get_child(),
+            if let Some(IndexSplitResult {
+                inner: post,
+                location: entry,
+                ..
+            }) = trav
+            .pather::<IndexBack>()
+            .index_primary_path::<InnerSide, _>(
+                path.start_path().into_iter().chain(
+                    std::iter::once(&path.entry())
+                ),
+                //path.get_child(),
             ) {
                 MatchEnd::Path(StartLeaf { entry, child: post, width: post.width() })
             } else {
@@ -167,6 +175,9 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
     }
     pub fn splitter<Side: IndexSide<D>>(&self) -> Splitter<T, D, Side> {
         Splitter::new(self.clone())
+    }
+    pub fn pather<Side: IndexSide<D>>(&self) -> Pather<T, D, Side> {
+        Pather::new(self.clone())
     }
     pub(crate) fn index_pattern(
         &mut self,

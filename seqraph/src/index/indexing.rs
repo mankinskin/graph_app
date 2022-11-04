@@ -19,9 +19,10 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
         &'a mut self,
         path: EndPath,
     ) -> Child {
-        self.splitter::<IndexFront>().single_entry_split(
-            path.get_exit_location(),
-            path.end_path().to_vec()
+        self.splitter::<IndexFront>().single_path_split(
+            std::iter::once(&path.get_exit_location()).chain(
+                path.end_path().into_iter()
+            )
         )
         .map(|split| split.inner)
         .expect("EndPath for complete path!")
@@ -30,9 +31,10 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
         &'a mut self,
         path: StartPath,
     ) -> Child {
-        self.splitter::<IndexBack>().single_entry_split(
-            path.entry(),
-            path.start_path().to_vec()
+        self.splitter::<IndexBack>().single_path_split(
+            path.start_path().into_iter().chain(
+                std::iter::once(&path.entry()),
+            )
         )
         .map(|split| split.inner)
         .expect("StartPath for complete path!")
@@ -77,10 +79,11 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
             path.start.start_path().to_vec()
         ).map(|split| (
             split.inner,
-            self.contexter::<IndexBack>().try_context_entry_path(
-                split.location,
-                split.path,
-                split.inner,
+            self.contexter::<IndexBack>().try_context_path(
+                split.path.into_iter().chain(
+                    std::iter::once(split.location)
+                ),
+                //split.inner,
             ).unwrap().0
         ));
         let last_split =
@@ -88,10 +91,11 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
                 path.end.end_path().to_vec()
             ).map(|split| (
                 split.inner,
-                self.contexter::<IndexFront>().try_context_entry_path(
-                    split.location,
-                    split.path,
-                    split.inner,
+                self.contexter::<IndexFront>().try_context_path(
+                    std::iter::once(split.location).chain(
+                        split.path.into_iter()
+                    ),
+                    //split.inner,
                 ).unwrap().0
             ));
         let mut graph = self.graph_mut();

@@ -32,7 +32,7 @@ impl OverlapChain {
                     let ctx = overlap.link.as_ref().and_then(|node| 
                         reader.contexter::<IndexFront>().try_context_path(
                             node.prefix_path.get_path().unwrap().clone().into_context_path(),
-                            node.overlap,
+                            //node.overlap,
                         )
                     ).map(|(ctx, _)| ctx);
                     bundle.push(prev_band);

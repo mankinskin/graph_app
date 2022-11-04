@@ -9,7 +9,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     ) -> Pattern {
         let (inner_back_ctx, _loc) = self.contexter::<IndexBack>().try_context_path(
             link.postfix_path.clone().into_context_path(),
-            link.overlap,
+            //link.overlap,
         ).unwrap();
         D::context_then_inner(
             overlaps.path.iter_mut().last()
