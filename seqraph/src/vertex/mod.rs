@@ -217,9 +217,11 @@ impl VertexData {
         //self.validate();
         id
     }
+    #[track_caller]
     pub fn validate_links(&self) {
         assert!(self.children.len() != 1 || self.parents.len() != 1);
     }
+    #[track_caller]
     pub fn validate_patterns(&self) {
         self.children
             .iter()
@@ -241,6 +243,7 @@ impl VertexData {
                 acc
             });
     }
+    #[track_caller]
     pub fn validate(&self) {
         //self.validate_links();
         if !self.children.is_empty() {

@@ -532,6 +532,12 @@ fn read_multiple_overlaps1() {
             vec![d, e],
         ]
     );
+    assert_eq!(
+        cde.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![c, de],
+        ]
+    );
     let dea = graph.find_sequence("dea".chars()).unwrap().expect_complete("dea");
     assert_eq!(
         dea.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),

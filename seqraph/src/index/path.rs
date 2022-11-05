@@ -120,27 +120,97 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
                 prev_path.into_iter().chain(std::iter::once(prev_loc))
             ).unwrap();
 
-            let primary = if let Some((_, IndexSplitResult {
-                inner: primary_exclusive,
-                ..
-            })) = self.index_primary_exclusive::<S, _>(location) {
-                // join prev and local
-                let (back, front) = S::outer_inner_order(primary_exclusive, prev_primary);
-                self.indexer.index_pattern([back, front])
-                    .map(|(c, _)| c)
-                    .unwrap_or_else(|_|
-                        self.graph_mut().insert_pattern([back, front])
+            let primary = self.index_primary_exclusive::<S, _>(location)
+                    .map(|(_, r)| 
+                        S::index_inner_and_context(&mut self.indexer, prev_primary, r.inner)
                     )
+                    .unwrap_or(prev_primary);
+            let offset = Side::inner_width_to_offset(
+                &location.parent,
+                primary.width(),
+            ).unwrap();
+            //Some(self.single_offset_split::<S>(
+            //    location.parent,
+            //    Side::inner_width_to_offset(
+            //        &location.parent,
+            //        primary.width(),
+            //    ).unwrap()
+            //))
+            let (back, front) = S::outer_inner_order(primary, prev_secondary);
+            let other_patterns = self.graph().expect_child_patterns(location.parent)
+                .into_iter()
+                //.filter(|(id, _)| **id != location.pattern_id)
+                .map(|(id, p)| (*id, p.clone()))
+                .collect::<HashMap<_, _>>();
+            assert!(!other_patterns.is_empty());
+            Some(if other_patterns.len() == 1 {
+                // simply wrap and replace old range with new primary split
+                let pattern = self.graph().expect_pattern_at(location.borrow());       
+                if !S::in_context() && S::split_secondary(&pattern, location.sub_index).is_empty()
+                    || S::in_context() && S::split_primary(&pattern, location.sub_index).len() == 1
+                {
+                    let pid = self.graph_mut().add_pattern_with_update(location,
+                        [back, front],
+                    );
+                    IndexSplitResult {
+                        inner: primary,
+                        location: location
+                            .to_pattern_location(pid)
+                            .to_child_location(1),
+                        path: vec![],
+                    }
+                } else if S::split_primary(&pattern, location.sub_index).len() > 1 {
+                    let range = S::primary_range(location.sub_index);
+                    let (wrapper, pids) = self.graph_mut().insert_patterns_with_ids([
+                        &pattern[range.clone()],
+                        &[back, front][..],
+                    ]);
+                    self.graph_mut().replace_in_pattern(location, range, [wrapper]);
+                    IndexSplitResult {
+                        inner: primary,
+                        location: location.to_child_location(S::primary_indexed_pos(location.sub_index)),
+                        path: vec![
+                            ChildLocation {
+                                parent: wrapper,
+                                pattern_id: pids[1],
+                                sub_index: 1,
+                            }
+                        ],
+                    }
+                } else {
+                    // point to previous primary
+                    IndexSplitResult {
+                        inner: prev_primary,
+                        location: *location,
+                        path: vec![prev_loc],
+                    }
+                }
             } else {
-                prev_primary
-            };
-            Some(self.single_offset_split::<S>(
-                location.parent,
-                Side::inner_width_to_offset(
-                    &location.parent,
-                    primary.width(),
-                ).unwrap()
-            ))
+                // wrap both primary and secondary side
+                match self.child_pattern_offset_splits::<S>(
+                        location.parent,
+                        other_patterns.clone(),
+                        offset,
+                    ) {
+                    Ok(result) => result,
+                    Err(splits) =>
+                        self.unperfect_splits(
+                            location.parent,
+                            splits,
+                        )
+                }
+
+                //let IndexSplitResult {
+                //    inner: prev_secondary,
+                //    ..    
+                //}= self.index_secondary_path::<S, _>(
+                //    prev_path.into_iter().chain(std::iter::once(prev_loc))
+                //).unwrap();
+
+                //prev.location = split_location;
+                //splits.push((*location, self.graph().expect_pattern_at(location), prev, secondary));
+
+            })
         })
     }
     /// index inner half of pattern

@@ -41,6 +41,12 @@ impl ChildLocation {
             ..self
         }
     }
+    pub fn to_pattern_location(self, pattern_id: usize) -> PatternLocation {
+        PatternLocation {
+            parent: self.parent,
+            pattern_id,
+        }
+    }
 }
 pub type ChildPath = Vec<ChildLocation>;
 
