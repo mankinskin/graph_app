@@ -9,7 +9,9 @@ use tracing_subscriber::{
     field::MakeExt,
     layer::SubscriberExt,
     util::SubscriberInitExt,
+    Layer,
 };
+use std::time::Duration;
 use tracing::Level;
 
 pub struct Logger;
@@ -19,6 +21,22 @@ pub enum Event {
     NewIndex
 }
 
+struct SleepLayer {
+    duration: Duration,
+}
+impl SleepLayer {
+    pub fn with(duration: Duration) -> Self {
+        Self {
+            duration,
+        }
+    }
+}
+
+impl<S: Subscriber> Layer<S> for SleepLayer {
+    fn on_event(&self, _event: &tracing::Event<'_>, _ctx: tracing_subscriber::layer::Context<'_, S>) {
+        std::thread::sleep(self.duration);
+    }
+}
 
 impl Default for Logger {
     fn default() -> Self {
@@ -51,6 +69,7 @@ impl Default for Logger {
         let registry = {
             let gui_layer = tracing_egui::layer();
             registry.with(gui_layer)
+                .with(SleepLayer::with(Duration::from_secs(1)))
         };
 
         registry.init();

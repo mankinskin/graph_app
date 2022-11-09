@@ -4,9 +4,6 @@ edition = "2018"
 name = "seqraph"
 version = "0.1.0"
 
-[build]
-rustflags = ["--cfg", "tracing_unstable"]
-
 [features]
 default = ["log_stdout", "log_gui"]
 log_file = []
