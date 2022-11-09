@@ -13,6 +13,9 @@ use eframe::wasm_bindgen::{
     prelude::*,
 };
 use seqraph::HypergraphRef;
+pub use {
+    tracing::*,
+};
 
 
 /// This is the entry-point for all the web-assembly.

@@ -39,6 +39,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
         .map(|split| split.inner)
         .expect("StartPath for complete path!")
     }
+    #[instrument(skip(self, path))]
     fn index_range_path(
         &'a mut self,
         path: SearchPath,
@@ -47,10 +48,6 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
         let entry_pos = path.start.get_entry_pos();
         let exit_pos = path.end.get_exit_pos();
 
-        //// a little bit dirty, path should have typing for this
-        //if entry_pos == exit_pos && path.start.path().is_empty() && path.end.path().is_empty() {
-        //    return graph.expect_child_at(&location);
-        //}
         let location = entry.into_pattern_location();
 
         let range = D::wrapper_range(entry_pos, exit_pos);
@@ -161,10 +158,3 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
         res
     }
 }
-//impl<
-//    'a: 'g,
-//    'g,
-//    T: Tokenize,
-//    D: IndexDirection,
-//    Trav: TraversableMut<'a, 'g, T>,
-//> Indexing<'a, 'g, T, D> for Trav {}

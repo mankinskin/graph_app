@@ -20,12 +20,6 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g
         self.graph.write().unwrap()
     }
 }
-//impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for &'a Indexer<T, D> {
-//    type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-//    fn graph(&'g self) -> Self::Guard {
-//        self.graph.read().unwrap()
-//    }
-//}
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for &'a mut Indexer<T, D> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
     fn graph(&'g self) -> Self::Guard {
@@ -55,6 +49,7 @@ DirectedTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R>
     type Folder = Indexer<T, D>;
     //type Primer = StartLeaf;
 
+    #[instrument(skip(trav, primer))]
     fn after_end_match(
         trav: &'a Self::Trav,
         primer: R::Primer,

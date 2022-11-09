@@ -29,57 +29,30 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D> + 
     }
 }
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> Pather<T, D, Side> {
-    /// replaces context in pattern at location with child and returns it with new location
-    pub(crate) fn splitter(&self) -> Splitter<T, D, Side> {
-        Splitter::new(self.indexer.clone())
-    }
-    pub(crate) fn contexter(&self) -> Contexter<T, D, Side> {
-        Contexter::new(self.indexer.clone())
-    }
-    /// complementary of primary range
-    fn index_secondary<
+    #[instrument(skip(self, entry), ret)]
+    pub fn index_primary_entry<
         S: RelativeSide<D, Side>,
-        L: Borrow<ChildLocation>
+        L: Borrow<ChildLocation> + Debug,
     >(
         &'a mut self,
-        location: L,
+        entry: L,
     ) -> Option<(Pattern, IndexSplitResult)> {
-        self.entry_perfect_split::<<S as RelativeSide<_, _>>::Opposite, _>(
-            location
+        let pattern = self.graph().expect_pattern_at(entry.borrow());       
+        self.pattern_perfect_split::<S, _, _>(
+            pattern,
+            entry,
         )
-    }
-    // primary range, depending on S
-    fn index_primary<
-        S: RelativeSide<D, Side>,
-        L: Borrow<ChildLocation>
-    >(
-        &'a mut self,
-        location: L,
-    ) -> Option<(Pattern, IndexSplitResult)> {
-        self.entry_perfect_split::<S, _>(location)
     }
     // primary range, depending on S
     fn index_primary_exclusive<
         S: RelativeSide<D, Side>,
-        L: Borrow<ChildLocation>
+        L: Borrow<ChildLocation> + Debug,
     >(
         &'a mut self,
         location: L,
     ) -> Option<(Pattern, IndexSplitResult)> {
-        self.entry_perfect_split::<S, _>(
+        self.index_primary_entry::<S, _>(
             <S as RelativeSide<D, Side>>::exclusive_primary_location(*location.borrow())?
-        )
-    }
-    // primary range, depending on S
-    fn index_secondary_exclusive<
-        S: RelativeSide<D, Side>,
-        L: Borrow<ChildLocation>
-    >(
-        &'a mut self,
-        location: L,
-    ) -> Option<(Pattern, IndexSplitResult)> {
-        self.entry_perfect_split::<S, _>(
-            <S as RelativeSide<D, Side>>::exclusive_secondary_location(*location.borrow())?
         )
     }
     pub fn index_secondary_path<
@@ -93,6 +66,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
             path,
         )
     }
+    #[instrument(skip(self, path))]
     pub fn index_primary_path<
         S: RelativeSide<D, Side>,
         P: ContextPath
@@ -102,7 +76,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
     ) -> Option<IndexSplitResult> {
         let mut iter = Side::bottom_up_path_iter(path);
         let entry  = iter.next()?;
-        let (_, prev) = self.index_primary::<S, _>(entry)?;
+        let (_, prev) = self.index_primary_entry::<S, _>(entry)?;
         iter.try_fold(prev, |
             IndexSplitResult {
                 inner: prev_primary,
@@ -129,27 +103,17 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
                 &location.parent,
                 primary.width(),
             ).unwrap();
-            //Some(self.single_offset_split::<S>(
-            //    location.parent,
-            //    Side::inner_width_to_offset(
-            //        &location.parent,
-            //        primary.width(),
-            //    ).unwrap()
-            //))
             let (back, front) = S::outer_inner_order(primary, prev_secondary);
-            let other_patterns = self.graph().expect_child_patterns(location.parent)
-                .into_iter()
-                //.filter(|(id, _)| **id != location.pattern_id)
-                .map(|(id, p)| (*id, p.clone()))
-                .collect::<HashMap<_, _>>();
-            assert!(!other_patterns.is_empty());
-            Some(if other_patterns.len() == 1 {
+            let child_patterns = self.graph().expect_child_patterns(location.parent).clone();
+            assert!(!child_patterns.is_empty());
+            Some(if child_patterns.len() == 1 {
                 // simply wrap and replace old range with new primary split
                 let pattern = self.graph().expect_pattern_at(location.borrow());       
                 if !S::in_context() && S::split_secondary(&pattern, location.sub_index).is_empty()
                     || S::in_context() && S::split_primary(&pattern, location.sub_index).len() == 1
                 {
-                    let pid = self.graph_mut().add_pattern_with_update(location,
+                    let pid = self.graph_mut().add_pattern_with_update(
+                        location,
                         [back, front],
                     );
                     IndexSplitResult {
@@ -189,7 +153,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
                 // wrap both primary and secondary side
                 match self.child_pattern_offset_splits::<S>(
                         location.parent,
-                        other_patterns.clone(),
+                        child_patterns,
                         offset,
                     ) {
                     Ok(result) => result,
@@ -199,31 +163,22 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
                             splits,
                         )
                 }
-
-                //let IndexSplitResult {
-                //    inner: prev_secondary,
-                //    ..    
-                //}= self.index_secondary_path::<S, _>(
-                //    prev_path.into_iter().chain(std::iter::once(prev_loc))
-                //).unwrap();
-
-                //prev.location = split_location;
-                //splits.push((*location, self.graph().expect_pattern_at(location), prev, secondary));
-
             })
         })
     }
     /// index inner half of pattern
+    #[instrument(skip(self))]
     fn pattern_perfect_split<
         S: RelativeSide<D, Side>,
         P: IntoPattern,
-        L: Borrow<ChildLocation>
+        L: Borrow<ChildLocation> + Debug
     >(
         &'a mut self,
         pattern: P,
         location: L,
     ) -> Option<(Pattern, IndexSplitResult)> {
         let location = location.borrow();
+        info!("first split");
         let secondary = S::split_secondary(&pattern, location.sub_index);
         if secondary.is_empty() {
             None
@@ -248,19 +203,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
             ))
         }
     }
-    pub fn entry_perfect_split<
-        S: RelativeSide<D, Side>,
-        L: Borrow<ChildLocation>,
-    >(
-        &'a mut self,
-        entry: L,
-    ) -> Option<(Pattern, IndexSplitResult)> {
-        let pattern = self.graph().expect_pattern_at(entry.borrow());       
-        self.pattern_perfect_split::<S, _, _>(
-            pattern,
-            entry,
-        )
-    }
+    #[instrument(skip(self, parent, child_patterns, offset))]
     fn child_pattern_offset_splits<
         S: RelativeSide<D, Side>,
     >(
@@ -269,12 +212,13 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
         child_patterns: ChildPatterns,
         offset: NonZeroUsize,
     ) -> Result<IndexSplitResult, Vec<(ChildLocation, Pattern, IndexSplitResult, Child)>> {
+        let mut child_patterns = child_patterns.into_iter();
         let len = child_patterns.len();
-        match child_patterns.into_iter()
+        match child_patterns
             .try_fold(Vec::with_capacity(len), |mut acc, (pid, pattern)| {
                 let (index, inner_offset) = Side::token_offset_split(pattern.borrow(), offset).unwrap();
                 if let Some(inner_offset) = inner_offset {
-                    acc.push((pid, pattern.into_pattern(), index, inner_offset));
+                    acc.push((pid, pattern, index, inner_offset));
                     ControlFlow::Continue(acc)
                 } else {
                     ControlFlow::Break((pattern.into_pattern(), pid, index))
@@ -316,6 +260,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
         }
     }
     /// split parent at token offset from direction start
+    #[instrument(skip(self, parent, offset))]
     pub fn single_offset_split<
         S: RelativeSide<D, Side>,
     >(
@@ -341,6 +286,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
                 ),
         }
     }
+    #[instrument(skip(self, location, split, split_ctx))]
     fn entry_unperfect_split(
         &'a mut self,
         location: ChildLocation,
@@ -355,7 +301,6 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
             location: split_location,
         } = split;
         let pos = location.sub_index;
-
         // inner part of child pattern (context of split index)
         if let Some(parent_inner) = graph.insert_range_in(
                 location,
@@ -415,6 +360,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
             }
         }
     }
+    #[instrument(skip(self, parent, splits))]
     fn unperfect_splits(
         &'a mut self,
         parent: Child,

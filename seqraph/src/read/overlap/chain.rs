@@ -15,6 +15,7 @@ impl OverlapChain {
             None => Ok(()),
         }
     }
+    #[instrument(skip(self, reader))]
     pub fn close<
         'a: 'g,
         'g,
@@ -57,25 +58,12 @@ impl OverlapChain {
         //println!("close result: {:?}", index);
         Some(index)
     }
+    #[instrument(skip(self, end_bound))]
     pub fn take_past(&mut self, end_bound: usize) -> OverlapChain {
         let mut past = self.path.split_off(&end_bound);
         std::mem::swap(&mut self.path, &mut past);
         Self { path: past }
     }
-    //pub fn append_index<
-    //    'a: 'g,
-    //    'g,
-    //    T: Tokenize,
-    //    D: IndexDirection,
-    //>(&mut self, reader: &mut Reader<T, D>, start_bound: usize, end: BandEnd) {
-    //    self.take_appended(reader, start_bound, end)
-    //        .map(|overlap|
-    //            self.add_overlap(
-    //                start_bound + overlap.band.end.index().unwrap().width(), // end_bound
-    //                overlap,
-    //            )
-    //        );
-    //}
 }
 #[derive(Clone, Debug)]
 pub(crate) struct OverlapLink {

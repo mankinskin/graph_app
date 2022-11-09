@@ -45,11 +45,12 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g
 //type HashMap<K, V> = DeterministicHashMap<K, V>;
 
 impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
+    #[instrument(skip(self))]
     pub(crate) fn read_sequence<N, S: ToNewTokenIndices<N, T>>(
         &mut self,
         sequence: S,
     ) -> Child {
-        //println!("start reading: {:?}", sequence);
+        debug!("start reading: {:?}", sequence);
         let mut sequence = sequence.to_new_token_indices(self).into_iter().peekable();
         while let Some((unknown, known)) = self.find_known_block(&mut sequence) {
             self.append_pattern(unknown);
@@ -63,6 +64,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         self.read_known(known.into_pattern());
         self.root.unwrap()
     }
+    #[instrument(skip(self, known))]
     pub(crate) fn read_known(&mut self, known: Pattern) {
         PrefixQuery::new_directed::<D, _>(known.borrow())
             .map(|path| self.read_bands(path))
@@ -78,6 +80,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             )
             .unwrap()
     }
+    #[instrument(skip(self, sequence))]
     fn read_bands(&mut self, mut sequence: PrefixQuery) {
         //println!("reading known bands");
         while let Some(next) = self.get_next(&mut sequence) {
@@ -90,6 +93,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             self.append_index(next);
         }
     }
+    #[instrument(skip(self, context))]
     fn get_next(&mut self, context: &mut PrefixQuery) -> Option<Child> {
         match self.indexer().index_query(context.clone()) {
             Ok((index, advanced)) => {
@@ -121,6 +125,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     //    self.append_index(index);
     //    0
     //}
+    #[instrument(skip(self, index))]
     fn append_index(
         &mut self,
         index: impl ToChild,

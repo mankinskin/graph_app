@@ -71,7 +71,7 @@ pub fn postfix<T: AsChild + Clone>(
     pattern.get(index..).unwrap_or(&[]).to_vec()
 }
 #[track_caller]
-#[tracing::instrument]
+#[tracing::instrument(skip(pattern, range, replace))]
 pub fn replace_in_pattern(
     mut pattern: impl AsPatternMut,
     range: impl PatternRangeIndex,

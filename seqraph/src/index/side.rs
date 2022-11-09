@@ -97,7 +97,12 @@ impl<D: IndexDirection, S: IndexSide<D>> RelativeSide<D, S> for InnerSide {
     }
     fn index_inner_and_context<T: Tokenize>(indexer: &mut Indexer<T, D>, inner: Child, context: Child) -> Child {
         let (back, front) = <Self as RelativeSide<D, S>>::outer_inner_order(context, inner);
-        indexer.graph_mut().insert_pattern([back, front])
+        //indexer.graph_mut().insert_pattern([back, front])
+        indexer.index_pattern([back, front])
+            .map(|(c, _)| c)
+            .unwrap_or_else(|_|
+                indexer.graph_mut().insert_pattern([back, front])
+            )
     }
     fn outer_inner_order(outer: Child, inner: Child) -> (Child, Child) {
         let (back, front) = S::context_inner_order(&inner, &outer);

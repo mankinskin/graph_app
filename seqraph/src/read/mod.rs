@@ -1,8 +1,4 @@
-use crate::{
-    direction::*,
-    vertex::*,
-    HypergraphRef,
-};
+use crate::*;
 mod reader;
 mod overlap;
 #[cfg(test)]

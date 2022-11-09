@@ -114,14 +114,14 @@ impl Indexed for VertexIndex {
     }
 }
 
-pub trait AsChild: Indexed + Wide {
+pub trait AsChild: Indexed + Wide + std::fmt::Debug {
     fn as_child(&self) -> Child {
         Child::new(self.index(), self.width())
     }
 }
-impl<T: Indexed + Wide> AsChild for T {}
+impl<T: Indexed + Wide + std::fmt::Debug> AsChild for T {}
 
-pub trait ToChild: AsChild + Sized {
+pub trait ToChild: AsChild + Sized + std::fmt::Debug {
     fn to_child(self) -> Child {
         self.as_child()
     }

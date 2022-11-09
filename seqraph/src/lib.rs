@@ -7,6 +7,7 @@
 #![feature(generic_associated_types)]
 #![feature(map_first_last)]
 #![feature(control_flow_enum)]
+#![feature(available_parallelism)]
 
 extern crate test;
 
@@ -46,6 +47,7 @@ pub use {
 #[allow(unused)]
 pub(crate) use {
     tracing::*,
+    tracing_test::traced_test,
     itertools::*,
     std::{
         fmt::Debug,
@@ -77,11 +79,13 @@ pub(crate) use {
         },
         num::NonZeroUsize,
     },
+    lazy_static::lazy_static,
     function_name::named,
     tap::{
         Tap,
         Pipe,
     },
+    valuable::*,
 };
 pub(crate) type DeterministicHashSet<T> =
     HashSet<T,

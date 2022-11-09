@@ -122,6 +122,7 @@ impl App {
         egui::CentralPanel::default()
             .show(ctx, |ui| {
                 self.graph.show(ui);
+                tracing_egui::show(ui.ctx(), &mut true);
                 egui::warn_if_debug_build(ui);
             })
             .response

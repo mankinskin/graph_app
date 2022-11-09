@@ -1,3 +1,4 @@
+use crate::*;
 use eframe::egui::{
     self,
     vec2,
@@ -101,10 +102,14 @@ impl Graph {
         *self = Self::new();
     }
     pub fn read(&mut self, text: impl ToString) {
-        //self.graph.read_sequence(text.to_string().chars());
+        let text = text.to_string();
+        let mut graph = self.graph.clone();
+        tokio::spawn(async move {
+            graph.read_sequence(text.chars());
+        });
     }
     pub fn show(&self, ui: &mut Ui) {
-        self.vis_mut().update();
+        //self.vis_mut().update();
         self.vis_mut().show(ui);
     }
 }

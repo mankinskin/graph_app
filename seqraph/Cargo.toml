@@ -4,15 +4,19 @@ edition = "2018"
 name = "seqraph"
 version = "0.1.0"
 
+[build]
+rustflags = ["--cfg", "tracing_unstable"]
+
 [features]
-default = ["log_stdout"]
+default = ["log_stdout", "log_gui"]
 log_file = []
 log_stdout = []
+log_gui = []
 tracing_off = ["tracing/max_level_off"]
 
 
 [dependencies]
-async-std = "^1"
+async-std = "=1.8"
 async-trait = "^0.1"
 either = "^1.6"
 futures = "^0.3"
@@ -35,9 +39,17 @@ rayon = "^1.5.3"
 tap = "^1"
 replace_with = "0.1.7"
 
+[dependencies.tracing-egui]
+path = "../../tracing-egui"
+#version = "^0.1"
+
+[dependencies.valuable]
+version = "^0.1"
+features = ["derive"]
+
 [dependencies.tracing]
 version = "^0.1"
-features = ["attributes"]
+features = ["attributes", "valuable"]
 
 [dependencies.tracing-subscriber]
 version = "^0.3"

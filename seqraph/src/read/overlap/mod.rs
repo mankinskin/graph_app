@@ -13,6 +13,7 @@ use crate::*;
 use super::*;
 
 impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
+    #[instrument(skip(self, first, context))]
     pub(crate) fn read_overlaps(
         &mut self,
         first: Child,
@@ -27,6 +28,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             )?
     }
     /// next bands generated when next overlap starts after a past bundle with a gap
+    #[instrument(skip(self, cache, past_end_bound, next_link, expansion, past_ctx))]
     pub(crate) fn odd_overlap_next(
         &mut self,
         cache: &mut OverlapCache,
@@ -35,7 +37,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         expansion: Child,
         past_ctx: Pattern,
     ) -> Overlap {
-        println!("odd overlap");
+        //println!("odd overlap");
         let last = cache.last.as_mut().unwrap();
         let prev = last.band.end.clone().into_index(self);
         last.band.end = BandEnd::Index(prev);
@@ -90,6 +92,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             link: None, // todo
         }
     }
+    #[instrument(skip(self, cache, context))]
     pub(crate) fn read_next_overlap(
         &mut self,
         cache: OverlapCache,
@@ -164,12 +167,13 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                     )
                 },
             Err(cache) => {
-                println!("No overlap found");
+                //println!("No overlap found");
                 cache.chain.close(self)
             }
         }
     }
     /// find largest expandable postfix
+    #[instrument(skip(self, cache, prefix_query))]
     fn find_next_overlap(
         &mut self,
         mut cache: OverlapCache,

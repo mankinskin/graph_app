@@ -59,8 +59,7 @@ impl<T: Tokenize> std::convert::AsMut<Self> for Hypergraph<T> {
 pub struct Hypergraph<T: Tokenize> {
     graph: indexmap::IndexMap<VertexKey<T>, VertexData>,
 }
-use lazy_static::lazy_static;
-lazy_static!{
+lazy_static! {
     static ref LOGGER: Arc<RwLock<Logger>> = Arc::default();
 }
 impl<T: Tokenize> Default for Hypergraph<T> {
