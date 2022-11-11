@@ -4,8 +4,6 @@ version = "0.1.0"
 authors = ["Linus Behrbohm <linusbehrbohm@web.de>"]
 edition = "2018"
 
-[lib]
-crate-type = ["cdylib", "rlib"]
 
 [workspace]
 members = [
@@ -36,9 +34,9 @@ version = "^0.3"
 features = ["json"]
 
 [dependencies.eframe]
-#path = "../egui/eframe"
-git = "https://github.com/mankinskin/egui"
-branch = "placer-measure"
+path = "../egui/crates/eframe"
+#git = "https://github.com/mankinskin/egui"
+#branch = "placer-measure"
 
 [dependencies.tokio]
 version = "^1"

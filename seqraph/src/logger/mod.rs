@@ -10,13 +10,14 @@ use tracing_subscriber::{
     layer::SubscriberExt,
     util::SubscriberInitExt,
     Layer,
+    filter::EnvFilter,
 };
 use std::time::Duration;
 use tracing::Level;
 
 pub struct Logger;
 
-#[derive(Valuable)]
+#[derive(Valuable, Debug)]
 pub enum Event {
     NewIndex
 }
@@ -67,11 +68,12 @@ impl Default for Logger {
         };
         #[cfg(feature = "log_gui")]
         let registry = {
-            let gui_layer = tracing_egui::layer();
-            registry.with(gui_layer)
+            registry
+                .with(tracing_egui::layer())
                 .with(SleepLayer::with(Duration::from_secs(1)))
         };
 
+        let registry = registry.with(EnvFilter::new("eframe=off,[]=trace"));
         registry.init();
         Logger
     }

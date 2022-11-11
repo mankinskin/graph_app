@@ -4,6 +4,7 @@
 mod app;
 pub use app::App;
 mod graph;
+mod examples;
 // ----------------------------------------------------------------------------
 // When compiling for web:
 
@@ -30,7 +31,9 @@ pub fn start(canvas_id: &str) -> Result<(), eframe::wasm_bindgen::JsValue> {
 }
 
 pub fn open(graph: HypergraphRef<char>) {
-    let app = App::new(graph);
-    let native_options = eframe::NativeOptions::default();
-    eframe::run_native(Box::new(app), native_options);
+    eframe::run_native(
+        "Graph App",
+        eframe::NativeOptions::default(),
+        Box::new(|_| Box::new(App::new(graph))),
+    );
 }
