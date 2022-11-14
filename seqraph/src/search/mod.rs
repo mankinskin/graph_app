@@ -47,33 +47,33 @@ where
     pub fn left_searcher(&'g self) -> Searcher<T, Left> {
         self.searcher()
     }
-    pub fn expect_pattern(
+    pub async fn expect_pattern(
         &self,
         pattern: impl IntoIterator<Item = impl AsToken<T>>,
     ) -> Child {
-        self.find_sequence(pattern).unwrap().unwrap_complete()
+        self.find_sequence(pattern).await.unwrap().unwrap_complete()
     }
-    pub(crate) fn find_ancestor(
+    pub(crate) async fn find_ancestor(
         &self,
         pattern: impl IntoIterator<Item = impl Indexed>,
     ) -> SearchResult {
-        let pattern = self.read().unwrap().to_children(pattern);
-        self.right_searcher().find_pattern_ancestor(pattern)
+        let pattern = self.read().await.to_children(pattern);
+        self.right_searcher().find_pattern_ancestor(pattern).await
     }
     #[allow(unused)]
-    pub(crate) fn find_parent(
+    pub(crate) async fn find_parent(
         &self,
         pattern: impl IntoIterator<Item = impl Indexed>,
     ) -> SearchResult {
-        let pattern = self.read().unwrap().to_children(pattern);
-        self.right_searcher().find_pattern_parent(pattern)
+        let pattern = self.read().await.to_children(pattern);
+        self.right_searcher().find_pattern_parent(pattern).await
     }
-    pub(crate) fn find_sequence(
+    pub(crate) async fn find_sequence(
         &self,
         pattern: impl IntoIterator<Item = impl AsToken<T>>,
     ) -> SearchResult {
         let iter = tokenizing_iter(pattern.into_iter());
-        let pattern = self.read().unwrap().to_token_children(iter)?;
-        self.find_ancestor(pattern)
+        let pattern = self.read().await.to_token_children(iter)?;
+        self.find_ancestor(pattern).await
     }
 }

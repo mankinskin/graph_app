@@ -1,6 +1,6 @@
 use crate::*;
+#[allow(unused)]
 use tracing_subscriber::{
-    prelude::*,
     fmt::{
         self,
         writer::MakeWriterExt,
@@ -13,11 +13,12 @@ use tracing_subscriber::{
     filter::EnvFilter,
 };
 use std::time::Duration;
+#[allow(unused)]
 use tracing::Level;
 
 pub struct Logger;
 
-#[derive(Valuable, Debug)]
+#[derive(Debug)]
 pub enum Event {
     NewIndex
 }
@@ -26,6 +27,7 @@ struct SleepLayer {
     duration: Duration,
 }
 impl SleepLayer {
+    #[allow(unused)]
     pub fn with(duration: Duration) -> Self {
         Self {
             duration,
@@ -41,7 +43,9 @@ impl<S: Subscriber> Layer<S> for SleepLayer {
 
 impl Default for Logger {
     fn default() -> Self {
-        let registry = tracing_subscriber::registry();
+        let console_layer = console_subscriber::spawn();
+        let registry = tracing_subscriber::registry()
+            ;
 
         #[cfg(feature = "log_file")]
         let registry = {
@@ -57,6 +61,7 @@ impl Default for Logger {
         };
 
         #[cfg(feature = "log_stdout")]
+        #[cfg(not(test))]
         let registry = {
             let stdout_writer = std::io::stdout
                 .with_max_level(Level::TRACE);
@@ -67,14 +72,18 @@ impl Default for Logger {
             registry.with(stdout_layer)
         };
         #[cfg(feature = "log_gui")]
+        #[cfg(not(test))]
         let registry = {
             registry
                 .with(tracing_egui::layer())
-                .with(SleepLayer::with(Duration::from_secs(1)))
+                //.with(SleepLayer::with(Duration::from_secs(1)))
         };
 
-        let registry = registry.with(EnvFilter::new("eframe=off,[]=trace"));
-        registry.init();
+        registry
+            .with(EnvFilter::new("eframe=off,[]=trace"))
+            .with(console_layer)
+            .init();
+        //std::thread::sleep(std::time::Duration::from_secs(3));
         Logger
     }
 }

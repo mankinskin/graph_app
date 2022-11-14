@@ -8,40 +8,45 @@ pub struct Indexer<T: Tokenize, D: IndexDirection> {
     graph: HypergraphRef<T>,
     _ty: std::marker::PhantomData<D>,
 }
+#[async_trait]
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for Indexer<T, D> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    fn graph(&'g self) -> Self::Guard {
-        self.graph.read().unwrap()
+    async fn graph(&'g self) -> Self::Guard {
+        self.graph.read().await
     }
 }
+#[async_trait]
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g, T> for Indexer<T, D> {
     type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
-    fn graph_mut(&'g mut self) -> Self::GuardMut {
-        self.graph.write().unwrap()
+    async fn graph_mut(&'g mut self) -> Self::GuardMut {
+        self.graph.write().await
     }
 }
+#[async_trait]
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for &'a mut Indexer<T, D> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    fn graph(&'g self) -> Self::Guard {
-        self.graph.read().unwrap()
+    async fn graph(&'g self) -> Self::Guard {
+        self.graph.read().await
     }
 }
+#[async_trait]
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g, T> for &'a mut Indexer<T, D> {
     type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
-    fn graph_mut(&'g mut self) -> Self::GuardMut {
-        self.graph.write().unwrap()
+    async fn graph_mut(&'g mut self) -> Self::GuardMut {
+        self.graph.write().await
     }
 }
 pub(crate) struct IndexingPolicy<'a, T: Tokenize, D: IndexDirection, Q: IndexingQuery, R: ResultKind> {
     _ty: std::marker::PhantomData<(&'a T, D, Q, R)>,
 }
+#[async_trait]
 impl<
     'a: 'g,
     'g,
     T: Tokenize + 'a,
     D: IndexDirection + 'a,
-    Q: IndexingQuery,
-    R: ResultKind,
+    Q: IndexingQuery + 'a,
+    R: ResultKind + 'a,
 >
 DirectedTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R>
 {
@@ -50,7 +55,7 @@ DirectedTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R>
     //type Primer = StartLeaf;
 
     #[instrument(skip(trav, primer))]
-    fn after_end_match(
+    async fn after_end_match(
         trav: &'a Self::Trav,
         primer: R::Primer,
     ) -> R::Postfix {
@@ -71,7 +76,7 @@ DirectedTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R>
                     std::iter::once(&path.entry())
                 ),
                 //path.get_child(),
-            ) {
+            ).await {
                 MatchEnd::Path(StartLeaf { entry, child: post, width: post.width() })
             } else {
                 MatchEnd::Complete(path.entry().parent)
@@ -85,8 +90,8 @@ pub(crate) trait IndexerTraversalPolicy<
     'g,
     T: Tokenize + 'a,
     D: IndexDirection + 'a,
-    Q: IndexingQuery,
-    R: ResultKind,
+    Q: IndexingQuery + 'a,
+    R: ResultKind + 'a,
 >:
     DirectedTraversalPolicy<
         'a, 'g, T, D, Q, R,
@@ -101,26 +106,27 @@ impl<
     'g,
     T: Tokenize + 'a,
     D: IndexDirection + 'a,
-    Q: IndexingQuery,
-    R: ResultKind,
+    Q: IndexingQuery + 'a,
+    R: ResultKind + 'a,
 > IndexerTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R>
 {}
 
 pub(crate) trait IndexingQuery: TraversalQuery {}
 impl<T: TraversalQuery> IndexingQuery for T {}
 
+#[async_trait]
 impl<'a: 'g, 'g, T, D, Q, R> TraversalFolder<'a, 'g, T, D, Q, R> for Indexer<T, D>
 where 
     T: Tokenize + 'a,
     D: IndexDirection + 'a,
-    Q: IndexingQuery,
-    R: ResultKind
+    Q: IndexingQuery + 'a,
+    R: ResultKind + 'a,
 {
     type Trav = Self;
     type Break = (<R as ResultKind>::Indexed, Q);
     type Continue = Option<TraversalResult<<R as ResultKind>::Found, Q>>;
 
-    fn fold_found(
+    async fn fold_found(
         trav: &Self::Trav,
         acc: Self::Continue,
         node: TraversalNode<R, Q>,
@@ -133,7 +139,7 @@ where
                     R::index_found::<_, D>(
                         res.found,
                         &mut trav
-                    ),
+                    ).await,
                     res.query,
                 ))
             },
@@ -174,34 +180,34 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
     pub fn pather<Side: IndexSide<D>>(&self) -> Pather<T, D, Side> {
         Pather::new(self.clone())
     }
-    pub(crate) fn index_pattern(
+    pub(crate) async fn index_pattern(
         &mut self,
         query: impl IntoPattern,
     ) -> Result<(Child, QueryRangePath), NoMatch> {
         let query = query.into_pattern();
         match QueryRangePath::new_directed::<D, _>(query.borrow()) {
-            Ok(query_path) => self.index_query(query_path),
+            Ok(query_path) => self.index_query(query_path).await,
             Err((NoMatch::SingleIndex(c), path)) => Ok((c, path)),
             Err((err, _)) => Err(err),
         }
     }
-    pub(crate) fn index_query<
+    pub(crate) async fn index_query<
         Q: IndexingQuery,
     >(
         &mut self,
         query: Q,
     ) -> Result<(Child, Q), NoMatch> {
-        self.path_indexing::<BaseResult, _, IndexingPolicy<T, D, Q, _>, Bft<_, _, _, _, _, _>>(query)
+        self.path_indexing::<BaseResult, _, IndexingPolicy<T, D, Q, _>, Bft<_, _, _, _, _, _>>(query).await
     }
-    pub(crate) fn index_query_with_origin<
+    pub(crate) async fn index_query_with_origin<
         Q: IndexingQuery,
     >(
         &mut self,
         query: Q,
     ) -> Result<(OriginPath<Child>, Q), NoMatch> {
-        self.path_indexing::<OriginPathResult, _, IndexingPolicy<T, D, Q, _>, Bft<_, _, _, _, _, _>>(query)
+        self.path_indexing::<OriginPathResult, _, IndexingPolicy<T, D, Q, _>, Bft<_, _, _, _, _, _>>(query).await
     }
-    fn path_indexing<
+    async fn path_indexing<
         R: ResultKind + 'a,
         Q: IndexingQuery + 'a,
         S: IndexerTraversalPolicy<'a, 'g, T, D, Q, R>,
@@ -214,20 +220,30 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         query_path.hash(&mut hasher);
         let _h = hasher.finish();
-        match Ti::new(self, TraversalNode::query_node(query_path))
-            .try_fold(
-                None,
-                |acc, (_depth, node)|
-                    <S::Folder as TraversalFolder<_, _, _, R>>::fold_found(&mut indexer, acc, node)
-            ) {
+
+        let mut acc = ControlFlow::Continue(None);
+        let mut stream = pin!(Ti::new(self, TraversalNode::query_node(query_path)));
+
+        while let Some((_depth, node)) = stream.next().await {
+            match <S::Folder as TraversalFolder<_, _, _, R>>::fold_found(self, acc.continue_value().unwrap(), node).await {
+                ControlFlow::Continue(c) => {
+                    acc = ControlFlow::Continue(c);
+                },
+                ControlFlow::Break(found) => {
+                    acc = ControlFlow::Break(found);
+                    break;
+                },
+            };
+        }
+        match acc {
             ControlFlow::Continue(found) => {
-                found.ok_or(NoMatch::NotFound)
-                    .map(|f|
-                        (
-                            R::index_found::<_, D>(f.found, &mut indexer),
-                            f.query
-                        )
-                    )
+                match found {
+                    Some(f) => Ok((
+                        R::index_found::<_, D>(f.found, &mut indexer).await,
+                        f.query
+                    )),
+                    None => Err(NoMatch::NotFound),
+                }
             }
             ControlFlow::Break((found, query)) => Ok((found, query)),
         }

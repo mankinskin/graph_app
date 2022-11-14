@@ -1,4 +1,3 @@
-use crate::*;
 use super::*;
 
 use std::collections::BTreeMap;
@@ -16,7 +15,7 @@ impl OverlapChain {
         }
     }
     #[instrument(skip(self, reader))]
-    pub fn close<
+    pub async fn close<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -25,36 +24,46 @@ impl OverlapChain {
         //println!("closing {:#?}", self);
         let mut path = self.path.into_iter();
         let first_band: Overlap = path.next()?.1;
-        let (mut bundle, prev_band, _) =
-            path.fold(
+        let (mut bundle, prev_band, _) = {
+            let reader = &reader.clone();
+            futures::stream::iter(path).fold(
                 (vec![], first_band, None),
-                |(mut bundle, prev_band, prev_ctx), (_end_bound, overlap)| {
+                |(mut bundle, prev_band, prev_ctx), (_end_bound, overlap)| async move {
+                    let mut reader = reader.clone();
                     // index context of prefix
-                    let ctx = overlap.link.as_ref().and_then(|node| 
+                    let ctx = if let Some(node) = overlap.link.as_ref() {
                         reader.contexter::<IndexFront>().try_context_path(
                             node.prefix_path.get_path().unwrap().clone().into_context_path(),
                             //node.overlap,
                         )
-                    ).map(|(ctx, _)| ctx);
+                        .await
+                        .map(|(ctx, _)| ctx)
+                    } else {
+                        None
+                    };
                     bundle.push(prev_band);
                     (
                         bundle,
                         overlap,
                         // join previous and current context into 
-                        prev_ctx.map(|prev|
-                            ctx.map(|ctx|
-                                reader.read_pattern(vec![prev, ctx])
-                            ).unwrap_or(prev)
-                        ).or(ctx)
+                        if let Some(prev) = prev_ctx {
+                            Some(if let Some(ctx) = ctx {
+                                reader.read_pattern(vec![prev, ctx]).await.unwrap()
+                            } else {
+                                prev
+                            })
+                        } else {
+                            ctx
+                        }
                     )
                 }
-            );
-
+            ).await
+        };
         bundle.push(prev_band);
         let bundle = bundle.into_iter()
             .map(|overlap| overlap.band.into_pattern(reader))
             .collect_vec();
-        let index = reader.graph_mut().insert_patterns(bundle);
+        let index = reader.graph_mut().await.insert_patterns(bundle);
         //println!("close result: {:?}", index);
         Some(index)
     }
@@ -69,7 +78,6 @@ impl OverlapChain {
 pub(crate) struct OverlapLink {
     pub(crate) postfix_path: StartPath, // location of postfix/overlap in first index
     pub(crate) prefix_path: MatchEnd<StartPath>, // location of prefix/overlap in second index
-    pub(crate) overlap: Child,
 }
 #[derive(Clone, Debug)]
 pub(crate) struct Overlap {

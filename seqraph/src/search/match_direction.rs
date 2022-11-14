@@ -19,7 +19,7 @@ fn to_matching_iterator<'a, I: Indexed + 'a, J: Indexed + 'a>(
         })
 }
 
-pub trait MatchDirection : Clone + Debug + Send + Sync {
+pub trait MatchDirection : Clone + Debug + Send + Sync + 'static + Unpin {
     type Opposite: MatchDirection;
     type PostfixRange<T>: PatternRangeIndex<T>;
     /// get the parent where vertex is at the relevant position

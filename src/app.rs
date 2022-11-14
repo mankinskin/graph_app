@@ -26,17 +26,16 @@ pub struct App {
     inserter: bool,
 }
 
-impl Default for App {
-    fn default() -> Self {
+impl App {
+    pub fn new() -> Self {
         Self {
             graph_file: None,
             graph: Graph::new(),
             inserter: true,
         }
     }
-}
-impl App {
-    pub fn new(graph: HypergraphRef<char>) -> Self {
+    #[allow(unused)]
+    pub fn from_graph_ref(graph: HypergraphRef<char>) -> Self {
         Self {
             graph_file: None,
             graph: Graph::new_from_graph_ref(graph),
@@ -49,7 +48,7 @@ impl App {
             ui.text_edit_singleline(&mut self.graph.insert_text);
             if ui.button("Go").clicked() {
                 let insert_text = self.graph.insert_text.clone();
-                self.graph.read(insert_text, ui.ctx());
+                self.graph.read_text(insert_text, ui.ctx());
                 self.graph.insert_text = String::new();
                 ui.close_menu();
             }
@@ -58,13 +57,14 @@ impl App {
             self.inserter = true;
             ui.close_menu();
         }
-        ui.menu_button("Layout", |ui| {
-            let mut vis = self.graph.vis_mut();
-            ui.radio_value(&mut vis.layout, Layout::Graph, "Graph")
-                .clicked();
-            ui.radio_value(&mut vis.layout, Layout::Nested, "Nested")
-                .clicked();
-        });
+        if let Some(mut vis) = self.graph.vis_mut() {
+            ui.menu_button("Layout", |ui| {
+                ui.radio_value(&mut vis.layout, Layout::Graph, "Graph")
+                    .clicked();
+                ui.radio_value(&mut vis.layout, Layout::Nested, "Nested")
+                    .clicked();
+            });
+        }
         ui.menu_button("Load preset...", |ui| {
             if ui.button("Graph 1").clicked() {
                 self.graph.set_graph(build_graph1());
@@ -109,7 +109,9 @@ impl App {
     fn top_panel(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.menu_button("Actions...", |ui| self.context_menu(ui));
+                ui.menu_button("Actions...", |ui| {
+                    self.context_menu(ui)
+                });
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui.button("Quit").clicked() {
                         frame.close()
@@ -126,7 +128,9 @@ impl App {
                 egui::warn_if_debug_build(ui);
             })
             .response
-            .context_menu(|ui| self.context_menu(ui));
+            .context_menu(|ui| {
+                self.context_menu(ui)
+            });
     }
 }
 impl eframe::App for App {
@@ -147,9 +151,8 @@ impl eframe::App for App {
                     ui.text_edit_multiline(&mut self.graph.insert_text);
                     if ui.button("Insert").clicked() {
                         let insert_text = self.graph.insert_text.clone();
-                        self.graph.read(insert_text, ctx);
+                        self.graph.read_text(insert_text, ctx);
                         self.graph.insert_text = String::new();
-                        ctx.request_repaint_after(std::time::Duration::from_secs(6));
                     }
                 });
         }

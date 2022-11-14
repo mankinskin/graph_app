@@ -15,9 +15,10 @@ pub use {
 async fn main() {
     //let graph = seqraph::gen_graph().unwrap_or_else(|g| g);
     //let app = app::App::new(graph);
+    let app = App::new();
     eframe::run_native(
         "Graph App",
         eframe::NativeOptions::default(),
-        Box::new(|_| Box::new(App::default())),
+        Box::new(|_| Box::new(app)),
     );
 }

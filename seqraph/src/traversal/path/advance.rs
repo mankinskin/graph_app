@@ -1,44 +1,50 @@
 use super::*;
 
+#[async_trait]
 pub(crate) trait NewAdvanced: Advance {
-    fn new_advanced<
+    async fn new_advanced<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
-        A: Into<Self> + Clone,
+        A: Into<Self> + Clone + Send + Sync,
     >(
         trav: &'a Trav,
         start: A,
     ) -> Result<Self, A> {
         let mut new = start.clone().into();
-        match new.advance_exit_pos::<_, D, _>(trav) {
+        match new.advance_exit_pos::<_, D, _>(trav).await {
             Ok(()) => Ok(new),
             Err(()) => Err(start)
         }
     }
 }
+#[async_trait]
 impl<T: Advance> NewAdvanced for T {
 }
+#[async_trait]
 pub(crate) trait Advance:
     EndPathMut
     + AdvanceExit
     + End
     + AdvanceWidth
-    + Sized {
-    fn advance<
+    + Sized
+    + Send
+    + Sync
+    {
+    async fn advance<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&mut self, trav: &'a Trav) -> Option<Child> {
-        if self.is_finished(trav) {
+        if self.is_finished(trav).await {
             None
         } else {
-            let graph = trav.graph();
-            let current = self.get_end::<_, D, _>(trav)?;
+            let current = self.get_end::<_, D, _>(trav).await?;
+            let graph = trav.graph().await;
             // skip path segments with no successors
             while let Some(mut location) = self.end_path_mut().pop() {
                 let pattern = graph.expect_pattern_at(&location);
@@ -51,7 +57,7 @@ pub(crate) trait Advance:
                 }
             }
             // end is empty (exit is prev)
-            let _ = self.advance_exit_pos::<_, D, _>(trav);
+            let _ = self.advance_exit_pos::<_, D, _>(trav).await;
             Some(current)
         }
     }
@@ -62,6 +68,8 @@ impl<T:
     + End
     + AdvanceWidth
     + Sized
+    + Send
+    + Sync
 > Advance for T {
 }
 pub(crate) trait AdvanceWidth {
@@ -72,22 +80,24 @@ impl <T: WideMut> AdvanceWidth for T {
         *self.width_mut() += width;
     }
 }
-pub(crate) trait AddMatchWidth: AdvanceWidth + End {
-    fn add_match_width<
+#[async_trait]
+pub(crate) trait AddMatchWidth: AdvanceWidth + End + Send + Sync {
+    async fn add_match_width<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&mut self, trav: &'a Trav) {
-        if let Some(end) = self.get_end::<_, D, _>(trav) {
+        if let Some(end) = self.get_end::<_, D, _>(trav).await {
             self.advance_width(end.width);
         }
     }
 }
-impl<T: AdvanceWidth + End> AddMatchWidth for T {
+impl<T: AdvanceWidth + End + Send + Sync> AddMatchWidth for T {
 }
-pub(crate) trait AdvanceExit: ExitPos + ExitMut {
+#[async_trait]
+pub(crate) trait AdvanceExit: ExitPos + ExitMut + Send + Sync {
     fn is_pattern_finished<
         P: IntoPattern,
     >(&self, pattern: P) -> bool {
@@ -103,58 +113,60 @@ pub(crate) trait AdvanceExit: ExitPos + ExitMut {
             Ok(D::pattern_index_next(pattern, self.get_exit_pos()))
         }
     }
-    fn is_finished<
+    async fn is_finished<
         'a: 'g,
         'g,
         T: Tokenize,
         Trav: Traversable<'a, 'g, T> + 'a,
     >(&self, _trav: &'a Trav) -> bool;
-    fn next_exit_pos<
+    async fn next_exit_pos<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T> + 'a,
     >(&self, _trav: &'a Trav) -> Result<Option<usize>, ()>;
-    fn advance_exit_pos<
+    async fn advance_exit_pos<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T> + 'a,
     >(&mut self, trav: &'a Trav) -> Result<(), ()> {
-        if let Some(next) = self.next_exit_pos::<_, D, _>(trav)? {
+        if let Some(next) = self.next_exit_pos::<_, D, _>(trav).await? {
             *self.exit_mut() = next;
             Ok(())
         } else {
-            if !self.is_finished(trav) {
+            if !self.is_finished(trav).await {
                 *self.exit_mut() = D::index_next(self.get_exit_pos()).expect("Can't represent behind end index!");
             }
             Err(())
         }
     }
 }
+#[async_trait]
 impl<P: AdvanceExit> AdvanceExit for OriginPath<P> {
-    fn is_finished<
+    async fn is_finished<
         'a: 'g,
         'g,
         T: Tokenize,
         Trav: Traversable<'a, 'g, T> + 'a,
     >(&self, trav: &'a Trav) -> bool {
-        self.postfix.is_finished(trav)
+        self.postfix.is_finished(trav).await
     }
-    fn next_exit_pos<
+    async fn next_exit_pos<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T> + 'a,
     >(&self, trav: &'a Trav) -> Result<Option<usize>, ()> {
-        self.postfix.next_exit_pos::<_, D, _>(trav)
+        self.postfix.next_exit_pos::<_, D, _>(trav).await
     }
 }
+#[async_trait]
 impl<M: ExitMut
-    + PatternExit
+    + PatternExit + Send + Sync
 > AdvanceExit for M {
     fn pattern_next_exit_pos<
         D: MatchDirection,
@@ -166,7 +178,7 @@ impl<M: ExitMut
             Ok(D::pattern_index_next(pattern, self.get_exit_pos()))
         }
     }
-    fn is_finished<
+    async fn is_finished<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -174,7 +186,7 @@ impl<M: ExitMut
     >(&self, _trav: &'a Trav) -> bool {
         self.is_pattern_finished(self.get_exit_pattern())
     }
-    fn next_exit_pos<
+    async fn next_exit_pos<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -183,7 +195,7 @@ impl<M: ExitMut
     >(&self, _trav: &'a Trav) -> Result<Option<usize>, ()> {
         self.pattern_next_exit_pos::<D, _>(self.get_exit_pattern())
     }
-    fn advance_exit_pos<
+    async fn advance_exit_pos<
         'a: 'g,
         'g,
         T: Tokenize,

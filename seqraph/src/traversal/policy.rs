@@ -11,14 +11,15 @@ use crate::{
 pub(crate) trait NodePath: RootChild + Send + Clone + Eq + Debug {}
 impl<T: RootChild + Send + Clone + Eq + Debug> NodePath for T {}
 
+#[async_trait]
 pub(crate) trait DirectedTraversalPolicy<
     'a: 'g,
     'g,
-    T: Tokenize,
-    D: MatchDirection,
-    Q: TraversalQuery,
-    R: ResultKind,
->: Sized {
+    T: Tokenize + 'a,
+    D: MatchDirection + 'a,
+    Q: TraversalQuery + 'a,
+    R: ResultKind + 'a,
+>: Sized + Send + Sync + Unpin {
 
     type Trav: Traversable<'a, 'g, T> + 'a;
     //type Primer: PathPrimer + From<R::Result<StartPath>> + GraphEntry;
@@ -27,13 +28,13 @@ pub(crate) trait DirectedTraversalPolicy<
     >;
 
     /// Executed after last child of index matched
-    fn after_end_match(
+    async fn after_end_match(
         _trav: &'a Self::Trav,
         path: R::Primer,
     ) -> R::Postfix;
     /// nodes generated when an index ended
     /// (parent nodes)
-    fn next_parents(
+    async fn next_parents(
         trav: &'a Self::Trav,
         query: &Q,
         primer: &R::Postfix,
@@ -43,16 +44,19 @@ pub(crate) trait DirectedTraversalPolicy<
             query,
             primer.root_child(),
             |p| primer.clone().append::<_, D, _>(trav, p)
-        )
+        ).await
     }
     /// generates parent nodes
-    fn gen_parent_nodes(
+    async fn gen_parent_nodes<
+        B: (Fn(ChildLocation) -> F) + Send + Sync + Copy,
+        F: Future<Output=R::Primer> + Send,
+    >(
         trav: &'a Self::Trav,
         query: &Q,
         index: Child,
-        build_start: impl Fn(ChildLocation) -> R::Primer,
+        build_start: B,
     ) -> Vec<TraversalNode<R, Q>> {
-        trav.graph()
+        futures::stream::iter(trav.graph().await
             .expect_vertex_data(index)
             .get_parents()
             .iter()
@@ -66,12 +70,15 @@ pub(crate) trait DirectedTraversalPolicy<
                     })
             })
             .sorted_unstable_by(|a, b| TraversalOrder::cmp(a, b))
-            .map(|p|
+            .map(|p| async move {
                 TraversalNode::parent_node(
-                    build_start(p),
+                    build_start(p).await,
                     query.clone(),
                 )
-            )
-            .collect_vec()
+            }.into_stream())
+        )
+        .flatten()
+        .collect()
+        .await
     }
 }

@@ -13,7 +13,7 @@ tracing_off = ["tracing/max_level_off"]
 
 
 [dependencies]
-async-std = "=1.8"
+async-std = "1.12"
 async-trait = "^0.1"
 either = "^1.6"
 futures = "^0.3"
@@ -35,6 +35,8 @@ histo = "^1"
 rayon = "^1.5.3"
 tap = "^1"
 replace_with = "0.1.7"
+async-recursion = "1"
+console-subscriber = "0.1"
 
 [dependencies.tracing-egui]
 path = "../../tracing-egui"

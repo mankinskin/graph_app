@@ -17,16 +17,16 @@ impl<T: Tokenize + Send> HypergraphRef<T> {
     pub fn left_reader(&self) -> Reader<T, Left> {
         Reader::new(self.clone())
     }
-    pub fn read_sequence(
+    pub async fn read_sequence(
         &mut self,
-        sequence: impl IntoIterator<Item = T> + std::fmt::Debug,
-    ) -> Child {
-        self.right_reader().read_sequence(sequence)
+        sequence: impl IntoIterator<Item = T> + std::fmt::Debug + Send + Sync,
+    ) -> Option<Child> {
+        self.right_reader().read_sequence(sequence).await
     }
-    pub fn read_pattern(
+    pub async fn read_pattern(
         &mut self,
         pattern: impl IntoPattern,
-    ) -> Child {
-        self.right_reader().read_pattern(pattern)
+    ) -> Option<Child> {
+        self.right_reader().read_pattern(pattern).await
     }
 }

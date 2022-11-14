@@ -2,18 +2,18 @@ use crate::{
     Tokenize,
     MatchDirection,
 };
-use std::iter::{Extend, FusedIterator};
+use std::iter::Extend;
 use super::*;
 
 
 #[derive(Debug)]
 pub(crate) struct Dft<'a: 'g, 'g, T, D, Trav, Q, R, S>
 where
-    T: Tokenize,
+    T: Tokenize + 'a,
     Trav: Traversable<'a, 'g, T>,
-    D: MatchDirection,
-    Q: TraversalQuery,
-    R: ResultKind,
+    D: MatchDirection + 'a,
+    Q: TraversalQuery + 'a,
+    R: ResultKind + 'a,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
 {
     stack: Vec<(usize, TraversalNode<R, Q>)>,
@@ -23,39 +23,55 @@ where
     _ty: std::marker::PhantomData<(&'g T, &'a D, Q, R, S)>
 }
 
-impl<'a: 'g, 'g, T, D, Trav, Q, R, S> Iterator for Dft<'a, 'g, T, D, Trav, Q, R, S>
+impl<'a: 'g, 'g, T, D, Trav, Q, R, S> Unpin for Dft<'a, 'g, T, D, Trav, Q, R, S>
 where
     T: Tokenize + 'a,
-    Trav: Traversable<'a, 'g, T>,
     D: MatchDirection + 'a,
+    Trav: Traversable<'a, 'g, T>,
+    Q: TraversalQuery + 'a,
+    R: ResultKind + 'a,
+    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
+{
+}
+impl<'a: 'g, 'g, T, D, Trav, Q, R, S> Stream for Dft<'a, 'g, T, D, Trav, Q, R, S>
+where
+    T: Tokenize + 'a,
+    D: MatchDirection + 'a,
+    Trav: Traversable<'a, 'g, T>,
     Q: TraversalQuery + 'a,
     R: ResultKind + 'a,
     S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
 {
     type Item = (usize, TraversalNode<R, Q>);
 
-    fn next(&mut self) -> Option<Self::Item> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> futures::task::Poll<Option<Self::Item>> {
         let (last_depth, last_node) = self.last.clone();
-        self.cached_extend(last_depth, last_node);
-        if let Some((depth, node)) = self.stack.pop() {
-            self.last = (depth, node.clone());
-            Some((depth, node))
+        let poll = self.cached_extend(last_depth, last_node).poll_unpin(cx);
+        if let Poll::Ready(_) = poll {
+            Poll::Ready(
+                if let Some((depth, node)) = self.stack.pop() {
+                    self.last = (depth, node.clone());
+                    Some((depth, node))
+                } else {
+                    None
+                }
+            )
         } else {
-            None
+            Poll::Pending
         }
     }
 }
 
-impl<'a: 'g, 'g, T, Trav, D, Q, R, S> FusedIterator for Dft<'a, 'g, T, D, Trav, Q, R, S>
-where
-    T: Tokenize + 'a,
-    Trav: Traversable<'a, 'g, T>,
-    D: MatchDirection + 'a,
-    Q: TraversalQuery + 'a,
-    R: ResultKind + 'a,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
-{
-}
+//impl<'a: 'g, 'g, T, Trav, D, Q, R, S> FusedIterator for Dft<'a, 'g, T, D, Trav, Q, R, S>
+//where
+//    T: Tokenize + 'a,
+//    Trav: Traversable<'a, 'g, T>,
+//    D: MatchDirection + 'a,
+//    Q: TraversalQuery + 'a,
+//    R: ResultKind + 'a,
+//    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
+//{
+//}
 
 impl<'a: 'g, 'g, T, Trav, D, Q, R, S> TraversalIterator<'a, 'g, T, D, Trav, Q, S, R> for Dft<'a, 'g, T, D, Trav, Q, R, S>
 where

@@ -1,3 +1,4 @@
+use super::*;
 use eframe::egui::{
     self,
     vec2,
@@ -20,7 +21,6 @@ use petgraph::{
     },
     visit::EdgeRef,
 };
-use seqraph::*;
 use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::sync::{
@@ -47,74 +47,6 @@ impl Default for Layout {
         Self::Graph
     }
 }
-#[derive(Clone)]
-pub struct Graph {
-    pub graph: HypergraphRef<char>,
-    pub vis: Arc<RwLock<GraphVis>>,
-    pub insert_text: String,
-}
-impl Graph {
-    pub fn new_from_graph(graph: Hypergraph<char>) -> Self {
-        Self::new_from_graph_ref(HypergraphRef::from(graph))
-    }
-    pub fn new_from_graph_ref(graph: HypergraphRef<char>) -> Self {
-        let vis = Arc::new(RwLock::new(GraphVis::default()));
-        let new = Self {
-            graph,
-            vis,
-            insert_text: String::from("heldldo"),
-        };
-        let g = new.clone();
-        new.vis_mut().set_graph(g);
-        new
-    }
-    pub fn new() -> Self {
-        let graph = Hypergraph::default();
-        Self::new_from_graph(graph)
-    }
-    pub(crate) fn graph(&self) -> std::sync::RwLockReadGuard<'_, Hypergraph<char>> {
-        self.graph.read().unwrap()
-    }
-    pub(crate) fn graph_mut(&self) -> std::sync::RwLockWriteGuard<'_, Hypergraph<char>> {
-        self.graph.write().unwrap()
-    }
-    #[allow(unused)]
-    pub(crate) fn vis(&self) -> std::sync::RwLockReadGuard<'_, GraphVis> {
-        self.vis.read().unwrap()
-    }
-    pub(crate) fn vis_mut(&self) -> std::sync::RwLockWriteGuard<'_, GraphVis> {
-        self.vis.write().unwrap()
-    }
-    pub fn set_graph(&self, graph: Hypergraph<char>) {
-        *self.graph_mut() = graph;
-    }
-    pub fn clear(&mut self) {
-        *self = Self::new();
-    }
-    pub fn read(&mut self, text: impl ToString, ctx: &egui::Context) {
-        let text = text.to_string();
-        let ctx = ctx.clone();
-        let mut graph = self.graph.clone();
-        tokio::spawn(async move {
-            graph.read_sequence(text.chars());
-            println!("done");
-            ctx.request_repaint();
-        });
-    }
-    pub fn poll_events(&self) -> Vec<tracing_egui::LogEvent> {
-        println!("polling..");
-        tracing_egui::poll_events()
-            .drain(..)
-            .collect()
-    }
-    pub fn show(&self, ui: &mut Ui) {
-        let events = self.poll_events();
-        if !events.is_empty() {
-            self.vis_mut().update();
-        }
-        self.vis_mut().show(ui);
-    }
-}
 #[derive(Default)]
 pub struct GraphVis {
     graph: DiGraph<NodeVis, ()>,
@@ -126,13 +58,13 @@ impl GraphVis {
         self.handle = Some(graph);
         self.update();
     }
-    fn handle(&self) -> Graph {
+    fn graph(&self) -> Graph {
         self.handle.clone().expect("GraphVis not yet initialized!")
     }
-    pub fn update(&mut self) {
+    pub fn update(&mut self) -> Option<()> {
         // todo reuse names in nodes
         println!("update...");
-        let pg = self.handle().graph().to_petgraph();
+        let pg = self.graph().try_read()?.to_petgraph();
         let node_indices: HashMap<_, _> =
             pg.nodes().map(|(idx, (key, _node))| (*key, idx)).collect();
         let old_node_indices: HashMap<_, _> = self
@@ -146,12 +78,36 @@ impl GraphVis {
                     let old = self.graph.node_weight(*oid).unwrap();
                     NodeVis::from_old(old, &node_indices, idx, node)
                 } else {
-                    NodeVis::new(self.handle(), &node_indices, idx, key, node)
+                    NodeVis::new(self.graph(), &node_indices, idx, key, node)
                 }
             },
             |_idx, _p| (),
         );
         self.graph = new;
+        Some(())
+    }
+    pub fn show(&mut self, ui: &mut Ui) {
+        //println!("{}", self.graph.vertex_count());
+        let rects: HashMap<_, _> = self
+            .graph
+            .nodes()
+            .map(|(idx, node)| {
+                let response = node.show(ui, self).unwrap();
+                (idx, response.rect)
+            })
+            .collect();
+        self.graph.edge_references().for_each(|edge| {
+            let a_pos = rects
+                .get(&edge.source())
+                .expect("No position for edge endpoint.")
+                .center();
+            let b = rects
+                .get(&edge.target())
+                .expect("No position for edge endpoint.");
+
+            let p = Self::border_intersection_point(b, &a_pos);
+            Self::edge(ui, &a_pos, &p);
+        });
     }
     pub fn edge_tip(ui: &mut Ui, source: &Pos2, target: &Pos2, size: f32) {
         let angle = (*target - *source).angle();
@@ -203,29 +159,6 @@ impl GraphVis {
                 vec2(-h / (2.0 * s), -h / 2.0)
             }
         }
-    }
-    pub fn show(&mut self, ui: &mut Ui) {
-        //println!("{}", self.graph.vertex_count());
-        let rects: HashMap<_, _> = self
-            .graph
-            .nodes()
-            .map(|(idx, node)| {
-                let response = node.show(ui, self).unwrap();
-                (idx, response.rect)
-            })
-            .collect();
-        self.graph.edge_references().for_each(|edge| {
-            let a_pos = rects
-                .get(&edge.source())
-                .expect("No position for edge endpoint.")
-                .center();
-            let b = rects
-                .get(&edge.target())
-                .expect("No position for edge endpoint.");
-
-            let p = Self::border_intersection_point(b, &a_pos);
-            Self::edge(ui, &a_pos, &p);
-        });
     }
 }
 #[allow(unused)]
@@ -299,7 +232,7 @@ impl NodeVis {
         state: Arc<RwLock<NodeState>>,
     ) -> Self {
         let (name, child_patterns) = {
-            let graph = &*graph.graph();
+            let graph = &*graph.try_read().unwrap();
             let name = graph.key_data_string(key, data);
             let child_patterns = Self::child_patterns_vis(graph, node_indices, data);
             (name, child_patterns)

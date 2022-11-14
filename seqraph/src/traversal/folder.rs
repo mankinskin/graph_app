@@ -35,15 +35,16 @@ pub(crate) type FolderQuery<'a, 'g, T, D, Q, R, Ty>
 pub(crate) type FolderPathPair<'a, 'g, T, D, Q, R, Ty>
     = PathPair<<R as ResultKind>::Advanced, FolderQuery<'a, 'g, T, D, Q, R, Ty>>;
 
-pub(crate) trait ResultKind: Eq + Clone + Debug {
+#[async_trait]
+pub(crate) trait ResultKind: Eq + Clone + Debug + Send + Sync + 'static + Unpin {
     type Found: Found<Self>;
     type Primer: PathPrimer<Self>;
     type Postfix: Postfix + PathAppend<Result=Self::Primer> + From<Self::Primer>;
     type Advanced: Advanced + PathPop<Result=Self::Postfix> + From<Self::Primer>;
-    type Indexed;
+    type Indexed: Send + Sync;
     //type Result: From<Self::Found>;
     fn into_postfix(primer: Self::Primer, match_end: MatchEnd<StartLeaf>) -> Self::Postfix;
-    fn index_found<
+    async fn index_found<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -57,6 +58,9 @@ pub(crate) trait Found<R: ResultKind>
     + From<<R as ResultKind>::Postfix>
     + Wide
     + Ord
+    + Send
+    + Sync
+    + Unpin
 {
 }
 impl<
@@ -66,6 +70,9 @@ impl<
     + From<<R as ResultKind>::Postfix>
     + Wide
     + Ord
+    + Send
+    + Sync
+    + Unpin
 > Found<R> for T {
 }
 pub(crate) trait PathPrimer<R: ResultKind>:
@@ -76,6 +83,9 @@ pub(crate) trait PathPrimer<R: ResultKind>:
     + From<StartLeaf>
     + From<R::Advanced>
     + Wide
+    + Send
+    + Sync
+    + Unpin
 {
 }
 impl<
@@ -88,11 +98,16 @@ impl<
     + From<StartLeaf>
     + From<<R as ResultKind>::Advanced>
     + Wide
+    + Send
+    + Sync
+    + Unpin
 > PathPrimer<R> for T
 {
 }
 
-pub(crate) trait Postfix: NodePath + PathReduce + IntoRangePath {
+pub(crate) trait Postfix: NodePath + PathReduce + IntoRangePath
+    + Send + Sync
+{
     fn new_complete(child: Child, origin: StartPath) -> Self;
     fn new_path(start: impl Into<StartPath>, origin: StartPath) -> Self;
 }
@@ -130,6 +145,9 @@ pub(crate) trait Advanced:
     + Eq
     + Clone
     + Debug
+    + Send
+    + Sync
+    + 'static
 {
 }
 impl<
@@ -144,12 +162,16 @@ impl<
     + Eq
     + Clone
     + Debug
+    + Send
+    + Sync
+    + 'static
 > Advanced for T {
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub(crate) struct BaseResult;
 
+#[async_trait]
 impl ResultKind for BaseResult {
     type Found = FoundPath;
     type Primer = StartPath;
@@ -159,18 +181,21 @@ impl ResultKind for BaseResult {
     fn into_postfix(_primer: Self::Primer, match_end: MatchEnd<StartLeaf>) -> Self::Postfix {
         match_end.into()
     }
-    fn index_found<
+    async fn index_found<
         'a: 'g,
         'g,
         T: Tokenize,
         D: IndexDirection,
         //Trav: TraversableMut<'a, 'g, T>,
     >(found: Self::Found, indexer: &'a mut Indexer<T, D>) -> Self::Indexed {
-        indexer.index_found(found.into_range_path().into())
+        indexer.index_found(found.into_range_path().into()).await
     }
 }
+
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub(crate) struct OriginPathResult;
+
+#[async_trait]
 impl ResultKind for OriginPathResult {
     type Found = OriginPath<FoundPath>;
     type Primer = OriginPath<StartPath>;
@@ -183,7 +208,7 @@ impl ResultKind for OriginPathResult {
             origin: primer.origin,
         }
     }
-    fn index_found<
+    async fn index_found<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -192,16 +217,17 @@ impl ResultKind for OriginPathResult {
     >(found: Self::Found, indexer: &'a mut Indexer<T, D>) -> Self::Indexed {
         OriginPath {
             origin: found.origin,
-            postfix: BaseResult::index_found::<_, D>(found.postfix, indexer)
+            postfix: BaseResult::index_found::<_, D>(found.postfix, indexer).await
         }
     }
 }
-pub(crate) trait TraversalFolder<'a: 'g, 'g, T: Tokenize, D: MatchDirection, Q: TraversalQuery, R: ResultKind>: Sized {
+#[async_trait]
+pub(crate) trait TraversalFolder<'a: 'g, 'g, T: Tokenize, D: MatchDirection, Q: TraversalQuery, R: ResultKind>: Sized + Send + Sync {
     type Trav: Traversable<'a, 'g, T>;
-    type Break;
-    type Continue;
+    type Break: Send + Sync;
+    type Continue: Send + Sync;
 
-    fn fold_found(
+    async fn fold_found(
         trav: &Self::Trav,
         acc: Self::Continue,
         node: TraversalNode<R, Q>

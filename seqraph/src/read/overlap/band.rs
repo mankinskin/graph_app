@@ -1,10 +1,9 @@
-use crate::*;
 use super::*;
 
 #[derive(Clone, Debug)]
 pub(crate) enum BandEnd {
     Index(Child),
-    Chain(OverlapChain),
+    //Chain(OverlapChain),
 }
 impl BandEnd {
     pub fn into_index<
@@ -12,16 +11,16 @@ impl BandEnd {
         'g,
         T: Tokenize,
         D: IndexDirection,
-    >(self, reader: &mut Reader<T, D>) -> Child {
+    >(self, _reader: &mut Reader<T, D>) -> Child {
         match self {
             Self::Index(c) => c,
-            Self::Chain(c) => c.close(reader).expect("Empty chain in BandEnd!"),
+            //Self::Chain(c) => c.close(reader).expect("Empty chain in BandEnd!"),
         }
     }
     pub fn index(&self) -> Option<&Child> {
         match self {
             Self::Index(c) => Some(c),
-            _ => None,
+            //_ => None,
         }
     }
 }
@@ -91,7 +90,7 @@ impl OverlapBundle {
     pub fn add_band(&mut self, overlap: OverlapBand) {
         self.bundle.push(overlap)
     }
-    pub fn into_band<
+    pub async fn into_band<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -101,7 +100,7 @@ impl OverlapBundle {
 
         let bundle = self.bundle.into_iter().map(|band| band.into_pattern(reader)).collect_vec();
         OverlapBand {
-            end: BandEnd::Index(reader.graph_mut().insert_patterns(bundle)),
+            end: BandEnd::Index(reader.graph_mut().await.insert_patterns(bundle)),
             back_context: vec![],
         }
     }

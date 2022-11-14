@@ -17,14 +17,17 @@ pub trait ContextPath:
         IntoIter=<Self as ContextPath>::IntoIter,
     >
     + Debug
+    + Send
+    + Sync
+    + Unpin
 {
-    type Item: Borrow<ChildLocation> + Debug;
-    type IntoIter: DoubleEndedIterator<Item=<Self as ContextPath>::Item> + Debug;
+    type Item: Borrow<ChildLocation> + Debug + Send + Sync + Unpin;
+    type IntoIter: DoubleEndedIterator<Item=<Self as ContextPath>::Item> + Debug + Send + Sync + Unpin;
 }
 impl<
-    Item: Borrow<ChildLocation> + Debug,
-    IntoIter: DoubleEndedIterator<Item=Item> + Debug,
-    T: IntoIterator<Item=Item, IntoIter=IntoIter> + Debug
+    Item: Borrow<ChildLocation> + Debug + Send + Sync + Unpin,
+    IntoIter: DoubleEndedIterator<Item=Item> + Debug + Send + Sync + Unpin,
+    T: IntoIterator<Item=Item, IntoIter=IntoIter> + Debug + Send + Sync + Unpin
 > ContextPath for T {
     type Item = Item;
     type IntoIter = IntoIter;
@@ -43,16 +46,18 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> C
         }
     }
 }
+#[async_trait]
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D> + 'a> Traversable<'a, 'g, T> for Contexter<T, D, Side> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    fn graph(&'g self) -> Self::Guard {
-        self.indexer.graph()
+    async fn graph(&'g self) -> Self::Guard {
+        self.indexer.graph().await
     }
 }
+#[async_trait]
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D> + 'a> TraversableMut<'a, 'g, T> for Contexter<T, D, Side> {
     type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
-    fn graph_mut(&'g mut self) -> Self::GuardMut {
-        self.indexer.graph_mut()
+    async fn graph_mut(&'g mut self) -> Self::GuardMut {
+        self.indexer.graph_mut().await
     }
 }
 //pub(crate) trait IndexContext<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: IndexSide<D>>: Indexing<'a, 'g, T, D> {
@@ -62,14 +67,14 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> C
         Pather::new(self.indexer.clone())
     }
     #[instrument(skip(self, path))]
-    pub fn try_context_path(
+    pub async fn try_context_path(
         &'a mut self,
         path: impl ContextPath,
     ) -> Option<(Child, ChildLocation)> {
         let path = path.into_iter();
         self.pather().index_primary_path::<ContextSide, _>(
             path,
-        ).map(|split|
+        ).await.map(|split|
             (split.inner, split.location)
         )
     }

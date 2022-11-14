@@ -28,7 +28,7 @@ where
         data.index = entry.index();
         let c = Child::new(data.index, data.width);
         entry.or_insert(data);
-        trace!(event = logger::Event::NewIndex.as_value());
+        trace!(event = ?logger::Event::NewIndex);
         c
     }
     /// insert single token node

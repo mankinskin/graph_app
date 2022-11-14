@@ -28,15 +28,16 @@ impl RangePath for StartPath {
         None
     }
 }
+#[async_trait]
 impl FromAdvanced<SearchPath> for FoundPath {
-    fn from_advanced<
+    async fn from_advanced<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>
     >(path: SearchPath, trav: &'a Trav) -> Self {
-        if path.is_complete::<_, D, _>(trav) {
+        if path.is_complete::<_, D, _>(trav).await {
             Self::Complete(path.start_match_path().entry().parent)
         } else {
             Self::Range(path)
@@ -44,8 +45,9 @@ impl FromAdvanced<SearchPath> for FoundPath {
         
     }
 }
+#[async_trait]
 impl FromAdvanced<OriginPath<SearchPath>> for OriginPath<FoundPath> {
-    fn from_advanced<
+    async fn from_advanced<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -53,13 +55,14 @@ impl FromAdvanced<OriginPath<SearchPath>> for OriginPath<FoundPath> {
         Trav: Traversable<'a, 'g, T>
     >(path: OriginPath<SearchPath>, trav: &'a Trav) -> Self {
         Self {
-            postfix: FoundPath::from_advanced::<_, D, _>(path.postfix, trav),
+            postfix: FoundPath::from_advanced::<_, D, _>(path.postfix, trav).await,
             origin: path.origin,
         }
     }
 }
+#[async_trait]
 pub(crate) trait FromAdvanced<A: Advanced> {
-    fn from_advanced<
+    async fn from_advanced<
         'a: 'g,
         'g,
         T: Tokenize,

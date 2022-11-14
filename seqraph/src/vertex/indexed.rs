@@ -79,23 +79,24 @@ impl<'a, 'g, V: Vertexed<'a, 'g>> Vertexed<'a, 'g> for &'a mut V {
         V::vertex_ref(*self, graph)
     }
 }
+#[async_trait]
 pub trait Indexed: Sized {
     fn index(&self) -> VertexIndex;
-    fn expect_child_patterns<
+    async fn expect_child_patterns<
         'a: 'g,
         'g,
         T: Tokenize + 'a,
         Trav: Traversable<'a, 'g, T>,
     >(&'a self, trav: &'a Trav) -> ChildPatterns {
-        trav.graph().expect_child_patterns(self).clone()
+        trav.graph().await.expect_child_patterns(self).clone()
     }
-    fn expect_child_pattern<
+    async fn expect_child_pattern<
         'a: 'g,
         'g,
         T: Tokenize + 'a,
         Trav: Traversable<'a, 'g, T> + 'a,
     >(&'a self, trav: &'a Trav, pid: PatternId) -> Pattern {
-        trav.graph().expect_child_pattern(self, pid).clone()
+        trav.graph().await.expect_child_pattern(self, pid).clone()
     }
 }
 impl<I: Indexed> Indexed for &'_ I {

@@ -7,8 +7,8 @@ use maplit::hashset;
 use std::collections::HashSet;
 use std::borrow::Borrow;
 
-#[test]
-fn index_pattern1() {
+#[tokio::test]
+async fn index_pattern1() {
     let mut graph = Hypergraph::default();
     let (a, b, _w, x, y, z) = graph.insert_tokens([
         Token::Element('a'),
@@ -28,28 +28,28 @@ fn index_pattern1() {
     let _xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
     let graph = HypergraphRef::from(graph);
     let query = vec![by, z];
-    let (byz, _) = graph.index_pattern(query.borrow()).expect("Indexing failed");
+    let (byz, _) = graph.index_pattern(query.borrow()).await.expect("Indexing failed");
     assert_eq!(byz, Child {
         index: 13,
         width: 3,
     }, "byz");
-    let byz_found = graph.find_ancestor(&query);
+    let byz_found = graph.find_ancestor(&query).await;
     assert_eq!(
         byz_found,
         Ok(TraversalResult::new_complete(query, byz)),
         "byz"
     );
     let query = vec![ab, y];
-    let (aby, _) = graph.index_pattern(query.borrow()).expect("Indexing failed");
-    let aby_found = graph.find_parent(&query);
+    let (aby, _) = graph.index_pattern(query.borrow()).await.expect("Indexing failed");
+    let aby_found = graph.find_parent(&query).await;
     assert_eq!(
         aby_found,
         Ok(TraversalResult::new_complete(query, aby)),
         "aby"
     );
 }
-#[test]
-fn index_pattern2() {
+#[tokio::test]
+async fn index_pattern2() {
     let mut graph = Hypergraph::default();
     let (a, b, _w, x, y, z) = graph.insert_tokens([
         Token::Element('a'),
@@ -69,11 +69,11 @@ fn index_pattern2() {
     let graph_ref = HypergraphRef::from(graph);
 
     let query = vec![a, b, y, x];
-    let (aby, _) = graph_ref.index_pattern(query.borrow()).expect("Indexing failed");
+    let (aby, _) = graph_ref.index_pattern(query.borrow()).await.expect("Indexing failed");
     assert_eq!(aby.width(), 3);
-    let ab = graph_ref.find_sequence("ab".chars()).unwrap().expect_complete("ab");
+    let ab = graph_ref.find_sequence("ab".chars()).await.unwrap().expect_complete("ab");
 
-    let graph = graph_ref.read().unwrap();
+    let graph = graph_ref.read().await;
     let aby_vertex = graph.expect_vertex_data(aby);
     assert_eq!(aby_vertex.parents.len(), 1, "aby");
     assert_eq!(
@@ -84,7 +84,7 @@ fn index_pattern2() {
     );
     drop(graph);
     let query = vec![a, b, y];
-    let aby_found = graph_ref.find_ancestor(&query);
+    let aby_found = graph_ref.find_ancestor(&query).await;
     assert_eq!(
         aby_found,
         Ok(TraversalResult {
@@ -94,8 +94,8 @@ fn index_pattern2() {
         "aby"
     );
 }
-#[test]
-fn index_infix1() {
+#[tokio::test]
+async fn index_infix1() {
     let mut graph = Hypergraph::default();
     let (a, b, w, x, y, z) = graph.insert_tokens([
         Token::Element('a'),
@@ -111,9 +111,9 @@ fn index_infix1() {
 
     let graph_ref = HypergraphRef::from(graph);
 
-    let (aby, _) = graph_ref.index_pattern([a, b, y]).expect("Indexing failed");
-    let ab = graph_ref.find_ancestor([a, b]).unwrap().expect_complete("ab");
-    let graph = graph_ref.read().unwrap();
+    let (aby, _) = graph_ref.index_pattern([a, b, y]).await.expect("Indexing failed");
+    let ab = graph_ref.find_ancestor([a, b]).await.unwrap().expect_complete("ab");
+    let graph = graph_ref.read().await;
     let aby_vertex = graph.expect_vertex_data(aby);
     assert_eq!(aby.width, 3, "aby");
     assert_eq!(aby_vertex.parents.len(), 1, "aby");
@@ -127,7 +127,7 @@ fn index_infix1() {
     );
     drop(graph);
     let query = vec![a, b, y];
-    let aby_found = graph_ref.find_ancestor(&query);
+    let aby_found = graph_ref.find_ancestor(&query).await;
     assert_eq!(
         aby_found,
         Ok(TraversalResult {
@@ -136,8 +136,8 @@ fn index_infix1() {
         }),
         "aby"
     );
-    let abyz = graph_ref.find_ancestor([ab, yz]).unwrap().expect_complete("abyz");
-    let graph = graph_ref.read().unwrap();
+    let abyz = graph_ref.find_ancestor([ab, yz]).await.unwrap().expect_complete("abyz");
+    let graph = graph_ref.read().await;
     let abyz_vertex = graph.expect_vertex_data(abyz);
     assert_eq!(
         abyz_vertex.get_child_pattern_set().into_iter().collect::<HashSet<_>>(),

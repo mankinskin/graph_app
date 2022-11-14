@@ -34,19 +34,19 @@ where
     pub fn indexer(&self) -> Indexer<T, Right> {
         Indexer::new(self.clone())
     }
-    pub fn index_pattern(
+    pub async fn index_pattern(
         &self,
         pattern: impl IntoPattern,
     ) -> Result<(Child, QueryRangePath), NoMatch> {
-        self.indexer().index_pattern(pattern)
+        self.indexer().index_pattern(pattern).await
     }
-    pub(crate) fn index_query_with_origin<
+    pub(crate) async fn index_query_with_origin<
         Q: IndexingQuery
     >(
         &self,
         query: Q,
     ) -> Result<(OriginPath<Child>, Q), NoMatch> {
-        self.indexer().index_query_with_origin(query)
+        self.indexer().index_query_with_origin(query).await
     }
 }
 

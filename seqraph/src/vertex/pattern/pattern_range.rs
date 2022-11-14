@@ -14,12 +14,12 @@ pub(crate) fn get_child_pattern_range<'a, R: PatternRangeIndex>(
     )
 }
 pub trait PatternRangeIndex<T = Child>:
-    SliceIndex<[T], Output = [T]> + RangeBounds<usize> + Iterator<Item = usize> + Debug + Clone
+    SliceIndex<[T], Output = [T]> + RangeBounds<usize> + Iterator<Item = usize> + Debug + Clone + Send + Sync
 {
 }
 impl<
         T,
-        R: SliceIndex<[T], Output = [T]> + RangeBounds<usize> + Iterator<Item = usize> + Debug + Clone,
+        R: SliceIndex<[T], Output = [T]> + RangeBounds<usize> + Iterator<Item = usize> + Debug + Clone + Send + Sync,
     > PatternRangeIndex<T> for R
 {
 }

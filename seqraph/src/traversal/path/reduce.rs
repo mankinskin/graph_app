@@ -1,24 +1,26 @@
 use crate::*;
 use super::*;
 
-pub(crate) trait PathReduce: Sized {
-    fn into_reduced<
+#[async_trait]
+pub(crate) trait PathReduce: Sized + Send + Sync {
+    async fn into_reduced<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(self, trav: &'a Trav) -> Self;
-    fn reduce<
+    async fn reduce<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&mut self, trav: &'a Trav) {
-        replace_with::replace_with_or_abort(
-            self,
-            |self_| self_.into_reduced::<_, D, _>(trav)
-        );
+	    unsafe {
+	    	let old = std::ptr::read(self);
+	    	let new = old.into_reduced::<_, D, _>(trav).await;
+	    	std::ptr::write(self, new);
+	    }
     }
 }

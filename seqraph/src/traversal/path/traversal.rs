@@ -8,6 +8,10 @@ pub(crate) trait TraversalQuery:
     + Hash
     + PartialEq
     + Eq
+    + Send
+    + Sync
+    + 'static
+    + Unpin
 {}
 impl<
     T: Advance
@@ -16,6 +20,10 @@ impl<
         + Hash
         + PartialEq
         + Eq
+        + Send
+        + Sync
+        + 'static
+        + Unpin
 > TraversalQuery for T {}
 
 pub(crate) trait TraversalStartPath:

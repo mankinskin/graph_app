@@ -4,10 +4,8 @@
 #![feature(try_blocks)]
 #![feature(hash_drain_filter)]
 #![feature(slice_pattern)]
-#![feature(generic_associated_types)]
-#![feature(map_first_last)]
 #![feature(control_flow_enum)]
-#![feature(available_parallelism)]
+#![feature(pin_macro)]
 
 extern crate test;
 
@@ -49,6 +47,12 @@ pub(crate) use {
     tracing::*,
     tracing_test::traced_test,
     itertools::*,
+    async_std::{
+        sync::{
+            RwLockReadGuard,
+            RwLockWriteGuard,
+        },
+    },
     std::{
         fmt::Debug,
         ops::{
@@ -64,10 +68,6 @@ pub(crate) use {
             BorrowMut,
         },
         marker::PhantomData,
-        sync::{
-            RwLockReadGuard,
-            RwLockWriteGuard,
-        },
         collections::{
             HashSet,
             HashMap,
@@ -78,6 +78,7 @@ pub(crate) use {
             Hash,
         },
         num::NonZeroUsize,
+        pin::{Pin, pin},
     },
     lazy_static::lazy_static,
     function_name::named,
@@ -86,6 +87,24 @@ pub(crate) use {
         Pipe,
     },
     valuable::*,
+    async_trait::async_trait,
+    async_recursion::async_recursion,
+    async_std::stream::{
+        //Stream,
+        //StreamExt,
+    },
+    futures::{
+        task::Poll,
+        stream::{
+            Stream,
+            StreamExt,
+        },
+        future::{
+            OptionFuture,
+            Future,
+            FutureExt,
+        },
+    },
 };
 pub(crate) type DeterministicHashSet<T> =
     HashSet<T,

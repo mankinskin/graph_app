@@ -2,14 +2,16 @@ use crate::*;
 use itertools::Itertools;
 use petgraph::graph::DiGraph;
 use std::{
-    fmt::Debug, sync::{Arc, RwLock},
+    fmt::Debug,
 };
+use async_std::sync::{Arc, RwLock};
 
 type HashMap<K, V> = DeterministicHashMap<K, V>;
 mod child_strings;
 mod getters;
 mod insert;
 mod validation;
+
 #[cfg(test)]
 #[macro_use]
 pub(crate) mod tests;

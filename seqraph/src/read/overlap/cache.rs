@@ -1,4 +1,3 @@
-use crate::*;
 use super::*;
 
 #[derive(Default, Clone, Debug)]
@@ -18,7 +17,7 @@ impl OverlapCache {
             chain: OverlapChain::default(),
         }
     }
-    pub fn add_bundle<
+    pub async fn add_bundle<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -32,7 +31,7 @@ impl OverlapCache {
             self.end_bound,
             Overlap {
                 link: None,
-                band: bundle.into_band(reader),
+                band: bundle.into_band(reader).await,
             }
         );
     }

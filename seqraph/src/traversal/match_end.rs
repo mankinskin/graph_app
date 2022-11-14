@@ -4,8 +4,8 @@ use super::*;
 //pub(crate) trait NotStartPath {}
 //impl NotStartPath for StartLeaf {}
 
-pub(crate) trait MatchEndPath: NodePath + PathComplete + PathAppend<Result=StartPath> + Into<StartPath> + From<StartPath> + From<StartLeaf> + Into<FoundPath> + Hash {}
-impl<T: NodePath + PathComplete + PathAppend<Result=StartPath> + Into<StartPath> + From<StartPath> + From<StartLeaf> + Into<FoundPath> + Hash> MatchEndPath for T {}
+pub(crate) trait MatchEndPath: NodePath + PathComplete + PathAppend<Result=StartPath> + Into<StartPath> + From<StartPath> + From<StartLeaf> + Into<FoundPath> + Hash + Sync + Send {}
+impl<T: NodePath + PathComplete + PathAppend<Result=StartPath> + Into<StartPath> + From<StartPath> + From<StartLeaf> + Into<FoundPath> + Hash + Sync + Send> MatchEndPath for T {}
 
 /// Used to represent results after traversal with only a start path
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
@@ -125,8 +125,9 @@ impl<P: MatchEndPath> MatchEnd<P> {
     //    }
     //}
 }
+#[async_trait]
 impl<P: MatchEndPath> PathComplete for MatchEnd<P> {
-    fn complete<
+    async fn complete<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -139,17 +140,19 @@ impl<P: MatchEndPath> PathComplete for MatchEnd<P> {
         }
     }
 }
+#[async_trait]
 impl<P: MatchEndPath + PathPop<Result=Self>> PathReduce for MatchEnd<P> {
-    fn into_reduced<
+    async fn into_reduced<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(self, trav: &'a Trav) -> Self {
-        if let Some(c) = self.get_path().and_then(
-            |p| p.complete::<_, D, _>(trav)
-        ) {
+        if let Some(c) = match self.get_path() {
+            Some(p) => p.complete::<_, D, _>(trav).await,
+            None => None,
+        } {
             MatchEnd::Complete(c)
         } else {
             self    
@@ -161,9 +164,10 @@ impl<P: MatchEndPath + PathPop<Result=Self>> PathReduce for MatchEnd<P> {
         //}
     }
 }
+#[async_trait]
 impl<P: MatchEndPath + PathAppend> PathAppend for MatchEnd<P> {
     type Result = <P as PathAppend>::Result;
-    fn append<
+    async fn append<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -171,7 +175,7 @@ impl<P: MatchEndPath + PathAppend> PathAppend for MatchEnd<P> {
         Trav: Traversable<'a, 'g, T>
     >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
         match self {
-            MatchEnd::Path(path) => path.append::<_, D, _>(trav, parent_entry),
+            MatchEnd::Path(path) => path.append::<_, D, _>(trav, parent_entry).await,
             MatchEnd::Complete(child) => StartLeaf {
                 entry: parent_entry,
                 width: child.width(),
@@ -180,9 +184,10 @@ impl<P: MatchEndPath + PathAppend> PathAppend for MatchEnd<P> {
         }
     }
 }
+#[async_trait]
 impl<P: MatchEndPath + PathPop<Result=Self>> PathPop for MatchEnd<P> {
     type Result = Result<Self, Child>;
-    fn pop_path<
+    async fn pop_path<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -190,7 +195,7 @@ impl<P: MatchEndPath + PathPop<Result=Self>> PathPop for MatchEnd<P> {
         Trav: Traversable<'a, 'g, T>
     >(self, trav: &'a Trav) -> Self::Result {
         match self {
-            MatchEnd::Path(path) => Ok(path.pop_path::<_, D, _>(trav)),
+            MatchEnd::Path(path) => Ok(path.pop_path::<_, D, _>(trav).await),
             MatchEnd::Complete(child) => Err(child),
         }
     }
