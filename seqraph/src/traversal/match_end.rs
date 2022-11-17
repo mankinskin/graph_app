@@ -125,9 +125,9 @@ impl<P: MatchEndPath> MatchEnd<P> {
     //    }
     //}
 }
-#[async_trait]
+
 impl<P: MatchEndPath> PathComplete for MatchEnd<P> {
-    async fn complete<
+    fn complete<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -140,9 +140,9 @@ impl<P: MatchEndPath> PathComplete for MatchEnd<P> {
         }
     }
 }
-#[async_trait]
+
 impl<P: MatchEndPath + PathPop<Result=Self>> PathReduce for MatchEnd<P> {
-    async fn into_reduced<
+    fn into_reduced<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -150,7 +150,7 @@ impl<P: MatchEndPath + PathPop<Result=Self>> PathReduce for MatchEnd<P> {
         Trav: Traversable<'a, 'g, T>,
     >(self, trav: &'a Trav) -> Self {
         if let Some(c) = match self.get_path() {
-            Some(p) => p.complete::<_, D, _>(trav).await,
+            Some(p) => p.complete::<_, D, _>(trav),
             None => None,
         } {
             MatchEnd::Complete(c)
@@ -164,10 +164,10 @@ impl<P: MatchEndPath + PathPop<Result=Self>> PathReduce for MatchEnd<P> {
         //}
     }
 }
-#[async_trait]
+
 impl<P: MatchEndPath + PathAppend> PathAppend for MatchEnd<P> {
     type Result = <P as PathAppend>::Result;
-    async fn append<
+    fn append<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -175,7 +175,7 @@ impl<P: MatchEndPath + PathAppend> PathAppend for MatchEnd<P> {
         Trav: Traversable<'a, 'g, T>
     >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
         match self {
-            MatchEnd::Path(path) => path.append::<_, D, _>(trav, parent_entry).await,
+            MatchEnd::Path(path) => path.append::<_, D, _>(trav, parent_entry),
             MatchEnd::Complete(child) => StartLeaf {
                 entry: parent_entry,
                 width: child.width(),
@@ -184,10 +184,10 @@ impl<P: MatchEndPath + PathAppend> PathAppend for MatchEnd<P> {
         }
     }
 }
-#[async_trait]
+
 impl<P: MatchEndPath + PathPop<Result=Self>> PathPop for MatchEnd<P> {
     type Result = Result<Self, Child>;
-    async fn pop_path<
+    fn pop_path<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -195,7 +195,7 @@ impl<P: MatchEndPath + PathPop<Result=Self>> PathPop for MatchEnd<P> {
         Trav: Traversable<'a, 'g, T>
     >(self, trav: &'a Trav) -> Self::Result {
         match self {
-            MatchEnd::Path(path) => Ok(path.pop_path::<_, D, _>(trav).await),
+            MatchEnd::Path(path) => Ok(path.pop_path::<_, D, _>(trav)),
             MatchEnd::Complete(child) => Err(child),
         }
     }

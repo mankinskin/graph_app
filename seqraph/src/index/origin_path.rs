@@ -97,9 +97,9 @@ impl<P: RangePath> RangePath for OriginPath<P> {
         self.postfix.into_complete()
     }
 }
-#[async_trait]
+
 impl<A: Advanced, F: FromAdvanced<A>> FromAdvanced<A> for OriginPath<F> {
-    async fn from_advanced<
+    fn from_advanced<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -108,7 +108,7 @@ impl<A: Advanced, F: FromAdvanced<A>> FromAdvanced<A> for OriginPath<F> {
     >(path: A, trav: &'a Trav) -> Self {
         Self {
             origin: MatchEnd::Path(path.start_match_path().clone()),
-            postfix: F::from_advanced::<_, D, _>(path, trav).await,
+            postfix: F::from_advanced::<_, D, _>(path, trav),
         }
     }
 }
@@ -123,25 +123,25 @@ impl<A: Advanced, F: FromAdvanced<A>> FromAdvanced<A> for OriginPath<F> {
 //        self.postfix.complete::<_, D, _>(trav)
 //    }
 //}
-#[async_trait]
+
 impl<P: PathReduce> PathReduce for OriginPath<P> {
-    async fn into_reduced<
+    fn into_reduced<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(mut self, trav: &'a Trav) -> Self {
-        self.postfix.reduce::<_, D, _>(trav).await;
+        self.postfix.reduce::<_, D, _>(trav);
         self
     }
 }
-#[async_trait]
+
 impl<P: PathAppend> PathAppend for OriginPath<P>
     where <P as PathAppend>::Result: PathAppend<Result=<P as PathAppend>::Result> + RangePath + GraphEntry
 {
     type Result = OriginPath<<P as PathAppend>::Result>;
-    async fn append<
+    fn append<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -149,8 +149,8 @@ impl<P: PathAppend> PathAppend for OriginPath<P>
         Trav: Traversable<'a, 'g, T>
     >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
         OriginPath {
-            origin: MatchEnd::Path(self.origin.append::<_, D, _>(trav, parent_entry).await),
-            postfix: self.postfix.append::<_, D, _>(trav, parent_entry).await,
+            origin: MatchEnd::Path(self.origin.append::<_, D, _>(trav, parent_entry)),
+            postfix: self.postfix.append::<_, D, _>(trav, parent_entry),
         }
     }
 }

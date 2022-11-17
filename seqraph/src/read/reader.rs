@@ -13,70 +13,65 @@ pub struct Reader<T: Tokenize, D: IndexDirection> {
     pub(crate) root: Option<Child>,
     _ty: std::marker::PhantomData<D>,
 }
-#[async_trait]
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for Reader<T, D> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    async fn graph(&'g self) -> Self::Guard {
-        self.graph.read().await
+    fn graph(&'g self) -> Self::Guard {
+        self.graph.try_read().unwrap()
     }
 }
-#[async_trait]
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g, T> for Reader<T, D> {
     type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
-    async fn graph_mut(&'g mut self) -> Self::GuardMut {
-        self.graph.write().await
+    fn graph_mut(&'g mut self) -> Self::GuardMut {
+        self.graph.try_write().unwrap()
     }
 }
-#[async_trait]
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for &'a Reader<T, D> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    async fn graph(&'g self) -> Self::Guard {
-        self.graph.read().await
+    fn graph(&'g self) -> Self::Guard {
+        self.graph.try_read().unwrap()
     }
 }
-#[async_trait]
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for &'a mut Reader<T, D> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    async fn graph(&'g self) -> Self::Guard {
-        self.graph.read().await
+    fn graph(&'g self) -> Self::Guard {
+        self.graph.try_read().unwrap()
     }
 }
-#[async_trait]
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g, T> for &'a mut Reader<T, D> {
     type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
-    async fn graph_mut(&'g mut self) -> Self::GuardMut {
-        self.graph.write().await
+    fn graph_mut(&'g mut self) -> Self::GuardMut {
+        self.graph.try_write().unwrap()
     }
 }
 //type HashMap<K, V> = DeterministicHashMap<K, V>;
 
 impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     #[instrument(skip(self))]
-    pub(crate) async fn read_sequence<N, S: ToNewTokenIndices<N, T>>(
+    pub(crate) fn read_sequence<N, S: ToNewTokenIndices<N, T>>(
         &mut self,
         sequence: S,
     ) -> Option<Child> {
         debug!("start reading: {:?}", sequence);
-        let mut sequence = sequence.to_new_token_indices(self).await.into_iter().peekable();
+        let mut sequence = sequence.to_new_token_indices(self).into_iter().peekable();
         while let Some((unknown, known)) = self.find_known_block(&mut sequence) {
-            self.append_pattern(unknown).await;
-            self.read_known(known).await
+            self.append_pattern(unknown);
+            self.read_known(known)
         }
         //println!("reading result: {:?}", index);
         self.root
     }
-    pub(crate) async fn read_pattern(&mut self, known: impl IntoPattern) -> Option<Child> {
-        self.read_known(known.into_pattern()).await;
+    pub(crate) fn read_pattern(&mut self, known: impl IntoPattern) -> Option<Child> {
+        self.read_known(known.into_pattern());
         self.root
     }
     #[instrument(skip(self, known))]
-    pub(crate) async fn read_known(&mut self, known: Pattern) {
+    pub(crate) fn read_known(&mut self, known: Pattern) {
         match PrefixQuery::new_directed::<D, _>(known.borrow()) {
-            Ok(path) => self.read_bands(path).await,
+            Ok(path) => self.read_bands(path),
             Err(err) =>
                 match err {
                     NoMatch::SingleIndex(c) => {
-                        self.append_index(c).await;
+                        self.append_index(c);
                         Ok(())
                     },
                     NoMatch::EmptyPatterns => Ok(()),
@@ -85,28 +80,28 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         }
     }
     #[instrument(skip(self, sequence))]
-    async fn read_bands(&mut self, mut sequence: PrefixQuery) {
+    fn read_bands(&mut self, mut sequence: PrefixQuery) {
         //println!("reading known bands");
-        while let Some(next) = self.get_next(&mut sequence).await {
+        while let Some(next) = self.get_next(&mut sequence) {
             //println!("found next {:?}", next);
             let next = self.read_overlaps(
                     next,
                     &mut sequence,
                 )
-                .await
+                
                 .unwrap_or(next);
-            self.append_index(next).await;
+            self.append_index(next);
         }
     }
     #[instrument(skip(self, context))]
-    async fn get_next(&mut self, context: &mut PrefixQuery) -> Option<Child> {
-        match self.indexer().index_query(context.clone()).await {
+    fn get_next(&mut self, context: &mut PrefixQuery) -> Option<Child> {
+        match self.indexer().index_query(context.clone()) {
             Ok((index, advanced)) => {
                 *context = advanced;
                 Some(index)
             },
             Err(_) => {
-                context.advance::<_, D, _>(self).await
+                context.advance::<_, D, _>(self)
             }
         }
     }
@@ -131,13 +126,13 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     //    0
     //}
     #[instrument(skip(self, index))]
-    async fn append_index(
+    fn append_index(
         &mut self,
         index: impl ToChild,
     ) {
         let index = index.to_child();
         if let Some(root) = &mut self.root {
-            let mut graph = self.graph.graph_mut().await;
+            let mut graph = self.graph.graph_mut();
             let vertex = (*root).vertex_mut(&mut graph);
             *root = if
                 index.index() != root.index() &&
@@ -155,7 +150,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     }
     /// append a pattern of new token indices
     /// returns index of possible new index
-    async fn append_pattern(
+    fn append_pattern(
         &mut self,
         new: impl IntoPattern,
     ) {
@@ -163,10 +158,10 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             0 => {},
             1 => {
                 let new = new.borrow().iter().next().unwrap();
-                self.append_index(new).await
+                self.append_index(new)
             },
             _ => if let Some(root) = &mut self.root {
-                    let mut graph = self.graph.graph_mut().await;
+                    let mut graph = self.graph.graph_mut();
                     let vertex = (*root).vertex_mut(&mut graph);
                     *root = if vertex.children.len() == 1 && vertex.parents.is_empty() {
                         let (&pid, _) = vertex.expect_any_child_pattern();
@@ -177,7 +172,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                         graph.insert_pattern([&[*root], new.as_slice()].concat())
                     };
                 } else {
-                    let c = self.graph_mut().await.insert_pattern(new);
+                    let c = self.graph_mut().insert_pattern(new);
                     self.root = Some(c);
                 }
         }
@@ -204,17 +199,17 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         }
     }
 }
-#[async_trait]
+
 pub(crate) trait ToNewTokenIndices<N, T: Tokenize>: Debug {
-    async fn to_new_token_indices<
+    fn to_new_token_indices<
         'a: 'g,
         'g,
         Trav: TraversableMut<'a, 'g, T>,
         >(self, graph: &'a mut Trav) -> NewTokenIndices;
 }
-#[async_trait]
+
 impl<T: Tokenize> ToNewTokenIndices<NewTokenIndex, T> for NewTokenIndices {
-    async fn to_new_token_indices<
+    fn to_new_token_indices<
         'a: 'g,
         'g,
         Trav: TraversableMut<'a, 'g, T>,
@@ -231,13 +226,13 @@ impl<T: Tokenize> ToNewTokenIndices<NewTokenIndex, T> for NewTokenIndices {
 //        graph.graph_mut().new_token_indices(self)
 //    }
 //}
-#[async_trait]
+
 impl<T: Tokenize, Iter: IntoIterator<Item=T> + Debug + Send + Sync> ToNewTokenIndices<T, T> for Iter {
-    async fn to_new_token_indices<
+    fn to_new_token_indices<
         'a: 'g,
         'g,
         Trav: TraversableMut<'a, 'g, T>,
     >(self, graph: &'a mut Trav) -> NewTokenIndices {
-        graph.graph_mut().await.new_token_indices(self)
+        graph.graph_mut().new_token_indices(self)
     }
 }

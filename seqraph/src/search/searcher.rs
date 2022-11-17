@@ -14,18 +14,18 @@ pub struct Searcher<T: Tokenize, D: MatchDirection> {
     graph: HypergraphRef<T>,
     _ty: std::marker::PhantomData<D>,
 }
-#[async_trait]
+
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> Traversable<'a, 'g, T> for Searcher<T, D> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    async fn graph(&'g self) -> Self::Guard {
-        self.graph.read().await
+    fn graph(&'g self) -> Self::Guard {
+        self.graph.try_read().unwrap()
     }
 }
-#[async_trait]
+
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> Traversable<'a, 'g, T> for &'a Searcher<T, D> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    async fn graph(&'g self) -> Self::Guard {
-        self.graph.read().await
+    fn graph(&'g self) -> Self::Guard {
+        self.graph.try_read().unwrap()
     }
 }
 
@@ -62,7 +62,7 @@ impl<
     SearchTraversalPolicy<'a, 'g, T, D> for ParentSearch<T, D>
 {}
 
-#[async_trait]
+
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a, Q: TraversalQuery + 'a, R: ResultKind + 'a>
     TraversalFolder<'a, 'g, T, D, Q, R> for Searcher<T, D>
 {
@@ -70,7 +70,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a, Q: TraversalQuery + '
     type Break = TraversalResult<<R as ResultKind>::Found, Q>;
     type Continue = Option<TraversalResult<<R as ResultKind>::Found, Q>>;
 
-    async fn fold_found(
+    fn fold_found(
         _trav: &Self::Trav,
         acc: Self::Continue,
         node: TraversalNode<R, Q>,
@@ -134,7 +134,7 @@ pub(crate) fn pick_max_result<
 struct AncestorSearch<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<(T, D)>,
 }
-#[async_trait]
+
 impl<
     'a: 'g,
     'g,
@@ -148,7 +148,7 @@ impl<
     type Folder = Searcher<T, D>;
     //type Primer = R::Result<StartPath>;
 
-    async fn after_end_match(
+    fn after_end_match(
         _trav: &'a Self::Trav,
         path: R::Primer,
     ) -> R::Postfix {
@@ -158,7 +158,7 @@ impl<
 struct ParentSearch<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<(T, D)>,
 }
-#[async_trait]
+
 impl<
     'a: 'g,
     'g,
@@ -172,13 +172,13 @@ impl<
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
 
-    async fn after_end_match(
+    fn after_end_match(
         _trav: &'a Self::Trav,
         path: R::Primer,
     ) -> R::Postfix {
         R::Postfix::from(path)
     }
-    async fn next_parents(
+    fn next_parents(
         _trav: &'a Self::Trav,
         _query: &Q,
         _start: &R::Postfix,
@@ -194,24 +194,24 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
         }
     }
     // find largest matching direct parent
-    pub(crate) async fn find_pattern_parent(
+    pub(crate) fn find_pattern_parent(
         &'a self,
         pattern: impl IntoPattern,
     ) -> SearchResult {
         self.bft_search::<ParentSearch<T, D>, _>(
             pattern,
-        ).await
+        )
     }
     /// find largest matching ancestor for pattern
-    pub(crate) async fn find_pattern_ancestor(
+    pub(crate) fn find_pattern_ancestor(
         &'a self,
         pattern: impl IntoPattern,
     ) -> SearchResult {
         self.bft_search::<AncestorSearch<T, D>, _>(
             pattern,
-        ).await
+        )
     }
-    async fn bft_search<
+    fn bft_search<
         S: SearchTraversalPolicy<'a, 'g, T, D> + Send,
         P: IntoPattern,
     >(
@@ -220,10 +220,10 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
     ) -> SearchResult {
         self.search::<Bft<'a, 'g, T, D, Self, QueryRangePath, BaseResult, S>, S, _>(
             query,
-        ).await
+        )
     }
     #[allow(unused)]
-    async fn search<
+    fn search<
         Ti: TraversalIterator<'a, 'g, T, D, Self, QueryRangePath, S, BaseResult> + Send,
         S: SearchTraversalPolicy<'a, 'g, T, D>,
         P: IntoPattern,
@@ -234,10 +234,10 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
         let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())
             .map_err(|(err, _)| err)?;
         let mut acc = ControlFlow::Continue(None);
-        let mut stream = pin!(Ti::new(self, TraversalNode::query_node(query_path)));
+        let mut stream = Ti::new(self, TraversalNode::query_node(query_path));
 
-        while let Some((_depth, node)) = stream.next().await {
-            match <S::Folder as TraversalFolder<_, _, _, BaseResult>>::fold_found(self, acc.continue_value().unwrap(), node).await {
+        while let Some((_depth, node)) = stream.next() {
+            match <S::Folder as TraversalFolder<_, _, _, BaseResult>>::fold_found(self, acc.continue_value().unwrap(), node) {
                 ControlFlow::Continue(c) => {
                     acc = ControlFlow::Continue(c);
                 },

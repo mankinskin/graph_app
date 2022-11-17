@@ -21,20 +21,20 @@ pub(crate) struct PostfixExpandingPolicy<D: MatchDirection> {
     _ty: std::marker::PhantomData<D>,
 }
 
-#[async_trait]
+
 pub(crate) trait BandIterator<
     'a: 'g,
     'g,
     T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
     P: BandExpandingPolicy<'a, 'g, T, Trav>,
->: Stream<Item = (ChildLocation, Child)>
+>: Iterator<Item = (ChildLocation, Child)>
 {
     fn new(trav: &'a Trav, root: Child) -> Self;
     /// get all postfixes of index with their locations
-    async fn next_children(trav: &'a Trav, index: Child) -> Vec<(ChildLocation, Child)> {
+    fn next_children(trav: &'a Trav, index: Child) -> Vec<(ChildLocation, Child)> {
         P::map_batch(
-            trav.graph().await
+            trav.graph()
                 .expect_child_patterns(index)
                 .iter()
                 .map(|(pid, pattern)|
@@ -77,7 +77,7 @@ where
 pub(crate) type PostfixIterator<'a, 'g, T, D, Trav>
     = BandExpandingIterator<'a, 'g, T, Trav, PostfixExpandingPolicy<D>>;
 
-#[async_trait]
+
 impl<'a: 'g, 'g, T, Trav, P> BandIterator<'a, 'g, T, Trav, P> for BandExpandingIterator<'a, 'g, T, Trav, P>
 where
     T: Tokenize,
@@ -93,7 +93,7 @@ where
         }
     }
 }
-impl<'a: 'g, 'g, T, Trav, P> Stream for BandExpandingIterator<'a, 'g, T, Trav, P>
+impl<'a: 'g, 'g, T, Trav, P> Iterator for BandExpandingIterator<'a, 'g, T, Trav, P>
 where
     T: Tokenize,
     Trav: Traversable<'a, 'g, T>,
@@ -101,29 +101,24 @@ where
 {
     type Item = (ChildLocation, Child);
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> futures::task::Poll<Option<Self::Item>> {
+    fn next(&mut self) -> Option<Self::Item> {
         //let mut segment = None;
-        let poll = <Self as BandIterator<T, Trav, P>>::next_children(self.trav, self.last.1).poll_unpin(cx);
-        if let Poll::Ready(next) = poll {
-            if self.queue.is_empty() {
-                //segment = last_location.take();
-                self.queue.extend(
-                    next
-                )
-            }
-            Poll::Ready(
-                self.queue.pop_front()
-                    .map(|(location, node)| { 
-                        self.last.0 = Some(location);
-                        self.last.1 = node;
-                        (location, node)
-                    })
-                    .map(|(location, node)|
-                        (location, node)
-                    )
+        let next = <Self as BandIterator<T, Trav, P>>::next_children(self.trav, self.last.1);
+        if self.queue.is_empty() {
+            //segment = last_location.take();
+            self.queue.extend(
+                next
             )
-        } else {
-            Poll::Pending
         }
+        self.queue.pop_front()
+            .map(|(location, node)| { 
+                self.last.0 = Some(location);
+                self.last.1 = node;
+                (location, node)
+            })
+            .map(|(location, node)|
+                (location, node)
+            )
+        
     }
 }

@@ -174,8 +174,9 @@ pub fn context() -> RwLockReadGuard<'static, Context> {
 pub fn context_mut() -> RwLockWriteGuard<'static, Context> {
     CONTEXT.write().unwrap()
 }
-#[tokio::test]
-async fn test_to_petgraph() {
+
+#[test]
+fn test_to_petgraph() {
     let mut graph = Hypergraph::default();
     let (a, b, c, d) = graph.insert_tokens([
         Token::Element('a'),

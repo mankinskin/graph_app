@@ -90,7 +90,7 @@ impl OverlapBundle {
     pub fn add_band(&mut self, overlap: OverlapBand) {
         self.bundle.push(overlap)
     }
-    pub async fn into_band<
+    pub fn into_band<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -100,7 +100,7 @@ impl OverlapBundle {
 
         let bundle = self.bundle.into_iter().map(|band| band.into_pattern(reader)).collect_vec();
         OverlapBand {
-            end: BandEnd::Index(reader.graph_mut().await.insert_patterns(bundle)),
+            end: BandEnd::Index(reader.graph_mut().insert_patterns(bundle)),
             back_context: vec![],
         }
     }

@@ -40,9 +40,9 @@ impl HasEndPath for OverlapPrimer {
         }
     }
 }
-#[async_trait]
+
 impl End for OverlapPrimer {
-    async fn get_end<
+    fn get_end<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -52,7 +52,7 @@ impl End for OverlapPrimer {
         if self.exit == 0 {
             Some(self.start)
         } else {
-            self.context.get_pattern_end(trav).await
+            self.context.get_pattern_end(trav)
         }
     }
 }
@@ -80,7 +80,7 @@ impl EntryPos for OverlapPrimer {
 //        }
 //    }
 //}
-#[async_trait]
+
 impl AdvanceExit for OverlapPrimer {
     fn pattern_next_exit_pos<
         D: MatchDirection,
@@ -88,7 +88,7 @@ impl AdvanceExit for OverlapPrimer {
     >(&self, _pattern: P) -> Result<Option<usize>, ()> {
         Ok(None)
     }
-    async fn next_exit_pos<
+    fn next_exit_pos<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -101,26 +101,26 @@ impl AdvanceExit for OverlapPrimer {
             None
         })
     }
-    async fn is_finished<
+    fn is_finished<
         'a: 'g,
         'g,
         T: Tokenize,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> bool {
-        self.context.is_finished(trav).await
+        self.context.is_finished(trav)
     }
-    async fn advance_exit_pos<
+    fn advance_exit_pos<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&mut self, trav: &'a Trav) -> Result<(), ()> {
-        if let Some(next) = self.next_exit_pos::<_, D, _>(trav).await? {
+        if let Some(next) = self.next_exit_pos::<_, D, _>(trav)? {
             *self.exit_mut() = next;
             Ok(())
         } else {
-            self.context.advance_exit_pos::<_, D, _>(trav).await
+            self.context.advance_exit_pos::<_, D, _>(trav)
         }
     }
 }

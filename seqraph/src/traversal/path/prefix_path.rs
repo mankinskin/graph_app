@@ -64,16 +64,16 @@ impl HasEndPath for PrefixQuery {
 }
 impl PatternEnd for PrefixQuery {}
 
-#[async_trait]
+
 impl End for PrefixQuery {
-    async fn get_end<
+    fn get_end<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Option<Child> {
-        self.get_pattern_end(trav).await
+        self.get_pattern_end(trav)
     }
 }
 //impl TraversalPath for PrefixQuery {
@@ -114,8 +114,8 @@ mod tests {
     use itertools::Itertools;
     use pretty_assertions::assert_eq;
 
-    #[tokio::test]
-    async fn prefix_path_reconstruct1() {
+    #[test]
+    fn prefix_path_reconstruct1() {
         let mut graph = Hypergraph::new();
         let (a, b, c, d, e, f, g) = graph.insert_tokens([
             Token::Element('a'),
@@ -130,7 +130,7 @@ mod tests {
         let pattern = vec![c,d,d,e,f,g,a,c,d,e,f,a,g,f,g,g,e,d,b,d];
         let mut path = PrefixQuery::new_directed::<Right, _>(pattern.borrow()).unwrap();
         let mut rec = vec![];
-        while let Some(next) = path.advance::<_, Right, _>(&graph).await {
+        while let Some(next) = path.advance::<_, Right, _>(&graph) {
             rec.push(next);
         }
         assert_eq!(rec, pattern);

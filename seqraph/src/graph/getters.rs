@@ -447,7 +447,7 @@ impl<'t, 'a, T> Hypergraph<T>
 where
     T: Tokenize + Send + Sync + 't,
 {
-    //pub async fn async_to_token_indices_stream(
+    //pub fn async_to_token_indices_stream(
     //    arc: Arc<RwLock<Self>>,
     //    tokens: impl TokenStream<T> + 't,
     //) -> impl PatternStream<VertexIndex, Token<T>> + 't {
@@ -455,16 +455,16 @@ where
     //    tokens.map(move |token|
     //        // is this slow?
     //        handle.block_on(async {
-    //            arc.read().await.get_token_index(token.as_token())
+    //            arc.read().get_token_index(token.as_token())
     //                .map_err(|_| Token::Element(token))
     //        }))
     //}
-    //pub async fn async_to_token_children_stream(
+    //pub fn async_to_token_children_stream(
     //    arc: Arc<RwLock<Self>>,
     //    tokens: impl TokenStream<T> + 't,
     //) -> impl PatternStream<Child, Token<T>> + 't {
     //    Self::async_to_token_indices_stream(arc, tokens)
-    //        .await
+    //        
     //        .map(move |index| index.into_inner().map(|index| Child::new(index, 1)))
     //}
     pub fn to_token_indices_stream(

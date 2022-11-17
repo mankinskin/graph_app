@@ -17,18 +17,18 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> S
         }
     }
 }
-#[async_trait]
+
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D> + 'a> Traversable<'a, 'g, T> for Splitter<T, D, Side> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    async fn graph(&'g self) -> Self::Guard {
-        self.indexer.graph().await
+    fn graph(&'g self) -> Self::Guard {
+        self.indexer.graph()
     }
 }
-#[async_trait]
+
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D> + 'a> TraversableMut<'a, 'g, T> for Splitter<T, D, Side> {
     type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
-    async fn graph_mut(&'g mut self) -> Self::GuardMut {
-        self.indexer.graph_mut().await
+    fn graph_mut(&'g mut self) -> Self::GuardMut {
+        self.indexer.graph_mut()
     }
 }
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> Splitter<T, D, Side> {
@@ -36,16 +36,16 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> S
         Pather::new(self.indexer.clone())
     }
     #[instrument(skip(self, path))]
-    pub async fn single_path_split(
+    pub fn single_path_split(
         &'a mut self,
         path: impl ContextPath,
     ) -> Option<IndexSplitResult> {
         self.pather().index_primary_path::<InnerSide, _>(
             path,
-        ).await
+        )
     }
     #[instrument(skip(self, parent, offset))]
-    pub async fn single_offset_split(
+    pub fn single_offset_split(
         &'a mut self,
         parent: Child,
         offset: NonZeroUsize,
@@ -53,6 +53,6 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> S
         self.pather().single_offset_split::<InnerSide>(
             parent,
             offset,
-        ).await
+        )
     }
 }

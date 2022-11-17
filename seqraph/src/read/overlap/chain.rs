@@ -15,7 +15,7 @@ impl OverlapChain {
         }
     }
     #[instrument(skip(self, reader))]
-    pub async fn close<
+    pub fn close<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -26,9 +26,9 @@ impl OverlapChain {
         let first_band: Overlap = path.next()?.1;
         let (mut bundle, prev_band, _) = {
             let reader = &reader.clone();
-            futures::stream::iter(path).fold(
+            path.fold(
                 (vec![], first_band, None),
-                |(mut bundle, prev_band, prev_ctx), (_end_bound, overlap)| async move {
+                |(mut bundle, prev_band, prev_ctx), (_end_bound, overlap)| {
                     let mut reader = reader.clone();
                     // index context of prefix
                     let ctx = if let Some(node) = overlap.link.as_ref() {
@@ -36,7 +36,7 @@ impl OverlapChain {
                             node.prefix_path.get_path().unwrap().clone().into_context_path(),
                             //node.overlap,
                         )
-                        .await
+                        
                         .map(|(ctx, _)| ctx)
                     } else {
                         None
@@ -48,7 +48,7 @@ impl OverlapChain {
                         // join previous and current context into 
                         if let Some(prev) = prev_ctx {
                             Some(if let Some(ctx) = ctx {
-                                reader.read_pattern(vec![prev, ctx]).await.unwrap()
+                                reader.read_pattern(vec![prev, ctx]).unwrap()
                             } else {
                                 prev
                             })
@@ -57,13 +57,13 @@ impl OverlapChain {
                         }
                     )
                 }
-            ).await
+            )
         };
         bundle.push(prev_band);
         let bundle = bundle.into_iter()
             .map(|overlap| overlap.band.into_pattern(reader))
             .collect_vec();
-        let index = reader.graph_mut().await.insert_patterns(bundle);
+        let index = reader.graph_mut().insert_patterns(bundle);
         //println!("close result: {:?}", index);
         Some(index)
     }

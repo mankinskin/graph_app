@@ -42,7 +42,7 @@ impl<T: Tokenize + Send + Sync + 'static, D: AsyncMatchDirection<T> + Clone> Asy
     pub(crate) fn right_searcher(&self) -> AsyncSearcher<T, Right> {
         AsyncSearcher::new(self.graph)
     }
-    pub async fn read_sequence_stream(&mut self, stream: impl TokenStream<T>) -> SearchResult {
+    pub fn read_sequence_stream(&mut self, stream: impl TokenStream<T>) -> SearchResult {
         let stream = Hypergraph::<T>::async_to_token_children_stream(
             self.graph.clone(),
             stream,
@@ -50,7 +50,7 @@ impl<T: Tokenize + Send + Sync + 'static, D: AsyncMatchDirection<T> + Clone> Asy
         self.async_read_pattern(stream).await
     }
     /// read until first known token and create any unknown token indices
-    pub(crate) async fn async_read_unknown_tokens(
+    pub(crate) fn async_read_unknown_tokens(
         &mut self,
         mut pattern: impl PatternStream<Child, Token<T>>,
     ) -> impl PatternStream<Child, Token<T>> {
@@ -67,7 +67,7 @@ impl<T: Tokenize + Send + Sync + 'static, D: AsyncMatchDirection<T> + Clone> Asy
         }
         pattern
     }
-    pub(crate) async fn async_read_pattern(
+    pub(crate) fn async_read_pattern(
         &mut self,
         pattern: impl PatternStream<Child, Token<T>>,
     ) -> SearchResult {

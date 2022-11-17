@@ -121,10 +121,10 @@ impl WideMut for StartPath {
         }
     }
 }
-#[async_trait]
+
 pub(crate) trait PathAppend: Send + Sync {
     type Result;
-    async fn append<
+    fn append<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -132,17 +132,17 @@ pub(crate) trait PathAppend: Send + Sync {
         Trav: Traversable<'a, 'g, T>
     >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result;
 }
-#[async_trait]
+
 impl PathAppend for StartLeaf {
     type Result = StartPath;
-    async fn append<
+    fn append<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>
     >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
-        let graph = trav.graph().await;
+        let graph = trav.graph();
         let pattern = graph.expect_pattern_at(self.entry);
         if self.entry.sub_index == D::head_index(pattern.borrow()) {
             StartPath::Leaf(StartLeaf {
@@ -160,10 +160,10 @@ impl PathAppend for StartLeaf {
         }
     }
 }
-#[async_trait]
+
 impl PathAppend for StartPath {
     type Result = Self;
-    async fn append<
+    fn append<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -171,9 +171,9 @@ impl PathAppend for StartPath {
         Trav: Traversable<'a, 'g, T>
     >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
         match self {
-            StartPath::Leaf(leaf) => leaf.append::<_, D, _>(trav, parent_entry).await,
+            StartPath::Leaf(leaf) => leaf.append::<_, D, _>(trav, parent_entry),
             StartPath::Path { entry, mut path, width , child} => {
-                let graph = trav.graph().await;
+                let graph = trav.graph();
                 //println!("path {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
                 let pattern = graph.expect_pattern_at(entry);
                 if entry.sub_index != D::head_index(pattern.borrow()) || !path.is_empty() {
@@ -189,10 +189,10 @@ impl PathAppend for StartPath {
         }
     }
 }
-#[async_trait]
+
 pub(crate) trait PathPop: Send + Sync {
     type Result;
-    async fn pop_path<
+    fn pop_path<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -200,10 +200,10 @@ pub(crate) trait PathPop: Send + Sync {
         Trav: Traversable<'a, 'g, T>
     >(self, trav: &'a Trav) -> Self::Result;
 }
-#[async_trait]
+
 impl PathPop for OriginPath<SearchPath> {
     type Result = OriginPath<<SearchPath as PathPop>::Result>;
-    async fn pop_path<
+    fn pop_path<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -211,29 +211,29 @@ impl PathPop for OriginPath<SearchPath> {
         Trav: Traversable<'a, 'g, T>
     >(self, trav: &'a Trav) -> Self::Result {
         OriginPath {
-            postfix: self.postfix.pop_path::<_, D, _>(trav).await,
-            origin: self.origin.pop_path::<_, D, _>(trav).await
+            postfix: self.postfix.pop_path::<_, D, _>(trav),
+            origin: self.origin.pop_path::<_, D, _>(trav)
                 .unwrap_or_else(|err| MatchEnd::Complete(err))
         }
     }
 }
-#[async_trait]
+
 impl PathPop for SearchPath {
     type Result = <StartPath as PathPop>::Result;
-    async fn pop_path<
+    fn pop_path<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>
     >(self, trav: &'a Trav) -> Self::Result {
-        self.start.pop_path::<_, D, _>(trav).await
+        self.start.pop_path::<_, D, _>(trav)
     }
 }
-#[async_trait]
+
 impl PathPop for StartPath {
     type Result = MatchEnd<StartPath>;
-    async fn pop_path<
+    fn pop_path<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -259,7 +259,7 @@ impl PathPop for StartPath {
                         }
                     }
                 } else {
-                    let graph = trav.graph().await;
+                    let graph = trav.graph();
                     StartPath::Leaf(StartLeaf {
                         child: graph.expect_child_at(&entry),
                         entry,

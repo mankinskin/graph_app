@@ -46,18 +46,18 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> C
         }
     }
 }
-#[async_trait]
+
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D> + 'a> Traversable<'a, 'g, T> for Contexter<T, D, Side> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    async fn graph(&'g self) -> Self::Guard {
-        self.indexer.graph().await
+    fn graph(&'g self) -> Self::Guard {
+        self.indexer.graph()
     }
 }
-#[async_trait]
+
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D> + 'a> TraversableMut<'a, 'g, T> for Contexter<T, D, Side> {
     type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
-    async fn graph_mut(&'g mut self) -> Self::GuardMut {
-        self.indexer.graph_mut().await
+    fn graph_mut(&'g mut self) -> Self::GuardMut {
+        self.indexer.graph_mut()
     }
 }
 //pub(crate) trait IndexContext<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: IndexSide<D>>: Indexing<'a, 'g, T, D> {
@@ -67,14 +67,14 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> C
         Pather::new(self.indexer.clone())
     }
     #[instrument(skip(self, path))]
-    pub async fn try_context_path(
+    pub fn try_context_path(
         &'a mut self,
         path: impl ContextPath,
     ) -> Option<(Child, ChildLocation)> {
         let path = path.into_iter();
         self.pather().index_primary_path::<ContextSide, _>(
             path,
-        ).await.map(|split|
+        ).map(|split|
             (split.inner, split.location)
         )
     }

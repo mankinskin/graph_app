@@ -35,7 +35,7 @@ where
 {
 }
 
-impl<'a: 'g, 'g, T, D, Trav, Q, R, S> Stream for Bft<'a, 'g, T, D, Trav, Q, R, S>
+impl<'a: 'g, 'g, T, D, Trav, Q, R, S> Iterator for Bft<'a, 'g, T, D, Trav, Q, R, S>
 where
     T: Tokenize + 'a,
     D: MatchDirection + 'a,
@@ -46,20 +46,14 @@ where
 {
     type Item = (usize, TraversalNode<R, Q>);
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> futures::task::Poll<Option<Self::Item>> {
+    fn next(&mut self) -> Option<Self::Item> {
         let (last_depth, last_node) = self.last.clone();
-        let poll = self.cached_extend(last_depth, last_node).poll_unpin(cx);
-        if let Poll::Ready(()) = poll {
-            Poll::Ready(
-                if let Some((depth, node)) = self.queue.pop_front() {
-                    self.last = (depth, node.clone());
-                    Some((depth, node))
-                } else {
-                    None
-                }
-            )
+        self.cached_extend(last_depth, last_node);
+        if let Some((depth, node)) = self.queue.pop_front() {
+            self.last = (depth, node.clone());
+            Some((depth, node))
         } else {
-            Poll::Pending
+            None
         }
     }
 }

@@ -1,16 +1,16 @@
 use crate::*;
 use super::*;
 
-#[async_trait]
+
 pub(crate) trait PathReduce: Sized + Send + Sync {
-    async fn into_reduced<
+    fn into_reduced<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(self, trav: &'a Trav) -> Self;
-    async fn reduce<
+    fn reduce<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -19,7 +19,7 @@ pub(crate) trait PathReduce: Sized + Send + Sync {
     >(&mut self, trav: &'a Trav) {
 	    unsafe {
 	    	let old = std::ptr::read(self);
-	    	let new = old.into_reduced::<_, D, _>(trav).await;
+	    	let new = old.into_reduced::<_, D, _>(trav);
 	    	std::ptr::write(self, new);
 	    }
     }

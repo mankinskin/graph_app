@@ -3,7 +3,7 @@ use super::*;
 use crate::*;
 type OppositeContextRange<D, Ty> =
     <<Ty as IndexSide<D>>::Opposite as IndexSide<D>>::ContextRange;
-#[async_trait]
+
 pub trait RelativeSide<D: IndexDirection, S: IndexSide<D>>: Sync + Send + Unpin {
     type Opposite: RelativeSide<D, S>;
     type Range: PatternRangeIndex + StartInclusive;
@@ -34,11 +34,11 @@ pub trait RelativeSide<D: IndexDirection, S: IndexSide<D>>: Sync + Send + Unpin 
         &pattern.borrow()[Self::secondary_range(pos)]
     }
     fn outer_inner_order(outer: Child, inner: Child) -> (Child, Child);
-    async fn index_inner_and_context<T: Tokenize>(indexer: &mut Indexer<T, D>, inner: Child, context: Child) -> Child;
+    fn index_inner_and_context<T: Tokenize>(indexer: &mut Indexer<T, D>, inner: Child, context: Child) -> Child;
 }
 
 pub struct ContextSide;
-#[async_trait]
+
 impl<D: IndexDirection, S: IndexSide<D>> RelativeSide<D, S> for ContextSide {
     type Opposite = InnerSide;
     type Range = <S as IndexSide<D>>::ContextRange;
@@ -60,12 +60,12 @@ impl<D: IndexDirection, S: IndexSide<D>> RelativeSide<D, S> for ContextSide {
     fn primary_indexed_pos(index: usize) -> usize {
         S::inner_pos_after_context_indexed(index)
     }
-    async fn index_inner_and_context<T: Tokenize>(indexer: &mut Indexer<T, D>, inner: Child, context: Child) -> Child {
+    fn index_inner_and_context<T: Tokenize>(indexer: &mut Indexer<T, D>, inner: Child, context: Child) -> Child {
         let (back, front) = <Self as RelativeSide<D, S>>::outer_inner_order(context, inner);
-        if let Ok((c, _)) = indexer.index_pattern([back, front]).await {
+        if let Ok((c, _)) = indexer.index_pattern([back, front]) {
             c
         } else {
-            indexer.graph_mut().await.insert_pattern([back, front])
+            indexer.graph_mut().insert_pattern([back, front])
         }
         //indexer.graph_mut().insert_pattern([back, front])
     }
@@ -76,7 +76,7 @@ impl<D: IndexDirection, S: IndexSide<D>> RelativeSide<D, S> for ContextSide {
 }
 pub struct InnerSide;
 
-#[async_trait]
+
 impl<D: IndexDirection, S: IndexSide<D>> RelativeSide<D, S> for InnerSide {
     type Opposite = ContextSide;
     type Range = <S as IndexSide<D>>::InnerRange;
@@ -98,12 +98,12 @@ impl<D: IndexDirection, S: IndexSide<D>> RelativeSide<D, S> for InnerSide {
     fn primary_indexed_pos(index: usize) -> usize {
         index
     }
-    async fn index_inner_and_context<T: Tokenize>(indexer: &mut Indexer<T, D>, inner: Child, context: Child) -> Child {
+    fn index_inner_and_context<T: Tokenize>(indexer: &mut Indexer<T, D>, inner: Child, context: Child) -> Child {
         let (back, front) = <Self as RelativeSide<D, S>>::outer_inner_order(context, inner);
         //indexer.graph_mut().insert_pattern([back, front])
-        match indexer.index_pattern([back, front]).await {
+        match indexer.index_pattern([back, front]) {
             Ok((c, _)) => c,
-            _ => indexer.graph_mut().await.insert_pattern([back, front]),
+            _ => indexer.graph_mut().insert_pattern([back, front]),
         }
     }
     fn outer_inner_order(outer: Child, inner: Child) -> (Child, Child) {
@@ -364,8 +364,8 @@ mod tests {
     };
 
 
-    #[tokio::test]
-    async fn token_offset_split() {
+    
+    fn token_offset_split() {
         let pattern = mock::pattern_from_widths([
             1,
             1,

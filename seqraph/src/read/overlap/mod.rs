@@ -13,7 +13,7 @@ use super::*;
 
 impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     #[instrument(skip(self, first, context))]
-    pub(crate) async fn read_overlaps(
+    pub(crate) fn read_overlaps(
         &mut self,
         first: Child,
         context: &mut PrefixQuery,
@@ -22,14 +22,14 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             self.read_next_overlap(
                 OverlapCache::new(first),
                 context,
-            ).await
+            )
         } else {
             None
         }
     }
     /// next bands generated when next overlap starts after a past bundle with a gap
     #[instrument(skip(self, cache, past_end_bound, next_link, expansion, past_ctx))]
-    pub(crate) async fn odd_overlap_next(
+    pub(crate) fn odd_overlap_next(
         &mut self,
         cache: &mut OverlapCache,
         past_end_bound: usize,
@@ -49,14 +49,14 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         } = self.splitter::<IndexFront>().single_offset_split(
             prev,
             NonZeroUsize::new(cache.end_bound - past_end_bound).unwrap(),
-        ).await;
+        );
         assert!(path.is_empty());
 
         // build new context path (to overlap)
         let context_path = {
             // entry in last band (could be handled by IndexSplit
             let inner_entry = {
-                let graph = self.graph.graph().await;
+                let graph = self.graph.graph();
                 let (pid, pattern) = graph.expect_vertex_data(inner).expect_any_child_pattern();
                 ChildLocation {
                     parent: inner,
@@ -75,12 +75,12 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         let (inner_back_ctx, _loc) = self.contexter::<IndexBack>().try_context_path(
             context_path,
             //next_link.overlap,
-        ).await.unwrap();
+        ).unwrap();
 
-        let past = self.graph.graph_mut().await.insert_pattern(past_ctx);
-        let past_inner = self.graph.graph_mut().await.insert_pattern([past, inner_back_ctx]);
-        let inner_expansion = self.graph.graph_mut().await.insert_pattern([inner_back_ctx, expansion]);
-        let index = self.graph.graph_mut().await.insert_patterns([
+        let past = self.graph.graph_mut().insert_pattern(past_ctx);
+        let past_inner = self.graph.graph_mut().insert_pattern([past, inner_back_ctx]);
+        let inner_expansion = self.graph.graph_mut().insert_pattern([inner_back_ctx, expansion]);
+        let index = self.graph.graph_mut().insert_patterns([
             [past_inner, expansion],
             [past, inner_expansion],
         ]);
@@ -92,9 +92,9 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             link: None, // todo
         }
     }
-    #[async_recursion]
+    //#[async_recursion]
     #[instrument(skip(self, cache, context))]
-    pub(crate) async fn read_next_overlap(
+    pub(crate) fn read_next_overlap(
         &mut self,
         cache: OverlapCache,
         context: &mut PrefixQuery,
@@ -104,14 +104,14 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         match self.find_next_overlap(
                 cache,
                 context,
-            ).await {
+            ) {
             Ok((start_bound, next_link, expansion, mut cache)) => {
                     //println!("found overlap at {}: {:?}", start_bound, expansion);
                     if let Some(ctx) =
                         if let Some((past_end_bound, past_ctx)) = self.take_past_context_pattern(
                             start_bound,
                             &mut cache.chain,
-                        ).await {
+                        ) {
                             println!("reusing back context {past_end_bound}: {:#?}", past_ctx);
                             if past_end_bound == start_bound {
                                 Some(past_ctx)
@@ -123,7 +123,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                                     &next_link,
                                     expansion,
                                     past_ctx,
-                                ).await;
+                                );
                                 cache.append(
                                     self,
                                     start_bound,
@@ -146,7 +146,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                             }
                         } else {
                             //println!("building back context from path");
-                            Some(self.back_context_from_path(&mut cache.chain, &next_link).await)
+                            Some(self.back_context_from_path(&mut cache.chain, &next_link))
                         }
                 {
                     cache.append(
@@ -165,17 +165,17 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
                     self.read_next_overlap(
                         cache,
                         context,
-                    ).await
+                    )
                 },
             Err(cache) => {
                 //println!("No overlap found");
-                cache.chain.close(self).await
+                cache.chain.close(self)
             }
         }
     }
     /// find largest expandable postfix
     #[instrument(skip(self, cache, prefix_query))]
-    async fn find_next_overlap(
+    fn find_next_overlap(
         &mut self,
         mut cache: OverlapCache,
         prefix_query: &mut PrefixQuery,
@@ -185,19 +185,19 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         let mut acc = ControlFlow::Continue((None as Option<StartPath>, OverlapBundle::from(last.band)));
         let mut indexer = self.indexer();
         let mut iter = PostfixIterator::<_, D, _>::new(&mut indexer, last_end);
-        while let Some((postfix_location, postfix)) = iter.next().await {
+        while let Some((postfix_location, postfix)) = iter.next() {
             let (path, mut bundle) = acc.continue_value().unwrap();
             let start_bound = cache.end_bound - postfix.width();
 
             let postfix_path = if let Some(path) = path {
-                path.append::<_, D, _>(&self.graph, postfix_location).await
+                path.append::<_, D, _>(&self.graph, postfix_location)
             } else {
                 StartPath::from(StartLeaf::new(postfix, postfix_location))
             };
             // try expand
             match self.graph
                 .index_query_with_origin(OverlapPrimer::new(postfix, prefix_query.clone()))
-                .await
+                
             {
                 Ok((
                     OriginPath {
@@ -234,11 +234,11 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         }
         match acc {
             ControlFlow::Break((start_bound, next, expansion, bundle)) => {
-                cache.add_bundle(self, bundle).await;
+                cache.add_bundle(self, bundle);
                 Ok((start_bound, next, expansion, cache))
             },
             ControlFlow::Continue((_, bundle)) => {
-                cache.add_bundle(self, bundle).await;
+                cache.add_bundle(self, bundle);
                 Err(cache)
             }
         }

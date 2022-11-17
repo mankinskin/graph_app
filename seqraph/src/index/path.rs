@@ -17,37 +17,37 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
         }
     }
 }
-#[async_trait]
+
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D> + 'a> Traversable<'a, 'g, T> for Pather<T, D, Side> {
     type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    async fn graph(&'g self) -> Self::Guard {
-        self.indexer.graph().await
+    fn graph(&'g self) -> Self::Guard {
+        self.indexer.graph()
     }
 }
-#[async_trait]
+
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D> + 'a> TraversableMut<'a, 'g, T> for Pather<T, D, Side> {
     type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
-    async fn graph_mut(&'g mut self) -> Self::GuardMut {
-        self.indexer.graph_mut().await
+    fn graph_mut(&'g mut self) -> Self::GuardMut {
+        self.indexer.graph_mut()
     }
 }
 impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> Pather<T, D, Side> {
     #[instrument(skip(self, entry), ret)]
-    pub async fn index_primary_entry<
+    pub fn index_primary_entry<
         S: RelativeSide<D, Side>,
         L: Borrow<ChildLocation> + Debug,
     >(
         &'a mut self,
         entry: L,
     ) -> Option<(Pattern, IndexSplitResult)> {
-        let pattern = self.graph().await.expect_pattern_at(entry.borrow());       
+        let pattern = self.graph().expect_pattern_at(entry.borrow());       
         self.pattern_perfect_split::<S, _, _>(
             pattern,
             entry,
-        ).await
+        )
     }
     // primary range, depending on S
-    async fn index_primary_exclusive<
+    fn index_primary_exclusive<
         S: RelativeSide<D, Side>,
         L: Borrow<ChildLocation> + Debug,
     >(
@@ -56,9 +56,9 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
     ) -> Option<(Pattern, IndexSplitResult)> {
         self.index_primary_entry::<S, _>(
             <S as RelativeSide<D, Side>>::exclusive_primary_location(*location.borrow())?
-        ).await
+        )
     }
-    pub async fn index_secondary_path<
+    pub fn index_secondary_path<
         S: RelativeSide<D, Side>,
         P: ContextPath
     >(
@@ -67,11 +67,11 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
     ) -> Option<IndexSplitResult> {
         self.index_primary_path::<<S as RelativeSide<D, Side>>::Opposite, _>(
             path,
-        ).await
+        )
     }
     #[instrument(skip(self, path))]
-    #[async_recursion]
-    pub async fn index_primary_path<
+    //#[async_recursion]
+    pub fn index_primary_path<
         S: RelativeSide<D, Side>,
         P: ContextPath
     >(
@@ -80,7 +80,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
     ) -> Option<IndexSplitResult> {
         let mut iter = Side::bottom_up_path_iter(path);
         let entry  = iter.next()?;
-        let (_, mut prev) = self.index_primary_entry::<S, _>(entry).await?;
+        let (_, mut prev) = self.index_primary_entry::<S, _>(entry)?;
         while let Some(location) = iter.next() {
             let IndexSplitResult {
                 inner: prev_primary,
@@ -94,10 +94,10 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
                 ..    
             }= self.index_secondary_path::<S, _>(
                 prev_path.into_iter().chain(std::iter::once(prev_loc))
-            ).await.unwrap();
+            ).unwrap();
 
-            let primary = if let Some((_, r)) = self.index_primary_exclusive::<S, _>(location).await {
-                S::index_inner_and_context(&mut self.indexer, prev_primary, r.inner).await
+            let primary = if let Some((_, r)) = self.index_primary_exclusive::<S, _>(location) {
+                S::index_inner_and_context(&mut self.indexer, prev_primary, r.inner)
             } else {
                 prev_primary
             };
@@ -106,15 +106,15 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
                 primary.width(),
             ).unwrap();
             let (back, front) = S::outer_inner_order(primary, prev_secondary);
-            let child_patterns = self.graph().await.expect_child_patterns(location.parent).clone();
+            let child_patterns = self.graph().expect_child_patterns(location.parent).clone();
             assert!(!child_patterns.is_empty());
             prev = if child_patterns.len() == 1 {
                 // simply wrap and replace old range with new primary split
-                let pattern = self.graph().await.expect_pattern_at(location.borrow());       
+                let pattern = self.graph().expect_pattern_at(location.borrow());       
                 if !S::in_context() && S::split_secondary(&pattern, location.sub_index).is_empty()
                     || S::in_context() && S::split_primary(&pattern, location.sub_index).len() == 1
                 {
-                    let pid = self.graph_mut().await.add_pattern_with_update(
+                    let pid = self.graph_mut().add_pattern_with_update(
                         location,
                         [back, front],
                     );
@@ -127,11 +127,11 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
                     }
                 } else if S::split_primary(&pattern, location.sub_index).len() > 1 {
                     let range = S::primary_range(location.sub_index);
-                    let (wrapper, pids) = self.graph_mut().await.insert_patterns_with_ids([
+                    let (wrapper, pids) = self.graph_mut().insert_patterns_with_ids([
                         &pattern[range.clone()],
                         &[back, front][..],
                     ]);
-                    self.graph_mut().await.replace_in_pattern(location, range, [wrapper]);
+                    self.graph_mut().replace_in_pattern(location, range, [wrapper]);
                     IndexSplitResult {
                         inner: primary,
                         location: location.to_child_location(S::primary_indexed_pos(location.sub_index)),
@@ -157,13 +157,13 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
                         location.parent,
                         child_patterns,
                         offset,
-                    ).await {
+                    ) {
                     Ok(result) => result,
                     Err(splits) =>
                         self.unperfect_splits(
                             location.parent,
                             splits,
-                        ).await
+                        )
                 }
             };
         }
@@ -171,7 +171,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
     }
     /// index inner half of pattern
     #[instrument(skip(self))]
-    async fn pattern_perfect_split<
+    fn pattern_perfect_split<
         S: RelativeSide<D, Side>,
         P: IntoPattern,
         L: Borrow<ChildLocation> + Debug
@@ -191,7 +191,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
             let primary = if primary.len() < 2 {
                 *primary.iter().next()?
             } else {
-                let mut graph = self.graph_mut().await;
+                let mut graph = self.graph_mut();
                 let primary = graph.insert_pattern(primary);
                 graph.replace_in_pattern(location, range.clone(), [primary]);
                 primary
@@ -207,8 +207,8 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
         }
     }
     #[instrument(skip(self, parent, child_patterns, offset))]
-    #[async_recursion]
-    async fn child_pattern_offset_splits<
+    //#[async_recursion]
+    fn child_pattern_offset_splits<
         S: RelativeSide<D, Side>,
     >(
         &'a mut self,
@@ -234,45 +234,42 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
                     self.pattern_perfect_split::<S, _, _>(
                         pattern,
                         ChildLocation::new(parent, pid, pos),
-                    ).await.expect("Offset non-zero!").1,
+                    ).expect("Offset non-zero!").1,
                 ),
             ControlFlow::Continue(c) => {
                 let pather = &self.clone();
                 Err(
-                    futures::stream::iter(
-                        c.into_iter()
-                            .map(|(pid, pattern, pos, offset)| async move {
-                                let mut pather = pather.clone();
-                                let sub = *pattern.get(pos).unwrap();
-                                // split index at pos with offset
-                                let split = pather.single_offset_split::<S>(
-                                    sub,
-                                    offset,
-                                ).await;
+                    c.into_iter()
+                        .map(|(pid, pattern, pos, offset)| {
+                            let mut pather = pather.clone();
+                            let sub = *pattern.get(pos).unwrap();
+                            // split index at pos with offset
+                            let split = pather.single_offset_split::<S>(
+                                sub,
+                                offset,
+                            );
 
-                                // index inner context
-                                let IndexSplitResult {
-                                    inner: context,
-                                    ..
-                                } = pather.index_secondary_path::<S, _>(
-                                    split.path.clone().into_iter().chain(
-                                        std::iter::once(split.location)
-                                    ),
-                                ).await.unwrap();
-                                (parent.to_child_location(pid, pos), pattern, split, context)
-                            }.into_stream())
-                        )
-                        .flatten()
-                        .collect()
-                        .await
+                            // index inner context
+                            let IndexSplitResult {
+                                inner: context,
+                                ..
+                            } = pather.index_secondary_path::<S, _>(
+                                split.path.clone().into_iter().chain(
+                                    std::iter::once(split.location)
+                                ),
+                            ).unwrap();
+                            (parent.to_child_location(pid, pos), pattern, split, context)
+                        })
+                    .collect()
+                        
                 )
             },
         }
     }
     /// split parent at token offset from direction start
     #[instrument(skip(self, parent, offset))]
-    #[async_recursion]
-    pub async fn single_offset_split<
+    //#[async_recursion]
+    pub fn single_offset_split<
         S: RelativeSide<D, Side>,
     >(
         &'a mut self,
@@ -282,29 +279,29 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
         if offset.get() >= parent.width() {
             assert!(offset.get() < parent.width());
         }
-        let child_patterns = self.graph().await.expect_child_patterns(&parent).clone();
+        let child_patterns = self.graph().expect_child_patterns(&parent).clone();
         // find perfect split in parent
         match self.child_pattern_offset_splits::<S>(
             parent,
             child_patterns,
             offset
-        ).await {
+        ) {
             Ok(split) => split,
             Err(splits) =>
                 self.unperfect_splits(
                     parent,
                     splits,
-                ).await,
+                ),
         }
     }
     #[instrument(skip(self, location, split, split_ctx))]
-    async fn entry_unperfect_split(
+    fn entry_unperfect_split(
         &'a mut self,
         location: ChildLocation,
         split: IndexSplitResult,
         split_ctx: Child,
     ) -> IndexSplitResult {
-        let mut graph = self.graph_mut().await;
+        let mut graph = self.graph_mut();
         // split index at pos with offset
         let IndexSplitResult {
             inner,
@@ -372,7 +369,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
         }
     }
     #[instrument(skip(self, parent, splits))]
-    async fn unperfect_splits(
+    fn unperfect_splits(
         &'a mut self,
         parent: Child,
         splits: Vec<(ChildLocation, Pattern, IndexSplitResult, Child)>,
@@ -383,7 +380,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
                 location,
                 split,
                 context,
-            ).await
+            )
         } else {
             // add contexts
             let mut backs = HashSet::default();
@@ -404,7 +401,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
             //println!("{:#?}", backs);
             //println!("{:#?}", fronts);
             // index half patterns
-            let mut graph = self.graph_mut().await;
+            let mut graph = self.graph_mut();
             let (back, front) = (
                 graph.insert_patterns(backs),
                 graph.insert_patterns(fronts),

@@ -80,19 +80,19 @@ impl HasEndPath for SearchPath {
         self.end.end_path()
     }
 }
-#[async_trait]
+
 impl AdvanceExit for SearchPath {
-    async fn is_finished<
+    fn is_finished<
         'a: 'g,
         'g,
         T: Tokenize,
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> bool {
         let location = self.get_exit_location();
-        let pattern = trav.graph().await.expect_pattern_at(&location);
+        let pattern = trav.graph().expect_pattern_at(&location);
         self.is_pattern_finished(pattern)
     }
-    async fn next_exit_pos<
+    fn next_exit_pos<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -100,7 +100,7 @@ impl AdvanceExit for SearchPath {
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Result<Option<usize>, ()> {
         let location = self.get_end_location();
-        let pattern = trav.graph().await.expect_pattern_at(&location);
+        let pattern = trav.graph().expect_pattern_at(&location);
         self.pattern_next_exit_pos::<D, _>(pattern)
     }
 }

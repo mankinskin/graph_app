@@ -17,7 +17,7 @@ impl OverlapCache {
             chain: OverlapChain::default(),
         }
     }
-    pub async fn add_bundle<
+    pub fn add_bundle<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -31,7 +31,7 @@ impl OverlapCache {
             self.end_bound,
             Overlap {
                 link: None,
-                band: bundle.into_band(reader).await,
+                band: bundle.into_band(reader),
             }
         );
     }

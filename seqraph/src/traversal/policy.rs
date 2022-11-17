@@ -11,7 +11,7 @@ use crate::{
 pub(crate) trait NodePath: RootChild + Send + Clone + Eq + Debug {}
 impl<T: RootChild + Send + Clone + Eq + Debug> NodePath for T {}
 
-#[async_trait]
+
 pub(crate) trait DirectedTraversalPolicy<
     'a: 'g,
     'g,
@@ -28,13 +28,13 @@ pub(crate) trait DirectedTraversalPolicy<
     >;
 
     /// Executed after last child of index matched
-    async fn after_end_match(
+    fn after_end_match(
         _trav: &'a Self::Trav,
         path: R::Primer,
     ) -> R::Postfix;
     /// nodes generated when an index ended
     /// (parent nodes)
-    async fn next_parents(
+    fn next_parents(
         trav: &'a Self::Trav,
         query: &Q,
         primer: &R::Postfix,
@@ -44,19 +44,18 @@ pub(crate) trait DirectedTraversalPolicy<
             query,
             primer.root_child(),
             |p| primer.clone().append::<_, D, _>(trav, p)
-        ).await
+        )
     }
     /// generates parent nodes
-    async fn gen_parent_nodes<
-        B: (Fn(ChildLocation) -> F) + Send + Sync + Copy,
-        F: Future<Output=R::Primer> + Send,
+    fn gen_parent_nodes<
+        B: (Fn(ChildLocation) -> R::Primer) + Send + Sync + Copy,
     >(
         trav: &'a Self::Trav,
         query: &Q,
         index: Child,
         build_start: B,
     ) -> Vec<TraversalNode<R, Q>> {
-        futures::stream::iter(trav.graph().await
+        trav.graph()
             .expect_vertex_data(index)
             .get_parents()
             .iter()
@@ -70,15 +69,13 @@ pub(crate) trait DirectedTraversalPolicy<
                     })
             })
             .sorted_unstable_by(|a, b| TraversalOrder::cmp(a, b))
-            .map(|p| async move {
+            .map(|p| {
                 TraversalNode::parent_node(
-                    build_start(p).await,
+                    build_start(p),
                     query.clone(),
                 )
-            }.into_stream())
-        )
-        .flatten()
-        .collect()
-        .await
+            })
+            .collect()
+        
     }
 }

@@ -1,5 +1,5 @@
-//#[tokio::test]
-//async fn fuzz1() {
+//
+//fn fuzz1() {
 //    if let Err(_) = crate::mock::gen_graph::gen_graph() {
 //        panic!("Encountered panics when generating graph!");
 //    }

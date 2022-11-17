@@ -23,7 +23,7 @@ lazy_static::lazy_static! {
     static ref PANIC_INFO: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
 }
 #[allow(unused)]
-pub async fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
+pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
     let batch_size = 10;
     let batch_count = 1;
     let fuzz_len = batch_size * batch_count;
@@ -45,7 +45,7 @@ pub async fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
     let prev_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(|info| {
         tokio::runtime::Handle::current().block_on(async {
-            *PANIC_INFO.lock().await = info.location().map(|loc| format!("{}", loc));
+            *PANIC_INFO.lock() = info.location().map(|loc| format!("{}", loc));
         })
     }));
     let fuzz_progress = indicatif::ProgressBar::with_draw_target(
@@ -95,7 +95,7 @@ pub async fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
                         Arc::try_unwrap(inner.0).unwrap()
                         .into_inner()
                     ));
-                    let msg = PANIC_INFO.lock().await.take().unwrap();
+                    let msg = PANIC_INFO.lock().take().unwrap();
                     let new = (i, input, seed);
                     panics.entry(msg).and_modify(|instances: &mut Vec<_>|
                         instances.push(new.clone())

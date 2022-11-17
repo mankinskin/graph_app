@@ -6,16 +6,16 @@ pub struct EndPath {
     pub(crate) path: ChildPath,
     pub(crate) width: usize,
 }
-#[async_trait]
+
 impl PathReduce for EndPath {
-    async fn into_reduced<
+    fn into_reduced<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<'a, 'g, T>,
     >(mut self, trav: &'a Trav) -> Self {
-        let graph = trav.graph().await;
+        let graph = trav.graph();
         // remove segments pointing to mismatch at pattern head
         while let Some(location) = self.path.pop() {
             let pattern = graph.expect_pattern_at(&location);
@@ -28,9 +28,9 @@ impl PathReduce for EndPath {
         self
     }
 }
-#[async_trait]
+
 pub(crate) trait Retract: GraphEnd + EndPathMut + ExitMut + Send + Sync {
-    async fn prev_exit_pos<
+    fn prev_exit_pos<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -38,10 +38,10 @@ pub(crate) trait Retract: GraphEnd + EndPathMut + ExitMut + Send + Sync {
         Trav: Traversable<'a, 'g, T>,
     >(&self, trav: &'a Trav) -> Option<usize> {
         let location = self.get_end_location();
-        let pattern = trav.graph().await.expect_pattern_at(&location);
+        let pattern = trav.graph().expect_pattern_at(&location);
         D::pattern_index_prev(pattern, location.sub_index)
     }
-    async fn retract<
+    fn retract<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -49,7 +49,7 @@ pub(crate) trait Retract: GraphEnd + EndPathMut + ExitMut + Send + Sync {
         Trav: Traversable<'a, 'g, T>,
         R: ResultKind,
     >(&mut self, trav: &'a Trav) {
-        let graph = trav.graph().await;
+        let graph = trav.graph();
         // remove segments pointing to mismatch at pattern head
         while let Some(mut location) = self.end_path_mut().pop() {
             let pattern = graph.expect_pattern_at(&location);
@@ -61,7 +61,7 @@ pub(crate) trait Retract: GraphEnd + EndPathMut + ExitMut + Send + Sync {
             }
         }
         if self.end_path_mut().is_empty() {
-            *self.exit_mut() = self.prev_exit_pos::<_, D, _>(trav).await.unwrap();
+            *self.exit_mut() = self.prev_exit_pos::<_, D, _>(trav).unwrap();
         }
 
     }

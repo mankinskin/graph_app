@@ -11,8 +11,9 @@ use pretty_assertions::{
 };
 use itertools::*;
 
-#[tokio::test]
-async fn find_parent1() {
+
+#[test]
+fn find_parent1() {
     let Context {
         graph,
         a,
@@ -34,43 +35,43 @@ async fn find_parent1() {
 
     let query = bc_pattern;
     assert_eq!(
-        graph.find_parent(&query).await,
+        graph.find_parent(&query),
         Err(NoMatch::SingleIndex(*bc)),
         "bc"
     );
     let query = b_c_pattern;
     assert_eq!(
-        graph.find_parent(&query).await,
+        graph.find_parent(&query),
         Ok(TraversalResult::new_complete(query, bc)),
         "b_c"
     );
     let query = a_bc_pattern;
     assert_eq!(
-        graph.find_parent(&query).await,
+        graph.find_parent(&query),
         Ok(TraversalResult::new_complete(query, abc)),
         "a_bc"
     );
     let query = ab_c_pattern;
     assert_eq!(
-        graph.find_parent(&query).await,
+        graph.find_parent(&query),
         Ok(TraversalResult::new_complete(query, abc)),
         "ab_c"
     );
     let query = a_bc_d_pattern;
     assert_eq!(
-        graph.find_parent(&query).await,
+        graph.find_parent(&query),
         Ok(TraversalResult::new_complete(query, abcd)),
         "a_bc_d"
     );
     let query = a_b_c_pattern.clone();
     assert_eq!(
-        graph.find_parent(&query).await,
+        graph.find_parent(&query),
         Ok(TraversalResult::new_complete(query, abc)),
         "a_b_c"
     );
     let query = [&a_b_c_pattern[..], &[Child::new(c, 1)]].concat();
     assert_eq!(
-        graph.find_parent(&query).await,
+        graph.find_parent(&query),
         Ok(TraversalResult {
             found: FoundPath::Complete(*abc),
             query: QueryRangePath {
@@ -84,8 +85,9 @@ async fn find_parent1() {
         "a_b_c_c"
     );
 }
-#[tokio::test]
-async fn find_ancestor1() {
+
+#[test]
+fn find_ancestor1() {
     let Context {
         graph,
         a,
@@ -113,50 +115,50 @@ async fn find_ancestor1() {
 
     let query = bc_pattern;
     assert_eq!(
-        graph.find_ancestor(&query).await,
+        graph.find_ancestor(&query),
         Err(NoMatch::SingleIndex(*bc)),
         "bc"
     );
     let query = b_c_pattern;
     assert_eq!(
-        graph.find_ancestor(&query).await,
+        graph.find_ancestor(&query),
         Ok(TraversalResult::new_complete(query, bc)),
         "b_c"
     );
     let query = a_bc_pattern;
     assert_eq!(
-        graph.find_ancestor(&query).await,
+        graph.find_ancestor(&query),
         Ok(TraversalResult::new_complete(query, abc)),
         "a_bc"
     );
     let query = ab_c_pattern;
     assert_eq!(
-        graph.find_ancestor(&query).await,
+        graph.find_ancestor(&query),
         Ok(TraversalResult::new_complete(query, abc)),
         "ab_c"
     );
     let query = a_bc_d_pattern;
     assert_eq!(
-        graph.find_ancestor(&query).await,
+        graph.find_ancestor(&query),
         Ok(TraversalResult::new_complete(query, abcd)),
         "a_bc_d"
     );
     let query = a_b_c_pattern.clone();
     assert_eq!(
-        graph.find_ancestor(&query).await,
+        graph.find_ancestor(&query),
         Ok(TraversalResult::new_complete(query, abc)),
         "a_b_c"
     );
     let query =
         vec![*a, *b, *a, *b, *a, *b, *a, *b, *c, *d, *e, *f, *g, *h, *i];
     assert_eq!(
-        graph.find_ancestor(&query).await,
+        graph.find_ancestor(&query),
         Ok(TraversalResult::new_complete(query, ababababcdefghi)),
         "a_b_a_b_a_b_a_b_c_d_e_f_g_h_i"
     );
     let query = [&a_b_c_pattern[..], &[Child::new(c, 1)]].concat();
     assert_eq!(
-        graph.find_ancestor(&query).await,
+        graph.find_ancestor(&query),
         Ok(TraversalResult {
             found: FoundPath::Complete(*abc),
             query: QueryRangePath {
@@ -170,8 +172,9 @@ async fn find_ancestor1() {
         "a_b_c_c"
     );
 }
-#[tokio::test]
-async fn find_ancestor2() {
+
+#[test]
+fn find_ancestor2() {
     let mut graph = Hypergraph::default();
     let (a, b, _w, x, y, z) = graph.insert_tokens([
         Token::Element('a'),
@@ -192,7 +195,7 @@ async fn find_ancestor2() {
     let xaby_z_id = xabyz_ids[0];
     let graph = HypergraphRef::from(graph);
     let query = vec![by, z];
-    let byz_found = graph.find_ancestor(&query).await;
+    let byz_found = graph.find_ancestor(&query);
     assert_eq!(
         byz_found,
         Ok(TraversalResult {
@@ -222,8 +225,9 @@ async fn find_ancestor2() {
         "by_z"
     );
 }
-#[tokio::test]
-async fn find_ancestor3() {
+
+#[test]
+fn find_ancestor3() {
     let mut graph = Hypergraph::default();
     let (a, b, _w, x, y, z) = graph.insert_tokens([
         Token::Element('a'),
@@ -245,7 +249,7 @@ async fn find_ancestor3() {
 
     let graph = HypergraphRef::from(graph);
     let query = vec![ab, y];
-    let aby_found = graph.find_ancestor(&query).await;
+    let aby_found = graph.find_ancestor(&query);
     assert_eq!(
         aby_found,
         Ok(TraversalResult {
@@ -275,8 +279,9 @@ async fn find_ancestor3() {
         "ab_y"
     );
 }
-#[tokio::test]
-async fn find_sequence() {
+
+#[test]
+fn find_sequence() {
     let Context {
         graph,
         abc,
@@ -285,18 +290,18 @@ async fn find_sequence() {
         ..
      } = &*context();
     assert_eq!(
-        graph.find_sequence("a".chars()).await,
+        graph.find_sequence("a".chars()),
         Err(NoMatch::SingleIndex(*a)),
     );
-    let query = graph.read().await.expect_token_pattern("abc".chars());
-    let abc_found = graph.find_ancestor(&query).await;
+    let query = graph.graph().expect_token_pattern("abc".chars());
+    let abc_found = graph.find_ancestor(&query);
     assert_eq!(
         abc_found,
         Ok(TraversalResult::new_complete(query, abc)),
         "abc"
     );
-    let query = graph.read().await.expect_token_pattern("ababababcdefghi".chars());
-    let ababababcdefghi_found = graph.find_ancestor(&query).await;
+    let query = graph.graph().expect_token_pattern("ababababcdefghi".chars());
+    let ababababcdefghi_found = graph.find_ancestor(&query);
     assert_eq!(
         ababababcdefghi_found,
         Ok(TraversalResult::new_complete(query, ababababcdefghi)),
