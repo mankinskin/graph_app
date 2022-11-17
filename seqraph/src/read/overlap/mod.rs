@@ -183,7 +183,9 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         let last = cache.last.take().expect("No last overlap to take!");
         let last_end = *last.band.end.index().unwrap();
         let mut acc = ControlFlow::Continue((None as Option<StartPath>, OverlapBundle::from(last.band)));
-        while let Some((postfix_location, postfix)) = PostfixIterator::<_, D, _>::new(&mut self.indexer(), last_end).next().await {
+        let mut indexer = self.indexer();
+        let mut iter = PostfixIterator::<_, D, _>::new(&mut indexer, last_end);
+        while let Some((postfix_location, postfix)) = iter.next().await {
             let (path, mut bundle) = acc.continue_value().unwrap();
             let start_bound = cache.end_bound - postfix.width();
 
