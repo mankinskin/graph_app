@@ -7,40 +7,40 @@ use super::*;
 
 
 #[derive(Debug)]
-pub(crate) struct Dft<'a: 'g, 'g, T, D, Trav, Q, R, S>
+pub(crate) struct Dft<'a, T, D, Trav, Q, R, S>
 where
-    T: Tokenize + 'a,
-    Trav: Traversable<'a, 'g, T>,
-    D: MatchDirection + 'a,
-    Q: TraversalQuery + 'a,
-    R: ResultKind + 'a,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
+    T: Tokenize,
+    Trav: Traversable<T>,
+    D: MatchDirection,
+    Q: TraversalQuery,
+    R: ResultKind,
+    S: DirectedTraversalPolicy<T, D, Q, R, Trav=Trav>,
 {
     stack: Vec<(usize, TraversalNode<R, Q>)>,
     last: (usize, TraversalNode<R, Q>),
     cache: TraversalCache<R, Q>,
     trav: &'a Trav,
-    _ty: std::marker::PhantomData<(&'g T, &'a D, Q, R, S)>
+    _ty: std::marker::PhantomData<(&'a T, D, Q, R, S)>
 }
 
-impl<'a: 'g, 'g, T, D, Trav, Q, R, S> Unpin for Dft<'a, 'g, T, D, Trav, Q, R, S>
+impl<'a,  T, D, Trav, Q, R, S> Unpin for Dft<'a, T, D, Trav, Q, R, S>
 where
-    T: Tokenize + 'a,
-    D: MatchDirection + 'a,
-    Trav: Traversable<'a, 'g, T>,
-    Q: TraversalQuery + 'a,
-    R: ResultKind + 'a,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
+    T: Tokenize,
+    D: MatchDirection,
+    Trav: Traversable<T>,
+    Q: TraversalQuery,
+    R: ResultKind,
+    S: DirectedTraversalPolicy<T, D, Q, R, Trav=Trav>,
 {
 }
-impl<'a: 'g, 'g, T, D, Trav, Q, R, S> Iterator for Dft<'a, 'g, T, D, Trav, Q, R, S>
+impl<'a, T, D, Trav, Q, R, S> Iterator for Dft<'a, T, D, Trav, Q, R, S>
 where
-    T: Tokenize + 'a,
-    D: MatchDirection + 'a,
-    Trav: Traversable<'a, 'g, T>,
-    Q: TraversalQuery + 'a,
-    R: ResultKind + 'a,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
+    T: Tokenize,
+    D: MatchDirection,
+    Trav: Traversable<T>,
+    Q: TraversalQuery,
+    R: ResultKind,
+    S: DirectedTraversalPolicy<T, D, Q, R, Trav=Trav>,
 {
     type Item = (usize, TraversalNode<R, Q>);
 
@@ -56,25 +56,25 @@ where
     }
 }
 
-//impl<'a: 'g, 'g, T, Trav, D, Q, R, S> FusedIterator for Dft<'a, 'g, T, D, Trav, Q, R, S>
+//impl<T, Trav, D, Q, R, S> FusedIterator for Dft<T, D, Trav, Q, R, S>
 //where
-//    T: Tokenize + 'a,
-//    Trav: Traversable<'a, 'g, T>,
-//    D: MatchDirection + 'a,
-//    Q: TraversalQuery + 'a,
-//    R: ResultKind + 'a,
-//    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
+//    T: Tokenize,
+//    Trav: Traversable<T>,
+//    D: MatchDirection,
+//    Q: TraversalQuery,
+//    R: ResultKind,
+//    S: DirectedTraversalPolicy<T, D, Q, R, Trav=Trav>,
 //{
 //}
 
-impl<'a: 'g, 'g, T, Trav, D, Q, R, S> TraversalIterator<'a, 'g, T, D, Trav, Q, S, R> for Dft<'a, 'g, T, D, Trav, Q, R, S>
+impl<'a, T, Trav, D, Q, R, S> TraversalIterator<'a, T, D, Trav, Q, S, R> for Dft<'a, T, D, Trav, Q, R, S>
 where
-    T: Tokenize + 'a,
-    Trav: Traversable<'a, 'g, T>,
-    D: MatchDirection + 'a,
-    Q: TraversalQuery + 'a,
-    R: ResultKind + 'a,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
+    T: Tokenize,
+    Trav: Traversable<T>,
+    D: MatchDirection,
+    Q: TraversalQuery,
+    R: ResultKind,
+    S: DirectedTraversalPolicy<T, D, Q, R, Trav=Trav>,
 {
     fn new(trav: &'a Trav, root: TraversalNode<R, Q>) -> Self {
         Self {

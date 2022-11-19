@@ -23,8 +23,8 @@ impl PatternLocation {
     pub(crate) fn get_pattern<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        Trav: Traversable<'a, 'g, T> + 'a,
+        T: Tokenize,
+        Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> Option<Pattern> {
         trav.graph().get_pattern_at(self).ok()
     }
@@ -32,8 +32,8 @@ impl PatternLocation {
     pub(crate) fn expect_pattern<
         'a: 'g,
         'g,
-        T: Tokenize + 'a,
-        Trav: Traversable<'a, 'g, T> + 'a,
+        T: Tokenize,
+        Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> Pattern {
         trav.graph().expect_pattern_at(self)
     }

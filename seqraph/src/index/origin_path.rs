@@ -104,7 +104,7 @@ impl<A: Advanced, F: FromAdvanced<A>> FromAdvanced<A> for OriginPath<F> {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>
+        Trav: Traversable<T>
     >(path: A, trav: &'a Trav) -> Self {
         Self {
             origin: MatchEnd::Path(path.start_match_path().clone()),
@@ -118,7 +118,7 @@ impl<A: Advanced, F: FromAdvanced<A>> FromAdvanced<A> for OriginPath<F> {
 //        'g,
 //        T: Tokenize,
 //        D: MatchDirection,
-//        Trav: Traversable<'a, 'g, T>,
+//        Trav: Traversable<T>,
 //    >(&self, trav: Trav) -> Option<Child> {
 //        self.postfix.complete::<_, D, _>(trav)
 //    }
@@ -130,7 +130,7 @@ impl<P: PathReduce> PathReduce for OriginPath<P> {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(mut self, trav: &'a Trav) -> Self {
         self.postfix.reduce::<_, D, _>(trav);
         self
@@ -146,7 +146,7 @@ impl<P: PathAppend> PathAppend for OriginPath<P>
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>
+        Trav: Traversable<T>
     >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
         OriginPath {
             origin: MatchEnd::Path(self.origin.append::<_, D, _>(trav, parent_entry)),

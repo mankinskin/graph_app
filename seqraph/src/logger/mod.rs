@@ -76,11 +76,11 @@ impl Default for Logger {
         let registry = {
             registry
                 .with(tracing_egui::layer())
-                //.with(SleepLayer::with(Duration::from_secs(1)))
+                .with(SleepLayer::with(Duration::from_secs(1)))
         };
 
         registry
-            .with(EnvFilter::new("eframe=off,[]=trace"))
+            .with(EnvFilter::new("eframe=off,egui_glow=off,runtime=off,[]=trace"))
             .with(console_layer)
             .init();
         //std::thread::sleep(std::time::Duration::from_secs(3));

@@ -8,14 +8,14 @@ pub(crate) trait PathReduce: Sized + Send + Sync {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(self, trav: &'a Trav) -> Self;
     fn reduce<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(&mut self, trav: &'a Trav) {
 	    unsafe {
 	    	let old = std::ptr::read(self);

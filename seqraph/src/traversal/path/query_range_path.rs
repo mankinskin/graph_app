@@ -97,7 +97,7 @@ impl PatternEnd for QueryRangePath {}
 //        'g,
 //        T: Tokenize,
 //        D: MatchDirection,
-//        Trav: Traversable<'a, 'g, T>,
+//        Trav: Traversable<T>,
 //    >(&self, trav: Trav) -> Option<usize> {
 //        if self.end.is_empty() {
 //            D::pattern_index_prev(self.query.borrow(), self.exit)

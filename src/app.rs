@@ -1,3 +1,4 @@
+use crate::*;
 use eframe::{
     egui::{
         self,
@@ -8,10 +9,7 @@ use crate::examples::*;
 use seqraph::HypergraphRef;
 #[cfg(feature = "persistence")]
 use serde::*;
-use std::sync::{
-    Arc,
-    RwLock,
-};
+use tokio::task::JoinHandle;
 
 #[allow(unused)]
 use crate::graph::*;
@@ -24,6 +22,7 @@ pub struct App {
     #[cfg_attr(feature = "persistence", serde(skip))]
     graph: Graph,
     inserter: bool,
+    read_task: Option<JoinHandle<()>>,
 }
 
 impl App {
@@ -32,6 +31,7 @@ impl App {
             graph_file: None,
             graph: Graph::new(),
             inserter: true,
+            read_task: None,
         }
     }
     #[allow(unused)]
@@ -40,6 +40,7 @@ impl App {
             graph_file: None,
             graph: Graph::new_from_graph_ref(graph),
             inserter: true,
+            read_task: None,
         }
     }
     pub fn context_menu(&mut self, ui: &mut Ui) {
@@ -57,7 +58,8 @@ impl App {
             self.inserter = true;
             ui.close_menu();
         }
-        if let Some(mut vis) = self.graph.vis_mut() {
+        {
+        let mut vis = self.graph.vis_mut();
             ui.menu_button("Layout", |ui| {
                 ui.radio_value(&mut vis.layout, Layout::Graph, "Graph")
                     .clicked();
@@ -151,11 +153,18 @@ impl eframe::App for App {
                     ui.text_edit_multiline(&mut self.graph.insert_text);
                     if ui.button("Insert").clicked() {
                         let insert_text = self.graph.insert_text.clone();
-                        self.graph.read_text(insert_text, ctx);
+                        self.read_task = Some(self.graph.read_text(insert_text, ctx));
                         self.graph.insert_text = String::new();
                     }
                 });
         }
+    }
+    fn on_close_event(&mut self) -> bool {
+        if let Some(handle) = self.read_task.take() {
+            println!("abort");
+            handle.abort();
+        }
+        true
     }
 }
 use std::future::Future;

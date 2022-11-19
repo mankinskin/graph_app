@@ -14,7 +14,6 @@ use std::{
     },
     collections::HashMap, hash::{Hash, Hasher},
 };
-use async_std::sync::{Arc, Mutex};
 use std::time::{
     Duration,
 };

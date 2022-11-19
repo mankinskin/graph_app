@@ -17,7 +17,23 @@ use seqraph::HypergraphRef;
 pub use {
     tracing::*,
 };
-
+pub(crate) use {
+    graph::*,
+    seqraph::*,
+    std::sync::{
+        Arc,
+        RwLock,
+        RwLockReadGuard,
+        RwLockWriteGuard,
+    },
+    //tracing_mutex::{
+    //    stdsync::{
+    //        TracingRwLock as RwLock,
+    //        TracingReadGuard as RwLockReadGuard,
+    //        TracingWriteGuard as RwLockWriteGuard,
+    //    },
+    //},
+};
 
 /// This is the entry-point for all the web-assembly.
 /// This is called once from the HTML.

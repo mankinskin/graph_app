@@ -1,4 +1,4 @@
-use super::*;
+use crate::*;
 use eframe::egui::{
     self,
     vec2,
@@ -23,10 +23,6 @@ use petgraph::{
 };
 use std::collections::HashMap;
 use std::f32::consts::PI;
-use std::sync::{
-    Arc,
-    RwLock,
-};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Layout {
@@ -64,7 +60,7 @@ impl GraphVis {
     pub fn update(&mut self) -> Option<()> {
         // todo reuse names in nodes
         println!("update...");
-        let pg = self.graph().try_read()?.to_petgraph();
+        let pg = self.graph().read().to_petgraph();
         let node_indices: HashMap<_, _> =
             pg.nodes().map(|(idx, (key, _node))| (*key, idx)).collect();
         let old_node_indices: HashMap<_, _> = self
@@ -232,7 +228,7 @@ impl NodeVis {
         state: Arc<RwLock<NodeState>>,
     ) -> Self {
         let (name, child_patterns) = {
-            let graph = &*graph.try_read().unwrap();
+            let graph = &*graph.read();
             let name = graph.key_data_string(key, data);
             let child_patterns = Self::child_patterns_vis(graph, node_indices, data);
             (name, child_patterns)
@@ -248,11 +244,11 @@ impl NodeVis {
         }
     }
     #[allow(unused)]
-    fn state(&self) -> std::sync::RwLockReadGuard<'_, NodeState> {
+    fn state(&self) -> RwLockReadGuard<'_, NodeState> {
         self.state.read().unwrap()
     }
     #[allow(unused)]
-    fn state_mut(&self) -> std::sync::RwLockWriteGuard<'_, NodeState> {
+    fn state_mut(&self) -> RwLockWriteGuard<'_, NodeState> {
         self.state.write().unwrap()
     }
     fn child_patterns_vis<T: Tokenize + std::fmt::Display>(

@@ -5,13 +5,10 @@ use crate::{
     search::*,
     *,
 };
-use async_std::sync::{
-    Arc,
-    RwLock,
-};
+
 use tokio_stream::StreamExt;
 
-impl<'t, 'a, T> Hypergraph<T>
+impl<'t, T> Hypergraph<T>
 where
     T: Tokenize + 't,
 {
@@ -272,9 +269,9 @@ where
     ) -> Child {
         Child::new(self.expect_token_index(token), 1)
     }
-    pub fn to_token_indices_iter(
+    pub fn to_token_indices_iter<'a>(
         &'a self,
-        tokens: impl IntoIterator<Item = impl AsToken<T> + 'a> + 'a,
+        tokens: impl IntoIterator<Item = impl AsToken<T>> + 'a,
     ) -> impl Iterator<Item = Result<VertexIndex, NoMatch>> + 'a {
         tokens
             .into_iter()
@@ -289,9 +286,9 @@ where
             .map(|token| self.get_token_index(token))
             .collect()
     }
-    pub fn to_token_children_iter(
+    pub fn to_token_children_iter<'a>(
         &'a self,
-        tokens: impl IntoIterator<Item = impl AsToken<T> + 'a> + 'a,
+        tokens: impl IntoIterator<Item = impl AsToken<T>> + 'a,
     ) -> impl Iterator<Item = Result<Child, NoMatch>> + 'a {
         self.to_token_indices_iter(tokens)
             .map(move |index| index.map(|index| Child::new(index, 1)))
@@ -415,7 +412,7 @@ where
         self.get_common_pattern_in_parent(pattern, parent)
             .expect("No common pattern in parent for children.")
     }
-    pub fn get_child_pattern_range<R: PatternRangeIndex>(
+    pub fn get_child_pattern_range<'a, R: PatternRangeIndex>(
         &'a self,
         id: impl IntoPatternLocation,
         range: R,
@@ -429,7 +426,7 @@ where
             )
     }
     #[track_caller]
-    pub fn expect_child_pattern_range<R: PatternRangeIndex>(
+    pub fn expect_child_pattern_range<'a, R: PatternRangeIndex>(
         &'a self,
         id: impl IntoPatternLocation,
         range: R,

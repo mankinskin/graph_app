@@ -18,7 +18,7 @@ impl From<StartPath> for SearchPath {
         }
     }
 }
-impl<'a: 'g, 'g> SearchPath {
+impl<> SearchPath {
     #[allow(unused)]
     pub fn into_paths(self) -> (StartPath, EndPath) {
         (
@@ -29,7 +29,7 @@ impl<'a: 'g, 'g> SearchPath {
     //pub fn reduce_start<
     //    T: Tokenize,
     //    D: MatchDirection,
-    //    Trav: Traversable<'a, 'g, T>,
+    //    Trav: Traversable<T>,
     //>(mut self, trav: Trav) -> FoundPath {
     //    let graph = trav.graph();
     //    self.start.reduce::<_, D, _>(&*graph);
@@ -38,7 +38,7 @@ impl<'a: 'g, 'g> SearchPath {
     //pub fn reduce<
     //    T: Tokenize,
     //    D: MatchDirection,
-    //    Trav: Traversable<'a, 'g, T>,
+    //    Trav: Traversable<T>,
     //>(mut self, trav: Trav) -> FoundPath {
     //    let graph = trav.graph();
     //    self.start.reduce::<_, D, _>(&*graph);
@@ -86,7 +86,7 @@ impl AdvanceExit for SearchPath {
         'a: 'g,
         'g,
         T: Tokenize,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> bool {
         let location = self.get_exit_location();
         let pattern = trav.graph().expect_pattern_at(&location);
@@ -97,7 +97,7 @@ impl AdvanceExit for SearchPath {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> Result<Option<usize>, ()> {
         let location = self.get_end_location();
         let pattern = trav.graph().expect_pattern_at(&location);

@@ -37,6 +37,7 @@ tap = "^1"
 replace_with = "0.1.7"
 async-recursion = "1"
 console-subscriber = "0.1"
+tracing-mutex = "0.2"
 
 [dependencies.tracing-egui]
 path = "../../tracing-egui"

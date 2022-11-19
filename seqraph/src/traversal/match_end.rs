@@ -43,7 +43,7 @@ impl<P: MatchEndPath> RangePath for MatchEnd<P> {
 //        'g,
 //        T: Tokenize,
 //        D: MatchDirection,
-//        Trav: Traversable<'a, 'g, T>
+//        Trav: Traversable<T>
 //    >(path: SearchPath, trav: Trav) -> Self {
 //        Self {
 //            origin: path.start_match_path().clone(),
@@ -132,7 +132,7 @@ impl<P: MatchEndPath> PathComplete for MatchEnd<P> {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(&self, _trav: &'a Trav) -> Option<Child> {
         match self {
             Self::Complete(c) => Some(*c),
@@ -147,7 +147,7 @@ impl<P: MatchEndPath + PathPop<Result=Self>> PathReduce for MatchEnd<P> {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(self, trav: &'a Trav) -> Self {
         if let Some(c) = match self.get_path() {
             Some(p) => p.complete::<_, D, _>(trav),
@@ -172,7 +172,7 @@ impl<P: MatchEndPath + PathAppend> PathAppend for MatchEnd<P> {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>
+        Trav: Traversable<T>
     >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
         match self {
             MatchEnd::Path(path) => path.append::<_, D, _>(trav, parent_entry),
@@ -192,7 +192,7 @@ impl<P: MatchEndPath + PathPop<Result=Self>> PathPop for MatchEnd<P> {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>
+        Trav: Traversable<T>
     >(self, trav: &'a Trav) -> Self::Result {
         match self {
             MatchEnd::Path(path) => Ok(path.pop_path::<_, D, _>(trav)),

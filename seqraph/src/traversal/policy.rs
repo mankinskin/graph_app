@@ -13,29 +13,27 @@ impl<T: RootChild + Send + Clone + Eq + Debug> NodePath for T {}
 
 
 pub(crate) trait DirectedTraversalPolicy<
-    'a: 'g,
-    'g,
-    T: Tokenize + 'a,
-    D: MatchDirection + 'a,
-    Q: TraversalQuery + 'a,
-    R: ResultKind + 'a,
+    T: Tokenize,
+    D: MatchDirection,
+    Q: TraversalQuery,
+    R: ResultKind,
 >: Sized + Send + Sync + Unpin {
 
-    type Trav: Traversable<'a, 'g, T> + 'a;
+    type Trav: Traversable<T>;
     //type Primer: PathPrimer + From<R::Result<StartPath>> + GraphEntry;
-    type Folder: TraversalFolder<'a, 'g, T, D, Q, R, Trav=Self::Trav,
+    type Folder: TraversalFolder<T, D, Q, R//, Trav=Self::Trav,
     // Primer=StartPath
     >;
 
     /// Executed after last child of index matched
     fn after_end_match(
-        _trav: &'a Self::Trav,
+        _trav: &Self::Trav,
         path: R::Primer,
     ) -> R::Postfix;
     /// nodes generated when an index ended
     /// (parent nodes)
     fn next_parents(
-        trav: &'a Self::Trav,
+        trav: &Self::Trav,
         query: &Q,
         primer: &R::Postfix,
     ) -> Vec<TraversalNode<R, Q>> {
@@ -48,9 +46,9 @@ pub(crate) trait DirectedTraversalPolicy<
     }
     /// generates parent nodes
     fn gen_parent_nodes<
-        B: (Fn(ChildLocation) -> R::Primer) + Send + Sync + Copy,
+        B: (Fn(ChildLocation) -> R::Primer) + Copy,
     >(
-        trav: &'a Self::Trav,
+        trav: &Self::Trav,
         query: &Q,
         index: Child,
         build_start: B,

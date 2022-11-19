@@ -3,7 +3,6 @@ use crate::{
     Hypergraph,
 };
 use std::ops::ControlFlow;
-use async_std::sync::RwLockReadGuard;
 //use rayon::iter::{
 //    ParallelBridge,
 //    ParallelIterator,
@@ -15,28 +14,26 @@ pub struct Searcher<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<D>,
 }
 
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> Traversable<'a, 'g, T> for Searcher<T, D> {
-    type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    fn graph(&'g self) -> Self::Guard {
-        self.graph.try_read().unwrap()
+impl<T: Tokenize, D: MatchDirection> Traversable<T> for Searcher<T, D> {
+    type Guard<'g> = RwLockReadGuard<'g, Hypergraph<T>> where Self: 'g;
+    fn graph<'g>(&'g self) -> Self::Guard<'g> {
+        self.graph.read().unwrap()
     }
 }
 
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a> Traversable<'a, 'g, T> for &'a Searcher<T, D> {
-    type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    fn graph(&'g self) -> Self::Guard {
-        self.graph.try_read().unwrap()
+impl<T: Tokenize, D: MatchDirection> Traversable<T> for &'_ Searcher<T, D> {
+    type Guard<'g> = RwLockReadGuard<'g, Hypergraph<T>> where Self: 'g;
+    fn graph<'g>(&'g self) -> Self::Guard<'g> {
+        self.graph.read().unwrap()
     }
 }
 
 trait SearchTraversalPolicy<
-    'a: 'g,
-    'g,
-    T: Tokenize + 'a,
-    D: MatchDirection + 'a,
+    T: Tokenize,
+    D: MatchDirection,
 >:
     DirectedTraversalPolicy<
-        'a, 'g, T, D,
+        T, D,
         QueryRangePath,
         BaseResult,
         Trav=Searcher<T, D>,
@@ -46,25 +43,21 @@ trait SearchTraversalPolicy<
 {
 }
 impl<
-    'a: 'g,
-    'g,
-    T: Tokenize + 'a,
-    D: MatchDirection + 'a,
+    T: Tokenize,
+    D: MatchDirection,
 >
-    SearchTraversalPolicy<'a, 'g, T, D> for AncestorSearch<T, D>
+    SearchTraversalPolicy<T, D> for AncestorSearch<T, D>
 {}
 impl<
-    'a: 'g,
-    'g,
-    T: Tokenize + 'a,
-    D: MatchDirection + 'a,
+    T: Tokenize,
+    D: MatchDirection,
 >
-    SearchTraversalPolicy<'a, 'g, T, D> for ParentSearch<T, D>
+    SearchTraversalPolicy<T, D> for ParentSearch<T, D>
 {}
 
 
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: MatchDirection + 'a, Q: TraversalQuery + 'a, R: ResultKind + 'a>
-    TraversalFolder<'a, 'g, T, D, Q, R> for Searcher<T, D>
+impl<T: Tokenize, D: MatchDirection, Q: TraversalQuery, R: ResultKind>
+    TraversalFolder<T, D, Q, R> for Searcher<T, D>
 {
     type Trav = Self;
     type Break = TraversalResult<<R as ResultKind>::Found, Q>;
@@ -115,11 +108,11 @@ pub(crate) fn pick_max_result<
 //pub(crate) fn fold_match<
 //    'a: 'g,
 //    'g,
-//    T: Tokenize + 'a,
-//    D: MatchDirection + 'a,
+//    T: Tokenize,
+//    D: MatchDirection,
 //    Q: TraversalQuery,
 //    R: ResultKind,
-//    Folder: TraversalFolder<'a, 'g, T, D, Q, R, Continue=Option<TraversalResult<<R as ResultKind>::Found, Q>>>
+//    Folder: TraversalFolder<T, D, Q, R, Continue=Option<TraversalResult<<R as ResultKind>::Found, Q>>>
 //>(
 //    trav: &'a Folder::Trav,
 //    acc: Folder::Continue,
@@ -136,20 +129,18 @@ struct AncestorSearch<T: Tokenize, D: MatchDirection> {
 }
 
 impl<
-    'a: 'g,
-    'g,
-    T: Tokenize + 'a,
-    D: MatchDirection + 'a,
-    R: ResultKind + 'a,
+    T: Tokenize,
+    D: MatchDirection,
+    R: ResultKind,
 >
-    DirectedTraversalPolicy<'a, 'g, T, D, QueryRangePath, R> for AncestorSearch<T, D>
+    DirectedTraversalPolicy<T, D, QueryRangePath, R> for AncestorSearch<T, D>
 {
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
     //type Primer = R::Result<StartPath>;
 
     fn after_end_match(
-        _trav: &'a Self::Trav,
+        _trav: &Self::Trav,
         path: R::Primer,
     ) -> R::Postfix {
         R::Postfix::from(path)
@@ -162,31 +153,31 @@ struct ParentSearch<T: Tokenize, D: MatchDirection> {
 impl<
     'a: 'g,
     'g,
-    T: Tokenize + 'a,
-    D: MatchDirection + 'a,
-    Q: TraversalQuery + 'a,
-    R: ResultKind + 'a,
+    T: Tokenize,
+    D: MatchDirection,
+    Q: TraversalQuery,
+    R: ResultKind,
 >
-    DirectedTraversalPolicy<'a, 'g, T, D, Q, R> for ParentSearch<T, D>
+    DirectedTraversalPolicy<T, D, Q, R> for ParentSearch<T, D>
 {
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
 
     fn after_end_match(
-        _trav: &'a Self::Trav,
+        _trav: &Self::Trav,
         path: R::Primer,
     ) -> R::Postfix {
         R::Postfix::from(path)
     }
     fn next_parents(
-        _trav: &'a Self::Trav,
+        _trav: &Self::Trav,
         _query: &Q,
         _start: &R::Postfix,
     ) -> Vec<TraversalNode<R, Q>> {
         vec![]
     }
 }
-impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
+impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
     pub fn new(graph: HypergraphRef<T>) -> Self {
         Self {
             graph,
@@ -195,7 +186,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
     }
     // find largest matching direct parent
     pub(crate) fn find_pattern_parent(
-        &'a self,
+        &self,
         pattern: impl IntoPattern,
     ) -> SearchResult {
         self.bft_search::<ParentSearch<T, D>, _>(
@@ -204,7 +195,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
     }
     /// find largest matching ancestor for pattern
     pub(crate) fn find_pattern_ancestor(
-        &'a self,
+        &self,
         pattern: impl IntoPattern,
     ) -> SearchResult {
         self.bft_search::<AncestorSearch<T, D>, _>(
@@ -212,20 +203,21 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
         )
     }
     fn bft_search<
-        S: SearchTraversalPolicy<'a, 'g, T, D> + Send,
+        S: SearchTraversalPolicy<T, D> + Send,
         P: IntoPattern,
     >(
-        &'a self,
+        &self,
         query: P,
     ) -> SearchResult {
-        self.search::<Bft<'a, 'g, T, D, Self, QueryRangePath, BaseResult, S>, S, _>(
+        self.search::<Bft<T, D, Self, QueryRangePath, BaseResult, S>, S, _>(
             query,
         )
     }
     #[allow(unused)]
     fn search<
-        Ti: TraversalIterator<'a, 'g, T, D, Self, QueryRangePath, S, BaseResult> + Send,
-        S: SearchTraversalPolicy<'a, 'g, T, D>,
+        'a,
+        Ti: TraversalIterator<'a, T, D, Self, QueryRangePath, S, BaseResult> + Send,
+        S: SearchTraversalPolicy<T, D>,
         P: IntoPattern,
     >(
         &'a self,
@@ -255,8 +247,8 @@ impl<'a: 'g, 'g, T: Tokenize + 'g, D: MatchDirection + 'g> Searcher<T, D> {
     }
     //#[allow(unused)]
     //fn par_search<
-    //    Ti: TraversalIterator<'a, 'g, T, D, Self, QueryRangePath, S, BaseResult> + Send,
-    //    S: SearchTraversalPolicy<'a, 'g, T, D>,
+    //    Ti: TraversalIterator<T, D, Self, QueryRangePath, S, BaseResult> + Send,
+    //    S: SearchTraversalPolicy<T, D>,
     //    P: IntoPattern,
     //>(
     //    &'a self,

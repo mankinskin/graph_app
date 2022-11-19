@@ -1,10 +1,10 @@
 use crate::*;
 use super::*;
 
-//pub(crate) trait Indexing<'a: 'g, 'g, T: Tokenize, D: IndexDirection>: TraversableMut<'a, 'g, T> {
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
+//pub(crate) trait Indexing<T: Tokenize, D: IndexDirection>: TraversableMut<T> {
+impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
     pub fn index_found(
-        &'a mut self,
+        &mut self,
         found: FoundPath,
     ) -> Child {
         //println!("indexing found path {:#?}", found);
@@ -16,7 +16,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
         }
     }
     fn index_prefix_path(
-        &'a mut self,
+        &mut self,
         path: EndPath,
     ) -> Child {
         self.splitter::<IndexFront>().single_path_split(
@@ -29,7 +29,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
         .expect("EndPath for complete path!")
     }
     fn index_postfix_path(
-        &'a mut self,
+        &mut self,
         path: StartPath,
     ) -> Child {
         self.splitter::<IndexBack>().single_path_split(
@@ -43,7 +43,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
     }
     #[instrument(skip(self, path))]
     fn index_range_path(
-        &'a mut self,
+        &mut self,
         path: SearchPath,
     ) -> Child {
         let entry = path.start.entry();

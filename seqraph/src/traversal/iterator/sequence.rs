@@ -6,7 +6,7 @@ pub(crate) struct PathIter<
     P: Advance,
     T: Tokenize,
     D: MatchDirection,
-    Trav: Traversable<'a, 'g, T>,
+    Trav: Traversable<T>,
 > {
     path: P,
     trav: Trav,
@@ -22,8 +22,8 @@ pub(crate) struct PathIter<
 //    P: Advance,
 //    T: Tokenize,
 //    D: MatchDirection,
-//    Trav: Traversable<'a, 'g, T>,
-//> SequenceIterator for PathIter<'a, 'g, P, T, D, Trav> {
+//    Trav: Traversable<T>,
+//> SequenceIterator for PathIter<P, T, D, Trav> {
 //    type Item = P;
 //    fn next(mut self) -> Result<Self::Item, Self::Item> {
 //        if self.path.advance_next::<_, D, _>(self.trav) {
@@ -38,7 +38,7 @@ pub(crate) struct PathIter<
 //    'g,
 //    T: Tokenize,
 //    D: MatchDirection,
-//    Trav: Traversable<'a, 'g, T>,
+//    Trav: Traversable<T>,
 //> {
 //    type Iter: SequenceIterator;
 //    fn into_seq_iter(self, trav: Trav) -> Self::Iter;
@@ -49,9 +49,9 @@ pub(crate) struct PathIter<
 //    P: Advance,
 //    T: Tokenize,
 //    D: MatchDirection,
-//    Trav: Traversable<'a, 'g, T>,
-//> IntoSequenceIterator<'a, 'g, T, D, Trav> for P {
-//    type Iter = PathIter<'a, 'g, P, T, D, Trav>;
+//    Trav: Traversable<T>,
+//> IntoSequenceIterator<T, D, Trav> for P {
+//    type Iter = PathIter<P, T, D, Trav>;
 //    fn into_seq_iter(self, trav: Trav) -> Self::Iter {
 //        PathIter {
 //            path: self,

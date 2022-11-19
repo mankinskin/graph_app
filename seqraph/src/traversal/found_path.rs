@@ -35,7 +35,7 @@ impl FromAdvanced<SearchPath> for FoundPath {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>
+        Trav: Traversable<T>
     >(path: SearchPath, trav: &'a Trav) -> Self {
         if path.is_complete::<_, D, _>(trav) {
             Self::Complete(path.start_match_path().entry().parent)
@@ -52,7 +52,7 @@ impl FromAdvanced<OriginPath<SearchPath>> for OriginPath<FoundPath> {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>
+        Trav: Traversable<T>
     >(path: OriginPath<SearchPath>, trav: &'a Trav) -> Self {
         Self {
             postfix: FoundPath::from_advanced::<_, D, _>(path.postfix, trav),
@@ -67,7 +67,7 @@ pub(crate) trait FromAdvanced<A: Advanced> {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>
+        Trav: Traversable<T>
     >(path: A, trav: &'a Trav) -> Self;
 }
 pub(crate) trait IntoRangePath {

@@ -9,7 +9,7 @@ pub struct Pather<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> {
     indexer: Indexer<T, D>,
     _ty: std::marker::PhantomData<(D, Side)>,
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> Pather<T, D, Side> {
+impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Pather<T, D, Side> {
     pub fn new(indexer: Indexer<T, D>) -> Self {
         Self {
             indexer,
@@ -18,26 +18,26 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
     }
 }
 
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D> + 'a> Traversable<'a, 'g, T> for Pather<T, D, Side> {
-    type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    fn graph(&'g self) -> Self::Guard {
+impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Traversable<T> for Pather<T, D, Side> {
+    type Guard<'g> = RwLockReadGuard<'g, Hypergraph<T>> where Side: 'g;
+    fn graph<'g>(&'g self) -> Self::Guard<'g> {
         self.indexer.graph()
     }
 }
 
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D> + 'a> TraversableMut<'a, 'g, T> for Pather<T, D, Side> {
-    type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
-    fn graph_mut(&'g mut self) -> Self::GuardMut {
+impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> TraversableMut<T> for Pather<T, D, Side> {
+    type GuardMut<'g> = RwLockWriteGuard<'g, Hypergraph<T>> where Side: 'g;
+    fn graph_mut<'g>(&'g mut self) -> Self::GuardMut<'g> {
         self.indexer.graph_mut()
     }
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> Pather<T, D, Side> {
+impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Pather<T, D, Side> {
     #[instrument(skip(self, entry), ret)]
     pub fn index_primary_entry<
         S: RelativeSide<D, Side>,
         L: Borrow<ChildLocation> + Debug,
     >(
-        &'a mut self,
+        &mut self,
         entry: L,
     ) -> Option<(Pattern, IndexSplitResult)> {
         let pattern = self.graph().expect_pattern_at(entry.borrow());       
@@ -51,7 +51,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
         S: RelativeSide<D, Side>,
         L: Borrow<ChildLocation> + Debug,
     >(
-        &'a mut self,
+        &mut self,
         location: L,
     ) -> Option<(Pattern, IndexSplitResult)> {
         self.index_primary_entry::<S, _>(
@@ -62,7 +62,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
         S: RelativeSide<D, Side>,
         P: ContextPath
     >(
-        &'a mut self,
+        &mut self,
         path: P,
     ) -> Option<IndexSplitResult> {
         self.index_primary_path::<<S as RelativeSide<D, Side>>::Opposite, _>(
@@ -75,7 +75,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
         S: RelativeSide<D, Side>,
         P: ContextPath
     >(
-        &'a mut self,
+        &mut self,
         path: P,
     ) -> Option<IndexSplitResult> {
         let mut iter = Side::bottom_up_path_iter(path);
@@ -176,7 +176,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
         P: IntoPattern,
         L: Borrow<ChildLocation> + Debug
     >(
-        &'a mut self,
+        &mut self,
         pattern: P,
         location: L,
     ) -> Option<(Pattern, IndexSplitResult)> {
@@ -211,7 +211,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
     fn child_pattern_offset_splits<
         S: RelativeSide<D, Side>,
     >(
-        &'a mut self,
+        &mut self,
         parent: Child,
         child_patterns: ChildPatterns,
         offset: NonZeroUsize,
@@ -272,7 +272,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
     pub fn single_offset_split<
         S: RelativeSide<D, Side>,
     >(
-        &'a mut self,
+        &mut self,
         parent: Child,
         offset: NonZeroUsize,
     ) -> IndexSplitResult {
@@ -296,7 +296,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
     }
     #[instrument(skip(self, location, split, split_ctx))]
     fn entry_unperfect_split(
-        &'a mut self,
+        &mut self,
         location: ChildLocation,
         split: IndexSplitResult,
         split_ctx: Child,
@@ -370,7 +370,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> P
     }
     #[instrument(skip(self, parent, splits))]
     fn unperfect_splits(
-        &'a mut self,
+        &mut self,
         parent: Child,
         splits: Vec<(ChildLocation, Pattern, IndexSplitResult, Child)>,
     ) -> IndexSplitResult {

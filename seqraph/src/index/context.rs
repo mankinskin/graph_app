@@ -8,7 +8,7 @@ trait ContextLocation {
         T: Tokenize,
         D: IndexDirection,
         Side: IndexSide<D>,
-        Trav: TraversableMut<'a, 'g, T>,
+        Trav: TraversableMut<T>,
     >(self, trav: Trav) -> (Child, ChildLocation);
 }
 pub trait ContextPath:
@@ -38,7 +38,7 @@ pub struct Contexter<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> {
     indexer: Indexer<T, D>,
     _ty: std::marker::PhantomData<(D, Side)>,
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> Contexter<T, D, Side> {
+impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Contexter<T, D, Side> {
     pub fn new(indexer: Indexer<T, D>) -> Self {
         Self {
             indexer,
@@ -47,28 +47,28 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> C
     }
 }
 
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D> + 'a> Traversable<'a, 'g, T> for Contexter<T, D, Side> {
-    type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    fn graph(&'g self) -> Self::Guard {
+impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Traversable<T> for Contexter<T, D, Side> {
+    type Guard<'g> = RwLockReadGuard<'g, Hypergraph<T>> where Side: 'g;
+    fn graph<'g>(&'g self) -> Self::Guard<'g> {
         self.indexer.graph()
     }
 }
 
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D> + 'a> TraversableMut<'a, 'g, T> for Contexter<T, D, Side> {
-    type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
-    fn graph_mut(&'g mut self) -> Self::GuardMut {
+impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> TraversableMut<T> for Contexter<T, D, Side> {
+    type GuardMut<'g> = RwLockWriteGuard<'g, Hypergraph<T>> where Side: 'g;
+    fn graph_mut<'g>(&'g mut self) -> Self::GuardMut<'g> {
         self.indexer.graph_mut()
     }
 }
-//pub(crate) trait IndexContext<'a: 'g, 'g, T: Tokenize, D: IndexDirection, Side: IndexSide<D>>: Indexing<'a, 'g, T, D> {
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> Contexter<T, D, Side> {
+//pub(crate) trait IndexContext<T: Tokenize, D: IndexDirection, Side: IndexSide<D>>: Indexing<T, D> {
+impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Contexter<T, D, Side> {
     /// replaces context in pattern at location with child and returns it with new location
     pub(crate) fn pather(&self) -> Pather<T, D, Side> {
         Pather::new(self.indexer.clone())
     }
     #[instrument(skip(self, path))]
     pub fn try_context_path(
-        &'a mut self,
+        &mut self,
         path: impl ContextPath,
     ) -> Option<(Child, ChildLocation)> {
         let path = path.into_iter();

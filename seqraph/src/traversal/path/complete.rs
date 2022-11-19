@@ -8,7 +8,7 @@ pub(crate) trait PathComplete: Send + Sync {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> Option<Child>;
 
     fn is_complete<
@@ -16,7 +16,7 @@ pub(crate) trait PathComplete: Send + Sync {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> bool {
         self.complete::<_, D, _>(trav).is_some()
     }
@@ -29,7 +29,7 @@ impl<P: PathComplete> PathComplete for OriginPath<P> {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> Option<Child> {
         self.postfix.complete::<_, D, _>(trav)
     }
@@ -41,7 +41,7 @@ impl PathComplete for SearchPath {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> bool {
         let pattern = self.get_entry_pattern(trav);
         <StartPath as PathBorder<D>>::pattern_is_complete(self.start_match_path(), &pattern[..]) &&
@@ -53,7 +53,7 @@ impl PathComplete for SearchPath {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> Option<Child> {
         self.is_complete::<_, D, _>(trav).then(||
             self.root_child()
@@ -68,7 +68,7 @@ impl PathComplete for StartLeaf {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> Option<Child> {
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(self.entry);
@@ -84,7 +84,7 @@ impl PathComplete for StartPath {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> Option<Child> {
         match self {
             Self::Leaf(leaf) => leaf.complete::<_, D, _>(trav),

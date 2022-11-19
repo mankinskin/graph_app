@@ -13,7 +13,7 @@ impl PathReduce for EndPath {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(mut self, trav: &'a Trav) -> Self {
         let graph = trav.graph();
         // remove segments pointing to mismatch at pattern head
@@ -35,7 +35,7 @@ pub(crate) trait Retract: GraphEnd + EndPathMut + ExitMut + Send + Sync {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> Option<usize> {
         let location = self.get_end_location();
         let pattern = trav.graph().expect_pattern_at(&location);
@@ -46,7 +46,7 @@ pub(crate) trait Retract: GraphEnd + EndPathMut + ExitMut + Send + Sync {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
         R: ResultKind,
     >(&mut self, trav: &'a Trav) {
         let graph = trav.graph();

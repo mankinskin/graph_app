@@ -9,7 +9,7 @@ pub struct Splitter<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> {
     indexer: Indexer<T, D>,
     _ty: std::marker::PhantomData<(D, Side)>,
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> Splitter<T, D, Side> {
+impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Splitter<T, D, Side> {
     pub fn new(indexer: Indexer<T, D>) -> Self {
         Self {
             indexer,
@@ -18,26 +18,26 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> S
     }
 }
 
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D> + 'a> Traversable<'a, 'g, T> for Splitter<T, D, Side> {
-    type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    fn graph(&'g self) -> Self::Guard {
+impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Traversable<T> for Splitter<T, D, Side> {
+    type Guard<'g> = RwLockReadGuard<'g, Hypergraph<T>> where Side: 'g;
+    fn graph<'g>(&'g self) -> Self::Guard<'g> {
         self.indexer.graph()
     }
 }
 
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D> + 'a> TraversableMut<'a, 'g, T> for Splitter<T, D, Side> {
-    type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
-    fn graph_mut(&'g mut self) -> Self::GuardMut {
+impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> TraversableMut<T> for Splitter<T, D, Side> {
+    type GuardMut<'g> = RwLockWriteGuard<'g, Hypergraph<T>> where Side: 'g;
+    fn graph_mut<'g>(&'g mut self) -> Self::GuardMut<'g> {
         self.indexer.graph_mut()
     }
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> Splitter<T, D, Side> {
+impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Splitter<T, D, Side> {
     pub(crate) fn pather(&self) -> Pather<T, D, Side> {
         Pather::new(self.indexer.clone())
     }
     #[instrument(skip(self, path))]
     pub fn single_path_split(
-        &'a mut self,
+        &mut self,
         path: impl ContextPath,
     ) -> Option<IndexSplitResult> {
         self.pather().index_primary_path::<InnerSide, _>(
@@ -46,7 +46,7 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a, Side: IndexSide<D>> S
     }
     #[instrument(skip(self, parent, offset))]
     pub fn single_offset_split(
-        &'a mut self,
+        &mut self,
         parent: Child,
         offset: NonZeroUsize,
     ) -> IndexSplitResult {

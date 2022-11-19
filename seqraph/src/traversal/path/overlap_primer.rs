@@ -47,7 +47,7 @@ impl End for OverlapPrimer {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> Option<Child> {
         if self.exit == 0 {
             Some(self.start)
@@ -67,7 +67,7 @@ impl EntryPos for OverlapPrimer {
 //        'g,
 //        T: Tokenize,
 //        D: MatchDirection,
-//        Trav: Traversable<'a, 'g, T>,
+//        Trav: Traversable<T>,
 //    >(&self, trav: Trav) -> Option<usize> {
 //        match self.exit {
 //            0 => None,
@@ -93,7 +93,7 @@ impl AdvanceExit for OverlapPrimer {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(&self, _trav: &'a Trav) -> Result<Option<usize>, ()> {
         Ok(if self.exit == 0 {
             Some(1)
@@ -105,7 +105,7 @@ impl AdvanceExit for OverlapPrimer {
         'a: 'g,
         'g,
         T: Tokenize,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> bool {
         self.context.is_finished(trav)
     }
@@ -114,7 +114,7 @@ impl AdvanceExit for OverlapPrimer {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(&mut self, trav: &'a Trav) -> Result<(), ()> {
         if let Some(next) = self.next_exit_pos::<_, D, _>(trav)? {
             *self.exit_mut() = next;

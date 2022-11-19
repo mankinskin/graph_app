@@ -4,7 +4,6 @@ use petgraph::graph::DiGraph;
 use std::{
     fmt::Debug,
 };
-use async_std::sync::{Arc, RwLock};
 
 type HashMap<K, V> = DeterministicHashMap<K, V>;
 mod child_strings;

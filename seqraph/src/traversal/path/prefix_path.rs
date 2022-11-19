@@ -71,7 +71,7 @@ impl End for PrefixQuery {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>,
+        Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> Option<Child> {
         self.get_pattern_end(trav)
     }
@@ -82,7 +82,7 @@ impl End for PrefixQuery {
 //        'g,
 //        T: Tokenize,
 //        D: MatchDirection,
-//        Trav: Traversable<'a, 'g, T>,
+//        Trav: Traversable<T>,
 //    >(&self, trav: Trav) -> Option<usize> {
 //        if self.end.is_empty() {
 //            D::pattern_index_prev(self.pattern.borrow(), self.exit)

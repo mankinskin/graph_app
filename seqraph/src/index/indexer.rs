@@ -8,42 +8,42 @@ pub struct Indexer<T: Tokenize, D: IndexDirection> {
     graph: HypergraphRef<T>,
     _ty: std::marker::PhantomData<D>,
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for Indexer<T, D> {
-    type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    fn graph(&'g self) -> Self::Guard {
-        self.graph.try_read().unwrap()
+impl<T: Tokenize, D: IndexDirection> Traversable<T> for Indexer<T, D> {
+    type Guard<'g> = RwLockReadGuard<'g, Hypergraph<T>> where Self: 'g;
+    fn graph<'g>(&'g self) -> Self::Guard<'g> {
+        self.graph.read().unwrap()
     }
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g, T> for Indexer<T, D> {
-    type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
-    fn graph_mut(&'g mut self) -> Self::GuardMut {
-        self.graph.try_write().unwrap()
+impl<T: Tokenize, D: IndexDirection> TraversableMut<T> for Indexer<T, D> {
+    type GuardMut<'g> = RwLockWriteGuard<'g, Hypergraph<T>> where Self: 'g;
+    fn graph_mut<'g>(&'g mut self) -> Self::GuardMut<'g> {
+        self.graph.write().unwrap()
     }
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Traversable<'a, 'g, T> for &'a mut Indexer<T, D> {
-    type Guard = RwLockReadGuard<'g, Hypergraph<T>>;
-    fn graph(&'g self) -> Self::Guard {
-        self.graph.try_read().unwrap()
+impl<T: Tokenize, D: IndexDirection> Traversable<T> for &'_ mut Indexer<T, D> {
+    type Guard<'g> = RwLockReadGuard<'g, Hypergraph<T>> where Self: 'g;
+    fn graph<'g>(&'g self) -> Self::Guard<'g> {
+        self.graph.read().unwrap()
     }
 }
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> TraversableMut<'a, 'g, T> for &'a mut Indexer<T, D> {
-    type GuardMut = RwLockWriteGuard<'g, Hypergraph<T>>;
-    fn graph_mut(&'g mut self) -> Self::GuardMut {
-        self.graph.try_write().unwrap()
+impl<T: Tokenize, D: IndexDirection> TraversableMut<T> for &'_ mut Indexer<T, D> {
+    type GuardMut<'g> = RwLockWriteGuard<'g, Hypergraph<T>> where Self: 'g;
+    fn graph_mut<'g>(&'g mut self) -> Self::GuardMut<'g> {
+        self.graph.write().unwrap()
     }
 }
-pub(crate) struct IndexingPolicy<'a, T: Tokenize, D: IndexDirection, Q: IndexingQuery, R: ResultKind> {
-    _ty: std::marker::PhantomData<(&'a T, D, Q, R)>,
+pub(crate) struct IndexingPolicy<T: Tokenize, D: IndexDirection, Q: IndexingQuery, R: ResultKind> {
+    _ty: std::marker::PhantomData<(T, D, Q, R)>,
 }
 impl<
     'a: 'g,
     'g,
-    T: Tokenize + 'a,
-    D: IndexDirection + 'a,
-    Q: IndexingQuery + 'a,
-    R: ResultKind + 'a,
+    T: Tokenize,
+    D: IndexDirection,
+    Q: IndexingQuery,
+    R: ResultKind,
 >
-DirectedTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R>
+DirectedTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
 {
     type Trav = Indexer<T, D>;
     type Folder = Indexer<T, D>;
@@ -51,7 +51,7 @@ DirectedTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R>
 
     #[instrument(skip(trav, primer))]
     fn after_end_match(
-        trav: &'a Self::Trav,
+        trav: &Self::Trav,
         primer: R::Primer,
     ) -> R::Postfix {
         let trav = trav.clone();
@@ -81,15 +81,13 @@ DirectedTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R>
     }
 }
 pub(crate) trait IndexerTraversalPolicy<
-    'a: 'g,
-    'g,
-    T: Tokenize + 'a,
-    D: IndexDirection + 'a,
-    Q: IndexingQuery + 'a,
-    R: ResultKind + 'a,
+    T: Tokenize,
+    D: IndexDirection,
+    Q: IndexingQuery,
+    R: ResultKind,
 >:
     DirectedTraversalPolicy<
-        'a, 'g, T, D, Q, R,
+        T, D, Q, R,
         Trav=Indexer<T, D>,
         Folder=Indexer<T, D>,
         //Primer = StartLeaf
@@ -99,23 +97,23 @@ pub(crate) trait IndexerTraversalPolicy<
 impl<
     'a: 'g,
     'g,
-    T: Tokenize + 'a,
-    D: IndexDirection + 'a,
-    Q: IndexingQuery + 'a,
-    R: ResultKind + 'a,
-> IndexerTraversalPolicy<'a, 'g, T, D, Q, R> for IndexingPolicy<'a, T, D, Q, R>
+    T: Tokenize,
+    D: IndexDirection,
+    Q: IndexingQuery,
+    R: ResultKind,
+> IndexerTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
 {}
 
 pub(crate) trait IndexingQuery: TraversalQuery {}
 impl<T: TraversalQuery> IndexingQuery for T {}
 
 
-impl<'a: 'g, 'g, T, D, Q, R> TraversalFolder<'a, 'g, T, D, Q, R> for Indexer<T, D>
+impl<T, D, Q, R> TraversalFolder<T, D, Q, R> for Indexer<T, D>
 where 
-    T: Tokenize + 'a,
-    D: IndexDirection + 'a,
-    Q: IndexingQuery + 'a,
-    R: ResultKind + 'a,
+    T: Tokenize,
+    D: IndexDirection,
+    Q: IndexingQuery,
+    R: ResultKind,
 {
     type Trav = Self;
     type Break = (<R as ResultKind>::Indexed, Q);
@@ -159,7 +157,7 @@ where
     }
 }
 
-impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
+impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
     pub fn new(graph: HypergraphRef<T>) -> Self {
         Self {
             graph,
@@ -203,33 +201,34 @@ impl<'a: 'g, 'g, T: Tokenize + 'a, D: IndexDirection + 'a> Indexer<T, D> {
         self.path_indexing::<OriginPathResult, _, IndexingPolicy<T, D, Q, _>, Bft<_, _, _, _, _, _>>(query)
     }
     fn path_indexing<
-        R: ResultKind + 'a,
-        Q: IndexingQuery + 'a,
-        S: IndexerTraversalPolicy<'a, 'g, T, D, Q, R>,
-        Ti: TraversalIterator<'a, 'g, T, D, Self, Q, S, R>,
+        'a,
+        R: ResultKind,
+        Q: IndexingQuery,
+        S: IndexerTraversalPolicy<T, D, Q, R>,
+        Ti: TraversalIterator<'a, T, D, Self, Q, S, R>,
     >(
         &'a mut self,
         query_path: Q,
     ) -> Result<(<R as ResultKind>::Indexed, Q), NoMatch> {
-        let mut indexer = self.clone();
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         query_path.hash(&mut hasher);
         let _h = hasher.finish();
-
         let mut acc = ControlFlow::Continue(None);
-        let mut stream = Ti::new(self, TraversalNode::query_node(query_path));
-
-        while let Some((_depth, node)) = stream.next() {
-            match <S::Folder as TraversalFolder<_, _, _, R>>::fold_found(self, acc.continue_value().unwrap(), node) {
-                ControlFlow::Continue(c) => {
-                    acc = ControlFlow::Continue(c);
-                },
-                ControlFlow::Break(found) => {
-                    acc = ControlFlow::Break(found);
-                    break;
-                },
-            };
+        {
+            let mut stream = Ti::new(self, TraversalNode::query_node(query_path));
+            while let Some((_depth, node)) = stream.next() {
+                match <S::Folder as TraversalFolder<_, _, _, R>>::fold_found(self, acc.continue_value().unwrap(), node) {
+                    ControlFlow::Continue(c) => {
+                        acc = ControlFlow::Continue(c);
+                    },
+                    ControlFlow::Break(found) => {
+                        acc = ControlFlow::Break(found);
+                        break;
+                    },
+                };
+            }
         }
+        let mut indexer = self.clone();
         match acc {
             ControlFlow::Continue(found) => {
                 match found {

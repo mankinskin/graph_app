@@ -129,7 +129,7 @@ pub(crate) trait PathAppend: Send + Sync {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>
+        Trav: Traversable<T>
     >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result;
 }
 
@@ -140,7 +140,7 @@ impl PathAppend for StartLeaf {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>
+        Trav: Traversable<T>
     >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(self.entry);
@@ -168,7 +168,7 @@ impl PathAppend for StartPath {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>
+        Trav: Traversable<T>
     >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
         match self {
             StartPath::Leaf(leaf) => leaf.append::<_, D, _>(trav, parent_entry),
@@ -197,7 +197,7 @@ pub(crate) trait PathPop: Send + Sync {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>
+        Trav: Traversable<T>
     >(self, trav: &'a Trav) -> Self::Result;
 }
 
@@ -208,7 +208,7 @@ impl PathPop for OriginPath<SearchPath> {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>
+        Trav: Traversable<T>
     >(self, trav: &'a Trav) -> Self::Result {
         OriginPath {
             postfix: self.postfix.pop_path::<_, D, _>(trav),
@@ -225,7 +225,7 @@ impl PathPop for SearchPath {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>
+        Trav: Traversable<T>
     >(self, trav: &'a Trav) -> Self::Result {
         self.start.pop_path::<_, D, _>(trav)
     }
@@ -238,7 +238,7 @@ impl PathPop for StartPath {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<'a, 'g, T>
+        Trav: Traversable<T>
     >(self, trav: &'a Trav) -> Self::Result {
         match self {
             StartPath::Leaf(leaf) => MatchEnd::Complete(leaf.child),

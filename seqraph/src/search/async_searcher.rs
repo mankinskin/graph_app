@@ -9,10 +9,6 @@ use tokio_stream::{
     StreamExt,
 };
 use itertools::Itertools;
-use async_std::sync::{
-    Arc,
-    RwLock,
-};
 
 pub struct AsyncSearcher<T: Tokenize + Send, D: AsyncMatchDirection<T>> {
     graph: HypergraphHandle<T>,

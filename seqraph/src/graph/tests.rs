@@ -1,10 +1,4 @@
 use super::*;
-use std::sync::{
-    Arc,
-    RwLock,
-    RwLockReadGuard,
-    RwLockWriteGuard,
-};
 pub struct Context {
     pub graph: HypergraphRef<char>,
     pub a: Child,

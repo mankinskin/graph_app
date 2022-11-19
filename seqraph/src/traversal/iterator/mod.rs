@@ -8,15 +8,14 @@ use super::*;
 
 
 pub(crate) trait TraversalIterator<
-    'a: 'g,
-    'g,
-    T: Tokenize + 'a,
-    D: MatchDirection + 'a,
-    Trav: Traversable<'a, 'g, T> + 'a,
-    Q: TraversalQuery + 'a,
-    S: DirectedTraversalPolicy<'a, 'g, T, D, Q, R, Trav=Trav>,
-    R: ResultKind + 'a = BaseResult,
->: Iterator<Item = (usize, TraversalNode<R, Q>)> + Sized + Send + Sync
+    'a, 
+    T: Tokenize,
+    D: MatchDirection,
+    Trav: Traversable<T> + 'a,
+    Q: TraversalQuery,
+    S: DirectedTraversalPolicy<T, D, Q, R, Trav=Trav>,
+    R: ResultKind = BaseResult,
+>: Iterator<Item = (usize, TraversalNode<R, Q>)> + Sized
 {
 
     fn new(trav: &'a Trav, root: TraversalNode<R, Q>) -> Self;
@@ -80,7 +79,7 @@ pub(crate) trait TraversalIterator<
     /// (parent nodes)
     fn at_index_end(
         &mut self,
-        query: &FolderQuery<'a, 'g, T, D, Q, R, S>,
+        query: &FolderQuery<T, D, Q, R, S>,
         postfix: &R::Postfix,
     ) -> Vec<TraversalNode<R, Q>> {
         let root = postfix.root_child();
@@ -95,7 +94,7 @@ pub(crate) trait TraversalIterator<
     /// runs after each index/query match
     fn after_match(
         &mut self,
-        paths: FolderPathPair<'a, 'g, T, D, Q, R, S>,
+        paths: FolderPathPair<T, D, Q, R, S>,
     ) -> Vec<TraversalNode<R, Q>> {
         let mode = paths.mode();
         let (mut path, query) = paths.unpack();
@@ -132,7 +131,7 @@ pub(crate) trait TraversalIterator<
     fn after_parent_nodes(
         &mut self,
         start: R::Primer,
-        query: FolderQuery<'a, 'g, T, D, Q, R, S>,
+        query: FolderQuery<T, D, Q, R, S>,
     ) -> Vec<TraversalNode<R, Q>> {
         assert!(!query.is_finished(self.trav()));
         match R::Advanced::new_advanced::<_, D, _, _>(self.trav(), start) {
@@ -152,7 +151,7 @@ pub(crate) trait TraversalIterator<
     /// match query position with graph position
     fn to_match(
         &mut self,
-        paths: FolderPathPair<'a, 'g, T, D, Q, R, S>,
+        paths: FolderPathPair<T, D, Q, R, S>,
     ) -> Vec<TraversalNode<R, Q>> {
         let (mut path, mut query) = paths.unpack();
         if path.is_finished(self.trav()) || query.is_finished(self.trav()) {
@@ -237,7 +236,7 @@ pub(crate) trait TraversalIterator<
     fn prefix_nodes(
         &self,
         index: Child,
-        paths: FolderPathPair<'a, 'g, T, D, Q, R, S>,
+        paths: FolderPathPair<T, D, Q, R, S>,
     ) -> Vec<TraversalNode<R, Q>> {
         self.trav().graph()
             .expect_vertex_data(index)
@@ -255,7 +254,7 @@ pub(crate) trait TraversalIterator<
     /// (query end or start parent nodes)
     fn query_start(
         &self,
-        mut query: FolderQuery<'a, 'g, T, D, Q, R, S>,
+        mut query: FolderQuery<T, D, Q, R, S>,
     ) -> Option<Vec<TraversalNode<R, Q>>> {
         let start_index = query.get_end::<_, D, _>(self.trav())?;
         if let Some(_) = query.advance::<_, D, _>(self.trav()) {

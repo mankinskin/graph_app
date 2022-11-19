@@ -3,12 +3,10 @@ use super::*;
 
 use std::ops::ControlFlow;
 
-pub(crate) type Folder<'a, 'g, T, D, Q, R, Ty>
-    = <Ty as DirectedTraversalPolicy<'a, 'g, T, D, Q, R>>::Folder;
+pub(crate) type Folder<T, D, Q, R, Ty>
+    = <Ty as DirectedTraversalPolicy<T, D, Q, R>>::Folder;
 
 pub(crate) trait FolderQ<
-    'a: 'g,
-    'g,
     T: Tokenize,
     D: MatchDirection,
     Q: TraversalQuery,
@@ -18,25 +16,23 @@ pub(crate) trait FolderQ<
 }
 
 impl<
-    'a: 'g,
-    'g,
     T: Tokenize,
     D: MatchDirection,
     Q: TraversalQuery,
     R: ResultKind,
-    Ty: TraversalFolder<'a, 'g, T, D, Q, R>,
-> FolderQ<'a, 'g, T, D, Q, R> for Ty {
+    Ty: TraversalFolder<T, D, Q, R>,
+> FolderQ<T, D, Q, R> for Ty {
     type Query = Q;
 }
 
-pub(crate) type FolderQuery<'a, 'g, T, D, Q, R, Ty>
-    = <Folder<'a, 'g, T, D, Q, R, Ty> as FolderQ<'a, 'g, T, D, Q, R>>::Query;
+pub(crate) type FolderQuery<T, D, Q, R, Ty>
+    = <Folder<T, D, Q, R, Ty> as FolderQ<T, D, Q, R>>::Query;
 
-pub(crate) type FolderPathPair<'a, 'g, T, D, Q, R, Ty>
-    = PathPair<<R as ResultKind>::Advanced, FolderQuery<'a, 'g, T, D, Q, R, Ty>>;
+pub(crate) type FolderPathPair<T, D, Q, R, Ty>
+    = PathPair<<R as ResultKind>::Advanced, FolderQuery<T, D, Q, R, Ty>>;
 
 
-pub(crate) trait ResultKind: Eq + Clone + Debug + Send + Sync + 'static + Unpin {
+pub(crate) trait ResultKind: Eq + Clone + Debug + Send + Sync + Unpin {
     type Found: Found<Self>;
     type Primer: PathPrimer<Self>;
     type Postfix: Postfix + PathAppend<Result=Self::Primer> + From<Self::Primer>;
@@ -49,7 +45,7 @@ pub(crate) trait ResultKind: Eq + Clone + Debug + Send + Sync + 'static + Unpin 
         'g,
         T: Tokenize,
         D: IndexDirection,
-        //Trav: TraversableMut<'a, 'g, T>,
+        //Trav: TraversableMut<T>,
     >(found: Self::Found, indexer: &'a mut Indexer<T, D>) -> Self::Indexed;
 }
 pub(crate) trait Found<R: ResultKind>
@@ -186,7 +182,7 @@ impl ResultKind for BaseResult {
         'g,
         T: Tokenize,
         D: IndexDirection,
-        //Trav: TraversableMut<'a, 'g, T>,
+        //Trav: TraversableMut<T>,
     >(found: Self::Found, indexer: &'a mut Indexer<T, D>) -> Self::Indexed {
         indexer.index_found(found.into_range_path().into())
     }
@@ -213,7 +209,7 @@ impl ResultKind for OriginPathResult {
         'g,
         T: Tokenize,
         D: IndexDirection,
-        //Trav: TraversableMut<'a, 'g, T>,
+        //Trav: TraversableMut<T>,
     >(found: Self::Found, indexer: &'a mut Indexer<T, D>) -> Self::Indexed {
         OriginPath {
             origin: found.origin,
@@ -222,8 +218,8 @@ impl ResultKind for OriginPathResult {
     }
 }
 
-pub(crate) trait TraversalFolder<'a: 'g, 'g, T: Tokenize, D: MatchDirection, Q: TraversalQuery, R: ResultKind>: Sized + Send + Sync {
-    type Trav: Traversable<'a, 'g, T>;
+pub(crate) trait TraversalFolder<T: Tokenize, D: MatchDirection, Q: TraversalQuery, R: ResultKind>: Sized + Send + Sync {
+    type Trav: Traversable<T>;
     type Break: Send + Sync;
     type Continue: Send + Sync;
 
