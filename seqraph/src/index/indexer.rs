@@ -190,7 +190,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
         &mut self,
         query: Q,
     ) -> Result<(Child, Q), NoMatch> {
-        self.path_indexing::<BaseResult, _, IndexingPolicy<T, D, Q, _>, Bft<_, _, _, _, _, _>>(query)
+        self.index_result_kind::<BaseResult, _>(query)
     }
     pub(crate) fn index_query_with_origin<
         Q: IndexingQuery,
@@ -198,9 +198,22 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
         &mut self,
         query: Q,
     ) -> Result<(OriginPath<Child>, Q), NoMatch> {
-        self.path_indexing::<OriginPathResult, _, IndexingPolicy<T, D, Q, _>, Bft<_, _, _, _, _, _>>(query)
+        self.index_result_kind::<OriginPathResult, _>(query)
     }
-    fn path_indexing<
+    pub(crate) fn index_result_kind<
+        R: ResultKind,
+        Q: IndexingQuery,
+    >(
+        &mut self,
+        query: Q,
+    ) -> Result<(<R as ResultKind>::Indexed, Q), NoMatch> {
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        query.hash(&mut hasher);
+        let _h = hasher.finish();
+        let acc = self.run_indexing::<R, _, IndexingPolicy<T, D, Q, _>, Bft<_, _, _, _, _, _>>(query);
+        self.finish_result::<R, Q>(acc)
+    }
+    fn run_indexing<
         'a,
         R: ResultKind,
         Q: IndexingQuery,
@@ -209,31 +222,34 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
     >(
         &'a mut self,
         query_path: Q,
-    ) -> Result<(<R as ResultKind>::Indexed, Q), NoMatch> {
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        query_path.hash(&mut hasher);
-        let _h = hasher.finish();
+    ) -> ControlFlow<(<R as ResultKind>::Indexed, Q), Option<TraversalResult<<R as ResultKind>::Found, Q>>> {
         let mut acc = ControlFlow::Continue(None);
-        {
-            let mut stream = Ti::new(self, TraversalNode::query_node(query_path));
-            while let Some((_depth, node)) = stream.next() {
-                match <S::Folder as TraversalFolder<_, _, _, R>>::fold_found(self, acc.continue_value().unwrap(), node) {
-                    ControlFlow::Continue(c) => {
-                        acc = ControlFlow::Continue(c);
-                    },
-                    ControlFlow::Break(found) => {
-                        acc = ControlFlow::Break(found);
-                        break;
-                    },
-                };
-            }
+        let mut stream = Ti::new(self, TraversalNode::query_node(query_path));
+        while let Some((_depth, node)) = stream.next() {
+            match <S::Folder as TraversalFolder<_, _, _, R>>::fold_found(self, acc.continue_value().unwrap(), node) {
+                ControlFlow::Continue(c) => {
+                    acc = ControlFlow::Continue(c);
+                },
+                ControlFlow::Break(found) => {
+                    acc = ControlFlow::Break(found);
+                    break;
+                },
+            };
         }
-        let mut indexer = self.clone();
-        match acc {
+        acc
+    }
+    fn finish_result<
+        R: ResultKind,
+        Q: IndexingQuery,
+    >(
+        &mut self,
+        result: ControlFlow<(<R as ResultKind>::Indexed, Q), Option<TraversalResult<<R as ResultKind>::Found, Q>>>,
+    ) -> Result<(<R as ResultKind>::Indexed, Q), NoMatch> {
+        match result {
             ControlFlow::Continue(found) => {
                 match found {
                     Some(f) => Ok((
-                        R::index_found::<_, D>(f.found, &mut indexer),
+                        R::index_found::<_, D>(f.found, self),
                         f.query
                     )),
                     None => Err(NoMatch::NotFound),

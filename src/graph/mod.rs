@@ -42,8 +42,11 @@ impl Graph {
         let graph = Hypergraph::default();
         Self::new_from_graph(graph)
     }
+    pub(crate) fn try_read(&self) -> Option<RwLockReadGuard<'_, Hypergraph<char>>> {
+        self.graph.read().ok()
+    }
     pub(crate) fn read(&self) -> RwLockReadGuard<'_, Hypergraph<char>> {
-        self.graph.read().unwrap()
+        self.try_read().unwrap()
     }
     pub(crate) fn write(&self) -> RwLockWriteGuard<'_, Hypergraph<char>> {
         self.graph.write().unwrap()
@@ -67,7 +70,7 @@ impl Graph {
         let mut graph = self.graph.clone();
         tokio::task::spawn_blocking(move || {
             graph.read_sequence(text.chars());
-            println!("done");
+            println!("done reading");
             ctx.request_repaint();
         })
     }
@@ -79,11 +82,11 @@ impl Graph {
     }
     pub fn show(&self, ui: &mut Ui) {
         //println!("got events");
-        let mut vis = self.vis_mut();
         let events = self.poll_events();
-        if !events.is_empty() {
-            vis.update();
-        }
+        let mut vis = self.vis_mut();
+        //if !events.is_empty() {
+        //}
+        vis.update();
         vis.show(ui);
     }
 }

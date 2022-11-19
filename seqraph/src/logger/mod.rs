@@ -76,7 +76,7 @@ impl Default for Logger {
         let registry = {
             registry
                 .with(tracing_egui::layer())
-                .with(SleepLayer::with(Duration::from_secs(1)))
+                //.with(SleepLayer::with(Duration::from_secs(1)))
         };
 
         registry

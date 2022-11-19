@@ -59,8 +59,9 @@ impl GraphVis {
     }
     pub fn update(&mut self) -> Option<()> {
         // todo reuse names in nodes
-        println!("update...");
+        //println!("update...");
         let pg = self.graph().read().to_petgraph();
+        //println!("updating");
         let node_indices: HashMap<_, _> =
             pg.nodes().map(|(idx, (key, _node))| (*key, idx)).collect();
         let old_node_indices: HashMap<_, _> = self
@@ -80,6 +81,7 @@ impl GraphVis {
             |_idx, _p| (),
         );
         self.graph = new;
+        //println!("done");
         Some(())
     }
     pub fn show(&mut self, ui: &mut Ui) {

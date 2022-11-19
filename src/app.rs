@@ -59,7 +59,7 @@ impl App {
             ui.close_menu();
         }
         {
-        let mut vis = self.graph.vis_mut();
+            let mut vis = self.graph.vis_mut();
             ui.menu_button("Layout", |ui| {
                 ui.radio_value(&mut vis.layout, Layout::Graph, "Graph")
                     .clicked();
