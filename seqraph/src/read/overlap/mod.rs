@@ -197,7 +197,6 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             // try expand
             match self.graph
                 .index_query_with_origin(OverlapPrimer::new(postfix, prefix_query.clone()))
-                
             {
                 Ok((
                     OriginPath {

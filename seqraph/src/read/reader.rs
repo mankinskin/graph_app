@@ -12,37 +12,21 @@ pub struct Reader<T: Tokenize, D: IndexDirection> {
     pub(crate) root: Option<Child>,
     _ty: std::marker::PhantomData<D>,
 }
-impl<T: Tokenize, D: IndexDirection> Traversable<T> for Reader<T, D> {
-    type Guard<'g> = RwLockReadGuard<'g, Hypergraph<T>> where Self: 'g;
-    fn graph<'g>(&'g self) -> Self::Guard<'g> {
-        self.graph.read().unwrap()
-    }
+impl_traversable! { impl <D: IndexDirection> for Reader<T, D>, self =>
+    self.graph.read().unwrap() ; <'g> RwLockReadGuard<'g, Hypergraph<T>>
 }
-impl<T: Tokenize, D: IndexDirection> TraversableMut<T> for Reader<T, D> {
-    type GuardMut<'g> = RwLockWriteGuard<'g, Hypergraph<T>> where Self: 'g;
-    fn graph_mut<'g>(&'g mut self) -> Self::GuardMut<'g> {
-        self.graph.write().unwrap()
-    }
+impl_traversable_mut! { impl<D: IndexDirection> for Reader<T, D>, self =>
+    self.graph.write().unwrap() ; <'g> RwLockWriteGuard<'g, Hypergraph<T>>
 }
-impl<T: Tokenize, D: IndexDirection> Traversable<T> for &'_ Reader<T, D> {
-    type Guard<'g> = RwLockReadGuard<'g, Hypergraph<T>> where Self: 'g;
-    fn graph<'g>(&'g self) -> Self::Guard<'g> {
-        self.graph.read().unwrap()
-    }
+impl_traversable! { impl<D: IndexDirection> for &'_ Reader<T, D>, self =>
+    self.graph.read().unwrap() ; <'g> RwLockReadGuard<'g, Hypergraph<T>>
 }
-impl<T: Tokenize, D: IndexDirection> Traversable<T> for &'_ mut Reader<T, D> {
-    type Guard<'g> = RwLockReadGuard<'g, Hypergraph<T>> where Self: 'g;
-    fn graph<'g>(&'g self) -> Self::Guard<'g> {
-        self.graph.read().unwrap()
-    }
+impl_traversable! { impl<D: IndexDirection> for &'_ mut Reader<T, D>, self =>
+    self.graph.read().unwrap() ; <'g> RwLockReadGuard<'g, Hypergraph<T>>
 }
-impl<T: Tokenize, D: IndexDirection> TraversableMut<T> for &'_ mut Reader<T, D> {
-    type GuardMut<'g> = RwLockWriteGuard<'g, Hypergraph<T>> where Self: 'g;
-    fn graph_mut<'g>(&'g mut self) -> Self::GuardMut<'g> {
-        self.graph.write().unwrap()
-    }
+impl_traversable_mut! { impl<D: IndexDirection> for &'_ mut Reader<T, D>, self =>
+    self.graph.write().unwrap() ; <'g> RwLockWriteGuard<'g, Hypergraph<T>>
 }
-//type HashMap<K, V> = DeterministicHashMap<K, V>;
 
 impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     #[instrument(skip(self))]

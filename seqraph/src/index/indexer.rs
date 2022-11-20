@@ -8,29 +8,17 @@ pub struct Indexer<T: Tokenize, D: IndexDirection> {
     graph: HypergraphRef<T>,
     _ty: std::marker::PhantomData<D>,
 }
-impl<T: Tokenize, D: IndexDirection> Traversable<T> for Indexer<T, D> {
-    type Guard<'g> = RwLockReadGuard<'g, Hypergraph<T>> where Self: 'g;
-    fn graph<'g>(&'g self) -> Self::Guard<'g> {
-        self.graph.read().unwrap()
-    }
+impl_traversable! { impl <D: IndexDirection> for Indexer<T, D>, self =>
+    self.graph.read().unwrap() ; <'g> RwLockReadGuard<'g, Hypergraph<T>>
 }
-impl<T: Tokenize, D: IndexDirection> TraversableMut<T> for Indexer<T, D> {
-    type GuardMut<'g> = RwLockWriteGuard<'g, Hypergraph<T>> where Self: 'g;
-    fn graph_mut<'g>(&'g mut self) -> Self::GuardMut<'g> {
-        self.graph.write().unwrap()
-    }
+impl_traversable_mut! { impl<D: IndexDirection> for Indexer<T, D>, self =>
+    self.graph.write().unwrap() ; <'g> RwLockWriteGuard<'g, Hypergraph<T>>
 }
-impl<T: Tokenize, D: IndexDirection> Traversable<T> for &'_ mut Indexer<T, D> {
-    type Guard<'g> = RwLockReadGuard<'g, Hypergraph<T>> where Self: 'g;
-    fn graph<'g>(&'g self) -> Self::Guard<'g> {
-        self.graph.read().unwrap()
-    }
+impl_traversable! { impl<D: IndexDirection> for &'_ mut Indexer<T, D>, self =>
+    self.graph.read().unwrap() ; <'g> RwLockReadGuard<'g, Hypergraph<T>>
 }
-impl<T: Tokenize, D: IndexDirection> TraversableMut<T> for &'_ mut Indexer<T, D> {
-    type GuardMut<'g> = RwLockWriteGuard<'g, Hypergraph<T>> where Self: 'g;
-    fn graph_mut<'g>(&'g mut self) -> Self::GuardMut<'g> {
-        self.graph.write().unwrap()
-    }
+impl_traversable_mut! { impl<D: IndexDirection> for &'_ mut Indexer<T, D>, self =>
+    self.graph.write().unwrap() ; <'g> RwLockWriteGuard<'g, Hypergraph<T>>
 }
 pub(crate) struct IndexingPolicy<T: Tokenize, D: IndexDirection, Q: IndexingQuery, R: ResultKind> {
     _ty: std::marker::PhantomData<(T, D, Q, R)>,

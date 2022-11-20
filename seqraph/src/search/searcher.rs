@@ -14,20 +14,12 @@ pub struct Searcher<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<D>,
 }
 
-impl<T: Tokenize, D: MatchDirection> Traversable<T> for Searcher<T, D> {
-    type Guard<'g> = RwLockReadGuard<'g, Hypergraph<T>> where Self: 'g;
-    fn graph<'g>(&'g self) -> Self::Guard<'g> {
-        self.graph.read().unwrap()
-    }
+impl_traversable! { impl <D: MatchDirection> for Searcher<T, D>, self =>
+    self.graph.read().unwrap() ; <'g> RwLockReadGuard<'g, Hypergraph<T>>
 }
-
-impl<T: Tokenize, D: MatchDirection> Traversable<T> for &'_ Searcher<T, D> {
-    type Guard<'g> = RwLockReadGuard<'g, Hypergraph<T>> where Self: 'g;
-    fn graph<'g>(&'g self) -> Self::Guard<'g> {
-        self.graph.read().unwrap()
-    }
+impl_traversable! { impl<D: MatchDirection> for &'_ Searcher<T, D>, self =>
+    self.graph.read().unwrap() ; <'g> RwLockReadGuard<'g, Hypergraph<T>>
 }
-
 trait SearchTraversalPolicy<
     T: Tokenize,
     D: MatchDirection,
