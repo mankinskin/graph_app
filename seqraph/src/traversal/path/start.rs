@@ -5,6 +5,7 @@ pub struct StartLeaf {
     pub(crate) entry: ChildLocation,
     pub(crate) child: Child,
     pub(crate) width: usize,
+    pub(crate) token_pos: usize,
 }
 impl StartLeaf {
     pub fn new(child: Child, entry: ChildLocation) -> Self {
@@ -12,6 +13,7 @@ impl StartLeaf {
             entry,
             child,
             width: child.width(),
+            token_pos: child.width(),
         }
     }
 }
@@ -48,11 +50,13 @@ impl From<StartPath> for StartLeaf {
                 entry,
                 child,
                 width,
+                token_pos,
                 ..
             } => StartLeaf {
                 entry,
                 child,
                 width,
+                token_pos,
             }
         }
     }
@@ -64,8 +68,9 @@ pub enum StartPath {
     Path {
         entry: ChildLocation,
         path: ChildPath,
-        width: usize,
         child: Child,
+        width: usize,
+        token_pos: usize,
     },
 }
 impl StartPath {
@@ -121,7 +126,27 @@ impl WideMut for StartPath {
         }
     }
 }
-
+impl GetCacheKey for StartLeaf {
+    fn cache_key(&self) -> CacheKey {
+        CacheKey {
+            root: self.entry.index(),
+            //sub_index: self.entry.sub_index,
+            token_pos: self.token_pos,
+        }
+    }
+}
+impl GetCacheKey for StartPath {
+    fn cache_key(&self) -> CacheKey {
+        match self {
+            Self::Leaf(leaf) => leaf.cache_key(),
+            Self::Path { entry, token_pos, .. } => CacheKey {
+                root: entry.index(),
+                //sub_index: entry.sub_index,
+                token_pos: *token_pos,
+            },
+        }
+    }
+}
 pub(crate) trait PathAppend: Send + Sync {
     type Result;
     fn append<
@@ -149,6 +174,7 @@ impl PathAppend for StartLeaf {
                 entry: parent_entry,
                 child: self.entry.parent,
                 width: self.width,
+                token_pos: self.token_pos,
             })
         } else {
             StartPath::Path {
@@ -156,6 +182,7 @@ impl PathAppend for StartLeaf {
                 path: vec![self.entry],
                 width: self.width,
                 child: self.child,
+                token_pos: self.token_pos,
             }
         }
     }
@@ -172,7 +199,7 @@ impl PathAppend for StartPath {
     >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
         match self {
             StartPath::Leaf(leaf) => leaf.append::<_, D, _>(trav, parent_entry),
-            StartPath::Path { entry, mut path, width , child} => {
+            StartPath::Path { entry, mut path, child, width, token_pos } => {
                 let graph = trav.graph();
                 //println!("path {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
                 let pattern = graph.expect_pattern_at(entry);
@@ -184,6 +211,7 @@ impl PathAppend for StartPath {
                     path,
                     width,
                     child,
+                    token_pos,
                 }
             },
         }
@@ -242,13 +270,14 @@ impl PathPop for StartPath {
     >(self, trav: &'a Trav) -> Self::Result {
         match self {
             StartPath::Leaf(leaf) => MatchEnd::Complete(leaf.child),
-            StartPath::Path { entry, mut path, width, child } => {
+            StartPath::Path { entry, mut path, child, width, token_pos } => {
                 MatchEnd::Path(if let Some(seg) = path.pop() {
                     if path.is_empty() {
                         StartPath::Leaf(StartLeaf {
                             entry: seg,
                             child,
                             width,
+                            token_pos,
                         })
                     } else {
                         StartPath::Path {
@@ -256,6 +285,7 @@ impl PathPop for StartPath {
                             path,
                             width,
                             child,
+                            token_pos,
                         }
                     }
                 } else {
@@ -264,6 +294,7 @@ impl PathPop for StartPath {
                         child: graph.expect_child_at(&entry),
                         entry,
                         width,
+                        token_pos,
                     })
                 })
             },

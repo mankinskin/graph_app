@@ -108,6 +108,7 @@ impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Pather<T, D, Side> {
             let (back, front) = S::outer_inner_order(primary, prev_secondary);
             let child_patterns = self.graph().expect_child_patterns(location.parent).clone();
             assert!(!child_patterns.is_empty());
+
             prev = if child_patterns.len() == 1 {
                 // simply wrap and replace old range with new primary split
                 let pattern = self.graph().expect_pattern_at(location.borrow());       
@@ -398,8 +399,6 @@ impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Pather<T, D, Side> {
                 fronts.insert([front, &D::front_context(pattern.borrow(), pos)[..]].concat());
             }
             
-            //println!("{:#?}", backs);
-            //println!("{:#?}", fronts);
             // index half patterns
             let mut graph = self.graph_mut();
             let (back, front) = (

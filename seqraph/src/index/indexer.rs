@@ -5,20 +5,8 @@ use super::*;
 
 #[derive(Debug, Clone)]
 pub struct Indexer<T: Tokenize, D: IndexDirection> {
-    graph: HypergraphRef<T>,
+    pub(crate) graph: HypergraphRef<T>,
     _ty: std::marker::PhantomData<D>,
-}
-impl_traversable! { impl <D: IndexDirection> for Indexer<T, D>, self =>
-    self.graph.read().unwrap() ; <'g> RwLockReadGuard<'g, Hypergraph<T>>
-}
-impl_traversable_mut! { impl<D: IndexDirection> for Indexer<T, D>, self =>
-    self.graph.write().unwrap() ; <'g> RwLockWriteGuard<'g, Hypergraph<T>>
-}
-impl_traversable! { impl<D: IndexDirection> for &'_ mut Indexer<T, D>, self =>
-    self.graph.read().unwrap() ; <'g> RwLockReadGuard<'g, Hypergraph<T>>
-}
-impl_traversable_mut! { impl<D: IndexDirection> for &'_ mut Indexer<T, D>, self =>
-    self.graph.write().unwrap() ; <'g> RwLockWriteGuard<'g, Hypergraph<T>>
 }
 pub(crate) struct IndexingPolicy<T: Tokenize, D: IndexDirection, Q: IndexingQuery, R: ResultKind> {
     _ty: std::marker::PhantomData<(T, D, Q, R)>,
@@ -38,13 +26,13 @@ DirectedTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
     //type Primer = StartLeaf;
 
     #[instrument(skip(trav, primer))]
-    fn after_end_match(
+    fn at_postfix(
         trav: &Self::Trav,
         primer: R::Primer,
     ) -> R::Postfix {
         let trav = trav.clone();
         let path = primer.start_match_path();
-        //println!("after end match {:?}", path);
+        println!("after end match {:?}", path);
         // index postfix of match
 
         let match_end =
@@ -58,13 +46,17 @@ DirectedTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
                 path.start_path().into_iter().chain(
                     std::iter::once(&path.entry())
                 ),
-                //path.get_child(),
             ) {
-                MatchEnd::Path(StartLeaf { entry, child: post, width: post.width() })
+                MatchEnd::Path(StartLeaf {
+                    entry,
+                    child: post,
+                    width: post.width(),
+                    token_pos: trav.graph().expect_pattern_range_width(entry, 0..entry.sub_index)
+                })
             } else {
                 MatchEnd::Complete(path.entry().parent)
             };
-        //println!("after end match result {:?}", match_end);
+        println!("after end match result {:?}", match_end);
         R::into_postfix(primer, match_end)
     }
 }

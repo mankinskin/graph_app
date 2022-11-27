@@ -11,7 +11,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
         match found {
             FoundPath::Range(path) => self.index_range_path(path),
             FoundPath::Prefix(path) => self.index_prefix_path(path),
-            FoundPath::Postfix(path) => self.index_postfix_path(path),
+            FoundPath::Postfix(path) => self.at_postfix_path(path),
             FoundPath::Complete(c) => c
         }
     }
@@ -28,7 +28,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
         .map(|split| split.inner)
         .expect("EndPath for complete path!")
     }
-    fn index_postfix_path(
+    fn at_postfix_path(
         &mut self,
         path: StartPath,
     ) -> Child {

@@ -1,9 +1,4 @@
-use crate::{
-    *,
-    Tokenize,
-    Hypergraph,
-    HypergraphRef,
-};
+use crate::*;
 
 macro_rules! impl_traversable {
     {
@@ -52,43 +47,79 @@ impl_traversable! {
 impl_traversable! {
     impl for HypergraphRef<T>, self => self.read().unwrap(); <'g> RwLockReadGuard<'g, Hypergraph<T>>
 }
+impl_traversable! {
+    impl <D: MatchDirection> for Searcher<T, D>,
+    self => self.graph.read().unwrap();
+    <'g> RwLockReadGuard<'g, Hypergraph<T>>
+}
+impl_traversable! {
+    impl<D: MatchDirection> for &'_ Searcher<T, D>,
+    self => self.graph.read().unwrap();
+    <'g> RwLockReadGuard<'g, Hypergraph<T>>
+}
 
+impl_traversable! {
+    impl <D: IndexDirection> for Reader<T, D>,
+    self => self.graph.read().unwrap();
+    <'g> RwLockReadGuard<'g, Hypergraph<T>>
+}
+impl_traversable! {
+    impl<D: IndexDirection> for &'_ Reader<T, D>,
+    self => self.graph.read().unwrap();
+    <'g> RwLockReadGuard<'g, Hypergraph<T>>
+}
+impl_traversable! {
+    impl<D: IndexDirection> for &'_ mut Reader<T, D>,
+    self => self.graph.read().unwrap();
+    <'g> RwLockReadGuard<'g, Hypergraph<T>>
+}
+impl_traversable! {
+    impl for Hypergraph<T>, self => self; <'g> &'g Self
+}
+impl_traversable! {
+    impl <D: IndexDirection> for Indexer<T, D>,
+    self => self.graph.read().unwrap();
+    <'g> RwLockReadGuard<'g, Hypergraph<T>>
+}
+impl_traversable! {
+    impl<D: IndexDirection> for &'_ mut Indexer<T, D>,
+    self => self.graph.read().unwrap();
+    <'g> RwLockReadGuard<'g, Hypergraph<T>>
+}
 pub trait TraversableMut<T: Tokenize>: Traversable<T> {
     type GuardMut<'g>: TraversableMut<T> + Deref<Target=Hypergraph<T>> + DerefMut where Self: 'g;
     fn graph_mut<'g>(&'g mut self) -> Self::GuardMut<'g>;
 }
 
-impl <T: Tokenize> Traversable<T> for Hypergraph<T> {
-    type Guard<'g> = &'g Self where Self: 'g;
-    fn graph<'g>(&'g self) -> Self::Guard<'g> {
-        self
-    }
+impl_traversable_mut! {
+    impl for Hypergraph<T>, self => self; <'g> &'g mut Self
 }
-
-impl <T: Tokenize> TraversableMut<T> for Hypergraph<T> {
-    type GuardMut<'g> = &'g mut Self where Self: 'g;
-    fn graph_mut<'g>(&'g mut self) -> Self::GuardMut<'g> {
-        self
-    }
+impl_traversable_mut! {
+    impl for &'_ mut Hypergraph<T>, self => *self; <'g> &'g mut Hypergraph<T>
 }
-
-impl <T: Tokenize> TraversableMut<T> for &'_ mut Hypergraph<T> {
-    type GuardMut<'g> = &'g mut Hypergraph<T> where Self: 'g;
-    fn graph_mut<'g>(&'g mut self) -> Self::GuardMut<'g> {
-        *self
-    }
+impl_traversable_mut! {
+    impl for RwLockWriteGuard<'_, Hypergraph<T>>, self => &mut **self; <'g> &'g mut Hypergraph<T>
 }
-
-impl<T: Tokenize> TraversableMut<T> for RwLockWriteGuard<'_, Hypergraph<T>> {
-    type GuardMut<'g> = &'g mut Hypergraph<T> where Self: 'g;
-    fn graph_mut<'g>(&'g mut self) -> Self::GuardMut<'g> {
-        &mut **self
-    }
+impl_traversable_mut! {
+    impl for HypergraphRef<T>, self => self.write().unwrap(); <'g> RwLockWriteGuard<'g, Hypergraph<T>>
 }
-
-impl<T: Tokenize> TraversableMut<T> for HypergraphRef<T> {
-    type GuardMut<'g> = RwLockWriteGuard<'g, Hypergraph<T>> where Self: 'g;
-    fn graph_mut<'g>(&'g mut self) -> Self::GuardMut<'g> {
-        self.write().unwrap()
-    }
+impl_traversable_mut! {
+    impl<D: IndexDirection> for Reader<T, D>,
+    self => self.graph.write().unwrap();
+    <'g> RwLockWriteGuard<'g, Hypergraph<T>>
+}
+impl_traversable_mut! {
+    impl<D: IndexDirection> for &'_ mut Reader<T, D>,
+    self => self.graph.write().unwrap();
+    <'g> RwLockWriteGuard<'g, Hypergraph<T>>
+}
+impl_traversable_mut! {
+    impl<D: IndexDirection> for Indexer<T, D>,
+    self => self.graph.write().unwrap();
+    <'g> RwLockWriteGuard<'g, Hypergraph<T>>
+}
+impl_traversable_mut! {
+    impl<D: IndexDirection> for &'_ mut Indexer<T, D>,
+    self => self.graph.write().unwrap();
+    <'g> RwLockWriteGuard<'g, Hypergraph<T>>
 }

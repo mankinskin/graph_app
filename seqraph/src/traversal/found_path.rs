@@ -205,3 +205,14 @@ impl<
     //    matches!(self, FoundPath::Complete(_))
     //}
 }
+impl GetCacheKey for FoundPath {
+    fn cache_key(&self) -> CacheKey {
+        match self {
+            Self::Complete(c) => c.cache_key(),
+            Self::Range(path) => path.cache_key(),
+            Self::Postfix(path) => path.cache_key(),
+            // todo: cache_key for end path
+            Self::Prefix(path) => path.cache_key(),
+        }
+    }
+}

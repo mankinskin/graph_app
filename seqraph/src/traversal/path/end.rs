@@ -84,3 +84,11 @@ impl GraphEntry for EndPath {
 impl<D: MatchDirection> PathBorder<D> for EndPath {
     type BorderDirection = Front;
 }
+impl GetCacheKey for EndPath {
+    fn cache_key(&self) -> CacheKey {
+        CacheKey {
+            root: self.entry.index(),
+            token_pos: self.width,
+        }
+    }
+}

@@ -313,7 +313,7 @@ impl VertexData {
         self.get_child_pattern_iter()
             .map(|pat| {
                 pat.iter()
-                    .map(|c| g.insert_string(c.index))
+                    .map(|c| g.index_string(c.index))
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>()

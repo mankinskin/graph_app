@@ -114,6 +114,11 @@ impl WideMut for SearchPath {
         self.start.width_mut()
     }
 }
+impl GetCacheKey for SearchPath {
+    fn cache_key(&self) -> CacheKey {
+        self.start.cache_key()
+    }
+}
 
 impl PartialOrd for SearchPath {
     fn partial_cmp(&self, other: &SearchPath) -> Option<Ordering> {

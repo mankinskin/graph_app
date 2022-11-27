@@ -180,6 +180,7 @@ impl<P: MatchEndPath + PathAppend> PathAppend for MatchEnd<P> {
                 entry: parent_entry,
                 width: child.width(),
                 child,
+                token_pos: 0,
             }.into(),
         }
     }
@@ -197,6 +198,14 @@ impl<P: MatchEndPath + PathPop<Result=Self>> PathPop for MatchEnd<P> {
         match self {
             MatchEnd::Path(path) => Ok(path.pop_path::<_, D, _>(trav)),
             MatchEnd::Complete(child) => Err(child),
+        }
+    }
+}
+impl<P: MatchEndPath + GetCacheKey> GetCacheKey for MatchEnd<P> {
+    fn cache_key(&self) -> CacheKey {
+        match self {
+            MatchEnd::Path(path) => path.cache_key(),
+            MatchEnd::Complete(c) => c.cache_key(),
         }
     }
 }

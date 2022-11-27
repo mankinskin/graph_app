@@ -1,7 +1,4 @@
-use crate::{
-    search::*,
-    Hypergraph,
-};
+use crate::*;
 use std::ops::ControlFlow;
 //use rayon::iter::{
 //    ParallelBridge,
@@ -10,16 +7,10 @@ use std::ops::ControlFlow;
 
 #[derive(Clone, Debug)]
 pub struct Searcher<T: Tokenize, D: MatchDirection> {
-    graph: HypergraphRef<T>,
+    pub(crate) graph: HypergraphRef<T>,
     _ty: std::marker::PhantomData<D>,
 }
 
-impl_traversable! { impl <D: MatchDirection> for Searcher<T, D>, self =>
-    self.graph.read().unwrap() ; <'g> RwLockReadGuard<'g, Hypergraph<T>>
-}
-impl_traversable! { impl<D: MatchDirection> for &'_ Searcher<T, D>, self =>
-    self.graph.read().unwrap() ; <'g> RwLockReadGuard<'g, Hypergraph<T>>
-}
 trait SearchTraversalPolicy<
     T: Tokenize,
     D: MatchDirection,
@@ -131,7 +122,7 @@ impl<
     type Folder = Searcher<T, D>;
     //type Primer = R::Result<StartPath>;
 
-    fn after_end_match(
+    fn at_postfix(
         _trav: &Self::Trav,
         path: R::Primer,
     ) -> R::Postfix {
@@ -155,7 +146,7 @@ impl<
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
 
-    fn after_end_match(
+    fn at_postfix(
         _trav: &Self::Trav,
         path: R::Primer,
     ) -> R::Postfix {

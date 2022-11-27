@@ -133,11 +133,17 @@ impl<'t, 'a, T: Tokenize> Hypergraph<T> {
             });
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct Edge {
+    pub parent: Parent,
+    pub child: Child,
+}
 impl<'t, 'a, T> Hypergraph<T>
 where
     T: Tokenize + 't + std::fmt::Display,
 {
-    pub fn to_petgraph(&self) -> DiGraph<(VertexKey<T>, VertexData), Parent> {
+    pub fn to_petgraph(&self) -> DiGraph<(VertexKey<T>, VertexData), Edge> {
         let mut pg = DiGraph::new();
         // id refers to index in Hypergraph
         // idx refers to index in petgraph
@@ -151,11 +157,14 @@ where
             .collect();
         nodes.values().for_each(|(idx, node)| {
             let parents = node.get_parents();
-            for (p_id, rel) in parents {
+            for (p_id, parent) in parents {
                 let (p_idx, _p_data) = nodes
                     .get(p_id)
                     .expect("Parent not mapped to node in petgraph!");
-                pg.add_edge(*p_idx, *idx, rel.clone());
+                pg.add_edge(*p_idx, *idx, Edge {
+                    parent: parent.clone(),
+                    child: node.as_child(),
+                });
             }
         });
         pg
@@ -176,7 +185,7 @@ where
     ) -> ChildStrings {
         let nodes = pattern.into_iter().map(|child| {
             (
-                self.insert_string(child.index()),
+                self.index_string(child.index()),
                 self.expect_vertex_data(child.index())
                     .to_pattern_strings(self),
             )
@@ -191,7 +200,7 @@ where
     ) -> String {
         pattern
             .into_iter()
-            .map(|child| self.insert_string(child.index()))
+            .map(|child| self.index_string(child.index()))
             .join(separator)
     }
     pub fn separated_pattern_string(
@@ -235,7 +244,7 @@ where
             VertexKey::Pattern(_) => self.pattern_string(data.expect_any_child_pattern().1),
         }
     }
-    pub fn insert_string(
+    pub fn index_string(
         &self,
         index: impl Indexed,
     ) -> String {

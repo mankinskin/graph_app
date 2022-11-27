@@ -17,13 +17,14 @@ pub mod traversal;
 pub mod index;
 pub mod logger;
 pub mod mock;
-mod read;
+pub mod read;
 
 pub(crate) use search::*;
 pub(crate) use vertex::*;
 pub(crate) use traversal::*;
 pub(crate) use logger::*;
 pub(crate) use index::*;
+pub(crate) use read::*;
 
 #[cfg(test)]
 pub use graph::tests::*;

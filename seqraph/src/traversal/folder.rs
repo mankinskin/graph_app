@@ -53,6 +53,7 @@ pub(crate) trait Found<R: ResultKind>
     + FromAdvanced<<R as ResultKind>::Advanced>
     + From<<R as ResultKind>::Postfix>
     + Wide
+    + GetCacheKey
     + Ord
     + Send
     + Sync
@@ -65,6 +66,7 @@ impl<
     + FromAdvanced<<R as ResultKind>::Advanced>
     + From<<R as ResultKind>::Postfix>
     + Wide
+    + GetCacheKey
     + Ord
     + Send
     + Sync
@@ -79,6 +81,7 @@ pub(crate) trait PathPrimer<R: ResultKind>:
     + From<StartLeaf>
     + From<R::Advanced>
     + Wide
+    + GetCacheKey
     + Send
     + Sync
     + Unpin
@@ -94,6 +97,7 @@ impl<
     + From<StartLeaf>
     + From<<R as ResultKind>::Advanced>
     + Wide
+    + GetCacheKey
     + Send
     + Sync
     + Unpin
@@ -101,13 +105,17 @@ impl<
 {
 }
 
-pub(crate) trait Postfix: NodePath + PathReduce + IntoRangePath
+pub(crate) trait Postfix:
+    NodePath
+    + PathReduce
+    + IntoRangePath
+    + GetCacheKey
     + Send + Sync
 {
     fn new_complete(child: Child, origin: StartPath) -> Self;
     fn new_path(start: impl Into<StartPath>, origin: StartPath) -> Self;
 }
-impl<P: MatchEndPath + PathPop<Result=Self>> Postfix for MatchEnd<P> {
+impl<P: MatchEndPath + PathPop<Result=Self> + GetCacheKey> Postfix for MatchEnd<P> {
     fn new_complete(c: Child, _origin: StartPath) -> Self {
         Self::Complete(c)
     }
@@ -115,7 +123,7 @@ impl<P: MatchEndPath + PathPop<Result=Self>> Postfix for MatchEnd<P> {
         Self::Path(P::from(start.into()))
     }
 }
-impl<P: Postfix + RangePath> Postfix for OriginPath<P> {
+impl<P: Postfix + RangePath + GetCacheKey> Postfix for OriginPath<P> {
     fn new_complete(c: Child, origin: StartPath) -> Self {
         Self {
             postfix: P::new_complete(c, origin.clone()),
@@ -144,6 +152,7 @@ pub(crate) trait Advanced:
     + Send
     + Sync
     + 'static
+    + GetCacheKey
 {
 }
 impl<
@@ -161,6 +170,7 @@ impl<
     + Send
     + Sync
     + 'static
+    + GetCacheKey
 > Advanced for T {
 }
 

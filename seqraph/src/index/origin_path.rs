@@ -169,3 +169,8 @@ impl<P: Wide> Wide for OriginPath<P> {
         self.postfix.width()
     }
 }
+impl<P: GetCacheKey> GetCacheKey for OriginPath<P> {
+    fn cache_key(&self) -> CacheKey {
+        self.postfix.cache_key()
+    }
+}

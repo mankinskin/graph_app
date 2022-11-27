@@ -82,7 +82,7 @@ impl Graph {
     }
     pub fn show(&self, ui: &mut Ui) {
         //println!("got events");
-        let events = self.poll_events();
+        let _events = self.poll_events();
         let mut vis = self.vis_mut();
         //if !events.is_empty() {
         //}

@@ -263,6 +263,14 @@ where
         self.expect_index_by_key(&VertexKey::Token(token.as_token()))
     }
     #[track_caller]
+    pub fn expect_pattern_range_width(
+        &self,
+        location: impl IntoPatternLocation,
+        range: impl PatternRangeIndex
+    ) -> usize {
+        pattern_width(self.expect_child_pattern_range(location, range))
+    }
+    #[track_caller]
     pub fn expect_token_child(
         &self,
         token: impl AsToken<T>,

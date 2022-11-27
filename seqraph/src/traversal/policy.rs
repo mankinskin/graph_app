@@ -26,7 +26,7 @@ pub(crate) trait DirectedTraversalPolicy<
     >;
 
     /// Executed after last child of index matched
-    fn after_end_match(
+    fn at_postfix(
         _trav: &Self::Trav,
         path: R::Primer,
     ) -> R::Postfix;
@@ -41,12 +41,12 @@ pub(crate) trait DirectedTraversalPolicy<
             trav,
             query,
             primer.root_child(),
-            |p| primer.clone().append::<_, D, _>(trav, p)
+            |p, trav| primer.clone().append::<_, D, _>(trav, p)
         )
     }
     /// generates parent nodes
     fn gen_parent_nodes<
-        B: (Fn(ChildLocation) -> R::Primer) + Copy,
+        B: (Fn(ChildLocation, &Self::Trav) -> R::Primer) + Copy,
     >(
         trav: &Self::Trav,
         query: &Q,
@@ -69,7 +69,7 @@ pub(crate) trait DirectedTraversalPolicy<
             .sorted_unstable_by(|a, b| TraversalOrder::cmp(a, b))
             .map(|p| {
                 TraversalNode::parent_node(
-                    build_start(p),
+                    build_start(p, trav),
                     query.clone(),
                 )
             })

@@ -21,6 +21,7 @@ use petgraph::{
     },
     visit::EdgeRef,
 };
+use seqraph::vertex::Wide;
 use std::collections::HashMap;
 use std::f32::consts::PI;
 
@@ -62,14 +63,26 @@ impl GraphVis {
         //println!("update...");
         let pg = self.graph().read().to_petgraph();
         //println!("updating");
-        let node_indices: HashMap<_, _> =
-            pg.nodes().map(|(idx, (key, _node))| (*key, idx)).collect();
         let old_node_indices: HashMap<_, _> = self
             .graph
             .nodes()
             .map(|(idx, node)| (node.key, idx))
             .collect();
-        let new = pg.map(
+        let filtered = pg.filter_map(
+            |_idx, (key, node)| {
+                if node.width() <= 1 {
+                    None
+                } else {
+                    Some((*key, node))
+                }
+            },
+            |_idx, e| (e.child.width() > 1).then(|| ()),
+        );
+        let node_indices: HashMap<_, _> = filtered.nodes()
+            .map(|(idx, (key, _node))| (*key, idx))
+            .collect();
+
+        self.graph = filtered.map(
             |idx, (key, node)| {
                 if let Some(oid) = old_node_indices.get(key) {
                     let old = self.graph.node_weight(*oid).unwrap();
@@ -78,9 +91,8 @@ impl GraphVis {
                     NodeVis::new(self.graph(), &node_indices, idx, key, node)
                 }
             },
-            |_idx, _p| (),
+            |_idx, _e| (),
         );
-        self.graph = new;
         //println!("done");
         Some(())
     }
@@ -315,10 +327,11 @@ impl NodeVis {
             .show(ui, |ui| {
                 ui.spacing_mut().item_spacing = Vec2::splat(0.0);
                 //ui.set_min_width(UNIT_WIDTH * child.width as f32);
-                if gvis.layout.is_nested() && child.child.width > 1 {
+                if gvis.layout.is_nested() && child.idx.is_some() {
+                    assert!(child.child.width() > 1);
                     let node = gvis
                         .graph
-                        .node_weight(child.idx)
+                        .node_weight(child.idx.unwrap())
                         .expect("Invalid NodeIndex in ChildVis!");
                     node.child_patterns(ui, gvis)
                 } else {
@@ -343,7 +356,7 @@ impl NodeVis {
 struct ChildVis {
     name: String,
     child: Child,
-    idx: NodeIndex,
+    idx: Option<NodeIndex>,
 }
 impl std::ops::Deref for ChildVis {
     type Target = Child;
@@ -358,10 +371,8 @@ impl ChildVis {
         child: Child,
     ) -> Self {
         let key = graph.expect_vertex_key(child.index);
-        let name = graph.insert_string(child.get_index());
-        let idx = *node_indices
-            .get(key)
-            .expect("Missing NodeIndex for VertexKey!");
+        let name = graph.index_string(child.get_index());
+        let idx = node_indices.get(key).cloned();
         Self { name, child, idx }
     }
 }
