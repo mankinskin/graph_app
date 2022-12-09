@@ -3,59 +3,70 @@ use super::*;
 
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq)]
-pub(crate) struct CacheKey {
+pub struct CacheKey {
     pub root: usize,
     pub token_pos: usize,
 }
-pub(crate) trait GetCacheKey {
+pub trait GetCacheKey {
     fn cache_key(&self) -> CacheKey;
 }
-//pub(crate) trait TryCacheKey {
-//    fn try_cache_key(&self) -> Option<CacheKey>;
-//}
 
 type HashMap<K, V> = DeterministicHashMap<K, V>;
 
+
 /// Bottom-Up Cache Entry
 #[derive(Clone, Debug)]
-pub(crate) struct BUCacheEntry<R: ResultKind + Eq, Q: TraversalQuery> {
-    finished: bool,
-    mismatch: bool,
+pub struct BUPositionCache<R: ResultKind + Eq, Q: TraversalQuery> {
+    state: CacheState,
     waiting: BinaryHeap<WaitingNode<R, Q>>,
 }
-impl<R: ResultKind + Eq, Q: TraversalQuery> Default for BUCacheEntry<R, Q> {
+impl<R: ResultKind + Eq, Q: TraversalQuery> Default for BUPositionCache<R, Q> {
     fn default() -> Self {
         Self {
-            finished: false,
-            mismatch: false,
+            state: CacheState::Waiting,
             waiting: Default::default()
         }
     }
 }
+/// Bottom-Up Cache Entry
+#[derive(Clone, Debug)]
+pub struct BUVertexCache<R: ResultKind + Eq, Q: TraversalQuery> {
+    num_patterns: usize,
+    positions: HashMap<usize, BUPositionCache<R, Q>>
+}
+#[derive(Clone, Debug)]
+pub enum CacheState {
+    Mismatch,
+    Waiting,
+    AtEnd,
+}
 /// ordered according to priority
 #[derive(Clone, Debug, Eq)]
-struct WaitingNode<R: ResultKind + Eq, Q: TraversalQuery>(usize, TraversalNode<R, Q>);
+pub struct WaitingNode<R: ResultKind + Eq, Q: TraversalQuery> {
+    sub_index: usize,
+    node: ParentNode<R, Q>,
+}
 
 impl<R: ResultKind + Eq, Q: TraversalQuery> PartialEq for WaitingNode<R, Q> {
     fn eq(&self, other: &Self) -> bool {
-        self.0.eq(&other.0)
+        self.sub_index.eq(&other.sub_index)
     }
 }
 impl<R: ResultKind + Eq, Q: TraversalQuery> Ord for WaitingNode<R, Q> {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.0.partial_cmp(&other.0)
+        self.sub_index.partial_cmp(&other.sub_index)
             .unwrap_or(Ordering::Equal)
     }
 }
 impl<R: ResultKind + Eq, Q: TraversalQuery> PartialOrd for WaitingNode<R, Q> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.0.partial_cmp(&other.0).map(Ordering::reverse)
+        self.sub_index.partial_cmp(&other.sub_index).map(Ordering::reverse)
     }
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct TraversalCache<R: ResultKind + Eq, Q: TraversalQuery> {
-    bu: HashMap<CacheKey, BUCacheEntry<R, Q>>,
+pub struct TraversalCache<R: ResultKind + Eq, Q: TraversalQuery> {
+    bu: HashMap<usize, BUVertexCache<R, Q>>,
 }
 impl<R: ResultKind + Eq, Q: TraversalQuery> Default for TraversalCache<R, Q> {
     fn default() -> Self {
@@ -64,42 +75,83 @@ impl<R: ResultKind + Eq, Q: TraversalQuery> Default for TraversalCache<R, Q> {
         }
     }
 }
+#[derive(Clone, Debug)]
+pub enum OnParent<R: ResultKind + Eq, Q: TraversalQuery> {
+    First,
+    Waiting,
+    Last(Option<BinaryHeap<WaitingNode<R, Q>>>),
+}
+#[derive(Clone, Debug)]
+pub enum OnIndexEnd<R: ResultKind + Eq, Q: TraversalQuery> {
+    Waiting,
+    Finished(BinaryHeap<WaitingNode<R, Q>>),
+}
 impl<R: ResultKind + Eq, Q: TraversalQuery> TraversalCache<R, Q> {
-    /// triggered on new node
-    pub fn on_bu_node(&mut self, primer: &<R as ResultKind>::Primer, last_node: &TraversalNode<R, Q>) -> Option<()> {
-        let key = primer.cache_key();
-        let sub_index = primer.entry().sub_index;
-        self.bu.get_mut(&key)
+    pub fn get_entry_mut(&mut self, key: CacheKey) -> Option<&mut BUPositionCache<R, Q>> {
+        self.bu.get_mut(&key.root)
             .and_then(|e|
-                match (e.finished, e.mismatch) {
-                    (false, false) => {
-                        e.waiting.push(WaitingNode(sub_index, last_node.clone()));
-                        Some(())
-                    }
-                    (false, true) => {
-                        e.mismatch = false;
-                        None
-                    },
-                    _ => Some(())
-                }
+                e.positions.get_mut(&key.token_pos)
             )
-            .or_else(|| {
-                self.bu.insert(key, BUCacheEntry::default());
-                None
-            })
     }
-    /// triggered on mismatch node
-    pub fn on_bu_mismatch(&mut self, key: CacheKey) -> Option<TraversalNode<R, Q>> {
-        self.bu.get_mut(&key).and_then(|e| {
-            e.mismatch = true;
-            e.waiting.pop().map(|w| w.1)
+    /// adds node to cache and returns the state of the insertion
+    pub fn on_parent_node(&mut self, node: ParentNode<R, Q>) -> OnParent<R, Q> {
+        let key = node.path.cache_key();
+        let ChildLocation {
+            sub_index,
+            ..
+        } = node.path.entry();
+        if let Some(ve) = self.bu.get_mut(&key.root) {
+            if let Some(e) = ve.positions.get_mut(&key.token_pos) {
+                e.waiting.push(WaitingNode {
+                    sub_index,
+                    node: node.clone()
+                });
+                assert!(e.waiting.len() <= ve.num_patterns);
+                if e.waiting.len() == ve.num_patterns {
+                    OnParent::Last(
+                        matches!(
+                            e.state,
+                            CacheState::AtEnd
+                        ).then(|| e.waiting)
+                    )
+                } else {
+                    OnParent::Waiting
+                }
+            } else {
+                // new position
+                ve.positions.insert(key.token_pos, BUPositionCache::default());
+                OnParent::First
+            }
+        } else {
+            // new vertex, with position
+            let mut positions: HashMap<_, _> = Default::default();
+            positions.insert(key.token_pos, BUPositionCache::default());
+            self.bu.insert(key.root, BUVertexCache {
+                num_patterns: node.num_patterns,
+                positions
+            });
+            OnParent::First
+        }
+    }
+    /// triggered when a path finds a mismatch
+    pub fn on_bu_mismatch(&mut self, key: CacheKey) -> Option<ParentNode<R, Q>> {
+        self.get_entry_mut(key).and_then(|e| {
+            e.state = CacheState::Mismatch;
+            e.waiting.pop().map(|w| w.node)
         })
     }
-    /// triggered at_index_end
-    pub fn on_bu_finished(&mut self, key: CacheKey) {
-        self.bu.entry(key).and_modify(|e| {
-            e.finished = true;
-            e.waiting.clear();
-        });
+    /// triggered when a path reached the end of an index
+    pub fn bu_index_end(&mut self, key: CacheKey) -> OnIndexEnd<R, Q> {
+        let mut ve = self.bu.get_mut(&key.root).unwrap();
+        let mut e = ve.positions.get_mut(&key.token_pos).unwrap();
+        if e.waiting.len() == ve.num_patterns {
+            drop(e);
+            let e = ve.positions.remove(&key.token_pos).unwrap();
+            OnIndexEnd::Finished(e.waiting)
+        } else {
+            assert!(e.waiting.len() < ve.num_patterns);
+            e.state = CacheState::AtEnd;
+            OnIndexEnd::Waiting
+        }
     }
 }

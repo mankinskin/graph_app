@@ -2,7 +2,7 @@ use super::*;
 
 impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     #[instrument(skip(self, overlaps, link))]
-    pub(crate) fn back_context_from_path(
+    pub fn back_context_from_path(
         &mut self,
         overlaps: &mut OverlapChain,
         link: &OverlapLink,
@@ -32,7 +32,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         )
     }
     #[instrument(skip(self, start_bound, overlaps))]
-    pub(crate) fn take_past_context_pattern(
+    pub fn take_past_context_pattern(
         &mut self,
         start_bound: usize,
         overlaps: &mut OverlapChain,

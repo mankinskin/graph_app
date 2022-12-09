@@ -1,9 +1,9 @@
 use crate::*;
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
-pub(crate) struct OriginPath<P> {
-    pub(crate) postfix: P,
-    pub(crate) origin: MatchEnd<StartPath>,
+pub struct OriginPath<P> {
+    pub postfix: P,
+    pub origin: MatchEnd<StartPath>,
 }
 
 impl<P: Into<StartPath>> From<P> for OriginPath<StartPath> {
@@ -60,7 +60,7 @@ impl From<OriginPath<StartLeaf>> for OriginPath<StartPath> {
         }
     }
 }
-pub(crate) trait Origin {
+pub trait Origin {
     fn into_origin(self) -> MatchEnd<StartPath>;
 }
 impl<P> Origin for OriginPath<P> {

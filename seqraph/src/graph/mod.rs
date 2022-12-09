@@ -13,7 +13,7 @@ mod validation;
 
 #[cfg(test)]
 #[macro_use]
-pub(crate) mod tests;
+pub mod tests;
 
 pub use {
     child_strings::*,
@@ -193,7 +193,7 @@ where
         ChildStrings::from_nodes(nodes)
     }
 
-    pub(crate) fn pattern_string_with_separator(
+    pub fn pattern_string_with_separator(
         &'a self,
         pattern: impl IntoIterator<Item = impl Indexed>,
         separator: &'static str,

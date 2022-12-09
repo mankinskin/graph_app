@@ -3,10 +3,10 @@ use super::*;
 
 use std::ops::ControlFlow;
 
-pub(crate) type Folder<T, D, Q, R, Ty>
+pub type Folder<T, D, Q, R, Ty>
     = <Ty as DirectedTraversalPolicy<T, D, Q, R>>::Folder;
 
-pub(crate) trait FolderQ<
+pub trait FolderQ<
     T: Tokenize,
     D: MatchDirection,
     Q: TraversalQuery,
@@ -25,14 +25,14 @@ impl<
     type Query = Q;
 }
 
-pub(crate) type FolderQuery<T, D, Q, R, Ty>
+pub type FolderQuery<T, D, Q, R, Ty>
     = <Folder<T, D, Q, R, Ty> as FolderQ<T, D, Q, R>>::Query;
 
-pub(crate) type FolderPathPair<T, D, Q, R, Ty>
+pub type FolderPathPair<T, D, Q, R, Ty>
     = PathPair<<R as ResultKind>::Advanced, FolderQuery<T, D, Q, R, Ty>>;
 
 
-pub(crate) trait ResultKind: Eq + Clone + Debug + Send + Sync + Unpin {
+pub trait ResultKind: Eq + Clone + Debug + Send + Sync + Unpin {
     type Found: Found<Self>;
     type Primer: PathPrimer<Self>;
     type Postfix: Postfix + PathAppend<Result=Self::Primer> + From<Self::Primer>;
@@ -48,7 +48,7 @@ pub(crate) trait ResultKind: Eq + Clone + Debug + Send + Sync + Unpin {
         //Trav: TraversableMut<T>,
     >(found: Self::Found, indexer: &'a mut Indexer<T, D>) -> Self::Indexed;
 }
-pub(crate) trait Found<R: ResultKind>
+pub trait Found<R: ResultKind>
     : RangePath
     + FromAdvanced<<R as ResultKind>::Advanced>
     + From<<R as ResultKind>::Postfix>
@@ -73,7 +73,7 @@ impl<
     + Unpin
 > Found<R> for T {
 }
-pub(crate) trait PathPrimer<R: ResultKind>:
+pub trait PathPrimer<R: ResultKind>:
     NodePath
     + HasStartMatchPath
     + GraphEntry
@@ -105,7 +105,7 @@ impl<
 {
 }
 
-pub(crate) trait Postfix:
+pub trait Postfix:
     NodePath
     + PathReduce
     + IntoRangePath
@@ -137,7 +137,7 @@ impl<P: Postfix + RangePath + GetCacheKey> Postfix for OriginPath<P> {
         }
     }
 }
-pub(crate) trait Advanced:
+pub trait Advanced:
     RootChild
     + NewAdvanced
     + HasStartMatchPath
@@ -175,7 +175,7 @@ impl<
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-pub(crate) struct BaseResult;
+pub struct BaseResult;
 
 
 impl ResultKind for BaseResult {
@@ -199,7 +199,7 @@ impl ResultKind for BaseResult {
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-pub(crate) struct OriginPathResult;
+pub struct OriginPathResult;
 
 
 impl ResultKind for OriginPathResult {
@@ -228,7 +228,7 @@ impl ResultKind for OriginPathResult {
     }
 }
 
-pub(crate) trait TraversalFolder<T: Tokenize, D: MatchDirection, Q: TraversalQuery, R: ResultKind>: Sized + Send + Sync {
+pub trait TraversalFolder<T: Tokenize, D: MatchDirection, Q: TraversalQuery, R: ResultKind>: Sized + Send + Sync {
     type Trav: Traversable<T>;
     type Break: Send + Sync;
     type Continue: Send + Sync;

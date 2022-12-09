@@ -1,13 +1,15 @@
 pub mod bands;
 
-pub(crate) use bands::*;
+use std::collections::BinaryHeap;
+
+pub use bands::*;
 
 use crate::*;
 
 use super::*;
 
 
-pub(crate) trait TraversalIterator<
+pub trait TraversalIterator<
     'a, 
     T: Tokenize,
     D: MatchDirection,
@@ -26,25 +28,13 @@ pub(crate) trait TraversalIterator<
         last_depth: usize,
         last_node: TraversalNode<R, Q>,
     ) -> Vec<(usize, TraversalNode<R, Q>)> {
-        self.iter_children(&last_node)
-            .into_iter()
-            .map(|child| (last_depth + 1, child))
-            .collect_vec()
-    }
-    fn iter_children(
-        &mut self,
-        node: &TraversalNode<R, Q>
-    ) -> Vec<TraversalNode<R, Q>> {
-        match node.clone().into() {
+        match last_node.into() {
             TraversalNode::Query(query) =>
                 self.query_start(
                     query,
                 ).unwrap_or_default(),
-            TraversalNode::Parent(path, query) =>
-                self.after_parent_nodes(
-                    path,
-                    query,
-                ),
+            TraversalNode::Parent(node) =>
+                self.on_parent_node(node),
             TraversalNode::ToMatch(paths) =>
                 self.to_match(
                     paths,
@@ -54,27 +44,62 @@ pub(crate) trait TraversalIterator<
                     PathPair::GraphMajor(path, query),
                 ),
             TraversalNode::MatchEnd(match_end, query) =>
-                self.at_index_end(
+                S::next_parents(
+                    self.trav(),
                     &query,
                     &match_end
                 ),
             _ => vec![],
         }
+        .into_iter()
+        .map(|child| (last_depth + 1, child))
+        .collect_vec()
     }
     /// nodes generated when an index ended
     /// (parent nodes)
     fn at_index_end(
         &mut self,
-        query: &FolderQuery<T, D, Q, R, S>,
-        postfix: &R::Postfix,
+        query: FolderQuery<T, D, Q, R, S>,
+        path: R::Primer,
+    ) -> Vec<TraversalNode<R, Q>> {
+        match self.cache_mut().bu_index_end(path.cache_key()) {
+            OnIndexEnd::Finished(nodes) => {
+                self.at_index_finished(
+                    query,
+                    nodes,
+                )
+            },
+            OnIndexEnd::Waiting => vec![],
+        }
+    }
+    fn at_index_finished(
+        &mut self,
+        query: FolderQuery<T, D, Q, R, S>,
+        nodes: BinaryHeap<WaitingNode<R, Q>>,
     ) -> Vec<TraversalNode<R, Q>> {
         //println!("at index end {:?}", root);
-        self.cache_mut().on_bu_finished(postfix.cache_key());
-        S::next_parents(
+        // possibly perform indexing
+        let match_end = S::at_postfix(
             self.trav(),
-            query,
-            postfix,
-        )
+            nodes,
+        );
+        // get next parents
+        let parents = S::next_parents(
+            self.trav(),
+            &query,
+            &match_end,
+        );
+        if parents.is_empty() {
+            //println!("no more parents {:#?}", match_end);
+            vec![
+                TraversalNode::match_end_node(
+                    match_end.into_reduced::<_, D, _>(self.trav()),
+                    query,
+                )
+            ]
+        } else {
+            parents
+        }
     }
     /// runs after each index/query match
     fn after_match(
@@ -88,49 +113,43 @@ pub(crate) trait TraversalIterator<
             vec![TraversalNode::to_match_node(PathPair::from_mode(path, query, mode))]
         } else {
             // at end of index
-            // possibly perform indexing
-            let match_end = S::at_postfix(
-                self.trav(),
+            self.at_index_end(
+                query,
                 path.into(),
-            );
-            // get next parents
-            let parents = self.at_index_end(
-                &query,
-                &match_end.clone()
-            );
-            if parents.is_empty() {
-                //println!("no more parents {:#?}", match_end);
-                vec![
-                    TraversalNode::match_end_node(
-                        match_end.into_reduced::<_, D, _>(self.trav()),
-                        query,
-                    )
-                ]
-            } else {
-                parents
-            }
+            )
         }
     }
     /// nodes generated from a parent node
     /// (child successor or super-parent nodes)
-    fn after_parent_nodes(
+    fn on_parent_node(
         &mut self,
-        start: R::Primer,
-        query: FolderQuery<T, D, Q, R, S>,
+        node: ParentNode<R, Q>,
     ) -> Vec<TraversalNode<R, Q>> {
-        assert!(!query.is_finished(self.trav()));
-        match R::Advanced::new_advanced::<_, D, _, _>(self.trav(), start) {
-            Ok(path) =>
-                vec![
-                    TraversalNode::to_match_node(
-                        PathPair::GraphMajor(path, query)
-                    )
-                ],
-            Err(path) =>
-                self.at_index_end(
-                    &query,
-                    &R::Postfix::from(path)
-                ),
+        assert!(!node.query.is_finished(self.trav()));
+
+        match self.cache_mut().on_parent_node(node) {
+            OnParent::First => {
+                match R::Advanced::new_advanced::<_, D, _, _>(self.trav(), node.path) {
+                    Ok(path) =>
+                        vec![
+                            TraversalNode::to_match_node(
+                                PathPair::GraphMajor(path, node.query)
+                            )
+                        ],
+                    Err(path) =>
+                        self.at_index_end(
+                            node.query,
+                            path
+                        ),
+                }
+            },
+            OnParent::Last(nodes) => nodes.map(|nodes|
+                self.at_index_finished(
+                    node.query,
+                    nodes,
+                )
+            ).unwrap_or_default(),
+            OnParent::Waiting => vec![]
         }
     }
     /// match query position with graph position

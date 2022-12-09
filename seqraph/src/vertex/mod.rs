@@ -38,7 +38,7 @@ pub type IndexPosition = usize;
 pub type IndexPattern = Vec<VertexIndex>;
 pub type VertexPatternView<'a> = Vec<&'a VertexData>;
 
-pub(crate) fn clone_child_patterns(children: &'_ ChildPatterns) -> impl Iterator<Item=Pattern> + '_ {
+pub fn clone_child_patterns(children: &'_ ChildPatterns) -> impl Iterator<Item=Pattern> + '_ {
     children.iter().map(|(_, p)| p.clone())
 }
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]

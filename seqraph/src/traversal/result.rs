@@ -2,12 +2,12 @@ use crate::*;
 use super::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub(crate) struct TraversalResult<P: RangePath, Q: TraversalQuery> {
-    pub(crate) found: P,
-    pub(crate) query: Q,
+pub struct TraversalResult<P: RangePath, Q: TraversalQuery> {
+    pub found: P,
+    pub query: Q,
 }
 
-pub(crate) trait IntoResult<Q: TraversalQuery>: RangePath {
+pub trait IntoResult<Q: TraversalQuery>: RangePath {
     fn into_result(self, query: Q) -> TraversalResult<Self, Q>;
 }
 
@@ -20,7 +20,7 @@ impl<P: RangePath, Q: TraversalQuery> IntoResult<Q> for P {
     }
 }
 impl<F: RangePath, Q: TraversalQuery> TraversalResult<F, Q> {
-    pub(crate) fn new(found: impl Into<F>, query: impl Into<Q>) -> Self {
+    pub fn new(found: impl Into<F>, query: impl Into<Q>) -> Self {
         Self {
             found: found.into(),
             query: query.into(),
@@ -38,7 +38,7 @@ impl<F: RangePath, Q: TraversalQuery> TraversalResult<F, Q> {
 }
 impl<Q: QueryPath> TraversalResult<FoundPath, Q> {
     #[allow(unused)]
-    pub(crate) fn new_complete(query: impl IntoPattern, index: impl AsChild) -> Self {
+    pub fn new_complete(query: impl IntoPattern, index: impl AsChild) -> Self {
         Self {
             found: FoundPath::Complete(index.as_child()),
             query: Q::complete(query),

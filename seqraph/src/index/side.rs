@@ -7,7 +7,10 @@ type OppositeContextRange<D, Ty> =
 pub trait RelativeSide<D: IndexDirection, S: IndexSide<D>>: Sync + Send + Unpin {
     type Opposite: RelativeSide<D, S>;
     type Range: PatternRangeIndex + StartInclusive;
-    fn in_context() -> bool;
+    fn is_context_side() -> bool;
+    fn is_inner_side() -> bool {
+        !Self::is_context_side()
+    }
     fn exclusive_primary_index(index: usize) -> Option<usize>;
     fn exclusive_primary_location(location: ChildLocation) -> Option<ChildLocation> {
         Some(ChildLocation {
@@ -35,6 +38,10 @@ pub trait RelativeSide<D: IndexDirection, S: IndexSide<D>>: Sync + Send + Unpin 
     }
     fn outer_inner_order(outer: Child, inner: Child) -> (Child, Child);
     fn index_inner_and_context<T: Tokenize>(indexer: &mut Indexer<T, D>, inner: Child, context: Child) -> Child;
+    fn has_secondary_exclusive(pattern: &'_ impl IntoPattern, pos: usize) -> bool {
+        Self::is_inner_side() && !Self::split_secondary(pattern, pos).is_empty()
+            || Self::is_context_side() && Self::split_secondary(pattern, pos).len() > 1
+    }
 }
 
 pub struct ContextSide;
@@ -42,7 +49,7 @@ pub struct ContextSide;
 impl<D: IndexDirection, S: IndexSide<D>> RelativeSide<D, S> for ContextSide {
     type Opposite = InnerSide;
     type Range = <S as IndexSide<D>>::ContextRange;
-    fn in_context() -> bool {
+    fn is_context_side() -> bool {
         true
     }
     fn exclusive_primary_index(index: usize) -> Option<usize> {
@@ -80,7 +87,7 @@ pub struct InnerSide;
 impl<D: IndexDirection, S: IndexSide<D>> RelativeSide<D, S> for InnerSide {
     type Opposite = ContextSide;
     type Range = <S as IndexSide<D>>::InnerRange;
-    fn in_context() -> bool {
+    fn is_context_side() -> bool {
         false
     }
     fn exclusive_primary_index(index: usize) -> Option<usize> {
@@ -116,7 +123,7 @@ pub trait IndexSide<D: IndexDirection>: std::fmt::Debug + Sync + Send + Unpin + 
     type Opposite: IndexSide<D>;
     type InnerRange: PatternRangeIndex + StartInclusive;
     type ContextRange: PatternRangeIndex + StartInclusive;
-    type BottomUpPathIter: Iterator<Item=ChildLocation> + Send + Sync;
+    type BottomUpPathIter: Iterator<Item=ChildLocation> + ExactSizeIterator + Send + Sync;
     fn next_outer_index(index: usize) -> Option<usize>;
     fn next_inner_index(index: usize) -> Option<usize>;
     fn inner_width_to_offset(child: &Child, width: usize) -> Option<NonZeroUsize>;
@@ -173,7 +180,7 @@ pub trait IndexSide<D: IndexDirection>: std::fmt::Debug + Sync + Send + Unpin + 
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct IndexBack;
+pub struct IndexBack;
 impl<D: IndexDirection> IndexSide<D> for IndexBack {
     type Opposite = IndexFront;
     //type Path = StartPath;
@@ -265,7 +272,7 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
     }
 }
 #[derive(Debug, Clone)]
-pub(crate) struct IndexFront;
+pub struct IndexFront;
 impl<D: IndexDirection> IndexSide<D> for IndexFront {
     type Opposite = IndexBack;
     //type Path = EndPath;

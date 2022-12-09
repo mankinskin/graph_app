@@ -8,11 +8,11 @@ use crate::{
     TraversalOrder,
 };
 
-pub(crate) trait NodePath: RootChild + Send + Clone + Eq + Debug {}
+pub trait NodePath: RootChild + Send + Clone + Eq + Debug {}
 impl<T: RootChild + Send + Clone + Eq + Debug> NodePath for T {}
 
 
-pub(crate) trait DirectedTraversalPolicy<
+pub trait DirectedTraversalPolicy<
     T: Tokenize,
     D: MatchDirection,
     Q: TraversalQuery,
@@ -71,6 +71,7 @@ pub(crate) trait DirectedTraversalPolicy<
                 TraversalNode::parent_node(
                     build_start(p, trav),
                     query.clone(),
+                    trav.graph().expect_vertex_data(p.parent).children.len()
                 )
             })
             .collect()

@@ -1,7 +1,7 @@
 use super::*;
 
 
-pub(crate) trait PathComplete: Send + Sync {
+pub trait PathComplete: Send + Sync {
     //fn new_complete(c: Child) -> Self;
     fn complete<
         'a: 'g,

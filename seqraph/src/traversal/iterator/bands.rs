@@ -6,7 +6,7 @@ use crate::{PatternLocation, ChildLocation, Child, Wide};
 
 use super::*;
 
-pub(crate) trait BandExpandingPolicy<
+pub trait BandExpandingPolicy<
     T: Tokenize,
     Trav: Traversable<T>,
 > {
@@ -15,12 +15,12 @@ pub(crate) trait BandExpandingPolicy<
         batch.into_iter().collect_vec()
     }
 }
-pub(crate) struct PostfixExpandingPolicy<D: MatchDirection> {
+pub struct PostfixExpandingPolicy<D: MatchDirection> {
     _ty: std::marker::PhantomData<D>,
 }
 
 
-pub(crate) trait BandIterator<
+pub trait BandIterator<
     'a,
     T: Tokenize,
     Trav: Traversable<T> + 'a,
@@ -59,7 +59,7 @@ impl <
             .collect_vec()
     }
 }
-pub(crate) struct BandExpandingIterator<'a, T, Trav, P>
+pub struct BandExpandingIterator<'a, T, Trav, P>
 where
     T: Tokenize,
     Trav: Traversable<T>,
@@ -70,7 +70,7 @@ where
     last: (Option<ChildLocation>, Child),
     _ty: std::marker::PhantomData<(&'a T, P)>
 }
-pub(crate) type PostfixIterator<'a, T, D, Trav>
+pub type PostfixIterator<'a, T, D, Trav>
     = BandExpandingIterator<'a, T, Trav, PostfixExpandingPolicy<D>>;
 
 

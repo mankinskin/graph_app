@@ -26,7 +26,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
             _ty: Default::default(),
         }
     }
-    pub(crate) fn matcher(&self) -> AsyncMatcher<T, D> {
+    pub fn matcher(&self) -> AsyncMatcher<T, D> {
         AsyncMatcher::new(self.graph)
     }
     pub fn find_sequence(&self, pattern: impl IntoIterator<Item = impl Into<T>>) -> SearchResult {
@@ -34,7 +34,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
         let pattern = self.graph.graph().to_token_children(iter)?;
         self.find_ancestor(pattern)
     }
-    pub(crate) fn find_ancestor_iter(
+    pub fn find_ancestor_iter(
         &self,
         pattern: impl IntoIterator<Item=Result<impl AsChild, NoMatch>>,
     ) -> SearchResult {
@@ -52,7 +52,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
                 }
             })
     }
-    pub(crate) fn find_ancestor(
+    pub fn find_ancestor(
         &self,
         pattern: impl IntoPattern,
     ) -> SearchResult {
@@ -168,7 +168,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
             })
         })
     }
-    pub(crate) fn compare_next_index_in_child_pattern(
+    pub fn compare_next_index_in_child_pattern(
         child_patterns: &'a ChildPatterns,
         context: impl PatternStream<Child, Token<T>>,
         pattern_index: &PatternId,
@@ -187,7 +187,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
         }
     }
     /// try to find child pattern with context matching sub_context
-    pub(crate) fn find_best_child_pattern(
+    pub fn find_best_child_pattern(
         child_patterns: &'a ChildPatterns,
         candidates: impl Iterator<Item = (usize, PatternId)>,
         sub_context: impl PatternStream<Child, Token<T>>,

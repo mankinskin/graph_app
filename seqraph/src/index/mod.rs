@@ -16,16 +16,16 @@ mod path;
 
 #[cfg(test)]
 #[macro_use]
-pub(crate) mod tests;
+pub mod tests;
 
 
 pub use indexer::*;
 pub use index_direction::*;
-pub(crate) use side::*;
-pub(crate) use split::*;
-pub(crate) use context::*;
-pub(crate) use origin_path::*;
-pub(crate) use path::*;
+pub use side::*;
+pub use split::*;
+pub use context::*;
+pub use origin_path::*;
+pub use path::*;
 
 impl<'t, 'g, T> HypergraphRef<T>
 where
@@ -40,7 +40,7 @@ where
     ) -> Result<(Child, QueryRangePath), NoMatch> {
         self.indexer().index_pattern(pattern)
     }
-    pub(crate) fn index_query_with_origin<
+    pub fn index_query_with_origin<
         Q: IndexingQuery
     >(
         &self,
@@ -52,7 +52,7 @@ where
 
 #[derive(Debug, Clone)]
 pub struct IndexSplitResult {
-    pub(crate) inner: Child,
-    pub(crate) location: ChildLocation,
-    pub(crate) path: Vec<ChildLocation>,
+    pub inner: Child,
+    pub location: ChildLocation,
+    pub path: Vec<ChildLocation>,
 }

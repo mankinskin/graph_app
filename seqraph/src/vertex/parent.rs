@@ -7,8 +7,8 @@ type HashSet<T> = DeterministicHashSet<T>;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct PatternIndex {
-    pub(crate) pattern_id: PatternId,
-    pub(crate) sub_index: usize,
+    pub pattern_id: PatternId,
+    pub sub_index: usize,
 }
 impl PatternIndex {
     pub fn new(pattern_id: PatternId, sub_index: usize) -> Self {

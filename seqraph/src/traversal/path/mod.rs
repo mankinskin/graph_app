@@ -1,24 +1,24 @@
-pub(crate) mod start;
-pub(crate) mod end;
-pub(crate) mod query_range_path;
-pub(crate) mod search;
-pub(crate) mod overlap_primer;
-pub(crate) mod prefix_path;
-pub(crate) mod traversal;
-pub(crate) mod advance;
-pub(crate) mod reduce;
-pub(crate) mod complete;
+pub mod start;
+pub mod end;
+pub mod query_range_path;
+pub mod search;
+pub mod overlap_primer;
+pub mod prefix_path;
+pub mod traversal;
+pub mod advance;
+pub mod reduce;
+pub mod complete;
 
-pub(crate) use start::*;
-pub(crate) use end::*;
-pub(crate) use query_range_path::*;
-pub(crate) use search::*;
-pub(crate) use overlap_primer::*;
-pub(crate) use prefix_path::*;
-pub(crate) use traversal::*;
-pub(crate) use advance::*;
-pub(crate) use reduce::*;
-pub(crate) use complete::*;
+pub use start::*;
+pub use end::*;
+pub use query_range_path::*;
+pub use search::*;
+pub use overlap_primer::*;
+pub use prefix_path::*;
+pub use traversal::*;
+pub use advance::*;
+pub use reduce::*;
+pub use complete::*;
 
 use crate::{
     vertex::*,
@@ -28,17 +28,17 @@ pub trait RelativeDirection<D: MatchDirection> {
     type Direction: MatchDirection;
 }
 #[derive(Default)]
-pub(crate) struct Front;
+pub struct Front;
 impl<D: MatchDirection> RelativeDirection<D> for Front {
     type Direction = D;
 }
 #[derive(Default)]
-pub(crate) struct Back;
+pub struct Back;
 impl<D: MatchDirection> RelativeDirection<D> for Back {
     type Direction = <D as MatchDirection>::Opposite;
 }
 
-pub(crate) trait PathBorder<D: MatchDirection>: PathRoot + HasSinglePath {
+pub trait PathBorder<D: MatchDirection>: PathRoot + HasSinglePath {
     type BorderDirection: RelativeDirection<D>;
 
     fn pattern_entry_outer_pos<P: IntoPattern>(pattern: P, entry: usize) -> Option<usize> {
@@ -168,7 +168,7 @@ impl<P: GraphExit> GraphExit for OriginPath<P> {
         self.postfix.get_exit_location()
     }
 }
-pub(crate) trait HasStartPath {
+pub trait HasStartPath {
     fn start_path(&self) -> &[ChildLocation];
     fn num_path_segments(&self) -> usize {
         1 + self.start_path().len()
@@ -180,7 +180,7 @@ impl<P: HasStartPath> HasStartPath for OriginPath<P> {
     }
 }
 
-pub(crate) trait HasEndPath {
+pub trait HasEndPath {
     fn end_path(&self) -> &[ChildLocation];
     fn num_path_segments(&self) -> usize {
         1 + self.end_path().len()
@@ -191,7 +191,7 @@ impl<P: HasEndPath> HasEndPath for OriginPath<P> {
         self.postfix.end_path()
     }
 }
-pub(crate) trait HasStartMatchPath: GraphEntry {
+pub trait HasStartMatchPath: GraphEntry {
     fn start_match_path(&self) -> &StartPath;
     fn start_match_path_mut(&mut self) -> &mut StartPath;
 }
@@ -219,7 +219,7 @@ impl<P: HasStartMatchPath> HasStartMatchPath for OriginPath<P> {
         self.postfix.start_match_path_mut()
     }
 }
-pub(crate) trait HasEndMatchPath: GraphEntry {
+pub trait HasEndMatchPath: GraphEntry {
     fn end_match_path(&self) -> &EndPath;
     fn end_match_path_mut(&mut self) -> &mut EndPath;
 }
@@ -247,7 +247,7 @@ impl<P: HasEndMatchPath> HasEndMatchPath for OriginPath<P> {
         self.postfix.end_match_path_mut()
     }
 }
-pub(crate) trait HasMatchPaths: HasStartMatchPath + HasEndMatchPath {
+pub trait HasMatchPaths: HasStartMatchPath + HasEndMatchPath {
     fn into_paths(self) -> (StartPath, EndPath);
     fn num_path_segments(&self) -> usize {
         self.start_match_path().num_path_segments() + self.end_match_path().num_path_segments()
@@ -261,7 +261,7 @@ pub(crate) trait HasMatchPaths: HasStartMatchPath + HasEndMatchPath {
 }
 
 
-pub(crate) trait PatternStart: PatternEntry + HasStartPath  + Send + Sync {
+pub trait PatternStart: PatternEntry + HasStartPath  + Send + Sync {
     fn get_start<
         'a: 'g,
         'g,
@@ -276,7 +276,7 @@ pub(crate) trait PatternStart: PatternEntry + HasStartPath  + Send + Sync {
     }
 }
 
-pub(crate) trait PatternEnd: PatternExit + HasEndPath + End + Send + Sync {
+pub trait PatternEnd: PatternExit + HasEndPath + End + Send + Sync {
     fn get_pattern_end<
         'a: 'g,
         'g,
@@ -291,7 +291,7 @@ pub(crate) trait PatternEnd: PatternExit + HasEndPath + End + Send + Sync {
     }
 }
 
-pub(crate) trait GraphStart: GraphEntry + HasStartPath {
+pub trait GraphStart: GraphEntry + HasStartPath {
     fn get_start_location(&self) -> ChildLocation {
         if let Some(start) = self.start_path().last() {
             *start
@@ -309,7 +309,7 @@ pub(crate) trait GraphStart: GraphEntry + HasStartPath {
     }
 }
 
-pub(crate) trait GraphEnd: GraphExit + HasEndPath + End {
+pub trait GraphEnd: GraphExit + HasEndPath + End {
     fn get_end_location(&self) -> ChildLocation {
         if let Some(end) = self.end_path().last() {
             *end
@@ -328,7 +328,7 @@ pub(crate) trait GraphEnd: GraphExit + HasEndPath + End {
 }
 impl<T: GraphExit + HasEndPath> GraphEnd for T {}
 
-pub(crate) trait EndPathMut {
+pub trait EndPathMut {
     fn end_path_mut(&mut self) -> &mut ChildPath;
     fn push_end(&mut self, next: ChildLocation) {
         self.end_path_mut().push(next)
@@ -353,7 +353,7 @@ impl EndPathMut for QueryRangePath {
         &mut self.end
     }
 }
-pub(crate) trait ExitMut: ExitPos {
+pub trait ExitMut: ExitPos {
     fn exit_mut(&mut self) -> &mut usize;
 }
 impl ExitMut for EndPath {
@@ -387,7 +387,7 @@ impl<P: ExitMut> ExitMut for OriginPath<P> {
     }
 }
 
-pub(crate) trait End {
+pub trait End {
     fn get_end<
         'a: 'g,
         'g,

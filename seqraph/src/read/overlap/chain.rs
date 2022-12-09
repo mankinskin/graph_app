@@ -3,8 +3,8 @@ use super::*;
 use std::collections::BTreeMap;
 
 #[derive(Default, Clone, Debug)]
-pub(crate) struct OverlapChain {
-    pub(crate) path: BTreeMap<usize, Overlap>,
+pub struct OverlapChain {
+    pub path: BTreeMap<usize, Overlap>,
 }
 impl OverlapChain {
     pub fn add_overlap(&mut self, end_bound: usize, overlap: Overlap) -> Result<(), Overlap> {
@@ -75,14 +75,14 @@ impl OverlapChain {
     }
 }
 #[derive(Clone, Debug)]
-pub(crate) struct OverlapLink {
-    pub(crate) postfix_path: StartPath, // location of postfix/overlap in first index
-    pub(crate) prefix_path: MatchEnd<StartPath>, // location of prefix/overlap in second index
+pub struct OverlapLink {
+    pub postfix_path: StartPath, // location of postfix/overlap in first index
+    pub prefix_path: MatchEnd<StartPath>, // location of prefix/overlap in second index
 }
 #[derive(Clone, Debug)]
-pub(crate) struct Overlap {
-    pub(crate) link: Option<OverlapLink>,
-    pub(crate) band: OverlapBand,
+pub struct Overlap {
+    pub link: Option<OverlapLink>,
+    pub band: OverlapBand,
 }
 impl Overlap {
     pub fn appended<

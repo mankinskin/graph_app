@@ -1,19 +1,19 @@
 use super::*;
 use std::hash::Hash;
 
-//pub(crate) type NodeTraversalResult<R, Q> =
+//pub type NodeTraversalResult<R, Q> =
 //    TraversalResult<<R as ResultKind>::Found, Q>;
 
 /// nodes generated during traversal.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub(crate) enum TraversalNode<
+pub enum TraversalNode<
     R: ResultKind,
     Q: TraversalQuery,
 > {
     /// a query is given.
     Query(Q),
     /// at a parent.
-    Parent(R::Primer, Q),
+    Parent(ParentNode<R, Q>),
     /// when the query has ended.
     QueryEnd(TraversalResult<<R as ResultKind>::Found, Q>),
     /// at a position to be matched.
@@ -25,6 +25,15 @@ pub(crate) enum TraversalNode<
     Mismatch(TraversalResult<<R as ResultKind>::Found, Q>),
     /// when a match was at the end of an index without parents.
     MatchEnd(R::Postfix, Q),
+}
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct ParentNode<
+    R: ResultKind,
+    Q: TraversalQuery,
+> {
+    pub path: R::Primer,
+    pub query: Q,
+    pub num_patterns: usize,
 }
 impl<
     R: ResultKind,
@@ -39,8 +48,8 @@ impl<
     pub fn to_match_node(paths: PathPair<R::Advanced, Q>) -> Self {
         Self::ToMatch(paths)
     }
-    pub fn parent_node(path: R::Primer, query: Q) -> Self {
-        Self::Parent(path, query)
+    pub fn parent_node(path: R::Primer, query: Q, num_patterns: usize) -> Self {
+        Self::Parent(path, query, num_patterns)
     }
     pub fn query_end_node(found: TraversalResult<<R as ResultKind>::Found, Q>) -> Self {
         Self::QueryEnd(found)
@@ -55,12 +64,12 @@ impl<
     pub fn is_match(&self) -> bool {
         matches!(self, TraversalNode::Match(_, _))
     }
-    pub fn get_parent_path(&self) -> Option<&R::Primer> {
-        match self {
-            TraversalNode::Parent(path, _) => Some(path),
-            _ => None
-        }
-    }
+    //pub fn get_parent_path(&self) -> Option<&R::Primer> {
+    //    match self {
+    //        TraversalNode::Parent(path, _) => Some(path),
+    //        _ => None
+    //    }
+    //}
 }
-//pub(crate) type MatchNode = TraversalNode<MatchEnd, QueryRangePath>;
-//pub(crate) type IndexingNode<Q> = TraversalNode<MatchEnd, Q>;
+//pub type MatchNode = TraversalNode<MatchEnd, QueryRangePath>;
+//pub type IndexingNode<Q> = TraversalNode<MatchEnd, Q>;

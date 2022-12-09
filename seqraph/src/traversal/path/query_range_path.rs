@@ -3,11 +3,11 @@ use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct QueryRangePath {
-    pub(crate) query: Pattern,
-    pub(crate) entry: usize,
-    pub(crate) start: ChildPath,
-    pub(crate) exit: usize,
-    pub(crate) end: ChildPath,
+    pub query: Pattern,
+    pub entry: usize,
+    pub start: ChildPath,
+    pub exit: usize,
+    pub end: ChildPath,
 }
 impl<
     'a: 'g,
@@ -43,7 +43,7 @@ impl<
         }
     }
 }
-pub(crate) trait QueryPath: TraversalQuery {
+pub trait QueryPath: TraversalQuery {
     fn complete(pattern: impl IntoPattern) -> Self;
 }
 

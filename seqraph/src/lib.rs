@@ -6,6 +6,7 @@
 #![feature(slice_pattern)]
 #![feature(control_flow_enum)]
 #![feature(pin_macro)]
+#![feature(exact_size_is_empty)]
 
 extern crate test;
 
@@ -19,12 +20,12 @@ pub mod logger;
 pub mod mock;
 pub mod read;
 
-pub(crate) use search::*;
-pub(crate) use vertex::*;
-pub(crate) use traversal::*;
-pub(crate) use logger::*;
-pub(crate) use index::*;
-pub(crate) use read::*;
+pub use search::*;
+pub use vertex::*;
+pub use traversal::*;
+pub use logger::*;
+pub use index::*;
+pub use read::*;
 
 #[cfg(test)]
 pub use graph::tests::*;
@@ -44,7 +45,7 @@ pub use {
     },
 };
 #[allow(unused)]
-pub(crate) use {
+pub use {
     tracing::*,
     tracing_test::traced_test,
     itertools::*,
@@ -114,9 +115,9 @@ pub(crate) use {
         },
     },
 };
-pub(crate) type DeterministicHashSet<T> =
+pub type DeterministicHashSet<T> =
     HashSet<T,
         BuildHasherDefault<DefaultHasher>
     >;
-pub(crate) type DeterministicHashMap<K, V> =
+pub type DeterministicHashMap<K, V> =
     HashMap<K, V, BuildHasherDefault<DefaultHasher>>;

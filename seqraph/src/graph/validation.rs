@@ -1,7 +1,7 @@
 use crate::*;
 
 #[derive(Debug, Clone)]
-pub(crate) enum ValidationError {
+pub enum ValidationError {
     InvalidPatternRange(String, PatternLocation, usize, usize),
     InvalidPattern(PatternLocation),
 }
@@ -10,7 +10,7 @@ impl<'t, 'a, T> Hypergraph<T>
 where
     T: Tokenize + 't,
 {
-    pub(crate) fn validate_pattern_indexing_range_at(
+    pub fn validate_pattern_indexing_range_at(
         &self,
         location: impl IntoPatternLocation,
         start: usize,
@@ -31,7 +31,7 @@ where
             ))
         }
     }
-    pub(crate) fn validate_pattern_range_at(
+    pub fn validate_pattern_range_at(
         &self,
         location: impl IntoPatternLocation,
         start: usize,

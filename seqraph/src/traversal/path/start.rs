@@ -2,10 +2,10 @@ use super::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StartLeaf {
-    pub(crate) entry: ChildLocation,
-    pub(crate) child: Child,
-    pub(crate) width: usize,
-    pub(crate) token_pos: usize,
+    pub entry: ChildLocation,
+    pub child: Child,
+    pub width: usize,
+    pub token_pos: usize,
 }
 impl StartLeaf {
     pub fn new(child: Child, entry: ChildLocation) -> Self {
@@ -147,7 +147,7 @@ impl GetCacheKey for StartPath {
         }
     }
 }
-pub(crate) trait PathAppend: Send + Sync {
+pub trait PathAppend: Send + Sync {
     type Result;
     fn append<
         'a: 'g,
@@ -218,7 +218,7 @@ impl PathAppend for StartPath {
     }
 }
 
-pub(crate) trait PathPop: Send + Sync {
+pub trait PathPop: Send + Sync {
     type Result;
     fn pop_path<
         'a: 'g,

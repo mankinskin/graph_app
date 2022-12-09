@@ -1,7 +1,7 @@
 use super::*;
 use std::hash::Hash;
 
-pub(crate) trait TraversalQuery:
+pub trait TraversalQuery:
     Advance
     + Debug
     + Clone
@@ -26,7 +26,7 @@ impl<
         + Unpin
 > TraversalQuery for T {}
 
-pub(crate) trait TraversalStartPath:
+pub trait TraversalStartPath:
     PathAppend<Result=StartPath>
     //+ BorderPath
     + Clone
@@ -41,7 +41,7 @@ impl<
 > TraversalStartPath for T {}
 
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
-pub(crate) enum PathPair<
+pub enum PathPair<
     P: NewAdvanced,
     Q: TraversalQuery,
 > {

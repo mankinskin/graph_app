@@ -1,6 +1,6 @@
 use super::*;
 
-pub(crate) struct PathIter<
+pub struct PathIter<
     'a: 'g,
     'g,
     P: Advance,
@@ -12,7 +12,7 @@ pub(crate) struct PathIter<
     trav: Trav,
     _ty: std::marker::PhantomData<(&'g T, D)>
 }
-//pub(crate) trait SequenceIterator: Sized {
+//pub trait SequenceIterator: Sized {
 //    type Item;
 //    fn next(self) -> Result<Self::Item, Self::Item>;
 //}
@@ -33,7 +33,7 @@ pub(crate) struct PathIter<
 //        }
 //    }
 //}
-//pub(crate) trait IntoSequenceIterator<
+//pub trait IntoSequenceIterator<
 //    'a: 'g,
 //    'g,
 //    T: Tokenize,

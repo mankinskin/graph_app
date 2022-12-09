@@ -22,11 +22,11 @@ pub trait ContextPath:
     + Unpin
 {
     type Item: Borrow<ChildLocation> + Debug + Send + Sync + Unpin;
-    type IntoIter: DoubleEndedIterator<Item=<Self as ContextPath>::Item> + Debug + Send + Sync + Unpin;
+    type IntoIter: DoubleEndedIterator<Item=<Self as ContextPath>::Item> + Debug + Send + Sync + Unpin + ExactSizeIterator;
 }
 impl<
     Item: Borrow<ChildLocation> + Debug + Send + Sync + Unpin,
-    IntoIter: DoubleEndedIterator<Item=Item> + Debug + Send + Sync + Unpin,
+    IntoIter: DoubleEndedIterator<Item=Item> + Debug + Send + Sync + Unpin + ExactSizeIterator,
     T: IntoIterator<Item=Item, IntoIter=IntoIter> + Debug + Send + Sync + Unpin
 > ContextPath for T {
     type Item = Item;
@@ -60,10 +60,10 @@ impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> TraversableMut<T> for C
         self.indexer.graph_mut()
     }
 }
-//pub(crate) trait IndexContext<T: Tokenize, D: IndexDirection, Side: IndexSide<D>>: Indexing<T, D> {
+//pub trait IndexContext<T: Tokenize, D: IndexDirection, Side: IndexSide<D>>: Indexing<T, D> {
 impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Contexter<T, D, Side> {
     /// replaces context in pattern at location with child and returns it with new location
-    pub(crate) fn pather(&self) -> Pather<T, D, Side> {
+    pub fn pather(&self) -> Pather<T, D, Side> {
         Pather::new(self.indexer.clone())
     }
     #[instrument(skip(self, path))]

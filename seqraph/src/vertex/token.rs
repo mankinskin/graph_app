@@ -42,7 +42,7 @@ impl Wide for NoToken {
 }
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq)]
-pub(crate) enum NewTokenIndex {
+pub enum NewTokenIndex {
     New(VertexIndex),
     Known(VertexIndex),
 }
@@ -83,7 +83,7 @@ impl Borrow<VertexIndex> for &'_ mut NewTokenIndex {
         }
     }
 }
-pub(crate) type NewTokenIndices = Vec<NewTokenIndex>;
+pub type NewTokenIndices = Vec<NewTokenIndex>;
 
 pub trait AsToken<T: Tokenize> {
     fn as_token(&self) -> Token<T>;

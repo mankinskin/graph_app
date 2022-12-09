@@ -32,7 +32,7 @@ impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> TraversableMut<T> for S
     }
 }
 impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Splitter<T, D, Side> {
-    pub(crate) fn pather(&self) -> Pather<T, D, Side> {
+    pub fn pather(&self) -> Pather<T, D, Side> {
         Pather::new(self.indexer.clone())
     }
     #[instrument(skip(self, path))]

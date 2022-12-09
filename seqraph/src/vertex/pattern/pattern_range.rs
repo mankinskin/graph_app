@@ -4,7 +4,7 @@ use std::{
     slice::SliceIndex,
 };
 
-pub(crate) fn get_child_pattern_range<'a, R: PatternRangeIndex>(
+pub fn get_child_pattern_range<'a, R: PatternRangeIndex>(
     id: &PatternId,
     p: &'a Pattern,
     range: R

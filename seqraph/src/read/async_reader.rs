@@ -35,7 +35,7 @@ pub struct AsyncReader<T: Tokenize + Send + Sync, D: AsyncMatchDirection<T> + Cl
     _ty: std::marker::PhantomData<D>,
 }
 impl<T: Tokenize + Send + Sync + 'static, D: AsyncMatchDirection<T> + Clone> AsyncReader<T, D> {
-    pub(crate) fn right_searcher(&self) -> AsyncSearcher<T, Right> {
+    pub fn right_searcher(&self) -> AsyncSearcher<T, Right> {
         AsyncSearcher::new(self.graph)
     }
     pub fn read_sequence_stream(&mut self, stream: impl TokenStream<T>) -> SearchResult {
@@ -46,7 +46,7 @@ impl<T: Tokenize + Send + Sync + 'static, D: AsyncMatchDirection<T> + Clone> Asy
         self.async_read_pattern(stream).await
     }
     /// read until first known token and create any unknown token indices
-    pub(crate) fn async_read_unknown_tokens(
+    pub fn async_read_unknown_tokens(
         &mut self,
         mut pattern: impl PatternStream<Child, Token<T>>,
     ) -> impl PatternStream<Child, Token<T>> {
@@ -63,7 +63,7 @@ impl<T: Tokenize + Send + Sync + 'static, D: AsyncMatchDirection<T> + Clone> Asy
         }
         pattern
     }
-    pub(crate) fn async_read_pattern(
+    pub fn async_read_pattern(
         &mut self,
         pattern: impl PatternStream<Child, Token<T>>,
     ) -> SearchResult {

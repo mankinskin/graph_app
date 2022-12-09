@@ -4,7 +4,7 @@ mod overlap;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use {
+pub use {
     reader::*,
 };
 //mod async_reader;

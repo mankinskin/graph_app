@@ -1,19 +1,19 @@
 use crate::*;
 use super::*;
 
-//pub(crate) trait NotStartPath {}
+//pub trait NotStartPath {}
 //impl NotStartPath for StartLeaf {}
 
-pub(crate) trait MatchEndPath: NodePath + PathComplete + PathAppend<Result=StartPath> + Into<StartPath> + From<StartPath> + From<StartLeaf> + Into<FoundPath> + Hash + Sync + Send {}
+pub trait MatchEndPath: NodePath + PathComplete + PathAppend<Result=StartPath> + Into<StartPath> + From<StartPath> + From<StartLeaf> + Into<FoundPath> + Hash + Sync + Send {}
 impl<T: NodePath + PathComplete + PathAppend<Result=StartPath> + Into<StartPath> + From<StartPath> + From<StartLeaf> + Into<FoundPath> + Hash + Sync + Send> MatchEndPath for T {}
 
 /// Used to represent results after traversal with only a start path
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
-pub(crate) enum MatchEnd<P: MatchEndPath> {
+pub enum MatchEnd<P: MatchEndPath> {
     Path(P),
     Complete(Child),
 }
-pub(crate) trait IntoMatchEndStartPath {
+pub trait IntoMatchEndStartPath {
     fn into_mesp(self) -> MatchEnd<StartPath>;
 }
 impl<P: MatchEndPath> RangePath for MatchEnd<P> {

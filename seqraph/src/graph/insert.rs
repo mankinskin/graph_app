@@ -321,7 +321,7 @@ where
         self.add_pattern_parent(Child::new(parent_index, width), replace, pat, start);
         self.validate_expansion(parent_index);
     }
-    pub(crate) fn add_pattern_parent(
+    pub fn add_pattern_parent(
         &mut self,
         parent: impl AsChild,
         pattern: impl IntoPattern,
@@ -334,7 +334,7 @@ where
             c.add_parent(parent.as_child(), pattern_id, pos);
         });
     }
-    pub(crate) fn append_to_pattern(
+    pub fn append_to_pattern(
         &mut self,
         parent: impl AsChild,
         pattern_id: PatternId,
@@ -365,7 +365,7 @@ where
         self.add_pattern_parent(parent, new, pattern_id, offset);
         parent
     }
-    pub(crate) fn new_token_indices(
+    pub fn new_token_indices(
         &mut self,
         sequence: impl IntoIterator<Item = T>,
     ) -> NewTokenIndices {

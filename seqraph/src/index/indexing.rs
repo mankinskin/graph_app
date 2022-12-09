@@ -1,7 +1,7 @@
 use crate::*;
 use super::*;
 
-//pub(crate) trait Indexing<T: Tokenize, D: IndexDirection>: TraversableMut<T> {
+//pub trait Indexing<T: Tokenize, D: IndexDirection>: TraversableMut<T> {
 impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
     pub fn index_found(
         &mut self,

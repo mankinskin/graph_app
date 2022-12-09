@@ -3,10 +3,10 @@ use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
 pub struct PrefixQuery {
-    pub(crate) pattern: Pattern,
-    pub(crate) exit: usize,
-    pub(crate) end: ChildPath,
-    pub(crate) width: usize,
+    pub pattern: Pattern,
+    pub exit: usize,
+    pub end: ChildPath,
+    pub width: usize,
 }
 
 impl<

@@ -2,9 +2,9 @@ use super::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct EndPath {
-    pub(crate) entry: ChildLocation,
-    pub(crate) path: ChildPath,
-    pub(crate) width: usize,
+    pub entry: ChildLocation,
+    pub path: ChildPath,
+    pub width: usize,
 }
 
 impl PathReduce for EndPath {
@@ -29,7 +29,7 @@ impl PathReduce for EndPath {
     }
 }
 
-pub(crate) trait Retract: GraphEnd + EndPathMut + ExitMut + Send + Sync {
+pub trait Retract: GraphEnd + EndPathMut + ExitMut + Send + Sync {
     fn prev_exit_pos<
         'a: 'g,
         'g,

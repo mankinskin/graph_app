@@ -3,7 +3,7 @@ mod cache;
 mod chain;
 mod context;
 
-pub(crate) use {
+pub use {
     band::*,
     cache::*,
     chain::*,
@@ -13,7 +13,7 @@ use super::*;
 
 impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     #[instrument(skip(self, first, context))]
-    pub(crate) fn read_overlaps(
+    pub fn read_overlaps(
         &mut self,
         first: Child,
         context: &mut PrefixQuery,
@@ -29,7 +29,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     }
     /// next bands generated when next overlap starts after a past bundle with a gap
     #[instrument(skip(self, cache, past_end_bound, next_link, expansion, past_ctx))]
-    pub(crate) fn odd_overlap_next(
+    pub fn odd_overlap_next(
         &mut self,
         cache: &mut OverlapCache,
         past_end_bound: usize,
@@ -94,7 +94,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     }
     //#[async_recursion]
     #[instrument(skip(self, cache, context))]
-    pub(crate) fn read_next_overlap(
+    pub fn read_next_overlap(
         &mut self,
         cache: OverlapCache,
         context: &mut PrefixQuery,

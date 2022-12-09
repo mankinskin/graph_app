@@ -1,10 +1,10 @@
 use super::*;
 
 #[derive(Default, Clone, Debug)]
-pub(crate) struct OverlapCache {
-    pub(crate) chain: OverlapChain,
-    pub(crate) end_bound: usize,
-    pub(crate) last: Option<Overlap>,
+pub struct OverlapCache {
+    pub chain: OverlapChain,
+    pub end_bound: usize,
+    pub last: Option<Overlap>,
 }
 impl OverlapCache {
     pub fn new(first: Child) -> Self {

@@ -7,7 +7,7 @@ use std::ops::ControlFlow;
 
 #[derive(Clone, Debug)]
 pub struct Searcher<T: Tokenize, D: MatchDirection> {
-    pub(crate) graph: HypergraphRef<T>,
+    pub graph: HypergraphRef<T>,
     _ty: std::marker::PhantomData<D>,
 }
 
@@ -68,7 +68,7 @@ impl<T: Tokenize, D: MatchDirection, Q: TraversalQuery, R: ResultKind>
         }
     }
 }
-pub(crate) fn pick_max_result<
+pub fn pick_max_result<
     R: ResultKind,
     Q: TraversalQuery,
 >(
@@ -88,7 +88,7 @@ pub(crate) fn pick_max_result<
         }
     )
 }
-//pub(crate) fn fold_match<
+//pub fn fold_match<
 //    'a: 'g,
 //    'g,
 //    T: Tokenize,
@@ -168,7 +168,7 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
         }
     }
     // find largest matching direct parent
-    pub(crate) fn find_pattern_parent(
+    pub fn find_pattern_parent(
         &self,
         pattern: impl IntoPattern,
     ) -> SearchResult {
@@ -177,7 +177,7 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
         )
     }
     /// find largest matching ancestor for pattern
-    pub(crate) fn find_pattern_ancestor(
+    pub fn find_pattern_ancestor(
         &self,
         pattern: impl IntoPattern,
     ) -> SearchResult {

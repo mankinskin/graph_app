@@ -2,8 +2,8 @@ use super::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy)]
 pub struct PatternLocation {
-    pub(crate) parent: Child,
-    pub(crate) pattern_id: PatternId,
+    pub parent: Child,
+    pub pattern_id: PatternId,
 }
 impl PatternLocation {
     pub fn new(parent: impl AsChild, pattern_id: PatternId) -> Self {
@@ -20,7 +20,7 @@ impl PatternLocation {
         }
     }
     #[allow(unused)]
-    pub(crate) fn get_pattern<
+    pub fn get_pattern<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -29,7 +29,7 @@ impl PatternLocation {
         trav.graph().get_pattern_at(self).ok()
     }
     #[allow(unused)]
-    pub(crate) fn expect_pattern<
+    pub fn expect_pattern<
         'a: 'g,
         'g,
         T: Tokenize,

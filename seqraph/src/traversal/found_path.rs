@@ -1,6 +1,6 @@
 use super::*;
 
-pub(crate) trait RangePath: RootChild + IntoRangePath + Into<FoundPath> + Clone + Debug + Hash + Eq// + PathComplete
+pub trait RangePath: RootChild + IntoRangePath + Into<FoundPath> + Clone + Debug + Hash + Eq// + PathComplete
 {
     fn into_complete(self) -> Option<Child>;
 
@@ -61,7 +61,7 @@ impl FromAdvanced<OriginPath<SearchPath>> for OriginPath<FoundPath> {
     }
 }
 
-pub(crate) trait FromAdvanced<A: Advanced> {
+pub trait FromAdvanced<A: Advanced> {
     fn from_advanced<
         'a: 'g,
         'g,
@@ -70,7 +70,7 @@ pub(crate) trait FromAdvanced<A: Advanced> {
         Trav: Traversable<T>
     >(path: A, trav: &'a Trav) -> Self;
 }
-pub(crate) trait IntoRangePath {
+pub trait IntoRangePath {
     type Result: RangePath;
     fn into_range_path(self) -> Self::Result;
 }

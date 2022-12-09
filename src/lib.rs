@@ -17,7 +17,7 @@ use seqraph::HypergraphRef;
 pub use {
     tracing::*,
 };
-pub(crate) use {
+pub use {
     graph::*,
     seqraph::*,
     std::sync::{

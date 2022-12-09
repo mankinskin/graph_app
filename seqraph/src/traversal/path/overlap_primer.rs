@@ -3,12 +3,12 @@ use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
 pub struct OverlapPrimer {
-    pub(crate) start: Child,
-    pub(crate) context: PrefixQuery,
-    pub(crate) context_offset: usize,
-    pub(crate) width: usize,
-    pub(crate) exit: usize,
-    pub(crate) end: ChildPath,
+    pub start: Child,
+    pub context: PrefixQuery,
+    pub context_offset: usize,
+    pub width: usize,
+    pub exit: usize,
+    pub end: ChildPath,
 }
 impl OverlapPrimer {
     pub fn new(start: Child, context: PrefixQuery) -> Self {

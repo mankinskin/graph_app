@@ -2,8 +2,8 @@ use crate::*;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct SearchPath {
-    pub(crate) start: StartPath,
-    pub(crate) end: EndPath,
+    pub start: StartPath,
+    pub end: EndPath,
 }
 impl From<StartPath> for SearchPath {
     fn from(start: StartPath) -> Self {

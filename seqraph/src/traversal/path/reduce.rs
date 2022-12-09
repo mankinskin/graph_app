@@ -2,7 +2,7 @@ use crate::*;
 use super::*;
 
 
-pub(crate) trait PathReduce: Sized + Send + Sync {
+pub trait PathReduce: Sized + Send + Sync {
     fn into_reduced<
         'a: 'g,
         'g,

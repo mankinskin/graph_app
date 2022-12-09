@@ -42,20 +42,20 @@ impl Graph {
         let graph = Hypergraph::default();
         Self::new_from_graph(graph)
     }
-    pub(crate) fn try_read(&self) -> Option<RwLockReadGuard<'_, Hypergraph<char>>> {
+    pub fn try_read(&self) -> Option<RwLockReadGuard<'_, Hypergraph<char>>> {
         self.graph.read().ok()
     }
-    pub(crate) fn read(&self) -> RwLockReadGuard<'_, Hypergraph<char>> {
+    pub fn read(&self) -> RwLockReadGuard<'_, Hypergraph<char>> {
         self.try_read().unwrap()
     }
-    pub(crate) fn write(&self) -> RwLockWriteGuard<'_, Hypergraph<char>> {
+    pub fn write(&self) -> RwLockWriteGuard<'_, Hypergraph<char>> {
         self.graph.write().unwrap()
     }
     #[allow(unused)]
-    pub(crate) fn vis(&self) -> RwLockReadGuard<'_, GraphVis> {
+    pub fn vis(&self) -> RwLockReadGuard<'_, GraphVis> {
         self.vis.read().unwrap()
     }
-    pub(crate) fn vis_mut(&self) -> RwLockWriteGuard<'_, GraphVis> {
+    pub fn vis_mut(&self) -> RwLockWriteGuard<'_, GraphVis> {
         self.vis.write().unwrap()
     }
     pub fn set_graph(&self, graph: Hypergraph<char>) {

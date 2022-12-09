@@ -4,9 +4,9 @@ use std::cmp::Ordering;
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy, Hash)]
 pub struct ChildLocation {
-    pub(crate) parent: Child,
-    pub(crate) pattern_id: PatternId,
-    pub(crate) sub_index: usize,
+    pub parent: Child,
+    pub pattern_id: PatternId,
+    pub sub_index: usize,
 }
 impl ChildLocation {
     pub fn new(parent: impl AsChild, pattern_id: PatternId, sub_index: usize) -> Self {

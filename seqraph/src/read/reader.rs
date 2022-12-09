@@ -8,14 +8,14 @@ use itertools::*;
 
 #[derive(Debug, Clone)]
 pub struct Reader<T: Tokenize, D: IndexDirection> {
-    pub(crate) graph: HypergraphRef<T>,
-    pub(crate) root: Option<Child>,
+    pub graph: HypergraphRef<T>,
+    pub root: Option<Child>,
     _ty: std::marker::PhantomData<D>,
 }
 
 impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     #[instrument(skip(self))]
-    pub(crate) fn read_sequence<N, S: ToNewTokenIndices<N, T>>(
+    pub fn read_sequence<N, S: ToNewTokenIndices<N, T>>(
         &mut self,
         sequence: S,
     ) -> Option<Child> {
@@ -28,12 +28,12 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
         //println!("reading result: {:?}", index);
         self.root
     }
-    pub(crate) fn read_pattern(&mut self, known: impl IntoPattern) -> Option<Child> {
+    pub fn read_pattern(&mut self, known: impl IntoPattern) -> Option<Child> {
         self.read_known(known.into_pattern());
         self.root
     }
     #[instrument(skip(self, known))]
-    pub(crate) fn read_known(&mut self, known: Pattern) {
+    pub fn read_known(&mut self, known: Pattern) {
         match PrefixQuery::new_directed::<D, _>(known.borrow()) {
             Ok(path) => self.read_bands(path),
             Err(err) =>
@@ -73,16 +73,16 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             }
         }
     }
-    pub(crate) fn indexer(&self) -> Indexer<T, D> {
+    pub fn indexer(&self) -> Indexer<T, D> {
         Indexer::new(self.graph.clone())
     }
-    pub(crate) fn contexter<Side: IndexSide<D>>(&self) -> Contexter<T, D, Side> {
+    pub fn contexter<Side: IndexSide<D>>(&self) -> Contexter<T, D, Side> {
         Contexter::new(self.indexer())
     }
-    pub(crate) fn splitter<Side: IndexSide<D>>(&self) -> Splitter<T, D, Side> {
+    pub fn splitter<Side: IndexSide<D>>(&self) -> Splitter<T, D, Side> {
         Splitter::new(self.indexer())
     }
-    pub(crate) fn new(graph: HypergraphRef<T>) -> Self {
+    pub fn new(graph: HypergraphRef<T>) -> Self {
         Self {
             graph,
             root: None,
@@ -168,7 +168,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     }
 }
 
-pub(crate) trait ToNewTokenIndices<N, T: Tokenize>: Debug {
+pub trait ToNewTokenIndices<N, T: Tokenize>: Debug {
     fn to_new_token_indices<
         'a: 'g,
         'g,

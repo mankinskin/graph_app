@@ -1,7 +1,7 @@
 use super::*;
 
 #[derive(Clone, Debug)]
-pub(crate) enum BandEnd {
+pub enum BandEnd {
     Index(Child),
     //Chain(OverlapChain),
 }
@@ -25,9 +25,9 @@ impl BandEnd {
     }
 }
 #[derive(Clone, Debug)]
-pub(crate) struct OverlapBand {
-    pub(crate) end: BandEnd,
-    pub(crate) back_context: Pattern,
+pub struct OverlapBand {
+    pub end: BandEnd,
+    pub back_context: Pattern,
 }
 impl OverlapBand {
     pub fn append<
@@ -83,7 +83,7 @@ impl From<Child> for OverlapBand {
 //}
 
 #[derive(Default, Clone, Debug)]
-pub(crate) struct OverlapBundle {
+pub struct OverlapBundle {
     bundle: Vec<OverlapBand>,
 }
 impl OverlapBundle {

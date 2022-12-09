@@ -5,10 +5,10 @@ use super::*;
 
 #[derive(Debug, Clone)]
 pub struct Indexer<T: Tokenize, D: IndexDirection> {
-    pub(crate) graph: HypergraphRef<T>,
+    pub graph: HypergraphRef<T>,
     _ty: std::marker::PhantomData<D>,
 }
-pub(crate) struct IndexingPolicy<T: Tokenize, D: IndexDirection, Q: IndexingQuery, R: ResultKind> {
+pub struct IndexingPolicy<T: Tokenize, D: IndexDirection, Q: IndexingQuery, R: ResultKind> {
     _ty: std::marker::PhantomData<(T, D, Q, R)>,
 }
 impl<
@@ -45,7 +45,7 @@ DirectedTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
             .index_primary_path::<InnerSide, _>(
                 path.start_path().into_iter().chain(
                     std::iter::once(&path.entry())
-                ),
+                ).collect_vec(),
             ) {
                 MatchEnd::Path(StartLeaf {
                     entry,
@@ -60,7 +60,7 @@ DirectedTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
         R::into_postfix(primer, match_end)
     }
 }
-pub(crate) trait IndexerTraversalPolicy<
+pub trait IndexerTraversalPolicy<
     T: Tokenize,
     D: IndexDirection,
     Q: IndexingQuery,
@@ -84,7 +84,7 @@ impl<
 > IndexerTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
 {}
 
-pub(crate) trait IndexingQuery: TraversalQuery {}
+pub trait IndexingQuery: TraversalQuery {}
 impl<T: TraversalQuery> IndexingQuery for T {}
 
 
@@ -153,7 +153,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
     pub fn pather<Side: IndexSide<D>>(&self) -> Pather<T, D, Side> {
         Pather::new(self.clone())
     }
-    pub(crate) fn index_pattern(
+    pub fn index_pattern(
         &mut self,
         query: impl IntoPattern,
     ) -> Result<(Child, QueryRangePath), NoMatch> {
@@ -164,7 +164,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
             Err((err, _)) => Err(err),
         }
     }
-    pub(crate) fn index_query<
+    pub fn index_query<
         Q: IndexingQuery,
     >(
         &mut self,
@@ -172,7 +172,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
     ) -> Result<(Child, Q), NoMatch> {
         self.index_result_kind::<BaseResult, _>(query)
     }
-    pub(crate) fn index_query_with_origin<
+    pub fn index_query_with_origin<
         Q: IndexingQuery,
     >(
         &mut self,
@@ -180,7 +180,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
     ) -> Result<(OriginPath<Child>, Q), NoMatch> {
         self.index_result_kind::<OriginPathResult, _>(query)
     }
-    pub(crate) fn index_result_kind<
+    pub fn index_result_kind<
         R: ResultKind,
         Q: IndexingQuery,
     >(

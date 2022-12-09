@@ -1,7 +1,7 @@
 use super::*;
 
 
-pub(crate) trait NewAdvanced: Advance {
+pub trait NewAdvanced: Advance {
     fn new_advanced<
         'a: 'g,
         'g,
@@ -24,7 +24,7 @@ pub(crate) trait NewAdvanced: Advance {
 impl<T: Advance> NewAdvanced for T {
 }
 
-pub(crate) trait Advance:
+pub trait Advance:
     EndPathMut
     + AdvanceExit
     + End
@@ -72,7 +72,7 @@ impl<T:
     + Sync
 > Advance for T {
 }
-pub(crate) trait AdvanceWidth {
+pub trait AdvanceWidth {
     fn advance_width(&mut self, width: usize);
 }
 impl <T: WideMut> AdvanceWidth for T {
@@ -81,7 +81,7 @@ impl <T: WideMut> AdvanceWidth for T {
     }
 }
 
-pub(crate) trait AddMatchWidth: AdvanceWidth + End + Send + Sync {
+pub trait AddMatchWidth: AdvanceWidth + End + Send + Sync {
     fn add_match_width<
         'a: 'g,
         'g,
@@ -97,7 +97,7 @@ pub(crate) trait AddMatchWidth: AdvanceWidth + End + Send + Sync {
 impl<T: AdvanceWidth + End + Send + Sync> AddMatchWidth for T {
 }
 
-pub(crate) trait AdvanceExit: ExitPos + ExitMut + Send + Sync {
+pub trait AdvanceExit: ExitPos + ExitMut + Send + Sync {
     fn is_pattern_finished<
         P: IntoPattern,
     >(&self, pattern: P) -> bool {
