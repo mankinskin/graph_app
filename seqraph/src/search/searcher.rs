@@ -43,8 +43,8 @@ impl<T: Tokenize, D: MatchDirection, Q: TraversalQuery, R: ResultKind>
     TraversalFolder<T, D, Q, R> for Searcher<T, D>
 {
     type Trav = Self;
-    type Break = TraversalResult<<R as ResultKind>::Found, Q>;
-    type Continue = Option<TraversalResult<<R as ResultKind>::Found, Q>>;
+    type Break = TraversalResult<R, Q>;
+    type Continue = Option<TraversalResult<R, Q>>;
 
     fn fold_found(
         _trav: &Self::Trav,
@@ -72,9 +72,9 @@ pub fn pick_max_result<
     R: ResultKind,
     Q: TraversalQuery,
 >(
-    acc: Option<TraversalResult<<R as ResultKind>::Found, Q>>,
-    res: TraversalResult<<R as ResultKind>::Found, Q>,
-) -> Option<TraversalResult<<R as ResultKind>::Found, Q>> {
+    acc: Option<TraversalResult<R, Q>>,
+    res: TraversalResult<R, Q>,
+) -> Option<TraversalResult<R, Q>> {
     Some(
         if let Some(acc) = acc {
             std::cmp::max_by(
@@ -95,13 +95,13 @@ pub fn pick_max_result<
 //    D: MatchDirection,
 //    Q: TraversalQuery,
 //    R: ResultKind,
-//    Folder: TraversalFolder<T, D, Q, R, Continue=Option<TraversalResult<<R as ResultKind>::Found, Q>>>
+//    Folder: TraversalFolder<T, D, Q, R, Continue=Option<TraversalResult<R, Q>>>
 //>(
 //    trav: &'a Folder::Trav,
 //    acc: Folder::Continue,
 //    mut path: SearchPath,
 //    query: Q
-//) -> Option<TraversalResult<<R as ResultKind>::Found, Q>> {
+//) -> Option<TraversalResult<R, Q>> {
 //    path.end_match_path_mut().reduce::<_, D, _>(trav);
 //    //let found = 
 //    //    path.into_range_path().into_result(query);
@@ -209,7 +209,8 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
         let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())
             .map_err(|(err, _)| err)?;
         let mut acc = ControlFlow::Continue(None);
-        let mut stream = Ti::new(self, TraversalNode::query_node(query_path));
+        let mut stream = Ti::new(self, query_path)
+            .ok_or(NoMatch::EmptyPatterns)?;
 
         while let Some((_depth, node)) = stream.next() {
             match <S::Folder as TraversalFolder<_, _, _, BaseResult>>::fold_found(self, acc.continue_value().unwrap(), node) {

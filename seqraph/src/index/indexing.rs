@@ -22,7 +22,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
         self.splitter::<IndexFront>().single_path_split(
             std::iter::once(&path.get_exit_location()).chain(
                 path.end_path().into_iter()
-            )
+            ).collect_vec(),
         )
         
         .map(|split| split.inner)
@@ -34,8 +34,8 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
     ) -> Child {
         self.splitter::<IndexBack>().single_path_split(
             path.start_path().into_iter().chain(
-                std::iter::once(&path.entry()),
-            )
+                std::iter::once(&path.entry())
+            ).collect_vec(),
         )
         
         .map(|split| split.inner)
@@ -83,7 +83,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
             head_contexter.try_context_path(
                 split.path.into_iter().chain(
                     std::iter::once(split.location)
-                ),
+                ).collect_vec(),
                 //split.inner,
             ).unwrap().0
         ));
@@ -98,7 +98,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
                 last_contexter.try_context_path(
                     std::iter::once(split.location).chain(
                         split.path.into_iter()
-                    ),
+                    ).collect_vec(),
                     //split.inner,
                 ).unwrap().0
             ));

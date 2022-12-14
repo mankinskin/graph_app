@@ -1,7 +1,10 @@
 use super::*;
 
 
-pub trait NewAdvanced: Advance {
+pub trait NewAdvanced:
+    Advance
+    + GetCacheKey
+{
     fn new_advanced<
         'a: 'g,
         'g,
@@ -20,19 +23,19 @@ pub trait NewAdvanced: Advance {
         }
     }
 }
-
-impl<T: Advance> NewAdvanced for T {
+impl<T:
+    Advance
+    + GetCacheKey
+> NewAdvanced for T {
 }
 
 pub trait Advance:
-    EndPathMut
-    + AdvanceExit
+    AdvanceExit
+    + EndPathMut
     + End
     + AdvanceWidth
     + Sized
-    + Send
-    + Sync
-    {
+{
     fn advance<
         'a: 'g,
         'g,
@@ -63,13 +66,11 @@ pub trait Advance:
     }
 }
 impl<T: 
-    EndPathMut
-    + AdvanceExit
-    + End
+    AdvanceExit
     + AdvanceWidth
+    + EndPathMut
+    + End
     + Sized
-    + Send
-    + Sync
 > Advance for T {
 }
 pub trait AdvanceWidth {
@@ -81,7 +82,7 @@ impl <T: WideMut> AdvanceWidth for T {
     }
 }
 
-pub trait AddMatchWidth: AdvanceWidth + End + Send + Sync {
+pub trait AddMatchWidth: AdvanceWidth + End {
     fn add_match_width<
         'a: 'g,
         'g,
@@ -94,10 +95,10 @@ pub trait AddMatchWidth: AdvanceWidth + End + Send + Sync {
         }
     }
 }
-impl<T: AdvanceWidth + End + Send + Sync> AddMatchWidth for T {
+impl<T: AdvanceWidth + End> AddMatchWidth for T {
 }
 
-pub trait AdvanceExit: ExitPos + ExitMut + Send + Sync {
+pub trait AdvanceExit: ExitPos + ExitMut + Send + Sync + Unpin {
     fn is_pattern_finished<
         P: IntoPattern,
     >(&self, pattern: P) -> bool {
@@ -165,8 +166,12 @@ impl<P: AdvanceExit> AdvanceExit for OriginPath<P> {
     }
 }
 
-impl<M: ExitMut
-    + PatternExit + Send + Sync
+impl<M:
+    ExitMut
+    + PatternExit
+    + Send
+    + Sync
+    + Unpin
 > AdvanceExit for M {
     fn pattern_next_exit_pos<
         D: MatchDirection,

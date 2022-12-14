@@ -89,49 +89,49 @@ impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Pather<T, D, Side> {
             entry,
         )
     }
-    pub fn index_primary_path_bundle<
-        S: RelativeSide<D, Side>,
-    >(
-        &mut self,
-        bundle: Vec<Vec<ChildLocation>>,
-    ) -> Option<IndexSplitResult> {
-        let features = bundle.iter()
-            .map(|path| PathFeatures::new::<_, _, S>(path))
-            .collect_vec();
-        let zip = bundle.iter().zip(features.iter());
-        if let Some(path) = zip.clone().find_map(|(p, f)| f.is_full_primary().then(|| p)) {
-            // some path to full primary
-            self.index_primary_path(path)
-            // might still need to use other paths for indexing prev_secondary in consequtive indexing
-        } else {
-            if let Some(path) = zip.find_map(|(p, f)| (!f.has_primary_exclusive).then(|| p)) {
-                // primary given by prev_primary
-                Some(IndexSplitResult {
-                    inner: prev_primary,
-                    location: location,
-                    path: vec![prev_location],
-                })
-            } else {
-                // none full primary, need to create new index
-                let components = bundle.into_iter()
-                    .map(|path| self.path_components(path).unwrap())
-                    .collect_vec();
-                let primary = self.graph_mut().insert_patterns(
-                    components.iter().map(|components| {
-                        let (back, front) = S::outer_inner_order(components.primary_exclusive.unwrap(), components.prev_primary);
-                        [back, front]
-                    })
-                );
-                let secondary = self.graph_mut().insert_patterns(
-                    components.iter().map(|components| {
-                        let (back, front) = S::outer_inner_order(components.primary_exclusive.unwrap(), components.prev_primary);
-                        [back, front]
-                    })
-                );
-                None
-            }
-        }
-    }
+    //pub fn index_primary_path_bundle<
+    //    S: RelativeSide<D, Side>,
+    //>(
+    //    &mut self,
+    //    bundle: Vec<Vec<ChildLocation>>,
+    //) -> Option<IndexSplitResult> {
+    //    let features = bundle.iter()
+    //        .map(|path| PathFeatures::new::<_, _, S>(path))
+    //        .collect_vec();
+    //    let zip = bundle.iter().zip(features.iter());
+    //    if let Some(path) = zip.clone().find_map(|(p, f)| f.is_full_primary().then(|| p)) {
+    //        // some path to full primary
+    //        self.index_primary_path(path)
+    //        // might still need to use other paths for indexing prev_secondary in consequtive indexing
+    //    } else {
+    //        if let Some(path) = zip.find_map(|(p, f)| (!f.has_primary_exclusive).then(|| p)) {
+    //            // primary given by prev_primary
+    //            Some(IndexSplitResult {
+    //                inner: prev_primary,
+    //                location: location,
+    //                path: vec![prev_location],
+    //            })
+    //        } else {
+    //            // none full primary, need to create new index
+    //            let components = bundle.into_iter()
+    //                .map(|path| self.path_components(path).unwrap())
+    //                .collect_vec();
+    //            let primary = self.graph_mut().insert_patterns(
+    //                components.iter().map(|components| {
+    //                    let (back, front) = S::outer_inner_order(components.primary_exclusive.unwrap(), components.prev_primary);
+    //                    [back, front]
+    //                })
+    //            );
+    //            let secondary = self.graph_mut().insert_patterns(
+    //                components.iter().map(|components| {
+    //                    let (back, front) = S::outer_inner_order(components.primary_exclusive.unwrap(), components.prev_primary);
+    //                    [back, front]
+    //                })
+    //            );
+    //            None
+    //        }
+    //    }
+    //}
 
     pub fn path_components<
         S: RelativeSide<D, Side>,

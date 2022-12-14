@@ -8,22 +8,16 @@ pub trait TraversalQuery:
     + Hash
     + PartialEq
     + Eq
-    + Send
-    + Sync
     + 'static
-    + Unpin
 {}
-impl<
-    T: Advance
-        + Debug
-        + Clone
-        + Hash
-        + PartialEq
-        + Eq
-        + Send
-        + Sync
-        + 'static
-        + Unpin
+impl<T:
+    Advance
+    + Debug
+    + Clone
+    + Hash
+    + PartialEq
+    + Eq
+    + 'static
 > TraversalQuery for T {}
 
 pub trait TraversalStartPath:

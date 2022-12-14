@@ -1,82 +1,21 @@
 use std::collections::BinaryHeap;
 use super::*;
 
-
-#[derive(Clone, Debug, Copy, Hash, Eq, PartialEq)]
-pub struct CacheKey {
-    pub root: usize,
-    pub token_pos: usize,
-}
-pub trait GetCacheKey {
-    fn cache_key(&self) -> CacheKey;
-}
+pub mod node;
+pub use node::*;
+pub mod key;
+pub use key::*;
 
 type HashMap<K, V> = DeterministicHashMap<K, V>;
 
-
-/// Bottom-Up Cache Entry
-#[derive(Clone, Debug)]
-pub struct BUPositionCache<R: ResultKind + Eq, Q: TraversalQuery> {
-    state: CacheState,
-    waiting: BinaryHeap<WaitingNode<R, Q>>,
-}
-impl<R: ResultKind + Eq, Q: TraversalQuery> Default for BUPositionCache<R, Q> {
-    fn default() -> Self {
-        Self {
-            state: CacheState::Waiting,
-            waiting: Default::default()
-        }
-    }
-}
-/// Bottom-Up Cache Entry
-#[derive(Clone, Debug)]
-pub struct BUVertexCache<R: ResultKind + Eq, Q: TraversalQuery> {
-    num_patterns: usize,
-    positions: HashMap<usize, BUPositionCache<R, Q>>
-}
-#[derive(Clone, Debug)]
-pub enum CacheState {
-    Mismatch,
-    Waiting,
-    AtEnd,
-}
-/// ordered according to priority
-#[derive(Clone, Debug, Eq)]
-pub struct WaitingNode<R: ResultKind + Eq, Q: TraversalQuery> {
-    sub_index: usize,
-    node: ParentNode<R, Q>,
-}
-
-impl<R: ResultKind + Eq, Q: TraversalQuery> PartialEq for WaitingNode<R, Q> {
-    fn eq(&self, other: &Self) -> bool {
-        self.sub_index.eq(&other.sub_index)
-    }
-}
-impl<R: ResultKind + Eq, Q: TraversalQuery> Ord for WaitingNode<R, Q> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.sub_index.partial_cmp(&other.sub_index)
-            .unwrap_or(Ordering::Equal)
-    }
-}
-impl<R: ResultKind + Eq, Q: TraversalQuery> PartialOrd for WaitingNode<R, Q> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.sub_index.partial_cmp(&other.sub_index).map(Ordering::reverse)
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct TraversalCache<R: ResultKind + Eq, Q: TraversalQuery> {
-    bu: HashMap<usize, BUVertexCache<R, Q>>,
-}
-impl<R: ResultKind + Eq, Q: TraversalQuery> Default for TraversalCache<R, Q> {
-    fn default() -> Self {
-        Self {
-            bu: Default::default()
-        }
-    }
-}
 #[derive(Clone, Debug)]
 pub enum OnParent<R: ResultKind + Eq, Q: TraversalQuery> {
+    First,
+    Waiting,
+    Last(Option<BinaryHeap<WaitingNode<R, Q>>>),
+}
+#[derive(Clone, Debug)]
+pub enum OnChild<R: ResultKind + Eq, Q: TraversalQuery> {
     First,
     Waiting,
     Last(Option<BinaryHeap<WaitingNode<R, Q>>>),
@@ -86,7 +25,56 @@ pub enum OnIndexEnd<R: ResultKind + Eq, Q: TraversalQuery> {
     Waiting,
     Finished(BinaryHeap<WaitingNode<R, Q>>),
 }
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum CacheNode<R: ResultKind + Eq, Q: TraversalQuery> {
+    Parent(ParentNode<R, Q>),
+    Child(ParentNode<R, Q>),
+}
+#[derive(Clone, Debug)]
+pub enum CacheState {
+    Mismatch,
+    Waiting,
+    AtEnd,
+}
+
+/// Bottom-Up Cache Entry
+#[derive(Clone, Debug)]
+pub struct BUPositionCache<R: ResultKind + Eq, Q: TraversalQuery> {
+    pub state: CacheState,
+    pub prev: HashSet<CacheKey>,
+    /// leading node (arrived first)
+    pub node: TraversalNode<R, Q>,
+    /// waiting nodes, continued when mismatch is found
+    pub waiting: Vec<TraversalNode<R, Q>>,
+}
+impl<R: ResultKind + Eq, Q: TraversalQuery> BUPositionCache<R, Q> {
+    pub fn new(prev: Option<CacheKey>, node: TraversalNode<R, Q>) -> Self {
+        Self {
+            state: CacheState::Waiting,
+            prev: prev.map(|prev| maplit::hashset![prev]).unwrap_or_default(),
+            node,
+            waiting: vec![],
+        }
+    }
+}
+/// Bottom-Up Cache Entry
+#[derive(Clone, Debug)]
+pub struct BUVertexCache<R: ResultKind + Eq, Q: TraversalQuery> {
+    positions: HashMap<usize, BUPositionCache<R, Q>>
+}
+#[derive(Clone, Debug)]
+pub struct TraversalCache<R: ResultKind + Eq, Q: TraversalQuery> {
+    bu: HashMap<usize, BUVertexCache<R, Q>>,
+}
 impl<R: ResultKind + Eq, Q: TraversalQuery> TraversalCache<R, Q> {
+    pub fn new(index: usize, query: Q) -> (Self, CacheKey) {
+        let bu = Default::default();
+        let s = Self {
+            bu,
+        };
+        let k = s.add_node(None, TraversalNode::Start(index, query)).unwrap();
+        (s, k)
+    }
     pub fn get_entry_mut(&mut self, key: CacheKey) -> Option<&mut BUPositionCache<R, Q>> {
         self.bu.get_mut(&key.root)
             .and_then(|e|
@@ -94,6 +82,25 @@ impl<R: ResultKind + Eq, Q: TraversalQuery> TraversalCache<R, Q> {
             )
     }
     /// adds node to cache and returns the state of the insertion
+    pub fn add_node(&mut self, prev: Option<CacheKey>, node: TraversalNode<R, Q>) -> Option<CacheKey> {
+        let key = node.cache_key();
+        if let Some(ve) = self.bu.get_mut(&key.root) {
+            if let Some(e) = ve.positions.get_mut(&key.token_pos) {
+                e.prev.insert(prev.expect("Non first nodes must have prev node!"));
+                None
+            } else {
+                ve.positions.insert(key.token_pos, BUPositionCache::new(prev, node));
+                Some(key)
+            }
+        } else {
+            let mut positions: HashMap<_, _> = Default::default();
+            positions.insert(key.token_pos, BUPositionCache::new(prev, node));
+            self.bu.insert(key.root, BUVertexCache {
+                positions
+            });
+            Some(key)
+        }
+    }
     pub fn on_parent_node(&mut self, node: ParentNode<R, Q>) -> OnParent<R, Q> {
         let key = node.path.cache_key();
         let ChildLocation {
@@ -134,10 +141,10 @@ impl<R: ResultKind + Eq, Q: TraversalQuery> TraversalCache<R, Q> {
         }
     }
     /// triggered when a path finds a mismatch
-    pub fn on_bu_mismatch(&mut self, key: CacheKey) -> Option<ParentNode<R, Q>> {
+    pub fn on_bu_mismatch(&mut self, key: CacheKey) -> Option<Vec<TraversalNode<R, Q>>> {
         self.get_entry_mut(key).and_then(|e| {
             e.state = CacheState::Mismatch;
-            e.waiting.pop().map(|w| w.node)
+            e.waiting
         })
     }
     /// triggered when a path reached the end of an index

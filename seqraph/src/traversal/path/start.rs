@@ -126,27 +126,6 @@ impl WideMut for StartPath {
         }
     }
 }
-impl GetCacheKey for StartLeaf {
-    fn cache_key(&self) -> CacheKey {
-        CacheKey {
-            root: self.entry.index(),
-            //sub_index: self.entry.sub_index,
-            token_pos: self.token_pos,
-        }
-    }
-}
-impl GetCacheKey for StartPath {
-    fn cache_key(&self) -> CacheKey {
-        match self {
-            Self::Leaf(leaf) => leaf.cache_key(),
-            Self::Path { entry, token_pos, .. } => CacheKey {
-                root: entry.index(),
-                //sub_index: entry.sub_index,
-                token_pos: *token_pos,
-            },
-        }
-    }
-}
 pub trait PathAppend: Send + Sync {
     type Result;
     fn append<

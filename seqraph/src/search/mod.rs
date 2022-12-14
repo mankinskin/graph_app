@@ -28,7 +28,7 @@ pub enum NoMatch {
 //pub type QueryFound = TraversalResult<QueryRangePath>;
 pub type SearchResult = Result<
     TraversalResult<
-        <BaseResult as ResultKind>::Found,
+        BaseResult,
         QueryRangePath
     >,
     NoMatch

@@ -131,11 +131,3 @@ impl AsRef<[Child]> for Child {
         self.borrow()
     }
 }
-impl GetCacheKey for Child {
-    fn cache_key(&self) -> CacheKey {
-        CacheKey {
-            root: self.index,
-            token_pos: 0,
-        }
-    }
-}

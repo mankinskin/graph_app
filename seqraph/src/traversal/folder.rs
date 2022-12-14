@@ -184,6 +184,7 @@ impl ResultKind for BaseResult {
     type Postfix = MatchEnd<StartPath>;
     type Advanced = SearchPath;
     type Indexed = Child;
+    
     fn into_postfix(_primer: Self::Primer, match_end: MatchEnd<StartLeaf>) -> Self::Postfix {
         match_end.into()
     }

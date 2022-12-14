@@ -97,7 +97,7 @@ where
 {
     type Trav = Self;
     type Break = (<R as ResultKind>::Indexed, Q);
-    type Continue = Option<TraversalResult<<R as ResultKind>::Found, Q>>;
+    type Continue = Option<TraversalResult<R, Q>>;
 
     fn fold_found(
         trav: &Self::Trav,
@@ -202,9 +202,9 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
     >(
         &'a mut self,
         query_path: Q,
-    ) -> ControlFlow<(<R as ResultKind>::Indexed, Q), Option<TraversalResult<<R as ResultKind>::Found, Q>>> {
+    ) -> ControlFlow<(<R as ResultKind>::Indexed, Q), Option<TraversalResult<R, Q>>> {
         let mut acc = ControlFlow::Continue(None);
-        let mut stream = Ti::new(self, TraversalNode::query_node(query_path));
+        let mut stream = Ti::new(self, query_path);
         while let Some((_depth, node)) = stream.next() {
             match <S::Folder as TraversalFolder<_, _, _, R>>::fold_found(self, acc.continue_value().unwrap(), node) {
                 ControlFlow::Continue(c) => {
@@ -223,7 +223,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
         Q: IndexingQuery,
     >(
         &mut self,
-        result: ControlFlow<(<R as ResultKind>::Indexed, Q), Option<TraversalResult<<R as ResultKind>::Found, Q>>>,
+        result: ControlFlow<(<R as ResultKind>::Indexed, Q), Option<TraversalResult<R, Q>>>,
     ) -> Result<(<R as ResultKind>::Indexed, Q), NoMatch> {
         match result {
             ControlFlow::Continue(found) => {

@@ -4,8 +4,31 @@ use super::*;
 //pub trait NotStartPath {}
 //impl NotStartPath for StartLeaf {}
 
-pub trait MatchEndPath: NodePath + PathComplete + PathAppend<Result=StartPath> + Into<StartPath> + From<StartPath> + From<StartLeaf> + Into<FoundPath> + Hash + Sync + Send {}
-impl<T: NodePath + PathComplete + PathAppend<Result=StartPath> + Into<StartPath> + From<StartPath> + From<StartLeaf> + Into<FoundPath> + Hash + Sync + Send> MatchEndPath for T {}
+pub trait MatchEndPath:
+    NodePath
+    + PathComplete
+    + PathAppend<Result=StartPath>
+    + Into<StartPath>
+    + From<StartPath>
+    + From<StartLeaf>
+    + Into<FoundPath>
+    + GetCacheKey
+    + Hash
+    + Sync
+    + Send {}
+impl<T:
+    NodePath
+    + PathComplete
+    + PathAppend<Result=StartPath>
+    + Into<StartPath>
+    + From<StartPath>
+    + From<StartLeaf>
+    + Into<FoundPath>
+    + GetCacheKey
+    + Hash
+    + Sync
+    + Send
+> MatchEndPath for T {}
 
 /// Used to represent results after traversal with only a start path
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
