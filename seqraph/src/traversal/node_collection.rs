@@ -56,7 +56,7 @@ impl<'a, T, Trav, D, Q, S, R, O> TraversalIterator<'a, T, D, Trav, Q, S, R> for 
         O: NodeCollection<Q, R>,
 {
     fn new(trav: &'a Trav, query: Q) -> Option<Self> {
-        let index = query.get_end::<_, D, _>(trav)?;
+        let index = query.get_descendant(trav);
         let (cache, start) = TraversalCache::new(index.index(), query);
         Some(Self {
             collection: Default::default(),

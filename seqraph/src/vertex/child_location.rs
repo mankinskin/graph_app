@@ -47,8 +47,26 @@ impl ChildLocation {
             pattern_id,
         }
     }
+    pub fn into_sub_location(self) -> SubLocation {
+        SubLocation {
+            pattern_id: self.pattern_id,
+            sub_index: self.sub_index,
+        }
+    }
 }
-pub type ChildPath = Vec<ChildLocation>;
+#[derive(Clone, Debug, PartialEq, Eq, Copy, Hash)]
+pub struct SubLocation {
+    pattern_id: usize,
+    sub_index: usize,
+}
+impl SubLocation {
+    pub fn new(pattern_id: PatternId, sub_index: usize) -> Self {
+        Self {
+            pattern_id,
+            sub_index,
+        }
+    }
+}
 
 pub trait IntoChildLocation {
     fn into_child_location(self) -> ChildLocation;

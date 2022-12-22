@@ -1,11 +1,10 @@
-use std::borrow::Borrow;
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
 pub struct PrefixQuery {
     pub pattern: Pattern,
     pub exit: usize,
-    pub end: ChildPath,
+    pub end: LocationPath,
     pub width: usize,
 }
 
@@ -31,51 +30,13 @@ impl<
         }
     }
 }
-impl EntryPos for PrefixQuery {
-    fn get_entry_pos(&self) -> usize {
-        0
-    }
-}
-impl PatternEntry for PrefixQuery {
-    fn get_entry_pattern(&self) -> &[Child] {
-        self.pattern.borrow()
-    }
-}
-impl HasStartPath for PrefixQuery {
-    fn start_path(&self) -> &[ChildLocation] {
-        &[]
-    }
-}
-impl PatternStart for PrefixQuery {}
-impl ExitPos for PrefixQuery {
-    fn get_exit_pos(&self) -> usize {
-        self.exit
-    }
-}
-impl PatternExit for PrefixQuery {
-    fn get_exit_pattern(&self) -> &[Child] {
-        &self.pattern
-    }
-}
-impl HasEndPath for PrefixQuery {
-    fn end_path(&self) -> &[ChildLocation] {
-        self.end.borrow()
-    }
-}
-impl PatternEnd for PrefixQuery {}
+//impl HasRootedPath for PrefixQuery {
+//    fn child_path(&self) -> &[ChildLocation] {
+//        self.end.borrow()
+//    }
+//}
 
 
-impl End for PrefixQuery {
-    fn get_end<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> Option<Child> {
-        self.get_pattern_end(trav)
-    }
-}
 //impl TraversalPath for PrefixQuery {
 //    fn prev_exit_pos<
 //        'a: 'g,

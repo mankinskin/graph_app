@@ -5,10 +5,10 @@ use super::*;
 impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
     pub fn index_found(
         &mut self,
-        found: FoundPath,
+        path: FoundPath,
     ) -> Child {
-        //println!("indexing found path {:#?}", found);
-        match found {
+        //println!("indexing found path {:#?}", path);
+        match path {
             FoundPath::Range(path) => self.index_range_path(path),
             FoundPath::Prefix(path) => self.index_prefix_path(path),
             FoundPath::Postfix(path) => self.at_postfix_path(path),
@@ -17,38 +17,38 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
     }
     fn index_prefix_path(
         &mut self,
-        path: EndPath,
+        path: ChildPath,
     ) -> Child {
         self.splitter::<IndexFront>().single_path_split(
-            std::iter::once(&path.get_exit_location()).chain(
-                path.end_path().into_iter()
+            std::iter::once(&path.child_location()).chain(
+                path.path().into_iter()
             ).collect_vec(),
         )
         
         .map(|split| split.inner)
-        .expect("EndPath for complete path!")
+        .expect("ChildPath for complete path!")
     }
     fn at_postfix_path(
         &mut self,
-        path: StartPath,
+        path: ChildPath,
     ) -> Child {
         self.splitter::<IndexBack>().single_path_split(
-            path.start_path().into_iter().chain(
-                std::iter::once(&path.entry())
+            path.path().into_iter().chain(
+                std::iter::once(&path.child_location())
             ).collect_vec(),
         )
         
         .map(|split| split.inner)
-        .expect("StartPath for complete path!")
+        .expect("ChildPath for complete path!")
     }
     #[instrument(skip(self, path))]
     fn index_range_path(
         &mut self,
         path: SearchPath,
     ) -> Child {
-        let entry = path.start.entry();
-        let entry_pos = path.start.get_entry_pos();
-        let exit_pos = path.end.get_exit_pos();
+        let entry = path.start.child_location();
+        let entry_pos = path.start.child_pos();
+        let exit_pos = path.end.child_pos();
 
         let location = entry.into_pattern_location();
 
@@ -76,7 +76,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
 
         let mut head_contexter = self.contexter::<IndexBack>();
         let head_split = self.splitter::<IndexBack>().single_path_split(
-            path.start.start_path().to_vec()
+            path.start.child_path().to_vec()
         )
         .map(|split| (
             split.inner,
@@ -91,7 +91,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
         let mut last_contexter = self.contexter::<IndexFront>();
         let last_split = 
             self.splitter::<IndexFront>().single_path_split(
-                path.end.end_path().to_vec()
+                path.end.child_path().to_vec()
             )
             .map(|split| (
                 split.inner,

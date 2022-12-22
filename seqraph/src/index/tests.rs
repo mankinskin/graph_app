@@ -89,7 +89,7 @@ fn index_pattern2() {
     assert_eq!(
         aby_found,
         Ok(TraversalResult {
-            found: FoundPath::Complete(aby),
+            path: FoundPath::Complete(aby),
             query: QueryRangePath::complete(query),
         }),
         "aby"
@@ -133,7 +133,7 @@ fn index_infix1() {
     assert_eq!(
         aby_found,
         Ok(TraversalResult {
-            found: FoundPath::Complete(aby),
+            path: FoundPath::Complete(aby),
             query: QueryRangePath::complete(query),
         }),
         "aby"

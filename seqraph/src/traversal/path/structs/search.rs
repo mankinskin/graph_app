@@ -2,25 +2,24 @@ use crate::*;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct SearchPath {
-    pub start: StartPath,
-    pub end: EndPath,
+    pub start: ChildPath,
+    pub end: ChildPath,
 }
-impl From<StartPath> for SearchPath {
-    fn from(start: StartPath) -> Self {
-        let entry = start.entry();
-        Self {
-            start,
-            end: EndPath {
-                entry,
-                path: vec![],
-                width: 0,
-            },
-        }
-    }
-}
+//impl From<ChildPath> for SearchPath {
+//    fn from(start: ChildPath) -> Self {
+//        let entry = start.child_location();
+//        Self {
+//            start,
+//            end: ChildPath::Leaf(PathLeaf::new({
+//                entry,
+//                width: 0,
+//            })),
+//        }
+//    }
+//}
 impl<> SearchPath {
     #[allow(unused)]
-    pub fn into_paths(self) -> (StartPath, EndPath) {
+    pub fn into_paths(self) -> (ChildPath, ChildPath) {
         (
             self.start,
             self.end
@@ -32,54 +31,23 @@ impl<> SearchPath {
     //    Trav: Traversable<T>,
     //>(mut self, trav: Trav) -> FoundPath {
     //    let graph = trav.graph();
-    //    self.start.reduce::<_, D, _>(&*graph);
+    //    self.start.simplify::<_, D, _>(&*graph);
     //    FoundPath::new::<_, D, _>(&*graph, self)
     //}
-    //pub fn reduce<
+    //pub fn simplify<
     //    T: Tokenize,
     //    D: MatchDirection,
     //    Trav: Traversable<T>,
     //>(mut self, trav: Trav) -> FoundPath {
     //    let graph = trav.graph();
-    //    self.start.reduce::<_, D, _>(&*graph);
-    //    self.end.reduce::<_, D, _>(&*graph);
+    //    self.start.simplify::<_, D, _>(&*graph);
+    //    self.end.simplify::<_, D, _>(&*graph);
     //    FoundPath::new::<_, D, _>(&*graph, self)
     //}
 
 }
 //impl RangePath for SearchPath {
 //}
-impl HasMatchPaths for SearchPath {
-    fn into_paths(self) -> (StartPath, EndPath) {
-        (self.start, self.end)
-    }
-}
-impl PathRoot for SearchPath {
-    fn root(&self) -> ChildLocation {
-        self.entry()
-    }
-}
-impl GraphEntry for SearchPath {
-    fn entry(&self) -> ChildLocation {
-        self.start.entry()
-    }
-}
-impl HasStartPath for SearchPath {
-    fn start_path(&self) -> &[ChildLocation] {
-        self.start.start_path()
-    }
-}
-impl GraphStart for SearchPath {}
-impl GraphExit for SearchPath {
-    fn get_exit_location(&self) -> ChildLocation {
-        self.end.entry
-    }
-}
-impl HasEndPath for SearchPath {
-    fn end_path(&self) -> &[ChildLocation] {
-        self.end.end_path()
-    }
-}
 
 impl AdvanceExit for SearchPath {
     fn is_finished<
@@ -88,7 +56,7 @@ impl AdvanceExit for SearchPath {
         T: Tokenize,
         Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> bool {
-        let location = self.get_exit_location();
+        let location = <Self as GraphChild<End>>::child_location(self);
         let pattern = trav.graph().expect_pattern_at(&location);
         self.is_pattern_finished(pattern)
     }
@@ -99,7 +67,7 @@ impl AdvanceExit for SearchPath {
         D: MatchDirection,
         Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> Result<Option<usize>, ()> {
-        let location = self.get_end_location();
+        let location = self.get_path_child_location();
         let pattern = trav.graph().expect_pattern_at(&location);
         self.pattern_next_exit_pos::<D, _>(pattern)
     }

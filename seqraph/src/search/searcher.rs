@@ -21,7 +21,7 @@ trait SearchTraversalPolicy<
         BaseResult,
         Trav=Searcher<T, D>,
         Folder=Searcher<T, D>,
-        //Primer=StartPath,
+        //Primer=ChildPath,
     >
 {
 }
@@ -81,7 +81,7 @@ pub fn pick_max_result<
                 res,
                 acc,
                 |res, acc|
-                    res.found.cmp(&acc.found)
+                    res.path.cmp(&acc.path)
             )
         } else {
             res
@@ -102,11 +102,12 @@ pub fn pick_max_result<
 //    mut path: SearchPath,
 //    query: Q
 //) -> Option<TraversalResult<R, Q>> {
-//    path.end_match_path_mut().reduce::<_, D, _>(trav);
+//    path.child_path_mut().simplify::<_, D, _>(trav);
 //    //let found = 
 //    //    path.into_range_path().into_result(query);
 //    pick_max_result(acc, path)
 //}
+
 struct AncestorSearch<T: Tokenize, D: MatchDirection> {
     _ty: std::marker::PhantomData<(T, D)>,
 }
@@ -120,7 +121,7 @@ impl<
 {
     type Trav = Searcher<T, D>;
     type Folder = Searcher<T, D>;
-    //type Primer = R::Result<StartPath>;
+    //type Primer = R::Result<ChildPath>;
 
     fn at_postfix(
         _trav: &Self::Trav,
@@ -240,7 +241,7 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
     //) -> SearchResult {
     //    let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())
     //        .map_err(|(err, _)| err)?;
-    //    match ParallelIterator::reduce(
+    //    match ParallelIterator::simplify(
     //        Ti::new(self, TraversalNode::query_node(query_path))
     //            .par_bridge()
     //            .try_fold_with(None, |acc, (_depth, node)|

@@ -5,26 +5,31 @@ pub struct CacheKey {
     pub root: usize,
     pub token_pos: usize,
 }
+impl CacheKey {
+    pub fn new(root: usize, token_pos: usize) -> Self {
+        Self {
+            root,
+            token_pos,
+        }
+    }
+}
 pub trait GetCacheKey {
     fn cache_key(&self) -> CacheKey;
 }
 impl<R: ResultKind, Q: TraversalQuery> GetCacheKey for TraversalResult<R, Q> {
     fn cache_key(&self) -> CacheKey {
-        CacheKey {
-            root: self.found.location.parent.index(),
-            token_pos: self.token_pos,
-        }
+        self.path.cache_key()
     }
 }
-impl GetCacheKey for EndPath {
-    fn cache_key(&self) -> CacheKey {
-        CacheKey {
-            root: self.entry.index(),
-            token_pos: self.width,
-        }
-    }
-}
-impl GetCacheKey for StartLeaf {
+//impl GetCacheKey for ChildPath {
+//    fn cache_key(&self) -> CacheKey {
+//        CacheKey {
+//            root: self.entry.index(),
+//            token_pos: self.width,
+//        }
+//    }
+//}
+impl GetCacheKey for PathLeaf {
     fn cache_key(&self) -> CacheKey {
         CacheKey {
             root: self.entry.index(),
@@ -33,7 +38,7 @@ impl GetCacheKey for StartLeaf {
         }
     }
 }
-impl GetCacheKey for StartPath {
+impl GetCacheKey for ChildPath {
     fn cache_key(&self) -> CacheKey {
         match self {
             Self::Leaf(leaf) => leaf.cache_key(),
@@ -67,5 +72,10 @@ impl<P: NewAdvanced, Q: TraversalQuery> GetCacheKey for PathPair<P, Q> {
 impl<R: ResultKind, Q: TraversalQuery> GetCacheKey for ParentNode<R, Q> {
     fn cache_key(&self) -> CacheKey {
         self.path.cache_key()
+    }
+}
+impl<R: ResultKind, Q: TraversalQuery> GetCacheKey for ChildNode<R, Q> {
+    fn cache_key(&self) -> CacheKey {
+        self.paths.cache_key()
     }
 }

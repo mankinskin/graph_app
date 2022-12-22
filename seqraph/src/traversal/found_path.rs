@@ -23,53 +23,12 @@ impl RangePath for FoundPath {
         }
     }
 }
-impl RangePath for StartPath {
-    fn into_complete(self) -> Option<Child> {
-        None
-    }
-}
+//impl RangePath for ChildPath {
+//    fn into_complete(self) -> Option<Child> {
+//        None
+//    }
+//}
 
-impl FromAdvanced<SearchPath> for FoundPath {
-    fn from_advanced<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>
-    >(path: SearchPath, trav: &'a Trav) -> Self {
-        if path.is_complete::<_, D, _>(trav) {
-            Self::Complete(path.start_match_path().entry().parent)
-        } else {
-            Self::Range(path)
-        }
-        
-    }
-}
-
-impl FromAdvanced<OriginPath<SearchPath>> for OriginPath<FoundPath> {
-    fn from_advanced<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>
-    >(path: OriginPath<SearchPath>, trav: &'a Trav) -> Self {
-        Self {
-            postfix: FoundPath::from_advanced::<_, D, _>(path.postfix, trav),
-            origin: path.origin,
-        }
-    }
-}
-
-pub trait FromAdvanced<A: Advanced> {
-    fn from_advanced<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>
-    >(path: A, trav: &'a Trav) -> Self;
-}
 pub trait IntoRangePath {
     type Result: RangePath;
     fn into_range_path(self) -> Self::Result;
@@ -80,16 +39,16 @@ impl IntoRangePath for FoundPath {
         self
     }
 }
-impl IntoRangePath for StartPath {
+impl IntoRangePath for ChildPath {
     type Result = FoundPath;
     fn into_range_path(self) -> Self::Result {
         FoundPath::from(self)
     }
 }
-impl IntoRangePath for StartLeaf {
+impl IntoRangePath for PathLeaf {
     type Result = FoundPath;
     fn into_range_path(self) -> Self::Result {
-        FoundPath::from(StartPath::from(self))
+        FoundPath::from(ChildPath::from(self))
     }
 }
 //impl IntoRangePath for SearchPath {
@@ -104,10 +63,10 @@ impl IntoRangePath for StartLeaf {
 pub enum FoundPath {
     Complete(Child),
     Range(SearchPath),
-    Postfix(StartPath),
-    Prefix(EndPath),
+    Postfix(ChildPath),
+    Prefix(ChildPath),
 }
-impl<P: Into<StartPath>> From<P> for FoundPath {
+impl<P: Into<ChildPath>> From<P> for FoundPath {
     fn from(path: P) -> Self {
         FoundPath::Postfix(path.into())
     }
@@ -122,16 +81,6 @@ impl<P: MatchEndPath> From<MatchEnd<P>> for FoundPath {
         match match_end {
             MatchEnd::Path(path) => path.into(),
             MatchEnd::Complete(c) => FoundPath::Complete(c),
-        }
-    }
-}
-impl RootChild for FoundPath {
-    fn root_child(&self) -> Child {
-        match self {
-            Self::Range(path) => path.root_child(),
-            Self::Postfix(path) => path.root_child(),
-            Self::Prefix(path) => path.root_child(),
-            Self::Complete(c) => *c,
         }
     }
 }

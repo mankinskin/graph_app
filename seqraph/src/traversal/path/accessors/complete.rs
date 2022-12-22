@@ -1,4 +1,4 @@
-use super::*;
+use crate::*;
 
 
 pub trait PathComplete: Send + Sync {
@@ -43,10 +43,10 @@ impl PathComplete for SearchPath {
         D: MatchDirection,
         Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> bool {
-        let pattern = self.get_entry_pattern(trav);
-        <StartPath as PathBorder<D>>::pattern_is_complete(self.start_match_path(), &pattern[..]) &&
-            self.end_path().is_empty() &&
-            <EndPath as PathBorder<D>>::pattern_entry_outer_pos(pattern, self.get_exit_pos()).is_none()
+        let pattern = self.get_pattern(trav);
+        <ChildPath as PathBorder<D>>::pattern_is_complete(self.child_path(), &pattern[..]) &&
+            self.child_path().is_empty() &&
+            <ChildPath as PathBorder<D>>::pattern_entry_outer_pos(pattern, self.child_pos()).is_none()
     }
     fn complete<
         'a: 'g,
@@ -61,7 +61,7 @@ impl PathComplete for SearchPath {
     }
 }
 
-impl PathComplete for StartLeaf {
+impl PathComplete for PathLeaf {
     /// returns child if reduced to single child
     fn complete<
         'a: 'g,
@@ -77,7 +77,7 @@ impl PathComplete for StartLeaf {
     }
 }
 
-impl PathComplete for StartPath {
+impl PathComplete for ChildPath {
     /// returns child if reduced to single child
     fn complete<
         'a: 'g,

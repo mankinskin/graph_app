@@ -1,4 +1,3 @@
-use std::collections::BinaryHeap;
 use super::*;
 
 pub mod node;
@@ -9,156 +8,179 @@ pub use key::*;
 type HashMap<K, V> = DeterministicHashMap<K, V>;
 
 #[derive(Clone, Debug)]
-pub enum OnParent<R: ResultKind + Eq, Q: TraversalQuery> {
-    First,
-    Waiting,
-    Last(Option<BinaryHeap<WaitingNode<R, Q>>>),
+pub struct ParentCache {
+    prev: CacheKey,
+    loc: SubLocation,
 }
 #[derive(Clone, Debug)]
-pub enum OnChild<R: ResultKind + Eq, Q: TraversalQuery> {
-    First,
-    Waiting,
-    Last(Option<BinaryHeap<WaitingNode<R, Q>>>),
+pub struct ChildCache {
+    prev: CacheKey,
+    loc: ChildLocation,
 }
 #[derive(Clone, Debug)]
-pub enum OnIndexEnd<R: ResultKind + Eq, Q: TraversalQuery> {
-    Waiting,
-    Finished(BinaryHeap<WaitingNode<R, Q>>),
-}
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum CacheNode<R: ResultKind + Eq, Q: TraversalQuery> {
-    Parent(ParentNode<R, Q>),
-    Child(ParentNode<R, Q>),
+pub enum CacheRole {
+    Parent(ParentCache),
+    Start,
+    Child(ChildCache),
+    End(CacheKey),
 }
 #[derive(Clone, Debug)]
-pub enum CacheState {
-    Mismatch,
-    Waiting,
-    AtEnd,
+pub struct CacheNode {
+    index: Child,
+    role: CacheRole
 }
-
-/// Bottom-Up Cache Entry
-#[derive(Clone, Debug)]
-pub struct BUPositionCache<R: ResultKind + Eq, Q: TraversalQuery> {
-    pub state: CacheState,
-    pub prev: HashSet<CacheKey>,
-    /// leading node (arrived first)
-    pub node: TraversalNode<R, Q>,
-    /// waiting nodes, continued when mismatch is found
-    pub waiting: Vec<TraversalNode<R, Q>>,
-}
-impl<R: ResultKind + Eq, Q: TraversalQuery> BUPositionCache<R, Q> {
-    pub fn new(prev: Option<CacheKey>, node: TraversalNode<R, Q>) -> Self {
-        Self {
-            state: CacheState::Waiting,
-            prev: prev.map(|prev| maplit::hashset![prev]).unwrap_or_default(),
-            node,
-            waiting: vec![],
+impl CacheNode {
+    pub fn new<R: ResultKind, Q: TraversalQuery>(prev: CacheKey, node: TraversalNode<R, Q>) -> Self {
+        let (index, role) = match node {
+            TraversalNode::Parent(node) => {
+                let entry = node.path.child_location();
+                (entry.parent, CacheRole::Parent(ParentCache {
+                    prev,
+                    loc: entry.into_sub_location(),
+                }))
+            },
+            TraversalNode::Child(node) => {
+                let path = node.paths.get_path();
+                (path.get_descendant(), CacheRole::Child(ChildCache {
+                    prev,
+                    loc: path.get_descendant_location(),
+                }))
+            },
+            TraversalNode::Mismatch(found) |
+            TraversalNode::QueryEnd(found) => 
+                (found.child_location().parent, CacheRole::End(prev)),
+            TraversalNode::Start(index, _) => (index, CacheRole::Start),
+        };
+        CacheNode {
+            index: 
+            role,
         }
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct PositionCache<R: ResultKind, Q: TraversalQuery> {
+    pub top_down: HashMap<CacheKey, ChildLocation>,
+    pub bottom_up: HashMap<CacheKey, SubLocation>,
+    pub index: Child,
+    pub query: Q,
+    pub waiting: Vec<CacheNode>,
+    _ty: std::marker::PhantomData<R>,
+}
+impl<R: ResultKind, Q: TraversalQuery> PositionCache<R, Q> {
+    pub fn new(prev: CacheKey, node: TraversalNode<R, Q>) -> Self {
+        let cache_node = CacheNode::new(prev, node);
+        let s = Self {
+            top_down: HashMap::default(),
+            bottom_up: HashMap::default(),
+            query: node.query,
+            index: cache_node.index,
+            waiting: Default::default(),
+        };
+        s.waiting.push(cache_node);
+        s
+    }
+    pub fn add(&mut self, prev: CacheKey, node: TraversalNode<R, Q>) {
+        self.waiting.push(CacheNode::new(prev, node));
+    }
+}
 /// Bottom-Up Cache Entry
 #[derive(Clone, Debug)]
-pub struct BUVertexCache<R: ResultKind + Eq, Q: TraversalQuery> {
-    positions: HashMap<usize, BUPositionCache<R, Q>>
+pub struct VertexCache<R: ResultKind, Q: TraversalQuery> {
+    positions: HashMap<usize, PositionCache<R, Q>>
 }
 #[derive(Clone, Debug)]
-pub struct TraversalCache<R: ResultKind + Eq, Q: TraversalQuery> {
-    bu: HashMap<usize, BUVertexCache<R, Q>>,
+pub struct TraversalCache<R: ResultKind, Q: TraversalQuery> {
+    entries: HashMap<usize, VertexCache<R, Q>>,
 }
-impl<R: ResultKind + Eq, Q: TraversalQuery> TraversalCache<R, Q> {
+impl<R: ResultKind, Q: TraversalQuery> TraversalCache<R, Q> {
     pub fn new(index: usize, query: Q) -> (Self, CacheKey) {
-        let bu = Default::default();
         let s = Self {
-            bu,
+            entries: std::iter::once(
+                (
+                    index,
+                    VertexCache {
+                        positions: std::iter::once(
+                            (
+                                0,
+                                PositionCache {
+                                    start: Some((index, query)),
+                                    td: Default::default(),
+                                    bu: Default::default(),
+                                }
+                            )
+                        ).into_iter().collect::<HashMap<_, _>>()
+                    }
+                ),
+            ).into_iter().collect::<HashMap<_, _>>(),
         };
-        let k = s.add_node(None, TraversalNode::Start(index, query)).unwrap();
-        (s, k)
+        (s, CacheKey::new(index, 0))
     }
-    pub fn get_entry_mut(&mut self, key: CacheKey) -> Option<&mut BUPositionCache<R, Q>> {
-        self.bu.get_mut(&key.root)
+    pub fn get_entry_mut(&mut self, key: CacheKey) -> Option<&mut PositionCache<R, Q>> {
+        self.entries.get_mut(&key.root)
             .and_then(|e|
                 e.positions.get_mut(&key.token_pos)
             )
     }
     /// adds node to cache and returns the state of the insertion
-    pub fn add_node(&mut self, prev: Option<CacheKey>, node: TraversalNode<R, Q>) -> Option<CacheKey> {
+    pub fn add_node(&mut self, prev: CacheKey, node: TraversalNode<R, Q>) -> Option<CacheKey> {
         let key = node.cache_key();
-        if let Some(ve) = self.bu.get_mut(&key.root) {
+        if let Some(ve) = self.entries.get_mut(&key.root) {
             if let Some(e) = ve.positions.get_mut(&key.token_pos) {
-                e.prev.insert(prev.expect("Non first nodes must have prev node!"));
+                e.add(
+                    prev,
+                    node,
+                );
                 None
             } else {
-                ve.positions.insert(key.token_pos, BUPositionCache::new(prev, node));
+                self.on_new_position(
+                    ve,
+                    key,
+                    prev,
+                    node,
+                );
                 Some(key)
             }
         } else {
-            let mut positions: HashMap<_, _> = Default::default();
-            positions.insert(key.token_pos, BUPositionCache::new(prev, node));
-            self.bu.insert(key.root, BUVertexCache {
-                positions
-            });
+            self.on_new_vertex(
+                key, 
+                prev,
+                node,
+            );
             Some(key)
         }
     }
-    pub fn on_parent_node(&mut self, node: ParentNode<R, Q>) -> OnParent<R, Q> {
-        let key = node.path.cache_key();
-        let ChildLocation {
-            sub_index,
-            ..
-        } = node.path.entry();
-        if let Some(ve) = self.bu.get_mut(&key.root) {
-            if let Some(e) = ve.positions.get_mut(&key.token_pos) {
-                e.waiting.push(WaitingNode {
-                    sub_index,
-                    node: node.clone()
-                });
-                assert!(e.waiting.len() <= ve.num_patterns);
-                if e.waiting.len() == ve.num_patterns {
-                    OnParent::Last(
-                        matches!(
-                            e.state,
-                            CacheState::AtEnd
-                        ).then(|| e.waiting)
-                    )
-                } else {
-                    OnParent::Waiting
-                }
-            } else {
-                // new position
-                ve.positions.insert(key.token_pos, BUPositionCache::default());
-                OnParent::First
-            }
-        } else {
-            // new vertex, with position
-            let mut positions: HashMap<_, _> = Default::default();
-            positions.insert(key.token_pos, BUPositionCache::default());
-            self.bu.insert(key.root, BUVertexCache {
-                num_patterns: node.num_patterns,
-                positions
-            });
-            OnParent::First
-        }
+    pub fn on_new_position(
+        &mut self,
+        ve: &mut VertexCache<R, Q>,
+        key: CacheKey,
+        prev: CacheKey,
+        node: TraversalNode<R, Q>,
+    ) {
+        let cache = PositionCache::new(
+            prev,
+            node,
+        );
+        ve.positions.insert(
+            key.token_pos,
+            cache,
+        );
     }
-    /// triggered when a path finds a mismatch
-    pub fn on_bu_mismatch(&mut self, key: CacheKey) -> Option<Vec<TraversalNode<R, Q>>> {
-        self.get_entry_mut(key).and_then(|e| {
-            e.state = CacheState::Mismatch;
-            e.waiting
-        })
-    }
-    /// triggered when a path reached the end of an index
-    pub fn bu_index_end(&mut self, key: CacheKey) -> OnIndexEnd<R, Q> {
-        let mut ve = self.bu.get_mut(&key.root).unwrap();
-        let mut e = ve.positions.get_mut(&key.token_pos).unwrap();
-        if e.waiting.len() == ve.num_patterns {
-            drop(e);
-            let e = ve.positions.remove(&key.token_pos).unwrap();
-            OnIndexEnd::Finished(e.waiting)
-        } else {
-            assert!(e.waiting.len() < ve.num_patterns);
-            e.state = CacheState::AtEnd;
-            OnIndexEnd::Waiting
-        }
+    pub fn on_new_vertex(
+        &mut self,
+        key: CacheKey,
+        prev: CacheKey,
+        node: TraversalNode<R, Q>,
+    ) {
+        let mut ve = VertexCache {
+            positions: Default::default()
+        };
+        self.on_new_position(
+            &mut ve,
+            key,
+            prev,
+            node,
+        );
+        self.entries.insert(key.root, ve);
     }
 }

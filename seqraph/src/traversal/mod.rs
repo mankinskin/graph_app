@@ -1,5 +1,4 @@
 pub mod path;
-pub mod node;
 pub mod traversable;
 pub mod folder;
 pub mod iterator;
@@ -12,7 +11,6 @@ pub mod node_collection;
 
 pub use super::*;
 pub use path::*;
-pub use node::*;
 pub use traversable::*;
 pub use folder::*;
 pub use iterator::*;

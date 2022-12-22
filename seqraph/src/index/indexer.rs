@@ -23,7 +23,7 @@ DirectedTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
 {
     type Trav = Indexer<T, D>;
     type Folder = Indexer<T, D>;
-    //type Primer = StartLeaf;
+    //type Primer = PathLeaf;
 
     #[instrument(skip(trav, primer))]
     fn at_postfix(
@@ -31,7 +31,7 @@ DirectedTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
         primer: R::Primer,
     ) -> R::Postfix {
         let trav = trav.clone();
-        let path = primer.start_match_path();
+        let path = primer.child_path();
         println!("after end match {:?}", path);
         // index postfix of match
 
@@ -43,18 +43,18 @@ DirectedTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
             }) = trav
             .pather::<IndexBack>()
             .index_primary_path::<InnerSide, _>(
-                path.start_path().into_iter().chain(
-                    std::iter::once(&path.entry())
+                path.path().into_iter().chain(
+                    std::iter::once(&path.child_location())
                 ).collect_vec(),
             ) {
-                MatchEnd::Path(StartLeaf {
+                MatchEnd::Path(PathLeaf {
                     entry,
                     child: post,
                     width: post.width(),
                     token_pos: trav.graph().expect_pattern_range_width(entry, 0..entry.sub_index)
                 })
             } else {
-                MatchEnd::Complete(path.entry().parent)
+                MatchEnd::Complete(path.child_location().parent)
             };
         println!("after end match result {:?}", match_end);
         R::into_postfix(primer, match_end)
@@ -70,7 +70,7 @@ pub trait IndexerTraversalPolicy<
         T, D, Q, R,
         Trav=Indexer<T, D>,
         Folder=Indexer<T, D>,
-        //Primer = StartLeaf
+        //Primer = PathLeaf
     >
 {
 }
@@ -110,7 +110,7 @@ where
                 //println!("fold query end {:#?}", res);
                 ControlFlow::Break((
                     R::index_found::<_, D>(
-                        res.found,
+                        res.path,
                         &mut trav
                     ),
                     res.query,
@@ -125,7 +125,7 @@ where
                 //let found = match_end
                 //    .into_range_path().into_result(query);
                 //if let Some(r) = found.found.get_range() {
-                //    assert!(r.get_entry_pos() != r.get_exit_pos());
+                //    assert!(r.child_pos() != r.child_pos());
                 //}
                 ControlFlow::Continue(search::pick_max_result::<R, _>(
                     acc,
@@ -229,7 +229,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
             ControlFlow::Continue(found) => {
                 match found {
                     Some(f) => Ok((
-                        R::index_found::<_, D>(f.found, self),
+                        R::index_found::<_, D>(f.path, self),
                         f.query
                     )),
                     None => Err(NoMatch::NotFound),

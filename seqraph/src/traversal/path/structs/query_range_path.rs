@@ -1,13 +1,12 @@
-use std::borrow::Borrow;
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct QueryRangePath {
     pub query: Pattern,
     pub entry: usize,
-    pub start: ChildPath,
+    pub start: LocationPath,
     pub exit: usize,
-    pub end: ChildPath,
+    pub end: LocationPath,
 }
 impl<
     'a: 'g,
@@ -59,38 +58,18 @@ impl QueryPath for QueryRangePath {
         }
     }
 }
-impl EntryPos for QueryRangePath {
-    fn get_entry_pos(&self) -> usize {
-        self.entry
-    }
-}
-impl PatternEntry for QueryRangePath {
-    fn get_entry_pattern(&self) -> &[Child] {
-        self.query.borrow()
-    }
-}
-impl HasStartPath for QueryRangePath {
-    fn start_path(&self) -> &[ChildLocation] {
-        self.start.borrow()
-    }
-}
-impl PatternStart for QueryRangePath {}
-impl ExitPos for QueryRangePath {
-    fn get_exit_pos(&self) -> usize {
-        self.exit
-    }
-}
-impl PatternExit for QueryRangePath {
-    fn get_exit_pattern(&self) -> &[Child] {
-        self.query.borrow()
-    }
-}
-impl HasEndPath for QueryRangePath {
-    fn end_path(&self) -> &[ChildLocation] {
-        &self.end
-    }
-}
-impl PatternEnd for QueryRangePath {}
+//impl HasRootedPath for QueryRangePath {
+//    fn child_path(&self) -> &[ChildLocation] {
+//        self.start.borrow()
+//    }
+//}
+//impl PatternStart for QueryRangePath {}
+//impl HasRootedPath for QueryRangePath {
+//    fn child_path(&self) -> &[ChildLocation] {
+//        &self.end
+//    }
+//}
+//impl PatternEnd for QueryRangePath {}
 //impl TraversalPath for QueryRangePath {
 //    fn prev_exit_pos<
 //        'a: 'g,

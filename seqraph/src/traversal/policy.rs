@@ -20,9 +20,9 @@ pub trait DirectedTraversalPolicy<
 >: Sized + Send + Sync + Unpin {
 
     type Trav: Traversable<T>;
-    //type Primer: PathPrimer + From<R::Result<StartPath>> + GraphEntry;
+    //type Primer: PathPrimer + From<R::Result<ChildPath>> + GraphChild;
     type Folder: TraversalFolder<T, D, Q, R//, Trav=Self::Trav,
-    // Primer=StartPath
+    // Primer=ChildPath
     >;
 
     /// Executed after last child of index matched

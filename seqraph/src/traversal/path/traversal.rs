@@ -21,14 +21,14 @@ impl<T:
 > TraversalQuery for T {}
 
 pub trait TraversalStartPath:
-    PathAppend<Result=StartPath>
+    PathAppend<Result=ChildPath>
     //+ BorderPath
     + Clone
     + Debug
 {
 }
 impl<
-    T: PathAppend<Result=StartPath>
+    T: PathAppend<Result=ChildPath>
         //+ BorderPath
         + Clone
         + Debug
@@ -59,9 +59,9 @@ impl<
     pub fn push_major(&mut self, location: ChildLocation) {
         match self {
             Self::GraphMajor(path, _) =>
-                path.push_end(location),
+                path.path_mut().push(location),
             Self::QueryMajor(query, _) =>
-                query.push_end(location),
+                query.path_mut().push(location),
         }
     }
     pub fn unpack(self) -> (P, Q) {

@@ -3,10 +3,10 @@ use crate::*;
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct OriginPath<P> {
     pub postfix: P,
-    pub origin: MatchEnd<StartPath>,
+    pub origin: MatchEnd<ChildPath>,
 }
 
-impl<P: Into<StartPath>> From<P> for OriginPath<StartPath> {
+impl<P: Into<ChildPath>> From<P> for OriginPath<ChildPath> {
     fn from(start: P) -> Self {
         let origin = start.into();
         OriginPath {
@@ -15,67 +15,57 @@ impl<P: Into<StartPath>> From<P> for OriginPath<StartPath> {
         }
     }
 }
-//impl<Q: Into<StartPath>> From<OriginPath<Q>> for StartPath {
+//impl<Q: Into<ChildPath>> From<OriginPath<Q>> for ChildPath {
 //    fn from(start: OriginPath<Q>) -> Self {
 //        start.postfix.into()
 //    }
 //}
-impl From<OriginPath<SearchPath>> for OriginPath<StartPath> {
+impl From<OriginPath<SearchPath>> for OriginPath<ChildPath> {
     fn from(other: OriginPath<SearchPath>) -> Self {
         OriginPath {
-            postfix: StartPath::from(other.postfix),
+            postfix: ChildPath::from(other.postfix),
             origin: other.origin,
         }
     }
 }
-impl From<OriginPath<StartPath>> for OriginPath<MatchEnd<StartPath>> {
-    fn from(other: OriginPath<StartPath>) -> Self {
+impl From<OriginPath<ChildPath>> for OriginPath<MatchEnd<ChildPath>> {
+    fn from(other: OriginPath<ChildPath>) -> Self {
         OriginPath {
             postfix: MatchEnd::from(other.postfix),
             origin: other.origin,
         }
     }
 }
-impl From<OriginPath<MatchEnd<StartPath>>> for OriginPath<FoundPath> {
-    fn from(other: OriginPath<MatchEnd<StartPath>>) -> Self {
+impl From<OriginPath<MatchEnd<ChildPath>>> for OriginPath<FoundPath> {
+    fn from(other: OriginPath<MatchEnd<ChildPath>>) -> Self {
         OriginPath {
             postfix: FoundPath::from(other.postfix),
             origin: other.origin,
         }
     }
 }
-impl From<OriginPath<StartPath>> for OriginPath<SearchPath> {
-    fn from(other: OriginPath<StartPath>) -> Self {
+impl From<OriginPath<ChildPath>> for OriginPath<SearchPath> {
+    fn from(other: OriginPath<ChildPath>) -> Self {
         OriginPath {
             postfix: SearchPath::from(other.postfix),
             origin: other.origin,
         }
     }
 }
-impl From<OriginPath<StartLeaf>> for OriginPath<StartPath> {
-    fn from(other: OriginPath<StartLeaf>) -> Self {
+impl From<OriginPath<PathLeaf>> for OriginPath<ChildPath> {
+    fn from(other: OriginPath<PathLeaf>) -> Self {
         OriginPath {
-            postfix: StartPath::from(other.postfix),
+            postfix: ChildPath::from(other.postfix),
             origin: other.origin,
         }
     }
 }
 pub trait Origin {
-    fn into_origin(self) -> MatchEnd<StartPath>;
+    fn into_origin(self) -> MatchEnd<ChildPath>;
 }
 impl<P> Origin for OriginPath<P> {
-    fn into_origin(self) -> MatchEnd<StartPath> {
+    fn into_origin(self) -> MatchEnd<ChildPath> {
         self.origin
-    }
-}
-impl<P: GraphEntry> GraphEntry for OriginPath<P> {
-    fn entry(&self) -> ChildLocation {
-        self.postfix.entry()
-    }
-}
-impl<P: RootChild> RootChild for OriginPath<P> {
-    fn root_child(&self) -> Child {
-        self.postfix.root_child()
     }
 }
 impl<R: RangePath> IntoRangePath for OriginPath<R> {
@@ -98,20 +88,6 @@ impl<P: RangePath> RangePath for OriginPath<P> {
     }
 }
 
-impl<A: Advanced, F: FromAdvanced<A>> FromAdvanced<A> for OriginPath<F> {
-    fn from_advanced<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>
-    >(path: A, trav: &'a Trav) -> Self {
-        Self {
-            origin: MatchEnd::Path(path.start_match_path().clone()),
-            postfix: F::from_advanced::<_, D, _>(path, trav),
-        }
-    }
-}
 //impl<P: RangePath> PathComplete for OriginPath<P> {
 //    fn complete<
 //        'a: 'g,
@@ -124,36 +100,6 @@ impl<A: Advanced, F: FromAdvanced<A>> FromAdvanced<A> for OriginPath<F> {
 //    }
 //}
 
-impl<P: PathReduce> PathReduce for OriginPath<P> {
-    fn into_reduced<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
-    >(mut self, trav: &'a Trav) -> Self {
-        self.postfix.reduce::<_, D, _>(trav);
-        self
-    }
-}
-
-impl<P: PathAppend> PathAppend for OriginPath<P>
-    where <P as PathAppend>::Result: PathAppend<Result=<P as PathAppend>::Result> + RangePath + GraphEntry
-{
-    type Result = OriginPath<<P as PathAppend>::Result>;
-    fn append<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>
-    >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
-        OriginPath {
-            origin: MatchEnd::Path(self.origin.append::<_, D, _>(trav, parent_entry)),
-            postfix: self.postfix.append::<_, D, _>(trav, parent_entry),
-        }
-    }
-}
 impl<P: Ord> PartialOrd for OriginPath<P> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.postfix.partial_cmp(&other.postfix)

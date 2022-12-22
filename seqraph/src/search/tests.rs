@@ -73,7 +73,7 @@ fn find_parent1() {
     assert_eq!(
         graph.find_parent(&query),
         Ok(TraversalResult {
-            found: FoundPath::Complete(*abc),
+            path: FoundPath::Complete(*abc),
             query: QueryRangePath {
                 exit: query.len() - 1,
                 query,
@@ -160,7 +160,7 @@ fn find_ancestor1() {
     assert_eq!(
         graph.find_ancestor(&query),
         Ok(TraversalResult {
-            found: FoundPath::Complete(*abc),
+            path: FoundPath::Complete(*abc),
             query: QueryRangePath {
                 exit: query.len() - 1,
                 query,
@@ -199,8 +199,8 @@ fn find_ancestor2() {
     assert_eq!(
         byz_found,
         Ok(TraversalResult {
-            found: FoundPath::Range(SearchPath {
-                start: StartPath::Path {
+            path: FoundPath::Range(SearchPath {
+                start: ChildPath::Path {
                     entry: xabyz.to_pattern_location(xaby_z_id)
                         .to_child_location(0),
                     path: vec![
@@ -214,7 +214,7 @@ fn find_ancestor2() {
                     child: by,
                     token_pos: 2,
                 },
-                end: EndPath {
+                end: ChildPath {
                     path: vec![],
                     entry: xabyz.to_pattern_location(xaby_z_id)
                         .to_child_location(1),
@@ -254,8 +254,8 @@ fn find_ancestor3() {
     assert_eq!(
         aby_found,
         Ok(TraversalResult {
-            found: FoundPath::Range(SearchPath {
-                start: StartPath::Path {
+            path: FoundPath::Range(SearchPath {
+                start: ChildPath::Path {
                     entry: xaby.to_pattern_location(xab_y_id)
                         .to_child_location(0),
                     path: vec![
@@ -269,7 +269,7 @@ fn find_ancestor3() {
                     width: 3,
                     token_pos: 1,
                 },
-                end: EndPath {
+                end: ChildPath {
                     path: vec![],
                     entry: xaby.to_pattern_location(xab_y_id)
                         .to_child_location(1),
