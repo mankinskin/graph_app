@@ -4,9 +4,9 @@ use crate::*;
 pub trait ChildPos<R> {
     fn child_pos(&self) -> usize;
 }
-impl<R> ChildPos<R> for ChildPath {
+impl<R: PathRole> ChildPos<R> for ChildPath<R> {
     fn child_pos(&self) -> usize {
-        self.child_location().sub_index
+        <Self as GraphRootChild<R>>::graph_root_child_location(self).sub_index
     }
 }
 impl ChildPos<Start> for SearchPath {
@@ -22,6 +22,14 @@ impl ChildPos<End> for SearchPath {
 impl<R, P: ChildPos<R>> ChildPos<R> for OriginPath<P> {
     fn child_pos(&self) -> usize {
         self.postfix.child_pos()
+    }
+}
+impl<P: MatchEndPath> ChildPos<Start> for MatchEnd<P> {
+    fn child_pos(&self) -> usize {
+        match self {
+            Self::Complete(_) => 0,
+            Self::Path(path) => path.child_pos(),
+        }
     }
 }
 impl ChildPos<Start> for QueryRangePath {
@@ -44,11 +52,12 @@ impl ChildPos<End> for PrefixQuery {
         self.exit
     }
 }
-impl<R> ChildPos<R> for PathLeaf {
-    fn child_pos(&self) -> usize {
-        self.entry.sub_index
-    }
-}
+
+//impl<R> ChildPos<R> for PathLeaf {
+//    fn child_pos(&self) -> usize {
+//        self.entry.sub_index
+//    }
+//}
 impl ChildPos<Start> for OverlapPrimer {
     fn child_pos(&self) -> usize {
         0
@@ -62,7 +71,7 @@ impl ChildPos<End> for OverlapPrimer {
 pub trait ChildPosMut<R>: ChildPos<R> {
     fn child_pos_mut(&mut self) -> &mut usize;
 }
-impl ChildPosMut<End> for ChildPath {
+impl ChildPosMut<End> for ChildPath<End> {
     fn child_pos_mut(&mut self) -> &mut usize {
         &mut self.child_location_mut().sub_index
     }

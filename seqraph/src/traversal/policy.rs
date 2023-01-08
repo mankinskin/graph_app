@@ -1,26 +1,18 @@
-use super::*;
-use crate::{
-    *,
-    Child,
-    ChildLocation,
-    Tokenize,
-    MatchDirection,
-    TraversalOrder,
-};
+use crate::*;
 
-pub trait NodePath: RootChild + Send + Clone + Eq + Debug {}
-impl<T: RootChild + Send + Clone + Eq + Debug> NodePath for T {}
+pub trait NodePath<R>: RootChild<R> + Send + Clone + Eq + Debug {}
+impl<R, T: RootChild<R> + Send + Clone + Eq + Debug> NodePath<R> for T {}
 
 
 pub trait DirectedTraversalPolicy<
     T: Tokenize,
     D: MatchDirection,
-    Q: TraversalQuery,
+    Q: BaseQuery,
     R: ResultKind,
 >: Sized + Send + Sync + Unpin {
 
     type Trav: Traversable<T>;
-    //type Primer: PathPrimer + From<R::Result<ChildPath>> + GraphChild;
+    //type Primer: PathPrimer + From<R::Result<ChildPath>> + GraphRootChild;
     type Folder: TraversalFolder<T, D, Q, R//, Trav=Self::Trav,
     // Primer=ChildPath
     >;
@@ -35,13 +27,13 @@ pub trait DirectedTraversalPolicy<
     fn next_parents(
         trav: &Self::Trav,
         query: &Q,
-        primer: &R::Postfix,
+        postfix: &R::Postfix,
     ) -> Vec<TraversalNode<R, Q>> {
         Self::gen_parent_nodes(
             trav,
             query,
-            primer.root_child(),
-            |p, trav| primer.clone().append::<_, D, _>(trav, p)
+            postfix.root_child(trav),
+            |p, trav| postfix.clone().append::<_, D, _>(trav, p)
         )
     }
     /// generates parent nodes

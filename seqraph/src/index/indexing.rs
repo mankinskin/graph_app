@@ -1,5 +1,4 @@
 use crate::*;
-use super::*;
 
 //pub trait Indexing<T: Tokenize, D: IndexDirection>: TraversableMut<T> {
 impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
@@ -17,7 +16,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
     }
     fn index_prefix_path(
         &mut self,
-        path: ChildPath,
+        path: ChildPath<End>,
     ) -> Child {
         self.splitter::<IndexFront>().single_path_split(
             std::iter::once(&path.child_location()).chain(
@@ -30,7 +29,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
     }
     fn at_postfix_path(
         &mut self,
-        path: ChildPath,
+        path: ChildPath<Start>,
     ) -> Child {
         self.splitter::<IndexBack>().single_path_split(
             path.path().into_iter().chain(
@@ -47,8 +46,8 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
         path: SearchPath,
     ) -> Child {
         let entry = path.start.child_location();
-        let entry_pos = path.start.child_pos();
-        let exit_pos = path.end.child_pos();
+        let entry_pos = ChildPos::<Start>::child_pos(&path);
+        let exit_pos = ChildPos::<End>::child_pos(&path);
 
         let location = entry.into_pattern_location();
 
@@ -76,7 +75,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
 
         let mut head_contexter = self.contexter::<IndexBack>();
         let head_split = self.splitter::<IndexBack>().single_path_split(
-            path.start.child_path().to_vec()
+            path.start.path().to_vec()
         )
         .map(|split| (
             split.inner,
@@ -91,7 +90,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
         let mut last_contexter = self.contexter::<IndexFront>();
         let last_split = 
             self.splitter::<IndexFront>().single_path_split(
-                path.end.child_path().to_vec()
+                path.end.path().to_vec()
             )
             .map(|split| (
                 split.inner,

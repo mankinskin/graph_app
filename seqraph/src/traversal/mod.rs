@@ -3,9 +3,7 @@ pub mod traversable;
 pub mod folder;
 pub mod iterator;
 pub mod policy;
-pub mod match_end;
 pub mod cache;
-pub mod found_path;
 pub mod result;
 pub mod node_collection;
 
@@ -15,8 +13,6 @@ pub use traversable::*;
 pub use folder::*;
 pub use iterator::*;
 pub use policy::*;
-pub use match_end::*;
 pub use cache::*;
-pub use found_path::*;
 pub use result::*;
 pub use node_collection::*;

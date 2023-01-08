@@ -1,9 +1,4 @@
-use crate::{
-    vertex::*,
-    search::*,
-    HypergraphRef, QueryRangePath,
-};
-use std::ops::RangeFrom;
+use crate::*;
 
 mod indexer;
 mod index_direction;
@@ -11,7 +6,6 @@ mod side;
 mod context;
 mod split;
 mod indexing;
-mod origin_path;
 mod path;
 
 #[cfg(test)]
@@ -24,7 +18,6 @@ pub use index_direction::*;
 pub use side::*;
 pub use split::*;
 pub use context::*;
-pub use origin_path::*;
 pub use path::*;
 
 impl<'t, 'g, T> HypergraphRef<T>

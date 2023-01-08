@@ -1,6 +1,11 @@
-use super::*;
+use crate::*;
 
-pub trait RangePath: RootChild + IntoRangePath + Into<FoundPath> + Clone + Debug + Hash + Eq// + PathComplete
+pub trait RangePath:
+    IntoRangePath
+    + BasePath
+    + Into<FoundPath>
+    + Hash
+    // + PathComplete
 {
     fn into_complete(self) -> Option<Child>;
 
@@ -23,9 +28,18 @@ impl RangePath for FoundPath {
         }
     }
 }
-//impl RangePath for ChildPath {
+//impl RangePath for ChildPath<Start> {
 //    fn into_complete(self) -> Option<Child> {
-//        None
+//        self.path.is_empty().then(||
+//            self.child
+//        )
+//    }
+//}
+//impl RangePath for ChildPath<End> {
+//    fn into_complete(self) -> Option<Child> {
+//        self.path.is_empty().then(||
+//            self.child
+//        )
 //    }
 //}
 
@@ -39,18 +53,18 @@ impl IntoRangePath for FoundPath {
         self
     }
 }
-impl IntoRangePath for ChildPath {
-    type Result = FoundPath;
-    fn into_range_path(self) -> Self::Result {
-        FoundPath::from(self)
-    }
-}
-impl IntoRangePath for PathLeaf {
-    type Result = FoundPath;
-    fn into_range_path(self) -> Self::Result {
-        FoundPath::from(ChildPath::from(self))
-    }
-}
+//impl<R> IntoRangePath for ChildPath<R> {
+//    type Result = FoundPath;
+//    fn into_range_path(self) -> Self::Result {
+//        FoundPath::from(self)
+//    }
+//}
+//impl IntoRangePath for PathLeaf {
+//    type Result = FoundPath;
+//    fn into_range_path(self) -> Self::Result {
+//        FoundPath::from(ChildPath::from(self))
+//    }
+//}
 //impl IntoRangePath for SearchPath {
 //    type Result = FoundPath;
 //    fn into_range_path(self) -> Self::Result {
@@ -63,12 +77,17 @@ impl IntoRangePath for PathLeaf {
 pub enum FoundPath {
     Complete(Child),
     Range(SearchPath),
-    Postfix(ChildPath),
-    Prefix(ChildPath),
+    Postfix(ChildPath<Start>),
+    Prefix(ChildPath<End>),
 }
-impl<P: Into<ChildPath>> From<P> for FoundPath {
-    fn from(path: P) -> Self {
-        FoundPath::Postfix(path.into())
+impl From<ChildPath<Start>> for FoundPath {
+    fn from(path: ChildPath<Start>) -> Self {
+        FoundPath::Postfix(path)
+    }
+}
+impl From<ChildPath<End>> for FoundPath {
+    fn from(path: ChildPath<End>) -> Self {
+        FoundPath::Prefix(path)
     }
 }
 impl<P: Into<FoundPath>> From<OriginPath<P>> for FoundPath {

@@ -9,7 +9,7 @@ use super::*;
 
 pub trait NodeCollection<Q, R>: Default
     where
-        Q: TraversalQuery,
+        Q: BaseQuery,
         R: ResultKind,
 {
     fn pop_next(&mut self) -> Option<(usize, CacheKey)>;
@@ -23,7 +23,7 @@ pub struct OrderedTraverser<'a, T, D, Trav, Q, R, S, O>
         T: Tokenize,
         Trav: Traversable<T>,
         D: MatchDirection,
-        Q: TraversalQuery,
+        Q: BaseQuery,
         R: ResultKind,
         S: DirectedTraversalPolicy<T, D, Q, R, Trav=Trav>,
         O: NodeCollection<Q, R>,
@@ -39,7 +39,7 @@ impl<'a, T, D, Trav, Q, R, S, O> Unpin for OrderedTraverser<'a, T, D, Trav, Q, R
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-        Q: TraversalQuery,
+        Q: BaseQuery,
         R: ResultKind,
         S: DirectedTraversalPolicy<T, D, Q, R, Trav=Trav>,
         O: NodeCollection<Q, R>,
@@ -50,13 +50,13 @@ impl<'a, T, Trav, D, Q, S, R, O> TraversalIterator<'a, T, D, Trav, Q, S, R> for 
         T: Tokenize,
         Trav: Traversable<T>,
         D: MatchDirection,
-        Q: TraversalQuery,
+        Q: BaseQuery,
         R: ResultKind,
         S: DirectedTraversalPolicy<T, D, Q, R, Trav=Trav>,
         O: NodeCollection<Q, R>,
 {
     fn new(trav: &'a Trav, query: Q) -> Option<Self> {
-        let index = query.get_descendant(trav);
+        let index = query.path_child(trav)?;
         let (cache, start) = TraversalCache::new(index.index(), query);
         Some(Self {
             collection: Default::default(),
@@ -81,7 +81,7 @@ where
     T: Tokenize,
     D: MatchDirection,
     Trav: Traversable<T>,
-    Q: TraversalQuery,
+    Q: BaseQuery,
     R: ResultKind,
     S: DirectedTraversalPolicy<T, D, Q, R, Trav=Trav>,
     O: NodeCollection<Q, R>,
@@ -110,7 +110,7 @@ pub type Dft<'a, T, D, Trav, Q, R, S> = OrderedTraverser<'a, T, D, Trav, Q, R, S
 #[derive(Debug)]
 pub struct BftQueue<Q, R>
     where
-        Q: TraversalQuery,
+        Q: BaseQuery,
         R: ResultKind,
 {
     queue: VecDeque<(usize, CacheKey)>,
@@ -118,7 +118,7 @@ pub struct BftQueue<Q, R>
 }
 impl<Q, R> NodeCollection<Q, R> for BftQueue<Q, R>
     where
-        Q: TraversalQuery,
+        Q: BaseQuery,
         R: ResultKind,
 {
     fn pop_next(&mut self) -> Option<(usize, CacheKey)> {
@@ -133,7 +133,7 @@ impl<Q, R> NodeCollection<Q, R> for BftQueue<Q, R>
 }
 impl<Q, R> Default for BftQueue<Q, R>
     where
-        Q: TraversalQuery,
+        Q: BaseQuery,
         R: ResultKind,
 {
     fn default() -> Self {
@@ -146,7 +146,7 @@ impl<Q, R> Default for BftQueue<Q, R>
 #[derive(Debug)]
 pub struct DftStack<Q, R>
 where
-    Q: TraversalQuery,
+    Q: BaseQuery,
     R: ResultKind,
 {
     stack: Vec<(usize, CacheKey)>,
@@ -155,7 +155,7 @@ where
 
 impl<Q, R> NodeCollection<Q, R> for DftStack<Q, R>
     where
-        Q: TraversalQuery,
+        Q: BaseQuery,
         R: ResultKind,
 {
     fn pop_next(&mut self) -> Option<(usize, CacheKey)> {
@@ -170,7 +170,7 @@ impl<Q, R> NodeCollection<Q, R> for DftStack<Q, R>
 }
 impl<Q, R> Default for DftStack<Q, R>
     where
-        Q: TraversalQuery,
+        Q: BaseQuery,
         R: ResultKind,
 {
     fn default() -> Self {

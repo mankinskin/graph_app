@@ -19,12 +19,13 @@ impl Wide for char {
         1
     }
 }
-impl Wide for ChildPath {
+impl<R> Wide for ChildPath<R> {
     fn width(&self) -> usize {
-        match self {
-            Self::Path { width, .. } |
-            Self::Leaf(PathLeaf { width, .. }) => *width,
-        }
+        self.width
+        //match self {
+        //    Self::Path { width, .. } |
+        //    Self::Leaf(PathLeaf { width, .. }) => *width,
+        //}
     }
 }
 

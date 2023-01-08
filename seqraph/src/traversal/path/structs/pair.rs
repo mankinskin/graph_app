@@ -1,50 +1,16 @@
-use super::*;
-use std::hash::Hash;
-
-pub trait TraversalQuery:
-    Advance
-    + Debug
-    + Clone
-    + Hash
-    + PartialEq
-    + Eq
-    + 'static
-{}
-impl<T:
-    Advance
-    + Debug
-    + Clone
-    + Hash
-    + PartialEq
-    + Eq
-    + 'static
-> TraversalQuery for T {}
-
-pub trait TraversalStartPath:
-    PathAppend<Result=ChildPath>
-    //+ BorderPath
-    + Clone
-    + Debug
-{
-}
-impl<
-    T: PathAppend<Result=ChildPath>
-        //+ BorderPath
-        + Clone
-        + Debug
-> TraversalStartPath for T {}
+use crate::*;
 
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
 pub enum PathPair<
-    P: NewAdvanced,
-    Q: TraversalQuery,
+    P: Advanced,
+    Q: BaseQuery,
 > {
     GraphMajor(P, Q),
     QueryMajor(Q, P),
 }
 impl<
-    P: NewAdvanced,
-    Q: TraversalQuery,
+    P: Advanced,
+    Q: BaseQuery,
 > PathPair<P, Q> {
     pub fn from_mode(path: P, query: Q, mode: bool) -> Self {
         if mode {
@@ -59,7 +25,7 @@ impl<
     pub fn push_major(&mut self, location: ChildLocation) {
         match self {
             Self::GraphMajor(path, _) =>
-                path.path_mut().push(location),
+                HasPath::<End>::path_mut(path).push(location),
             Self::QueryMajor(query, _) =>
                 query.path_mut().push(location),
         }

@@ -1,6 +1,6 @@
 use crate::*;
 
-pub trait PathPop: Send + Sync {
+pub trait PathPop {
     type Result;
     fn pop_path<
         'a: 'g,
@@ -29,7 +29,7 @@ impl PathPop for OriginPath<SearchPath> {
 }
 
 impl PathPop for SearchPath {
-    type Result = <ChildPath as PathPop>::Result;
+    type Result = <ChildPath<Start> as PathPop>::Result;
     fn pop_path<
         'a: 'g,
         'g,
@@ -41,8 +41,8 @@ impl PathPop for SearchPath {
     }
 }
 
-impl PathPop for ChildPath {
-    type Result = MatchEnd<ChildPath>;
+impl PathPop for ChildPath<Start> {
+    type Result = MatchEnd<ChildPath<Start>>;
     fn pop_path<
         'a: 'g,
         'g,
@@ -50,36 +50,12 @@ impl PathPop for ChildPath {
         D: MatchDirection,
         Trav: Traversable<T>
     >(self, trav: &'a Trav) -> Self::Result {
-        match self {
-            ChildPath::Leaf(leaf) => MatchEnd::Complete(leaf.child),
-            ChildPath::Path { entry, mut path, child, width, token_pos } => {
-                MatchEnd::Path(if let Some(seg) = path.pop() {
-                    if path.is_empty() {
-                        ChildPath::Leaf(PathLeaf {
-                            entry: seg,
-                            child,
-                            width,
-                            token_pos,
-                        })
-                    } else {
-                        ChildPath::Path {
-                            entry: seg,
-                            path,
-                            width,
-                            child,
-                            token_pos,
-                        }
-                    }
-                } else {
-                    let graph = trav.graph();
-                    ChildPath::Leaf(PathLeaf {
-                        child: graph.expect_child_at(&entry),
-                        entry,
-                        width,
-                        token_pos,
-                    })
-                })
-            },
+        let len = self.path.len();
+        if len == 1 {
+            MatchEnd::Complete(self.child)
+        } else {
+            let _ = self.path.pop().unwrap();
+            MatchEnd::Path(self)
         }
     }
 }

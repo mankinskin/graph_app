@@ -47,11 +47,12 @@ DirectedTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
                     std::iter::once(&path.child_location())
                 ).collect_vec(),
             ) {
-                MatchEnd::Path(PathLeaf {
-                    entry,
+                MatchEnd::Path(ChildPath {
+                    path: vec![entry],
                     child: post,
                     width: post.width(),
-                    token_pos: trav.graph().expect_pattern_range_width(entry, 0..entry.sub_index)
+                    token_pos: trav.graph().expect_pattern_range_width(entry, 0..entry.sub_index),
+                    _ty: Default::default(),
                 })
             } else {
                 MatchEnd::Complete(path.child_location().parent)
@@ -60,6 +61,7 @@ DirectedTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
         R::into_postfix(primer, match_end)
     }
 }
+
 pub trait IndexerTraversalPolicy<
     T: Tokenize,
     D: IndexDirection,
@@ -84,8 +86,8 @@ impl<
 > IndexerTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
 {}
 
-pub trait IndexingQuery: TraversalQuery {}
-impl<T: TraversalQuery> IndexingQuery for T {}
+pub trait IndexingQuery: BaseQuery {}
+impl<T: BaseQuery> IndexingQuery for T {}
 
 
 impl<T, D, Q, R> TraversalFolder<T, D, Q, R> for Indexer<T, D>

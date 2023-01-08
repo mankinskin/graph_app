@@ -57,6 +57,7 @@ pub use {
             ControlFlow,
             Range,
             RangeInclusive,
+            RangeFrom,
         },
         cmp::Ordering,
         borrow::{

@@ -3,24 +3,24 @@ use std::hash::Hash;
 
 /// ordered according to priority
 #[derive(Clone, Debug, Eq)]
-pub struct WaitingNode<R: ResultKind + Eq, Q: TraversalQuery> {
+pub struct WaitingNode<R: ResultKind + Eq, Q: BaseQuery> {
     sub_index: usize,
     prev: CacheKey,
     // could be more efficient by referencing cache instead of storing path and query
     node: TraversalNode<R, Q>,
 }
-impl<R: ResultKind + Eq, Q: TraversalQuery> PartialEq for WaitingNode<R, Q> {
+impl<R: ResultKind + Eq, Q: BaseQuery> PartialEq for WaitingNode<R, Q> {
     fn eq(&self, other: &Self) -> bool {
         self.sub_index.eq(&other.sub_index)
     }
 }
-impl<R: ResultKind + Eq, Q: TraversalQuery> Ord for WaitingNode<R, Q> {
+impl<R: ResultKind + Eq, Q: BaseQuery> Ord for WaitingNode<R, Q> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.sub_index.partial_cmp(&other.sub_index)
             .unwrap_or(Ordering::Equal)
     }
 }
-impl<R: ResultKind + Eq, Q: TraversalQuery> PartialOrd for WaitingNode<R, Q> {
+impl<R: ResultKind + Eq, Q: BaseQuery> PartialOrd for WaitingNode<R, Q> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.sub_index.partial_cmp(&other.sub_index).map(Ordering::reverse)
     }
@@ -56,7 +56,7 @@ impl<R: ResultKind + Eq, Q: TraversalQuery> PartialOrd for WaitingNode<R, Q> {
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct ParentNode<
     R: ResultKind,
-    Q: TraversalQuery,
+    Q: BaseQuery,
 > {
     pub path: R::Primer,
     //pub location: LocationNode,
@@ -67,7 +67,7 @@ pub struct ParentNode<
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct ChildNode<
     R: ResultKind,
-    Q: TraversalQuery,
+    Q: BaseQuery,
 > {
     pub root: CacheKey,
     pub paths: PathPair<R::Advanced, Q>,
@@ -76,7 +76,7 @@ pub struct ChildNode<
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TraversalNode<
     R: ResultKind,
-    Q: TraversalQuery,
+    Q: BaseQuery,
 > {
     Start(usize, Q),
     /// at a parent.
@@ -95,7 +95,7 @@ pub enum TraversalNode<
 }
 impl<
     R: ResultKind,
-    Q: TraversalQuery,
+    Q: BaseQuery,
 > GetCacheKey for TraversalNode<R, Q> {
     fn cache_key(&self) -> CacheKey {
         match self {
@@ -125,7 +125,7 @@ enum NodeDirection {
 }
 impl<
     R: ResultKind,
-    Q: TraversalQuery,
+    Q: BaseQuery,
 > TraversalNode<R, Q> {
     pub fn query_node(index: usize, query: Q) -> Self {
         Self::Start(index, query)

@@ -76,8 +76,8 @@ impl OverlapChain {
 }
 #[derive(Clone, Debug)]
 pub struct OverlapLink {
-    pub postfix_path: ChildPath, // location of postfix/overlap in first index
-    pub prefix_path: MatchEnd<ChildPath>, // location of prefix/overlap in second index
+    pub postfix_path: ChildPath<End>, // location of postfix/overlap in first index
+    pub prefix_path: MatchEnd<ChildPath<Start>>, // location of prefix/overlap in second index
 }
 #[derive(Clone, Debug)]
 pub struct Overlap {

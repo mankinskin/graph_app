@@ -12,7 +12,7 @@ pub trait TraversalIterator<
     T: Tokenize,
     D: MatchDirection,
     Trav: Traversable<T> + 'a,
-    Q: TraversalQuery,
+    Q: BaseQuery,
     S: DirectedTraversalPolicy<T, D, Q, R, Trav=Trav>,
     R: ResultKind = BaseResult,
 >: Iterator<Item = (usize, CacheKey)> + Sized
@@ -70,20 +70,21 @@ pub trait TraversalIterator<
     //}
     fn after_index(
         &mut self,
-        primer: R::Postfix,
+        primer: R::Primer,
         query: FolderQuery<T, D, Q, R, S>,
     ) -> Vec<TraversalNode<R, Q>> {
         // get next parents
+        let postfix = primer.into();
         let parents = S::next_parents(
             self.trav(),
             &query,
-            &primer,
+            &postfix,
         );
         if parents.is_empty() {
             //println!("no more parents {:#?}", match_end);
             vec![
                 TraversalNode::match_end_node(
-                    primer.into_simplified::<_, D, _>(self.trav()),
+                    postfix.into_simplified::<_, D, _>(self.trav()),
                     query,
                 )
             ]
@@ -136,7 +137,7 @@ pub trait TraversalIterator<
         // todo: solve the "is finished" predicate with a type (how to relate to specific trav state?)
         assert!(!node.query.is_finished(self.trav()));
         // create path to next child
-        match R::Advanced::new_advanced::<_, D, _, _>(self.trav(), node.path) {
+        match R::Primer::into_advanced::<_, D, _>(node.path, self.trav()) {
             Ok(path) =>
                 vec![TraversalNode::child_node(
                     key,
@@ -145,7 +146,7 @@ pub trait TraversalIterator<
             Err(path) =>
                 // no next child
                 self.after_index(
-                    path.into(),
+                    path,
                     node.query,
                 ),
         }
@@ -166,8 +167,8 @@ pub trait TraversalIterator<
             println!("can't match finished paths");
         }
 
-        let path_next = path.get_descendant(self.trav());
-        let query_next = query.get_descendant(self.trav());
+        let path_next = path.path_child(self.trav()).unwrap();
+        let query_next = query.path_child(self.trav()).unwrap();
 
         // compare next child
         //println!("matching query {:?}", query_next);
@@ -198,7 +199,7 @@ pub trait TraversalIterator<
                         } else {
                             path.child_path_mut().simplify::<_, D, _>(self.trav());
                             TraversalNode::query_end_node(
-                                if path.path().is_empty() && path.child_pos() == path.child_pos() {
+                                if path.path().is_empty() && <_ as ChildPos<Start>>::child_pos(&path) == <_ as ChildPos<End>>::child_pos(&path) {
                                     R::Found::from(path.pop_path::<_, D, _>(self.trav()))
                                 } else {
                                     R::Found::from_advanced::<_, D, _>(path, self.trav())
@@ -270,7 +271,7 @@ pub trait TraversalIterator<
         &self,
         mut query: FolderQuery<T, D, Q, R, S>,
     ) -> Option<Vec<TraversalNode<R, Q>>> {
-        let start_index = query.get_descendant(self.trav());
+        let start_index = query.path_child(self.trav()).unwrap();
         if let Some(_) = query.advance::<_, D, _>(self.trav()) {
             if !query.is_finished(self.trav()) {
                 Some(S::gen_parent_nodes(
@@ -278,11 +279,12 @@ pub trait TraversalIterator<
                     &query,
                     start_index,
                     |p, trav| {
-                        R::Primer::from(PathLeaf {
-                            entry: p,
+                        R::Primer::from(ChildPath {
+                            path: vec![p],
                             child: start_index,
                             width: start_index.width,
                             token_pos: trav.graph().expect_pattern_range_width(&p, 0..p.sub_index),
+                            _ty: Default::default(),
                         })
                     }
                 ))

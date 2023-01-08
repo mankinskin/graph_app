@@ -39,7 +39,7 @@ impl<
 {}
 
 
-impl<T: Tokenize, D: MatchDirection, Q: TraversalQuery, R: ResultKind>
+impl<T: Tokenize, D: MatchDirection, Q: BaseQuery, R: ResultKind>
     TraversalFolder<T, D, Q, R> for Searcher<T, D>
 {
     type Trav = Self;
@@ -70,7 +70,7 @@ impl<T: Tokenize, D: MatchDirection, Q: TraversalQuery, R: ResultKind>
 }
 pub fn pick_max_result<
     R: ResultKind,
-    Q: TraversalQuery,
+    Q: BaseQuery,
 >(
     acc: Option<TraversalResult<R, Q>>,
     res: TraversalResult<R, Q>,
@@ -93,7 +93,7 @@ pub fn pick_max_result<
 //    'g,
 //    T: Tokenize,
 //    D: MatchDirection,
-//    Q: TraversalQuery,
+//    Q: BaseQuery,
 //    R: ResultKind,
 //    Folder: TraversalFolder<T, D, Q, R, Continue=Option<TraversalResult<R, Q>>>
 //>(
@@ -139,7 +139,7 @@ impl<
     'g,
     T: Tokenize,
     D: MatchDirection,
-    Q: TraversalQuery,
+    Q: BaseQuery,
     R: ResultKind,
 >
     DirectedTraversalPolicy<T, D, Q, R> for ParentSearch<T, D>

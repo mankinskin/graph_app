@@ -42,7 +42,7 @@ impl<
         }
     }
 }
-pub trait QueryPath: TraversalQuery {
+pub trait QueryPath: BaseQuery {
     fn complete(pattern: impl IntoPattern) -> Self;
 }
 

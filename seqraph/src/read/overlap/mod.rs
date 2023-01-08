@@ -192,7 +192,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             let postfix_path = if let Some(path) = path {
                 path.append::<_, D, _>(&self.graph, postfix_location)
             } else {
-                ChildPath::from(PathLeaf::new(postfix, postfix_location))
+                ChildPath::from(ChildPath::new(postfix, postfix_location))
             };
             // try expand
             match self.graph

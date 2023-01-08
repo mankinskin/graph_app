@@ -2,7 +2,7 @@ use crate::*;
 use super::*;
 
 
-pub trait PathSimplify: Sized + Send + Sync {
+pub trait PathSimplify: Sized {
     fn into_simplified<
         'a: 'g,
         'g,
@@ -33,7 +33,7 @@ impl<P: MatchEndPath + PathPop<Result=Self>> PathSimplify for MatchEnd<P> {
         Trav: Traversable<T>,
     >(self, trav: &'a Trav) -> Self {
         if let Some(c) = match self.get_path() {
-            Some(p) => p.complete::<_, D, _>(trav),
+            Some(p) => p.into_complete::<_, D, _>(trav),
             None => None,
         } {
             MatchEnd::Complete(c)
@@ -47,7 +47,7 @@ impl<P: MatchEndPath + PathPop<Result=Self>> PathSimplify for MatchEnd<P> {
         //}
     }
 }
-impl PathSimplify for ChildPath {
+impl<R> PathSimplify for ChildPath<R> {
     fn into_simplified<
         'a: 'g,
         'g,

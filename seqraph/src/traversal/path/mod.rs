@@ -1,9 +1,7 @@
-pub mod traversal;
 pub mod structs;
 pub mod accessors;
 pub mod mutators;
 
-pub use traversal::*;
 pub use structs::*;
 pub use accessors::*;
 pub use mutators::*;
@@ -14,42 +12,60 @@ use crate::{
 };
 pub type LocationPath = Vec<ChildLocation>;
 
-pub trait RelativeDirection<D: MatchDirection> {
-    type Direction: MatchDirection;
-}
-#[derive(Default)]
-pub struct Front;
-impl<D: MatchDirection> RelativeDirection<D> for Front {
-    type Direction = D;
-}
-#[derive(Default)]
-pub struct Back;
-impl<D: MatchDirection> RelativeDirection<D> for Back {
-    type Direction = <D as MatchDirection>::Opposite;
-}
+use std::hash::Hash;
 
-pub trait PathBorder<D: MatchDirection>: GraphRoot + HasSinglePath {
-    type BorderDirection: RelativeDirection<D>;
+pub trait BaseQuery:
+    Advance
+    + Debug
+    + Clone
+    + Hash
+    + PartialEq
+    + Eq
+    + Send
+    + Sync
+    + 'static
+{}
+impl<T:
+    Advance
+    + Debug
+    + Clone
+    + Hash
+    + PartialEq
+    + Eq
+    + Send
+    + Sync
+    + 'static
+> BaseQuery for T {}
 
-    fn pattern_entry_outer_pos<P: IntoPattern>(pattern: P, entry: usize) -> Option<usize> {
-        <Self::BorderDirection as RelativeDirection<D>>::Direction::pattern_index_next(pattern, entry)
-    }
-    fn pattern_outer_pos<P: IntoPattern>(&self, pattern: P) -> Option<usize> {
-        Self::pattern_entry_outer_pos(pattern, self.root().sub_index)
-    }
-    fn is_at_pattern_border<P: IntoPattern>(&self, pattern: P) -> bool {
-        self.pattern_outer_pos(pattern).is_none()
-    }
-    fn pattern_is_complete<P: IntoPattern>(&self, pattern: P) -> bool {
-        self.single_path().is_empty() && self.is_at_pattern_border(pattern)
-    }
-}
+pub trait BasePath:
+    Debug
+    + Sized
+    + Clone
+    + PartialEq
+    + Eq
+    + Send
+    + Sync
+    + Unpin
+    + 'static
+{}
+impl<T:
+    Debug
+    + Sized
+    + Clone
+    + PartialEq
+    + Eq
+    + Send
+    + Sync
+    + Unpin
+    + 'static
+> BasePath for T {}
 
-//impl<R> GraphChild<R> for PrefixQuery {
+
+//impl<R> GraphRootChild<R> for PrefixQuery {
 //    fn child_location(&self) -> ChildLocation {
 //    }
 //}
-//pub trait PatternChild<End>: ChildPos<End> {
+//pub trait PatternRootChild<End>: ChildPos<End> {
 //    fn get_pattern(&self) -> &[Child];
 //    fn get_exit(&self) -> Option<Child> {
 //        self.get_pattern()
@@ -104,7 +120,7 @@ pub trait PathBorder<D: MatchDirection>: GraphRoot + HasSinglePath {
 //    }
 //}
 
-//pub trait HasEndMatchPath: GraphChild {
+//pub trait HasEndMatchPath: GraphRootChild {
 //    fn child_path(&self) -> &ChildPath;
 //    fn child_path_mut(&mut self) -> &mut ChildPath;
 //}
@@ -132,7 +148,7 @@ pub trait PathBorder<D: MatchDirection>: GraphRoot + HasSinglePath {
 //        self.postfix.child_path_mut()
 //    }
 //}
-//pub trait PatternEnd: PatternChild<End> + HasRootedPath + End + Send + Sync {
+//pub trait PatternEnd: PatternRootChild<End> + HasRootedPath + End + Send + Sync {
 //    fn get_pattern_end<
 //        'a: 'g,
 //        'g,
@@ -148,7 +164,7 @@ pub trait PathBorder<D: MatchDirection>: GraphRoot + HasSinglePath {
 //}
 
 //pub trait GraphEnd: GraphExit + HasRootedPath<End> + End {
-//    fn get_descendant_location(&self) -> ChildLocation {
+//    fn path_child_location(&self) -> ChildLocation {
 //        if let Some(end) = self.child_path().child_path().last() {
 //            *end
 //        } else {
@@ -161,7 +177,7 @@ pub trait PathBorder<D: MatchDirection>: GraphRoot + HasSinglePath {
 //        T: Tokenize,
 //        Trav: Traversable<T>,
 //    >(&self, trav: &'a Trav) -> Option<Child> {
-//        trav.graph().get_child_at(self.get_descendant_location()).ok()
+//        trav.graph().get_child_at(self.path_child_location()).ok()
 //    }
 //}
 //impl<T: GraphExit + HasRootedPath<End>> GraphEnd for T {}
@@ -193,7 +209,7 @@ pub trait PathBorder<D: MatchDirection>: GraphRoot + HasSinglePath {
 //}
 //
 //pub trait End {
-//    fn get_descendant<
+//    fn path_child<
 //        'a: 'g,
 //        'g,
 //        T: Tokenize,
@@ -203,7 +219,7 @@ pub trait PathBorder<D: MatchDirection>: GraphRoot + HasSinglePath {
 //}
 //
 //impl End for QueryRangePath {
-//    fn get_descendant<
+//    fn path_child<
 //        'a: 'g,
 //        'g,
 //        T: Tokenize,
@@ -225,7 +241,7 @@ pub trait PathBorder<D: MatchDirection>: GraphRoot + HasSinglePath {
 //}
 //
 //impl<A: GraphEnd> End for A {
-//    fn get_descendant<
+//    fn path_child<
 //        'a: 'g,
 //        'g,
 //        T: Tokenize,

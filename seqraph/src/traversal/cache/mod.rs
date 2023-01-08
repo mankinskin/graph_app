@@ -30,7 +30,7 @@ pub struct CacheNode {
     role: CacheRole
 }
 impl CacheNode {
-    pub fn new<R: ResultKind, Q: TraversalQuery>(prev: CacheKey, node: TraversalNode<R, Q>) -> Self {
+    pub fn new<R: ResultKind, Q: BaseQuery>(prev: CacheKey, node: TraversalNode<R, Q>) -> Self {
         let (index, role) = match node {
             TraversalNode::Parent(node) => {
                 let entry = node.path.child_location();
@@ -41,9 +41,9 @@ impl CacheNode {
             },
             TraversalNode::Child(node) => {
                 let path = node.paths.get_path();
-                (path.get_descendant(), CacheRole::Child(ChildCache {
+                (path.path_child(), CacheRole::Child(ChildCache {
                     prev,
-                    loc: path.get_descendant_location(),
+                    loc: path.path_child_location(),
                 }))
             },
             TraversalNode::Mismatch(found) |
@@ -59,7 +59,7 @@ impl CacheNode {
 }
 
 #[derive(Clone, Debug)]
-pub struct PositionCache<R: ResultKind, Q: TraversalQuery> {
+pub struct PositionCache<R: ResultKind, Q: BaseQuery> {
     pub top_down: HashMap<CacheKey, ChildLocation>,
     pub bottom_up: HashMap<CacheKey, SubLocation>,
     pub index: Child,
@@ -67,7 +67,7 @@ pub struct PositionCache<R: ResultKind, Q: TraversalQuery> {
     pub waiting: Vec<CacheNode>,
     _ty: std::marker::PhantomData<R>,
 }
-impl<R: ResultKind, Q: TraversalQuery> PositionCache<R, Q> {
+impl<R: ResultKind, Q: BaseQuery> PositionCache<R, Q> {
     pub fn new(prev: CacheKey, node: TraversalNode<R, Q>) -> Self {
         let cache_node = CacheNode::new(prev, node);
         let s = Self {
@@ -86,14 +86,14 @@ impl<R: ResultKind, Q: TraversalQuery> PositionCache<R, Q> {
 }
 /// Bottom-Up Cache Entry
 #[derive(Clone, Debug)]
-pub struct VertexCache<R: ResultKind, Q: TraversalQuery> {
+pub struct VertexCache<R: ResultKind, Q: BaseQuery> {
     positions: HashMap<usize, PositionCache<R, Q>>
 }
 #[derive(Clone, Debug)]
-pub struct TraversalCache<R: ResultKind, Q: TraversalQuery> {
+pub struct TraversalCache<R: ResultKind, Q: BaseQuery> {
     entries: HashMap<usize, VertexCache<R, Q>>,
 }
-impl<R: ResultKind, Q: TraversalQuery> TraversalCache<R, Q> {
+impl<R: ResultKind, Q: BaseQuery> TraversalCache<R, Q> {
     pub fn new(index: usize, query: Q) -> (Self, CacheKey) {
         let s = Self {
             entries: std::iter::once(

@@ -5,29 +5,28 @@ use super::*;
 //impl NotStartPath for PathLeaf {}
 
 pub trait MatchEndPath:
-    NodePath
+    NodePath<Start>
     + PathComplete
-    + PathAppend<Result=ChildPath>
-    + Into<ChildPath>
-    + From<ChildPath>
-    + From<PathLeaf>
+    + PathAppend<Result=ChildPath<Start>>
+    + Into<ChildPath<Start>>
+    + From<ChildPath<Start>>
+    //+ From<PathLeaf>
     + Into<FoundPath>
     + GetCacheKey
+    + BasePath
     + Hash
-    + Sync
-    + Send {}
+    {}
 impl<T:
-    NodePath
+    NodePath<Start>
     + PathComplete
-    + PathAppend<Result=ChildPath>
-    + Into<ChildPath>
-    + From<ChildPath>
-    + From<PathLeaf>
+    + PathAppend<Result=ChildPath<Start>>
+    + Into<ChildPath<Start>>
+    + From<ChildPath<Start>>
+    //+ From<PathLeaf>
     + Into<FoundPath>
     + GetCacheKey
     + Hash
-    + Sync
-    + Send
+    + BasePath
 > MatchEndPath for T {}
 
 /// Used to represent results after traversal with only a start path
@@ -37,7 +36,7 @@ pub enum MatchEnd<P: MatchEndPath> {
     Complete(Child),
 }
 pub trait IntoMatchEndStartPath {
-    fn into_mesp(self) -> MatchEnd<ChildPath>;
+    fn into_mesp(self) -> MatchEnd<ChildPath<Start>>;
 }
 impl<P: MatchEndPath> RangePath for MatchEnd<P> {
     fn into_complete(self) -> Option<Child> {
@@ -83,7 +82,7 @@ impl<P: MatchEndPath> RangePath for MatchEnd<P> {
 //    }
 //}
 impl<P: MatchEndPath> IntoMatchEndStartPath for MatchEnd<P> {
-    fn into_mesp(self) -> MatchEnd<ChildPath> {
+    fn into_mesp(self) -> MatchEnd<ChildPath<Start>> {
         match self {
             MatchEnd::Path(p) => MatchEnd::Path(p.into()),
             MatchEnd::Complete(c) => MatchEnd::Complete(c)
@@ -97,24 +96,24 @@ impl<P: MatchEndPath> IntoRangePath for MatchEnd<P> {
     }
 }
 impl<P: MatchEndPath> IntoMatchEndStartPath for OriginPath<MatchEnd<P>> {
-    fn into_mesp(self) -> MatchEnd<ChildPath> {
+    fn into_mesp(self) -> MatchEnd<ChildPath<Start>> {
         self.postfix.into_mesp()
     }
 }
-impl From<OriginPath<MatchEnd<ChildPath>>> for MatchEnd<ChildPath> {
-    fn from(start: OriginPath<MatchEnd<ChildPath>>) -> Self {
+impl From<OriginPath<MatchEnd<ChildPath<Start>>>> for MatchEnd<ChildPath<Start>> {
+    fn from(start: OriginPath<MatchEnd<ChildPath<Start>>>) -> Self {
         start.postfix
     }
 }
-impl From<MatchEnd<PathLeaf>> for MatchEnd<ChildPath> {
-    fn from(start: MatchEnd<PathLeaf>) -> Self {
-        match start {
-            MatchEnd::Path(leaf) => MatchEnd::Path(leaf.into()),
-            MatchEnd::Complete(c) => MatchEnd::Complete(c)
-        }
-    }
-}
-impl<P: MatchEndPath + From<Q>, Q: Into<ChildPath>> From<Q> for MatchEnd<P> {
+//impl From<MatchEnd<PathLeaf>> for MatchEnd<ChildPath> {
+//    fn from(start: MatchEnd<PathLeaf>) -> Self {
+//        match start {
+//            MatchEnd::Path(leaf) => MatchEnd::Path(leaf.into()),
+//            MatchEnd::Complete(c) => MatchEnd::Complete(c)
+//        }
+//    }
+//}
+impl<P: MatchEndPath + From<Q>, Q: Into<ChildPath<Start>>> From<Q> for MatchEnd<P> {
     fn from(start: Q) -> Self {
         MatchEnd::Path(P::from(start))
     }
@@ -141,21 +140,6 @@ impl<P: MatchEndPath> MatchEnd<P> {
     //}
 }
 
-impl<P: MatchEndPath> PathComplete for MatchEnd<P> {
-    fn complete<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
-    >(&self, _trav: &'a Trav) -> Option<Child> {
-        match self {
-            Self::Complete(c) => Some(*c),
-            _ => None,
-        }
-    }
-}
-
 impl<P: MatchEndPath + PathAppend> PathAppend for MatchEnd<P> {
     type Result = <P as PathAppend>::Result;
     fn append<
@@ -167,11 +151,12 @@ impl<P: MatchEndPath + PathAppend> PathAppend for MatchEnd<P> {
     >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
         match self {
             MatchEnd::Path(path) => path.append::<_, D, _>(trav, parent_entry),
-            MatchEnd::Complete(child) => PathLeaf {
-                entry: parent_entry,
+            MatchEnd::Complete(child) => ChildPath {
+                path: vec![parent_entry],
                 width: child.width(),
                 child,
                 token_pos: 0,
+                _ty: Default::default(),
             }.into(),
         }
     }

@@ -9,16 +9,16 @@ pub type Folder<T, D, Q, R, Ty>
 pub trait FolderQ<
     T: Tokenize,
     D: MatchDirection,
-    Q: TraversalQuery,
+    Q: BaseQuery,
     R: ResultKind,
 > {
-    type Query: TraversalQuery;
+    type Query: BaseQuery;
 }
 
 impl<
     T: Tokenize,
     D: MatchDirection,
-    Q: TraversalQuery,
+    Q: BaseQuery,
     R: ResultKind,
     Ty: TraversalFolder<T, D, Q, R>,
 > FolderQ<T, D, Q, R> for Ty {
@@ -39,7 +39,7 @@ pub trait ResultKind: Eq + Clone + Debug + Send + Sync + Unpin {
     type Advanced: Advanced + PathPop<Result=Self::Postfix>;//+ From<Self::Primer>;
     type Indexed: Send + Sync;
     //type Result: From<Self::Found>;
-    fn into_postfix(primer: Self::Primer, match_end: MatchEnd<PathLeaf>) -> Self::Postfix;
+    fn into_postfix(primer: Self::Primer, match_end: MatchEnd<ChildPath<Start>>) -> Self::Postfix;
     fn index_found<
         'a: 'g,
         'g,
@@ -54,10 +54,8 @@ pub trait Found<R: ResultKind>
     + From<<R as ResultKind>::Postfix>
     + Wide
     + GetCacheKey
+    + BasePath
     + Ord
-    + Send
-    + Sync
-    + Unpin
 {
 }
 impl<
@@ -67,19 +65,18 @@ impl<
     + From<<R as ResultKind>::Postfix>
     + Wide
     + GetCacheKey
+    + BasePath
     + Ord
-    + Send
-    + Sync
-    + Unpin
 > Found<R> for T {
 }
 pub trait PathPrimer<R: ResultKind>:
-    NodePath
+    NodePath<Start>
     + HasRootedPath<Start>
-    + GraphChild<Start>
-    + PathAppend
-    + From<PathLeaf>
-    + From<R::Advanced>
+    + GraphRootChild<Start>
+    //+ PathAppend
+    + From<ChildPath<Start>>
+    + Into<R::Postfix>
+    + IntoAdvanced<R>
     + Wide
     + GetCacheKey
     + Send
@@ -89,48 +86,46 @@ pub trait PathPrimer<R: ResultKind>:
 }
 impl<
     R: ResultKind,
-    T: NodePath
+    T: NodePath<Start>
     + HasRootedPath<Start>
-    + GraphChild<Start>
-    + PathAppend
-    + PathAppend
-    + From<PathLeaf>
-    + From<<R as ResultKind>::Advanced>
+    + GraphRootChild<Start>
+    //+ PathAppend
+    + From<ChildPath<Start>>
+    + IntoAdvanced<R>
+    + Into<R::Postfix>
     + Wide
     + GetCacheKey
-    + Send
-    + Sync
-    + Unpin
+    + BasePath
 > PathPrimer<R> for T
 {
 }
 
 pub trait Postfix:
-    NodePath
+    NodePath<Start>
     + PathSimplify
     + IntoRangePath
     + GetCacheKey
-    + Send + Sync
+    + BasePath
 {
-    fn new_complete(child: Child, origin: ChildPath) -> Self;
-    fn new_path(start: impl Into<ChildPath>, origin: ChildPath) -> Self;
+    fn new_complete(child: Child, origin: ChildPath<Start>) -> Self;
+    fn new_path(start: impl Into<ChildPath<Start>>, origin: ChildPath<Start>) -> Self;
 }
-impl<P: MatchEndPath + PathPop<Result=Self> + GetCacheKey + RootChild> Postfix for MatchEnd<P> {
-    fn new_complete(c: Child, _origin: ChildPath) -> Self {
+impl<P: MatchEndPath + PathPop<Result=Self> + GetCacheKey + NodePath<Start>> Postfix for MatchEnd<P> {
+    fn new_complete(c: Child, _origin: ChildPath<Start>) -> Self {
         Self::Complete(c)
     }
-    fn new_path(start: impl Into<ChildPath>, _origin: ChildPath) -> Self {
+    fn new_path(start: impl Into<ChildPath<Start>>, _origin: ChildPath<Start>) -> Self {
         Self::Path(P::from(start.into()))
     }
 }
 impl<P: Postfix + RangePath + GetCacheKey + GraphRoot> Postfix for OriginPath<P> {
-    fn new_complete(c: Child, origin: ChildPath) -> Self {
+    fn new_complete(c: Child, origin: ChildPath<Start>) -> Self {
         Self {
             postfix: P::new_complete(c, origin.clone()),
             origin: MatchEnd::Path(origin),
         }
     }
-    fn new_path(start: impl Into<ChildPath>, origin: ChildPath) -> Self {
+    fn new_path(start: impl Into<ChildPath<Start>>, origin: ChildPath<Start>) -> Self {
         Self {
             postfix: P::new_path(start, origin.clone()),
             origin: MatchEnd::Path(origin),
@@ -138,39 +133,31 @@ impl<P: Postfix + RangePath + GetCacheKey + GraphRoot> Postfix for OriginPath<P>
     }
 }
 pub trait Advanced:
-    RootChild
-    + NewAdvanced
+    NodePath<Start>
+    + BasePath
     + HasRootedPath<Start>
     + HasRootedPath<End>
-    + GraphChild<Start>
-    + GraphChild<End>
+    + GraphRootChild<Start>
+    + GraphRootChild<End>
     + PathComplete
     + AddMatchWidth
-    + Eq
-    + Clone
-    + Debug
-    + Send
-    + Sync
-    + 'static
     + GetCacheKey
+    + PathChild<Start>
+    + PathChild<End>
 {
 }
 impl<
-    T: RootChild
-    + NewAdvanced
+    T: NodePath<Start>
+    + BasePath
     + HasRootedPath<Start>
     + HasRootedPath<End>
-    + GraphChild<Start>
-    + GraphChild<End>
+    + GraphRootChild<Start>
+    + GraphRootChild<End>
     + PathComplete
     + AddMatchWidth
-    + Eq
-    + Clone
-    + Debug
-    + Send
-    + Sync
-    + 'static
     + GetCacheKey
+    + PathChild<Start>
+    + PathChild<End>
 > Advanced for T {
 }
 
@@ -180,12 +167,12 @@ pub struct BaseResult;
 
 impl ResultKind for BaseResult {
     type Found = FoundPath;
-    type Primer = ChildPath;
-    type Postfix = MatchEnd<ChildPath>;
+    type Primer = ChildPath<Start>;
     type Advanced = SearchPath;
+    type Postfix = MatchEnd<ChildPath<Start>>;
     type Indexed = Child;
     
-    fn into_postfix(_primer: Self::Primer, match_end: MatchEnd<PathLeaf>) -> Self::Postfix {
+    fn into_postfix(_primer: Self::Primer, match_end: MatchEnd<ChildPath<Start>>) -> Self::Postfix {
         match_end.into()
     }
     fn index_found<
@@ -202,14 +189,13 @@ impl ResultKind for BaseResult {
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct OriginPathResult;
 
-
 impl ResultKind for OriginPathResult {
     type Found = OriginPath<FoundPath>;
-    type Primer = OriginPath<ChildPath>;
-    type Postfix = OriginPath<MatchEnd<ChildPath>>;
+    type Primer = OriginPath<ChildPath<Start>>;
+    type Postfix = OriginPath<MatchEnd<ChildPath<Start>>>;
     type Advanced = OriginPath<SearchPath>;
     type Indexed = OriginPath<Child>;
-    fn into_postfix(primer: Self::Primer, match_end: MatchEnd<PathLeaf>) -> Self::Postfix {
+    fn into_postfix(primer: Self::Primer, match_end: MatchEnd<ChildPath<Start>>) -> Self::Postfix {
         OriginPath {
             postfix: match_end.into(),
             origin: primer.origin,
@@ -229,7 +215,7 @@ impl ResultKind for OriginPathResult {
     }
 }
 
-pub trait TraversalFolder<T: Tokenize, D: MatchDirection, Q: TraversalQuery, R: ResultKind>: Sized + Send + Sync {
+pub trait TraversalFolder<T: Tokenize, D: MatchDirection, Q: BaseQuery, R: ResultKind>: Sized + Send + Sync {
     type Trav: Traversable<T>;
     type Break: Send + Sync;
     type Continue: Send + Sync;

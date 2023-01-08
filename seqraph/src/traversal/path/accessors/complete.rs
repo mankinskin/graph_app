@@ -1,9 +1,9 @@
 use crate::*;
 
 
-pub trait PathComplete: Send + Sync {
+pub trait PathComplete {
     //fn new_complete(c: Child) -> Self;
-    fn complete<
+    fn into_complete<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -18,20 +18,18 @@ pub trait PathComplete: Send + Sync {
         D: MatchDirection,
         Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> bool {
-        self.complete::<_, D, _>(trav).is_some()
+        self.into_complete::<_, D, _>(trav).is_some()
     }
 }
-
-
 impl<P: PathComplete> PathComplete for OriginPath<P> {
-    fn complete<
+    fn into_complete<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> Option<Child> {
-        self.postfix.complete::<_, D, _>(trav)
+        self.postfix.into_complete::<_, D, _>(trav)
     }
 }
 
@@ -43,12 +41,11 @@ impl PathComplete for SearchPath {
         D: MatchDirection,
         Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> bool {
-        let pattern = self.get_pattern(trav);
-        <ChildPath as PathBorder<D>>::pattern_is_complete(self.child_path(), &pattern[..]) &&
-            self.child_path().is_empty() &&
-            <ChildPath as PathBorder<D>>::pattern_entry_outer_pos(pattern, self.child_pos()).is_none()
+        let pattern = self.root_pattern(trav);
+        <_ as PathBorder<D, _>>::is_complete_in_pattern(&self.start, pattern.borrow()) &&
+            <_ as PathBorder<D, _>>::is_complete_in_pattern(&self.end, pattern.borrow())
     }
-    fn complete<
+    fn into_complete<
         'a: 'g,
         'g,
         T: Tokenize,
@@ -56,40 +53,64 @@ impl PathComplete for SearchPath {
         Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> Option<Child> {
         self.is_complete::<_, D, _>(trav).then(||
-            self.root_child()
+            self.root_parent()
         )
     }
 }
 
-impl PathComplete for PathLeaf {
+//impl PathComplete for PathLeaf {
+//    /// returns child if reduced to single child
+//    fn into_complete<
+//        'a: 'g,
+//        'g,
+//        T: Tokenize,
+//        D: MatchDirection,
+//        Trav: Traversable<T>,
+//    >(&self, trav: &'a Trav) -> Option<Child> {
+//        let graph = trav.graph();
+//        let pattern = graph.expect_pattern_at(self.entry);
+//        (self.entry.sub_index == D::head_index(pattern.borrow()))
+//            .then(|| self.entry.parent)
+//    }
+//}
+
+impl<R> PathComplete for ChildPath<R> {
     /// returns child if reduced to single child
-    fn complete<
+    fn into_complete<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> Option<Child> {
-        let graph = trav.graph();
-        let pattern = graph.expect_pattern_at(self.entry);
-        (self.entry.sub_index == D::head_index(pattern.borrow()))
-            .then(|| self.entry.parent)
+        self.path.is_empty().then(||
+            self.child
+        )
     }
 }
-
-impl PathComplete for ChildPath {
-    /// returns child if reduced to single child
-    fn complete<
+impl<P: MatchEndPath> PathComplete for MatchEnd<P> {
+    fn into_complete<
         'a: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> Option<Child> {
+    >(&self, _trav: &'a Trav) -> Option<Child> {
         match self {
-            Self::Leaf(leaf) => leaf.complete::<_, D, _>(trav),
-            // TODO: maybe skip path segments starting at pattern head
-            Self::Path { .. } => None,
+            Self::Complete(c) => Some(*c),
+            _ => None,
         }
     }
 }
+
+//impl<P: RangePath> PathComplete for OriginPath<P> {
+//    fn into_complete<
+//        'a: 'g,
+//        'g,
+//        T: Tokenize,
+//        D: MatchDirection,
+//        Trav: Traversable<T>,
+//    >(&self, trav: Trav) -> Option<Child> {
+//        self.postfix.into_complete::<_, D, _>(trav)
+//    }
+//}

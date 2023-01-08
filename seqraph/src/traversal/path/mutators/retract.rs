@@ -8,8 +8,8 @@ use crate::*;
 //}
 
 pub trait Retract:
-    Root
-    + Descendant<End>
+    RootPattern
+    + PathChild<End>
     + HasRootedPath<End>
     + ChildPosMut<End>
     + Send
@@ -22,7 +22,10 @@ pub trait Retract:
         D: MatchDirection,
         Trav: Traversable<T>,
     >(&self, trav: &'a Trav) -> Option<usize> {
-        D::pattern_index_prev(self.pattern(trav), self.child_pos())
+        D::pattern_index_prev(
+            self.root_pattern(trav),
+            self.child_pos()
+        )
     }
     fn retract<
         'a: 'g,
@@ -50,8 +53,8 @@ pub trait Retract:
     }
 }
 impl<T:
-    Root
-    + Descendant<End>
+    RootPattern
+    + PathChild<End>
     + HasRootedPath<End>
     + ChildPosMut<End>
     + Send
@@ -59,19 +62,3 @@ impl<T:
 > Retract for T
 {
 }
-//impl GraphChild for ChildPath {
-//    fn entry(&self) -> ChildLocation {
-//        self.entry
-//    }
-//}
-//impl BorderPath for ChildPath {
-//    fn path(&self) -> &[ChildLocation] {
-//        self.path.borrow()
-//    }
-//    fn entry(&self) -> ChildLocation {
-//        self.child_location()
-//    }
-//}
-//impl<D: MatchDirection> PathBorder<D> for ChildPath {
-//    type BorderDirection = Front;
-//}
