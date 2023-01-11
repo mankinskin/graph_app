@@ -51,7 +51,10 @@ pub trait TraversalIterator<
                 //    ),
                 _ => vec![],
             }),
-            Err(key) => (key, vec![])
+            Err(key) => {
+                cache.get_entry_mut(&key).unwrap().add_waiting(node);
+                (key, vec![])
+            }
         }
     }
     /// nodes generated when an index ended
@@ -208,7 +211,7 @@ pub trait TraversalIterator<
                             let (entry, path) = if path.raw_child_path::<End>().is_empty() && <_ as RootChildPos<Start>>::root_child_pos(&path) == <_ as RootChildPos<End>>::root_child_pos(&path) {
                                 (None, R::Found::from(path.pop_path::<_, D, _>(self.trav())))
                             } else {
-                                (path.role_path_child_location::<End>(), R::Found::from_advanced::<_, D, _>(path, self.trav()))
+                                (Some(path.role_path_child_location::<End>()), R::Found::from_advanced::<_, D, _>(path, self.trav()))
                             };
                             TraversalNode::QueryEnd(
                                 key,
@@ -219,9 +222,7 @@ pub trait TraversalIterator<
                     ]
                 } else if path_next.width() == 1 && query_next.width() == 1 {
                     // mismatch
-                    todo!("handle waiting nodes");
-                    let continued = vec![];
-                    //self.cache_mut().on_bu_mismatch(path.cache_key()).unwrap_or_default();
+                    let root_key = path.root_key();
                     path.child_path_mut::<End>().retract::<_, D, _, R>(self.trav());
 
                     let (entry, found) = if path.raw_child_path::<End>().is_empty()
@@ -229,9 +230,8 @@ pub trait TraversalIterator<
                     {
                         (None, R::Found::from(path.pop_path::<_, D, _>(self.trav())))
                     } else {
-                        (path.role_path_child_location::<End>(), R::Found::from_advanced::<_, D, _>(path, self.trav()))
+                        (Some(path.role_path_child_location::<End>()), R::Found::from_advanced::<_, D, _>(path, self.trav()))
                     };
-
                     (found.width() > 1).then(||
                         TraversalNode::Mismatch(
                             key,
@@ -240,7 +240,7 @@ pub trait TraversalIterator<
                         )
                     )
                     .into_iter()
-                    .chain(continued)
+                    .chain(self.cache_mut().continue_waiting(&root_key))
                     .collect()
                 } else {
                     // expand nodes

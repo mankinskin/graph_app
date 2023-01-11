@@ -8,10 +8,7 @@ pub struct QueryRangePath {
     pub exit: usize,
     pub end: LocationPath,
 }
-impl<
-    'a: 'g,
-    'g,
-> QueryRangePath {
+impl QueryRangePath {
     pub fn postfix(query: impl IntoPattern, entry: usize) -> Self {
         let query = query.into_pattern();
         Self {

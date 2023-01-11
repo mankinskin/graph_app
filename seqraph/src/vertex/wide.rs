@@ -44,6 +44,11 @@ impl<T: Wide> Wide for &'_ mut T {
 //        self.width
 //    }
 //}
+impl Wide for VertexData {
+    fn width(&self) -> usize {
+        self.width
+    }
+}
 
 pub trait WideMut: Wide {
     fn width_mut(&mut self) -> &mut usize;

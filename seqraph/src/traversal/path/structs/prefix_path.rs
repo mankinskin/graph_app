@@ -8,10 +8,7 @@ pub struct PrefixQuery {
     pub width: usize,
 }
 
-impl<
-    'a: 'g,
-    'g,
-> PrefixQuery {
+impl PrefixQuery {
     pub fn new_directed<
         D: MatchDirection,
         P: IntoPattern,

@@ -16,13 +16,10 @@ pub trait Retract:
     + Sync
 {
     fn prev_exit_pos<
-        'a: 'g,
-        'b: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<T> + 'a,
-    >(&'b self, trav: &'a Trav) -> Option<usize> {
+        Trav: Traversable<T>,
+    >(&self, trav: &Trav) -> Option<usize> {
         let graph = trav.graph();
         let pattern = self.root_pattern::<_, Trav>(&graph);
         D::pattern_index_prev(
@@ -31,13 +28,11 @@ pub trait Retract:
         )
     }
     fn retract<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
         R: ResultKind,
-    >(&mut self, trav: &'a Trav) {
+    >(&mut self, trav: &Trav) {
         let graph = trav.graph();
         // remove segments pointing to mismatch at pattern head
         while let Some(mut location) = self.path_mut().pop() {

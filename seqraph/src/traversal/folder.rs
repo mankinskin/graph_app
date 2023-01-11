@@ -41,12 +41,10 @@ pub trait ResultKind: Eq + Clone + Debug + Send + Sync + Unpin {
     //type Result: From<Self::Found>;
     fn into_postfix(primer: Self::Primer, match_end: MatchEnd<ChildPath<Start>>) -> Self::Postfix;
     fn index_found<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: IndexDirection,
         //Trav: TraversableMut<T>,
-    >(found: Self::Found, indexer: &'a mut Indexer<T, D>) -> Self::Indexed;
+    >(found: Self::Found, indexer: &mut Indexer<T, D>) -> Self::Indexed;
 }
 pub trait Found<R: ResultKind>
     : RangePath
@@ -108,17 +106,15 @@ impl<
 
 pub trait RoleChildPath {
     fn role_path_child_location<
-        'a,
         R: PathRole,
-    >(&'a self) -> Option<ChildLocation>
+    >(&self) -> ChildLocation
         where Self: PathChild<R>
     {
         PathChild::<R>::path_child_location(self)
     }
     fn role_child_location<
-        'a,
         R: PathRole,
-    >(&'a self) -> ChildLocation
+    >(&self) -> ChildLocation
         where Self: HasRolePath<R>
     {
         self.child_path::<R>().child_location()
@@ -190,11 +186,10 @@ pub trait Advanced:
     + GraphRoot
 {
     fn role_path_child<
-        'a,
         R: PathRole,
         T: Tokenize,
         Trav: Traversable<T>,
-    >(&'a self, trav: &Trav) -> Child
+    >(&self, trav: &Trav) -> Child
         where Self: PathChild<R>
     {
         PathChild::<R>::path_child(self, trav)
@@ -254,12 +249,10 @@ impl ResultKind for BaseResult {
         match_end.into()
     }
     fn index_found<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: IndexDirection,
         //Trav: TraversableMut<T>,
-    >(found: Self::Found, indexer: &'a mut Indexer<T, D>) -> Self::Indexed {
+    >(found: Self::Found, indexer: &mut Indexer<T, D>) -> Self::Indexed {
         indexer.index_found(found.into_range_path().into())
     }
 }
@@ -280,12 +273,10 @@ impl ResultKind for OriginPathResult {
         }
     }
     fn index_found<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: IndexDirection,
         //Trav: TraversableMut<T>,
-    >(found: Self::Found, indexer: &'a mut Indexer<T, D>) -> Self::Indexed {
+    >(found: Self::Found, indexer: &mut Indexer<T, D>) -> Self::Indexed {
         OriginPath {
             origin: found.origin,
             postfix: BaseResult::index_found::<_, D>(found.postfix, indexer)

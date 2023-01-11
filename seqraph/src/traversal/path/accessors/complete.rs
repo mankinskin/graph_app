@@ -4,55 +4,45 @@ use crate::*;
 pub trait PathComplete {
     //fn new_complete(c: Child) -> Self;
     fn into_complete<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&'a self, trav: &'a Trav) -> Option<Child>;
+    >(&self, trav: &Trav) -> Option<Child>;
 
     fn is_complete<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&'a self, trav: &'a Trav) -> bool {
+    >(&self, trav: &Trav) -> bool {
         self.into_complete::<_, D, _>(trav).is_some()
     }
 }
 impl<P: PathComplete> PathComplete for OriginPath<P> {
     fn into_complete<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&'a self, trav: &'a Trav) -> Option<Child> {
+    >(&self, trav: &Trav) -> Option<Child> {
         self.postfix.into_complete::<_, D, _>(trav)
     }
 }
 
 impl PathComplete for SearchPath {
     fn is_complete<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<T> + 'a,
-    >(&'a self, trav: &'g Trav) -> bool {
+        Trav: Traversable<T>,
+    >(&self, trav: &Trav) -> bool {
         let graph = trav.graph();
         let pattern = self.root_pattern::<_, Trav>(&graph);
         <_ as PathBorder<D, _>>::is_complete_in_pattern(&self.start, pattern.borrow()) &&
             <_ as PathBorder<D, _>>::is_complete_in_pattern(&self.end, pattern.borrow())
     }
     fn into_complete<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&'a self, trav: &'a Trav) -> Option<Child> {
+    >(&self, trav: &Trav) -> Option<Child> {
         self.is_complete::<_, D, _>(trav).then(||
             self.root_parent()
         )
@@ -78,12 +68,10 @@ impl PathComplete for SearchPath {
 impl<R> PathComplete for ChildPath<R> {
     /// returns child if reduced to single child
     fn into_complete<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&self, _trav: &'a Trav) -> Option<Child> {
+    >(&self, _trav: &Trav) -> Option<Child> {
         self.path.is_empty().then(||
             self.child
         )
@@ -91,12 +79,10 @@ impl<R> PathComplete for ChildPath<R> {
 }
 impl<P: MatchEndPath> PathComplete for MatchEnd<P> {
     fn into_complete<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&self, _trav: &'a Trav) -> Option<Child> {
+    >(&self, _trav: &Trav) -> Option<Child> {
         match self {
             Self::Complete(c) => Some(*c),
             _ => None,

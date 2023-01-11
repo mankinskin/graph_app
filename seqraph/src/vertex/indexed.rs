@@ -1,111 +1,19 @@
 use crate::traversal::traversable::Traversable;
 
 use super::*;
-use std::ops::{
-    Deref,
-    DerefMut,
-};
-
-pub trait VertexedMut: Vertexed {
-    fn vertex_mut<'a, T: Tokenize, R: Deref<Target=Hypergraph<T>> + DerefMut>(
-        self,
-        graph: &'a mut R,
-    ) -> &'a mut VertexData
-        where Self: 'a
-    {
-        graph.expect_vertex_data_mut(self.index())
-    }
-    fn vertex_ref_mut<'a, T: Tokenize, R: Deref<Target=Hypergraph<T>> + DerefMut>(
-        &'a mut self,
-        graph: &'a mut R,
-    ) -> &'a mut VertexData {
-        graph.expect_vertex_data_mut(self.index())
-    }
-}
-impl VertexedMut for Child {}
-impl<V: VertexedMut<>> VertexedMut for &'_ mut V {
-    fn vertex_mut<'a, T: Tokenize, R: Deref<Target=Hypergraph<T>> + DerefMut>(
-        self,
-        graph: &'a mut R,
-    ) -> &'a mut VertexData
-        where Self: 'a
-    {
-        V::vertex_ref_mut(self, graph)
-    }
-    fn vertex_ref_mut<'a, T: Tokenize, R: Deref<Target=Hypergraph<T>> + DerefMut>(
-        &'a mut self,
-        graph: &'a mut R,
-    ) -> &'a mut VertexData {
-        V::vertex_ref_mut(*self, graph)
-    }
-}
-
-pub trait Vertexed: AsChild + Sized {
-    fn vertex<'a, T: Tokenize, R: Deref<Target=Hypergraph<T>>>(
-        self,
-        graph: &'a R,
-    ) -> &'a VertexData
-        where Self: 'a
-    {
-        graph.expect_vertex_data(self.index())
-    }
-    fn vertex_ref<'a, T: Tokenize, R: Deref<Target=Hypergraph<T>>>(
-        &'a self,
-        graph: &'a R,
-    ) -> &'a VertexData {
-        graph.expect_vertex_data(self.index())
-    }
-}
-impl Vertexed for Child {}
-impl<V: Vertexed> Vertexed for &'_ V {
-    fn vertex<'a, T: Tokenize, R: Deref<Target=Hypergraph<T>>>(
-        self,
-        graph: &'a R,
-    ) -> &'a VertexData
-        where Self: 'a
-    {
-        V::vertex_ref(self, graph)
-    }
-    fn vertex_ref<'a, T: Tokenize, R: Deref<Target=Hypergraph<T>>>(
-        &'a self,
-        graph: &'a R,
-    ) -> &'a VertexData {
-        V::vertex_ref(*self, graph)
-    }
-}
-impl<V: Vertexed<>> Vertexed<> for &'_ mut V {
-    fn vertex<'a, T: Tokenize, R: Deref<Target=Hypergraph<T>>>(
-        self,
-        graph: &'a R,
-    ) -> &'a VertexData
-        where Self: 'a
-    {
-        V::vertex_ref(self, graph)
-    }
-    fn vertex_ref<'a, T: Tokenize, R: Deref<Target=Hypergraph<T>>>(
-        &'a self,
-        graph: &'a R,
-    ) -> &'a VertexData {
-        V::vertex_ref(*self, graph)
-    }
-}
 
 pub trait Indexed: Sized {
     fn index(&self) -> VertexIndex;
     fn expect_child_patterns<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>,
-    >(&'a self, trav: &'a Trav) -> ChildPatterns {
+    >(&self, trav: &Trav) -> ChildPatterns {
         trav.graph().expect_child_patterns(self).clone()
     }
     fn expect_child_pattern<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>,
-    >(&'a self, trav: &'a Trav, pid: PatternId) -> Pattern {
+    >(&self, trav: &Trav, pid: PatternId) -> Pattern {
         trav.graph().expect_child_pattern(self, pid).clone()
     }
 }
@@ -122,6 +30,11 @@ impl<I: Indexed> Indexed for &'_ mut I {
 impl Indexed for VertexIndex {
     fn index(&self) -> VertexIndex {
         *self
+    }
+}
+impl Indexed for VertexData {
+    fn index(&self) -> VertexIndex {
+        self.index
     }
 }
 

@@ -13,6 +13,7 @@ type HashSet<T> = DeterministicHashSet<T>;
 type HashMap<K, V> = DeterministicHashMap<K, V>;
 
 pub mod indexed;
+pub mod vertexed;
 pub mod parent;
 pub mod child;
 pub mod child_location;
@@ -21,6 +22,7 @@ pub mod wide;
 pub mod pattern;
 pub use {
     indexed::*,
+    vertexed::*,
     child_location::*,
     parent::*,
     child::*,
@@ -404,68 +406,5 @@ impl VertexData {
             )
             .unwrap();
         (*id, *c)
-    }
-}
-
-use std::ops::{
-    Deref,
-    DerefMut,
-};
-impl Vertexed for &'_ VertexData {
-    fn vertex<'a, T: Tokenize, R: Deref<Target=Hypergraph<T>>>(
-        self,
-        _graph: &'a R,
-    ) -> &'a VertexData
-        where Self: 'a
-    {
-        self
-    }
-    fn vertex_ref<'a, T: Tokenize, R: Deref<Target=Hypergraph<T>>>(
-        &'a self,
-        _graph: &'a R,
-    ) -> &'a VertexData {
-        *self
-    }
-}
-impl Vertexed for &'_ mut VertexData {
-    fn vertex<'a, T: Tokenize, R: Deref<Target=Hypergraph<T>>>(
-        self,
-        _graph: &'a R,
-    ) -> &'a VertexData
-        where Self: 'a
-    {
-        self
-    }
-    fn vertex_ref<'a, T: Tokenize, R: Deref<Target=Hypergraph<T>>>(
-        &'a self,
-        _graph: &'a R,
-    ) -> &'a VertexData {
-        *self
-    }
-}
-impl VertexedMut for &mut VertexData {
-    fn vertex_mut<'a, T: Tokenize, R: Deref<Target=Hypergraph<T>> + DerefMut>(
-        self,
-        _graph: &'a mut R,
-    ) -> &'a mut VertexData
-        where Self: 'a
-    {
-        self
-    }
-    fn vertex_ref_mut<'a, T: Tokenize, R: Deref<Target=Hypergraph<T>> + DerefMut>(
-        &'a mut self,
-        _graph: &'a mut R,
-    ) -> &'a mut VertexData {
-        *self
-    }
-}
-impl Indexed for VertexData {
-    fn index(&self) -> VertexIndex {
-        self.index
-    }
-}
-impl Wide for VertexData {
-    fn width(&self) -> usize {
-        self.width
     }
 }

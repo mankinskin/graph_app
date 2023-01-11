@@ -8,14 +8,12 @@ pub use from_advanced::*;
 
 pub trait IntoAdvanced<R: ResultKind>: Sized + Clone {
     fn into_advanced<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
     >(
         self,
-        trav: &'a Trav,
+        trav: &Trav,
     ) -> Result<R::Advanced, Self>;
     //{
     //    let mut new: R::Advanced = self.clone().into();
@@ -34,14 +32,12 @@ impl<
     P: IntoAdvanced<BaseResult>,
 > IntoAdvanced<OriginPathResult> for OriginPath<P> {
     fn into_advanced<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
     >(
         self,
-        trav: &'a Trav,
+        trav: &Trav,
     ) -> Result<<OriginPathResult as ResultKind>::Advanced, Self> {
         match self.postfix.into_advanced::<_, D, _>(trav) {
             Ok(path) => Ok(OriginPath {
@@ -57,14 +53,12 @@ impl<
 }
 impl IntoAdvanced<BaseResult> for ChildPath<Start> {
     fn into_advanced<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<T> + 'a,
+        Trav: Traversable<T>,
     >(
         self,
-        trav: &'a Trav,
+        trav: &Trav,
     ) -> Result<<BaseResult as ResultKind>::Advanced, Self> {
         let entry = self.child_location();
         let graph = trav.graph();
@@ -96,12 +90,10 @@ pub trait Advance:
     + Sized
 {
     fn advance<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&mut self, trav: &'a Trav) -> Option<Child> {
+    >(&mut self, trav: &Trav) -> Option<Child> {
         if self.is_finished(trav) {
             None
         } else {
@@ -144,12 +136,10 @@ impl <T: WideMut> AdvanceWidth for T {
 
 pub trait AddMatchWidth: AdvanceWidth + LeafChild<End> {
     fn add_match_width<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&mut self, trav: &'a Trav) {
+    >(&mut self, trav: &Trav) {
         let leaf = self.leaf_child(trav);
         self.advance_width(leaf.width);
     }

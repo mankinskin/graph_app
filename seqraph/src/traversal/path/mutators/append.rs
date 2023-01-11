@@ -3,12 +3,10 @@ use crate::*;
 pub trait PathAppend {
     type Result;
     fn append<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>
-    >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result;
+    >(self, trav: &Trav, parent_entry: ChildLocation) -> Self::Result;
 }
 
 //impl PathAppend for PathLeaf {
@@ -44,12 +42,10 @@ pub trait PathAppend {
 impl<R: PathRole> PathAppend for ChildPath<R> {
     type Result = Self;
     fn append<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>
-    >(mut self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
+    >(mut self, trav: &Trav, parent_entry: ChildLocation) -> Self::Result {
         //println!("path {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
         let entry = self.child_location();
         let graph = trav.graph();
@@ -68,15 +64,32 @@ impl<P: PathAppend> PathAppend for OriginPath<P>
 {
     type Result = OriginPath<<P as PathAppend>::Result>;
     fn append<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>
-    >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
+    >(self, trav: &Trav, parent_entry: ChildLocation) -> Self::Result {
         OriginPath {
             origin: MatchEnd::Path(self.origin.append::<_, D, _>(trav, parent_entry)),
             postfix: self.postfix.append::<_, D, _>(trav, parent_entry),
+        }
+    }
+}
+impl<P: MatchEndPath + PathAppend> PathAppend for MatchEnd<P> {
+    type Result = <P as PathAppend>::Result;
+    fn append<
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<T>
+    >(self, trav: &Trav, parent_entry: ChildLocation) -> Self::Result {
+        match self {
+            MatchEnd::Path(path) => path.append::<_, D, _>(trav, parent_entry),
+            MatchEnd::Complete(child) => ChildPath {
+                path: vec![parent_entry],
+                width: child.width(),
+                child,
+                token_pos: 0,
+                _ty: Default::default(),
+            }.into(),
         }
     }
 }

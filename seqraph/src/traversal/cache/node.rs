@@ -114,31 +114,6 @@ pub enum TraversalNode<
     ///// at a match.
     //Match(R::Advanced, Q),
 }
-impl<
-    R: ResultKind,
-    Q: BaseQuery,
-> GetCacheKey for TraversalNode<R, Q> {
-    fn cache_key(&self) -> CacheKey {
-        match self {
-            TraversalNode::Start(start) => CacheKey {
-                root: start.index.index(),
-                token_pos: 0,
-            },
-            TraversalNode::Parent(_, node) =>
-                node.cache_key(),
-            TraversalNode::Child(_, paths) =>
-                paths.cache_key(),
-            TraversalNode::Mismatch(_, _, found) =>
-                found.cache_key(),
-            TraversalNode::QueryEnd(_, _, found) =>
-                found.cache_key(),
-            TraversalNode::MatchEnd(_, _, match_end, _) =>
-                match_end.cache_key(),
-            //TraversalNode::Match(path, query) =>
-            //    path.cache_key(),
-        }
-    }
-}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum NodeDirection {
     BottomUp,
@@ -177,7 +152,7 @@ impl<
     pub fn entry_location(&self) -> Option<ChildLocation> {
         match self {
             Self::Parent(_, node) => Some(node.path.root_child_location()),
-            Self::Child(_, node) => node.paths.get_path().role_path_child_location::<End>(),
+            Self::Child(_, node) => Some(node.paths.get_path().role_path_child_location::<End>()),
             Self::MatchEnd(_, entry, _, _) => Some(*entry),
             Self::QueryEnd(_, entry, _)
             | Self::Mismatch(_, entry, _) => *entry,

@@ -4,19 +4,15 @@ use super::*;
 
 pub trait PathSimplify: Sized {
     fn into_simplified<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(self, trav: &'a Trav) -> Self;
+    >(self, trav: &Trav) -> Self;
     fn simplify<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&mut self, trav: &'a Trav) {
+    >(&mut self, trav: &Trav) {
 	    unsafe {
 	    	let old = std::ptr::read(self);
 	    	let new = old.into_simplified::<_, D, _>(trav);
@@ -26,12 +22,10 @@ pub trait PathSimplify: Sized {
 }
 impl<P: MatchEndPath + PathPop<Result=Self>> PathSimplify for MatchEnd<P> {
     fn into_simplified<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(self, trav: &'a Trav) -> Self {
+    >(self, trav: &Trav) -> Self {
         if let Some(c) = match self.get_path() {
             Some(p) => p.into_complete::<_, D, _>(trav),
             None => None,
@@ -49,12 +43,10 @@ impl<P: MatchEndPath + PathPop<Result=Self>> PathSimplify for MatchEnd<P> {
 }
 impl<R> PathSimplify for ChildPath<R> {
     fn into_simplified<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(mut self, trav: &'a Trav) -> Self {
+    >(mut self, trav: &Trav) -> Self {
         let graph = trav.graph();
         // remove segments pointing to mismatch at pattern head
         while let Some(location) = self.path_mut().pop() {
@@ -70,12 +62,10 @@ impl<R> PathSimplify for ChildPath<R> {
 }
 impl<P: PathSimplify> PathSimplify for OriginPath<P> {
     fn into_simplified<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(mut self, trav: &'a Trav) -> Self {
+    >(mut self, trav: &Trav) -> Self {
         self.postfix.simplify::<_, D, _>(trav);
         self
     }

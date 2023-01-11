@@ -18,26 +18,23 @@ pub trait AdvanceExit: RootChildPosMut<End>
             Ok(D::pattern_index_next(pattern, self.root_child_pos()))
         }
     }
+
     fn is_finished<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>,
-    >(&self, _trav: &'a Trav) -> bool;
+    >(&self, _trav: &Trav) -> bool;
+
     fn next_exit_pos<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&self, _trav: &'a Trav) -> Result<Option<usize>, ()>;
+    >(&self, _trav: &Trav) -> Result<Option<usize>, ()>;
+
     fn advance_exit_pos<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&mut self, trav: &'a Trav) -> Result<(), ()> {
+    >(&mut self, trav: &Trav) -> Result<(), ()> {
         if let Some(next) = self.next_exit_pos::<_, D, _>(trav)? {
             *self.root_child_pos_mut() = next;
             Ok(())
@@ -65,29 +62,23 @@ impl<M:
         }
     }
     fn is_finished<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>,
-    >(&self, _trav: &'a Trav) -> bool {
+    >(&self, _trav: &Trav) -> bool {
         self.is_pattern_finished(self.pattern_root_pattern().borrow())
     }
     fn next_exit_pos<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&self, _trav: &'a Trav) -> Result<Option<usize>, ()> {
+    >(&self, _trav: &Trav) -> Result<Option<usize>, ()> {
         self.pattern_next_exit_pos::<D, _>(self.pattern_root_pattern().borrow())
     }
     fn advance_exit_pos<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&mut self, _trav: &'a Trav) -> Result<(), ()> {
+    >(&mut self, _trav: &Trav) -> Result<(), ()> {
         let pattern = self.pattern_root_pattern();
         if let Some(next) = self.pattern_next_exit_pos::<D, _>(pattern.borrow())? {
             *self.root_child_pos_mut() = next;
@@ -102,43 +93,35 @@ impl<M:
 }
 impl<P: AdvanceExit> AdvanceExit for OriginPath<P> {
     fn is_finished<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> bool {
+    >(&self, trav: &Trav) -> bool {
         self.postfix.is_finished(trav)
     }
     fn next_exit_pos<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> Result<Option<usize>, ()> {
+    >(&self, trav: &Trav) -> Result<Option<usize>, ()> {
         self.postfix.next_exit_pos::<_, D, _>(trav)
     }
 }
 
 impl AdvanceExit for SearchPath {
     fn is_finished<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> bool {
+    >(&self, trav: &Trav) -> bool {
         let location = <Self as GraphRootChild<End>>::root_child_location(self);
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(&location);
         self.is_pattern_finished(pattern.borrow())
     }
     fn next_exit_pos<
-        'a: 'g,
-        'g,
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> Result<Option<usize>, ()> {
+    >(&self, trav: &Trav) -> Result<Option<usize>, ()> {
         let location = self.root_pattern_location();
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(&location);

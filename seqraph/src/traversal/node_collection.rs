@@ -58,7 +58,7 @@ impl<'a, T, Trav, D, Q, S, R, O> TraversalIterator<'a, T, D, Trav, Q, S, R> for 
     fn new(trav: &'a Trav, query: Q) -> Option<Self> {
         let index = query.path_child(trav);
         let start = StartNode::new(index, query);
-        let cache = TraversalCache::new(&start);
+        let cache = TraversalCache::new();
         Some(Self {
             collection: Default::default(),
             last: (0, TraversalNode::Start(start)),

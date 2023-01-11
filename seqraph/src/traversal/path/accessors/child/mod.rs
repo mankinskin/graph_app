@@ -5,29 +5,23 @@ pub use pos::*;
 
 pub trait LeafChild<R>: RootChildPos<R> {
     fn leaf_child<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> Child;
+    >(&self, trav: &Trav) -> Child;
 }
 impl<R, P: RootChild<R> + PathChild<R>> LeafChild<R> for P {
     fn leaf_child<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> Child {
+    >(&self, trav: &Trav) -> Child {
         self.path_child(trav)
     }
 }
 pub trait RootChild<R>: RootChildPos<R> {
     fn root_child<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> Child;
+    >(&self, trav: &Trav) -> Child;
 }
 macro_rules! impl_child {
     {
@@ -37,8 +31,6 @@ macro_rules! impl_child {
             where $target: RootChildPos<R>
         {
             fn root_child<
-                'a: 'g,
-                'g,
                 T: Tokenize,
                 Trav: Traversable<T>
             >(& $self_, $trav: &Trav) -> Child {
@@ -61,8 +53,6 @@ impl_child! { RootChild for QueryRangePath, self, _trav => self.query[self.root_
 //}
 impl RootChild<Start> for SearchPath {
     fn root_child<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>
     >(&self, trav: &Trav) -> Child {
@@ -71,8 +61,6 @@ impl RootChild<Start> for SearchPath {
 }
 impl RootChild<End> for SearchPath {
     fn root_child<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>
     >(&self, trav: &Trav) -> Child {
@@ -84,8 +72,6 @@ impl_child! { RootChild for ChildPath<R>, self, trav => trav.graph().expect_chil
 
 impl<R, P: RootChild<R>> RootChild<R> for OriginPath<P> {
     fn root_child<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>,
     >(&self, trav: &Trav) -> Child {
@@ -94,8 +80,6 @@ impl<R, P: RootChild<R>> RootChild<R> for OriginPath<P> {
 }
 impl<P: MatchEndPath> RootChild<Start> for MatchEnd<P> {
     fn root_child<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>,
     >(&self, trav: &Trav) -> Child {
@@ -111,11 +95,9 @@ pub trait GraphRootChild<R>: GraphRootPattern + RootChildPos<R> {
     fn root_child_location(&self) -> ChildLocation;
     fn root_child_location_mut(&mut self) -> &mut ChildLocation;
     fn graph_root_child<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> Child {
+    >(&self, trav: &Trav) -> Child {
         trav.graph().expect_child_at(<_ as GraphRootChild<R>>::root_child_location(self))
     }
 }
@@ -177,16 +159,14 @@ impl<R> PatternRootChild<R> for QueryRangePath
 
 /// used to get a descendant in a Graph, pointed to by a child path
 pub trait PathChild<R>: HasPath<R> {
-    fn path_child_location(&self) -> Option<ChildLocation> {
+    fn path_child_location(&self) -> ChildLocation {
         // todo: leaf direction
-        self.path().last().copied()
+        self.path().last().copied().unwrap()
     }
     fn path_child<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> Child;
+    >(&self, trav: &Trav) -> Child;
     //{
     //    trav.graph().get_child_at(self.get_child_location()).ok()
     //}
@@ -195,11 +175,9 @@ impl<R> PathChild<R> for QueryRangePath
     where QueryRangePath: HasPath<R> + PatternRootChild<R>
 {
     fn path_child<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> Child {
+    >(&self, trav: &Trav) -> Child {
         if let Some(next) = self.path().last() {
             trav.graph().expect_child_at(next)
         } else {
@@ -209,11 +187,9 @@ impl<R> PathChild<R> for QueryRangePath
 }
 impl<R: PathRole> PathChild<R> for ChildPath<R> {
     fn path_child<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>,
-    >(&self, _trav: &'a Trav) -> Child {
+    >(&self, _trav: &Trav) -> Child {
         //trav.graph().expect_child_at(R::top_down_iter(self.path.iter()).next().unwrap())
         self.get_child()
     }
@@ -222,11 +198,9 @@ impl<R: PathRole> PathChild<R> for SearchPath
     where SearchPath: HasRolePath<R>
 {
     fn path_child<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> Child {
+    >(&self, trav: &Trav) -> Child {
         PathChild::<R>::path_child(self.role_path(), trav)
     }
 }
@@ -256,11 +230,9 @@ impl<R: PathRole> PathChild<R> for SearchPath
 //}
 impl<R, P: PathChild<R>> PathChild<R> for OriginPath<P> {
     fn path_child<
-        'a: 'g,
-        'g,
         T: Tokenize,
         Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> Child {
+    >(&self, trav: &Trav) -> Child {
         self.postfix.path_child(trav)
     }
 }
