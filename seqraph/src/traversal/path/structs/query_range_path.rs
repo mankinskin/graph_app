@@ -58,17 +58,7 @@ impl QueryPath for QueryRangePath {
         }
     }
 }
-//impl HasRootedPath for QueryRangePath {
-//    fn child_path(&self) -> &[ChildLocation] {
-//        self.start.borrow()
-//    }
-//}
 //impl PatternStart for QueryRangePath {}
-//impl HasRootedPath for QueryRangePath {
-//    fn child_path(&self) -> &[ChildLocation] {
-//        &self.end
-//    }
-//}
 //impl PatternEnd for QueryRangePath {}
 //impl TraversalPath for QueryRangePath {
 //    fn prev_exit_pos<

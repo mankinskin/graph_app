@@ -41,7 +41,7 @@ pub trait PathAppend {
 //    }
 //}
 
-impl PathAppend for ChildPath<Start> {
+impl<R: PathRole> PathAppend for ChildPath<R> {
     type Result = Self;
     fn append<
         'a: 'g,
@@ -49,10 +49,11 @@ impl PathAppend for ChildPath<Start> {
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>
-    >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
+    >(mut self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
         //println!("path {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
         let entry = self.child_location();
-        let pattern = self.graph_root_pattern(trav);
+        let graph = trav.graph();
+        let pattern = self.graph_root_pattern::<_, Trav>(&graph);
         // start paths only at a non-head index position 
         if entry.sub_index != D::head_index(pattern.borrow()) {
             self.path.push(parent_entry);
@@ -63,7 +64,7 @@ impl PathAppend for ChildPath<Start> {
     }
 }
 impl<P: PathAppend> PathAppend for OriginPath<P>
-    where <P as PathAppend>::Result: PathAppend<Result=<P as PathAppend>::Result> + RangePath + GraphRootChild<Start>
+    where <P as PathAppend>::Result: PathAppend<Result=<P as PathAppend>::Result> + GraphRootChild<Start>
 {
     type Result = OriginPath<<P as PathAppend>::Result>;
     fn append<

@@ -50,28 +50,33 @@ pub trait ResultKind: Eq + Clone + Debug + Send + Sync + Unpin {
 }
 pub trait Found<R: ResultKind>
     : RangePath
+    + RoleChildPath
     + FromAdvanced<<R as ResultKind>::Advanced>
     + From<<R as ResultKind>::Postfix>
     + Wide
     + GetCacheKey
     + BasePath
+    + GraphRoot
     + Ord
 {
 }
 impl<
     R: ResultKind,
     T: RangePath
+    + RoleChildPath
     + FromAdvanced<<R as ResultKind>::Advanced>
     + From<<R as ResultKind>::Postfix>
     + Wide
     + GetCacheKey
     + BasePath
+    + GraphRoot
     + Ord
 > Found<R> for T {
 }
 pub trait PathPrimer<R: ResultKind>:
-    NodePath<Start>
-    + HasRootedPath<Start>
+    RoleChildPath
+    + NodePath<Start>
+    + HasRolePath<Start>
     + GraphRootChild<Start>
     //+ PathAppend
     + From<ChildPath<Start>>
@@ -87,7 +92,8 @@ pub trait PathPrimer<R: ResultKind>:
 impl<
     R: ResultKind,
     T: NodePath<Start>
-    + HasRootedPath<Start>
+    + RoleChildPath
+    + HasRolePath<Start>
     + GraphRootChild<Start>
     //+ PathAppend
     + From<ChildPath<Start>>
@@ -100,17 +106,52 @@ impl<
 {
 }
 
+pub trait RoleChildPath {
+    fn role_path_child_location<
+        'a,
+        R: PathRole,
+    >(&'a self) -> Option<ChildLocation>
+        where Self: PathChild<R>
+    {
+        PathChild::<R>::path_child_location(self)
+    }
+    fn role_child_location<
+        'a,
+        R: PathRole,
+    >(&'a self) -> ChildLocation
+        where Self: HasRolePath<R>
+    {
+        self.child_path::<R>().child_location()
+    }
+    fn child_path<
+        R: PathRole,
+    >(&self) -> &ChildPath<R>
+        where Self: HasRolePath<R>
+    {
+        HasRolePath::<R>::role_path(self)
+    }
+    fn child_path_mut<
+        R: PathRole,
+    >(&mut self) -> &mut ChildPath<R>
+        where Self: HasRolePath<R>
+    {
+        HasRolePath::<R>::role_path_mut(self)
+    }
+}
+impl<T> RoleChildPath for T {
+}
 pub trait Postfix:
     NodePath<Start>
     + PathSimplify
-    + IntoRangePath
+    //+ IntoRangePath
     + GetCacheKey
     + BasePath
+    + GraphRoot
 {
     fn new_complete(child: Child, origin: ChildPath<Start>) -> Self;
     fn new_path(start: impl Into<ChildPath<Start>>, origin: ChildPath<Start>) -> Self;
 }
-impl<P: MatchEndPath + PathPop<Result=Self> + GetCacheKey + NodePath<Start>> Postfix for MatchEnd<P> {
+impl<P: MatchEndPath + PathPop<Result=Self> + GetCacheKey + NodePath<Start> + GraphRoot> Postfix for MatchEnd<P> {
     fn new_complete(c: Child, _origin: ChildPath<Start>) -> Self {
         Self::Complete(c)
     }
@@ -118,7 +159,7 @@ impl<P: MatchEndPath + PathPop<Result=Self> + GetCacheKey + NodePath<Start>> Pos
         Self::Path(P::from(start.into()))
     }
 }
-impl<P: Postfix + RangePath + GetCacheKey + GraphRoot> Postfix for OriginPath<P> {
+impl<P: Postfix> Postfix for OriginPath<P> {
     fn new_complete(c: Child, origin: ChildPath<Start>) -> Self {
         Self {
             postfix: P::new_complete(c, origin.clone()),
@@ -133,10 +174,11 @@ impl<P: Postfix + RangePath + GetCacheKey + GraphRoot> Postfix for OriginPath<P>
     }
 }
 pub trait Advanced:
-    NodePath<Start>
+    RoleChildPath
+    + NodePath<Start>
     + BasePath
-    + HasRootedPath<Start>
-    + HasRootedPath<End>
+    + HasRolePath<Start>
+    + HasRolePath<End>
     + GraphRootChild<Start>
     + GraphRootChild<End>
     + PathComplete
@@ -144,13 +186,48 @@ pub trait Advanced:
     + GetCacheKey
     + PathChild<Start>
     + PathChild<End>
+    + AdvanceExit
+    + GraphRoot
 {
+    fn role_path_child<
+        'a,
+        R: PathRole,
+        T: Tokenize,
+        Trav: Traversable<T>,
+    >(&'a self, trav: &Trav) -> Child
+        where Self: PathChild<R>
+    {
+        PathChild::<R>::path_child(self, trav)
+    }
+    fn child_pos<
+        R: PathRole,
+    >(&self) -> usize
+        where Self: HasRolePath<R>
+    {
+        HasRolePath::<R>::role_path(self).root_child_pos()
+    }
+    fn raw_child_path<
+        R: PathRole,
+    >(&self) -> &Vec<ChildLocation>
+        where Self: HasRolePath<R>
+    {
+        HasRolePath::<R>::role_path(self).path()
+    }
+    fn raw_child_path_mut<
+        R: PathRole,
+    >(&mut self) -> &mut Vec<ChildLocation>
+        where Self: HasRolePath<R>
+    {
+        HasRolePath::<R>::role_path_mut(self).path_mut()
+    }
 }
 impl<
-    T: NodePath<Start>
+    T:
+    RoleChildPath
+    +NodePath<Start>
     + BasePath
-    + HasRootedPath<Start>
-    + HasRootedPath<End>
+    + HasRolePath<Start>
+    + HasRolePath<End>
     + GraphRootChild<Start>
     + GraphRootChild<End>
     + PathComplete
@@ -158,6 +235,7 @@ impl<
     + GetCacheKey
     + PathChild<Start>
     + PathChild<End>
+    + AdvanceExit
 > Advanced for T {
 }
 

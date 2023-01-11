@@ -21,7 +21,7 @@ pub trait PathBorder<D: MatchDirection, R>: GraphRootChild<R> + HasSinglePath {
         <Self::BorderDirection as RelativeDirection<D>>::Direction::pattern_index_next(pattern, entry)
     }
     fn pattern_outer_pos<P: IntoPattern>(&self, pattern: P) -> Option<usize> {
-        Self::pattern_entry_outer_pos(pattern, <_ as GraphRootChild<R>>::graph_root_child_location(self).sub_index)
+        Self::pattern_entry_outer_pos(pattern, <_ as GraphRootChild<R>>::root_child_location(self).sub_index)
     }
     fn is_at_pattern_border<P: IntoPattern>(&self, pattern: P) -> bool {
         self.pattern_outer_pos(pattern).is_none()

@@ -40,18 +40,18 @@ where
     pub fn get_pattern_at(
         &self,
         location: impl IntoPatternLocation,
-    ) -> Result<Pattern, NoMatch> {
+    ) -> Result<&Pattern, NoMatch> {
         let location = location.into_pattern_location();
         let vertex = self.get_vertex_data(location.parent)?;
         let child_patterns = vertex.get_child_patterns();
-        child_patterns.get(&location.pattern_id).cloned()
+        child_patterns.get(&location.pattern_id)
             .ok_or(NoMatch::NoChildPatterns) // todo: better error
     }
     #[track_caller]
     pub fn expect_pattern_at(
         &self,
         location: impl IntoPatternLocation,
-    ) -> Pattern {
+    ) -> &Pattern {
         let location = location.into_pattern_location();
         self.get_pattern_at(location)
             .unwrap_or_else(|_|

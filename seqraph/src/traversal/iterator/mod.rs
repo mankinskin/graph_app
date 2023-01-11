@@ -15,7 +15,7 @@ pub trait TraversalIterator<
     Q: BaseQuery,
     S: DirectedTraversalPolicy<T, D, Q, R, Trav=Trav>,
     R: ResultKind = BaseResult,
->: Iterator<Item = (usize, CacheKey)> + Sized
+>: Iterator<Item = (usize, TraversalNode<R, Q>)> + Sized
 {
 
     fn new(trav: &'a Trav, root: Q) -> Option<Self>;
@@ -23,38 +23,36 @@ pub trait TraversalIterator<
     fn cache_mut(&mut self) -> &mut TraversalCache<R, Q>;
     fn next_nodes(
         &mut self,
-        key: CacheKey,
-    ) -> Vec<CacheKey> {
-        let mut cache = self.cache_mut();
-        let mut entry = cache.get_entry_mut(key).unwrap();
-        // compute following nodes
-        match entry.node {
-            TraversalNode::Start(index, query) =>
-                self.query_start(
-                    query,
-                ).unwrap_or_default(),
-            TraversalNode::Parent(node) =>
-                self.on_parent_node(key, node),
-            TraversalNode::Child(node) =>
-                self.on_child(node),
-            TraversalNode::MatchEnd(match_end, query) =>
-                S::next_parents(
-                    self.trav(),
-                    &query,
-                    &match_end,
-                ),
-            //TraversalNode::Match(path, query) =>
-            //    self.after_match(
-            //        PathPair::GraphMajor(path, query),
-            //    ),
-            _ => vec![],
+        node: TraversalNode<R, Q>,
+    ) -> (CacheKey, Vec<TraversalNode<R, Q>>) {
+        let cache = self.cache_mut();
+        match cache.add_node(&node) {
+            Ok(key) => (key, match node {
+                // compute next nodes
+                TraversalNode::Start(node) =>
+                    self.query_start(
+                        key,
+                        node.query,
+                    ).unwrap_or_default(),
+                TraversalNode::Parent(_prev, node) =>
+                    self.on_parent_node(key, node),
+                TraversalNode::Child(_prev, node) =>
+                    self.on_child(key, node),
+                TraversalNode::MatchEnd(_prev, _entry, match_end, query) =>
+                    S::next_parents(
+                        self.trav(),
+                        key,
+                        &query,
+                        &match_end,
+                    ),
+                //TraversalNode::Match(path, query) =>
+                //    self.after_match(
+                //        PathPair::GraphMajor(path, query),
+                //    ),
+                _ => vec![],
+            }),
+            Err(key) => (key, vec![])
         }
-        .into_iter()
-        .filter_map(|node|
-            // add nodes and transitions to cache
-            cache.add_node(key, node)
-        )
-        .collect_vec()
     }
     /// nodes generated when an index ended
     /// (parent nodes)
@@ -70,20 +68,25 @@ pub trait TraversalIterator<
     //}
     fn after_index(
         &mut self,
+        key: CacheKey,
         primer: R::Primer,
         query: FolderQuery<T, D, Q, R, S>,
     ) -> Vec<TraversalNode<R, Q>> {
         // get next parents
+        let entry = primer.root_child_location();
         let postfix = primer.into();
         let parents = S::next_parents(
             self.trav(),
+            key,
             &query,
             &postfix,
         );
         if parents.is_empty() {
             //println!("no more parents {:#?}", match_end);
             vec![
-                TraversalNode::match_end_node(
+                TraversalNode::MatchEnd(
+                    key,
+                    entry,
                     postfix.into_simplified::<_, D, _>(self.trav()),
                     query,
                 )
@@ -139,13 +142,14 @@ pub trait TraversalIterator<
         // create path to next child
         match R::Primer::into_advanced::<_, D, _>(node.path, self.trav()) {
             Ok(path) =>
-                vec![TraversalNode::child_node(
-                    key,
-                    PathPair::GraphMajor(path, node.query)
-                )],
+                vec![TraversalNode::Child(key, ChildNode {
+                    root: key,
+                    paths: PathPair::GraphMajor(path, node.query)
+                })],
             Err(path) =>
                 // no next child
                 self.after_index(
+                    key,
                     path,
                     node.query,
                 ),
@@ -154,6 +158,7 @@ pub trait TraversalIterator<
     /// match query position with graph position
     fn on_child(
         &mut self,
+        key: CacheKey,
         node: ChildNode<R, Q>,
     ) -> Vec<TraversalNode<R, Q>> {
         let ChildNode {
@@ -167,8 +172,8 @@ pub trait TraversalIterator<
             println!("can't match finished paths");
         }
 
-        let path_next = path.path_child(self.trav()).unwrap();
-        let query_next = query.path_child(self.trav()).unwrap();
+        let path_next = path.role_path_child::<End, _, _>(self.trav());
+        let query_next = query.path_child(self.trav());
 
         // compare next child
         //println!("matching query {:?}", query_next);
@@ -176,12 +181,14 @@ pub trait TraversalIterator<
             Ordering::Greater =>
                 // continue in prefix of child
                 self.prefix_nodes(
+                    key,
                     root, 
                     path_next,
                     PathPair::GraphMajor(path, query),
                 ),
             Ordering::Less =>
                 self.prefix_nodes(
+                    key,
                     root, 
                     query_next,
                     PathPair::QueryMajor(query, path),
@@ -192,34 +199,43 @@ pub trait TraversalIterator<
                     path.add_match_width::<_, D, _>(self.trav());
                     vec![
                         if query.advance::<_, D, _>(self.trav()).is_some() && !query.is_finished(self.trav()) {
-                            TraversalNode::child_node(
+                            TraversalNode::Child(key, ChildNode {
                                 root,
-                                PathPair::from_mode(path, query, mode)
-                            )
+                                paths: PathPair::from_mode(path, query, mode)
+                            })
                         } else {
-                            path.child_path_mut().simplify::<_, D, _>(self.trav());
-                            TraversalNode::query_end_node(
-                                if path.path().is_empty() && <_ as ChildPos<Start>>::child_pos(&path) == <_ as ChildPos<End>>::child_pos(&path) {
-                                    R::Found::from(path.pop_path::<_, D, _>(self.trav()))
-                                } else {
-                                    R::Found::from_advanced::<_, D, _>(path, self.trav())
-                                }.into_result(query)
+                            path.child_path_mut::<End>().simplify::<_, D, _>(self.trav());
+                            let (entry, path) = if path.raw_child_path::<End>().is_empty() && <_ as RootChildPos<Start>>::root_child_pos(&path) == <_ as RootChildPos<End>>::root_child_pos(&path) {
+                                (None, R::Found::from(path.pop_path::<_, D, _>(self.trav())))
+                            } else {
+                                (path.role_path_child_location::<End>(), R::Found::from_advanced::<_, D, _>(path, self.trav()))
+                            };
+                            TraversalNode::QueryEnd(
+                                key,
+                                entry,
+                                path.into_result(query)
                             )
                         }
                     ]
                 } else if path_next.width() == 1 && query_next.width() == 1 {
                     // mismatch
-                    let continued = self.cache_mut().on_bu_mismatch(path.cache_key()).unwrap_or_default();
-                    path.child_path_mut().retract::<_, D, _, R>(self.trav());
+                    todo!("handle waiting nodes");
+                    let continued = vec![];
+                    //self.cache_mut().on_bu_mismatch(path.cache_key()).unwrap_or_default();
+                    path.child_path_mut::<End>().retract::<_, D, _, R>(self.trav());
 
-                    let found = if path.path().is_empty() && path.child_pos() == path.child_pos() {
-                        R::Found::from(path.pop_path::<_, D, _>(self.trav()))
+                    let (entry, found) = if path.raw_child_path::<End>().is_empty()
+                        && path.child_pos::<Start>() == path.child_pos::<End>()
+                    {
+                        (None, R::Found::from(path.pop_path::<_, D, _>(self.trav())))
                     } else {
-                        R::Found::from_advanced::<_, D, _>(path, self.trav())
+                        (path.role_path_child_location::<End>(), R::Found::from_advanced::<_, D, _>(path, self.trav()))
                     };
 
                     (found.width() > 1).then(||
-                        TraversalNode::mismatch_node(
+                        TraversalNode::Mismatch(
+                            key,
+                            entry,
                             found.into_result(query),
                         )
                     )
@@ -229,15 +245,16 @@ pub trait TraversalIterator<
                 } else {
                     // expand nodes
                     self.prefix_nodes(
+                        key,
                         root, 
                         path_next,
                         PathPair::GraphMajor(path.clone(), query.clone()),
                     )
-                    
                     .into_iter()
                     .chain(
                         self.prefix_nodes(
-                            root, 
+                            key,
+                            root,
                             query_next,
                             PathPair::QueryMajor(query, path),
                         )
@@ -249,6 +266,7 @@ pub trait TraversalIterator<
     /// generate child nodes for index prefixes
     fn prefix_nodes(
         &self,
+        key: CacheKey,
         root: CacheKey,
         index: Child,
         paths: FolderPathPair<T, D, Q, R, S>,
@@ -261,7 +279,10 @@ pub trait TraversalIterator<
                 let sub_index = D::head_index(child_pattern.borrow());
                 let mut paths = paths.clone();
                 paths.push_major(ChildLocation::new(index, pid, sub_index));
-                TraversalNode::child_node(root, paths)
+                TraversalNode::Child(key, ChildNode {
+                    root,
+                    paths,
+                })
             })
             .collect_vec()
     }
@@ -269,13 +290,15 @@ pub trait TraversalIterator<
     /// (query end or start parent nodes)
     fn query_start(
         &self,
+        key: CacheKey,
         mut query: FolderQuery<T, D, Q, R, S>,
     ) -> Option<Vec<TraversalNode<R, Q>>> {
-        let start_index = query.path_child(self.trav()).unwrap();
+        let start_index = query.path_child(self.trav());
         if let Some(_) = query.advance::<_, D, _>(self.trav()) {
             if !query.is_finished(self.trav()) {
                 Some(S::gen_parent_nodes(
                     self.trav(),
+                    key,
                     &query,
                     start_index,
                     |p, trav| {

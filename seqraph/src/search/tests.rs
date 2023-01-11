@@ -200,10 +200,10 @@ fn find_ancestor2() {
         byz_found,
         Ok(TraversalResult {
             path: FoundPath::Range(SearchPath {
-                start: ChildPath::Path {
-                    entry: xabyz.to_pattern_location(xaby_z_id)
-                        .to_child_location(0),
+                start: ChildPath {
                     path: vec![
+                        xabyz.to_pattern_location(xaby_z_id)
+                            .to_child_location(0),
                         ChildLocation {
                             parent: xaby,
                             pattern_id: xa_by_id,
@@ -213,12 +213,17 @@ fn find_ancestor2() {
                     width: 3,
                     child: by,
                     token_pos: 2,
+                    _ty: Default::default(),
                 },
                 end: ChildPath {
-                    path: vec![],
-                    entry: xabyz.to_pattern_location(xaby_z_id)
-                        .to_child_location(1),
+                    path: vec![
+                        xabyz.to_pattern_location(xaby_z_id)
+                            .to_child_location(1),
+                    ],
                     width: 0,
+                    child: z,
+                    token_pos: 3,
+                    _ty: Default::default(),
                 },
             }),
             query: QueryRangePath::complete(query),
@@ -255,10 +260,10 @@ fn find_ancestor3() {
         aby_found,
         Ok(TraversalResult {
             path: FoundPath::Range(SearchPath {
-                start: ChildPath::Path {
-                    entry: xaby.to_pattern_location(xab_y_id)
-                        .to_child_location(0),
+                start: ChildPath {
                     path: vec![
+                        xaby.to_pattern_location(xab_y_id)
+                            .to_child_location(0),
                         ChildLocation {
                             parent: xab,
                             pattern_id: x_ab_id,
@@ -268,12 +273,17 @@ fn find_ancestor3() {
                     child: ab,
                     width: 3,
                     token_pos: 1,
+                    _ty: Default::default(),
                 },
                 end: ChildPath {
-                    path: vec![],
-                    entry: xaby.to_pattern_location(xab_y_id)
-                        .to_child_location(1),
+                    path: vec![
+                        xaby.to_pattern_location(xab_y_id)
+                            .to_child_location(1),
+                    ],
                     width: 0,
+                    child: y,
+                    token_pos: 3,
+                    _ty: Default::default(),
                 },
             }),
             query: QueryRangePath::complete(query),

@@ -9,7 +9,7 @@ pub trait PathComplete {
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> Option<Child>;
+    >(&'a self, trav: &'a Trav) -> Option<Child>;
 
     fn is_complete<
         'a: 'g,
@@ -17,7 +17,7 @@ pub trait PathComplete {
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> bool {
+    >(&'a self, trav: &'a Trav) -> bool {
         self.into_complete::<_, D, _>(trav).is_some()
     }
 }
@@ -28,7 +28,7 @@ impl<P: PathComplete> PathComplete for OriginPath<P> {
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> Option<Child> {
+    >(&'a self, trav: &'a Trav) -> Option<Child> {
         self.postfix.into_complete::<_, D, _>(trav)
     }
 }
@@ -39,9 +39,10 @@ impl PathComplete for SearchPath {
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> bool {
-        let pattern = self.root_pattern(trav);
+        Trav: Traversable<T> + 'a,
+    >(&'a self, trav: &'g Trav) -> bool {
+        let graph = trav.graph();
+        let pattern = self.root_pattern::<_, Trav>(&graph);
         <_ as PathBorder<D, _>>::is_complete_in_pattern(&self.start, pattern.borrow()) &&
             <_ as PathBorder<D, _>>::is_complete_in_pattern(&self.end, pattern.borrow())
     }
@@ -51,7 +52,7 @@ impl PathComplete for SearchPath {
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> Option<Child> {
+    >(&'a self, trav: &'a Trav) -> Option<Child> {
         self.is_complete::<_, D, _>(trav).then(||
             self.root_parent()
         )
@@ -82,7 +83,7 @@ impl<R> PathComplete for ChildPath<R> {
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> Option<Child> {
+    >(&self, _trav: &'a Trav) -> Option<Child> {
         self.path.is_empty().then(||
             self.child
         )

@@ -26,11 +26,13 @@ pub trait DirectedTraversalPolicy<
     /// (parent nodes)
     fn next_parents(
         trav: &Self::Trav,
+        key: CacheKey,
         query: &Q,
         postfix: &R::Postfix,
     ) -> Vec<TraversalNode<R, Q>> {
         Self::gen_parent_nodes(
             trav,
+            key,
             query,
             postfix.root_child(trav),
             |p, trav| postfix.clone().append::<_, D, _>(trav, p)
@@ -41,6 +43,7 @@ pub trait DirectedTraversalPolicy<
         B: (Fn(ChildLocation, &Self::Trav) -> R::Primer) + Copy,
     >(
         trav: &Self::Trav,
+        key: CacheKey,
         query: &Q,
         index: Child,
         build_start: B,
@@ -60,11 +63,12 @@ pub trait DirectedTraversalPolicy<
             })
             .sorted_unstable_by(|a, b| TraversalOrder::cmp(a, b))
             .map(|p| {
-                TraversalNode::parent_node(
-                    build_start(p, trav),
-                    query.clone(),
-                    trav.graph().expect_vertex_data(p.parent).children.len()
-                )
+                TraversalNode::Parent(key, ParentNode {
+                    path: build_start(p, trav),
+                    query: query.clone(),
+                    //num_patterns: trav.graph().expect_vertex_data(p.parent).children.len()
+                    _ty: Default::default(),
+                })
             })
             .collect()
         

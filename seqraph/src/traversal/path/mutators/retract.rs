@@ -10,21 +10,24 @@ use crate::*;
 pub trait Retract:
     RootPattern
     + PathChild<End>
-    + HasRootedPath<End>
-    + ChildPosMut<End>
+    + HasRolePath<End>
+    + RootChildPosMut<End>
     + Send
     + Sync
 {
     fn prev_exit_pos<
         'a: 'g,
+        'b: 'g,
         'g,
         T: Tokenize,
         D: MatchDirection,
-        Trav: Traversable<T>,
-    >(&self, trav: &'a Trav) -> Option<usize> {
+        Trav: Traversable<T> + 'a,
+    >(&'b self, trav: &'a Trav) -> Option<usize> {
+        let graph = trav.graph();
+        let pattern = self.root_pattern::<_, Trav>(&graph);
         D::pattern_index_prev(
-            self.root_pattern(trav),
-            self.child_pos()
+            pattern.borrow(),
+            self.root_child_pos()
         )
     }
     fn retract<
@@ -47,7 +50,7 @@ pub trait Retract:
             }
         }
         if self.path_mut().is_empty() {
-            *self.child_pos_mut() = self.prev_exit_pos::<_, D, _>(trav).unwrap();
+            *self.root_child_pos_mut() = self.prev_exit_pos::<_, D, _>(trav).unwrap();
         }
 
     }
@@ -55,8 +58,8 @@ pub trait Retract:
 impl<T:
     RootPattern
     + PathChild<End>
-    + HasRootedPath<End>
-    + ChildPosMut<End>
+    + HasRolePath<End>
+    + RootChildPosMut<End>
     + Send
     + Sync
 > Retract for T

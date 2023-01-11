@@ -118,7 +118,7 @@ impl<D: IndexDirection, S: IndexSide<D>> RelativeSide<D, S> for InnerSide {
     }
 }
 /// Side refers to border (front is indexing before front border, back is indexing after back border)
-pub trait IndexSide<D: IndexDirection>: std::fmt::Debug + Sync + Send + Unpin + Clone {
+pub trait IndexSide<D: IndexDirection>: std::fmt::Debug + Sync + Send + Unpin + Clone + 'static {
     type Opposite: IndexSide<D>;
     type InnerRange: PatternRangeIndex + StartInclusive;
     type ContextRange: PatternRangeIndex + StartInclusive;

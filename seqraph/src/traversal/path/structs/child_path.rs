@@ -124,10 +124,10 @@ impl<R: PathRole> ChildPath<R> {
         //}
     }
     pub fn child_location(&self) -> ChildLocation {
-        <Self as GraphRootChild<R>>::graph_root_child_location(self)
+        <Self as GraphRootChild<R>>::root_child_location(self)
     }
     pub fn child_location_mut(&mut self) -> &mut ChildLocation {
-        <Self as GraphRootChild<R>>::graph_root_child_location_mut(self)
+        <Self as GraphRootChild<R>>::root_child_location_mut(self)
     }
 }
 impl<R> Deref for ChildPath<R> {

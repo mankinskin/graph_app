@@ -6,7 +6,7 @@ type HashMap<K, V> = DeterministicHashMap<K, V>;
 
 #[derive(Debug, Clone)]
 pub struct Pather<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> {
-    indexer: Indexer<T, D>,
+    pub(crate) indexer: Indexer<T, D>,
     _ty: std::marker::PhantomData<(D, Side)>,
 }
 impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Pather<T, D, Side> {
@@ -17,22 +17,8 @@ impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Pather<T, D, Side> {
         }
     }
 }
-
-impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Traversable<T> for Pather<T, D, Side> {
-    type Guard<'g> = RwLockReadGuard<'g, Hypergraph<T>> where Side: 'g;
-    fn graph<'g>(&'g self) -> Self::Guard<'g> {
-        self.indexer.graph()
-    }
-}
-
-impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> TraversableMut<T> for Pather<T, D, Side> {
-    type GuardMut<'g> = RwLockWriteGuard<'g, Hypergraph<T>> where Side: 'g;
-    fn graph_mut<'g>(&'g mut self) -> Self::GuardMut<'g> {
-        self.indexer.graph_mut()
-    }
-}
 #[derive(Debug, Clone)]
-struct IndexPathComponents {
+pub struct IndexPathComponents {
     prev_primary: Child,
     primary_exclusive: Option<Child>,
     prev_secondary: Child,
@@ -65,12 +51,13 @@ impl PathFeatures {
     >(
         path: &Vec<ChildLocation>,
     ) -> Self {
+        assert!(!path.is_empty());
+        let len = path.len();
         let path = Side::bottom_up_path_iter(path.iter());
         let last = path.last().unwrap();
-        assert!(!path.is_empty());
         PathFeatures {
             has_primary_exclusive: <S as RelativeSide<D, Side>>::exclusive_primary_location(last).is_some(),
-            len: path.len(),
+            len,
         }
     }
 }
@@ -83,7 +70,7 @@ impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Pather<T, D, Side> {
         &mut self,
         entry: L,
     ) -> Option<(Pattern, IndexSplitResult)> {
-        let pattern = self.graph().expect_pattern_at(entry.borrow());       
+        let pattern = self.graph().expect_pattern_at(entry.borrow()).clone();
         self.pattern_perfect_split::<S, _, _>(
             pattern,
             entry,
@@ -140,7 +127,7 @@ impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Pather<T, D, Side> {
         &mut self,
         path: P,
     ) -> Option<IndexPathComponents> {
-        let iter = Side::bottom_up_path_iter(path);
+        let mut iter = Side::bottom_up_path_iter(path);
         let entry = iter.next()?;
         let (_, mut prev) = self.index_primary_entry::<S, _>(entry)?;
         let last = if !iter.is_empty() {
@@ -212,7 +199,7 @@ impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Pather<T, D, Side> {
 
         let (back, front) = S::outer_inner_order(primary, prev_secondary);
         // simply wrap and replace old range with new primary split
-        let pattern = self.graph().expect_pattern_at(location.borrow());       
+        let pattern = self.graph().expect_pattern_at(location.borrow()).clone();
         match (S::has_secondary_exclusive(&pattern, location.sub_index), has_primary_exclusive) {
             (true, true) => {
                 // with secondary exclusive
@@ -268,8 +255,10 @@ impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Pather<T, D, Side> {
         prev: IndexSplitResult,
         location: ChildLocation
     ) -> IndexSplitResult {
+        let components = 
+            self.path_entry_components::<S>(prev, location);
         self.index_components::<S>(
-            self.path_entry_components::<S>(prev, location)
+            components,
         )
     }
     #[instrument(skip(self, path))]

@@ -46,8 +46,8 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
         path: SearchPath,
     ) -> Child {
         let entry = path.start.child_location();
-        let entry_pos = ChildPos::<Start>::child_pos(&path);
-        let exit_pos = ChildPos::<End>::child_pos(&path);
+        let entry_pos = RootChildPos::<Start>::root_child_pos(&path);
+        let exit_pos = RootChildPos::<End>::root_child_pos(&path);
 
         let location = entry.into_pattern_location();
 

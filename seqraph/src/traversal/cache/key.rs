@@ -38,15 +38,11 @@ impl<R: ResultKind, Q: BaseQuery> GetCacheKey for TraversalResult<R, Q> {
 //        }
 //    }
 //}
-impl<R> GetCacheKey for ChildPath<R> {
+impl<R: PathRole> GetCacheKey for ChildPath<R> {
     fn cache_key(&self) -> CacheKey {
-        match self {
-            Self::Leaf(leaf) => leaf.cache_key(),
-            Self::Path { entry, token_pos, .. } => CacheKey {
-                root: entry.index(),
-                //sub_index: entry.sub_index,
-                token_pos: *token_pos,
-            },
+        CacheKey {
+            root: self.child_location().index(),
+            token_pos: self.token_pos,
         }
     }
 }

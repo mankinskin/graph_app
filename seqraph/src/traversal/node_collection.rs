@@ -12,10 +12,10 @@ pub trait NodeCollection<Q, R>: Default
         Q: BaseQuery,
         R: ResultKind,
 {
-    fn pop_next(&mut self) -> Option<(usize, CacheKey)>;
+    fn pop_next(&mut self) -> Option<(usize, TraversalNode<R, Q>)>;
     fn extend<
-        It: DoubleEndedIterator + Iterator<Item = (usize, CacheKey)>,
-        T: IntoIterator<Item = (usize, CacheKey), IntoIter=It>
+        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalNode<R, Q>)>,
+        T: IntoIterator<Item = (usize, TraversalNode<R, Q>), IntoIter=It>
     >(&mut self, iter: T);
 }
 pub struct OrderedTraverser<'a, T, D, Trav, Q, R, S, O>
@@ -30,7 +30,7 @@ pub struct OrderedTraverser<'a, T, D, Trav, Q, R, S, O>
 {
     collection: O,
     cache: TraversalCache<R, Q>,
-    last: (usize, CacheKey),
+    last: (usize, TraversalNode<R, Q>),
     trav: &'a Trav,
     _ty: std::marker::PhantomData<(&'a T, D, S, R)>
 }
@@ -56,11 +56,12 @@ impl<'a, T, Trav, D, Q, S, R, O> TraversalIterator<'a, T, D, Trav, Q, S, R> for 
         O: NodeCollection<Q, R>,
 {
     fn new(trav: &'a Trav, query: Q) -> Option<Self> {
-        let index = query.path_child(trav)?;
-        let (cache, start) = TraversalCache::new(index.index(), query);
+        let index = query.path_child(trav);
+        let start = StartNode::new(index, query);
+        let cache = TraversalCache::new(&start);
         Some(Self {
             collection: Default::default(),
-            last: (0, start),
+            last: (0, TraversalNode::Start(start)),
             cache,
             trav,
             _ty: Default::default(),
@@ -86,14 +87,15 @@ where
     S: DirectedTraversalPolicy<T, D, Q, R, Trav=Trav>,
     O: NodeCollection<Q, R>,
 {
-    type Item = (usize, CacheKey);
+    type Item = (usize, TraversalNode<R, Q>);
 
     fn next(&mut self) -> Option<Self::Item> {
         let (last_depth, last_node) = self.last.clone();
+        let (_key, next_nodes) = self.next_nodes(last_node);
         self.collection.extend(
-            self.next_nodes(last_node)
+            next_nodes
                 .into_iter()
-                .map(|child| (last_depth + 1, child))
+                .map(|node| (last_depth + 1, node))
         );
         if let Some((depth, node)) = self.collection.pop_next() {
             self.last = (depth, node.clone());
@@ -113,7 +115,7 @@ pub struct BftQueue<Q, R>
         Q: BaseQuery,
         R: ResultKind,
 {
-    queue: VecDeque<(usize, CacheKey)>,
+    queue: VecDeque<(usize, TraversalNode<R, Q>)>,
     _ty: std::marker::PhantomData<(Q, R)>
 }
 impl<Q, R> NodeCollection<Q, R> for BftQueue<Q, R>
@@ -121,12 +123,12 @@ impl<Q, R> NodeCollection<Q, R> for BftQueue<Q, R>
         Q: BaseQuery,
         R: ResultKind,
 {
-    fn pop_next(&mut self) -> Option<(usize, CacheKey)> {
+    fn pop_next(&mut self) -> Option<(usize, TraversalNode<R, Q>)> {
         self.queue.pop_front()
     }
     fn extend<
-        It: DoubleEndedIterator + Iterator<Item = (usize, CacheKey)>,
-        T: IntoIterator<Item = (usize, CacheKey), IntoIter=It>
+        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalNode<R, Q>)>,
+        T: IntoIterator<Item = (usize, TraversalNode<R, Q>), IntoIter=It>
     >(&mut self, iter: T) {
         self.queue.extend(iter)
     }
@@ -149,7 +151,7 @@ where
     Q: BaseQuery,
     R: ResultKind,
 {
-    stack: Vec<(usize, CacheKey)>,
+    stack: Vec<(usize, TraversalNode<R, Q>)>,
     _ty: std::marker::PhantomData<(Q, R)>
 }
 
@@ -158,12 +160,12 @@ impl<Q, R> NodeCollection<Q, R> for DftStack<Q, R>
         Q: BaseQuery,
         R: ResultKind,
 {
-    fn pop_next(&mut self) -> Option<(usize, CacheKey)> {
+    fn pop_next(&mut self) -> Option<(usize, TraversalNode<R, Q>)> {
         self.stack.pop()
     }
     fn extend<
-        It: DoubleEndedIterator + Iterator<Item = (usize, CacheKey)>,
-        T: IntoIterator<Item = (usize, CacheKey), IntoIter=It>
+        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalNode<R, Q>)>,
+        T: IntoIterator<Item = (usize, TraversalNode<R, Q>), IntoIter=It>
     >(&mut self, iter: T) {
         self.stack.extend(iter.into_iter().rev())
     }

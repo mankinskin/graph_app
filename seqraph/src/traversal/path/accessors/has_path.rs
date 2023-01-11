@@ -45,22 +45,22 @@ impl HasPath<Start> for QueryRangePath {
 //        }
 //    }
 //}
-impl<R> HasPath<R> for SearchPath
-    where SearchPath: HasRootedPath<R>
+impl<R: 'static> HasPath<R> for SearchPath
+    where SearchPath: HasRolePath<R>
 {
     fn path(&self) -> &Vec<ChildLocation> {
-        HasRootedPath::<R>::child_path(self).path()
+        HasRolePath::<R>::role_path(self).path()
     }
     fn path_mut(&mut self) -> &mut Vec<ChildLocation> {
-        HasRootedPath::<R>::child_path_mut(self).path_mut()
+        HasRolePath::<R>::role_path_mut(self).path_mut()
     }
 }
-//impl<R, T: HasRootedPath<R>> HasPath<R> for T {
+//impl<R, T: HasRolePath<R>> HasPath<R> for T {
 //    fn path(&self) -> &Vec<ChildLocation> {
-//        self.child_path().path()
+//        self.role_path().path()
 //    }
 //    fn path_mut(&mut self) -> &mut Vec<ChildLocation> {
-//        self.child_path_mut().path_mut()
+//        self.role_path_mut().path_mut()
 //    }
 //}
 impl<R, P: HasPath<R>> HasPath<R> for OriginPath<P> {
@@ -82,65 +82,65 @@ impl<R, P: HasPath<R>> HasPath<R> for OriginPath<P> {
 //}
 impl<R> HasPath<R> for ChildPath<R> {
     fn path(&self) -> &Vec<ChildLocation> {
-        self.path()
+        &self.path
     }
     fn path_mut(&mut self) -> &mut Vec<ChildLocation> {
-        self.path_mut()
+        &mut self.path
     }
 }
 
 /// access to a rooted path pointing to a descendant
-pub trait HasRootedPath<R>: HasPath<R> {
-    fn child_path(&self) -> &ChildPath<R>;
-    fn child_path_mut(&mut self) -> &mut ChildPath<R>;
+pub trait HasRolePath<R>: HasPath<R> {
+    fn role_path(&self) -> &ChildPath<R>;
+    fn role_path_mut(&mut self) -> &mut ChildPath<R>;
     fn num_path_segments(&self) -> usize {
-        self.child_path().num_path_segments()
+        self.role_path().num_path_segments()
     }
 }
-impl<R> HasRootedPath<R> for ChildPath<R> {
-    fn child_path(&self) -> &ChildPath<R> {
+impl<R> HasRolePath<R> for ChildPath<R> {
+    fn role_path(&self) -> &ChildPath<R> {
         self
     }
-    fn child_path_mut(&mut self) -> &mut ChildPath<R> {
+    fn role_path_mut(&mut self) -> &mut ChildPath<R> {
         self
     }
 }
-impl HasRootedPath<Start> for SearchPath {
-    fn child_path(&self) -> &ChildPath<Start> {
+impl HasRolePath<Start> for SearchPath {
+    fn role_path(&self) -> &ChildPath<Start> {
         &self.start
     }
-    fn child_path_mut(&mut self) -> &mut ChildPath<Start> {
+    fn role_path_mut(&mut self) -> &mut ChildPath<Start> {
         &mut self.start
     }
 }
-impl HasRootedPath<End> for SearchPath {
-    fn child_path(&self) -> &ChildPath<End> {
+impl HasRolePath<End> for SearchPath {
+    fn role_path(&self) -> &ChildPath<End> {
         &self.end
     }
-    fn child_path_mut(&mut self) -> &mut ChildPath<End> {
+    fn role_path_mut(&mut self) -> &mut ChildPath<End> {
         &mut self.end
     }
 }
-impl<R, P: HasRootedPath<R>> HasRootedPath<R> for OriginPath<P> {
-    fn child_path(&self) -> &ChildPath<R> {
-        self.postfix.child_path()
+impl<R, P: HasRolePath<R>> HasRolePath<R> for OriginPath<P> {
+    fn role_path(&self) -> &ChildPath<R> {
+        self.postfix.role_path()
     }
-    fn child_path_mut(&mut self) -> &mut ChildPath<R> {
-        self.postfix.child_path_mut()
+    fn role_path_mut(&mut self) -> &mut ChildPath<R> {
+        self.postfix.role_path_mut()
     }
 }
-pub trait HasMatchPaths: HasRootedPath<Start> + HasRootedPath<End> {
+pub trait HasMatchPaths: HasRolePath<Start> + HasRolePath<End> {
     fn into_paths(self) -> (ChildPath<Start>, ChildPath<End>);
     fn num_path_segments(&self) -> usize {
-        HasRootedPath::<Start>::child_path(self).num_path_segments() + HasRootedPath::<End>::child_path(self).num_path_segments()
+        HasRolePath::<Start>::role_path(self).num_path_segments() + HasRolePath::<End>::role_path(self).num_path_segments()
     }
     fn min_path_segments(&self) -> usize {
-        HasRootedPath::<Start>::child_path(self).num_path_segments().min(
-            HasRootedPath::<End>::child_path(self).num_path_segments()
+        HasRolePath::<Start>::role_path(self).num_path_segments().min(
+            HasRolePath::<End>::role_path(self).num_path_segments()
         )
     }
     //fn root(&self) -> Child {
-    //    self.child_path().root()
+    //    self.role_path().root()
     //}
 }
 impl HasMatchPaths for SearchPath {

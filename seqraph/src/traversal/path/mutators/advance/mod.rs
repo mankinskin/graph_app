@@ -6,7 +6,7 @@ pub use exit::*;
 pub use from_advanced::*;
 
 
-pub trait IntoAdvanced<R: ResultKind>: Sized + Clone + Into<R::Advanced> {
+pub trait IntoAdvanced<R: ResultKind>: Sized + Clone {
     fn into_advanced<
         'a: 'g,
         'g,
@@ -16,18 +16,76 @@ pub trait IntoAdvanced<R: ResultKind>: Sized + Clone + Into<R::Advanced> {
     >(
         self,
         trav: &'a Trav,
-    ) -> Result<R::Advanced, Self> {
-        let mut new: R::Advanced = self.clone().into();
-        match new.advance_exit_pos::<_, D, _>(trav) {
-            Ok(()) => Ok(new),
-            Err(()) => Err(self)
+    ) -> Result<R::Advanced, Self>;
+    //{
+    //    let mut new: R::Advanced = self.clone().into();
+    //    match new.advance_exit_pos::<_, D, _>(trav) {
+    //        Ok(()) => Ok(new),
+    //        Err(()) => Err(self)
+    //    }
+    //}
+}
+//impl<
+//    R: ResultKind,
+//    T: Sized + Clone + Into<R::Advanced>
+//> IntoAdvanced<R> for T {
+//}
+impl<
+    P: IntoAdvanced<BaseResult>,
+> IntoAdvanced<OriginPathResult> for OriginPath<P> {
+    fn into_advanced<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<T>,
+    >(
+        self,
+        trav: &'a Trav,
+    ) -> Result<<OriginPathResult as ResultKind>::Advanced, Self> {
+        match self.postfix.into_advanced::<_, D, _>(trav) {
+            Ok(path) => Ok(OriginPath {
+                postfix: path,
+                origin: self.origin,
+            }),
+            Err(path) => Err(OriginPath {
+                postfix: path,
+                origin: self.origin,
+            }),
         }
     }
 }
-impl<
-    R: ResultKind,
-    T: Sized + Clone + Into<R::Advanced>
-> IntoAdvanced<R> for T {
+impl IntoAdvanced<BaseResult> for ChildPath<Start> {
+    fn into_advanced<
+        'a: 'g,
+        'g,
+        T: Tokenize,
+        D: MatchDirection,
+        Trav: Traversable<T> + 'a,
+    >(
+        self,
+        trav: &'a Trav,
+    ) -> Result<<BaseResult as ResultKind>::Advanced, Self> {
+        let entry = self.child_location();
+        let graph = trav.graph();
+        let pattern = self.root_pattern::<_, Trav>(&graph).clone();
+        if let Some(next) = D::pattern_index_next(pattern.borrow(), entry.sub_index) {
+            let exit = entry.clone().to_child_location(next);
+            let child = pattern[next];
+            Ok(SearchPath {
+                end: ChildPath {
+                    path: vec![exit],
+                    width: child.width(),
+                    token_pos: self.token_pos + child.width(),
+                    child,
+                    _ty: Default::default(),
+                },
+                start: self,
+            })
+        } else {
+            Err(self)
+        }
+    }
 }
 
 pub trait Advance:
@@ -57,12 +115,12 @@ pub trait Advance:
                     //let next = pattern[next];
                     //self.advance_width(next.width);
                     self.path_mut().push(location);
-                    return current;
+                    return Some(current);
                 }
             }
             // end is empty (exit is prev)
             let _ = self.advance_exit_pos::<_, D, _>(trav);
-            current
+            Some(current)
         }
     }
 }

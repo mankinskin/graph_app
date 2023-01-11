@@ -49,7 +49,7 @@ impl PathPop for ChildPath<Start> {
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>
-    >(self, trav: &'a Trav) -> Self::Result {
+    >(mut self, _trav: &'a Trav) -> Self::Result {
         let len = self.path.len();
         if len == 1 {
             MatchEnd::Complete(self.child)

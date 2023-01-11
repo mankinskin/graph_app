@@ -7,7 +7,7 @@ pub struct OverlapPrimer {
     pub context_offset: usize,
     pub width: usize,
     pub exit: usize,
-    pub end: LocationPath,
+    pub end: ChildPath<End>,
 }
 impl OverlapPrimer {
     pub fn new(start: Child, context: PrefixQuery) -> Self {
@@ -35,7 +35,7 @@ impl OverlapPrimer {
 //    >(&self, trav: Trav) -> Option<usize> {
 //        match self.exit {
 //            0 => None,
-//            1 => if self.context.child_pos() > self.context_offset {
+//            1 => if self.context.root_child_pos() > self.context_offset {
 //                self.context.prev_exit_pos::<_, D, _>(trav)
 //            } else {
 //                Some(0)

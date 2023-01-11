@@ -68,7 +68,7 @@ impl<P: MatchEndPath> RangePath for MatchEnd<P> {
 //        Trav: Traversable<T>
 //    >(path: SearchPath, trav: Trav) -> Self {
 //        Self {
-//            origin: path.child_path().clone(),
+//            origin: path.role_path().clone(),
 //            postfix: P::from_search_path(path, trav),
 //        }
 //    }

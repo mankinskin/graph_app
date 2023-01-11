@@ -65,11 +65,11 @@ impl<T:
 //    fn child_location(&self) -> ChildLocation {
 //    }
 //}
-//pub trait PatternRootChild<End>: ChildPos<End> {
+//pub trait PatternRootChild<End>: RootChildPos<End> {
 //    fn get_pattern(&self) -> &[Child];
 //    fn get_exit(&self) -> Option<Child> {
 //        self.get_pattern()
-//            .get(self.child_pos())
+//            .get(self.root_child_pos())
 //            .cloned()
 //    }
 //}
@@ -103,59 +103,59 @@ impl<T:
 //        trav.graph().get_child_at(self.child_location()).ok()
 //    }
 //}
-//impl HasRootedPath<Start> for PrefixQuery {
-//    fn child_path(&self) -> &[ChildLocation] {
+//impl HasRolePath<Start> for PrefixQuery {
+//    fn role_path(&self) -> &[ChildLocation] {
 //        &[]
 //    }
 //}
 
-//impl<T: HasRootedPath<End>> T {
-//    fn child_path(&self) -> &ChildPath {
-//        self.child_path()
+//impl<T: HasRolePath<End>> T {
+//    fn role_path(&self) -> &ChildPath {
+//        self.role_path()
 //    }
 //}
-//impl<T: HasRootedPath<Start>> T {
-//    fn child_path(&self) -> &ChildPath {
-//        self.child_path()
+//impl<T: HasRolePath<Start>> T {
+//    fn role_path(&self) -> &ChildPath {
+//        self.role_path()
 //    }
 //}
 
 //pub trait HasEndMatchPath: GraphRootChild {
-//    fn child_path(&self) -> &ChildPath;
-//    fn child_path_mut(&mut self) -> &mut ChildPath;
+//    fn role_path(&self) -> &ChildPath;
+//    fn role_path_mut(&mut self) -> &mut ChildPath;
 //}
 //impl HasEndMatchPath for ChildPath {
-//    fn child_path(&self) -> &ChildPath {
+//    fn role_path(&self) -> &ChildPath {
 //        self
 //    }
-//    fn child_path_mut(&mut self) -> &mut ChildPath {
+//    fn role_path_mut(&mut self) -> &mut ChildPath {
 //        self
 //    }
 //}
 //impl HasEndMatchPath for SearchPath {
-//    fn child_path(&self) -> &ChildPath {
+//    fn role_path(&self) -> &ChildPath {
 //        &self.end
 //    }
-//    fn child_path_mut(&mut self) -> &mut ChildPath {
+//    fn role_path_mut(&mut self) -> &mut ChildPath {
 //        &mut self.end
 //    }
 //}
 //impl<P: HasEndMatchPath> HasEndMatchPath for OriginPath<P> {
-//    fn child_path(&self) -> &ChildPath {
-//        self.postfix.child_path()
+//    fn role_path(&self) -> &ChildPath {
+//        self.postfix.role_path()
 //    }
-//    fn child_path_mut(&mut self) -> &mut ChildPath {
-//        self.postfix.child_path_mut()
+//    fn role_path_mut(&mut self) -> &mut ChildPath {
+//        self.postfix.role_path_mut()
 //    }
 //}
-//pub trait PatternEnd: PatternRootChild<End> + HasRootedPath + End + Send + Sync {
+//pub trait PatternEnd: PatternRootChild<End> + HasRolePath + End + Send + Sync {
 //    fn get_pattern_end<
 //        'a: 'g,
 //        'g,
 //        T: Tokenize,
 //        Trav: Traversable<T>,
 //    >(&self, trav: &'a Trav) -> Option<Child> {
-//        if let Some(end) = self.child_path().last() {
+//        if let Some(end) = self.role_path().last() {
 //            trav.graph().get_child_at(end).ok()
 //        } else {
 //            self.get_exit()
@@ -163,9 +163,9 @@ impl<T:
 //    }
 //}
 
-//pub trait GraphEnd: GraphExit + HasRootedPath<End> + End {
+//pub trait GraphEnd: GraphExit + HasRolePath<End> + End {
 //    fn path_child_location(&self) -> ChildLocation {
-//        if let Some(end) = self.child_path().child_path().last() {
+//        if let Some(end) = self.role_path().role_path().last() {
 //            *end
 //        } else {
 //            self.child_location()
@@ -180,16 +180,16 @@ impl<T:
 //        trav.graph().get_child_at(self.path_child_location()).ok()
 //    }
 //}
-//impl<T: GraphExit + HasRootedPath<End>> GraphEnd for T {}
+//impl<T: GraphExit + HasRolePath<End>> GraphEnd for T {}
 
-//pub trait HasRootedPath<End> {
-//    fn child_path_mut(&mut self) -> &mut LocationPath;
+//pub trait HasRolePath<End> {
+//    fn role_path_mut(&mut self) -> &mut LocationPath;
 //    fn path_mut().push(&mut self, next: ChildLocation) {
-//        self.child_path_mut().push(next)
+//        self.role_path_mut().push(next)
 //    }
 //}
-//impl HasRootedPath<End> for OverlapPrimer {
-//    fn child_path_mut(&mut self) -> &mut LocationPath {
+//impl HasRolePath<End> for OverlapPrimer {
+//    fn role_path_mut(&mut self) -> &mut LocationPath {
 //        if self.exit == 0 {
 //            &mut self.end
 //        } else {
@@ -197,13 +197,13 @@ impl<T:
 //        }
 //    }
 //}
-//impl HasRootedPath<End> for PrefixQuery {
-//    fn child_path_mut(&mut self) -> &mut LocationPath {
+//impl HasRolePath<End> for PrefixQuery {
+//    fn role_path_mut(&mut self) -> &mut LocationPath {
 //        &mut self.end
 //    }
 //}
-//impl HasRootedPath<End> for QueryRangePath {
-//    fn child_path_mut(&mut self) -> &mut LocationPath {
+//impl HasRolePath<End> for QueryRangePath {
+//    fn role_path_mut(&mut self) -> &mut LocationPath {
 //        &mut self.end
 //    }
 //}
@@ -229,14 +229,14 @@ impl<T:
 //        self.get_pattern_end(trav)
 //    }
 //}
-//impl HasRootedPath<End> for SearchPath {
-//    fn child_path_mut(&mut self) -> &mut LocationPath {
+//impl HasRolePath<End> for SearchPath {
+//    fn role_path_mut(&mut self) -> &mut LocationPath {
 //        &mut self.end.path
 //    }
 //}
-//impl<P: HasRootedPath<End>> HasRootedPath<End> for OriginPath<P> {
-//    fn child_path_mut(&mut self) -> &mut LocationPath {
-//        self.postfix.child_path_mut()
+//impl<P: HasRolePath<End>> HasRolePath<End> for OriginPath<P> {
+//    fn role_path_mut(&mut self) -> &mut LocationPath {
+//        self.postfix.role_path_mut()
 //    }
 //}
 //
@@ -256,19 +256,19 @@ impl<T:
 //        self.entry
 //    }
 //}
-//impl HasRootedPath<End> for LocationPath {
-//    fn child_path_mut(&mut self) -> &mut LocationPath {
+//impl HasRolePath<End> for LocationPath {
+//    fn role_path_mut(&mut self) -> &mut LocationPath {
 //        self.path.borrow_mut()
 //    }
 //}
 
-//impl GraphRoot for ChildPath {
+//impl GraphRootPattern for ChildPath {
 //    fn root(&self) -> ChildLocation {
 //        self.child_location()
 //    }
 //}
-//impl HasRootedPath for ChildPath {
-//    fn child_path(&self) -> &[ChildLocation] {
+//impl HasRolePath for ChildPath {
+//    fn role_path(&self) -> &[ChildLocation] {
 //        self.path.borrow()
 //    }
 //}

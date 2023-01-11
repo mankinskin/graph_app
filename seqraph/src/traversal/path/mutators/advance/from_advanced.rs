@@ -18,7 +18,7 @@ impl FromAdvanced<SearchPath> for FoundPath {
         Trav: Traversable<T>
     >(path: SearchPath, trav: &'a Trav) -> Self {
         if path.is_complete::<_, D, _>(trav) {
-            Self::Complete(<SearchPath as GraphRootChild<Start>>::graph_root_child_location(&path).parent)
+            Self::Complete(<SearchPath as GraphRootChild<Start>>::root_child_location(&path).parent)
         } else {
             Self::Range(path)
         }
@@ -49,7 +49,7 @@ impl<A: Advanced, F: FromAdvanced<A>> FromAdvanced<A> for OriginPath<F> {
         Trav: Traversable<T>
     >(path: A, trav: &'a Trav) -> Self {
         Self {
-            origin: MatchEnd::Path(HasRootedPath::<Start>::child_path(&path).clone()),
+            origin: MatchEnd::Path(HasRolePath::<Start>::role_path(&path).clone()),
             postfix: F::from_advanced::<_, D, _>(path, trav),
         }
     }

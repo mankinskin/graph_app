@@ -52,17 +52,17 @@ impl<T: Tokenize, D: MatchDirection, Q: BaseQuery, R: ResultKind>
         node: TraversalNode<R, Q>,
     ) -> ControlFlow<Self::Break, Self::Continue> {
         match node {
-            TraversalNode::QueryEnd(found) => {
+            TraversalNode::QueryEnd(_, _, found) => {
                 ControlFlow::Break(found)
             },
-            TraversalNode::MatchEnd(match_end, query) => {
+            TraversalNode::MatchEnd(_, _, match_end, query) => {
                 let found = TraversalResult::new(
                     match_end,
                     query,
                 );
                 ControlFlow::Continue(search::pick_max_result::<R, _>(acc, found))
             },
-            TraversalNode::Mismatch(found) =>
+            TraversalNode::Mismatch(_, _, found) =>
                 ControlFlow::Continue(search::pick_max_result::<R, _>(acc, found)),
             _ => ControlFlow::Continue(acc)
         }
@@ -102,7 +102,7 @@ pub fn pick_max_result<
 //    mut path: SearchPath,
 //    query: Q
 //) -> Option<TraversalResult<R, Q>> {
-//    path.child_path_mut().simplify::<_, D, _>(trav);
+//    path.role_path_mut().simplify::<_, D, _>(trav);
 //    //let found = 
 //    //    path.into_range_path().into_result(query);
 //    pick_max_result(acc, path)
@@ -155,6 +155,7 @@ impl<
     }
     fn next_parents(
         _trav: &Self::Trav,
+        _key: CacheKey,
         _query: &Q,
         _start: &R::Postfix,
     ) -> Vec<TraversalNode<R, Q>> {

@@ -4,7 +4,7 @@ use crate::*;
 pub struct PrefixQuery {
     pub pattern: Pattern,
     pub exit: usize,
-    pub end: Option<ChildPath<End>>,
+    pub end: ChildPath<End>,
     pub width: usize,
 }
 
@@ -30,8 +30,8 @@ impl<
         }
     }
 }
-//impl HasRootedPath for PrefixQuery {
-//    fn child_path(&self) -> &[ChildLocation] {
+//impl HasRolePath for PrefixQuery {
+//    fn role_path(&self) -> &[ChildLocation] {
 //        self.end.borrow()
 //    }
 //}

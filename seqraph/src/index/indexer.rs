@@ -31,7 +31,7 @@ DirectedTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
         primer: R::Primer,
     ) -> R::Postfix {
         let trav = trav.clone();
-        let path = primer.child_path();
+        let path = primer.role_path();
         println!("after end match {:?}", path);
         // index postfix of match
 
@@ -108,7 +108,7 @@ where
     ) -> ControlFlow<Self::Break, Self::Continue> {
         let mut trav = trav.clone();
         match node {
-            TraversalNode::QueryEnd(res) => {
+            TraversalNode::QueryEnd(_, _, res) => {
                 //println!("fold query end {:#?}", res);
                 ControlFlow::Break((
                     R::index_found::<_, D>(
@@ -118,16 +118,16 @@ where
                     res.query,
                 ))
             },
-            TraversalNode::Mismatch(res) => {
+            TraversalNode::Mismatch(_, _, res) => {
                 //println!("fold mismatch {:#?}", res);
                 ControlFlow::Continue(search::pick_max_result::<R, _>(acc, res))
             },
-            TraversalNode::MatchEnd(postfix, query) => {
+            TraversalNode::MatchEnd(_, _, postfix, query) => {
                 //println!("fold match end {:#?}", postfix);
                 //let found = match_end
                 //    .into_range_path().into_result(query);
                 //if let Some(r) = found.found.get_range() {
-                //    assert!(r.child_pos() != r.child_pos());
+                //    assert!(r.root_child_pos() != r.root_child_pos());
                 //}
                 ControlFlow::Continue(search::pick_max_result::<R, _>(
                     acc,
@@ -192,7 +192,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         query.hash(&mut hasher);
         let _h = hasher.finish();
-        let acc = self.run_indexing::<R, _, IndexingPolicy<T, D, Q, _>, Bft<_, _, _, _, _, _>>(query);
+        let acc = self.run_indexing::<R, _, IndexingPolicy<T, D, Q, _>, Bft<_, _, _, _, _, _>>(query)?;
         self.finish_result::<R, Q>(acc)
     }
     fn run_indexing<
@@ -204,9 +204,10 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
     >(
         &'a mut self,
         query_path: Q,
-    ) -> ControlFlow<(<R as ResultKind>::Indexed, Q), Option<TraversalResult<R, Q>>> {
+    ) -> Result<ControlFlow<(<R as ResultKind>::Indexed, Q), Option<TraversalResult<R, Q>>>, NoMatch> {
         let mut acc = ControlFlow::Continue(None);
-        let mut stream = Ti::new(self, query_path);
+        let mut stream = Ti::new(self, query_path)
+            .ok_or(NoMatch::EmptyPatterns)?;
         while let Some((_depth, node)) = stream.next() {
             match <S::Folder as TraversalFolder<_, _, _, R>>::fold_found(self, acc.continue_value().unwrap(), node) {
                 ControlFlow::Continue(c) => {
@@ -218,7 +219,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
                 },
             };
         }
-        acc
+        Ok(acc)
     }
     fn finish_result<
         R: ResultKind,
