@@ -2,29 +2,29 @@ use crate::*;
 use std::hash::Hash;
 
 /// ordered according to priority
-#[derive(Clone, Debug, Eq)]
-pub struct WaitingNode<R: ResultKind + Eq, Q: BaseQuery> {
-    sub_index: usize,
-    prev: CacheKey,
-    // could be more efficient by referencing cache instead of storing path and query
-    node: TraversalNode<R, Q>,
-}
-impl<R: ResultKind + Eq, Q: BaseQuery> PartialEq for WaitingNode<R, Q> {
-    fn eq(&self, other: &Self) -> bool {
-        self.sub_index.eq(&other.sub_index)
-    }
-}
-impl<R: ResultKind + Eq, Q: BaseQuery> Ord for WaitingNode<R, Q> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.sub_index.partial_cmp(&other.sub_index)
-            .unwrap_or(Ordering::Equal)
-    }
-}
-impl<R: ResultKind + Eq, Q: BaseQuery> PartialOrd for WaitingNode<R, Q> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.sub_index.partial_cmp(&other.sub_index).map(Ordering::reverse)
-    }
-}
+//#[derive(Clone, Debug, Eq)]
+//pub struct WaitingNode<R: ResultKind + Eq, Q: BaseQuery> {
+//    sub_index: usize,
+//    prev: CacheKey,
+//    // could be more efficient by referencing cache instead of storing path and query
+//    node: TraversalNode<R, Q>,
+//}
+//impl<R: ResultKind + Eq, Q: BaseQuery> PartialEq for WaitingNode<R, Q> {
+//    fn eq(&self, other: &Self) -> bool {
+//        self.sub_index.eq(&other.sub_index)
+//    }
+//}
+//impl<R: ResultKind + Eq, Q: BaseQuery> Ord for WaitingNode<R, Q> {
+//    fn cmp(&self, other: &Self) -> Ordering {
+//        self.sub_index.partial_cmp(&other.sub_index)
+//            .unwrap_or(Ordering::Equal)
+//    }
+//}
+//impl<R: ResultKind + Eq, Q: BaseQuery> PartialOrd for WaitingNode<R, Q> {
+//    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+//        self.sub_index.partial_cmp(&other.sub_index).map(Ordering::reverse)
+//    }
+//}
 
 //#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 //pub struct LocationNode {

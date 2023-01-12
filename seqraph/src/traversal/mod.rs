@@ -6,6 +6,7 @@ pub mod policy;
 pub mod cache;
 pub mod result;
 pub mod node_collection;
+pub mod result_kind;
 
 pub use super::*;
 pub use path::*;
@@ -16,3 +17,4 @@ pub use policy::*;
 pub use cache::*;
 pub use result::*;
 pub use node_collection::*;
+pub use result_kind::*;

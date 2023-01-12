@@ -25,42 +25,42 @@ pub struct IndexPathComponents {
     location: ChildLocation,
     prev_location: ChildLocation,
 }
-#[derive(Debug, Clone)]
-struct PathFeatures {
-    len: usize,
-    has_primary_exclusive: bool,
-}
-#[derive(Debug, Clone)]
-enum IndexingMode {
-    /// create new index wrapping primary part and residual secondary parts
-    Wrapping,
-    /// postpone indexing until it is needed and more information is available
-    Postpone,
-    /// insert local pattern with indexed primary and secondary halves
-    Local,
-}
+//#[derive(Debug, Clone)]
+//struct PathFeatures {
+//    len: usize,
+//    has_primary_exclusive: bool,
+//}
+//#[derive(Debug, Clone)]
+//enum IndexingMode {
+//    /// create new index wrapping primary part and residual secondary parts
+//    Wrapping,
+//    /// postpone indexing until it is needed and more information is available
+//    Postpone,
+//    /// insert local pattern with indexed primary and secondary halves
+//    Local,
+//}
+//impl PathFeatures {
+//    fn is_full_primary(&self) -> bool {
+//        !self.has_primary_exclusive && self.len == 1
+//    }
+//    pub fn new<
+//        D: IndexDirection,
+//        Side: IndexSide<D>,
+//        S: RelativeSide<D, Side>,
+//    >(
+//        path: &Vec<ChildLocation>,
+//    ) -> Self {
+//        assert!(!path.is_empty());
+//        let len = path.len();
+//        let path = Side::bottom_up_path_iter(path.iter());
+//        let last = path.last().unwrap();
+//        PathFeatures {
+//            has_primary_exclusive: <S as RelativeSide<D, Side>>::exclusive_primary_location(last).is_some(),
+//            len,
+//        }
+//    }
+//}
 
-impl PathFeatures {
-    fn is_full_primary(&self) -> bool {
-        !self.has_primary_exclusive && self.len == 1
-    }
-    pub fn new<
-        D: IndexDirection,
-        Side: IndexSide<D>,
-        S: RelativeSide<D, Side>,
-    >(
-        path: &Vec<ChildLocation>,
-    ) -> Self {
-        assert!(!path.is_empty());
-        let len = path.len();
-        let path = Side::bottom_up_path_iter(path.iter());
-        let last = path.last().unwrap();
-        PathFeatures {
-            has_primary_exclusive: <S as RelativeSide<D, Side>>::exclusive_primary_location(last).is_some(),
-            len,
-        }
-    }
-}
 impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Pather<T, D, Side> {
     #[instrument(skip(self, entry), ret)]
     pub fn index_primary_entry<
