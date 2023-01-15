@@ -25,14 +25,6 @@ pub enum NoMatch {
     Unnecessary,
     EmptyRange,
 }
-//pub type QueryFound = TraversalResult<QueryRangePath>;
-pub type SearchResult = Result<
-    TraversalResult<
-        BaseResult,
-        QueryRangePath
-    >,
-    NoMatch
->;
 
 impl<'t, 'g, T> HypergraphRef<T>
 where

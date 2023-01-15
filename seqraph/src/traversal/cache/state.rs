@@ -7,7 +7,7 @@ use std::hash::Hash;
 //    sub_index: usize,
 //    prev: CacheKey,
 //    // could be more efficient by referencing cache instead of storing path and query
-//    node: TraversalNode<R, Q>,
+//    node: TraversalState<R, Q>,
 //}
 //impl<R: ResultKind + Eq, Q: BaseQuery> PartialEq for WaitingNode<R, Q> {
 //    fn eq(&self, other: &Self) -> bool {
@@ -54,7 +54,7 @@ use std::hash::Hash;
 //}
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct StartNode<
+pub struct StartState<
     R: ResultKind,
     Q: BaseQuery,
 > {
@@ -65,7 +65,7 @@ pub struct StartNode<
 impl<
     R: ResultKind,
     Q: BaseQuery,
-> StartNode<R, Q> {
+> StartState<R, Q> {
     pub fn new(index: Child, query: Q) -> Self {
         Self {
             index,
@@ -75,7 +75,7 @@ impl<
     }
 }
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct ParentNode<
+pub struct ParentState<
     R: ResultKind,
     Q: BaseQuery,
 > {
@@ -86,33 +86,38 @@ pub struct ParentNode<
     pub _ty: std::marker::PhantomData<(R, Q)>,
 }
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct ChildNode<
+pub struct ChildState<
     R: ResultKind,
     Q: BaseQuery,
 > {
     pub root: CacheKey,
     pub paths: PathPair<R::Advanced, Q>,
 }
-/// nodes generated during traversal.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum TraversalNode<
+pub enum EndState<
     R: ResultKind,
     Q: BaseQuery,
 > {
-    Start(StartNode<R, Q>),
+    /// when the query has ended.
+    QueryEnd(Option<ChildLocation>, CacheKey, TraversalResult<R, Q>),
+    /// at a mismatch.
+    Mismatch(Option<ChildLocation>, CacheKey, TraversalResult<R, Q>),
+    /// when a match was at the end of an index without parents.
+    MatchEnd(ChildLocation, R::Postfix, Q),
+}
+/// nodes generated during traversal.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TraversalState<
+    R: ResultKind,
+    Q: BaseQuery,
+> {
+    Start(StartState<R, Q>),
     /// at a parent.
-    Parent(CacheKey, ParentNode<R, Q>),
+    Parent(CacheKey, ParentState<R, Q>),
     /// at a position to be matched.
     /// (needed to enable breadth-first traversal)
-    Child(CacheKey, ChildNode<R, Q>),
-    /// when the query has ended.
-    QueryEnd(CacheKey, Option<ChildLocation>, TraversalResult<R, Q>),
-    /// at a mismatch.
-    Mismatch(CacheKey, Option<ChildLocation>, TraversalResult<R, Q>),
-    /// when a match was at the end of an index without parents.
-    MatchEnd(CacheKey, ChildLocation, R::Postfix, Q),
-    ///// at a match.
-    //Match(R::Advanced, Q),
+    Child(CacheKey, ChildState<R, Q>),
+    End(CacheKey, EndState<R, Q>),
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum NodeDirection {
@@ -122,40 +127,42 @@ pub enum NodeDirection {
 impl<
     R: ResultKind,
     Q: BaseQuery,
-> TraversalNode<R, Q> {
-    //pub fn query_node(index: usize, query: Q) -> Self {
-    //    Self::Start(index, query)
-    //}
-    //pub fn match_node(path: R::Advanced, query: Q) -> Self {
-    //    Self::Match(path, query)
-    //}
-    //pub fn child_node(prev: CacheKey, root: CacheKey, paths: PathPair<R::Advanced, Q>) -> Self {
-    //    Self::Child(ChildNode {
-    //        root,
-    //        paths
-    //    })
-    //}
-    //pub fn parent_node(path: R::Primer, query: Q, num_patterns: usize) -> Self {
-    //    Self::Parent(ParentNode {
-    //        path,
-    //        query,
-    //        //num_patterns,
-    //        _ty: Default::default(),
-    //    })
-    //}
-    //pub fn query_end_node(found: TraversalResult<R, Q>) -> Self {
-    //    Self::QueryEnd(found)
-    //}
-    //pub fn mismatch_node(found: TraversalResult<R, Q>) -> Self {
-    //    Self::Mismatch(found)
-    //}
+> EndState<R, Q> {
     pub fn entry_location(&self) -> Option<ChildLocation> {
         match self {
-            Self::Parent(_, node) => Some(node.path.root_child_location()),
-            Self::Child(_, node) => Some(node.paths.get_path().role_path_child_location::<End>()),
-            Self::MatchEnd(_, entry, _, _) => Some(*entry),
-            Self::QueryEnd(_, entry, _)
-            | Self::Mismatch(_, entry, _) => *entry,
+            Self::MatchEnd(entry, _, _) => Some(*entry),
+            Self::QueryEnd(entry, _, _)
+            | Self::Mismatch(entry, _, _) => *entry,
+        }
+    }
+    pub fn node_direction(&self) -> NodeDirection {
+        match self {
+            Self::MatchEnd(_, _, _)
+                => NodeDirection::BottomUp,
+            Self::QueryEnd(_, _, _)
+            | Self::Mismatch(_, _, _)
+                => NodeDirection::TopDown,
+        }
+    }
+    pub fn waiting_root_key(&self) -> Option<CacheKey> {
+        match self {
+            Self::MatchEnd(_, _, _)
+                => None,
+            Self::QueryEnd(_, root_key, _)
+            | Self::Mismatch(_, root_key, _)
+                => Some(*root_key),
+        }
+    }
+}
+impl<
+    R: ResultKind,
+    Q: BaseQuery,
+> TraversalState<R, Q> {
+    pub fn entry_location(&self) -> Option<ChildLocation> {
+        match self {
+            Self::Parent(_, state) => Some(state.path.root_child_location()),
+            Self::Child(_, state) => Some(state.paths.get_path().role_path_child_location::<End>()),
+            Self::End(_, state) => state.entry_location(),
             _ => None
         }
     }
@@ -163,9 +170,7 @@ impl<
         match self {
             Self::Parent(prev, _)
             | Self::Child(prev, _)
-            | Self::Mismatch(prev, _, _)
-            | Self::QueryEnd(prev, _, _)
-            | Self::MatchEnd(prev, _, _, _)
+            | Self::End(prev, _)
                 => Some(*prev),
             _ => None,
         }
@@ -174,12 +179,10 @@ impl<
         match self {
             Self::Parent(_, _)
             | Self::Start(_)
-            | Self::MatchEnd(_, _, _, _)
                 => NodeDirection::BottomUp,
             Self::Child(_, _)
-            | Self::Mismatch(_, _, _)
-            | Self::QueryEnd(_, _, _)
                 => NodeDirection::TopDown,
+            Self::End(_, state) => state.node_direction()
         }
     }
     pub fn is_bottom_up(&self) -> bool {
@@ -188,17 +191,4 @@ impl<
     pub fn is_top_down(&self) -> bool {
         self.node_direction() == NodeDirection::TopDown
     }
-    //pub fn match_end_node(match_end: R::Postfix, query: Q) -> Self {
-    //    Self::MatchEnd(match_end, query)
-    //}
-    //#[allow(unused)]
-    //pub fn is_match(&self) -> bool {
-    //    matches!(self, TraversalNode::Match(_, _))
-    //}
-    //pub fn get_parent_path(&self) -> Option<&R::Primer> {
-    //    match self {
-    //        TraversalNode::Parent(path, _) => Some(path),
-    //        _ => None
-    //    }
-    //}
 }

@@ -1,5 +1,4 @@
 use crate::*;
-use std::ops::ControlFlow;
 //use rayon::iter::{
 //    ParallelBridge,
 //    ParallelIterator,
@@ -14,59 +13,72 @@ pub struct Searcher<T: Tokenize, D: MatchDirection> {
 trait SearchTraversalPolicy<
     T: Tokenize,
     D: MatchDirection,
+    Q: QueryPath,
+    R: ResultKind,
 >:
     DirectedTraversalPolicy<
-        T, D,
-        QueryRangePath,
-        BaseResult,
+        T,
+        D,
+        Q,
+        R,
+        //QueryRangePath,
+        //BaseResult,
         Trav=Searcher<T, D>,
-        Folder=Searcher<T, D>,
-        //Primer=ChildPath,
     >
 {
 }
 impl<
     T: Tokenize,
     D: MatchDirection,
+    Q: QueryPath,
+    R: ResultKind,
 >
-    SearchTraversalPolicy<T, D> for AncestorSearch<T, D>
+    SearchTraversalPolicy<T, D, Q, R> for AncestorSearch<T, D>
 {}
 impl<
     T: Tokenize,
     D: MatchDirection,
+    Q: QueryPath,
+    R: ResultKind,
 >
-    SearchTraversalPolicy<T, D> for ParentSearch<T, D>
+    SearchTraversalPolicy<T, D, Q, R> for ParentSearch<T, D>
 {}
 
 
-impl<T: Tokenize, D: MatchDirection, Q: BaseQuery, R: ResultKind>
-    TraversalFolder<T, D, Q, R> for Searcher<T, D>
+impl<
+    T: Tokenize,
+    D: MatchDirection,
+    Q: QueryPath,
+    S: SearchTraversalPolicy<T, D, Q, R>,
+    R: ResultKind,
+>
+    TraversalFolder<T, D, Q, S, R> for Searcher<T, D>
 {
-    type Trav = Self;
-    type Break = TraversalResult<R, Q>;
-    type Continue = Option<TraversalResult<R, Q>>;
+    //type Break = TraversalResult<R, Q>;
+    //type Continue = TraversalResult<R, Q>;
+    type NodeCollection = BftQueue<R, Q>;
 
-    fn fold_found(
-        _trav: &Self::Trav,
-        acc: Self::Continue,
-        node: TraversalNode<R, Q>,
-    ) -> ControlFlow<Self::Break, Self::Continue> {
-        match node {
-            TraversalNode::QueryEnd(_, _, found) => {
-                ControlFlow::Break(found)
-            },
-            TraversalNode::MatchEnd(_, _, match_end, query) => {
-                let found = TraversalResult::new(
-                    match_end,
-                    query,
-                );
-                ControlFlow::Continue(search::pick_max_result::<R, _>(acc, found))
-            },
-            TraversalNode::Mismatch(_, _, found) =>
-                ControlFlow::Continue(search::pick_max_result::<R, _>(acc, found)),
-            _ => ControlFlow::Continue(acc)
-        }
-    }
+    //fn map_state(
+    //    &self,
+    //    acc: ControlFlow<Self::Break, Self::Continue>,
+    //    node: TraversalState<R, Q>,
+    //) -> ControlFlow<Self::Break, Self::Continue> {
+    //    match node {
+    //        TraversalState::QueryEnd(_, _, found) => {
+    //            ControlFlow::Break(found)
+    //        },
+    //        TraversalState::MatchEnd(_, _, match_end, query) => {
+    //            let found = TraversalResult::new(
+    //                match_end,
+    //                query,
+    //            );
+    //            ControlFlow::Continue(search::pick_max_result::<R, _>(acc, found))
+    //        },
+    //        TraversalState::Mismatch(_, _, found) =>
+    //            ControlFlow::Continue(search::pick_max_result::<R, _>(acc, found)),
+    //        _ => ControlFlow::Continue(acc)
+    //    }
+    //}
 }
 pub fn pick_max_result<
     R: ResultKind,
@@ -115,13 +127,12 @@ struct AncestorSearch<T: Tokenize, D: MatchDirection> {
 impl<
     T: Tokenize,
     D: MatchDirection,
+    Q: QueryPath,
     R: ResultKind,
 >
-    DirectedTraversalPolicy<T, D, QueryRangePath, R> for AncestorSearch<T, D>
+    DirectedTraversalPolicy<T, D, Q, R> for AncestorSearch<T, D>
 {
     type Trav = Searcher<T, D>;
-    type Folder = Searcher<T, D>;
-    //type Primer = R::Result<ChildPath>;
 
     fn at_postfix(
         _trav: &Self::Trav,
@@ -139,13 +150,12 @@ impl<
     'g,
     T: Tokenize,
     D: MatchDirection,
-    Q: BaseQuery,
+    Q: QueryPath,
     R: ResultKind,
 >
     DirectedTraversalPolicy<T, D, Q, R> for ParentSearch<T, D>
 {
     type Trav = Searcher<T, D>;
-    type Folder = Searcher<T, D>;
 
     fn at_postfix(
         _trav: &Self::Trav,
@@ -158,10 +168,17 @@ impl<
         _key: CacheKey,
         _query: &Q,
         _start: &R::Postfix,
-    ) -> Vec<TraversalNode<R, Q>> {
+    ) -> Vec<ParentState<R, Q>> {
         vec![]
     }
 }
+pub type SearchResult = Result<
+    TraversalResult<
+        BaseResult,
+        QueryRangePath
+    >,
+    NoMatch
+>;
 impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
     pub fn new(graph: HypergraphRef<T>) -> Self {
         Self {
@@ -188,7 +205,7 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
         )
     }
     fn bft_search<
-        S: SearchTraversalPolicy<T, D> + Send,
+        S: SearchTraversalPolicy<T, D, QueryRangePath, BaseResult> + Send,
         P: IntoPattern,
     >(
         &self,
@@ -202,34 +219,12 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
     fn search<
         'a,
         Ti: TraversalIterator<'a, T, D, Self, QueryRangePath, S, BaseResult> + Send,
-        S: SearchTraversalPolicy<T, D>,
+        S: SearchTraversalPolicy<T, D, QueryRangePath, BaseResult>,
         P: IntoPattern,
     >(
         &'a self,
         query: P,
     ) -> SearchResult {
-        let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())
-            .map_err(|(err, _)| err)?;
-        let mut acc = ControlFlow::Continue(None);
-        let mut stream = Ti::new(self, query_path)
-            .ok_or(NoMatch::EmptyPatterns)?;
-
-        while let Some((_depth, node)) = stream.next() {
-            match <S::Folder as TraversalFolder<_, _, _, BaseResult>>::fold_found(self, acc.continue_value().unwrap(), node) {
-                ControlFlow::Continue(c) => {
-                    acc = ControlFlow::Continue(c);
-                },
-                ControlFlow::Break(found) => {
-                    acc = ControlFlow::Break(found);
-                    break;
-                },
-            };
-        }
-        match acc {
-            ControlFlow::Continue(None) => Err(NoMatch::NotFound),
-            ControlFlow::Continue(Some(found)) |
-            ControlFlow::Break(found) => Ok(found)
-        }
     }
     //#[allow(unused)]
     //fn par_search<
@@ -243,7 +238,7 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
     //    let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())
     //        .map_err(|(err, _)| err)?;
     //    match ParallelIterator::simplify(
-    //        Ti::new(self, TraversalNode::query_node(query_path))
+    //        Ti::new(self, TraversalState::query_node(query_path))
     //            .par_bridge()
     //            .try_fold_with(None, |acc, (_depth, node)|
     //                tokio::runtime::Handle::current().block_on(

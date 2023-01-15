@@ -7,6 +7,7 @@
 #![feature(control_flow_enum)]
 #![feature(pin_macro)]
 #![feature(exact_size_is_empty)]
+#![feature(associated_type_defaults)]
 
 extern crate test;
 

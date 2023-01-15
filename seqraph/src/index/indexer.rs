@@ -8,7 +8,7 @@ pub struct Indexer<T: Tokenize, D: IndexDirection> {
     pub graph: HypergraphRef<T>,
     _ty: std::marker::PhantomData<D>,
 }
-pub struct IndexingPolicy<T: Tokenize, D: IndexDirection, Q: IndexingQuery, R: ResultKind> {
+pub struct IndexingPolicy<T: Tokenize, D: IndexDirection, Q: QueryPath, R: ResultKind> {
     _ty: std::marker::PhantomData<(T, D, Q, R)>,
 }
 impl<
@@ -16,14 +16,12 @@ impl<
     'g,
     T: Tokenize,
     D: IndexDirection,
-    Q: IndexingQuery,
+    Q: QueryPath,
     R: ResultKind,
 >
 DirectedTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
 {
     type Trav = Indexer<T, D>;
-    type Folder = Indexer<T, D>;
-    //type Primer = PathLeaf;
 
     #[instrument(skip(trav, primer))]
     fn at_postfix(
@@ -65,14 +63,12 @@ DirectedTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
 pub trait IndexerTraversalPolicy<
     T: Tokenize,
     D: IndexDirection,
-    Q: IndexingQuery,
+    Q: QueryPath,
     R: ResultKind,
 >:
     DirectedTraversalPolicy<
         T, D, Q, R,
         Trav=Indexer<T, D>,
-        Folder=Indexer<T, D>,
-        //Primer = PathLeaf
     >
 {
 }
@@ -81,62 +77,75 @@ impl<
     'g,
     T: Tokenize,
     D: IndexDirection,
-    Q: IndexingQuery,
+    Q: QueryPath,
     R: ResultKind,
 > IndexerTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
 {}
 
-pub trait IndexingQuery: BaseQuery {}
-impl<T: BaseQuery> IndexingQuery for T {}
-
-
-impl<T, D, Q, R> TraversalFolder<T, D, Q, R> for Indexer<T, D>
+impl<T, D, Q, R> TraversalFolder<T, D, Q, IndexingPolicy<T, D, Q, R>, R> for Indexer<T, D>
 where 
     T: Tokenize,
     D: IndexDirection,
-    Q: IndexingQuery,
+    Q: QueryPath,
     R: ResultKind,
 {
-    type Trav = Self;
-    type Break = (<R as ResultKind>::Indexed, Q);
-    type Continue = Option<TraversalResult<R, Q>>;
+    //type Break = TraversalResult<R, Q>;
+    //type Continue = TraversalResult<R, Q>;
+    //type Result = (<R as ResultKind>::Indexed, Q);
+    type NodeCollection = BftQueue<R, Q>;
 
-    fn fold_found(
-        trav: &Self::Trav,
-        acc: Self::Continue,
-        node: TraversalNode<R, Q>,
-    ) -> ControlFlow<Self::Break, Self::Continue> {
-        let mut trav = trav.clone();
-        match node {
-            TraversalNode::QueryEnd(_, _, res) => {
-                //println!("fold query end {:#?}", res);
-                ControlFlow::Break((
-                    R::index_found::<_, D>(
-                        res.path,
-                        &mut trav
-                    ),
-                    res.query,
-                ))
-            },
-            TraversalNode::Mismatch(_, _, res) => {
-                //println!("fold mismatch {:#?}", res);
-                ControlFlow::Continue(search::pick_max_result::<R, _>(acc, res))
-            },
-            TraversalNode::MatchEnd(_, _, postfix, query) => {
-                //println!("fold match end {:#?}", postfix);
-                //let found = match_end
-                //    .into_range_path().into_result(query);
-                //if let Some(r) = found.found.get_range() {
-                //    assert!(r.root_child_pos() != r.root_child_pos());
-                //}
-                ControlFlow::Continue(search::pick_max_result::<R, _>(
-                    acc,
-                    <R as ResultKind>::Found::from(postfix).into_result(query)
-                ))
-            },
-            _ => ControlFlow::Continue(acc)
-        }
-    }
+    //fn map_state(
+    //    &self,
+    //    acc: ControlFlow<Self::Break, Self::Continue>,
+    //    node: TraversalState<R, Q>,
+    //) -> ControlFlow<Self::Break, Self::Continue> {
+    //    match node {
+    //        TraversalState::QueryEnd(_, _, res) => {
+    //            //println!("fold query end {:#?}", res);
+    //            ControlFlow::Break()
+    //        },
+    //        TraversalState::Mismatch(_, _, res) => {
+    //            //println!("fold mismatch {:#?}", res);
+    //            ControlFlow::Continue(search::pick_max_result::<R, _>(acc, res))
+    //        },
+    //        TraversalState::MatchEnd(_, _, postfix, query) => {
+    //            //println!("fold match end {:#?}", postfix);
+    //            //let found = match_end
+    //            //    .into_range_path().into_result(query);
+    //            //if let Some(r) = found.found.get_range() {
+    //            //    assert!(r.root_child_pos() != r.root_child_pos());
+    //            //}
+    //            ControlFlow::Continue(search::pick_max_result::<R, _>(
+    //                acc,
+    //                <R as ResultKind>::Found::from(postfix).into_result(query)
+    //            ))
+    //        },
+    //        _ => ControlFlow::Continue(acc)
+    //    }
+    //}
+    //fn map_continue(
+    //    &self,
+    //    cont: Self::Continue,
+    //) -> Self::Result {
+    //    (
+    //        R::index_found::<_, D>(cont.path, self),
+    //        cont.query
+    //    )
+    //}
+
+    //fn map_break(
+    //    &self,
+    //    brk: Self::Break,
+    //) -> Self::Result {
+    //    let mut trav = self.clone();
+    //    (
+    //        R::index_found::<_, D>(
+    //            brk.path,
+    //            &mut trav,
+    //        ),
+    //        brk.query,
+    //    )
+    //}
 }
 
 impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
@@ -159,86 +168,65 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
         &mut self,
         query: impl IntoPattern,
     ) -> Result<(Child, QueryRangePath), NoMatch> {
-        let query = query.into_pattern();
-        match QueryRangePath::new_directed::<D, _>(query.borrow()) {
-            Ok(query_path) => self.index_query(query_path),
+        match <S::Folder as TraversalFolder<_, D, _, R>>::fold_query(query) {
+            Ok((result, remaining_query)) => Ok((self.index_found(result), remaining_query)),
             Err((NoMatch::SingleIndex(c), path)) => Ok((c, path)),
             Err((err, _)) => Err(err),
         }
     }
-    pub fn index_query<
-        Q: IndexingQuery,
-    >(
-        &mut self,
-        query: Q,
-    ) -> Result<(Child, Q), NoMatch> {
-        self.index_result_kind::<BaseResult, _>(query)
-    }
-    pub fn index_query_with_origin<
-        Q: IndexingQuery,
-    >(
-        &mut self,
-        query: Q,
-    ) -> Result<(OriginPath<Child>, Q), NoMatch> {
-        self.index_result_kind::<OriginPathResult, _>(query)
-    }
-    pub fn index_result_kind<
-        R: ResultKind,
-        Q: IndexingQuery,
-    >(
-        &mut self,
-        query: Q,
-    ) -> Result<(<R as ResultKind>::Indexed, Q), NoMatch> {
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        query.hash(&mut hasher);
-        let _h = hasher.finish();
-        let acc = self.run_indexing::<R, _, IndexingPolicy<T, D, Q, _>, Bft<_, _, _, _, _, _>>(query)?;
-        self.finish_result::<R, Q>(acc)
-    }
-    fn run_indexing<
-        'a,
-        R: ResultKind,
-        Q: IndexingQuery,
-        S: IndexerTraversalPolicy<T, D, Q, R>,
-        Ti: TraversalIterator<'a, T, D, Self, Q, S, R>,
-    >(
-        &'a mut self,
-        query_path: Q,
-    ) -> Result<ControlFlow<(<R as ResultKind>::Indexed, Q), Option<TraversalResult<R, Q>>>, NoMatch> {
-        let mut acc = ControlFlow::Continue(None);
-        let mut stream = Ti::new(self, query_path)
-            .ok_or(NoMatch::EmptyPatterns)?;
-        while let Some((_depth, node)) = stream.next() {
-            match <S::Folder as TraversalFolder<_, _, _, R>>::fold_found(self, acc.continue_value().unwrap(), node) {
-                ControlFlow::Continue(c) => {
-                    acc = ControlFlow::Continue(c);
-                },
-                ControlFlow::Break(found) => {
-                    acc = ControlFlow::Break(found);
-                    break;
-                },
-            };
-        }
-        Ok(acc)
-    }
-    fn finish_result<
-        R: ResultKind,
-        Q: IndexingQuery,
-    >(
-        &mut self,
-        result: ControlFlow<(<R as ResultKind>::Indexed, Q), Option<TraversalResult<R, Q>>>,
-    ) -> Result<(<R as ResultKind>::Indexed, Q), NoMatch> {
-        match result {
-            ControlFlow::Continue(found) => {
-                match found {
-                    Some(f) => Ok((
-                        R::index_found::<_, D>(f.path, self),
-                        f.query
-                    )),
-                    None => Err(NoMatch::NotFound),
-                }
-            }
-            ControlFlow::Break((found, query)) => Ok((found, query)),
-        }
-    }
+    //pub fn index_query<
+    //    Q: QueryPath,
+    //>(
+    //    &mut self,
+    //    query: Q,
+    //) -> Result<(Child, Q), NoMatch> {
+    //    self.index_result_kind::<BaseResult, _>(query)
+    //}
+    //pub fn index_query_with_origin<
+    //    Q: QueryPath,
+    //>(
+    //    &mut self,
+    //    query: Q,
+    //) -> Result<(OriginPath<Child>, Q), NoMatch> {
+    //    self.index_result_kind::<OriginPathResult, _>(query)
+    //}
+    //pub fn index_result_kind<
+    //    R: ResultKind,
+    //    Q: QueryPath,
+    //>(
+    //    &mut self,
+    //    query: Q,
+    //) -> Result<(<R as ResultKind>::Indexed, Q), NoMatch> {
+    //    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    //    query.hash(&mut hasher);
+    //    let _h = hasher.finish();
+    //    let acc = self.run_indexing::<R, _, IndexingPolicy<T, D, Q, _>, Bft<_, _, _, _, _, _>>(query)?;
+    //    self.finish_result::<R, Q>(acc)
+    //}
+    //fn run_indexing<
+    //    'a,
+    //    R: ResultKind,
+    //    Q: QueryPath,
+    //    S: IndexerTraversalPolicy<T, D, Q, R>,
+    //    Ti: TraversalIterator<'a, T, D, Self, Q, IndexingTraversalPolicy<T, D, Q, R>, R>,
+    //>(
+    //    &'a mut self,
+    //    query_path: Q,
+    //) -> Result<ControlFlow<(<R as ResultKind>::Indexed, Q), Option<TraversalResult<R, Q>>>, NoMatch> {
+    //    let mut acc = ControlFlow::Continue(None);
+    //    let mut stream = Ti::new(self, query_path)
+    //        .ok_or(NoMatch::EmptyPatterns)?;
+    //    while let Some((_depth, node)) = stream.next() {
+    //        match <S::Folder as TraversalFolder<_, _, _, R>>::fold_found(self, acc.continue_value().unwrap(), node) {
+    //            ControlFlow::Continue(c) => {
+    //                acc = ControlFlow::Continue(c);
+    //            },
+    //            ControlFlow::Break(found) => {
+    //                acc = ControlFlow::Break(found);
+    //                break;
+    //            },
+    //        };
+    //    }
+    //    Ok(acc)
+    //}
 }

@@ -19,7 +19,27 @@ impl QueryRangePath {
             end: vec![],
         }
     }
-    pub fn new_directed<
+}
+pub trait QueryPath: BaseQuery {
+    fn complete(pattern: impl IntoPattern) -> Self;
+    fn new_directed<
+        D: MatchDirection,
+        P: IntoPattern,
+    >(query: P) -> Result<Self, (NoMatch, Self)>;
+}
+
+impl QueryPath for QueryRangePath {
+    fn complete(query: impl IntoPattern) -> Self {
+        let query = query.into_pattern();
+        Self {
+            entry: 0,
+            exit: query.len(),
+            query,
+            start: vec![],
+            end: vec![],
+        }
+    }
+    fn new_directed<
         D: MatchDirection,
         P: IntoPattern,
     >(query: P) -> Result<Self, (NoMatch, Self)> {
@@ -36,22 +56,6 @@ impl QueryRangePath {
             0 => Err((NoMatch::EmptyPatterns, mk_path(query))),
             1 => Err((NoMatch::SingleIndex(*query.first().unwrap()), mk_path(query))),
             _ => Ok(mk_path(query))
-        }
-    }
-}
-pub trait QueryPath: BaseQuery {
-    fn complete(pattern: impl IntoPattern) -> Self;
-}
-
-impl QueryPath for QueryRangePath {
-    fn complete(query: impl IntoPattern) -> Self {
-        let query = query.into_pattern();
-        Self {
-            entry: 0,
-            exit: query.len(),
-            query,
-            start: vec![],
-            end: vec![],
         }
     }
 }

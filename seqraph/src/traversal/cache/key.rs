@@ -85,7 +85,7 @@ impl<P: Advanced, Q: BaseQuery> GetCacheKey for PathPair<P, Q> {
         self.get_path().root_key()
     }
 }
-impl<R: ResultKind, Q: BaseQuery> GetCacheKey for ParentNode<R, Q> {
+impl<R: ResultKind, Q: BaseQuery> GetCacheKey for ParentState<R, Q> {
     fn leaf_key(&self) -> CacheKey {
         self.path.leaf_key()
     }
@@ -96,7 +96,7 @@ impl<R: ResultKind, Q: BaseQuery> GetCacheKey for ParentNode<R, Q> {
 impl<
     R: ResultKind,
     Q: BaseQuery,
-> GetCacheKey for StartNode<R, Q> {
+> GetCacheKey for StartState<R, Q> {
     fn leaf_key(&self) -> CacheKey {
         CacheKey::new(self.index.index(), 0)
     }
@@ -104,7 +104,7 @@ impl<
         self.leaf_key()
     }
 }
-impl<R: ResultKind, Q: BaseQuery> GetCacheKey for ChildNode<R, Q> {
+impl<R: ResultKind, Q: BaseQuery> GetCacheKey for ChildState<R, Q> {
     fn leaf_key(&self) -> CacheKey {
         self.paths.leaf_key()
     }
@@ -133,14 +133,14 @@ impl GetCacheKey for FoundPath {
 impl<P: MatchEndPath + GetCacheKey> GetCacheKey for MatchEnd<P> {
     fn leaf_key(&self) -> CacheKey {
         match self {
-            MatchEnd::Path(path) => path.leaf_key(),
-            MatchEnd::Complete(c) => c.leaf_key(),
+            Self::Path(path) => path.leaf_key(),
+            Self::Complete(c) => c.leaf_key(),
         }
     }
     fn root_key(&self) -> CacheKey {
         match self {
-            MatchEnd::Path(path) => path.root_key(),
-            MatchEnd::Complete(c) => c.root_key(),
+            Self::Path(path) => path.root_key(),
+            Self::Complete(c) => c.root_key(),
         }
     }
 }
@@ -155,41 +155,52 @@ impl<P: GetCacheKey> GetCacheKey for OriginPath<P> {
 impl<
     R: ResultKind,
     Q: BaseQuery,
-> GetCacheKey for TraversalNode<R, Q> {
+> GetCacheKey for TraversalState<R, Q> {
     fn leaf_key(&self) -> CacheKey {
         match self {
-            TraversalNode::Start(start) => CacheKey {
+            Self::Start(start) => CacheKey {
                 index: start.index.index(),
                 token_pos: 0,
             },
-            TraversalNode::Parent(_, node) =>
+            Self::Parent(_, node) =>
                 node.leaf_key(),
-            TraversalNode::Child(_, paths) =>
+            Self::Child(_, paths) =>
                 paths.leaf_key(),
-            TraversalNode::Mismatch(_, _, found) =>
-                found.leaf_key(),
-            TraversalNode::QueryEnd(_, _, found) =>
-                found.leaf_key(),
-            TraversalNode::MatchEnd(_, _, match_end, _) =>
-                match_end.leaf_key(),
-            //TraversalNode::Match(path, query) =>
-            //    path.cache_key(),
+            Self::End(_, state) =>
+                state.leaf_key(),
         }
     }
     fn root_key(&self) -> CacheKey {
         match self {
-            TraversalNode::Start(node) => node.root_key(),
-            TraversalNode::Parent(_, node) => node.root_key(),
-            TraversalNode::Child(_, paths) =>
+            Self::Start(node) => node.root_key(),
+            Self::Parent(_, node) => node.root_key(),
+            Self::Child(_, paths) =>
                 paths.root_key(),
-            TraversalNode::Mismatch(_, _, found) =>
-                found.root_key(),
-            TraversalNode::QueryEnd(_, _, found) =>
-                found.root_key(),
-            TraversalNode::MatchEnd(_, _, match_end, _) =>
+            Self::End(_, state) =>
+                state.root_key(),
+        }
+    }
+}
+impl<
+    R: ResultKind,
+    Q: BaseQuery,
+> GetCacheKey for EndState<R, Q> {
+    fn leaf_key(&self) -> CacheKey {
+        match self {
+            Self::Mismatch(_, _, found)
+            | Self::QueryEnd(_, _, found) =>
+                found.leaf_key(),
+            Self::MatchEnd(_, match_end, _) =>
+                match_end.leaf_key(),
+        }
+    }
+    fn root_key(&self) -> CacheKey {
+        match self {
+            Self::Mismatch(_, root_key, _)
+            | Self::QueryEnd(_, root_key, _) =>
+                *root_key,
+            Self::MatchEnd(_, match_end, _) =>
                 match_end.root_key(),
-            //TraversalNode::Match(path, query) =>
-            //    path.cache_key(),
         }
     }
 }

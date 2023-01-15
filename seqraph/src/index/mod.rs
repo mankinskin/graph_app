@@ -34,7 +34,7 @@ where
         self.indexer().index_pattern(pattern)
     }
     pub fn index_query_with_origin<
-        Q: IndexingQuery
+        Q: QueryPath
     >(
         &self,
         query: Q,

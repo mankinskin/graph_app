@@ -134,15 +134,22 @@ impl_root! { GraphRootPattern for SearchPath, self => self.start.root_pattern_lo
 //impl_root! { GraphRootPattern for PathLeaf, self => self.child_location().into_pattern_location() }
 impl_root! { GraphRoot for SearchPath, self => self.root_pattern_location().parent }
 
-impl<R: ResultKind, Q: BaseQuery> GraphRoot for TraversalNode<R, Q> {
+impl<R: ResultKind, Q: BaseQuery> GraphRoot for TraversalState<R, Q> {
     fn root_parent(&self) -> Child {
         match self {
             Self::Parent(_, node) => node.path.root_parent(),
             Self::Child(_, node) => node.paths.get_path().root_parent(),
-            Self::MatchEnd(_, _, path, _) => path.root_parent(),
+            Self::End(_, state) => state.root_parent(),
+            Self::Start(node) => node.index,
+        }
+    }
+}
+impl<R: ResultKind, Q: BaseQuery> GraphRoot for EndState<R, Q> {
+    fn root_parent(&self) -> Child {
+        match self {
+            Self::MatchEnd(_, path, _) => path.root_parent(),
             Self::Mismatch(_, _, found)
             | Self::QueryEnd(_, _, found) => found.path.root_parent(),
-            Self::Start(node) => node.index,
         }
     }
 }

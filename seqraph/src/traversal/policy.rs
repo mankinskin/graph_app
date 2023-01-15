@@ -7,15 +7,11 @@ impl<R, T: RootChild<R> + Send + Clone + Eq + Debug> NodePath<R> for T {}
 pub trait DirectedTraversalPolicy<
     T: Tokenize,
     D: MatchDirection,
-    Q: BaseQuery,
+    Q: QueryPath,
     R: ResultKind,
 >: Sized + Send + Sync + Unpin {
 
-    type Trav: Traversable<T>;
-    //type Primer: PathPrimer + From<R::Result<ChildPath>> + GraphRootChild;
-    type Folder: TraversalFolder<T, D, Q, R//, Trav=Self::Trav,
-    // Primer=ChildPath
-    >;
+    type Trav: Traversable<T> + TraversalFolder<T, D, Q, Self, R>;
 
     /// Executed after last child of index matched
     fn at_postfix(
@@ -29,7 +25,7 @@ pub trait DirectedTraversalPolicy<
         key: CacheKey,
         query: &Q,
         postfix: &R::Postfix,
-    ) -> Vec<TraversalNode<R, Q>> {
+    ) -> Vec<ParentState<R, Q>> {
         Self::gen_parent_nodes(
             trav,
             key,
@@ -47,7 +43,7 @@ pub trait DirectedTraversalPolicy<
         query: &Q,
         index: Child,
         build_start: B,
-    ) -> Vec<TraversalNode<R, Q>> {
+    ) -> Vec<ParentState<R, Q>> {
         trav.graph()
             .expect_vertex_data(index)
             .get_parents()
@@ -63,12 +59,12 @@ pub trait DirectedTraversalPolicy<
             })
             .sorted_unstable_by(|a, b| TraversalOrder::cmp(a, b))
             .map(|p| {
-                TraversalNode::Parent(key, ParentNode {
+                ParentState {
                     path: build_start(p, trav),
                     query: query.clone(),
                     //num_patterns: trav.graph().expect_vertex_data(p.parent).children.len()
                     _ty: Default::default(),
-                })
+                }
             })
             .collect()
         
