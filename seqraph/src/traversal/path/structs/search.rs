@@ -2,29 +2,18 @@ use crate::*;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct SearchPath {
-    pub start: ChildPath<Start>,
-    pub end: ChildPath<End>,
+    pub root: PatternLocation,
+    pub start: RolePath<Start>,
+    pub end: RolePath<End>,
 }
-//impl From<ChildPath> for SearchPath {
-//    fn from(start: ChildPath) -> Self {
-//        let entry = start.child_location();
-//        Self {
-//            start,
-//            end: ChildPath::Leaf(PathLeaf::new({
-//                entry,
-//                width: 0,
-//            })),
-//        }
-//    }
-//}
 impl SearchPath {
-    #[allow(unused)]
-    pub fn into_paths(self) -> (ChildPath<Start>, ChildPath<End>) {
-        (
-            self.start,
-            self.end
-        )
-    }
+    //#[allow(unused)]
+    //pub fn into_paths(self) -> (RolePath<Start>, RolePath<End>) {
+    //    (
+    //        self.start,
+    //        self.end
+    //    )
+    //}
     //pub fn reduce_start<
     //    T: Tokenize,
     //    D: MatchDirection,
@@ -46,33 +35,31 @@ impl SearchPath {
     //}
 
 }
-//impl RangePath for SearchPath {
+
+//impl Wide for SearchPath {
+//    fn width(&self) -> usize {
+//        self.start.width()
+//    }
+//}
+//impl WideMut for SearchPath {
+//    fn width_mut(&mut self) -> &mut usize {
+//        self.start.width_mut()
+//    }
 //}
 
-impl Wide for SearchPath {
-    fn width(&self) -> usize {
-        self.start.width()
-    }
-}
-impl WideMut for SearchPath {
-    fn width_mut(&mut self) -> &mut usize {
-        self.start.width_mut()
-    }
-}
-
-impl PartialOrd for SearchPath {
-    fn partial_cmp(&self, other: &SearchPath) -> Option<Ordering> {
-        match self.width().cmp(&other.width()) {
-            Ordering::Equal =>
-                match (self.min_path_segments(), other.min_path_segments()) {
-                    (1, 2..) => Some(Ordering::Greater),
-                    (2.., 1) => Some(Ordering::Less),
-                    _ =>
-                        HasMatchPaths::num_path_segments(self).partial_cmp(
-                            &HasMatchPaths::num_path_segments(other)
-                        ).map(Ordering::reverse),
-                },
-            o => Some(o),
-        }
-    }
-}
+//impl PartialOrd for SearchPath {
+//    fn partial_cmp(&self, other: &SearchPath) -> Option<Ordering> {
+//        match self.width().cmp(&other.width()) {
+//            Ordering::Equal =>
+//                match (self.min_path_segments(), other.min_path_segments()) {
+//                    (1, 2..) => Some(Ordering::Greater),
+//                    (2.., 1) => Some(Ordering::Less),
+//                    _ =>
+//                        HasMatchPaths::num_path_segments(self).partial_cmp(
+//                            &HasMatchPaths::num_path_segments(other)
+//                        ).map(Ordering::reverse),
+//                },
+//            o => Some(o),
+//        }
+//    }
+//}

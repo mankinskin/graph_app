@@ -19,15 +19,11 @@ impl Wide for char {
         1
     }
 }
-impl<R> Wide for ChildPath<R> {
-    fn width(&self) -> usize {
-        self.width
-        //match self {
-        //    Self::Path { width, .. } |
-        //    Self::Leaf(PathLeaf { width, .. }) => *width,
-        //}
-    }
-}
+//impl<R> Wide for RolePath<R> {
+//    fn width(&self) -> usize {
+//        self.width
+//    }
+//}
 
 impl<T: Wide> Wide for &'_ T {
     fn width(&self) -> usize {
@@ -53,11 +49,11 @@ impl Wide for VertexData {
 pub trait WideMut: Wide {
     fn width_mut(&mut self) -> &mut usize;
 }
-impl<P: WideMut> WideMut for OriginPath<P> {
-    fn width_mut(&mut self) -> &mut usize {
-        self.postfix.width_mut()
-    }
-}
+//impl<P: WideMut> WideMut for OriginPath<P> {
+//    fn width_mut(&mut self) -> &mut usize {
+//        self.postfix.width_mut()
+//    }
+//}
 //impl WideMut for OverlapPrimer {
 //    fn width_mut(&mut self) -> &mut usize {
 //        &mut self.width

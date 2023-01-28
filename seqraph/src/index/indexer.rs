@@ -45,7 +45,7 @@ DirectedTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
                     std::iter::once(&path.child_location())
                 ).collect_vec(),
             ) {
-                MatchEnd::Path(ChildPath {
+                MatchEnd::Path(RolePath {
                     path: vec![entry],
                     child: post,
                     width: post.width(),

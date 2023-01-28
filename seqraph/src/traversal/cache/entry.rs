@@ -1,14 +1,15 @@
 use super::*;
+type StateDepth = usize;
 
-#[derive(Clone, Debug)]
-pub struct PositionCache<R: ResultKind, Q: BaseQuery> {
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PositionCache<R: ResultKind> {
     pub top_down: HashMap<CacheKey, ChildLocation>,
     pub bottom_up: HashMap<CacheKey, SubLocation>,
     pub index: Child,
-    pub waiting: Vec<(usize, TraversalState<R, Q>)>,
+    pub waiting: Vec<(StateDepth, TraversalState<R>)>,
     _ty: std::marker::PhantomData<R>,
 }
-impl<R: ResultKind, Q: BaseQuery> PositionCache<R, Q> {
+impl<R: ResultKind> PositionCache<R> {
     pub fn start(index: Child) -> Self {
         Self {
             index,
@@ -18,13 +19,17 @@ impl<R: ResultKind, Q: BaseQuery> PositionCache<R, Q> {
             _ty: Default::default(),
         }
     }
-    pub fn new(
-        state: &TraversalState<R, Q>,
+    pub fn new<
+        T: Tokenize,
+        Trav: Traversable<T>,
+    >(
+        trav: &Trav,
+        state: &TraversalState<R>,
     ) -> Self {
         //let cache_node = CacheNode::new(node);
         let mut top_down = HashMap::default();
         let mut bottom_up = HashMap::default();
-        if let (Some(prev), Some(entry)) = (state.prev_key(), state.entry_location()) {
+        if let (prev, Some(entry)) = (state.prev_key(), state.entry_location()) {
             match state.node_direction() {
                 NodeDirection::TopDown => {
                     top_down.insert(prev, entry);
@@ -37,33 +42,33 @@ impl<R: ResultKind, Q: BaseQuery> PositionCache<R, Q> {
         let s = Self {
             top_down,
             bottom_up,
-            index: state.root_parent(),
+            index: state.target_key(trav).index,
             waiting: Default::default(),
             _ty: Default::default(),
         };
         s
     }
-    pub fn add_waiting(&mut self, depth: usize, state: TraversalState<R, Q>) {
+    pub fn add_waiting(&mut self, depth: StateDepth, state: TraversalState<R>) {
         self.waiting.push((depth, state));
     }
 }
-/// Bottom-Up Cache Entry
-#[derive(Clone, Debug)]
-pub struct VertexCache<R: ResultKind, Q: BaseQuery> {
-    pub(crate) positions: HashMap<usize, PositionCache<R, Q>>
-}
-impl<R: ResultKind, Q: BaseQuery> VertexCache<R, Q> {
-    pub(crate)fn new_position(
-        &mut self,
-        key: CacheKey,
-        state: &TraversalState<R, Q>,
-    ) {
-        let cache = PositionCache::new(
-            state,
-        );
-        self.positions.insert(
-            key.token_pos,
-            cache,
-        );
-    }
-}
+///// Bottom-Up Cache Entry
+//#[derive(Clone, Debug, PartialEq, Eq)]
+//pub struct VertexCache<R: ResultKind> {
+//    pub(crate) positions: HashMap<usize, PositionCache<R>>
+//}
+//impl<R: ResultKind> VertexCache<R> {
+//    pub(crate)fn new_position(
+//        &mut self,
+//        key: CacheKey,
+//        state: &TraversalState<R>,
+//    ) {
+//        let cache = PositionCache::new(
+//            state,
+//        );
+//        self.positions.insert(
+//            key.token_pos,
+//            cache,
+//        );
+//    }
+//}

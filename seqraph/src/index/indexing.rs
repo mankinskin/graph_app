@@ -8,15 +8,22 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
     ) -> Child {
         //println!("indexing found path {:#?}", path);
         match path {
-            FoundPath::Range(path) => self.index_range_path(path),
+            FoundPath::Path(path) => self.index_range_path(path),
             FoundPath::Prefix(path) => self.index_prefix_path(path),
             FoundPath::Postfix(path) => self.at_postfix_path(path),
             FoundPath::Complete(c) => c
         }
     }
+    //pub fn index_subgraph<R: ResultKind, Q: QueryPath>(
+    //    &mut self,
+    //    result: FoldResult<R, Q>
+    //) -> Child {
+    //    let root_index = result.root_index();
+    //    let root_entries = result.root_entries()
+    //}
     fn index_prefix_path(
         &mut self,
-        path: ChildPath<End>,
+        path: RolePath<End>,
     ) -> Child {
         self.splitter::<IndexFront>().single_path_split(
             std::iter::once(&path.child_location()).chain(
@@ -25,11 +32,11 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
         )
         
         .map(|split| split.inner)
-        .expect("ChildPath for complete path!")
+        .expect("RolePath for complete path!")
     }
     fn at_postfix_path(
         &mut self,
-        path: ChildPath<Start>,
+        path: RolePath<Start>,
     ) -> Child {
         self.splitter::<IndexBack>().single_path_split(
             path.path().into_iter().chain(
@@ -38,7 +45,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
         )
         
         .map(|split| split.inner)
-        .expect("ChildPath for complete path!")
+        .expect("RolePath for complete path!")
     }
     #[instrument(skip(self, path))]
     fn index_range_path(

@@ -1,26 +1,17 @@
 use crate::*;
 use super::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TraversalResult<R: ResultKind, Q: BaseQuery> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TraversalResult<R: ResultKind> {
     pub path: <R as ResultKind>::Found,
-    pub query: Q,
+    pub query: <R as ResultKind>::Query,
 }
 
-pub trait IntoResult<R: ResultKind, Q: BaseQuery>: RangePath {
-    fn into_result(self, query: Q) -> TraversalResult<R, Q>;
-}
-
-impl<R: ResultKind, Q: BaseQuery> IntoResult<R, Q> for <R as ResultKind>::Found {
-    fn into_result(self, query: Q) -> TraversalResult<R, Q> {
-        TraversalResult {
-            path: self,
-            query,
-        }
-    }
-}
-impl<R: ResultKind, Q: BaseQuery> TraversalResult<R, Q> {
-    pub fn new(found: impl Into<<R as ResultKind>::Found>, query: impl Into<Q>) -> Self {
+impl<R: ResultKind> TraversalResult<R> {
+    pub fn new(
+        found: impl Into<<R as ResultKind>::Found>,
+        query: impl Into<<R as ResultKind>::Query>,
+    ) -> Self {
         Self {
             path: found.into(),
             query: query.into(),
@@ -36,12 +27,12 @@ impl<R: ResultKind, Q: BaseQuery> TraversalResult<R, Q> {
         self.path.expect_complete(msg)
     }
 }
-impl<Q: QueryPath> TraversalResult<BaseResult, Q> {
+impl TraversalResult<BaseResult> {
     #[allow(unused)]
     pub fn new_complete(query: impl IntoPattern, index: impl AsChild) -> Self {
         Self {
             path: FoundPath::Complete(index.as_child()),
-            query: Q::complete(query),
+            query: QueryRangePath::complete(query),
         }
     }
 }

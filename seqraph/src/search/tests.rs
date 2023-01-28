@@ -11,6 +11,8 @@ use pretty_assertions::{
 };
 use itertools::*;
 
+type HashMap<K, V> = DeterministicHashMap<K, V>;
+
 
 #[test]
 fn find_parent1() {
@@ -74,13 +76,7 @@ fn find_parent1() {
         graph.find_parent(&query),
         Ok(TraversalResult {
             path: FoundPath::Complete(*abc),
-            query: QueryRangePath {
-                exit: query.len() - 1,
-                query,
-                entry: 0,
-                start: vec![],
-                end: vec![],
-            },
+            query: QueryRangePath::complete(query),
         }),
         "a_b_c_c"
     );
@@ -161,13 +157,11 @@ fn find_ancestor1() {
         graph.find_ancestor(&query),
         Ok(TraversalResult {
             path: FoundPath::Complete(*abc),
-            query: QueryRangePath {
-                exit: query.len() - 1,
-                query,
-                entry: 0,
-                start: vec![],
-                end: vec![],
-            },
+            query: QueryRangePath::new_range(
+                query.clone(),
+                0,
+                query.len()-1
+            ),
         }),
         "a_b_c_c"
     );
@@ -189,9 +183,15 @@ fn find_ancestor2() {
     let yz = graph.insert_pattern([y, z]);
     let xa = graph.insert_pattern([x, a]);
     let xab = graph.insert_patterns([[x, ab], [xa, b]]);
-    let (xaby, xaby_ids) = graph.insert_patterns_with_ids([vec![xab, y], vec![xa, by]]);
+    let (xaby, xaby_ids) = graph.insert_patterns_with_ids([
+        vec![xab, y],
+        vec![xa, by],
+    ]);
     let xa_by_id = xaby_ids[1];
-    let (xabyz, xabyz_ids) = graph.insert_patterns_with_ids([vec![xaby, z], vec![xab, yz]]);
+    let (xabyz, xabyz_ids) = graph.insert_patterns_with_ids([
+        vec![xaby, z],
+        vec![xab, yz],
+    ]);
     let xaby_z_id = xabyz_ids[0];
     let graph = HypergraphRef::from(graph);
     let query = vec![by, z];
@@ -199,33 +199,42 @@ fn find_ancestor2() {
     assert_eq!(
         byz_found,
         Ok(TraversalResult {
-            path: FoundPath::Range(SearchPath {
-                start: ChildPath {
-                    path: vec![
-                        xabyz.to_pattern_location(xaby_z_id)
-                            .to_child_location(0),
-                        ChildLocation {
-                            parent: xaby,
-                            pattern_id: xa_by_id,
-                            sub_index: 1,
-                        },
-                    ],
-                    width: 3,
-                    child: by,
-                    token_pos: 2,
-                    _ty: Default::default(),
-                },
-                end: ChildPath {
-                    path: vec![
-                        xabyz.to_pattern_location(xaby_z_id)
-                            .to_child_location(1),
-                    ],
-                    width: 0,
-                    child: z,
-                    token_pos: 3,
-                    _ty: Default::default(),
-                },
-            }),
+            path: FoundPath::Path(
+                FoldResult {
+                    cache: TraversalCache {
+                        entries: HashMap::default()
+                    },
+                    end_states: vec![
+                    ]
+                }
+            //SearchPath {
+            //    start: RolePath {
+            //        path: vec![
+            //            xabyz.to_pattern_location(xaby_z_id)
+            //                .to_child_location(0),
+            //            ChildLocation {
+            //                parent: xaby,
+            //                pattern_id: xa_by_id,
+            //                sub_index: 1,
+            //            },
+            //        ],
+            //        width: 3,
+            //        child: by,
+            //        token_pos: 2,
+            //        _ty: Default::default(),
+            //    },
+            //    end: RolePath {
+            //        path: vec![
+            //            xabyz.to_pattern_location(xaby_z_id)
+            //                .to_child_location(1),
+            //        ],
+            //        width: 0,
+            //        child: z,
+            //        token_pos: 3,
+            //        _ty: Default::default(),
+            //    },
+            //}
+            ),
             query: QueryRangePath::complete(query),
         }),
         "by_z"
@@ -243,6 +252,7 @@ fn find_ancestor3() {
         Token::Element('y'),
         Token::Element('z'),
     ]).into_iter().next_tuple().unwrap();
+    // 6
     let ab = graph.insert_pattern([a, b]);
     let by = graph.insert_pattern([b, y]);
     let yz = graph.insert_pattern([y, z]);
@@ -259,33 +269,42 @@ fn find_ancestor3() {
     assert_eq!(
         aby_found,
         Ok(TraversalResult {
-            path: FoundPath::Range(SearchPath {
-                start: ChildPath {
-                    path: vec![
-                        xaby.to_pattern_location(xab_y_id)
-                            .to_child_location(0),
-                        ChildLocation {
-                            parent: xab,
-                            pattern_id: x_ab_id,
-                            sub_index: 1,
-                        },
-                    ],
-                    child: ab,
-                    width: 3,
-                    token_pos: 1,
-                    _ty: Default::default(),
-                },
-                end: ChildPath {
-                    path: vec![
-                        xaby.to_pattern_location(xab_y_id)
-                            .to_child_location(1),
-                    ],
-                    width: 0,
-                    child: y,
-                    token_pos: 3,
-                    _ty: Default::default(),
-                },
-            }),
+            path: FoundPath::Path(
+                FoldResult {
+                    cache: TraversalCache {
+                        entries: HashMap::default()
+                    },
+                    end_states: vec![
+                    ]
+                }
+            //SearchPath {
+            //    start: RolePath {
+            //        path: vec![
+            //            xaby.to_pattern_location(xab_y_id)
+            //                .to_child_location(0),
+            //            ChildLocation {
+            //                parent: xab,
+            //                pattern_id: x_ab_id,
+            //                sub_index: 1,
+            //            },
+            //        ],
+            //        child: ab,
+            //        width: 3,
+            //        token_pos: 1,
+            //        _ty: Default::default(),
+            //    },
+            //    end: RolePath {
+            //        path: vec![
+            //            xaby.to_pattern_location(xab_y_id)
+            //                .to_child_location(1),
+            //        ],
+            //        width: 0,
+            //        child: y,
+            //        token_pos: 3,
+            //        _ty: Default::default(),
+            //    },
+            //}
+            ),
             query: QueryRangePath::complete(query),
         }),
         "ab_y"

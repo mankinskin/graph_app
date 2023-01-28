@@ -16,7 +16,7 @@ pub mod graph;
 pub mod search;
 pub mod vertex;
 pub mod traversal;
-pub mod index;
+//pub mod index;
 pub mod logger;
 pub mod mock;
 //pub mod read;
@@ -25,7 +25,8 @@ pub use search::*;
 pub use vertex::*;
 pub use traversal::*;
 pub use logger::*;
-pub use index::*;
+pub use direction::*;
+//pub use index::*;
 //pub use read::*;
 
 #[cfg(test)]

@@ -1,17 +1,75 @@
 use crate::*;
 
+/// move path leaf position one level deeper
 pub trait PathAppend {
-    type Result;
-    fn append<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>
-    >(self, trav: &Trav, parent_entry: ChildLocation) -> Self::Result;
+    fn path_append(&mut self, parent_entry: ChildLocation);
 }
 
+impl PathAppend for SubPath {
+    fn path_append(&mut self, parent_entry: ChildLocation) {
+        self.path.push(parent_entry);
+    }
+}
+impl PathAppend for RolePath<Start> {
+    fn path_append(&mut self, parent_entry: ChildLocation) {
+        self.path.root_entry = parent_entry.sub_index;
+        self.path.path_append(parent_entry)
+    }
+}
+impl PathAppend for RolePath<End> {
+    fn path_append(&mut self, parent_entry: ChildLocation) {
+        self.path.path_append(parent_entry)
+    }
+}
+impl PathAppend for RootedRolePath<Start> {
+    fn path_append(&mut self, parent_entry: ChildLocation) {
+        self.path.path.root_entry = parent_entry.sub_index;
+        self.path.path.path_append(parent_entry)
+    }
+}
+impl PathAppend for RootedRolePath<End> {
+    fn path_append(&mut self, parent_entry: ChildLocation) {
+        self.path.path.path_append(parent_entry)
+    }
+}
+impl PathAppend for SearchPath {
+    fn path_append(&mut self, parent_entry: ChildLocation) {
+        self.end.path_append(parent_entry)
+    }
+}
+impl PathAppend for QueryRangePath {
+    fn path_append(&mut self, parent_entry: ChildLocation) {
+        self.end.path_append(parent_entry)
+    }
+}
+//impl<P: MatchEndPath + PathAppend> PathAppend for MatchEnd<P> {
+//    fn path_append(&mut self, parent_entry: ChildLocation) {
+//        match self {
+//            MatchEnd::Path(path) => path.path_append(parent_entry),
+//            MatchEnd::Complete(child) => RolePath {
+//                path: vec![parent_entry],
+//                width: child.width(),
+//                child,
+//                token_pos: 0,
+//                _ty: Default::default(),
+//            }.into(),
+//        }
+//    }
+//}
+//impl<P: PathAppend> PathAppend for OriginPath<P>
+//    where <P as PathAppend>::Result: PathAppend<Result=<P as PathAppend>::Result> + GraphRootChild<Start>
+//{
+//    type Result = OriginPath<<P as PathAppend>::Result>;
+//    fn path_append(self, parent_entry: ChildLocation) -> Self::Result {
+//        OriginPath {
+//            origin: MatchEnd::Path(self.origin.path_append(parent_entry)),
+//            postfix: self.postfix.path_append(parent_entry),
+//        }
+//    }
+//}
 //impl PathAppend for PathLeaf {
-//    type Result = ChildPath;
-//    fn append<
+//    type Result = RolePath;
+//    fn path_append<
 //        'a: 'g,
 //        'g,
 //        T: Tokenize,
@@ -21,14 +79,14 @@ pub trait PathAppend {
 //        let graph = trav.graph();
 //        let pattern = graph.expect_pattern_at(self.entry);
 //        if self.entry.sub_index == D::head_index(pattern.borrow()) {
-//            ChildPath::Leaf(PathLeaf {
+//            RolePath::Leaf(PathLeaf {
 //                entry: parent_entry,
 //                child: self.entry.parent,
 //                width: self.width,
 //                token_pos: self.token_pos,
 //            })
 //        } else {
-//            ChildPath::Path {
+//            RolePath::Path {
 //                entry: parent_entry,
 //                path: vec![self.entry],
 //                width: self.width,
@@ -39,57 +97,23 @@ pub trait PathAppend {
 //    }
 //}
 
-impl<R: PathRole> PathAppend for ChildPath<R> {
-    type Result = Self;
-    fn append<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>
-    >(mut self, trav: &Trav, parent_entry: ChildLocation) -> Self::Result {
-        //println!("path {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
-        let entry = self.child_location();
-        let graph = trav.graph();
-        let pattern = self.graph_root_pattern::<_, Trav>(&graph);
-        // start paths only at a non-head index position 
-        if entry.sub_index != D::head_index(pattern.borrow()) {
-            self.path.push(parent_entry);
-        } else {
-            self.path = vec![parent_entry]
-        }
-        self
-    }
-}
-impl<P: PathAppend> PathAppend for OriginPath<P>
-    where <P as PathAppend>::Result: PathAppend<Result=<P as PathAppend>::Result> + GraphRootChild<Start>
-{
-    type Result = OriginPath<<P as PathAppend>::Result>;
-    fn append<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>
-    >(self, trav: &Trav, parent_entry: ChildLocation) -> Self::Result {
-        OriginPath {
-            origin: MatchEnd::Path(self.origin.append::<_, D, _>(trav, parent_entry)),
-            postfix: self.postfix.append::<_, D, _>(trav, parent_entry),
-        }
-    }
-}
-impl<P: MatchEndPath + PathAppend> PathAppend for MatchEnd<P> {
-    type Result = <P as PathAppend>::Result;
-    fn append<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>
-    >(self, trav: &Trav, parent_entry: ChildLocation) -> Self::Result {
-        match self {
-            MatchEnd::Path(path) => path.append::<_, D, _>(trav, parent_entry),
-            MatchEnd::Complete(child) => ChildPath {
-                path: vec![parent_entry],
-                width: child.width(),
-                child,
-                token_pos: 0,
-                _ty: Default::default(),
-            }.into(),
-        }
-    }
-}
+//impl<R: PathRole> PathAppend for RolePath<R> {
+//    type Result = Self;
+//    fn path_append<
+//        T: Tokenize,
+//        D: MatchDirection,
+//        Trav: Traversable<T>
+//    >(mut self, trav: &Trav, parent_entry: ChildLocation) -> Self::Result {
+//        //println!("path {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);
+//        let entry = self.child_location();
+//        let graph = trav.graph();
+//        let pattern = self.graph_root_pattern::<_, Trav>(&graph);
+//        // start paths only at a non-head index position 
+//        if entry.sub_index != D::head_index(pattern.borrow()) {
+//            self.path.push(parent_entry);
+//        } else {
+//            self.path = vec![parent_entry]
+//        }
+//        self
+//    }
+//}

@@ -1,19 +1,17 @@
 use crate::*;
 
 //#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-//pub struct ChildPath {
+//pub struct RolePath {
 //    pub entry: ChildLocation,
-//    pub path: ChildPath,
+//    pub path: RolePath,
 //    pub width: usize,
 //}
 
 pub trait Retract:
     RootPattern
-    + PathChild<End>
-    + HasRolePath<End>
+    + PathPop
+    + PathAppend
     + RootChildPosMut<End>
-    + Send
-    + Sync
 {
     fn prev_exit_pos<
         T: Tokenize,
@@ -33,18 +31,34 @@ pub trait Retract:
         Trav: Traversable<T>,
         R: ResultKind,
     >(&mut self, trav: &Trav) {
+        //let graph = trav.graph();
+        //// remove segments pointing to mismatch at pattern head
+        //while let Some(mut location) = self.path_mut().pop() {
+        //    let pattern = graph.expect_pattern_at(&location);
+        //    // skip segments at start of pattern
+        //    if let Some(prev) = D::pattern_index_prev(pattern.borrow(), location.sub_index) {
+        //        location.sub_index = prev;
+        //        self.path_mut().push(location);
+        //        break;
+        //    }
+        //}
+        //if self.path_mut().is_empty() {
+        //    *self.root_child_pos_mut() = self.prev_exit_pos::<_, D, _>(trav).unwrap();
+        //}
         let graph = trav.graph();
-        // remove segments pointing to mismatch at pattern head
-        while let Some(mut location) = self.path_mut().pop() {
+        // skip path segments with no successors
+        if let Some(location) = std::iter::from_fn(|| 
+            self.pop_path()
+        ).find_map(|mut location| {
             let pattern = graph.expect_pattern_at(&location);
-            // skip segments at start of pattern
-            if let Some(prev) = D::pattern_index_prev(pattern.borrow(), location.sub_index) {
-                location.sub_index = prev;
-                self.path_mut().push(location);
-                break;
-            }
-        }
-        if self.path_mut().is_empty() {
+            D::pattern_index_prev(pattern.borrow(), location.sub_index)
+                .map(|next| {
+                    location.sub_index = next;
+                    location
+                })
+        }) {
+            self.path_append(location);
+        } else {
             *self.root_child_pos_mut() = self.prev_exit_pos::<_, D, _>(trav).unwrap();
         }
 
@@ -52,11 +66,9 @@ pub trait Retract:
 }
 impl<T:
     RootPattern
-    + PathChild<End>
-    + HasRolePath<End>
+    + PathPop
+    + PathAppend
     + RootChildPosMut<End>
-    + Send
-    + Sync
 > Retract for T
 {
 }

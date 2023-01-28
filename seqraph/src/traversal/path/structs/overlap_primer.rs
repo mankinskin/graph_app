@@ -7,7 +7,7 @@ pub struct OverlapPrimer {
     pub context_offset: usize,
     pub width: usize,
     pub exit: usize,
-    pub end: ChildPath<End>,
+    pub end: RolePath<End>,
 }
 impl OverlapPrimer {
     pub fn new(start: Child, context: PrefixQuery) -> Self {

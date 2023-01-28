@@ -39,12 +39,12 @@ where
     pub fn left_searcher(&'g self) -> Searcher<T, Left> {
         self.searcher()
     }
-    pub fn expect_pattern(
-        &self,
-        pattern: impl IntoIterator<Item = impl AsToken<T>>,
-    ) -> Child {
-        self.find_sequence(pattern).unwrap().unwrap_complete()
-    }
+    //pub fn expect_pattern(
+    //    &self,
+    //    pattern: impl IntoIterator<Item = impl AsToken<T>>,
+    //) -> Child {
+    //    self.find_sequence(pattern).unwrap().unwrap_complete()
+    //}
     pub fn find_ancestor(
         &self,
         pattern: impl IntoIterator<Item = impl Indexed>,

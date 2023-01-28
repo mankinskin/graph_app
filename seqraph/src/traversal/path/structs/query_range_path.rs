@@ -1,26 +1,26 @@
 use crate::*;
 
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct QueryRangePath {
-    pub query: Pattern,
-    pub entry: usize,
-    pub start: LocationPath,
-    pub exit: usize,
-    pub end: LocationPath,
+    pub root: Pattern,
+    pub start: RolePath<Start>,
+    pub end: RolePath<End>,
 }
 impl QueryRangePath {
-    pub fn postfix(query: impl IntoPattern, entry: usize) -> Self {
+    pub fn new_postfix(query: impl IntoPattern, entry: usize) -> Self {
         let query = query.into_pattern();
-        Self {
-            entry,
-            exit: query.len() - 1,
-            query,
-            start: vec![],
-            end: vec![],
-        }
+        let len = query.len();
+        Self::new_range(query, entry, len)
     }
 }
-pub trait QueryPath: BaseQuery {
+pub trait QueryPath:
+    BaseQuery
+    + LeafChild<End>
+    + PathAppend
+    + PathPop
+    + AdvanceExit
+{
     fn complete(pattern: impl IntoPattern) -> Self;
     fn new_directed<
         D: MatchDirection,
@@ -31,13 +31,8 @@ pub trait QueryPath: BaseQuery {
 impl QueryPath for QueryRangePath {
     fn complete(query: impl IntoPattern) -> Self {
         let query = query.into_pattern();
-        Self {
-            entry: 0,
-            exit: query.len(),
-            query,
-            start: vec![],
-            end: vec![],
-        }
+        let len = query.len();
+        Self::new_range(query, 0, len)
     }
     fn new_directed<
         D: MatchDirection,
@@ -45,17 +40,13 @@ impl QueryPath for QueryRangePath {
     >(query: P) -> Result<Self, (NoMatch, Self)> {
         let entry = D::head_index(query.borrow());
         let query = query.into_pattern();
-        let mk_path = |query| Self {
-                query,
-                entry,
-                start: vec![],
-                exit: entry,
-                end: vec![],
-            };
-        match query.len() {
-            0 => Err((NoMatch::EmptyPatterns, mk_path(query))),
-            1 => Err((NoMatch::SingleIndex(*query.first().unwrap()), mk_path(query))),
-            _ => Ok(mk_path(query))
+        let first = *query.first().unwrap();
+        let len = query.len();
+        let query = Self::new_range(query, entry, entry);
+        match len {
+            0 => Err((NoMatch::EmptyPatterns, query)),
+            1 => Err((NoMatch::SingleIndex(first), query)),
+            _ => Ok(query)
         }
     }
 }
@@ -78,7 +69,3 @@ impl QueryPath for QueryRangePath {
 //        }
 //    }
 //}
-impl AdvanceWidth for QueryRangePath {
-    fn advance_width(&mut self, _width: usize) {
-    }
-}

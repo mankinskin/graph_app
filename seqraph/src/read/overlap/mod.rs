@@ -182,7 +182,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
     ) -> Result<(usize, OverlapLink, Child, OverlapCache), OverlapCache> {
         let last = cache.last.take().expect("No last overlap to take!");
         let last_end = *last.band.end.index().unwrap();
-        let mut acc = ControlFlow::Continue((None as Option<ChildPath<End>>, OverlapBundle::from(last.band)));
+        let mut acc = ControlFlow::Continue((None as Option<RolePath<End>>, OverlapBundle::from(last.band)));
         let mut indexer = self.indexer();
         let mut iter = PostfixIterator::<_, D, _>::new(&mut indexer, last_end);
         while let Some((postfix_location, postfix)) = iter.next() {
@@ -190,9 +190,9 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             let start_bound = cache.end_bound - postfix.width();
 
             let postfix_path = if let Some(path) = path {
-                path.append::<_, D, _>(&self.graph, postfix_location)
+                path.path_append(postfix_location)
             } else {
-                ChildPath::new(postfix, postfix_location)
+                RolePath::new(postfix, postfix_location)
             };
             // try expand
             match self.graph.index_query_with_origin(OverlapPrimer::new(postfix, prefix_query.clone())) {

@@ -6,28 +6,47 @@ use crate::*;
 
 use super::*;
 
-pub enum NextStates<R: ResultKind, Q: QueryPath> {
-    Parents(CacheKey, Vec<ParentState<R, Q>>),
-    Prefixes(CacheKey, Vec<ChildState<R, Q>>),
-    End(CacheKey, EndState<R, Q>),
-    Child(CacheKey, ChildState<R, Q>),
+#[derive(Clone, Debug)]
+pub enum NextStates<R: ResultKind> {
+    Parents(CacheKey, bool, Vec<ParentState<R>>),
+    Prefixes(CacheKey, bool, Vec<ChildState<R>>),
+    End(CacheKey, bool, EndState<R>),
+    Child(CacheKey, bool, ChildState<R>),
     Empty,
 }
-impl<R: ResultKind, Q: QueryPath> NextStates<R, Q> {
-    pub fn into_states(self) -> Vec<TraversalState<R, Q>> {
+impl<R: ResultKind> NextStates<R> {
+    pub fn into_states(self) -> Vec<TraversalState<R>> {
         match self {
-            Self::Parents(key, states) =>
+            Self::Parents(key, matched, states) =>
                 states.into_iter()
-                    .map(|s| TraversalState::Parent(key, s))
+                    .map(|s| TraversalState {
+                        prev: key,
+                        matched,
+                        kind: InnerKind::Parent(s)
+                    })
                     .collect_vec(),
-            Self::Prefixes(key, states) =>
+            Self::Prefixes(key, matched, states) =>
                 states.into_iter()
-                    .map(|s| TraversalState::Child(key, s))
+                    .map(|state|
+                        TraversalState {
+                            prev: key,
+                            matched,
+                            kind: InnerKind::Child(state),
+                        }
+                    )
                     .collect_vec(),
-            Self::End(key, state) =>
-                vec![TraversalState::End(key, state)],
-            Self::Child(key, state) =>
-                vec![TraversalState::Child(key, state)],
+            Self::End(key, matched, state) =>
+                vec![TraversalState {
+                    prev: key,
+                    matched,
+                    kind: InnerKind::End(state),
+                }],
+            Self::Child(key, matched, state) =>
+                vec![TraversalState {
+                    prev: key,
+                    matched,
+                    kind: InnerKind::Child(state),
+                }],
             Self::Empty => vec![],
         }
     }
@@ -36,53 +55,80 @@ pub trait TraversalIterator<
     'a, 
     T: Tokenize,
     D: MatchDirection,
-    Trav: Traversable<T> + 'a + TraversalFolder<T, D, Q, S, R>,
-    Q: QueryPath,
-    S: DirectedTraversalPolicy<T, D, Q, R, Trav=Trav>,
+    Trav: Traversable<T> + 'a + TraversalFolder<T, D, S, R>,
+    S: DirectedTraversalPolicy<T, D, R, Trav=Trav>,
     R: ResultKind = BaseResult,
->: Iterator<Item = (usize, TraversalState<R, Q>)> + Sized + ExtendStates<R, Q>
+>: Iterator<Item = (usize, TraversalState<R>)> + Sized + ExtendStates<R>
 {
 
-    fn new(trav: &'a Trav, start: StartState<R, Q>) -> Self;
+    fn new(trav: &'a Trav) -> Self;
     fn trav(&self) -> &'a Trav;
     fn next_states(
         &mut self,
-        key: CacheKey,
-        node: TraversalState<R, Q>,
-    ) -> NextStates<R, Q> {
-        match node {
-            // compute next nodes
-            TraversalState::Start(node) =>
-                self.query_start(
-                    key,
-                    node.query,
-                ),
-            TraversalState::Parent(_prev, node) =>
-                self.on_parent_node(key, node),
-            TraversalState::Child(_prev, node) =>
-                self.on_child(key, node),
-            //TraversalState::MatchEnd(_prev, _entry, match_end, query) =>
-            //    S::next_parents(
-            //        self.trav(),
-            //        key,
-            //        &query,
-            //        &match_end,
-            //    ),
-            _ => NextStates::Empty,
-        }
+        cache: &mut TraversalCache<R>,
+    ) -> Option<(usize, NextStates<R>)> {
+        let (depth, tstate) = self.next()?;
+        let next_states = match cache.add_state(self.trav(), &tstate) {
+            Ok(key) => {
+                match tstate.kind {
+                    InnerKind::Parent(state) =>
+                        self.on_parent(key, tstate.matched, state),
+                    InnerKind::Child(state) =>
+                        self.on_child(key, tstate.matched, state),
+                    _ => NextStates::Empty,
+                }
+            },
+            Err(key) => {
+                cache.get_entry_mut(&key)
+                    .unwrap()
+                    .add_waiting(depth, tstate);
+                NextStates::Empty
+            }
+        };
+        Some((depth + 1, next_states))
     }
-    fn after_index(
+    fn on_parent(
         &mut self,
         key: CacheKey,
+        matched: bool,
+        state: ParentState<R>,
+    ) -> NextStates<R> {
+        // todo: solve the "is finished" predicate with a type (how to relate to specific trav state?)
+        let query = state.query;
+        //assert!(!query.is_finished(self.trav()));
+        // create path to next child
+        match R::Primer::into_advanced::<_, D, _>(state.path, self.trav()) {
+            Ok(path) =>
+                // first child state in this parent
+                NextStates::Child(
+                    key,
+                    matched,
+                    ChildState {
+                        root: key,
+                        paths: PathPair::GraphMajor(path, query)
+                    }
+                ),
+            Err(primer) =>
+                // no child state, bottom up path at end of parent
+                self.next_parents(
+                    primer,
+                    matched,
+                    key,
+                    query,
+                )
+        }
+    }
+    fn next_parents(
+        &mut self,
         primer: R::Primer,
-        query: FolderQuery<T, D, Q, R, S>,
-    ) -> NextStates<R, Q> {
+        matched: bool,
+        key: CacheKey,
+        query: R::Query,
+    ) -> NextStates<R> {
         // get next parents
-        let entry = primer.root_child_location();
         let postfix = primer.into();
         let parents = S::next_parents(
             self.trav(),
-            key,
             &query,
             &postfix,
         );
@@ -90,206 +136,198 @@ pub trait TraversalIterator<
             //println!("no more parents {:#?}", match_end);
             NextStates::End(
                 key,
-                EndState::MatchEnd(
-                    entry,
-                    postfix.into_simplified::<_, D, _>(self.trav()),
+                matched,
+                EndState {
+                    root: key,
+                    kind: EndKind::Postfix(PostfixEnd {
+                        path: postfix,//.into_simplified::<_, D, _>(self.trav()),
+                    }),
                     query,
-                )
+                },
             )
         } else {
             NextStates::Parents(
                 key,
+                matched,
                 parents
             )
-        }
-    }
-    //fn at_index_finished(
-    //    &mut self,
-    //    query: FolderQuery<T, D, Q, R, S>,
-    //    nodes: BinaryHeap<WaitingNode<R, Q>>,
-    //) -> Vec<TraversalState<R, Q>> {
-    //    //println!("at index end {:?}", root);
-    //    // possibly perform indexing
-    //    let match_end = S::at_postfix(
-    //        self.trav(),
-    //        nodes,
-    //    );
-    //    self.after_index(
-    //        query,
-    //    )
-    //}
-    /// runs after each index/query match
-    //fn after_match(
-    //    &mut self,
-    //    paths: FolderPathPair<T, D, Q, R, S>,
-    //) -> Vec<TraversalState<R, Q>> {
-    //    let mode = paths.mode();
-    //    let (mut path, query) = paths.unpack();
-    //    assert!(!query.is_finished(self.trav()));
-    //    if path.advance::<_, D, _>(self.trav()).is_some() && !path.is_finished(self.trav()) {
-    //        vec![
-    //            TraversalState::child_node(PathPair::from_mode(path, query, mode))
-    //        ]
-    //    } else {
-    //        // at end of index
-    //        self.at_index_end(
-    //            query,
-    //            path.into(),
-    //        )
-    //    }
-    //}
-    /// nodes generated from a parent node
-    /// (child successor or super-parent nodes)
-    fn on_parent_node(
-        &mut self,
-        key: CacheKey,
-        node: ParentState<R, Q>,
-    ) -> NextStates<R, Q> {
-        // todo: solve the "is finished" predicate with a type (how to relate to specific trav state?)
-        assert!(!node.query.is_finished(self.trav()));
-        // create path to next child
-        match R::Primer::into_advanced::<_, D, _>(node.path, self.trav()) {
-            Ok(path) =>
-                NextStates::Child(key, ChildState {
-                    root: key,
-                    paths: PathPair::GraphMajor(path, node.query)
-                }),
-            Err(path) =>
-                // no next child
-                self.after_index(
-                    key,
-                    path,
-                    node.query,
-                ),
         }
     }
     /// match query position with graph position
     fn on_child(
         &mut self,
         key: CacheKey,
-        node: ChildState<R, Q>,
-    ) -> NextStates<R, Q> {
+        matched: bool,
+        state: ChildState<R>,
+    ) -> NextStates<R> {
         let ChildState {
             root,
             paths,
-        } = node;
+        } = state;
         let mode = paths.mode();
+        let (path, query) = paths.unpack();
 
-        let (mut path, mut query) = paths.unpack();
-        if path.is_finished(self.trav()) || query.is_finished(self.trav()) {
-            println!("can't match finished paths");
-        }
-
-        let path_next = path.role_path_child::<End, _, _>(self.trav());
-        let query_next = query.path_child(self.trav());
+        let path_leaf = path.role_leaf_child::<End, _, _>(self.trav());
+        let query_leaf = query.leaf_child(self.trav());
 
         // compare next child
-        //println!("matching query {:?}", query_next);
-        match path_next.width.cmp(&query_next.width) {
+        match path_leaf.width.cmp(&query_leaf.width) {
+            Ordering::Equal =>
+                if path_leaf == query_leaf {
+                    self.on_match(
+                        mode,
+                        path,
+                        query,
+                        key,
+                        root,
+                    )
+                } else if path_leaf.width() == 1 && query_leaf.width() == 1 {
+                    self.on_mismatch(
+                        matched,
+                        path,
+                        query,
+                        key,
+                    )
+                } else {
+                    // expand states to find matching prefix
+                    NextStates::Prefixes(
+                        key,
+                        matched,
+                        self.prefix_states(
+                            root, 
+                            path_leaf,
+                            PathPair::GraphMajor(path.clone(), query.clone()),
+                        )
+                        .into_iter()
+                        .chain(
+                            self.prefix_states(
+                                root,
+                                query_leaf,
+                                PathPair::QueryMajor(query, path),
+                            )
+                        )
+                        .collect_vec()
+                    )
+                }
             Ordering::Greater =>
                 // continue in prefix of child
                 NextStates::Prefixes(
                     key,
-                    self.prefix_nodes(
-                        root, 
-                        path_next,
+                    matched,
+                    self.prefix_states(
+                        root,
+                        path_leaf,
                         PathPair::GraphMajor(path, query),
                     )
                 ),
             Ordering::Less =>
                 NextStates::Prefixes(
                     key,
-                    self.prefix_nodes(
+                    matched,
+                    self.prefix_states(
                         root, 
-                        query_next,
+                        query_leaf,
                         PathPair::QueryMajor(query, path),
                     )
                 ),
-            Ordering::Equal =>
-                if path_next == query_next {
-                    // match
-                    path.add_match_width::<_, D, _>(self.trav());
-                    if query.advance::<_, D, _>(self.trav()).is_some() && !query.is_finished(self.trav()) {
-                        NextStates::Child(key, ChildState {
-                            root,
-                            paths: PathPair::from_mode(path, query, mode)
-                        })
-                    } else {
-                        let root_key = path.root_key();
-                        path.child_path_mut::<End>().simplify::<_, D, _>(self.trav());
-                        let (entry, path) = if path.raw_child_path::<End>().is_empty() && <_ as RootChildPos<Start>>::root_child_pos(&path) == <_ as RootChildPos<End>>::root_child_pos(&path) {
-                            (None, R::Found::from(path.pop_path::<_, D, _>(self.trav())))
-                        } else {
-                            (Some(path.role_path_child_location::<End>()), R::Found::from_advanced::<_, D, _>(path, self.trav()))
-                        };
-                        NextStates::End(
-                            key,
-                            EndState::QueryEnd(
-                                entry,
-                                root_key,
-                                path.into_result(query)
-                            )
-                        )
-                    }
-                } else if path_next.width() == 1 && query_next.width() == 1 {
-                    // mismatch
-                    let root_key = path.root_key();
-                    path.child_path_mut::<End>().retract::<_, D, _, R>(self.trav());
-
-                    let (entry, found) = if path.raw_child_path::<End>().is_empty()
-                        && path.child_pos::<Start>() == path.child_pos::<End>()
-                    {
-                        (None, R::Found::from(path.pop_path::<_, D, _>(self.trav())))
-                    } else {
-                        (Some(path.role_path_child_location::<End>()), R::Found::from_advanced::<_, D, _>(path, self.trav()))
-                    };
-                    if found.width() > 1 {
-                        NextStates::End(
-                            key,
-                            EndState::Mismatch(
-                                entry,
-                                root_key,
-                                found.into_result(query),
-                            )
-                        )
-                    } else {
-                        NextStates::Empty
-                    }
-                } else {
-                    // expand nodes
-                    let prefixes = 
-                        self.prefix_nodes(
-                            root, 
-                            path_next,
-                            PathPair::GraphMajor(path.clone(), query.clone()),
-                        )
-                        .into_iter()
-                        .chain(
-                            self.prefix_nodes(
-                                root,
-                                query_next,
-                                PathPair::QueryMajor(query, path),
-                            )
-                        )
-                        .collect_vec();
-                    if prefixes.is_empty() {
-                        NextStates::Empty
-                    } else {
-                        NextStates::Prefixes(
-                            key,
-                            prefixes
-                        )
-                    }
-                }
         }
     }
-    /// generate child nodes for index prefixes
-    fn prefix_nodes(
+    fn on_match(
+        &mut self,
+        mode: PathPairMode,
+        mut path: R::Advanced,
+        mut query: R::Query,
+        key: CacheKey,
+        root: CacheKey,
+    ) -> NextStates<R> {
+        //path.add_match_width::<_, D, _>(self.trav());
+        if query.advance::<_, D, _>(self.trav()).is_continue() {
+            if path.advance::<_, D, _>(self.trav()).is_continue() {
+                NextStates::Child(
+                    key,
+                    true,
+                    ChildState {
+                        root,
+                        paths: PathPair::from_mode(path, query, mode)
+                    }
+                )
+            } else {
+                self.next_parents(
+                    R::Primer::from(path),
+                    true,
+                    key,
+                    query
+                )
+            }
+        } else {
+            // query end
+            //path.child_path_mut::<End>().simplify::<_, D, _>(self.trav());
+            self.on_end(
+                true,
+                path,
+                query,
+                key,
+                RangeKind::QueryEnd
+            )
+        }
+    }
+    fn on_end(
+        &mut self,
+        matched: bool,
+        path: R::Advanced,
+        query: R::Query,
+        key: CacheKey,
+        range_kind: RangeKind,
+    ) -> NextStates<R> {
+        let root_key = path.root_key();
+
+        NextStates::End(
+            key,
+            matched,
+            EndState {
+                root: root_key,
+                query,
+                kind:
+                    if path.raw_child_path::<End>().is_empty()
+                        && path.child_pos::<Start>() == path.child_pos::<End>()
+                    {
+                        todo!("handle this")
+                        //EndKind::Postfix(PostfixEnd {
+                        //    path: path.pop_path::<_, D, _>(self.trav()),
+                        //})
+                    } else {
+                        EndKind::Range(RangeEnd {
+                            kind: range_kind,
+                            entry: path.role_leaf_child_location::<End>().unwrap(),
+                            path,
+                        })
+                    }
+            }
+        )
+    }
+    fn on_mismatch(
+        &mut self,
+        matched: bool,
+        mut path: R::Advanced,
+        query: R::Query,
+        key: CacheKey,
+    ) -> NextStates<R> {
+        path.child_path_mut::<End>().retract::<_, D, _, R>(self.trav());
+        self.on_end(
+            matched,
+            path,
+            query,
+            key,
+            RangeKind::Mismatch
+        )
+    }
+    /// generate child states for index prefixes
+    fn prefix_states(
         &self,
         root: CacheKey,
         index: Child,
-        paths: FolderPathPair<T, D, Q, R, S>,
-    ) -> Vec<ChildState<R, Q>> {
+        paths: FolderPathPair<R>,
+    ) -> Vec<ChildState<R>> {
         self.trav().graph()
             .expect_vertex_data(index)
             .get_child_patterns().iter()
@@ -305,38 +343,30 @@ pub trait TraversalIterator<
             })
             .collect_vec()
     }
-    /// nodes generated from a query start node
-    /// (query end or start parent nodes)
+    /// states generated from a query start state
+    /// (query end or start parent states)
     fn query_start(
         &self,
         key: CacheKey,
-        mut query: FolderQuery<T, D, Q, R, S>,
-    ) -> NextStates<R, Q> {
-        let start_index = query.path_child(self.trav());
-        if let Some(_) = query.advance::<_, D, _>(self.trav()) {
-            if !query.is_finished(self.trav()) {
-                NextStates::Parents(
-                    key,
-                    S::gen_parent_nodes(
-                        self.trav(),
-                        key,
-                        &query,
-                        start_index,
-                        |p, trav| {
-                            R::Primer::from(ChildPath {
-                                path: vec![p],
-                                child: start_index,
-                                width: start_index.width,
-                                token_pos: trav.graph().expect_pattern_range_width(&p, 0..p.sub_index),
-                                _ty: Default::default(),
-                            })
-                        }
-                    )
+        mut state: StartState<R>,
+    ) -> NextStates<R> {
+        if state.query.advance::<_, D, _>(self.trav()).is_continue() {
+            NextStates::Parents(
+                key,
+                false,
+                S::gen_parent_states(
+                    self.trav(),
+                    &state.query,
+                    state.index,
+                    |p, trav|
+                        <_ as IntoPrimer<R>>::into_primer(
+                            MatchEnd::Complete(state.index),
+                            p,
+                        )
                 )
-            } else {
-                NextStates::Empty
-            }
+            )
         } else {
+            todo!("query end");
             NextStates::Empty
         }
     }

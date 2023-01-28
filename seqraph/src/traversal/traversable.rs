@@ -76,16 +76,16 @@ impl_traversable! {
 impl_traversable! {
     impl for Hypergraph<T>, self => self; <'a> &'a Self
 }
-impl_traversable! {
-    impl <D: IndexDirection> for Indexer<T, D>,
-    self => self.graph.read().unwrap();
-    <'a> RwLockReadGuard<'a, Hypergraph<T>>
-}
-impl_traversable! {
-    impl<D: IndexDirection> for &'_ mut Indexer<T, D>,
-    self => self.graph.read().unwrap();
-    <'a> RwLockReadGuard<'a, Hypergraph<T>>
-}
+//impl_traversable! {
+//    impl <D: IndexDirection> for Indexer<T, D>,
+//    self => self.graph.read().unwrap();
+//    <'a> RwLockReadGuard<'a, Hypergraph<T>>
+//}
+//impl_traversable! {
+//    impl<D: IndexDirection> for &'_ mut Indexer<T, D>,
+//    self => self.graph.read().unwrap();
+//    <'a> RwLockReadGuard<'a, Hypergraph<T>>
+//}
 pub trait TraversableMut<T: Tokenize>: Traversable<T> {
     type GuardMut<'a>: TraversableMut<T> + Deref<Target=Hypergraph<T>> + DerefMut where Self: 'a;
     fn graph_mut<'a>(&'a mut self) -> Self::GuardMut<'a>;
@@ -113,54 +113,54 @@ impl_traversable_mut! {
 //    self => self.graph.write().unwrap();
 //    <'a> RwLockWriteGuard<'a, Hypergraph<T>>
 //}
-impl_traversable_mut! {
-    impl<D: IndexDirection> for Indexer<T, D>,
-    self => self.graph.write().unwrap();
-    <'a> RwLockWriteGuard<'a, Hypergraph<T>>
-}
-impl_traversable_mut! {
-    impl<D: IndexDirection> for &'_ mut Indexer<T, D>,
-    self => self.graph.write().unwrap();
-    <'a> RwLockWriteGuard<'a, Hypergraph<T>>
-}
-
-impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Traversable<T> for Splitter<T, D, Side> {
-    type Guard<'a> = RwLockReadGuard<'a, Hypergraph<T>> where Side: 'a;
-    fn graph<'a>(&'a self) -> Self::Guard<'a> {
-        self.indexer.graph()
-    }
-}
-
-impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> TraversableMut<T> for Splitter<T, D, Side> {
-    type GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph<T>> where Side: 'a;
-    fn graph_mut<'a>(&'a mut self) -> Self::GuardMut<'a> {
-        self.indexer.graph_mut()
-    }
-}
-impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Traversable<T> for Contexter<T, D, Side> {
-    type Guard<'a> = RwLockReadGuard<'a, Hypergraph<T>> where Side: 'a;
-    fn graph<'a>(&'a self) -> Self::Guard<'a> {
-        self.indexer.graph()
-    }
-}
-
-impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> TraversableMut<T> for Contexter<T, D, Side> {
-    type GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph<T>> where Side: 'a;
-    fn graph_mut<'a>(&'a mut self) -> Self::GuardMut<'a> {
-        self.indexer.graph_mut()
-    }
-}
-
-impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Traversable<T> for Pather<T, D, Side> {
-    type Guard<'a> = RwLockReadGuard<'a, Hypergraph<T>> where Side: 'a;
-    fn graph<'a>(&'a self) -> Self::Guard<'a> {
-        self.indexer.graph()
-    }
-}
-
-impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> TraversableMut<T> for Pather<T, D, Side> {
-    type GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph<T>> where Side: 'a;
-    fn graph_mut<'a>(&'a mut self) -> Self::GuardMut<'a> {
-        self.indexer.graph_mut()
-    }
-}
+//impl_traversable_mut! {
+//    impl<D: IndexDirection> for Indexer<T, D>,
+//    self => self.graph.write().unwrap();
+//    <'a> RwLockWriteGuard<'a, Hypergraph<T>>
+//}
+//impl_traversable_mut! {
+//    impl<D: IndexDirection> for &'_ mut Indexer<T, D>,
+//    self => self.graph.write().unwrap();
+//    <'a> RwLockWriteGuard<'a, Hypergraph<T>>
+//}
+//
+//impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Traversable<T> for Splitter<T, D, Side> {
+//    type Guard<'a> = RwLockReadGuard<'a, Hypergraph<T>> where Side: 'a;
+//    fn graph<'a>(&'a self) -> Self::Guard<'a> {
+//        self.indexer.graph()
+//    }
+//}
+//
+//impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> TraversableMut<T> for Splitter<T, D, Side> {
+//    type GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph<T>> where Side: 'a;
+//    fn graph_mut<'a>(&'a mut self) -> Self::GuardMut<'a> {
+//        self.indexer.graph_mut()
+//    }
+//}
+//impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Traversable<T> for Contexter<T, D, Side> {
+//    type Guard<'a> = RwLockReadGuard<'a, Hypergraph<T>> where Side: 'a;
+//    fn graph<'a>(&'a self) -> Self::Guard<'a> {
+//        self.indexer.graph()
+//    }
+//}
+//
+//impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> TraversableMut<T> for Contexter<T, D, Side> {
+//    type GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph<T>> where Side: 'a;
+//    fn graph_mut<'a>(&'a mut self) -> Self::GuardMut<'a> {
+//        self.indexer.graph_mut()
+//    }
+//}
+//
+//impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Traversable<T> for Pather<T, D, Side> {
+//    type Guard<'a> = RwLockReadGuard<'a, Hypergraph<T>> where Side: 'a;
+//    fn graph<'a>(&'a self) -> Self::Guard<'a> {
+//        self.indexer.graph()
+//    }
+//}
+//
+//impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> TraversableMut<T> for Pather<T, D, Side> {
+//    type GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph<T>> where Side: 'a;
+//    fn graph_mut<'a>(&'a mut self) -> Self::GuardMut<'a> {
+//        self.indexer.graph_mut()
+//    }
+//}

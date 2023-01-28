@@ -13,16 +13,12 @@ pub struct Searcher<T: Tokenize, D: MatchDirection> {
 trait SearchTraversalPolicy<
     T: Tokenize,
     D: MatchDirection,
-    Q: QueryPath,
     R: ResultKind,
 >:
     DirectedTraversalPolicy<
         T,
         D,
-        Q,
         R,
-        //QueryRangePath,
-        //BaseResult,
         Trav=Searcher<T, D>,
     >
 {
@@ -30,33 +26,30 @@ trait SearchTraversalPolicy<
 impl<
     T: Tokenize,
     D: MatchDirection,
-    Q: QueryPath,
     R: ResultKind,
 >
-    SearchTraversalPolicy<T, D, Q, R> for AncestorSearch<T, D>
+    SearchTraversalPolicy<T, D, R> for AncestorSearch<T, D>
 {}
 impl<
     T: Tokenize,
     D: MatchDirection,
-    Q: QueryPath,
     R: ResultKind,
 >
-    SearchTraversalPolicy<T, D, Q, R> for ParentSearch<T, D>
+    SearchTraversalPolicy<T, D, R> for ParentSearch<T, D>
 {}
 
 
 impl<
     T: Tokenize,
     D: MatchDirection,
-    Q: QueryPath,
-    S: SearchTraversalPolicy<T, D, Q, R>,
+    S: SearchTraversalPolicy<T, D, R>,
     R: ResultKind,
 >
-    TraversalFolder<T, D, Q, S, R> for Searcher<T, D>
+    TraversalFolder<T, D, S, R> for Searcher<T, D>
 {
     //type Break = TraversalResult<R, Q>;
     //type Continue = TraversalResult<R, Q>;
-    type NodeCollection = BftQueue<R, Q>;
+    type NodeCollection = BftQueue<R>;
 
     //fn map_state(
     //    &self,
@@ -80,26 +73,26 @@ impl<
     //    }
     //}
 }
-pub fn pick_max_result<
-    R: ResultKind,
-    Q: BaseQuery,
->(
-    acc: Option<TraversalResult<R, Q>>,
-    res: TraversalResult<R, Q>,
-) -> Option<TraversalResult<R, Q>> {
-    Some(
-        if let Some(acc) = acc {
-            std::cmp::max_by(
-                res,
-                acc,
-                |res, acc|
-                    res.path.cmp(&acc.path)
-            )
-        } else {
-            res
-        }
-    )
-}
+//pub fn pick_max_result<
+//    R: ResultKind,
+//    Q: BaseQuery,
+//>(
+//    acc: Option<TraversalResult<R, Q>>,
+//    res: TraversalResult<R, Q>,
+//) -> Option<TraversalResult<R, Q>> {
+//    Some(
+//        if let Some(acc) = acc {
+//            std::cmp::max_by(
+//                res,
+//                acc,
+//                |res, acc|
+//                    res.path.cmp(&acc.path)
+//            )
+//        } else {
+//            res
+//        }
+//    )
+//}
 //pub fn fold_match<
 //    'a: 'g,
 //    'g,
@@ -127,10 +120,9 @@ struct AncestorSearch<T: Tokenize, D: MatchDirection> {
 impl<
     T: Tokenize,
     D: MatchDirection,
-    Q: QueryPath,
     R: ResultKind,
 >
-    DirectedTraversalPolicy<T, D, Q, R> for AncestorSearch<T, D>
+    DirectedTraversalPolicy<T, D, R> for AncestorSearch<T, D>
 {
     type Trav = Searcher<T, D>;
 
@@ -150,10 +142,9 @@ impl<
     'g,
     T: Tokenize,
     D: MatchDirection,
-    Q: QueryPath,
     R: ResultKind,
 >
-    DirectedTraversalPolicy<T, D, Q, R> for ParentSearch<T, D>
+    DirectedTraversalPolicy<T, D, R> for ParentSearch<T, D>
 {
     type Trav = Searcher<T, D>;
 
@@ -165,17 +156,15 @@ impl<
     }
     fn next_parents(
         _trav: &Self::Trav,
-        _key: CacheKey,
-        _query: &Q,
+        _query: &R::Query,
         _start: &R::Postfix,
-    ) -> Vec<ParentState<R, Q>> {
+    ) -> Vec<ParentState<R>> {
         vec![]
     }
 }
 pub type SearchResult = Result<
     TraversalResult<
         BaseResult,
-        QueryRangePath
     >,
     NoMatch
 >;
@@ -205,26 +194,28 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
         )
     }
     fn bft_search<
-        S: SearchTraversalPolicy<T, D, QueryRangePath, BaseResult> + Send,
+        S: SearchTraversalPolicy<T, D, BaseResult> + Send,
         P: IntoPattern,
     >(
         &self,
         query: P,
     ) -> SearchResult {
-        self.search::<Bft<T, D, Self, QueryRangePath, BaseResult, S>, S, _>(
+        self.search::<Bft<T, D, Self, BaseResult, S>, S, _>(
             query,
         )
     }
     #[allow(unused)]
     fn search<
         'a,
-        Ti: TraversalIterator<'a, T, D, Self, QueryRangePath, S, BaseResult> + Send,
-        S: SearchTraversalPolicy<T, D, QueryRangePath, BaseResult>,
+        Ti: TraversalIterator<'a, T, D, Self, S, BaseResult> + Send,
+        S: SearchTraversalPolicy<T, D, BaseResult>,
         P: IntoPattern,
     >(
         &'a self,
         query: P,
     ) -> SearchResult {
+        <Self as TraversalFolder<_, D, S, _>>::fold_query(self, query)
+            .map_err(|(nm, _)| nm)
     }
     //#[allow(unused)]
     //fn par_search<

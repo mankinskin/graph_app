@@ -2,7 +2,7 @@ use crate::*;
 use super::*;
 
 
-pub trait PathSimplify: Sized {
+pub trait PathSimplify: Sized + PathComplete {
     fn into_simplified<
         T: Tokenize,
         D: MatchDirection,
@@ -20,14 +20,14 @@ pub trait PathSimplify: Sized {
 	    }
     }
 }
-impl<P: MatchEndPath + PathPop<Result=Self>> PathSimplify for MatchEnd<P> {
+impl<P: MatchEndPath + PathSimplify> PathSimplify for MatchEnd<P> {
     fn into_simplified<
         T: Tokenize,
         D: MatchDirection,
         Trav: Traversable<T>,
     >(self, trav: &Trav) -> Self {
         if let Some(c) = match self.get_path() {
-            Some(p) => p.into_complete::<_, D, _>(trav),
+            Some(p) => p.into_complete(),
             None => None,
         } {
             MatchEnd::Complete(c)
@@ -41,7 +41,7 @@ impl<P: MatchEndPath + PathPop<Result=Self>> PathSimplify for MatchEnd<P> {
         //}
     }
 }
-impl<R> PathSimplify for ChildPath<R> {
+impl<R: PathRole> PathSimplify for RolePath<R> {
     fn into_simplified<
         T: Tokenize,
         D: MatchDirection,
@@ -60,13 +60,13 @@ impl<R> PathSimplify for ChildPath<R> {
         self
     }
 }
-impl<P: PathSimplify> PathSimplify for OriginPath<P> {
-    fn into_simplified<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
-    >(mut self, trav: &Trav) -> Self {
-        self.postfix.simplify::<_, D, _>(trav);
-        self
-    }
-}
+//impl<P: PathSimplify> PathSimplify for OriginPath<P> {
+//    fn into_simplified<
+//        T: Tokenize,
+//        D: MatchDirection,
+//        Trav: Traversable<T>,
+//    >(mut self, trav: &Trav) -> Self {
+//        self.postfix.simplify::<_, D, _>(trav);
+//        self
+//    }
+//}

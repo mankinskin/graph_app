@@ -1,51 +1,22 @@
 use crate::*;
 use super::*;
 
-pub type Folder<T, D, Q, R, Ty>
-    = <Ty as DirectedTraversalPolicy<T, D, Q, R>>::Trav;
+pub type Folder<T, D, R, Ty>
+    = <Ty as DirectedTraversalPolicy<T, D, R>>::Trav;
 
-pub trait FolderQ<
-    T: Tokenize,
-    D: MatchDirection,
-    Q: QueryPath,
-    S: DirectedTraversalPolicy<T, D, Q, R>,
-    R: ResultKind,
-> {
-    type Query: QueryPath;
-}
+pub type FolderPathPair<R>
+    = PathPair<<R as ResultKind>::Advanced, <R as ResultKind>::Query>;
 
-impl<
-    T: Tokenize,
-    D: MatchDirection,
-    Q: QueryPath,
-    R: ResultKind,
-    S: DirectedTraversalPolicy<T, D, Q, R, Trav=Ty>,
-    Ty: TraversalFolder<T, D, Q, S, R>,
-> FolderQ<T, D, Q, S, R> for Ty {
-    type Query = Q;
-}
-
-pub type FolderQuery<T, D, Q, R, S>
-    = <Folder<T, D, Q, R, S> as FolderQ<T, D, Q, S, R>>::Query;
-
-pub type FolderPathPair<T, D, Q, R, S>
-    = PathPair<<R as ResultKind>::Advanced, FolderQuery<T, D, Q, R, S>>;
-
-struct FoldResult<R: ResultKind, Q: QueryPath> {
-    cache: TraversalCache<R, Q>,
-    end_states: Vec<(CacheKey, EndState<R, Q>)>,
-}
 pub trait TraversalFolder<
     T: Tokenize,
     D: MatchDirection,
-    Q: QueryPath,
-    S: DirectedTraversalPolicy<T, D, Q, R, Trav=Self>,
+    S: DirectedTraversalPolicy<T, D, R, Trav=Self>,
     R: ResultKind,
 >: Sized + Traversable<T> {
     //type Break;
     //type Continue;
     //type Result = ControlFlow<Self::Break, Self::Continue>;
-    type NodeCollection: NodeCollection<R, Q>;
+    type NodeCollection: NodeCollection<R>;
 
     //fn map_state(
     //    &self,
@@ -56,45 +27,82 @@ pub trait TraversalFolder<
     fn fold_query<P: IntoPattern>(
         &self,
         query: P,
-    ) -> Result<(FoldResult<R, Q>, Q), (NoMatch, Q)> {
-        let query_path = Q::new_directed::<D, _>(query.borrow())
+    ) -> Result<TraversalResult<R>, (NoMatch, R::Query)> {
+        let query_path = R::Query::new_directed::<D, _>(query.borrow())
             .map_err(|(err, q)| (err, q))?;
-        let index = query_path.path_child(self);
-        let start = StartState::new(index, query_path);
+        let index = query_path.leaf_child(self);
 
-        let mut states = OrderedTraverser::<_, _, _, _, _, _, Self::NodeCollection>::new(self, start);
-        let mut cache = TraversalCache::new();
+        let start = StartState::new(index, query_path.clone());
+        let mut states = OrderedTraverser::<_, _, _, _, _, Self::NodeCollection>::new(self);
+        let (start_key, mut cache) = TraversalCache::new(&start);
+        states.extend(
+            states.query_start(start_key, start)
+                .into_states()
+                .into_iter()
+                .map(|n| (1, n))
+        );
         let mut end_states = vec![];
 
-        while let Some((depth, state)) = states.next() {
-            match cache.add_state(&state) {
-                Ok(key) =>
-                    match states.next_states(key, state) {
-                        NextStates::End(prev, state) => {
-                            if let Some(root_key) = state.waiting_root_key() {
-                                states.extend(
-                                    cache.continue_waiting(&root_key)
-                                );
-                            }
-                            end_states.push((prev, state));
-                        },
-                        next_states => {
-                            states.extend(
-                                next_states.into_states()
-                                    .into_iter()
-                                    .map(|node| (depth + 1, node))
-                            );
-                        },
-                    },
-                Err(key) =>
-                    cache.get_entry_mut(&key)
-                        .unwrap()
-                        .add_waiting(depth, state)
+        while let Some((depth, next_states)) = states.next_states(&mut cache) {
+            match &next_states {
+                NextStates::End(prev, matched, state) => {
+                    if *matched {
+                        // stop other paths not with this root
+                        states.prune_not_below(state.root_key());
+                    } else {
+                        // stop other paths with this root
+                        states.prune_below(state.root_key());
+                    }
+                    if let Some(root_key) = state.waiting_root_key() {
+                        states.extend(
+                            cache.continue_waiting(&root_key)
+                        );
+                    }
+                    end_states.push((*prev, state.clone()));
+                },
+                _ => {},
             }
+            states.extend(
+                next_states.into_states()
+                    .into_iter()
+                    .map(|nstate| (depth, nstate))
+            );
         }
-        Ok((FoldResult {
+        let result = FoldResult {
             cache,
             end_states
-        }, query_path))
+        };
+        Ok(TraversalResult {
+            path: result.into_found_path(),
+            query: query_path,
+        })
+    }
+}
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct FoldResult<R: ResultKind> {
+    pub cache: TraversalCache<R>,
+    pub end_states: Vec<(CacheKey, EndState<R>)>,
+}
+impl<R: ResultKind> FoldResult<R> {
+    pub fn root_entry(&self) -> &PositionCache<R> {
+        self.cache.entries.get(&self.root_index().index()).unwrap()
+    }
+    pub fn root_index(&self) -> Child {
+        // assert same root
+        let root = self.end_states.first().unwrap().1.root_key().index;
+        assert!(
+            self.end_states
+                .iter()
+                .skip(1)
+                .all(|s|
+                    s.1.root_key().index == root
+                )
+        );
+        root
+    }
+    pub fn into_found_path(self) -> <R as ResultKind>::Found {
+        //todo!("handle complete");
+        let found = FoundPath::Path(self);
+        <R as ResultKind>::Found::from(found)
     }
 }

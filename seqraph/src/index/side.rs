@@ -182,7 +182,7 @@ pub trait IndexSide<D: IndexDirection>: std::fmt::Debug + Sync + Send + Unpin + 
 pub struct IndexBack;
 impl<D: IndexDirection> IndexSide<D> for IndexBack {
     type Opposite = IndexFront;
-    //type Path = ChildPath;
+    //type Path = RolePath;
     type InnerRange = RangeFrom<usize>;
     type ContextRange = Range<usize>;
     type BottomUpPathIter = std::vec::IntoIter<ChildLocation>;
@@ -274,7 +274,7 @@ impl<D: IndexDirection> IndexSide<D> for IndexBack {
 pub struct IndexFront;
 impl<D: IndexDirection> IndexSide<D> for IndexFront {
     type Opposite = IndexBack;
-    //type Path = ChildPath;
+    //type Path = RolePath;
     type InnerRange = Range<usize>;
     type ContextRange = RangeFrom<usize>;
     type BottomUpPathIter = std::iter::Rev<<Self::Opposite as IndexSide<D>>::BottomUpPathIter>;

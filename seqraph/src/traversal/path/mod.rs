@@ -6,17 +6,12 @@ pub use structs::*;
 pub use accessors::*;
 pub use mutators::*;
 
-use crate::{
-    vertex::*,
-    *,
-};
-pub type LocationPath = Vec<ChildLocation>;
+use crate::*;
 
 use std::hash::Hash;
 
 pub trait BaseQuery:
-    Advance
-    + Debug
+    Debug
     + Clone
     + Hash
     + PartialEq
@@ -26,8 +21,7 @@ pub trait BaseQuery:
     + 'static
 {}
 impl<T:
-    Advance
-    + Debug
+    Debug
     + Clone
     + Hash
     + PartialEq
@@ -110,41 +104,41 @@ impl<T:
 //}
 
 //impl<T: HasRolePath<End>> T {
-//    fn role_path(&self) -> &ChildPath {
+//    fn role_path(&self) -> &RolePath {
 //        self.role_path()
 //    }
 //}
 //impl<T: HasRolePath<Start>> T {
-//    fn role_path(&self) -> &ChildPath {
+//    fn role_path(&self) -> &RolePath {
 //        self.role_path()
 //    }
 //}
 
 //pub trait HasEndMatchPath: GraphRootChild {
-//    fn role_path(&self) -> &ChildPath;
-//    fn role_path_mut(&mut self) -> &mut ChildPath;
+//    fn role_path(&self) -> &RolePath;
+//    fn role_path_mut(&mut self) -> &mut RolePath;
 //}
-//impl HasEndMatchPath for ChildPath {
-//    fn role_path(&self) -> &ChildPath {
+//impl HasEndMatchPath for RolePath {
+//    fn role_path(&self) -> &RolePath {
 //        self
 //    }
-//    fn role_path_mut(&mut self) -> &mut ChildPath {
+//    fn role_path_mut(&mut self) -> &mut RolePath {
 //        self
 //    }
 //}
 //impl HasEndMatchPath for SearchPath {
-//    fn role_path(&self) -> &ChildPath {
+//    fn role_path(&self) -> &RolePath {
 //        &self.end
 //    }
-//    fn role_path_mut(&mut self) -> &mut ChildPath {
+//    fn role_path_mut(&mut self) -> &mut RolePath {
 //        &mut self.end
 //    }
 //}
 //impl<P: HasEndMatchPath> HasEndMatchPath for OriginPath<P> {
-//    fn role_path(&self) -> &ChildPath {
+//    fn role_path(&self) -> &RolePath {
 //        self.postfix.role_path()
 //    }
-//    fn role_path_mut(&mut self) -> &mut ChildPath {
+//    fn role_path_mut(&mut self) -> &mut RolePath {
 //        self.postfix.role_path_mut()
 //    }
 //}
@@ -262,22 +256,22 @@ impl<T:
 //    }
 //}
 
-//impl GraphRootPattern for ChildPath {
+//impl GraphRootPattern for RolePath {
 //    fn root(&self) -> ChildLocation {
 //        self.child_location()
 //    }
 //}
-//impl HasRolePath for ChildPath {
+//impl HasRolePath for RolePath {
 //    fn role_path(&self) -> &[ChildLocation] {
 //        self.path.borrow()
 //    }
 //}
-//impl WideMut for ChildPath {
+//impl WideMut for RolePath {
 //    fn width_mut(&mut self) -> &mut usize {
 //        &mut self.width
 //    }
 //}
-//impl Wide for ChildPath {
+//impl Wide for RolePath {
 //    fn width(&self) -> usize {
 //        self.width
 //    }

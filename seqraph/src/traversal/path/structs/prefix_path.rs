@@ -4,7 +4,7 @@ use crate::*;
 pub struct PrefixQuery {
     pub pattern: Pattern,
     pub exit: usize,
-    pub end: ChildPath<End>,
+    pub end: RolePath<End>,
     pub width: usize,
 }
 
