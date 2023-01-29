@@ -312,7 +312,7 @@ pub trait TraversalIterator<
         query: R::Query,
         key: CacheKey,
     ) -> NextStates<R> {
-        path.child_path_mut::<End>().retract::<_, D, _, R>(self.trav());
+        path.retract::<_, D, _, R>(self.trav());
         self.on_end(
             matched,
             path,

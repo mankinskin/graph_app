@@ -90,14 +90,14 @@ impl<
 //        }
 //    }
 //}
-impl<R: PathRole> RootKey for RolePath<R> {
-    fn root_key(&self) -> CacheKey {
-        CacheKey {
-            index: self.root_parent(),
-            token_pos: 0,
-        }
-    }
-}
+//impl<R: PathRole> RootKey for RolePath<R> {
+//    fn root_key(&self) -> CacheKey {
+//        CacheKey {
+//            index: self.root_parent(),
+//            token_pos: 0,
+//        }
+//    }
+//}
 //impl<R: PathRole> LeafKey for RootedRolePath<R> {
 //    fn leaf_key(&self) -> CacheKey {
 //        CacheKey {
@@ -124,8 +124,7 @@ impl RootKey for Child {
 }
 impl RootKey for SearchPath {
     fn root_key(&self) -> CacheKey {
-        // todo: use start or end?
-        self.end.root_key()
+        self.root.parent.root_key()
     }
 }
 impl<P: Advanced, Q: QueryPath> RootKey for PathPair<P, Q> {

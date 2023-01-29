@@ -7,7 +7,7 @@ pub struct PositionCache<R: ResultKind> {
     pub bottom_up: HashMap<CacheKey, SubLocation>,
     pub index: Child,
     pub waiting: Vec<(StateDepth, TraversalState<R>)>,
-    _ty: std::marker::PhantomData<R>,
+    pub _ty: std::marker::PhantomData<R>,
 }
 impl<R: ResultKind> PositionCache<R> {
     pub fn start(index: Child) -> Self {

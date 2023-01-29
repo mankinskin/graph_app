@@ -60,13 +60,14 @@ pub trait TraversalFolder<
                     }
                     end_states.push((*prev, state.clone()));
                 },
-                _ => {},
+                _ => {
+                    states.extend(
+                        next_states.into_states()
+                            .into_iter()
+                            .map(|nstate| (depth, nstate))
+                    );
+                },
             }
-            states.extend(
-                next_states.into_states()
-                    .into_iter()
-                    .map(|nstate| (depth, nstate))
-            );
         }
         let result = FoldResult {
             cache,

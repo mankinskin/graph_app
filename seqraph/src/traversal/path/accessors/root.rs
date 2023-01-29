@@ -129,7 +129,7 @@ impl_root! { PatternRoot for QueryRangePath, self => self.root.borrow() }
 //impl_root! { RootChild for RolePath, self => self.child_location().parent }
 //impl_root! { RootChild for PathLeaf, self => self.child_location().parent }
 
-impl_root! { GraphRootPattern for SearchPath, self => self.start.root_pattern_location() }
+impl_root! { GraphRootPattern for SearchPath, self => self.root }
 impl_root! { GraphRootPattern for RootedSplitPath<PatternLocation>, self => self.root }
 //impl_root! { GraphRootPattern for RolePath, self => self.child_location().into_pattern_location() }
 //impl_root! { GraphRootPattern for PathLeaf, self => self.child_location().into_pattern_location() }
@@ -163,16 +163,6 @@ impl<P: MatchEndPath + GraphRoot> GraphRoot for MatchEnd<P> {
         }
     }
 }
-impl<R: PathRole> GraphRoot for RolePath<R> {
-    fn root_parent(&self) -> Child {
-        self.child_location().parent
-    }
-}
-impl<R: PathRole> GraphRootPattern for RolePath<R> {
-    fn root_pattern_location(&self) -> PatternLocation {
-        self.child_location().into_pattern_location()
-    }
-}
 impl<R: PathRole> GraphRoot for RootedRolePath<R, PatternLocation> {
     fn root_parent(&self) -> Child {
         self.path.root_parent()
@@ -197,17 +187,6 @@ impl_root! { RootPattern for SearchPath, self, trav => GraphRootPattern::graph_r
 impl_root! { RootPattern for RootedSplitPath<PatternLocation>, self, trav => GraphRootPattern::graph_root_pattern::<_, Trav>(self, trav) }
 //impl_root! { RootPattern for RolePath, self, trav => GraphRoot::graph_root_pattern(self, trav).borrow() }
 //impl_root! { RootPattern for PathLeaf, self, trav => GraphRoot::graph_root_pattern(self, trav).borrow() }
-impl<R: PathRole> RootPattern for RolePath<R> {
-    fn root_pattern<
-        'a: 'g,
-        'b: 'g,
-        'g,
-        T: Tokenize,
-        Trav: Traversable<T> + 'a
-    >(&'b self, trav: &'g Trav::Guard<'a>) -> &'g Pattern {
-        GraphRootPattern::graph_root_pattern::<_, Trav>(self, trav).borrow()
-    }
-}
 impl<R: PathRole> RootPattern for RootedRolePath<R> {
     fn root_pattern<
         'a: 'g,

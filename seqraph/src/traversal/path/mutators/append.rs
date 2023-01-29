@@ -21,10 +21,12 @@ impl PathAppend for RolePath<End> {
         self.path.path_append(parent_entry)
     }
 }
-impl PathAppend for RootedRolePath<Start> {
+impl PathAppend for RootedRolePath<Start, PatternLocation> {
     fn path_append(&mut self, parent_entry: ChildLocation) {
+        let prev = self.path.root.to_child_location(self.path.path.root_entry);
+        self.path.path.path_append(prev);
         self.path.path.root_entry = parent_entry.sub_index;
-        self.path.path.path_append(parent_entry)
+        self.path.root = parent_entry.into_pattern_location();
     }
 }
 impl PathAppend for RootedRolePath<End> {

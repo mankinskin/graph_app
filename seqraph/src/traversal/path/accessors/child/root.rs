@@ -91,17 +91,12 @@ pub trait GraphRootChild<R>: GraphRootPattern + RootChildPos<R> {
 //}
 impl GraphRootChild<Start> for SearchPath {
     fn root_child_location(&self) -> ChildLocation {
-        <_ as GraphRootChild<Start>>::root_child_location(&self.start)
+        self.root.to_child_location(self.start.root_entry)
     }
 }
 impl GraphRootChild<End> for SearchPath {
     fn root_child_location(&self) -> ChildLocation {
-        <_ as GraphRootChild<End>>::root_child_location(&self.end)
-    }
-}
-impl<R: PathRole> GraphRootChild<R> for RolePath<R> {
-    fn root_child_location(&self) -> ChildLocation {
-        *R::top_down_iter(self.path.iter()).next().unwrap()
+        self.root.to_child_location(self.end.root_entry)
     }
 }
 impl<R: PathRole> GraphRootChild<R> for RootedRolePath<R, PatternLocation> {

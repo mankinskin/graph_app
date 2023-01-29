@@ -51,6 +51,12 @@ impl<R: PathRole> PathChild<R> for RolePath<R> {
 impl<R: PathRole> PathChild<R> for SearchPath
     where SearchPath: HasRolePath<R>
 {
+    fn path_child_location(&self) -> Option<ChildLocation> {
+        Some(
+            R::bottom_up_iter(self.path().iter()).next().cloned()
+            .unwrap_or(self.root.to_child_location(self.role_path().root_entry))
+        )
+    }
     fn path_child<
         T: Tokenize,
         Trav: Traversable<T>,

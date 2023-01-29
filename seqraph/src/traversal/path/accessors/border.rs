@@ -31,10 +31,10 @@ pub trait PathBorder<D: MatchDirection, R>: GraphRootChild<R> + HasSinglePath {
     }
 }
 
-impl<D: MatchDirection> PathBorder<D, Start> for RolePath<Start> {
+impl<D: MatchDirection> PathBorder<D, Start> for RootedRolePath<Start> {
     type BorderDirection = Back;
 }
-impl<D: MatchDirection> PathBorder<D, End> for RolePath<End> {
+impl<D: MatchDirection> PathBorder<D, End> for RootedRolePath<End> {
     type BorderDirection = Front;
 }
 //impl<D: MatchDirection> PathBorder<D> for EndPath {

@@ -84,6 +84,7 @@ pub use {
             RwLockReadGuard,
             RwLockWriteGuard,
         },
+        iter::FromIterator,
     },
     //tracing_mutex::{
     //    stdsync::{

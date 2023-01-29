@@ -76,19 +76,12 @@ pub trait RoleChildPath {
     {
         LeafChild::<R>::leaf_child_location(self)
     }
-    fn role_child_location<
+    fn role_root_child_location<
         R: PathRole,
     >(&self) -> ChildLocation
-        where Self: HasRolePath<R>
+        where Self: GraphRootChild<R>
     {
-        self.child_path::<R>().child_location()
-    }
-    fn child_path<
-        R: PathRole,
-    >(&self) -> &RolePath<R>
-        where Self: HasRolePath<R>
-    {
-        HasRolePath::<R>::role_path(self)
+        GraphRootChild::<R>::root_child_location(self)
     }
     fn child_path_mut<
         R: PathRole,

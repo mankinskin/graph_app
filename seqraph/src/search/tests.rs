@@ -257,10 +257,13 @@ fn find_ancestor3() {
     let by = graph.insert_pattern([b, y]);
     let yz = graph.insert_pattern([y, z]);
     let xa = graph.insert_pattern([x, a]);
+    // 10
     let (xab, xab_ids) = graph.insert_patterns_with_ids([[x, ab], [xa, b]]);
     let x_ab_id = xab_ids[0];
+    // 11
     let (xaby, xaby_ids) = graph.insert_patterns_with_ids([vec![xab, y], vec![xa, by]]);
     let xab_y_id = xaby_ids[0];
+    // 12
     let _xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
 
     let graph = HypergraphRef::from(graph);
@@ -272,9 +275,199 @@ fn find_ancestor3() {
             path: FoundPath::Path(
                 FoldResult {
                     cache: TraversalCache {
-                        entries: HashMap::default()
+                        entries: HashMap::from_iter([
+                            (6, PositionCache {
+                                top_down: Default::default(),
+                                bottom_up: Default::default(),
+                                index: Child {
+                                    index: 6,
+                                    width: 2,
+                                },
+                                waiting: Default::default(),
+                                _ty: Default::default(),   
+                            }),
+                            (12, PositionCache {
+                                top_down: Default::default(),
+                                bottom_up: HashMap::from_iter([
+                                    (CacheKey {
+                                        index: Child {
+                                            index: 10,
+                                            width: 3,
+                                        },
+                                        token_pos: 0,
+                                    }, SubLocation {
+                                        pattern_id: 9,
+                                        sub_index: 0,
+                                    }),
+                                ]),
+                                index: Child {
+                                    index: 12,
+                                    width: 5,
+                                },
+                                waiting: Default::default(),
+                                _ty: Default::default(),   
+                            }),
+                            (4, PositionCache {
+                                top_down: HashMap::from_iter([
+                                    (CacheKey {
+                                        index: Child {
+                                            index: 11,
+                                            width: 4,
+                                        },
+                                        token_pos: 0,
+                                    }, ChildLocation {
+                                        parent: Child {
+                                            index: 11,
+                                            width: 4,
+                                        },
+                                        pattern_id: 6,
+                                        sub_index: 1,
+                                    }),
+                                ]),
+                                bottom_up: Default::default(),
+                                index: Child {
+                                    index: 4,
+                                    width: 1,
+                                },
+                                waiting: vec![
+                                ],
+                                _ty: Default::default(),   
+                            }),
+                            (11, PositionCache {
+                                top_down: Default::default(),
+                                bottom_up: HashMap::from_iter([
+                                    (CacheKey {
+                                        index: Child {
+                                            index: 10,
+                                            width: 3,
+                                        },
+                                        token_pos: 0,
+                                    }, SubLocation {
+                                        pattern_id: 6,
+                                        sub_index: 0,
+                                    }),
+                                ]),
+                                index: Child {
+                                    index: 11,
+                                    width: 4,
+                                },
+                                waiting: Default::default(),
+                                _ty: Default::default(),   
+                            }),
+                            (10, PositionCache {
+                                top_down: Default::default(),
+                                bottom_up: HashMap::from_iter([
+                                    (CacheKey {
+                                        index: Child {
+                                            index: 6,
+                                            width: 2,
+                                        },
+                                        token_pos: 0,
+                                    }, SubLocation {
+                                        pattern_id: 4,
+                                        sub_index: 1,
+                                    }),
+                                ]),
+                                index: Child {
+                                    index: 10,
+                                    width: 3,
+                                },
+                                waiting: vec![
+                                ],
+                                _ty: Default::default(),
+                            }),
+                        ]),
                     },
                     end_states: vec![
+                        (
+                            CacheKey {
+                                index: Child {
+                                    index: 4,
+                                    width: 1,
+                                },
+                                token_pos: 0,
+                            },
+                            EndState {
+                                root: CacheKey {
+                                    index: Child {
+                                        index: 11,
+                                        width: 4,
+                                    },
+                                    token_pos: 0,
+                                },
+                                kind: EndKind::Range(
+                                    RangeEnd {
+                                        entry: ChildLocation {
+                                            parent: Child {
+                                                index: 11,
+                                                width: 4,
+                                            },
+                                            pattern_id: 6,
+                                            sub_index: 1,
+                                        },
+                                        kind: RangeKind::QueryEnd,
+                                        path: SearchPath {
+                                            root: PatternLocation {
+                                                parent: Child {
+                                                    index: 11,
+                                                    width: 4,
+                                                },
+                                                pattern_id: 6,
+                                            },
+                                            start: RolePath {
+                                                path: SubPath {
+                                                    root_entry: 0,
+                                                    path: vec![
+                                                        ChildLocation {
+                                                            parent: Child {
+                                                                index: 10,
+                                                                width: 3,
+                                                            },
+                                                            pattern_id: 4,
+                                                            sub_index: 1,
+                                                        },
+                                                    ],
+                                                },
+                                                _ty: Default::default(),
+                                            },
+                                            end: RolePath {
+                                                path: SubPath {
+                                                    root_entry: 1,
+                                                    path: vec![],
+                                                },
+                                                _ty: Default::default(),
+                                            },
+                                        },
+                                    },
+                                ),
+                                query: QueryRangePath {
+                                    root: vec![
+                                        Child {
+                                            index: 6,
+                                            width: 2,
+                                        },
+                                        Child {
+                                            index: 4,
+                                            width: 1,
+                                        },
+                                    ],
+                                    start: RolePath {
+                                        path: SubPath {
+                                            root_entry: 0,
+                                            path: vec![],
+                                        },
+                                        _ty: Default::default(),
+                                    },
+                                    end: RolePath {
+                                        path: SubPath {
+                                            root_entry: 2,
+                                            path: vec![],
+                                        },
+                                        _ty: Default::default(),
+                                    },
+                                },
+                            },
+                        ),
                     ]
                 }
             //SearchPath {

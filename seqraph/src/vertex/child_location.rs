@@ -56,8 +56,8 @@ impl ChildLocation {
 }
 #[derive(Clone, Debug, PartialEq, Eq, Copy, Hash)]
 pub struct SubLocation {
-    pattern_id: usize,
-    sub_index: usize,
+    pub pattern_id: usize,
+    pub sub_index: usize,
 }
 impl SubLocation {
     pub fn new(pattern_id: PatternId, sub_index: usize) -> Self {
