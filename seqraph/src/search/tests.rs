@@ -169,7 +169,7 @@ fn find_ancestor1() {
 
 #[test]
 fn find_ancestor2() {
-    let mut graph = Hypergraph::default();
+    let mut graph = Hypergraph::<BaseGraphKind>::default();
     let (a, b, _w, x, y, z) = graph.insert_tokens([
         Token::Element('a'),
         Token::Element('b'),
@@ -243,7 +243,7 @@ fn find_ancestor2() {
 
 #[test]
 fn find_ancestor3() {
-    let mut graph = Hypergraph::default();
+    let mut graph = Hypergraph::<BaseGraphKind>::default();
     let (a, b, _w, x, y, z) = graph.insert_tokens([
         Token::Element('a'),
         Token::Element('b'),

@@ -53,7 +53,7 @@ impl IntoAdvanced<BaseResult> for RootedRolePath<Start> {
         let entry = self.root_child_location();
         let graph = trav.graph();
         let pattern = self.root_pattern::<Trav>(&graph).clone();
-        if let Some(next) = Trav::Direction::pattern_index_next(pattern.borrow(), entry.sub_index) {
+        if let Some(next) = TravDir::<Trav>::pattern_index_next(pattern.borrow(), entry.sub_index) {
             //let exit = entry.clone().to_child_location(next);
             //let child = pattern[next];
             Ok(SearchPath {

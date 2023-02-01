@@ -23,7 +23,7 @@ impl<P: MatchEndPath> PathSimplify for MatchEnd<P> {
                 let location = p.root_child_location();
                 let graph = trav.graph();
                 let pattern = graph.expect_pattern_at(&location);
-                Trav::Direction::pattern_index_prev(pattern.borrow(), location.sub_index).is_none()
+                <Trav::Kind as GraphKind>::Direction::pattern_index_prev(pattern.borrow(), location.sub_index).is_none()
             } {
                 Some(p.root_parent())
             } else {

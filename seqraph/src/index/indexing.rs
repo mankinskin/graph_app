@@ -1,10 +1,10 @@
 use crate::*;
 
 //pub trait Indexing<T: Tokenize, D: IndexDirection>: TraversableMut<T> {
-impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
+impl<G: GraphKind> Indexer<G> {
     pub fn index_found(
         &mut self,
-        path: FoundPath,
+        path: FoundPath<BaseResult>,
     ) -> Child {
         //println!("indexing found path {:#?}", path);
         match path {
@@ -58,7 +58,7 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
 
         let location = entry.into_pattern_location();
 
-        let range = D::wrapper_range(entry_pos, exit_pos);
+        let range = G::Direction::wrapper_range(entry_pos, exit_pos);
         self.graph().validate_pattern_indexing_range_at(&location, entry_pos, exit_pos).unwrap();
         let inserted = self.graph_mut().insert_range_in(
                 location,
@@ -77,8 +77,8 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
             (wrapper, pattern, location)
         };
 
-        let head_pos = D::head_index(pattern.borrow());
-        let last_pos = D::last_index(pattern.borrow());
+        let head_pos = G::Direction::head_index(pattern.borrow());
+        let last_pos = G::Direction::last_index(pattern.borrow());
 
         let mut head_contexter = self.contexter::<IndexBack>();
         let head_split = self.splitter::<IndexBack>().single_path_split(
@@ -112,13 +112,13 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
         let mut graph = self.graph_mut();
         let res = match (head_split, last_split) {
             (Some((head_inner, head_context)), Some((last_inner, last_context))) => {
-                let range = D::inner_context_range(head_pos, last_pos);
+                let range = G::Direction::inner_context_range(head_pos, last_pos);
                 let inner = graph.insert_range_in(
                     location,
                     range,
                 ).ok();
                 let target = graph.insert_pattern(
-                    D::concat_context_inner_context(
+                    G::Direction::concat_context_inner_context(
                         head_inner,
                         inner.as_ref().map(std::slice::from_ref).unwrap_or_default(),
                         last_inner
@@ -126,43 +126,43 @@ impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
                 );
                 graph.add_pattern_with_update(
                     wrapper,
-                    D::concat_context_inner_context(head_context, target, last_context)
+                    G::Direction::concat_context_inner_context(head_context, target, last_context)
                 );
                 target
             },
             (Some((head_inner, head_context)), None) => {
                 let range = 
-                    <IndexBack as IndexSide<D>>::inner_context_range(head_pos);
+                    <IndexBack as IndexSide<G::Direction>>::inner_context_range(head_pos);
                 let inner_context = graph.insert_range_in_or_default(
                     location,
                     range,
                 ).unwrap();
                 // |context, [inner, inner_context]|
                 let target = graph.insert_pattern(
-                    D::inner_then_context(head_inner, inner_context)
+                    G::Direction::inner_then_context(head_inner, inner_context)
                 );
                 // |context, target|
                 graph.add_pattern_with_update(
                     wrapper,
-                    D::context_then_inner(head_context, target)
+                    G::Direction::context_then_inner(head_context, target)
                 );
                 target
             },
             (None, Some((last_inner, last_context))) => {
                 let range = 
-                    <IndexFront as IndexSide<D>>::inner_context_range(last_pos);
+                    <IndexFront as IndexSide<G::Direction>>::inner_context_range(last_pos);
                 let inner_context = graph.insert_range_in_or_default(
                     location,
                     range,
                 ).unwrap();
                 // |[inner_context, inner], context|
                 let target = graph.insert_pattern(
-                    D::inner_then_context(inner_context, last_inner)
+                    G::Direction::inner_then_context(inner_context, last_inner)
                 );
                 // |target, context|
                 graph.add_pattern_with_update(
                     wrapper,
-                    D::inner_then_context(target, last_context)
+                    G::Direction::inner_then_context(target, last_context)
                 );
                 target
             },

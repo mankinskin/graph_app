@@ -10,6 +10,7 @@ mod child_strings;
 mod getters;
 mod insert;
 mod validation;
+pub mod kind;
 
 #[cfg(test)]
 #[macro_use]
@@ -19,59 +20,62 @@ pub use {
     child_strings::*,
     getters::*,
     insert::*,
+    kind::*,
 };
 
 #[derive(Debug, Clone, Default)]
-pub struct HypergraphRef<T: Tokenize>(pub Arc<RwLock<Hypergraph<T>>>);
+pub struct HypergraphRef<G: GraphKind = BaseGraphKind>(pub Arc<RwLock<Hypergraph<G>>>);
 
-impl<T: Tokenize> HypergraphRef<T> {
-    pub fn new(g: Hypergraph<T>) -> Self {
+impl<G: GraphKind> HypergraphRef<G> {
+    pub fn new(g: Hypergraph<G>) -> Self {
         Self::from(g)
     }
 }
-impl<T: Tokenize> From<Hypergraph<T>> for HypergraphRef<T> {
-    fn from(g: Hypergraph<T>) -> Self {
+impl<G: GraphKind> From<Hypergraph<G>> for HypergraphRef<G> {
+    fn from(g: Hypergraph<G>) -> Self {
         Self(Arc::new(RwLock::new(g)))
     }
 }
-impl<T: Tokenize> std::ops::Deref for HypergraphRef<T> {
-    type Target = Arc<RwLock<Hypergraph<T>>>;
+impl<G: GraphKind> std::ops::Deref for HypergraphRef<G> {
+    type Target = Arc<RwLock<Hypergraph<G>>>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl<T: Tokenize> std::ops::DerefMut for HypergraphRef<T> {
+impl<G: GraphKind> std::ops::DerefMut for HypergraphRef<G> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
-impl<T: Tokenize> std::convert::AsRef<Self> for Hypergraph<T> {
+impl<G: GraphKind> std::convert::AsRef<Self> for Hypergraph<G> {
     fn as_ref(&self) -> &Self {
         self
     }
 }
-impl<T: Tokenize> std::convert::AsMut<Self> for Hypergraph<T> {
+impl<G: GraphKind> std::convert::AsMut<Self> for Hypergraph<G> {
     fn as_mut(&mut self) -> &mut Self {
         self
     }
 }
 
 #[derive(Debug)]
-pub struct Hypergraph<T: Tokenize> {
-    graph: indexmap::IndexMap<VertexKey<T>, VertexData>,
+pub struct Hypergraph<G: GraphKind = BaseGraphKind> {
+    graph: indexmap::IndexMap<VertexKey<G::Token>, VertexData>,
+    _ty: std::marker::PhantomData<G>,
 }
 lazy_static! {
     static ref LOGGER: Arc<RwLock<Logger>> = Arc::default();
 }
-impl<T: Tokenize> Default for Hypergraph<T> {
+impl<G: GraphKind> Default for Hypergraph<G> {
     fn default() -> Self {
         lazy_static::initialize(&LOGGER);
         Self {
             graph: indexmap::IndexMap::default(),
+            _ty: Default::default(),
         }
     }
 }
-impl<'t, 'a, T: Tokenize> Hypergraph<T> {
+impl<'t, 'a, G: GraphKind> Hypergraph<G> {
     pub fn new() -> Self {
         Self::default()
     }
@@ -84,7 +88,7 @@ impl<'t, 'a, T: Tokenize> Hypergraph<T> {
     pub fn vertex_count(&self) -> usize {
         self.graph.len()
     }
-    //pub fn index_sequence<N: Into<T>, I: IntoIterator<Item = N>>(&mut self, seq: I) -> VertexIndex {
+    //pub fn index_sequence<N: Into<G>, I: IntoIterator<Item = N>>(&mut self, seq: I) -> VertexIndex {
     //    let seq = seq.into_iter();
     //    let tokens = T::tokenize(seq);
     //    let pattern = self.to_token_children(tokens);
@@ -139,11 +143,12 @@ pub struct Edge {
     pub parent: Parent,
     pub child: Child,
 }
-impl<'t, 'a, T> Hypergraph<T>
+impl<'t, 'a, G> Hypergraph<G>
 where
-    T: Tokenize + 't + std::fmt::Display,
+    G: GraphKind,
+    G::Token: std::fmt::Display + 't,
 {
-    pub fn to_petgraph(&self) -> DiGraph<(VertexKey<T>, VertexData), Edge> {
+    pub fn to_petgraph(&self) -> DiGraph<(VertexKey<G::Token>, VertexData), Edge> {
         let mut pg = DiGraph::new();
         // id refers to index in Hypergraph
         // idx refers to index in petgraph
@@ -228,16 +233,16 @@ where
     }
     pub fn key_data_string(
         &self,
-        key: &VertexKey<T>,
+        key: &VertexKey<G::Token>,
         data: &VertexData,
     ) -> String {
         self.key_data_string_impl(key, data, |t| t.to_string())
     }
     pub fn key_data_string_impl(
         &self,
-        key: &VertexKey<T>,
+        key: &VertexKey<G::Token>,
         data: &VertexData,
-        f: impl Fn(&Token<T>) -> String,
+        f: impl Fn(&Token<G::Token>) -> String,
     ) -> String {
         match key {
             VertexKey::Token(token) => f(token),
@@ -253,7 +258,7 @@ where
     }
     pub fn key_string(
         &self,
-        key: &VertexKey<T>,
+        key: &VertexKey<G::Token>,
     ) -> String {
         let data = self.expect_vertex_data_by_key(key);
         self.key_data_string(key, data)

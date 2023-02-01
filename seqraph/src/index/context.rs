@@ -4,10 +4,8 @@ trait ContextLocation {
     fn index<
         'a: 'g,
         'g,
-        T: Tokenize,
-        D: IndexDirection,
-        Side: IndexSide<D>,
-        Trav: TraversableMut<T>,
+        Side: IndexSide<<Trav::Kind as GraphKind>::Direction>,
+        Trav: TraversableMut,
     >(self, trav: Trav) -> (Child, ChildLocation);
 }
 pub trait ContextPath:
@@ -33,12 +31,12 @@ impl<
 }
 
 #[derive(Debug, Clone)]
-pub struct Contexter<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> {
-    pub(crate) indexer: Indexer<T, D>,
-    _ty: std::marker::PhantomData<(D, Side)>,
+pub struct Contexter<G: GraphKind, Side: IndexSide<G::Direction>> {
+    pub(crate) indexer: Indexer<G>,
+    _ty: std::marker::PhantomData<Side>,
 }
-impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Contexter<T, D, Side> {
-    pub fn new(indexer: Indexer<T, D>) -> Self {
+impl<G: GraphKind, Side: IndexSide<G::Direction>> Contexter<G, Side> {
+    pub fn new(indexer: Indexer<G>) -> Self {
         Self {
             indexer,
             _ty: Default::default()
@@ -47,9 +45,9 @@ impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Contexter<T, D, Side> {
 }
 
 //pub trait IndexContext<T: Tokenize, D: IndexDirection, Side: IndexSide<D>>: Indexing<T, D> {
-impl<T: Tokenize, D: IndexDirection, Side: IndexSide<D>> Contexter<T, D, Side> {
+impl<G: GraphKind, Side: IndexSide<G::Direction>> Contexter<G, Side> {
     /// replaces context in pattern at location with child and returns it with new location
-    pub fn pather(&self) -> Pather<T, D, Side> {
+    pub fn pather(&self) -> Pather<G, Side> {
         Pather::new(self.indexer.clone())
     }
     #[instrument(skip(self, path))]

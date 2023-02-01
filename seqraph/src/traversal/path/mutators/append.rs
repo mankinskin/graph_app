@@ -26,7 +26,7 @@ impl PathAppend for RootedRolePath<Start, PatternLocation> {
         if !self.split_path.sub_path.is_empty() || {
             let graph = trav.graph();
             let pattern = graph.expect_pattern_at(&prev);
-            Trav::Direction::pattern_index_prev(pattern.borrow(), prev.sub_index).is_some()
+            TravDir::<Trav>::pattern_index_prev(pattern.borrow(), prev.sub_index).is_some()
         } {
             self.split_path.sub_path.path.push(prev);
         }

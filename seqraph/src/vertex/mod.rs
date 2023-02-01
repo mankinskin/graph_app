@@ -308,10 +308,12 @@ impl VertexData {
             Either::Right(parents.iter())
         }
     }
-    pub fn to_pattern_strings<T: Tokenize + std::fmt::Display>(
+    pub fn to_pattern_strings<G: GraphKind>(
         &self,
-        g: &Hypergraph<T>,
-    ) -> Vec<Vec<String>> {
+        g: &Hypergraph<G>,
+    ) -> Vec<Vec<String>>
+        where G::Token: std::fmt::Display
+    {
         self.get_child_pattern_iter()
             .map(|pat| {
                 pat.iter()

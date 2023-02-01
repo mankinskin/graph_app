@@ -20,11 +20,11 @@ pub use split::*;
 pub use context::*;
 pub use path::*;
 
-impl<'t, 'g, T> HypergraphRef<T>
+impl<'t, 'g, G> HypergraphRef<G>
 where
-    T: Tokenize + 't,
+    G: GraphKind + 't,
 {
-    pub fn indexer(&self) -> Indexer<T, Right> {
+    pub fn indexer(&self) -> Indexer<G> {
         Indexer::new(self.clone())
     }
     pub fn index_pattern(
@@ -33,14 +33,14 @@ where
     ) -> Result<(Child, QueryRangePath), NoMatch> {
         self.indexer().index_pattern(pattern)
     }
-    pub fn index_query_with_origin<
-        Q: QueryPath
-    >(
-        &self,
-        query: Q,
-    ) -> Result<(OriginPath<Child>, Q), NoMatch> {
-        self.indexer().index_query_with_origin(query)
-    }
+    //pub fn index_query_with_origin<
+    //    Q: QueryPath
+    //>(
+    //    &self,
+    //    query: Q,
+    //) -> Result<(OriginPath<Child>, Q), NoMatch> {
+    //    self.indexer().index_query_with_origin(query)
+    //}
 }
 
 #[derive(Debug, Clone)]

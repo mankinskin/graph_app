@@ -5,45 +5,39 @@ use crate::*;
 //};
 
 #[derive(Clone, Debug)]
-pub struct Searcher<T: Tokenize, D: MatchDirection> {
-    pub graph: HypergraphRef<T>,
-    _ty: std::marker::PhantomData<D>,
+pub struct Searcher<G: GraphKind> {
+    pub graph: HypergraphRef<G>,
 }
-
 trait SearchTraversalPolicy<
-    T: Tokenize,
-    D: MatchDirection,
+    G: GraphKind,
     R: ResultKind,
 >:
     DirectedTraversalPolicy<
         R,
-        Trav=Searcher<T, D>,
+        Trav=Searcher<G>,
     >
 {
 }
 impl<
-    T: Tokenize,
-    D: MatchDirection,
+    G: GraphKind,
     R: ResultKind,
 >
-    SearchTraversalPolicy<T, D, R> for AncestorSearch<T, D>
+    SearchTraversalPolicy<G, R> for AncestorSearch<G>
 {}
 impl<
-    T: Tokenize,
-    D: MatchDirection,
+    G: GraphKind,
     R: ResultKind,
 >
-    SearchTraversalPolicy<T, D, R> for ParentSearch<T, D>
+    SearchTraversalPolicy<G, R> for ParentSearch<G>
 {}
 
 
 impl<
-    T: Tokenize,
-    D: MatchDirection,
-    S: SearchTraversalPolicy<T, D, R>,
+    G: GraphKind,
+    S: SearchTraversalPolicy<G, R>,
     R: ResultKind,
 >
-    TraversalFolder<S, R> for Searcher<T, D>
+    TraversalFolder<S, R> for Searcher<G>
 {
     //type Break = TraversalResult<R, Q>;
     //type Continue = TraversalResult<R, Q>;
@@ -111,18 +105,17 @@ impl<
 //    pick_max_result(acc, path)
 //}
 
-struct AncestorSearch<T: Tokenize, D: MatchDirection> {
-    _ty: std::marker::PhantomData<(T, D)>,
+struct AncestorSearch<G: GraphKind> {
+    _ty: std::marker::PhantomData<G>,
 }
 
 impl<
-    T: Tokenize,
-    D: MatchDirection,
+    G: GraphKind,
     R: ResultKind,
 >
-    DirectedTraversalPolicy<R> for AncestorSearch<T, D>
+    DirectedTraversalPolicy<R> for AncestorSearch<G>
 {
-    type Trav = Searcher<T, D>;
+    type Trav = Searcher<G>;
 
     fn at_postfix(
         _trav: &Self::Trav,
@@ -131,20 +124,19 @@ impl<
         R::Postfix::from(path)
     }
 }
-struct ParentSearch<T: Tokenize, D: MatchDirection> {
-    _ty: std::marker::PhantomData<(T, D)>,
+struct ParentSearch<G: GraphKind> {
+    _ty: std::marker::PhantomData<G>,
 }
 
 impl<
     'a: 'g,
     'g,
-    T: Tokenize,
-    D: MatchDirection,
+    G: GraphKind,
     R: ResultKind,
 >
-    DirectedTraversalPolicy<R> for ParentSearch<T, D>
+    DirectedTraversalPolicy<R> for ParentSearch<G>
 {
-    type Trav = Searcher<T, D>;
+    type Trav = Searcher<G>;
 
     fn at_postfix(
         _trav: &Self::Trav,
@@ -166,11 +158,10 @@ pub type SearchResult = Result<
     >,
     NoMatch
 >;
-impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
-    pub fn new(graph: HypergraphRef<T>) -> Self {
+impl<G: GraphKind> Searcher<G> {
+    pub fn new(graph: HypergraphRef<G>) -> Self {
         Self {
             graph,
-            _ty: Default::default(),
         }
     }
     // find largest matching direct parent
@@ -178,7 +169,7 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
         &self,
         pattern: impl IntoPattern,
     ) -> SearchResult {
-        self.bft_search::<ParentSearch<T, D>, _>(
+        self.bft_search::<ParentSearch<G>, _>(
             pattern,
         )
     }
@@ -187,12 +178,12 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
         &self,
         pattern: impl IntoPattern,
     ) -> SearchResult {
-        self.bft_search::<AncestorSearch<T, D>, _>(
+        self.bft_search::<AncestorSearch<G>, _>(
             pattern,
         )
     }
     fn bft_search<
-        S: SearchTraversalPolicy<T, D, BaseResult> + Send,
+        S: SearchTraversalPolicy<G, BaseResult>,
         P: IntoPattern,
     >(
         &self,
@@ -205,8 +196,8 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
     #[allow(unused)]
     fn search<
         'a,
-        Ti: TraversalIterator<'a, Self, S, BaseResult> + Send,
-        S: SearchTraversalPolicy<T, D, BaseResult>,
+        Ti: TraversalIterator<'a, Self, S, BaseResult>,
+        S: SearchTraversalPolicy<G, BaseResult>,
         P: IntoPattern,
     >(
         &'a self,

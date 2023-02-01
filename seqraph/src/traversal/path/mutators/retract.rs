@@ -18,7 +18,7 @@ pub trait Retract:
     >(&self, trav: &Trav) -> Option<usize> {
         let graph = trav.graph();
         let pattern = self.root_pattern::<Trav>(&graph);
-        Trav::Direction::pattern_index_prev(
+        <Trav::Kind as GraphKind>::Direction::pattern_index_prev(
             pattern.borrow(),
             self.root_child_pos()
         )
@@ -47,7 +47,7 @@ pub trait Retract:
             self.pop_path()
         ).find_map(|mut location| {
             let pattern = graph.expect_pattern_at(&location);
-            Trav::Direction::pattern_index_prev(pattern.borrow(), location.sub_index)
+            <Trav::Kind as GraphKind>::Direction::pattern_index_prev(pattern.borrow(), location.sub_index)
                 .map(|next| {
                     location.sub_index = next;
                     location

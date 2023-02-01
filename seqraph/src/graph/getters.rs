@@ -8,14 +8,11 @@ use crate::{
 
 use tokio_stream::StreamExt;
 
-impl<'t, T> Hypergraph<T>
-where
-    T: Tokenize + 't,
-{
+impl<'t, G: GraphKind> Hypergraph<G> {
     pub fn get_vertex(
         &self,
         index: impl Indexed,
-    ) -> Result<(&VertexKey<T>, &VertexData), NoMatch> {
+    ) -> Result<(&VertexKey<G::Token>, &VertexData), NoMatch> {
         self.graph
             .get_index(index.index())
             .ok_or(NoMatch::UnknownIndex)
@@ -23,7 +20,7 @@ where
     pub fn get_vertex_mut(
         &mut self,
         index: impl Indexed,
-    ) -> Result<(&mut VertexKey<T>, &mut VertexData), NoMatch> {
+    ) -> Result<(&mut VertexKey<G::Token>, &mut VertexData), NoMatch> {
         self.graph
             .get_index_mut(index.index())
             .ok_or(NoMatch::UnknownIndex)
@@ -32,7 +29,7 @@ where
     pub fn expect_vertex(
         &self,
         index: impl Indexed,
-    ) -> (&VertexKey<T>, &VertexData) {
+    ) -> (&VertexKey<G::Token>, &VertexData) {
         let index = index.index();
         self.get_vertex(index)
             .unwrap_or_else(|_| panic!("Index {} does not exist!", index))
@@ -116,7 +113,7 @@ where
     pub fn expect_vertex_mut(
         &mut self,
         index: impl Indexed,
-    ) -> (&mut VertexKey<T>, &mut VertexData) {
+    ) -> (&mut VertexKey<G::Token>, &mut VertexData) {
         let index = index.index();
         self.get_vertex_mut(index)
             .unwrap_or_else(|_| panic!("Index {} does not exist!", index))
@@ -124,14 +121,14 @@ where
     pub fn get_vertex_key(
         &self,
         index: impl Indexed,
-    ) -> Result<&VertexKey<T>, NoMatch> {
+    ) -> Result<&VertexKey<G::Token>, NoMatch> {
         self.get_vertex(index).map(|entry| entry.0)
     }
     #[track_caller]
     pub fn expect_vertex_key(
         &self,
         index: impl Indexed,
-    ) -> &VertexKey<T> {
+    ) -> &VertexKey<G::Token> {
         self.expect_vertex(index).0
     }
     pub fn get_vertex_data(
@@ -162,37 +159,37 @@ where
     }
     pub fn get_vertex_data_by_key(
         &self,
-        key: &VertexKey<T>,
+        key: &VertexKey<G::Token>,
     ) -> Result<&VertexData, NoMatch> {
         self.graph.get(key).ok_or(NoMatch::UnknownKey)
     }
     pub fn get_vertex_data_by_key_mut(
         &mut self,
-        key: &VertexKey<T>,
+        key: &VertexKey<G::Token>,
     ) -> Result<&mut VertexData, NoMatch> {
         self.graph.get_mut(key).ok_or(NoMatch::UnknownKey)
     }
     #[track_caller]
     pub fn expect_vertex_data_by_key(
         &self,
-        key: &VertexKey<T>,
+        key: &VertexKey<G::Token>,
     ) -> &VertexData {
         self.graph.get(key).expect("Key does not exist")
     }
     #[track_caller]
     pub fn expect_vertex_data_by_key_mut(
         &mut self,
-        key: &VertexKey<T>,
+        key: &VertexKey<G::Token>,
     ) -> &mut VertexData {
         self.graph.get_mut(key).expect("Key does not exist")
     }
-    pub fn vertex_iter(&self) -> impl Iterator<Item = (&VertexKey<T>, &VertexData)> {
+    pub fn vertex_iter(&self) -> impl Iterator<Item = (&VertexKey<G::Token>, &VertexData)> {
         self.graph.iter()
     }
-    pub fn vertex_iter_mut(&mut self) -> impl Iterator<Item = (&VertexKey<T>, &mut VertexData)> {
+    pub fn vertex_iter_mut(&mut self) -> impl Iterator<Item = (&VertexKey<G::Token>, &mut VertexData)> {
         self.graph.iter_mut()
     }
-    pub fn vertex_key_iter(&self) -> impl Iterator<Item = &VertexKey<T>> {
+    pub fn vertex_key_iter(&self) -> impl Iterator<Item = &VertexKey<G::Token>> {
         self.graph.keys()
     }
     pub fn vertex_data_iter(&self) -> impl Iterator<Item = &VertexData> {
@@ -220,45 +217,45 @@ where
     }
     pub fn get_token_data(
         &self,
-        token: &Token<T>,
+        token: &Token<G::Token>,
     ) -> Result<&VertexData, NoMatch> {
         self.get_vertex_data_by_key(&VertexKey::Token(*token))
     }
     pub fn get_token_data_mut(
         &mut self,
-        token: &Token<T>,
+        token: &Token<G::Token>,
     ) -> Result<&mut VertexData, NoMatch> {
         self.get_vertex_data_by_key_mut(&VertexKey::Token(*token))
     }
     pub fn get_index_by_key(
         &self,
-        key: &VertexKey<T>,
+        key: &VertexKey<G::Token>,
     ) -> Result<VertexIndex, NoMatch> {
         self.graph.get_index_of(key).ok_or(NoMatch::UnknownKey)
     }
     #[track_caller]
     pub fn expect_index_by_key(
         &self,
-        key: &VertexKey<T>,
+        key: &VertexKey<G::Token>,
     ) -> VertexIndex {
         self.graph.get_index_of(key).expect("Key does not exist")
     }
     pub fn get_token_index(
         &self,
-        token: impl AsToken<T>,
+        token: impl AsToken<G::Token>,
     ) -> Result<VertexIndex, NoMatch> {
         self.get_index_by_key(&VertexKey::Token(token.as_token()))
     }
     pub fn get_token_child(
         &self,
-        token: impl AsToken<T>,
+        token: impl AsToken<G::Token>,
     ) -> Result<Child, NoMatch> {
         self.get_token_index(token).map(|i| Child::new(i, 1))
     }
     #[track_caller]
     pub fn expect_token_index(
         &self,
-        token: impl AsToken<T>,
+        token: impl AsToken<G::Token>,
     ) -> VertexIndex {
         self.expect_index_by_key(&VertexKey::Token(token.as_token()))
     }
@@ -273,13 +270,13 @@ where
     #[track_caller]
     pub fn expect_token_child(
         &self,
-        token: impl AsToken<T>,
+        token: impl AsToken<G::Token>,
     ) -> Child {
         Child::new(self.expect_token_index(token), 1)
     }
     pub fn to_token_indices_iter<'a>(
         &'a self,
-        tokens: impl IntoIterator<Item = impl AsToken<T>> + 'a,
+        tokens: impl IntoIterator<Item = impl AsToken<G::Token>> + 'a,
     ) -> impl Iterator<Item = Result<VertexIndex, NoMatch>> + 'a {
         tokens
             .into_iter()
@@ -287,7 +284,7 @@ where
     }
     pub fn to_token_indices(
         &self,
-        tokens: impl IntoIterator<Item = impl AsToken<T>>,
+        tokens: impl IntoIterator<Item = impl AsToken<G::Token>>,
     ) -> Result<IndexPattern, NoMatch> {
         tokens
             .into_iter()
@@ -296,14 +293,14 @@ where
     }
     pub fn to_token_children_iter<'a>(
         &'a self,
-        tokens: impl IntoIterator<Item = impl AsToken<T>> + 'a,
+        tokens: impl IntoIterator<Item = impl AsToken<G::Token>> + 'a,
     ) -> impl Iterator<Item = Result<Child, NoMatch>> + 'a {
         self.to_token_indices_iter(tokens)
             .map(move |index| index.map(|index| Child::new(index, 1)))
     }
     pub fn to_token_children(
         &self,
-        tokens: impl IntoIterator<Item = impl AsToken<T>>,
+        tokens: impl IntoIterator<Item = impl AsToken<G::Token>>,
     ) -> Result<impl IntoPattern, NoMatch> {
         self.to_token_children_iter(tokens)
             .collect::<Result<Pattern, _>>()
@@ -311,7 +308,7 @@ where
     #[track_caller]
     pub fn expect_token_pattern(
         &self,
-        tokens: impl IntoIterator<Item = impl AsToken<T>>,
+        tokens: impl IntoIterator<Item = impl AsToken<G::Token>>,
     ) -> Pattern {
         self.to_token_children(tokens)
             .expect("Failed to convert tokens to children")
@@ -319,7 +316,7 @@ where
     }
     pub fn get_token_indices(
         &self,
-        tokens: impl Iterator<Item = impl AsToken<T>>,
+        tokens: impl Iterator<Item = impl AsToken<G::Token>>,
     ) -> Result<IndexPattern, NoMatch> {
         let mut v = IndexPattern::with_capacity(tokens.size_hint().0);
         for token in tokens {
@@ -448,10 +445,7 @@ where
             )
     }
 }
-impl<'t, 'a, T> Hypergraph<T>
-where
-    T: Tokenize + Send + Sync + 't,
-{
+impl<'t, 'a, G: GraphKind> Hypergraph<G> {
     //pub fn async_to_token_indices_stream(
     //    arc: Arc<RwLock<Self>>,
     //    tokens: impl TokenStream<T> + 't,
@@ -472,20 +466,20 @@ where
     //        
     //        .map(move |index| index.into_inner().map(|index| Child::new(index, 1)))
     //}
-    pub fn to_token_indices_stream(
-        &'a self,
-        tokens: impl TokenStream<T> + 'a,
-    ) -> impl PatternStream<VertexIndex, Token<T>> + 'a {
-        tokens.map(move |token| {
-            self.get_token_index(token.as_token())
-                .map_err(|_| Token::Element(token))
-        })
-    }
-    pub fn to_token_children_stream(
-        &'a self,
-        tokens: impl TokenStream<T> + 'a,
-    ) -> impl PatternStream<Child, Token<T>> + 'a {
-        self.to_token_indices_stream(tokens)
-            .map(move |index| index.into_inner().map(|index| Child::new(index, 1)))
-    }
+    //pub fn to_token_indices_stream(
+    //    &'a self,
+    //    tokens: impl TokenStream<G::Token> + 'a,
+    //) -> impl PatternStream<VertexIndex, Token<G::Token>> + 'a {
+    //    tokens.map(move |token| {
+    //        self.get_token_index(token.as_token())
+    //            .map_err(|_| Token::Element(token))
+    //    })
+    //}
+    //pub fn to_token_children_stream(
+    //    &'a self,
+    //    tokens: impl TokenStream<G::Token> + 'a,
+    //) -> impl PatternStream<Child, Token<G::Token>> + 'a {
+    //    self.to_token_indices_stream(tokens)
+    //        .map(move |index| index.into_inner().map(|index| Child::new(index, 1)))
+    //}
 }

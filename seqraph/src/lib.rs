@@ -33,10 +33,7 @@ pub use direction::*;
 pub use graph::tests::*;
 
 pub use {
-    graph::{
-        HypergraphRef,
-        Hypergraph,
-    },
+    graph::*,
     vertex::{
         Token,
         VertexKey,

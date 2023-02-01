@@ -6,9 +6,9 @@ pub enum ValidationError {
     InvalidPattern(PatternLocation),
 }
 
-impl<'t, 'a, T> Hypergraph<T>
+impl<'t, 'a, G> Hypergraph<G>
 where
-    T: Tokenize + 't,
+    G: GraphKind,
 {
     pub fn validate_pattern_indexing_range_at(
         &self,

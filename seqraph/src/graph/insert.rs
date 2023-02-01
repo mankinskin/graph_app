@@ -9,9 +9,9 @@ use std::{
 };
 type HashSet<T> = DeterministicHashSet<T>;
 
-impl<'t, 'g, T> Hypergraph<T>
+impl<'t, 'g, G> Hypergraph<G>
 where
-    T: Tokenize + 't,
+    G: GraphKind,
 {
     fn next_pattern_vertex_id() -> VertexIndex {
         static VERTEX_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
@@ -20,7 +20,7 @@ where
     /// insert single token node
     pub fn insert_vertex(
         &mut self,
-        key: VertexKey<T>,
+        key: VertexKey<G::Token>,
         mut data: VertexData,
     ) -> Child {
         assert!(!self.graph.contains_key(&key));
@@ -34,14 +34,14 @@ where
     /// insert single token node
     pub fn insert_token(
         &mut self,
-        token: Token<T>,
+        token: Token<G::Token>,
     ) -> Child {
         self.insert_vertex(VertexKey::Token(token), VertexData::new(0, 1))
     }
     /// insert multiple token nodes
     pub fn insert_tokens(
         &mut self,
-        tokens: impl IntoIterator<Item = Token<T>>,
+        tokens: impl IntoIterator<Item = Token<G::Token>>,
     ) -> Vec<Child> {
         tokens
             .into_iter()
@@ -367,7 +367,7 @@ where
     }
     pub fn new_token_indices(
         &mut self,
-        sequence: impl IntoIterator<Item = T>,
+        sequence: impl IntoIterator<Item = G::Token>,
     ) -> NewTokenIndices {
         sequence
             .into_iter()

@@ -26,7 +26,7 @@ pub trait TraversalFolder<
         &self,
         query: P,
     ) -> Result<TraversalResult<R>, (NoMatch, R::Query)> {
-        let query_path = R::Query::new_directed::<Self::Direction, _>(query.borrow())
+        let query_path = R::Query::new_directed::<<Self::Kind as GraphKind>::Direction, _>(query.borrow())
             .map_err(|(err, q)| (err, q))?;
         let index = query_path.leaf_child(self);
 

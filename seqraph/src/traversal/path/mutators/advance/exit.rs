@@ -39,7 +39,7 @@ pub trait AdvanceExit:
         } else {
             //if !self.is_finished(trav) {
             //}
-            *self.root_child_pos_mut() = Trav::Direction::index_next(self.root_child_pos()).expect("Can't represent behind end index!");
+            *self.root_child_pos_mut() = TravDir::<Trav>::index_next(self.root_child_pos()).expect("Can't represent behind end index!");
             ControlFlow::BREAK
         }
     }
@@ -58,7 +58,7 @@ impl<M:
     fn next_exit_pos<
         Trav: Traversable,
     >(&self, _trav: &Trav) -> Option<usize> {
-        self.pattern_next_exit_pos::<Trav::Direction, _>(self.pattern_root_pattern().borrow())
+        self.pattern_next_exit_pos::<TravDir<Trav>, _>(self.pattern_root_pattern().borrow())
     }
 }
 //impl<P: AdvanceExit> AdvanceExit for OriginPath<P> {
@@ -93,7 +93,7 @@ impl AdvanceExit for SearchPath {
         let location = self.root_pattern_location();
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(&location);
-        self.pattern_next_exit_pos::<Trav::Direction, _>(pattern.borrow())
+        self.pattern_next_exit_pos::<TravDir<Trav>, _>(pattern.borrow())
     }
 }
 //impl AdvanceExit for OverlapPrimer {

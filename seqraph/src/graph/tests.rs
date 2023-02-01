@@ -1,6 +1,6 @@
 use super::*;
 pub struct Context {
-    pub graph: HypergraphRef<char>,
+    pub graph: HypergraphRef,
     pub a: Child,
     pub b: Child,
     pub c: Child,
@@ -171,7 +171,7 @@ pub fn context_mut() -> RwLockWriteGuard<'static, Context> {
 
 #[test]
 fn test_to_petgraph() {
-    let mut graph = Hypergraph::default();
+    let mut graph = Hypergraph::<BaseGraphKind>::default();
     let (a, b, c, d) = graph.insert_tokens([
         Token::Element('a'),
         Token::Element('b'),

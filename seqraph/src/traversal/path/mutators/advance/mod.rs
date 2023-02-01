@@ -31,7 +31,7 @@ pub trait Advance:
                 self.pop_path()
             ).find_map(|mut location| {
                 let pattern = graph.expect_pattern_at(&location);
-                Trav::Direction::pattern_index_next(pattern.borrow(), location.sub_index)
+                TravDir::<Trav>::pattern_index_next(pattern.borrow(), location.sub_index)
                     .map(|next| {
                         location.sub_index = next;
                         location

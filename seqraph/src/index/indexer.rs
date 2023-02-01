@@ -1,27 +1,21 @@
-use std::hash::Hasher;
-
 use crate::*;
 use super::*;
 
 #[derive(Debug, Clone)]
-pub struct Indexer<T: Tokenize, D: IndexDirection> {
-    pub graph: HypergraphRef<T>,
-    _ty: std::marker::PhantomData<D>,
+pub struct Indexer<G: GraphKind> {
+    pub graph: HypergraphRef<G>,
 }
-pub struct IndexingPolicy<T: Tokenize, D: IndexDirection, Q: QueryPath, R: ResultKind> {
-    _ty: std::marker::PhantomData<(T, D, Q, R)>,
+pub struct IndexingPolicy<G: GraphKind, R: ResultKind> {
+    _ty: std::marker::PhantomData<(G, R)>,
 }
 impl<
     'a: 'g,
     'g,
-    T: Tokenize,
-    D: IndexDirection,
-    Q: QueryPath,
+    G: GraphKind,
     R: ResultKind,
->
-DirectedTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
+> DirectedTraversalPolicy<R> for IndexingPolicy<G, R>
 {
-    type Trav = Indexer<T, D>;
+    type Trav = Indexer<G>;
 
     #[instrument(skip(trav, primer))]
     fn at_postfix(
@@ -61,38 +55,32 @@ DirectedTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
 }
 
 pub trait IndexerTraversalPolicy<
-    T: Tokenize,
-    D: IndexDirection,
-    Q: QueryPath,
+    G: GraphKind,
     R: ResultKind,
 >:
     DirectedTraversalPolicy<
-        T, D, Q, R,
-        Trav=Indexer<T, D>,
+        R,
+        Trav=Indexer<G>,
     >
 {
 }
 impl<
     'a: 'g,
     'g,
-    T: Tokenize,
-    D: IndexDirection,
-    Q: QueryPath,
+    G: GraphKind,
     R: ResultKind,
-> IndexerTraversalPolicy<T, D, Q, R> for IndexingPolicy<T, D, Q, R>
+> IndexerTraversalPolicy<G, R> for IndexingPolicy<G, R>
 {}
 
-impl<T, D, Q, R> TraversalFolder<T, D, Q, IndexingPolicy<T, D, Q, R>, R> for Indexer<T, D>
+impl<G, R> TraversalFolder<IndexingPolicy<G, R>, R> for Indexer<G>
 where 
-    T: Tokenize,
-    D: IndexDirection,
-    Q: QueryPath,
+    G: GraphKind,
     R: ResultKind,
 {
     //type Break = TraversalResult<R, Q>;
     //type Continue = TraversalResult<R, Q>;
     //type Result = (<R as ResultKind>::Indexed, Q);
-    type NodeCollection = BftQueue<R, Q>;
+    type NodeCollection = BftQueue<R>;
 
     //fn map_state(
     //    &self,
@@ -148,27 +136,27 @@ where
     //}
 }
 
-impl<T: Tokenize, D: IndexDirection> Indexer<T, D> {
-    pub fn new(graph: HypergraphRef<T>) -> Self {
+impl<G: GraphKind> Indexer<G> {
+    pub fn new(graph: HypergraphRef<G>) -> Self {
         Self {
             graph,
             _ty: Default::default(),
         }
     }
-    pub fn contexter<Side: IndexSide<D>>(&self) -> Contexter<T, D, Side> {
+    pub fn contexter<Side: IndexSide<G::Direction>>(&self) -> Contexter<G, Side> {
         Contexter::new(self.clone())
     }
-    pub fn splitter<Side: IndexSide<D>>(&self) -> Splitter<T, D, Side> {
+    pub fn splitter<Side: IndexSide<G::Direction>>(&self) -> Splitter<G, Side> {
         Splitter::new(self.clone())
     }
-    pub fn pather<Side: IndexSide<D>>(&self) -> Pather<T, D, Side> {
+    pub fn pather<Side: IndexSide<G::Direction>>(&self) -> Pather<G, Side> {
         Pather::new(self.clone())
     }
     pub fn index_pattern(
         &mut self,
         query: impl IntoPattern,
     ) -> Result<(Child, QueryRangePath), NoMatch> {
-        match <S::Folder as TraversalFolder<_, D, _, R>>::fold_query(query) {
+        match <Self as TraversalFolder<_, BaseResult>>::fold_query(self, query) {
             Ok((result, remaining_query)) => Ok((self.index_found(result), remaining_query)),
             Err((NoMatch::SingleIndex(c), path)) => Ok((c, path)),
             Err((err, _)) => Err(err),

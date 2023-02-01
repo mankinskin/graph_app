@@ -296,7 +296,7 @@ pub trait TraversalIterator<
                             let location = path.role_root_child_location::<End>();
                             let graph = self.trav().graph();
                             let pattern = graph.expect_pattern_at(location);
-                            Trav::Direction::pattern_index_next(pattern.borrow(), location.sub_index).is_none()
+                            <Trav::Kind as GraphKind>::Direction::pattern_index_next(pattern.borrow(), location.sub_index).is_none()
                         }
                     {
                         EndKind::from(path.into().into_simplified(self.trav()).into())
@@ -338,7 +338,7 @@ pub trait TraversalIterator<
             .get_child_patterns().iter()
             .sorted_unstable_by_key(|(_, p)| p.first().unwrap().width)
             .map(|(&pid, child_pattern)| {
-                let sub_index = Trav::Direction::head_index(child_pattern.borrow());
+                let sub_index = <Trav::Kind as GraphKind>::Direction::head_index(child_pattern.borrow());
                 let mut paths = paths.clone();
                 paths.push_major(self.trav(), ChildLocation::new(index, pid, sub_index));
                 ChildState {

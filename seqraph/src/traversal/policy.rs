@@ -6,7 +6,7 @@ impl<R, T: RootChild<R> + Send + Clone + Eq + Debug> NodePath<R> for T {}
 
 pub trait DirectedTraversalPolicy<
     R: ResultKind,
->: Sized + Send + Sync + Unpin {
+>: Sized {
 
     type Trav: Traversable + TraversalFolder<Self, R>;
 

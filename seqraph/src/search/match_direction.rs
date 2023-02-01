@@ -24,7 +24,7 @@ pub trait MatchDirection : Clone + Debug + Send + Sync + 'static + Unpin {
     type PostfixRange<T>: PatternRangeIndex<T>;
     /// get the parent where vertex is at the relevant position
     fn get_match_parent_to(
-        graph: &Hypergraph<impl Tokenize>,
+        graph: &Hypergraph<impl GraphKind>,
         vertex: &VertexData,
         sup: impl Indexed,
     ) -> Result<PatternIndex, NoMatch>;
@@ -153,7 +153,7 @@ impl MatchDirection for Right {
     type Opposite = Left;
     type PostfixRange<T> = RangeFrom<PatternId>;
     fn get_match_parent_to(
-        _graph: &Hypergraph<impl Tokenize>,
+        _graph: &Hypergraph<impl GraphKind>,
         vertex: &VertexData,
         sup: impl Indexed,
     ) -> Result<PatternIndex, NoMatch> {
@@ -235,7 +235,7 @@ impl MatchDirection for Left {
     type Opposite = Left;
     type PostfixRange<T> = Range<PatternId>;
     fn get_match_parent_to(
-        graph: &Hypergraph<impl Tokenize>,
+        graph: &Hypergraph<impl GraphKind>,
         vertex: &VertexData,
         sup: impl Indexed,
     ) -> Result<PatternIndex, NoMatch> {

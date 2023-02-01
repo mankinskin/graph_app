@@ -26,18 +26,12 @@ pub enum NoMatch {
     EmptyRange,
 }
 
-impl<'t, 'g, T> HypergraphRef<T>
+impl<'t, 'g, G> HypergraphRef<G>
 where
-    T: Tokenize + 't,
+    G: GraphKind + 't,
 {
-    pub fn searcher<D: MatchDirection>(&'g self) -> Searcher<T, D> {
+    pub fn searcher(&'g self) -> Searcher<G> {
         Searcher::new(self.clone())
-    }
-    pub fn right_searcher(&'g self) -> Searcher<T, Right> {
-        self.searcher()
-    }
-    pub fn left_searcher(&'g self) -> Searcher<T, Left> {
-        self.searcher()
     }
     //pub fn expect_pattern(
     //    &self,
@@ -50,7 +44,7 @@ where
         pattern: impl IntoIterator<Item = impl Indexed>,
     ) -> SearchResult {
         let pattern = self.graph().to_children(pattern);
-        self.right_searcher().find_pattern_ancestor(pattern)
+        self.searcher().find_pattern_ancestor(pattern)
     }
     #[allow(unused)]
     pub fn find_parent(
@@ -58,11 +52,11 @@ where
         pattern: impl IntoIterator<Item = impl Indexed>,
     ) -> SearchResult {
         let pattern = self.graph().to_children(pattern);
-        self.right_searcher().find_pattern_parent(pattern)
+        self.searcher().find_pattern_parent(pattern)
     }
     pub fn find_sequence(
         &self,
-        pattern: impl IntoIterator<Item = impl AsToken<T>>,
+        pattern: impl IntoIterator<Item = impl AsToken<G::Token>>,
     ) -> SearchResult {
         let iter = tokenizing_iter(pattern.into_iter());
         let pattern = self.graph().to_token_children(iter)?;
