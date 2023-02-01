@@ -30,12 +30,18 @@ impl<
             Self::QueryMajor(_, _) => PathPairMode::QueryMajor,
         }
     }
-    pub fn push_major(&mut self, location: ChildLocation) {
+    pub fn push_major<
+        Trav: Traversable,
+    >(
+        &mut self,
+        trav: &Trav,
+        location: ChildLocation,
+    ) {
         match self {
             Self::GraphMajor(path, _) =>
-                path.path_append(location),
+                path.path_append(trav, location),
             Self::QueryMajor(query, _) =>
-                query.path_append(location),
+                query.path_append(trav, location),
         }
     }
     pub fn unpack(self) -> (P, Q) {

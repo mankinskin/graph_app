@@ -2,9 +2,7 @@ use crate::*;
 
 pub trait IntoAdvanced<R: ResultKind>: Sized + Clone {
     fn into_advanced<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(
         self,
         trav: &Trav,
@@ -47,23 +45,21 @@ pub trait IntoAdvanced<R: ResultKind>: Sized + Clone {
 //}
 impl IntoAdvanced<BaseResult> for RootedRolePath<Start> {
     fn into_advanced<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(
         self,
         trav: &Trav,
     ) -> Result<<BaseResult as ResultKind>::Advanced, Self> {
         let entry = self.root_child_location();
         let graph = trav.graph();
-        let pattern = self.root_pattern::<_, Trav>(&graph).clone();
-        if let Some(next) = D::pattern_index_next(pattern.borrow(), entry.sub_index) {
+        let pattern = self.root_pattern::<Trav>(&graph).clone();
+        if let Some(next) = Trav::Direction::pattern_index_next(pattern.borrow(), entry.sub_index) {
             //let exit = entry.clone().to_child_location(next);
             //let child = pattern[next];
             Ok(SearchPath {
                 root: entry.into_pattern_location(),
                 end: RolePath {
-                    path: SubPath {
+                    sub_path: SubPath {
                         root_entry: next,
                         path: vec![],
                     }.into(),
@@ -73,7 +69,7 @@ impl IntoAdvanced<BaseResult> for RootedRolePath<Start> {
                     _ty: Default::default(),
                 },
                 start: RolePath {
-                    path: self.path.path,
+                    sub_path: self.split_path.sub_path,
                     _ty: Default::default(),
                 },
             })

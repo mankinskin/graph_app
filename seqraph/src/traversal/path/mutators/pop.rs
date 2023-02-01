@@ -7,7 +7,7 @@ pub trait PathPop {
 
 impl<R: PathRole> PathPop for RolePath<R> {
     fn pop_path(&mut self) -> Option<ChildLocation> {
-        self.path.path.pop()
+        self.sub_path.path.pop()
     }
 }
 impl PathPop for SearchPath {

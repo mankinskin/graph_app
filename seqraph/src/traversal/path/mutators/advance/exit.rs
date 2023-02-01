@@ -27,23 +27,19 @@ pub trait AdvanceExit:
     //>(&self, _trav: &Trav) -> bool;
 
     fn next_exit_pos<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&self, _trav: &Trav) -> Option<usize>;
 
     fn advance_exit_pos<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&mut self, trav: &Trav) -> ControlFlow<()> {
-        if let Some(next) = self.next_exit_pos::<_, D, _>(trav) {
+        if let Some(next) = self.next_exit_pos(trav) {
             *self.root_child_pos_mut() = next;
             ControlFlow::CONTINUE
         } else {
             //if !self.is_finished(trav) {
             //}
-            *self.root_child_pos_mut() = D::index_next(self.root_child_pos()).expect("Can't represent behind end index!");
+            *self.root_child_pos_mut() = Trav::Direction::index_next(self.root_child_pos()).expect("Can't represent behind end index!");
             ControlFlow::BREAK
         }
     }
@@ -60,11 +56,9 @@ impl<M:
     //    self.is_pattern_finished(self.pattern_root_pattern().borrow())
     //}
     fn next_exit_pos<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&self, _trav: &Trav) -> Option<usize> {
-        self.pattern_next_exit_pos::<D, _>(self.pattern_root_pattern().borrow())
+        self.pattern_next_exit_pos::<Trav::Direction, _>(self.pattern_root_pattern().borrow())
     }
 }
 //impl<P: AdvanceExit> AdvanceExit for OriginPath<P> {
@@ -94,14 +88,12 @@ impl AdvanceExit for SearchPath {
     //    self.is_pattern_finished(pattern.borrow())
     //}
     fn next_exit_pos<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&self, trav: &Trav) -> Option<usize> {
         let location = self.root_pattern_location();
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(&location);
-        self.pattern_next_exit_pos::<D, _>(pattern.borrow())
+        self.pattern_next_exit_pos::<Trav::Direction, _>(pattern.borrow())
     }
 }
 //impl AdvanceExit for OverlapPrimer {

@@ -4,7 +4,9 @@ macro_rules! impl_traversable {
     {
         impl $(< $( $par:ident $( : $bhead:tt $( + $btail:tt )*)? ),* >)? for $target:ty, $self_:ident => $func:expr; <$lt:lifetime> $guard:ty
     } => {
-        impl <T: Tokenize $( $(, $par $(: $bhead $( + $btail )* )? ),* )?> Traversable<T> for $target {
+        impl <T: Tokenize $( $(, $par $(: $bhead $( + $btail )* )? ),* )?> Traversable for $target {
+            type Token = T;
+            type Direction = Right;
             type Guard<$lt> = $guard where Self: $lt;
             fn graph<'a>(&'a $self_) -> Self::Guard<'a> {
                 $func
@@ -16,7 +18,7 @@ macro_rules! impl_traversable_mut {
     {
         impl $(< $( $par:ident $( : $bhead:tt $( + $btail:tt )*)? ),* >)? for $target:ty, $self_:ident => $func:expr; <$lt:lifetime> $guard:ty
     } => {
-        impl <T: Tokenize $( $(, $par $(: $bhead $( + $btail )* )? ),* )?> TraversableMut<T> for $target {
+        impl <T: Tokenize $( $(, $par $(: $bhead $( + $btail )* )? ),* )?> TraversableMut for $target {
             type GuardMut<$lt> = $guard where Self: $lt;
             fn graph_mut<'a>(&'a mut $self_) -> Self::GuardMut<'a> {
                 $func
@@ -27,8 +29,10 @@ macro_rules! impl_traversable_mut {
 pub(crate) use impl_traversable;
 pub(crate) use impl_traversable_mut;
 
-pub trait Traversable<T: Tokenize>: Sized + std::fmt::Debug + Unpin {
-    type Guard<'a>: Traversable<T> + Deref<Target=Hypergraph<T>> where Self: 'a;
+pub trait Traversable: Sized + std::fmt::Debug + Unpin {
+    type Token: Tokenize;
+    type Direction: MatchDirection;
+    type Guard<'a>: Traversable<Token=Self::Token> + Deref<Target=Hypergraph<Self::Token>> where Self: 'a;
     fn graph<'a>(&'a self) -> Self::Guard<'a>;
 }
 
@@ -86,8 +90,11 @@ impl_traversable! {
 //    self => self.graph.read().unwrap();
 //    <'a> RwLockReadGuard<'a, Hypergraph<T>>
 //}
-pub trait TraversableMut<T: Tokenize>: Traversable<T> {
-    type GuardMut<'a>: TraversableMut<T> + Deref<Target=Hypergraph<T>> + DerefMut where Self: 'a;
+pub trait TraversableMut: Traversable {
+    type GuardMut<'a>:
+        TraversableMut<Token=Self::Token, Direction=Self::Direction>
+        + Deref<Target=Hypergraph<Self::Token>>
+        + DerefMut where Self: 'a;
     fn graph_mut<'a>(&'a mut self) -> Self::GuardMut<'a>;
 }
 

@@ -1,8 +1,4 @@
 use std::collections::VecDeque;
-use crate::{
-    Tokenize,
-    MatchDirection,
-};
 use std::iter::Extend;
 
 use super::*;
@@ -42,27 +38,23 @@ pub struct PruningState {
     count: usize,
     prune: bool,
 }
-pub struct OrderedTraverser<'a, T, D, Trav, R, S, O>
+pub struct OrderedTraverser<'a, Trav, R, S, O>
     where
-        T: Tokenize,
-        Trav: Traversable<T>,
-        D: MatchDirection,
+        Trav: Traversable,
         R: ResultKind,
-        S: DirectedTraversalPolicy<T, D, R, Trav=Trav>,
+        S: DirectedTraversalPolicy<R, Trav=Trav>,
         O: NodeCollection<R>,
 {
     collection: O,
     pruning_map: HashMap<CacheKey, PruningState>,
     trav: &'a Trav,
-    _ty: std::marker::PhantomData<(&'a T, D, S, R, Trav)>
+    _ty: std::marker::PhantomData<(&'a S, R, Trav)>
 }
-impl<'a, T, D, Trav, R, S, O> OrderedTraverser<'a, T, D, Trav, R, S, O>
+impl<'a, Trav, R, S, O> OrderedTraverser<'a, Trav, R, S, O>
     where
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
+        Trav: Traversable,
         R: ResultKind,
-        S: DirectedTraversalPolicy<T, D, R, Trav=Trav>,
+        S: DirectedTraversalPolicy<R, Trav=Trav>,
         O: NodeCollection<R>,
 {
     pub fn prune_not_below(&mut self, root: CacheKey) {
@@ -73,26 +65,22 @@ impl<'a, T, D, Trav, R, S, O> OrderedTraverser<'a, T, D, Trav, R, S, O>
             });
     }
     pub fn prune_below(&mut self, root: CacheKey) {
-        self.pruning_map.get_mut(&root).unwrap().prune = true;
+        self.pruning_map.get_mut(&root).map(|entry| entry.prune = true);
     }
 }
-impl<'a, T, D, Trav, R, S, O> Unpin for OrderedTraverser<'a, T, D, Trav, R, S, O>
+impl<'a, Trav, R, S, O> Unpin for OrderedTraverser<'a, Trav, R, S, O>
     where
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
+        Trav: Traversable,
         R: ResultKind,
-        S: DirectedTraversalPolicy<T, D, R, Trav=Trav>,
+        S: DirectedTraversalPolicy<R, Trav=Trav>,
         O: NodeCollection<R>,
 {
 }
-impl<'a, T, D, Trav, R, S, O> ExtendStates<R> for OrderedTraverser<'a, T, D, Trav, R, S, O>
+impl<'a, Trav, R, S, O> ExtendStates<R> for OrderedTraverser<'a, Trav, R, S, O>
     where
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
+        Trav: Traversable,
         R: ResultKind,
-        S: DirectedTraversalPolicy<T, D, R, Trav=Trav>,
+        S: DirectedTraversalPolicy<R, Trav=Trav>,
         O: NodeCollection<R>,
 {
     fn extend<
@@ -115,13 +103,11 @@ impl<'a, T, D, Trav, R, S, O> ExtendStates<R> for OrderedTraverser<'a, T, D, Tra
         )
     }
 }
-impl<'a, T, Trav, D, S, R, O> TraversalIterator<'a, T, D, Trav, S, R> for OrderedTraverser<'a, T, D, Trav, R, S, O>
+impl<'a, Trav, S, R, O> TraversalIterator<'a, Trav, S, R> for OrderedTraverser<'a, Trav, R, S, O>
     where
-        T: Tokenize,
-        Trav: Traversable<T> + 'a + TraversalFolder<T, D, S, R>,
-        D: MatchDirection,
+        Trav: Traversable + 'a + TraversalFolder<S, R>,
         R: ResultKind,
-        S: DirectedTraversalPolicy<T, D, R, Trav=Trav>,
+        S: DirectedTraversalPolicy<R, Trav=Trav>,
         O: NodeCollection<R>,
 {
     fn new(trav: &'a Trav) -> Self {
@@ -143,13 +129,11 @@ impl<'a, T, Trav, D, S, R, O> TraversalIterator<'a, T, D, Trav, S, R> for Ordere
         self.trav
     }
 }
-impl<'a, T, D, Trav, R, S, O> Iterator for OrderedTraverser<'a, T, D, Trav, R, S, O>
+impl<'a, Trav, R, S, O> Iterator for OrderedTraverser<'a, Trav, R, S, O>
 where
-    T: Tokenize,
-    D: MatchDirection,
-    Trav: Traversable<T> + TraversalFolder<T, D, S, R>,
+    Trav: Traversable + TraversalFolder<S, R>,
     R: ResultKind,
-    S: DirectedTraversalPolicy<T, D, R, Trav=Trav>,
+    S: DirectedTraversalPolicy<R, Trav=Trav>,
     O: NodeCollection<R>,
 {
     type Item = (usize, TraversalState<R>);
@@ -169,9 +153,9 @@ where
         None
     }
 }
-pub type Bft<'a, T, D, Trav, R, S> = OrderedTraverser<'a, T, D, Trav, R, S, BftQueue<R>>;
+pub type Bft<'a, Trav, R, S> = OrderedTraverser<'a, Trav, R, S, BftQueue<R>>;
 #[allow(unused)]
-pub type Dft<'a, T, D, Trav, R, S> = OrderedTraverser<'a, T, D, Trav, R, S, DftStack<R>>;
+pub type Dft<'a, Trav, R, S> = OrderedTraverser<'a, Trav, R, S, DftStack<R>>;
 
 #[derive(Debug)]
 pub struct BftQueue<R>

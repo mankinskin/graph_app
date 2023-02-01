@@ -53,10 +53,8 @@ impl<R: ResultKind> NextStates<R> {
 }
 pub trait TraversalIterator<
     'a, 
-    T: Tokenize,
-    D: MatchDirection,
-    Trav: Traversable<T> + 'a + TraversalFolder<T, D, S, R>,
-    S: DirectedTraversalPolicy<T, D, R, Trav=Trav>,
+    Trav: Traversable + 'a + TraversalFolder<S, R>,
+    S: DirectedTraversalPolicy<R, Trav=Trav>,
     R: ResultKind = BaseResult,
 >: Iterator<Item = (usize, TraversalState<R>)> + Sized + ExtendStates<R>
 {
@@ -68,22 +66,31 @@ pub trait TraversalIterator<
         cache: &mut TraversalCache<R>,
     ) -> Option<(usize, NextStates<R>)> {
         let (depth, tstate) = self.next()?;
-        let next_states = match cache.add_state(self.trav(), &tstate) {
-            Ok(key) => {
-                match tstate.kind {
-                    InnerKind::Parent(state) =>
+        let root_key = tstate.root_key();
+        let cached = cache.add_state(self.trav(), &tstate);
+        let target_key = match cached {
+            Ok(key) |
+            Err(key) => key,
+        };
+        let next_states = match tstate.kind {
+            InnerKind::Parent(state) =>
+                match cached {
+                    Ok(key) => 
                         self.on_parent(key, tstate.matched, state),
-                    InnerKind::Child(state) =>
-                        self.on_child(key, tstate.matched, state),
-                    _ => NextStates::Empty,
-                }
-            },
-            Err(key) => {
-                cache.get_entry_mut(&key)
-                    .unwrap()
-                    .add_waiting(depth, tstate);
-                NextStates::Empty
-            }
+                    Err(key) => {
+                        cache.get_entry_mut(&key)
+                            .unwrap()
+                            .add_waiting(depth, WaitingState {
+                                prev: tstate.prev,
+                                matched: tstate.matched,
+                                state,
+                            });
+                        NextStates::Empty
+                    }
+                },
+            InnerKind::Child(state) =>
+                self.on_child(target_key, tstate.matched, state),
+            _ => NextStates::Empty,
         };
         Some((depth + 1, next_states))
     }
@@ -97,7 +104,7 @@ pub trait TraversalIterator<
         let query = state.query;
         //assert!(!query.is_finished(self.trav()));
         // create path to next child
-        match R::Primer::into_advanced::<_, D, _>(state.path, self.trav()) {
+        match R::Primer::into_advanced(state.path, self.trav()) {
             Ok(path) =>
                 // first child state in this parent
                 NextStates::Child(
@@ -133,15 +140,12 @@ pub trait TraversalIterator<
             &postfix,
         );
         if parents.is_empty() {
-            //println!("no more parents {:#?}", match_end);
             NextStates::End(
                 key,
                 matched,
                 EndState {
                     root: key,
-                    kind: EndKind::Postfix(PostfixEnd {
-                        path: postfix,//.into_simplified::<_, D, _>(self.trav()),
-                    }),
+                    kind: EndKind::from(postfix.into_simplified(self.trav()).into()),
                     query,
                 },
             )
@@ -167,7 +171,7 @@ pub trait TraversalIterator<
         let mode = paths.mode();
         let (path, query) = paths.unpack();
 
-        let path_leaf = path.role_leaf_child::<End, _, _>(self.trav());
+        let path_leaf = path.role_leaf_child::<End, _>(self.trav());
         let query_leaf = query.leaf_child(self.trav());
 
         // compare next child
@@ -181,7 +185,7 @@ pub trait TraversalIterator<
                         key,
                         root,
                     )
-                } else if path_leaf.width() == 1 && query_leaf.width() == 1 {
+                } else if path_leaf.width() == 1 {
                     self.on_mismatch(
                         matched,
                         path,
@@ -241,8 +245,8 @@ pub trait TraversalIterator<
         root: CacheKey,
     ) -> NextStates<R> {
         //path.add_match_width::<_, D, _>(self.trav());
-        if query.advance::<_, D, _>(self.trav()).is_continue() {
-            if path.advance::<_, D, _>(self.trav()).is_continue() {
+        if query.advance(self.trav()).is_continue() {
+            if path.advance(self.trav()).is_continue() {
                 NextStates::Child(
                     key,
                     true,
@@ -260,7 +264,6 @@ pub trait TraversalIterator<
                 )
             }
         } else {
-            // query end
             //path.child_path_mut::<End>().simplify::<_, D, _>(self.trav());
             self.on_end(
                 true,
@@ -289,12 +292,14 @@ pub trait TraversalIterator<
                 query,
                 kind:
                     if path.raw_child_path::<End>().is_empty()
-                        && path.child_pos::<Start>() == path.child_pos::<End>()
+                        && {
+                            let location = path.role_root_child_location::<End>();
+                            let graph = self.trav().graph();
+                            let pattern = graph.expect_pattern_at(location);
+                            Trav::Direction::pattern_index_next(pattern.borrow(), location.sub_index).is_none()
+                        }
                     {
-                        todo!("handle this")
-                        //EndKind::Postfix(PostfixEnd {
-                        //    path: path.pop_path::<_, D, _>(self.trav()),
-                        //})
+                        EndKind::from(path.into().into_simplified(self.trav()).into())
                     } else {
                         EndKind::Range(RangeEnd {
                             kind: range_kind,
@@ -312,7 +317,7 @@ pub trait TraversalIterator<
         query: R::Query,
         key: CacheKey,
     ) -> NextStates<R> {
-        path.retract::<_, D, _, R>(self.trav());
+        path.retract::<_, R>(self.trav());
         self.on_end(
             matched,
             path,
@@ -333,9 +338,9 @@ pub trait TraversalIterator<
             .get_child_patterns().iter()
             .sorted_unstable_by_key(|(_, p)| p.first().unwrap().width)
             .map(|(&pid, child_pattern)| {
-                let sub_index = D::head_index(child_pattern.borrow());
+                let sub_index = Trav::Direction::head_index(child_pattern.borrow());
                 let mut paths = paths.clone();
-                paths.push_major(ChildLocation::new(index, pid, sub_index));
+                paths.push_major(self.trav(), ChildLocation::new(index, pid, sub_index));
                 ChildState {
                     root,
                     paths,
@@ -350,7 +355,7 @@ pub trait TraversalIterator<
         key: CacheKey,
         mut state: StartState<R>,
     ) -> NextStates<R> {
-        if state.query.advance::<_, D, _>(self.trav()).is_continue() {
+        if state.query.advance(self.trav()).is_continue() {
             NextStates::Parents(
                 key,
                 false,
@@ -358,16 +363,25 @@ pub trait TraversalIterator<
                     self.trav(),
                     &state.query,
                     state.index,
-                    |p, trav|
+                    |trav, p|
                         <_ as IntoPrimer<R>>::into_primer(
                             MatchEnd::Complete(state.index),
+                            trav,
                             p,
                         )
                 )
             )
         } else {
-            todo!("query end");
-            NextStates::Empty
+            NextStates::End(
+                key,
+                false,
+                EndState {
+                    kind:
+                    EndKind::Complete(state.index),
+                    query: state.query,
+                    root: key,
+                }
+            )
         }
     }
 }

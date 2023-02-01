@@ -14,21 +14,17 @@ pub trait Retract:
     + RootChildPosMut<End>
 {
     fn prev_exit_pos<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&self, trav: &Trav) -> Option<usize> {
         let graph = trav.graph();
-        let pattern = self.root_pattern::<_, Trav>(&graph);
-        D::pattern_index_prev(
+        let pattern = self.root_pattern::<Trav>(&graph);
+        Trav::Direction::pattern_index_prev(
             pattern.borrow(),
             self.root_child_pos()
         )
     }
     fn retract<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
+        Trav: Traversable,
         R: ResultKind,
     >(&mut self, trav: &Trav) {
         //let graph = trav.graph();
@@ -51,15 +47,15 @@ pub trait Retract:
             self.pop_path()
         ).find_map(|mut location| {
             let pattern = graph.expect_pattern_at(&location);
-            D::pattern_index_prev(pattern.borrow(), location.sub_index)
+            Trav::Direction::pattern_index_prev(pattern.borrow(), location.sub_index)
                 .map(|next| {
                     location.sub_index = next;
                     location
                 })
         }) {
-            self.path_append(location);
+            self.path_append(trav, location);
         } else {
-            *self.root_child_pos_mut() = self.prev_exit_pos::<_, D, _>(trav).unwrap();
+            *self.root_child_pos_mut() = self.prev_exit_pos(trav).unwrap();
         }
 
     }

@@ -204,7 +204,7 @@ fn find_ancestor2() {
                     cache: TraversalCache {
                         entries: HashMap::default()
                     },
-                    end_states: vec![
+                    final_states: vec![
                     ]
                 }
             //SearchPath {
@@ -378,16 +378,10 @@ fn find_ancestor3() {
                             }),
                         ]),
                     },
-                    end_states: vec![
-                        (
-                            CacheKey {
-                                index: Child {
-                                    index: 4,
-                                    width: 1,
-                                },
-                                token_pos: 0,
-                            },
-                            EndState {
+                    final_states: vec![
+                        FinalState {
+                            num_parents: 2,
+                            state: EndState {
                                 root: CacheKey {
                                     index: Child {
                                         index: 11,
@@ -395,27 +389,18 @@ fn find_ancestor3() {
                                     },
                                     token_pos: 0,
                                 },
-                                kind: EndKind::Range(
-                                    RangeEnd {
-                                        entry: ChildLocation {
-                                            parent: Child {
-                                                index: 11,
-                                                width: 4,
-                                            },
-                                            pattern_id: 6,
-                                            sub_index: 1,
-                                        },
-                                        kind: RangeKind::QueryEnd,
-                                        path: SearchPath {
-                                            root: PatternLocation {
-                                                parent: Child {
-                                                    index: 11,
-                                                    width: 4,
+                                kind: EndKind::Postfix(
+                                    PostfixEnd {
+                                        path: RootedRolePath {
+                                            split_path: RootedSplitPath {
+                                                root: PatternLocation {
+                                                    parent: Child {
+                                                        index: 11,
+                                                        width: 4,
+                                                    },
+                                                    pattern_id: 6,
                                                 },
-                                                pattern_id: 6,
-                                            },
-                                            start: RolePath {
-                                                path: SubPath {
+                                                sub_path: SubPath {
                                                     root_entry: 0,
                                                     path: vec![
                                                         ChildLocation {
@@ -428,15 +413,8 @@ fn find_ancestor3() {
                                                         },
                                                     ],
                                                 },
-                                                _ty: Default::default(),
                                             },
-                                            end: RolePath {
-                                                path: SubPath {
-                                                    root_entry: 1,
-                                                    path: vec![],
-                                                },
-                                                _ty: Default::default(),
-                                            },
+                                            _ty: Default::default(),
                                         },
                                     },
                                 ),
@@ -452,14 +430,14 @@ fn find_ancestor3() {
                                         },
                                     ],
                                     start: RolePath {
-                                        path: SubPath {
+                                        sub_path: SubPath {
                                             root_entry: 0,
                                             path: vec![],
                                         },
                                         _ty: Default::default(),
                                     },
                                     end: RolePath {
-                                        path: SubPath {
+                                        sub_path: SubPath {
                                             root_entry: 2,
                                             path: vec![],
                                         },
@@ -467,7 +445,7 @@ fn find_ancestor3() {
                                     },
                                 },
                             },
-                        ),
+                        },
                     ]
                 }
             //SearchPath {

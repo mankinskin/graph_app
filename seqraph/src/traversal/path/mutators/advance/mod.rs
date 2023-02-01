@@ -20,9 +20,7 @@ pub trait Advance:
     + Sized
 {
     fn advance<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&mut self, trav: &Trav) -> ControlFlow<()> {
         //if self.is_finished(trav) {
         //    ControlFlow::BREAK
@@ -33,16 +31,16 @@ pub trait Advance:
                 self.pop_path()
             ).find_map(|mut location| {
                 let pattern = graph.expect_pattern_at(&location);
-                D::pattern_index_next(pattern.borrow(), location.sub_index)
+                Trav::Direction::pattern_index_next(pattern.borrow(), location.sub_index)
                     .map(|next| {
                         location.sub_index = next;
                         location
                     })
             }) {
-                self.path_append(location);
+                self.path_append(trav, location);
                 ControlFlow::CONTINUE
             } else {
-                self.advance_exit_pos::<_, D, _>(trav)
+                self.advance_exit_pos(trav)
             }
         //}
     }

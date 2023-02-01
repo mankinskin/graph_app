@@ -23,8 +23,7 @@ pub trait RootKey {
 pub trait LeafKey {
     fn leaf_location(&self) -> ChildLocation;
     fn leaf_key<
-        T: Tokenize,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&self, trav: &Trav) -> CacheKey {
         let c = trav.graph().expect_child_at(self.leaf_location());
         CacheKey {
@@ -36,7 +35,7 @@ pub trait LeafKey {
 impl LeafKey for SearchPath {
     fn leaf_location(&self) -> ChildLocation {
         self.end.path.last().cloned().unwrap_or(
-            self.root.to_child_location(self.end.path.root_entry)
+            self.root.to_child_location(self.end.sub_path.root_entry)
         )
     }
 }
@@ -246,8 +245,7 @@ impl<
 }
 pub trait TargetKey {
     fn target_key<
-        T: Tokenize,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&self, trav: &Trav) -> CacheKey;
 }
 
@@ -267,8 +265,7 @@ impl<
     R: ResultKind,
 > TargetKey for TraversalState<R> {
     fn target_key<
-        T: Tokenize,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&self, trav: &Trav) -> CacheKey {
         match &self.kind {
             InnerKind::Parent(state) => state.root_key(),
@@ -281,12 +278,12 @@ impl<
     R: ResultKind,
 > TargetKey for EndState<R> {
     fn target_key<
-        T: Tokenize,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&self, trav: &Trav) -> CacheKey {
         match &self.kind {
             EndKind::Range(state) => state.leaf_key(trav),
             EndKind::Postfix(_) => self.root_key(),
+            EndKind::Complete(c) => c.root_key(),
         }
     }
 }

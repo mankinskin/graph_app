@@ -2,7 +2,7 @@ use crate::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RolePath<R> {
-    pub path: SubPath,
+    pub sub_path: SubPath,
     //pub child: Child,
     //pub width: usize,
     //pub token_pos: usize,
@@ -19,10 +19,10 @@ impl<R: PathRole> RolePath<R> {
         self.path().len()
     }
     pub fn path(&self) -> &Vec<ChildLocation> {
-        &self.path.path
+        &self.sub_path.path
     }
     pub fn path_mut(&mut self) -> &mut Vec<ChildLocation> {
-        &mut self.path.path
+        &mut self.sub_path.path
     }
     //pub fn child_location(&self) -> ChildLocation {
     //    <Self as GraphRootChild<R>>::root_child_location(self)
@@ -34,7 +34,7 @@ impl<R: PathRole> RolePath<R> {
 impl<R> Deref for RolePath<R> {
     type Target = SubPath;
     fn deref(&self) -> &Self::Target {
-        &self.path
+        &self.sub_path
     }
 }
 impl From<SearchPath> for RolePath<Start> {
@@ -43,9 +43,9 @@ impl From<SearchPath> for RolePath<Start> {
     }
 }
 impl<R: PathRole> From<SubPath> for RolePath<R> {
-    fn from(path: SubPath) -> Self {
+    fn from(sub_path: SubPath) -> Self {
         Self {
-            path,
+            sub_path,
             _ty: Default::default(),
         }
     }

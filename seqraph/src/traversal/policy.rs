@@ -5,12 +5,10 @@ impl<R, T: RootChild<R> + Send + Clone + Eq + Debug> NodePath<R> for T {}
 
 
 pub trait DirectedTraversalPolicy<
-    T: Tokenize,
-    D: MatchDirection,
     R: ResultKind,
 >: Sized + Send + Sync + Unpin {
 
-    type Trav: Traversable<T> + TraversalFolder<T, D, Self, R>;
+    type Trav: Traversable + TraversalFolder<Self, R>;
 
     /// Executed after last child of index matched
     fn at_postfix(
@@ -28,12 +26,12 @@ pub trait DirectedTraversalPolicy<
             trav,
             query,
             postfix.root_parent(),
-            |p, trav| postfix.clone().into_primer(p)
+            |trav, p| postfix.clone().into_primer(trav, p)
         )
     }
     /// generates parent nodes
     fn gen_parent_states<
-        B: (Fn(ChildLocation, &Self::Trav) -> R::Primer) + Copy,
+        B: (Fn(&Self::Trav, ChildLocation) -> R::Primer) + Copy,
     >(
         trav: &Self::Trav,
         query: &R::Query,
@@ -56,7 +54,7 @@ pub trait DirectedTraversalPolicy<
             .sorted_unstable_by(|a, b| TraversalOrder::cmp(a, b))
             .map(|p| {
                 ParentState {
-                    path: build_start(p, trav),
+                    path: build_start(trav, p),
                     query: query.clone(),
                 }
             })

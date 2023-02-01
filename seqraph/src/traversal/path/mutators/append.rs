@@ -2,48 +2,103 @@ use crate::*;
 
 /// move path leaf position one level deeper
 pub trait PathAppend {
-    fn path_append(&mut self, parent_entry: ChildLocation);
+    fn path_append<
+        Trav: Traversable,
+    >(
+        &mut self,
+        trav: &Trav,
+        parent_entry: ChildLocation
+    );
 }
 
-impl PathAppend for SubPath {
-    fn path_append(&mut self, parent_entry: ChildLocation) {
-        self.path.push(parent_entry);
-    }
-}
-impl PathAppend for RolePath<Start> {
-    fn path_append(&mut self, parent_entry: ChildLocation) {
-        self.path.root_entry = parent_entry.sub_index;
-        self.path.path_append(parent_entry)
-    }
-}
-impl PathAppend for RolePath<End> {
-    fn path_append(&mut self, parent_entry: ChildLocation) {
-        self.path.path_append(parent_entry)
-    }
-}
 impl PathAppend for RootedRolePath<Start, PatternLocation> {
-    fn path_append(&mut self, parent_entry: ChildLocation) {
-        let prev = self.path.root.to_child_location(self.path.path.root_entry);
-        self.path.path.path_append(prev);
-        self.path.path.root_entry = parent_entry.sub_index;
-        self.path.root = parent_entry.into_pattern_location();
+    fn path_append<
+        Trav: Traversable,
+    >(
+        &mut self,
+        trav: &Trav,
+        parent_entry: ChildLocation,
+    ) {
+        let prev = self.split_path.root.to_child_location(self.split_path.sub_path.root_entry);
+        self.split_path.sub_path.root_entry = parent_entry.sub_index;
+        self.split_path.root = parent_entry.into_pattern_location();
+
+        if !self.split_path.sub_path.is_empty() || {
+            let graph = trav.graph();
+            let pattern = graph.expect_pattern_at(&prev);
+            Trav::Direction::pattern_index_prev(pattern.borrow(), prev.sub_index).is_some()
+        } {
+            self.split_path.sub_path.path.push(prev);
+        }
     }
 }
 impl PathAppend for RootedRolePath<End> {
-    fn path_append(&mut self, parent_entry: ChildLocation) {
-        self.path.path.path_append(parent_entry)
+    fn path_append<
+        Trav: Traversable,
+    >(
+        &mut self,
+        _trav: &Trav,
+        parent_entry: ChildLocation,
+    ) {
+        self.split_path.sub_path.path.push(parent_entry)
     }
 }
 impl PathAppend for SearchPath {
-    fn path_append(&mut self, parent_entry: ChildLocation) {
-        self.end.path_append(parent_entry)
+    fn path_append<
+        Trav: Traversable,
+    >(
+        &mut self,
+        _trav: &Trav,
+        parent_entry: ChildLocation,
+    ) {
+        self.end.sub_path.path.push(parent_entry);
     }
 }
 impl PathAppend for QueryRangePath {
-    fn path_append(&mut self, parent_entry: ChildLocation) {
-        self.end.path_append(parent_entry)
+    fn path_append<
+        Trav: Traversable,
+    >(
+        &mut self,
+        _trav: &Trav,
+        parent_entry: ChildLocation,
+    ) {
+        self.end.sub_path.path.push(parent_entry);
     }
 }
+//impl PathAppend for RolePath<End> {
+//    fn path_append<
+//        Trav: Traversable,
+//    >(
+//        &mut self,
+//        trav: &Trav,
+//        parent_entry: ChildLocation,
+//    ) {
+//        self.path.path.push(parent_entry);
+//    }
+//}
+//impl PathAppend for SubPath {
+//    fn path_append<
+//        Trav: Traversable,
+//    >(
+//        &mut self,
+//        trav: &Trav,
+//        parent_entry: ChildLocation,
+//    ) {
+//        self.path.push(parent_entry);
+//    }
+//}
+//impl PathAppend for RolePath<Start> {
+//    fn path_append<
+//        T: Tokenize,
+//        Trav: Traversable<T>,
+//    >(
+//        &mut self,
+//        trav: &Trav,
+//        parent_entry: ChildLocation,
+//    ) {
+//        self.path.path_append(trav, parent_entry)
+//    }
+//}
 //impl<P: MatchEndPath + PathAppend> PathAppend for MatchEnd<P> {
 //    fn path_append(&mut self, parent_entry: ChildLocation) {
 //        match self {

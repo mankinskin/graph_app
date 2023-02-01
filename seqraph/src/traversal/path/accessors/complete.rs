@@ -2,7 +2,6 @@ use crate::*;
 
 
 pub trait PathComplete: Sized + Debug {
-    //fn new_complete(c: Child) -> Self;
     fn into_complete(&self) -> Option<Child>;
 
     fn is_complete(&self) -> bool {
@@ -28,14 +27,6 @@ impl<R: ResultKind> PathComplete for FoundPath<R> {
         }
     }
 }
-//impl<R: PathRole> PathComplete for RolePath<R> {
-//    /// returns child if reduced to single child
-//    fn into_complete(&self) -> Option<Child> {
-//        self.path.is_empty().then(||
-//            self.child
-//        )
-//    }
-//}
 impl<P: MatchEndPath> PathComplete for MatchEnd<P> {
     fn into_complete(&self) -> Option<Child> {
         match self {
@@ -44,6 +35,14 @@ impl<P: MatchEndPath> PathComplete for MatchEnd<P> {
         }
     }
 }
+//impl<R: PathRole> PathComplete for RolePath<R> {
+//    /// returns child if reduced to single child
+//    fn into_complete(&self) -> Option<Child> {
+//        self.path.is_empty().then(||
+//            self.child
+//        )
+//    }
+//}
 //impl<P: PathComplete> PathComplete for OriginPath<P> {
 //    fn into_complete(&self) -> Option<Child> {
 //        self.postfix.into_complete()

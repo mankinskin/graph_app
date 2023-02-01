@@ -6,17 +6,17 @@ pub trait RootChildPos<R> {
 }
 impl<R: PathRole> RootChildPos<R> for RolePath<R> {
     fn root_child_pos(&self) -> usize {
-        self.path.root_entry
+        self.sub_path.root_entry
     }
 }
 impl<R: PathRole> RootChildPos<R> for RootedRolePath<R> {
     fn root_child_pos(&self) -> usize {
-        RootChildPos::<R>::root_child_pos(&self.path)
+        RootChildPos::<R>::root_child_pos(&self.split_path)
     }
 }
 impl<R: PathRole, Root: PathRoot> RootChildPos<R> for RootedSplitPath<Root> {
     fn root_child_pos(&self) -> usize {
-        RootChildPos::<R>::root_child_pos(&self.path)
+        RootChildPos::<R>::root_child_pos(&self.sub_path)
     }
 }
 impl<R: PathRole> RootChildPos<R> for SubPath {
@@ -57,12 +57,12 @@ pub trait RootChildPosMut<R>: RootChildPos<R> {
 }
 impl RootChildPosMut<End> for RolePath<End> {
     fn root_child_pos_mut(&mut self) -> &mut usize {
-        &mut self.path.root_entry
+        &mut self.sub_path.root_entry
     }
 }
 impl RootChildPosMut<End> for QueryRangePath {
     fn root_child_pos_mut(&mut self) -> &mut usize {
-        &mut self.end.path.root_entry
+        &mut self.end.sub_path.root_entry
     }
 }
 impl RootChildPosMut<End> for SearchPath {

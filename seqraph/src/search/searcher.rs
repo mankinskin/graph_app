@@ -16,8 +16,6 @@ trait SearchTraversalPolicy<
     R: ResultKind,
 >:
     DirectedTraversalPolicy<
-        T,
-        D,
         R,
         Trav=Searcher<T, D>,
     >
@@ -45,7 +43,7 @@ impl<
     S: SearchTraversalPolicy<T, D, R>,
     R: ResultKind,
 >
-    TraversalFolder<T, D, S, R> for Searcher<T, D>
+    TraversalFolder<S, R> for Searcher<T, D>
 {
     //type Break = TraversalResult<R, Q>;
     //type Continue = TraversalResult<R, Q>;
@@ -122,7 +120,7 @@ impl<
     D: MatchDirection,
     R: ResultKind,
 >
-    DirectedTraversalPolicy<T, D, R> for AncestorSearch<T, D>
+    DirectedTraversalPolicy<R> for AncestorSearch<T, D>
 {
     type Trav = Searcher<T, D>;
 
@@ -144,7 +142,7 @@ impl<
     D: MatchDirection,
     R: ResultKind,
 >
-    DirectedTraversalPolicy<T, D, R> for ParentSearch<T, D>
+    DirectedTraversalPolicy<R> for ParentSearch<T, D>
 {
     type Trav = Searcher<T, D>;
 
@@ -200,21 +198,21 @@ impl<T: Tokenize, D: MatchDirection> Searcher<T, D> {
         &self,
         query: P,
     ) -> SearchResult {
-        self.search::<Bft<T, D, Self, BaseResult, S>, S, _>(
+        self.search::<Bft<Self, BaseResult, S>, S, _>(
             query,
         )
     }
     #[allow(unused)]
     fn search<
         'a,
-        Ti: TraversalIterator<'a, T, D, Self, S, BaseResult> + Send,
+        Ti: TraversalIterator<'a, Self, S, BaseResult> + Send,
         S: SearchTraversalPolicy<T, D, BaseResult>,
         P: IntoPattern,
     >(
         &'a self,
         query: P,
     ) -> SearchResult {
-        <Self as TraversalFolder<_, D, S, _>>::fold_query(self, query)
+        <Self as TraversalFolder<S, _>>::fold_query(self, query)
             .map_err(|(nm, _)| nm)
     }
     //#[allow(unused)]

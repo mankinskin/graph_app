@@ -9,19 +9,19 @@ pub struct RootedRangePath<Root: PathRoot> {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RootedSplitPath<Root: PathRoot> {
     pub root: Root,
-    pub path: SubPath,
+    pub sub_path: SubPath,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RootedRolePath<R: PathRole, Root: PathRoot = PatternLocation> {
-    pub path: RootedSplitPath<Root>,
+    pub split_path: RootedSplitPath<Root>,
     pub _ty: std::marker::PhantomData<R>,
 }
 impl From<SearchPath> for RootedRolePath<Start, PatternLocation> {
     fn from(path: SearchPath) -> Self {
         Self {
-            path: RootedSplitPath {
+            split_path: RootedSplitPath {
                 root: path.root,
-                path: path.start.path,
+                sub_path: path.start.sub_path,
             },
             _ty: Default::default(),
         }
@@ -79,7 +79,7 @@ impl<R: PathRoot> RootedPath for RootedSplitPath<R> {
 impl<R: PathRole, Root: PathRoot> RootedPath for RootedRolePath<R, Root> {
     type Root = Root;
     fn path_root(&self) -> &Self::Root {
-        &self.path.root
+        &self.split_path.root
     }
 }
 pub trait RangePath: RootedPath {

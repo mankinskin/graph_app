@@ -9,8 +9,7 @@ pub use root::*;
 pub trait LeafChild<R>: RootChildPos<R> {
     fn leaf_child_location(&self) -> Option<ChildLocation>;
     fn leaf_child<
-        T: Tokenize,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&self, trav: &Trav) -> Child;
 }
 impl<R: PathRole, P: RootChild<R> + PathChild<R>> LeafChild<R> for P {
@@ -18,8 +17,7 @@ impl<R: PathRole, P: RootChild<R> + PathChild<R>> LeafChild<R> for P {
         self.path_child_location()
     }
     fn leaf_child<
-        T: Tokenize,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&self, trav: &Trav) -> Child {
         self.path_child(trav)
             .unwrap_or_else(||
@@ -34,8 +32,7 @@ trait PathChild<R: PathRole>: HasPath<R> {
         R::bottom_up_iter(self.path().iter()).next().cloned()
     }
     fn path_child<
-        T: Tokenize,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&self, trav: &Trav) -> Option<Child> {
         self.path_child_location().map(|loc|
             trav.graph().expect_child_at(loc)
@@ -58,8 +55,7 @@ impl<R: PathRole> PathChild<R> for SearchPath
         )
     }
     fn path_child<
-        T: Tokenize,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&self, trav: &Trav) -> Option<Child> {
         PathChild::<R>::path_child(self.role_path(), trav)
     }

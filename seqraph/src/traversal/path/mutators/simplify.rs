@@ -1,65 +1,59 @@
 use crate::*;
-use super::*;
-
 
 pub trait PathSimplify: Sized + PathComplete {
     fn into_simplified<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(self, trav: &Trav) -> Self;
     fn simplify<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&mut self, trav: &Trav) {
 	    unsafe {
 	    	let old = std::ptr::read(self);
-	    	let new = old.into_simplified::<_, D, _>(trav);
+	    	let new = old.into_simplified(trav);
 	    	std::ptr::write(self, new);
 	    }
     }
 }
-impl<P: MatchEndPath + PathSimplify> PathSimplify for MatchEnd<P> {
+impl<P: MatchEndPath> PathSimplify for MatchEnd<P> {
     fn into_simplified<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(self, trav: &Trav) -> Self {
         if let Some(c) = match self.get_path() {
-            Some(p) => p.into_complete(),
+            Some(p) => if p.single_path().is_empty() && {
+                let location = p.root_child_location();
+                let graph = trav.graph();
+                let pattern = graph.expect_pattern_at(&location);
+                Trav::Direction::pattern_index_prev(pattern.borrow(), location.sub_index).is_none()
+            } {
+                Some(p.root_parent())
+            } else {
+                None
+            },
             None => None,
         } {
             MatchEnd::Complete(c)
         } else {
             self    
         }
-        //if let MatchEnd::Path(path) = self {
-        //    path.pop_path::<_, D, _>(trav)
-        //} else {
-        //    self    
-        //}
     }
 }
-impl<R: PathRole> PathSimplify for RolePath<R> {
-    fn into_simplified<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>,
-    >(mut self, trav: &Trav) -> Self {
-        let graph = trav.graph();
-        // remove segments pointing to mismatch at pattern head
-        while let Some(location) = self.path_mut().pop() {
-            let pattern = graph.expect_pattern_at(&location);
-            // skip segments at end of pattern
-            if D::pattern_index_next(pattern.borrow(), location.sub_index).is_some() {
-                self.path_mut().push(location);
-                break;
-            }
-        }
-        self
-    }
-}
+//impl<R: PathRole> PathSimplify for RolePath<R> {
+//    fn into_simplified<
+//        Trav: Traversable,
+//    >(mut self, trav: &Trav) -> Self {
+//        let graph = trav.graph();
+//        // remove segments pointing to mismatch at pattern head
+//        while let Some(location) = self.path_mut().pop() {
+//            let pattern = graph.expect_pattern_at(&location);
+//            // skip segments at end of pattern
+//            if Trav::Direction::pattern_index_next(pattern.borrow(), location.sub_index).is_some() {
+//                self.path_mut().push(location);
+//                break;
+//            }
+//        }
+//        self
+//    }
+//}
 //impl<P: PathSimplify> PathSimplify for OriginPath<P> {
 //    fn into_simplified<
 //        T: Tokenize,

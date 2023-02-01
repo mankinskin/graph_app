@@ -45,6 +45,11 @@ impl Wide for VertexData {
         self.width
     }
 }
+impl Wide for CacheKey {
+    fn width(&self) -> usize {
+        self.index.width()
+    }
+}
 
 pub trait WideMut: Wide {
     fn width_mut(&mut self) -> &mut usize;

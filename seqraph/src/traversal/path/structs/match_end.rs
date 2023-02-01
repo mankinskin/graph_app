@@ -10,6 +10,8 @@ pub trait MatchEndPath:
     //+ PathAppend
     + Into<RootedRolePath<Start>>
     + From<RootedRolePath<Start>>
+    + HasSinglePath
+    + GraphRootChild<Start>
     //+ From<PathLeaf>
     //+ Into<FoundPath>
     //+ GetCacheKey
@@ -23,6 +25,8 @@ impl<T:
     //+ PathAppend
     + Into<RootedRolePath<Start>>
     + From<RootedRolePath<Start>>
+    + HasSinglePath
+    + GraphRootChild<Start>
     //+ From<PathLeaf>
     //+ Into<FoundPath>
     //+ GetCacheKey
@@ -59,6 +63,7 @@ impl<P: MatchEndPath> IntoMatchEndStartPath for MatchEnd<P> {
 //}
 impl<P: MatchEndPath + From<Q>, Q: Into<RootedRolePath<Start>>> From<Q> for MatchEnd<P> {
     fn from(start: Q) -> Self {
+        // todo: handle complete
         MatchEnd::Path(P::from(start))
     }
 }

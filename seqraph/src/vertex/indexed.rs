@@ -5,14 +5,12 @@ use super::*;
 pub trait Indexed: Sized {
     fn index(&self) -> VertexIndex;
     fn expect_child_patterns<
-        T: Tokenize,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&self, trav: &Trav) -> ChildPatterns {
         trav.graph().expect_child_patterns(self).clone()
     }
     fn expect_child_pattern<
-        T: Tokenize,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&self, trav: &Trav, pid: PatternId) -> Pattern {
         trav.graph().expect_child_pattern(self, pid).clone()
     }

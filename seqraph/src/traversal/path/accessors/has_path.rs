@@ -10,7 +10,7 @@ impl HasPath<End> for QueryRangePath {
         &self.end.path
     }
     fn path_mut(&mut self) -> &mut Vec<ChildLocation> {
-        &mut self.end.path.path
+        &mut self.end.sub_path.path
     }
 }
 impl HasPath<Start> for QueryRangePath {
@@ -18,7 +18,7 @@ impl HasPath<Start> for QueryRangePath {
         &self.start.path
     }
     fn path_mut(&mut self) -> &mut Vec<ChildLocation> {
-        &mut self.start.path.path
+        &mut self.start.sub_path.path
     }
 }
 //impl HasPath<End> for PrefixQuery {
@@ -60,7 +60,7 @@ impl<R> HasPath<R> for RolePath<R> {
         &self.path
     }
     fn path_mut(&mut self) -> &mut Vec<ChildLocation> {
-        &mut self.path.path
+        &mut self.sub_path.path
     }
 }
 //impl<R, T: HasRolePath<R>> HasPath<R> for T {
@@ -159,6 +159,6 @@ impl<R> HasSinglePath for RolePath<R> {
 }
 impl<R: PathRole, Root: PathRoot> HasSinglePath for RootedRolePath<R, Root> {
     fn single_path(&self) -> &[ChildLocation] {
-        &self.path.path.path.borrow()
+        &self.split_path.sub_path.path.borrow()
     }
 }

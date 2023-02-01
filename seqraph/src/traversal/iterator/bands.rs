@@ -7,8 +7,7 @@ use crate::{PatternLocation, ChildLocation, Child, Wide};
 use super::*;
 
 pub trait BandExpandingPolicy<
-    T: Tokenize,
-    Trav: Traversable<T>,
+    Trav: Traversable,
 > {
     fn map_band(location: PatternLocation, pattern: impl IntoPattern) -> (ChildLocation, Child);
     fn map_batch(batch: impl IntoIterator<Item=(ChildLocation, Child)>) -> Vec<(ChildLocation, Child)> {
@@ -22,9 +21,8 @@ pub struct PostfixExpandingPolicy<D: MatchDirection> {
 
 pub trait BandIterator<
     'a,
-    T: Tokenize,
-    Trav: Traversable<T> + 'a,
-    P: BandExpandingPolicy<T, Trav>,
+    Trav: Traversable + 'a,
+    P: BandExpandingPolicy<Trav>,
 >: Iterator<Item = (ChildLocation, Child)>
 {
     fn new(trav: &'a Trav, root: Child) -> Self;
@@ -42,10 +40,9 @@ pub trait BandIterator<
     }
 }
 impl <
-    T: Tokenize,
-    Trav: Traversable<T>,
+    Trav: Traversable,
     D: MatchDirection,
-> BandExpandingPolicy<T, Trav> for PostfixExpandingPolicy<D> {
+> BandExpandingPolicy<Trav> for PostfixExpandingPolicy<D> {
     // 
     fn map_band(location: PatternLocation, pattern: impl IntoPattern) -> (ChildLocation, Child) {
         let last = D::last_index(pattern.borrow());
@@ -59,26 +56,24 @@ impl <
             .collect_vec()
     }
 }
-pub struct BandExpandingIterator<'a, T, Trav, P>
+pub struct BandExpandingIterator<'a, Trav, P>
 where
-    T: Tokenize,
-    Trav: Traversable<T>,
-    P: BandExpandingPolicy<T, Trav>,
+    Trav: Traversable,
+    P: BandExpandingPolicy<Trav>,
 {
     trav: &'a Trav,
     queue: VecDeque<(ChildLocation, Child)>,
     last: (Option<ChildLocation>, Child),
-    _ty: std::marker::PhantomData<(&'a T, P)>
+    _ty: std::marker::PhantomData<&'a P>
 }
-pub type PostfixIterator<'a, T, D, Trav>
-    = BandExpandingIterator<'a, T, Trav, PostfixExpandingPolicy<D>>;
+pub type PostfixIterator<'a, Trav>
+    = BandExpandingIterator<'a, Trav, PostfixExpandingPolicy<<Trav as Traversable>::Direction>>;
 
 
-impl<'a, T, Trav, P> BandIterator<'a, T, Trav, P> for BandExpandingIterator<'a, T, Trav, P>
+impl<'a, Trav, P> BandIterator<'a, Trav, P> for BandExpandingIterator<'a, Trav, P>
 where
-    T: Tokenize,
-    Trav: Traversable<T>,
-    P: BandExpandingPolicy<T, Trav>,
+    Trav: Traversable,
+    P: BandExpandingPolicy<Trav>,
 {
     fn new(trav: &'a Trav, root: Child) -> Self {
         Self {
@@ -92,11 +87,10 @@ where
         self.trav
     }
 }
-impl<'a, T, Trav, P> Iterator for BandExpandingIterator<'a, T, Trav, P>
+impl<'a, Trav, P> Iterator for BandExpandingIterator<'a, Trav, P>
 where
-    T: Tokenize,
-    Trav: Traversable<T>,
-    P: BandExpandingPolicy<T, Trav>,
+    Trav: Traversable,
+    P: BandExpandingPolicy<Trav>,
 {
     type Item = (ChildLocation, Child);
 

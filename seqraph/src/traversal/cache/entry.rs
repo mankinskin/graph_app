@@ -6,7 +6,7 @@ pub struct PositionCache<R: ResultKind> {
     pub top_down: HashMap<CacheKey, ChildLocation>,
     pub bottom_up: HashMap<CacheKey, SubLocation>,
     pub index: Child,
-    pub waiting: Vec<(StateDepth, TraversalState<R>)>,
+    pub waiting: Vec<(StateDepth, WaitingState<R>)>,
     pub _ty: std::marker::PhantomData<R>,
 }
 impl<R: ResultKind> PositionCache<R> {
@@ -20,8 +20,7 @@ impl<R: ResultKind> PositionCache<R> {
         }
     }
     pub fn new<
-        T: Tokenize,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(
         trav: &Trav,
         state: &TraversalState<R>,
@@ -48,8 +47,11 @@ impl<R: ResultKind> PositionCache<R> {
         };
         s
     }
-    pub fn add_waiting(&mut self, depth: StateDepth, state: TraversalState<R>) {
+    pub fn add_waiting(&mut self, depth: StateDepth, state: WaitingState<R>) {
         self.waiting.push((depth, state));
+    }
+    pub fn num_parents(&self) -> usize {
+        self.top_down.len()
     }
 }
 ///// Bottom-Up Cache Entry

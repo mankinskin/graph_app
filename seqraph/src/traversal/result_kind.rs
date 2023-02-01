@@ -5,8 +5,8 @@ pub trait ResultKind: Eq + Clone + Debug + Send + Sync + Unpin {
     type Query: QueryPath;
     type Found: Found<Self> + From<FoundPath<Self>>;
     type Primer: PathPrimer<Self>;
-    type Postfix: Postfix + From<Self::Primer> + IntoPrimer<Self>;
-    type Advanced: Advanced + PathPop;
+    type Postfix: Postfix + From<MatchEnd<RootedRolePath<Start>>> + From<Self::Primer> + IntoPrimer<Self>;
+    type Advanced: Advanced + PathPop + Into<Self::Postfix>;
     type Indexed: Send + Sync;
     fn into_postfix(primer: Self::Primer, match_end: MatchEnd<RootedRolePath<Start>>) -> Self::Postfix;
 }
@@ -49,6 +49,9 @@ pub trait PathPrimer<R: ResultKind>:
     + Send
     + Sync
     + Unpin
+    + Hash
+    + HasSinglePath
+    + MatchEndPath
 {
 }
 impl<
@@ -64,6 +67,9 @@ impl<
     //+ Wide
     + RootKey
     + BasePath
+    + Hash
+    + HasSinglePath
+    + MatchEndPath
 > PathPrimer<R> for T
 {
 }
@@ -95,23 +101,33 @@ impl<T> RoleChildPath for T {
 }
 pub trait Postfix:
     NodePath<Start>
-    //+ PathSimplify
+    + PathSimplify
     //+ IntoRangePath
     + RootKey
     + BasePath
     + GraphRoot
+    + Into<MatchEnd<RootedRolePath<Start>>>
 {
-    fn new_complete(child: Child, origin: RootedRolePath<Start>) -> Self;
-    fn new_path(start: impl Into<RootedRolePath<Start>>, origin: RootedRolePath<Start>) -> Self;
+    //fn new_complete(child: Child, origin: RootedRolePath<Start>) -> Self;
+    //fn new_path(start: impl Into<RootedRolePath<Start>>, origin: RootedRolePath<Start>) -> Self;
 }
-impl<P: MatchEndPath + RootKey + NodePath<Start> + GraphRoot> Postfix for MatchEnd<P> {
-    fn new_complete(c: Child, _origin: RootedRolePath<Start>) -> Self {
-        Self::Complete(c)
-    }
-    fn new_path(start: impl Into<RootedRolePath<Start>>, _origin: RootedRolePath<Start>) -> Self {
-        Self::Path(P::from(start.into()))
-    }
+impl<T:
+    NodePath<Start>
+    + PathSimplify
+    + RootKey
+    + BasePath
+    + GraphRoot
+    + Into<MatchEnd<RootedRolePath<Start>>>
+> Postfix for T {
 }
+//impl<P: MatchEndPath + Postfix> Postfix for MatchEnd<P> {
+//    //fn new_complete(c: Child, _origin: RootedRolePath<Start>) -> Self {
+//    //    Self::Complete(c)
+//    //}
+//    //fn new_path(start: impl Into<RootedRolePath<Start>>, _origin: RootedRolePath<Start>) -> Self {
+//    //    Self::Path(P::from(start.into()))
+//    //}
+//}
 //impl<P: Postfix> Postfix for OriginPath<P> {
 //    fn new_complete(c: Child, origin: RolePath<Start>) -> Self {
 //        Self {
@@ -144,8 +160,7 @@ pub trait Advanced:
 {
     fn role_leaf_child<
         R: PathRole,
-        T: Tokenize,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&self, trav: &Trav) -> Child
         where Self: LeafChild<R>
     {

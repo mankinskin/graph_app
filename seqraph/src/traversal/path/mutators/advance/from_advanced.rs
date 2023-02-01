@@ -2,9 +2,7 @@ use crate::*;
 
 pub trait FromAdvanced<A: Advanced> {
     fn from_advanced<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>
+        Trav: Traversable,
     >(path: A, trav: &Trav) -> Self;
 }
 //impl FromAdvanced<SearchPath> for FoundPath {
@@ -23,9 +21,7 @@ pub trait FromAdvanced<A: Advanced> {
 //}
 impl FromAdvanced<SearchPath> for RolePath<Start> {
     fn from_advanced<
-        T: Tokenize,
-        D: MatchDirection,
-        Trav: Traversable<T>
+        Trav: Traversable
     >(path: SearchPath, _trav: &Trav) -> Self {
         path.start
     }

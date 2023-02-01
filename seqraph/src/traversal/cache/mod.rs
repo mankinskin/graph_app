@@ -21,6 +21,9 @@ impl<R: ResultKind> TraversalCache<R> {
             entries,
         })
     }
+    pub fn get_entry(&self, key: &CacheKey) -> Option<&PositionCache<R>> {
+        self.entries.get(&key.index.index())
+    }
     pub fn get_entry_mut(&mut self, key: &CacheKey) -> Option<&mut PositionCache<R>> {
         self.entries.get_mut(&key.index.index())
             //.and_then(|e|
@@ -29,11 +32,10 @@ impl<R: ResultKind> TraversalCache<R> {
     }
     /// adds node to cache and returns the state of the insertion
     pub fn add_state<
-        T: Tokenize,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(&mut self, trav: &Trav, state: &TraversalState<R>) -> Result<CacheKey, CacheKey> {
         let key = state.target_key(trav);
-        if let Some(ve) = self.entries.get_mut(&key.index.index()) {
+        if let Some(_) = self.entries.get_mut(&key.index.index()) {
             Err(key)
             //if let Some(_) = ve.positions.get_mut(&key.token_pos) {
             //} else {
@@ -53,15 +55,14 @@ impl<R: ResultKind> TraversalCache<R> {
         }
     }
     fn new_vertex<
-        T: Tokenize,
-        Trav: Traversable<T>,
+        Trav: Traversable,
     >(
         &mut self,
         trav: &Trav,
         key: CacheKey,
         state: &TraversalState<R>,
     ) {
-        let mut ve = PositionCache::new(
+        let ve = PositionCache::new(
             trav,
             state
         );
@@ -81,6 +82,8 @@ impl<R: ResultKind> TraversalCache<R> {
         self.get_entry_mut(key)
             .unwrap()
             .waiting
-            .drain(..).collect()
+            .drain(..)
+            .map(|(d, s)| (d, s.into()))
+            .collect()
     }
 }
