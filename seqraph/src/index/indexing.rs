@@ -23,7 +23,7 @@ impl<G: GraphKind> Indexer<G> {
     //}
     fn index_prefix_path(
         &mut self,
-        path: RolePath<End>,
+        path: RootedRolePath<End>,
     ) -> Child {
         self.splitter::<IndexFront>().single_path_split(
             std::iter::once(&path.child_location()).chain(
@@ -36,7 +36,7 @@ impl<G: GraphKind> Indexer<G> {
     }
     fn at_postfix_path(
         &mut self,
-        path: RolePath<Start>,
+        path: RootedRolePath<Start>,
     ) -> Child {
         self.splitter::<IndexBack>().single_path_split(
             path.path().into_iter().chain(

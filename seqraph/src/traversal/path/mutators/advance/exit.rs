@@ -1,66 +1,90 @@
 use crate::*;
 
-pub trait AdvanceExit:
-    RootChildPosMut<End>
-    + BasePath
- {
-    //fn is_pattern_finished<
-    //    P: IntoPattern,
-    //>(&self, pattern: P) -> bool {
-    //    self.root_child_pos() >= pattern.borrow().len()
-    //}
-    fn pattern_next_exit_pos<
-        D: MatchDirection,
-        P: IntoPattern,
-    >(&self, pattern: P) -> Option<usize> {
-        //if self.is_pattern_finished(pattern.borrow()) {
-        //    Err(())
-        //} else {
-        //    Ok()
-        //}
-        D::pattern_index_next(pattern, self.root_child_pos())
-    }
-
-    //fn is_finished<
-    //    T: Tokenize,
-    //    Trav: Traversable<T>,
-    //>(&self, _trav: &Trav) -> bool;
-
-    fn next_exit_pos<
+pub trait AdvanceRootPos<R: PathRole> {
+    fn advance_root_pos<
         Trav: Traversable,
-    >(&self, _trav: &Trav) -> Option<usize>;
+    >(&mut self, trav: &Trav) -> ControlFlow<()>;
+}
+//pub trait AdvanceExit {
+//    fn next_exit_pos<
+//        Trav: Traversable,
+//    >(&self, _trav: &Trav) -> Option<usize>;
+//
+//    fn pattern_next_exit_pos<
+//        D: MatchDirection,
+//        P: IntoPattern,
+//    >(&self, pattern: P) -> Option<usize>;
+//
+//    fn advance_exit_pos<
+//        Trav: Traversable,
+//    >(&mut self, trav: &Trav) -> ControlFlow<()>;
+//}
 
-    fn advance_exit_pos<
+impl AdvanceRootPos<End> for SearchPath {
+    //fn next_exit_pos<
+    //    Trav: Traversable,
+    //>(&self, trav: &Trav) -> Option<usize> {
+    //    let location = self.root_pattern_location();
+    //    let graph = trav.graph();
+    //    let pattern = graph.expect_pattern_at(&location);
+    //    self.pattern_next_exit_pos::<TravDir<Trav>, _>(pattern.borrow())
+    //}
+    //fn pattern_next_exit_pos<
+    //    D: MatchDirection,
+    //    P: IntoPattern,
+    //>(&self, pattern: P) -> Option<usize> {
+    //    D::pattern_index_next(pattern, RootChildPos::<End>::root_child_pos(self))
+    //}
+    fn advance_root_pos<
         Trav: Traversable,
     >(&mut self, trav: &Trav) -> ControlFlow<()> {
-        if let Some(next) = self.next_exit_pos(trav) {
+        if let Some(next) = TravDir::<Trav>::index_next(RootChildPos::<End>::root_child_pos(self)) {
             *self.root_child_pos_mut() = next;
             ControlFlow::CONTINUE
         } else {
-            //if !self.is_finished(trav) {
-            //}
-            *self.root_child_pos_mut() = TravDir::<Trav>::index_next(self.root_child_pos()).expect("Can't represent behind end index!");
             ControlFlow::BREAK
         }
     }
 }
-impl<M:
-    RootChildPosMut<End>
-    + PatternRootChild<End>
-    + BasePath
-> AdvanceExit for M {
-    //fn is_finished<
-    //    T: Tokenize,
-    //    Trav: Traversable<T>,
-    //>(&self, _trav: &Trav) -> bool {
-    //    self.is_pattern_finished(self.pattern_root_pattern().borrow())
-    //}
-    fn next_exit_pos<
+impl AdvanceRootPos<End> for QueryRangePath {
+    fn advance_root_pos<
         Trav: Traversable,
-    >(&self, _trav: &Trav) -> Option<usize> {
-        self.pattern_next_exit_pos::<TravDir<Trav>, _>(self.pattern_root_pattern().borrow())
+    >(&mut self, trav: &Trav) -> ControlFlow<()> {
+        if let Some(next) = TravDir::<Trav>::index_next(RootChildPos::<End>::root_child_pos(self)) {
+            *self.root_child_pos_mut() = next;
+            ControlFlow::CONTINUE
+        } else {
+            ControlFlow::BREAK
+        }
     }
 }
+//impl<M:
+//    RootChildPosMut<End>
+//    + PatternRootChild<End>
+//> AdvanceExit for M {
+//    fn next_exit_pos<
+//        Trav: Traversable,
+//    >(&self, _trav: &Trav) -> Option<usize> {
+//        self.pattern_next_exit_pos::<TravDir<Trav>, _>(self.pattern_root_pattern().borrow())
+//    }
+//    fn pattern_next_exit_pos<
+//        D: MatchDirection,
+//        P: IntoPattern,
+//    >(&self, pattern: P) -> Option<usize> {
+//        D::pattern_index_next(pattern, self.root_child_pos())
+//    }
+//    fn advance_exit_pos<
+//        Trav: Traversable,
+//    >(&mut self, trav: &Trav) -> ControlFlow<()> {
+//        if let Some(next) = self.next_exit_pos(trav) {
+//            *self.root_child_pos_mut() = next;
+//            ControlFlow::CONTINUE
+//        } else {
+//            *self.root_child_pos_mut() = TravDir::<Trav>::index_next(self.root_child_pos()).expect("Can't represent behind end index!");
+//            ControlFlow::BREAK
+//        }
+//    }
+//}
 //impl<P: AdvanceExit> AdvanceExit for OriginPath<P> {
 //    fn is_finished<
 //        T: Tokenize,
@@ -76,26 +100,6 @@ impl<M:
 //        self.postfix.next_exit_pos::<_, D, _>(trav)
 //    }
 //}
-
-impl AdvanceExit for SearchPath {
-    //fn is_finished<
-    //    T: Tokenize,
-    //    Trav: Traversable<T>,
-    //>(&self, trav: &Trav) -> bool {
-    //    let location = <Self as GraphRootChild<End>>::root_child_location(self);
-    //    let graph = trav.graph();
-    //    let pattern = graph.expect_pattern_at(&location);
-    //    self.is_pattern_finished(pattern.borrow())
-    //}
-    fn next_exit_pos<
-        Trav: Traversable,
-    >(&self, trav: &Trav) -> Option<usize> {
-        let location = self.root_pattern_location();
-        let graph = trav.graph();
-        let pattern = graph.expect_pattern_at(&location);
-        self.pattern_next_exit_pos::<TravDir<Trav>, _>(pattern.borrow())
-    }
-}
 //impl AdvanceExit for OverlapPrimer {
 //    fn pattern_next_exit_pos<
 //        D: MatchDirection,

@@ -81,7 +81,7 @@ impl<P: MatchEndPath> MatchEnd<P> {
             _ => None,
         }
     }
-    //pub fn into_result<R: ResultKind>(self, start: RolePath) -> R::Result<P> {
+    //pub fn into_result(self, start: RolePath) -> R::Result<P> {
     //    match self {
     //        Self::Path(start) => Some(start),
     //        _ => None,

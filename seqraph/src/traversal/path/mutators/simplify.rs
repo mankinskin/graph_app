@@ -1,6 +1,6 @@
 use crate::*;
 
-pub trait PathSimplify: Sized + PathComplete {
+pub trait PathSimplify: Sized {
     fn into_simplified<
         Trav: Traversable,
     >(self, trav: &Trav) -> Self;
@@ -12,6 +12,20 @@ pub trait PathSimplify: Sized + PathComplete {
 	    	let new = old.into_simplified(trav);
 	    	std::ptr::write(self, new);
 	    }
+    }
+}
+impl<R: PathRole> PathSimplify for RolePath<R> {
+    fn into_simplified<
+        Trav: Traversable,
+    >(mut self, trav: &Trav) -> Self {
+        let graph = trav.graph();
+        while let Some(loc) = self.path_mut().pop() {
+            if !<R as PathBorder>::is_at_border(graph.graph(), loc) {
+                self.path_mut().push(loc);
+                break;
+            }
+        }
+        self    
     }
 }
 impl<P: MatchEndPath> PathSimplify for MatchEnd<P> {
@@ -33,7 +47,38 @@ impl<P: MatchEndPath> PathSimplify for MatchEnd<P> {
         } {
             MatchEnd::Complete(c)
         } else {
-            self    
+            self
+        }
+    }
+}
+impl PathSimplify for EndKind {
+    fn into_simplified<
+        Trav: Traversable,
+    >(self, trav: &Trav) -> Self {
+        match self {
+            Self::Complete(_) |
+            Self::Postfix(_) |
+            Self::Prefix(_) => self,
+            Self::Range(mut s) => {
+                s.path.child_path_mut::<Start>().simplify(trav);
+                s.path.child_path_mut::<End>().simplify(trav);
+                match (
+                    s.path.raw_child_path::<Start>().is_empty()
+                    && Start::is_at_border(trav.graph(), s.path.role_root_child_location::<Start>()),
+                    s.path.raw_child_path::<End>().is_empty()
+                    && End::is_at_border(trav.graph(), s.path.role_root_child_location::<End>())
+                ) 
+                {
+                    (true, true) =>
+                        Self::Complete(s.path.root_parent()),
+                    (true, false) =>
+                        Self::Prefix(s.path.into()),
+                    (false, true) =>
+                        Self::Postfix(s.path.into()),
+                    (false, false) =>
+                        Self::Range(s),
+                }
+            }
         }
     }
 }

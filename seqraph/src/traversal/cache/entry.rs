@@ -2,68 +2,78 @@ use super::*;
 type StateDepth = usize;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct PositionCache<R: ResultKind> {
-    pub top_down: HashMap<CacheKey, ChildLocation>,
-    pub bottom_up: HashMap<CacheKey, SubLocation>,
-    pub index: Child,
-    pub waiting: Vec<(StateDepth, WaitingState<R>)>,
-    pub _ty: std::marker::PhantomData<R>,
+pub enum CacheEdge {
+    TopDown(SubLocation),
+    TopDownQuery(SubLocation),
+    BottomUp(SubLocation),
 }
-impl<R: ResultKind> PositionCache<R> {
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PositionCache {
+    pub back_edges: HashMap<CacheKey, CacheEdge>,
+    pub num_parents: usize,
+    pub index: Child,
+    pub waiting: Vec<(StateDepth, WaitingState)>,
+}
+impl PositionCache {
     pub fn start(index: Child) -> Self {
         Self {
             index,
-            top_down: Default::default(),
-            bottom_up: Default::default(),
+            // todo: update num_parents when creating forward edges
+            num_parents: 0,
+            back_edges: Default::default(),
             waiting: Default::default(),
-            _ty: Default::default(),
         }
     }
     pub fn new<
         Trav: Traversable,
     >(
         trav: &Trav,
-        state: &TraversalState<R>,
+        state: &TraversalState,
     ) -> Self {
         //let cache_node = CacheNode::new(node);
-        let mut top_down = HashMap::default();
-        let mut bottom_up = HashMap::default();
-        if let (prev, Some(entry)) = (state.prev_key(), state.entry_location()) {
+        let mut edges = HashMap::default();
+        let num_parents = if let (prev, Some(entry)) = (state.prev_key(), state.entry_location()) {
             match state.node_direction() {
                 NodeDirection::TopDown => {
-                    top_down.insert(prev, entry);
+                    edges.insert(prev, CacheEdge::TopDown(entry.into_sub_location()));
+                    1
                 },
                 NodeDirection::BottomUp => {
-                    bottom_up.insert(prev, entry.into_sub_location());
+                    edges.insert(prev, CacheEdge::BottomUp(entry.into_sub_location()));
+                    0
                 },
             }
-        }
-        let s = Self {
-            top_down,
-            bottom_up,
+        } else {
+            0
+        };
+        Self {
+            back_edges: edges,
+            num_parents,
             index: state.target_key(trav).index,
             waiting: Default::default(),
-            _ty: Default::default(),
-        };
-        s
+        }
     }
-    pub fn add_waiting(&mut self, depth: StateDepth, state: WaitingState<R>) {
+    pub fn add_waiting(&mut self, depth: StateDepth, state: WaitingState) {
         self.waiting.push((depth, state));
     }
+    //pub fn add_back_edge(&mut self) {
+    //    unimplemented!();
+    //    //self.back_edges.insert();
+    //}
     pub fn num_parents(&self) -> usize {
-        self.top_down.len()
+        self.num_parents
     }
 }
 ///// Bottom-Up Cache Entry
 //#[derive(Clone, Debug, PartialEq, Eq)]
-//pub struct VertexCache<R: ResultKind> {
-//    pub(crate) positions: HashMap<usize, PositionCache<R>>
+//pub struct VertexCache {
+//    pub(crate) positions: HashMap<usize, PositionCache>
 //}
-//impl<R: ResultKind> VertexCache<R> {
+//impl VertexCache {
 //    pub(crate)fn new_position(
 //        &mut self,
 //        key: CacheKey,
-//        state: &TraversalState<R>,
+//        state: &TraversalState,
 //    ) {
 //        let cache = PositionCache::new(
 //            state,

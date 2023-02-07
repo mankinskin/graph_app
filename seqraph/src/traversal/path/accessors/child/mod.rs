@@ -25,11 +25,40 @@ impl<R: PathRole, P: RootChild<R> + PathChild<R>> LeafChild<R> for P {
             )
     }
 }
+pub trait LeafChildPosMut<R>: RootChildPosMut<R> {
+    fn leaf_child_pos_mut(&mut self) -> &mut usize;
+}
+//impl<R: PathRole, P: PathChild<R> + RootChildPosMut<R>> LeafChildPosMut<R> for P {
+//    fn leaf_child_pos_mut(&mut self) -> &mut usize {
+//        if let Some(loc) = self.path_child_location_mut() {
+//            &mut loc.sub_index
+//        } else {
+//            self.root_child_pos_mut()
+//        }
+//    }
+//}
+impl LeafChildPosMut<End> for CachedQuery<'_> {
+    fn leaf_child_pos_mut(&mut self) -> &mut usize {
+        self.state.end.leaf_child_pos_mut()
+    }
+}
+impl LeafChildPosMut<End> for RolePath<End> {
+    fn leaf_child_pos_mut(&mut self) -> &mut usize {
+        if !self.path().is_empty() {
+            &mut self.path_child_location_mut().unwrap().sub_index
+        } else {
+            self.root_child_pos_mut()
+        }
+    }
+}
 
 /// used to get a descendant in a Graph, pointed to by a child path
-trait PathChild<R: PathRole>: HasPath<R> {
+pub trait PathChild<R: PathRole>: HasPath<R> {
     fn path_child_location(&self) -> Option<ChildLocation> {
         R::bottom_up_iter(self.path().iter()).next().cloned()
+    }
+    fn path_child_location_mut(&mut self) -> Option<&mut ChildLocation> {
+        R::bottom_up_iter(self.path_mut().iter_mut()).next()
     }
     fn path_child<
         Trav: Traversable,
@@ -40,7 +69,11 @@ trait PathChild<R: PathRole>: HasPath<R> {
     }
 }
 impl<R: PathRole> PathChild<R> for QueryRangePath
-    where QueryRangePath: HasPath<R> + PatternRootChild<R>
+    where Self: HasPath<R> + PatternRootChild<R>
+{
+}
+impl<R: PathRole> PathChild<R> for CachedQuery<'_>
+    where Self: HasPath<R> + PatternRootChild<R>
 {
 }
 impl<R: PathRole> PathChild<R> for RolePath<R> {

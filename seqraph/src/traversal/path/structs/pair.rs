@@ -1,23 +1,18 @@
 use crate::*;
 
-#[derive(Clone, Debug, PartialEq, Hash, Eq)]
-pub enum PathPair<
-    P: Advanced,
-    Q: QueryPath,
-> {
-    GraphMajor(P, Q),
-    QueryMajor(Q, P),
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PathPair {
+    GraphMajor(SearchPath, QueryState),
+    QueryMajor(QueryState, SearchPath),
 }
-#[derive(Clone, Debug, PartialEq, Hash, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PathPairMode {
     GraphMajor,
     QueryMajor,
 }
 impl<
-    P: Advanced,
-    Q: QueryPath,
-> PathPair<P, Q> {
-    pub fn from_mode(path: P, query: Q, mode: PathPairMode) -> Self {
+> PathPair {
+    pub fn from_mode(path: SearchPath, query: QueryState, mode: PathPairMode) -> Self {
         if matches!(mode, PathPairMode::GraphMajor) {
             Self::GraphMajor(path, query)
         } else {
@@ -30,21 +25,19 @@ impl<
             Self::QueryMajor(_, _) => PathPairMode::QueryMajor,
         }
     }
-    pub fn push_major<
-        Trav: Traversable,
-    >(
+    pub fn push_major
+    (
         &mut self,
-        trav: &Trav,
         location: ChildLocation,
     ) {
         match self {
             Self::GraphMajor(path, _) =>
-                path.path_append(trav, location),
+                path.path_append(location),
             Self::QueryMajor(query, _) =>
-                query.path_append(trav, location),
+                query.path_append(location),
         }
     }
-    pub fn unpack(self) -> (P, Q) {
+    pub fn unpack(self) -> (SearchPath, QueryState) {
         match self {
             Self::GraphMajor(path, query) =>
                 (path, query),
@@ -52,16 +45,14 @@ impl<
                 (path, query),
         }
     }
-    #[allow(unused)]
-    pub fn get_path(&self) -> &P {
+    pub fn path(&self) -> &SearchPath {
         match self {
             Self::GraphMajor(path, _) |
             Self::QueryMajor(_, path) =>
                 path,
         }
     }
-    #[allow(unused)]
-    pub fn get_query(&self) -> &Q {
+    pub fn query(&self) -> &QueryState {
         match self {
             Self::GraphMajor(_, query) |
             Self::QueryMajor(query, _) =>

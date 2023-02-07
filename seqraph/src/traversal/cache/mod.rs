@@ -10,41 +10,32 @@ pub use key::*;
 type HashMap<K, V> = DeterministicHashMap<K, V>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct TraversalCache<R: ResultKind> {
-    pub(crate) entries: HashMap<VertexIndex, PositionCache<R>>,
+pub struct TraversalCache {
+    pub(crate) query_root: Pattern,
+    pub(crate) entries: HashMap<VertexIndex, PositionCache>,
 }
-impl<R: ResultKind> TraversalCache<R> {
-    pub fn new(start: &StartState<R>) -> (CacheKey, Self) {
+impl TraversalCache {
+    pub fn new(start: &StartState, query: Pattern) -> (CacheKey, Self) {
         let mut entries = HashMap::default();
         entries.insert(start.index.index(), PositionCache::start(start.index));
         (CacheKey::new(start.index, 0), Self {
+            query_root: query,
             entries,
         })
     }
-    pub fn get_entry(&self, key: &CacheKey) -> Option<&PositionCache<R>> {
+    pub fn get_entry(&self, key: &CacheKey) -> Option<&PositionCache> {
         self.entries.get(&key.index.index())
     }
-    pub fn get_entry_mut(&mut self, key: &CacheKey) -> Option<&mut PositionCache<R>> {
+    pub fn get_entry_mut(&mut self, key: &CacheKey) -> Option<&mut PositionCache> {
         self.entries.get_mut(&key.index.index())
-            //.and_then(|e|
-            //    e.positions.get_mut(&key.token_pos)
-            //)
     }
     /// adds node to cache and returns the state of the insertion
     pub fn add_state<
         Trav: Traversable,
-    >(&mut self, trav: &Trav, state: &TraversalState<R>) -> Result<CacheKey, CacheKey> {
+    >(&mut self, trav: &Trav, state: &TraversalState) -> Result<CacheKey, CacheKey> {
         let key = state.target_key(trav);
         if let Some(_) = self.entries.get_mut(&key.index.index()) {
             Err(key)
-            //if let Some(_) = ve.positions.get_mut(&key.token_pos) {
-            //} else {
-            //    ve.new_position(
-            //        key,
-            //        state,
-            //    );
-            //    Ok(key)
-            //}
         } else {
             self.new_vertex(
                 trav,
@@ -60,7 +51,7 @@ impl<R: ResultKind> TraversalCache<R> {
         &mut self,
         trav: &Trav,
         key: CacheKey,
-        state: &TraversalState<R>,
+        state: &TraversalState,
     ) {
         let ve = PositionCache::new(
             trav,
@@ -78,7 +69,7 @@ impl<R: ResultKind> TraversalCache<R> {
     pub fn continue_waiting(
         &mut self,
         key: &CacheKey,
-    ) -> Vec<(usize, TraversalState<R>)> {
+    ) -> Vec<(usize, TraversalState)> {
         self.get_entry_mut(key)
             .unwrap()
             .waiting

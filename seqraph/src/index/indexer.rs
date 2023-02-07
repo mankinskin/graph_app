@@ -13,15 +13,15 @@ impl<
     'g,
     G: GraphKind,
     R: ResultKind,
-> DirectedTraversalPolicy<R> for IndexingPolicy<G, R>
+> DirectedTraversalPolicy for IndexingPolicy<G, R>
 {
     type Trav = Indexer<G>;
 
     #[instrument(skip(trav, primer))]
     fn at_postfix(
         trav: &Self::Trav,
-        primer: R::Primer,
-    ) -> R::Postfix {
+        primer: Primer,
+    ) -> Postfix {
         let trav = trav.clone();
         let path = primer.role_path();
         println!("after end match {:?}", path);
@@ -80,7 +80,7 @@ where
     //type Break = TraversalResult<R, Q>;
     //type Continue = TraversalResult<R, Q>;
     //type Result = (<R as ResultKind>::Indexed, Q);
-    type NodeCollection = BftQueue<R>;
+    type NodeCollection = BftQueue;
 
     //fn map_state(
     //    &self,

@@ -16,10 +16,10 @@ impl QueryRangePath {
 }
 pub trait QueryPath:
     BaseQuery
-    + LeafChild<End>
+    //+ LeafChildPosMut<End>
     + PathAppend
     + PathPop
-    + AdvanceExit
+    + AdvanceRootPos<End>
 {
     fn complete(pattern: impl IntoPattern) -> Self;
     fn new_directed<
@@ -47,6 +47,27 @@ impl QueryPath for QueryRangePath {
             0 => Err((NoMatch::EmptyPatterns, query)),
             1 => Err((NoMatch::SingleIndex(first), query)),
             _ => Ok(query)
+        }
+    }
+}
+pub trait RangePath: RootedPath {
+    fn new_range(root: Self::Root, entry: usize, exit: usize) -> Self;
+}
+impl RangePath for QueryRangePath {
+    fn new_range(root: Self::Root, entry: usize, exit: usize) -> Self {
+        Self {
+            root,
+            start: SubPath::new(entry).into(),
+            end: SubPath::new(exit).into(),
+        }
+    }
+}
+impl RangePath for SearchPath {
+    fn new_range(root: Self::Root, entry: usize, exit: usize) -> Self {
+        Self {
+            root,
+            start: SubPath::new(entry).into(),
+            end: SubPath::new(exit).into(),
         }
     }
 }

@@ -18,7 +18,7 @@ pub trait PathComplete: Sized + Debug {
             .expect(&format!("Unable to unwrap {:?} as complete: {}", self, msg))
     }
 }
-impl<R: ResultKind> PathComplete for FoundPath<R> {
+impl PathComplete for FoundPath {
     /// returns child if reduced to single child
     fn into_complete(&self) -> Option<Child> {
         match self {
@@ -28,6 +28,14 @@ impl<R: ResultKind> PathComplete for FoundPath<R> {
     }
 }
 impl<P: MatchEndPath> PathComplete for MatchEnd<P> {
+    fn into_complete(&self) -> Option<Child> {
+        match self {
+            Self::Complete(c) => Some(*c),
+            _ => None,
+        }
+    }
+}
+impl PathComplete for EndKind {
     fn into_complete(&self) -> Option<Child> {
         match self {
             Self::Complete(c) => Some(*c),

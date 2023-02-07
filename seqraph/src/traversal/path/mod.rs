@@ -55,7 +55,7 @@ impl<T:
 > BasePath for T {}
 
 
-//impl<R> GraphRootChild<R> for PrefixQuery {
+//impl GraphRootChild for PrefixQuery {
 //    fn child_location(&self) -> ChildLocation {
 //    }
 //}

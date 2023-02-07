@@ -1,16 +1,19 @@
 use crate::*;
 use super::*;
 
-pub trait ResultKind: Eq + Clone + Debug + Send + Sync + Unpin {
-    type Query: QueryPath;
-    type Found: Found<Self> + From<FoundPath<Self>>;
-    type Primer: PathPrimer<Self>;
-    type Postfix: Postfix + From<MatchEnd<RootedRolePath<Start>>> + From<Self::Primer> + IntoPrimer<Self>;
-    type Advanced: Advanced + PathPop + Into<Self::Postfix>;
-    type Indexed: Send + Sync;
-    fn into_postfix(primer: Self::Primer, match_end: MatchEnd<RootedRolePath<Start>>) -> Self::Postfix;
-}
-pub trait Found<R: ResultKind>
+//pub trait ResultKind: Eq + Clone + Debug + Send + Sync + Unpin {
+//    type Query: QueryPath;
+//    type Found: Found<Self> + From<FoundPath>;
+//    type Primer: PathPrimer<Self>;
+//    type Postfix: Postfix + From<MatchEnd<RootedRolePath<Start>>> + From<Self::Primer> + IntoPrimer<Self>;
+//    type Advanced: Advanced + PathPop + Into<Self::Postfix> + Into<RootedRolePath<End>>;
+//    type Indexed: Send + Sync;
+//    fn into_postfix(primer: Self::Primer, match_end: MatchEnd<RootedRolePath<Start>>) -> Self::Postfix;
+//}
+pub type Primer = RootedRolePath<Start>;
+pub type Postfix = MatchEnd<Primer>;
+
+pub trait Found
     : BasePath
     + PathComplete
     //+ RoleChildPath
@@ -23,7 +26,6 @@ pub trait Found<R: ResultKind>
 {
 }
 impl<
-    R: ResultKind,
     T: BasePath
     + PathComplete
     //+ RoleChildPath
@@ -33,17 +35,17 @@ impl<
     //+ GetCacheKey
     //+ GraphRoot
     //+ Ord
-> Found<R> for T {
+> Found for T {
 }
-pub trait PathPrimer<R: ResultKind>:
+pub trait PathPrimer:
     RoleChildPath
     + NodePath<Start>
     //+ HasRolePath<Start>
     + GraphRootChild<Start>
     + From<RootedRolePath<Start>>
-    + From<<R as ResultKind>::Advanced>
-    + Into<R::Postfix>
-    + IntoAdvanced<R>
+    + From<SearchPath>
+    + Into<Postfix>
+    + IntoAdvanced
     //+ Wide
     + RootKey
     + Send
@@ -55,22 +57,21 @@ pub trait PathPrimer<R: ResultKind>:
 {
 }
 impl<
-    R: ResultKind,
     T: NodePath<Start>
     + RoleChildPath
     //+ HasRolePath<Start>
     + GraphRootChild<Start>
     + From<RootedRolePath<Start>>
-    + From<<R as ResultKind>::Advanced>
-    + IntoAdvanced<R>
-    + Into<R::Postfix>
+    + From<SearchPath>
+    + IntoAdvanced
+    + Into<Postfix>
     //+ Wide
     + RootKey
     + BasePath
     + Hash
     + HasSinglePath
     + MatchEndPath
-> PathPrimer<R> for T
+> PathPrimer for T
 {
 }
 
@@ -96,68 +97,6 @@ pub trait RoleChildPath {
     {
         HasRolePath::<R>::role_path_mut(self)
     }
-}
-impl<T> RoleChildPath for T {
-}
-pub trait Postfix:
-    NodePath<Start>
-    + PathSimplify
-    //+ IntoRangePath
-    + RootKey
-    + BasePath
-    + GraphRoot
-    + Into<MatchEnd<RootedRolePath<Start>>>
-{
-    //fn new_complete(child: Child, origin: RootedRolePath<Start>) -> Self;
-    //fn new_path(start: impl Into<RootedRolePath<Start>>, origin: RootedRolePath<Start>) -> Self;
-}
-impl<T:
-    NodePath<Start>
-    + PathSimplify
-    + RootKey
-    + BasePath
-    + GraphRoot
-    + Into<MatchEnd<RootedRolePath<Start>>>
-> Postfix for T {
-}
-//impl<P: MatchEndPath + Postfix> Postfix for MatchEnd<P> {
-//    //fn new_complete(c: Child, _origin: RootedRolePath<Start>) -> Self {
-//    //    Self::Complete(c)
-//    //}
-//    //fn new_path(start: impl Into<RootedRolePath<Start>>, _origin: RootedRolePath<Start>) -> Self {
-//    //    Self::Path(P::from(start.into()))
-//    //}
-//}
-//impl<P: Postfix> Postfix for OriginPath<P> {
-//    fn new_complete(c: Child, origin: RolePath<Start>) -> Self {
-//        Self {
-//            postfix: P::new_complete(c, origin.clone()),
-//            origin: MatchEnd::Path(origin),
-//        }
-//    }
-//    fn new_path(start: impl Into<RolePath<Start>>, origin: RolePath<Start>) -> Self {
-//        Self {
-//            postfix: P::new_path(start, origin.clone()),
-//            origin: MatchEnd::Path(origin),
-//        }
-//    }
-//}
-pub trait Advanced:
-    RoleChildPath
-    + NodePath<Start>
-    + BasePath
-    + HasRolePath<Start>
-    + HasRolePath<End>
-    + GraphRootChild<Start>
-    + GraphRootChild<End>
-    //+ AddMatchWidth
-    + GetCacheKey
-    + LeafChild<Start>
-    + LeafChild<End>
-    + AdvanceExit
-    + GraphRoot
-    + PathAppend
-{
     fn role_leaf_child<
         R: PathRole,
         Trav: Traversable,
@@ -188,6 +127,68 @@ pub trait Advanced:
         HasRolePath::<R>::role_path_mut(self).path_mut()
     }
 }
+impl<T> RoleChildPath for T {
+}
+//pub trait Postfix:
+//    NodePath<Start>
+//    + PathSimplify
+//    //+ IntoRangePath
+//    + RootKey
+//    + BasePath
+//    + GraphRoot
+//    + Into<MatchEnd<RootedRolePath<Start>>>
+//{
+//    //fn new_complete(child: Child, origin: RootedRolePath<Start>) -> Self;
+//    //fn new_path(start: impl Into<RootedRolePath<Start>>, origin: RootedRolePath<Start>) -> Self;
+//}
+//impl<T:
+//    NodePath<Start>
+//    + PathSimplify
+//    + RootKey
+//    + BasePath
+//    + GraphRoot
+//    + Into<MatchEnd<RootedRolePath<Start>>>
+//> Postfix for T {
+//}
+//impl<P: MatchEndPath + Postfix> Postfix for MatchEnd<P> {
+//    //fn new_complete(c: Child, _origin: RootedRolePath<Start>) -> Self {
+//    //    Self::Complete(c)
+//    //}
+//    //fn new_path(start: impl Into<RootedRolePath<Start>>, _origin: RootedRolePath<Start>) -> Self {
+//    //    Self::Path(P::from(start.into()))
+//    //}
+//}
+//impl<P: Postfix> Postfix for OriginPath<P> {
+//    fn new_complete(c: Child, origin: RolePath<Start>) -> Self {
+//        Self {
+//            postfix: P::new_complete(c, origin.clone()),
+//            origin: MatchEnd::Path(origin),
+//        }
+//    }
+//    fn new_path(start: impl Into<RolePath<Start>>, origin: RolePath<Start>) -> Self {
+//        Self {
+//            postfix: P::new_path(start, origin.clone()),
+//            origin: MatchEnd::Path(origin),
+//        }
+//    }
+//}
+pub trait Advanced:
+    RoleChildPath
+    + NodePath<Start>
+    + BasePath
+    + HasRolePath<Start>
+    + HasRolePath<End>
+    + GraphRootChild<Start>
+    + GraphRootChild<End>
+    + GetCacheKey
+    + LeafChild<Start>
+    + LeafChild<End>
+    + AdvanceRootPos<End>
+    + RootChildPosMut<End>
+    + GraphRoot
+    + PathAppend
+{
+}
 impl<
     T:
     RoleChildPath
@@ -195,13 +196,13 @@ impl<
     + BasePath
     + HasRolePath<Start>
     + HasRolePath<End>
-    //+ AddMatchWidth
     + GetCacheKey
     + GraphRootChild<Start>
     + GraphRootChild<End>
     + LeafChild<Start>
     + LeafChild<End>
-    + AdvanceExit
+    + AdvanceRootPos<End>
+    + RootChildPosMut<End>
     + PathAppend
 > Advanced for T {
 }
@@ -210,25 +211,25 @@ impl<
 pub struct BaseResult;
 
 
-impl ResultKind for BaseResult {
-    type Query = QueryRangePath;
-    type Found = FoundPath<Self>;
-    type Primer = RootedRolePath<Start>;
-    type Advanced = SearchPath;
-    type Postfix = MatchEnd<RootedRolePath<Start>>;
-    type Indexed = Child;
-    
-    fn into_postfix(_primer: Self::Primer, match_end: MatchEnd<RootedRolePath<Start>>) -> Self::Postfix {
-        match_end.into()
-    }
-    //fn index_found<
-    //    T: Tokenize,
-    //    D: IndexDirection,
-    //    //Trav: TraversableMut<T>,
-    //>(found: Self::Found, indexer: &mut Indexer<T, D>) -> Self::Indexed {
-    //    indexer.index_found(found.into_range_path().into())
-    //}
-}
+//impl ResultKind for BaseResult {
+//    type Query = QueryRangePath;
+//    type Found = FoundPath;
+//    type Primer = RootedRolePath<Start>;
+//    type Advanced = SearchPath;
+//    type Postfix = MatchEnd<RootedRolePath<Start>>;
+//    type Indexed = Child;
+//    
+//    fn into_postfix(_primer: Self::Primer, match_end: MatchEnd<RootedRolePath<Start>>) -> Self::Postfix {
+//        match_end.into()
+//    }
+//    //fn index_found<
+//    //    T: Tokenize,
+//    //    D: IndexDirection,
+//    //    //Trav: TraversableMut<T>,
+//    //>(found: Self::Found, indexer: &mut Indexer<T, D>) -> Self::Indexed {
+//    //    indexer.index_found(found.into_range_path().into())
+//    //}
+//}
 
 //#[derive(Eq, PartialEq, Clone, Debug)]
 //pub struct OriginPathResult;

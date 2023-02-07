@@ -1,14 +1,14 @@
 use crate::*;
 
-pub trait IntoAdvanced<R: ResultKind>: Sized + Clone {
+pub trait IntoAdvanced: Sized + Clone {
     fn into_advanced<
         Trav: Traversable,
     >(
         self,
         trav: &Trav,
-    ) -> Result<R::Advanced, Self>;
+    ) -> Result<SearchPath, Self>;
     //{
-    //    let mut new: R::Advanced = self.clone().into();
+    //    let mut new: SearchPath = self.clone().into();
     //    match new.advance_exit_pos::<_, D, _>(trav) {
     //        Ok(()) => Ok(new),
     //        Err(()) => Err(self)
@@ -17,8 +17,8 @@ pub trait IntoAdvanced<R: ResultKind>: Sized + Clone {
 }
 //impl<
 //    R: ResultKind,
-//    T: Sized + Clone + Into<R::Advanced>
-//> IntoAdvanced<R> for T {
+//    T: Sized + Clone + Into<SearchPath>
+//> IntoAdvanced for T {
 //}
 //impl<
 //    P: IntoAdvanced<BaseResult>,
@@ -43,13 +43,13 @@ pub trait IntoAdvanced<R: ResultKind>: Sized + Clone {
 //        }
 //    }
 //}
-impl IntoAdvanced<BaseResult> for RootedRolePath<Start> {
+impl IntoAdvanced for RootedRolePath<Start> {
     fn into_advanced<
         Trav: Traversable,
     >(
         self,
         trav: &Trav,
-    ) -> Result<<BaseResult as ResultKind>::Advanced, Self> {
+    ) -> Result<SearchPath, Self> {
         let entry = self.root_child_location();
         let graph = trav.graph();
         let pattern = self.root_pattern::<Trav>(&graph).clone();

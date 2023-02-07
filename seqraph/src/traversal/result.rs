@@ -2,15 +2,15 @@ use crate::*;
 use super::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TraversalResult<R: ResultKind> {
-    pub path: <R as ResultKind>::Found,
-    pub query: <R as ResultKind>::Query,
+pub struct TraversalResult {
+    pub path: FoundPath,
+    pub query: QueryRangePath,
 }
 
-impl<R: ResultKind> TraversalResult<R> {
+impl TraversalResult {
     pub fn new(
-        found: impl Into<<R as ResultKind>::Found>,
-        query: impl Into<<R as ResultKind>::Query>,
+        found: impl Into<FoundPath>,
+        query: impl Into<QueryRangePath>,
     ) -> Self {
         Self {
             path: found.into(),
@@ -27,7 +27,7 @@ impl<R: ResultKind> TraversalResult<R> {
         self.path.expect_complete(msg)
     }
 }
-impl TraversalResult<BaseResult> {
+impl TraversalResult {
     #[allow(unused)]
     pub fn new_complete(query: impl IntoPattern, index: impl AsChild) -> Self {
         Self {

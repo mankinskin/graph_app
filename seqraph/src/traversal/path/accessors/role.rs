@@ -5,7 +5,7 @@ pub struct Start;
 #[derive(Hash, Debug, Clone, Eq, PartialEq)]
 pub struct End;
 
-pub trait PathRole: 'static + Debug {
+pub trait PathRole: 'static + Debug + PathBorder {
     type TopDownPathIter<I: Borrow<ChildLocation>, T: DoubleEndedIterator<Item=I> + ExactSizeIterator>: DoubleEndedIterator<Item=I> + ExactSizeIterator;
     fn top_down_iter<I: Borrow<ChildLocation>, T: DoubleEndedIterator<Item=I> + ExactSizeIterator>(collection: T) -> Self::TopDownPathIter<I, T>;
     fn bottom_up_iter<I: Borrow<ChildLocation>, T: DoubleEndedIterator<Item=I> + ExactSizeIterator>(collection: T) -> std::iter::Rev<Self::TopDownPathIter<I, T>> {

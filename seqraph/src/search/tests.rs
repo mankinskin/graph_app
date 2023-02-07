@@ -76,7 +76,11 @@ fn find_parent1() {
         graph.find_parent(&query),
         Ok(TraversalResult {
             path: FoundPath::Complete(*abc),
-            query: QueryRangePath::complete(query),
+            query: QueryRangePath::new_range(
+                query.clone(),
+                0,
+                query.len()-1
+            ),
         }),
         "a_b_c_c"
     );
@@ -202,6 +206,7 @@ fn find_ancestor2() {
             path: FoundPath::Path(
                 FoldResult {
                     cache: TraversalCache {
+                        query_root: query.clone(),
                         entries: HashMap::default()
                     },
                     final_states: vec![
@@ -275,98 +280,90 @@ fn find_ancestor3() {
             path: FoundPath::Path(
                 FoldResult {
                     cache: TraversalCache {
+                        query_root: query.clone(),
                         entries: HashMap::from_iter([
                             (6, PositionCache {
-                                top_down: Default::default(),
-                                bottom_up: Default::default(),
+                                back_edges: Default::default(),
                                 index: Child {
                                     index: 6,
                                     width: 2,
                                 },
                                 waiting: Default::default(),
-                                _ty: Default::default(),   
+                                num_parents: 0,
                             }),
                             (12, PositionCache {
-                                top_down: Default::default(),
-                                bottom_up: HashMap::from_iter([
+                                back_edges: HashMap::from_iter([
                                     (CacheKey {
                                         index: Child {
                                             index: 10,
                                             width: 3,
                                         },
                                         token_pos: 0,
-                                    }, SubLocation {
+                                    }, CacheEdge::BottomUp(SubLocation {
                                         pattern_id: 9,
                                         sub_index: 0,
-                                    }),
+                                    })),
                                 ]),
                                 index: Child {
                                     index: 12,
                                     width: 5,
                                 },
                                 waiting: Default::default(),
-                                _ty: Default::default(),   
+                                num_parents: 0,
                             }),
                             (4, PositionCache {
-                                top_down: HashMap::from_iter([
+                                back_edges: HashMap::from_iter([
                                     (CacheKey {
                                         index: Child {
                                             index: 11,
                                             width: 4,
                                         },
                                         token_pos: 0,
-                                    }, ChildLocation {
-                                        parent: Child {
-                                            index: 11,
-                                            width: 4,
-                                        },
+                                    }, CacheEdge::TopDown(SubLocation {
                                         pattern_id: 6,
                                         sub_index: 1,
-                                    }),
+                                    })),
                                 ]),
-                                bottom_up: Default::default(),
                                 index: Child {
                                     index: 4,
                                     width: 1,
                                 },
                                 waiting: vec![
                                 ],
-                                _ty: Default::default(),   
+                                num_parents: 0,
                             }),
                             (11, PositionCache {
-                                top_down: Default::default(),
-                                bottom_up: HashMap::from_iter([
+                                back_edges: HashMap::from_iter([
                                     (CacheKey {
                                         index: Child {
                                             index: 10,
                                             width: 3,
                                         },
                                         token_pos: 0,
-                                    }, SubLocation {
+                                    }, CacheEdge::BottomUp(SubLocation {
                                         pattern_id: 6,
                                         sub_index: 0,
-                                    }),
+                                    })),
                                 ]),
                                 index: Child {
                                     index: 11,
                                     width: 4,
                                 },
                                 waiting: Default::default(),
-                                _ty: Default::default(),   
+                                num_parents: 0,
                             }),
                             (10, PositionCache {
-                                top_down: Default::default(),
-                                bottom_up: HashMap::from_iter([
+                                back_edges: HashMap::from_iter([
                                     (CacheKey {
                                         index: Child {
                                             index: 6,
                                             width: 2,
                                         },
                                         token_pos: 0,
-                                    }, SubLocation {
+                                    }, CacheEdge::BottomUp(SubLocation {
                                         pattern_id: 4,
                                         sub_index: 1,
-                                    }),
+                                    })),
                                 ]),
                                 index: Child {
                                     index: 10,
@@ -374,7 +371,7 @@ fn find_ancestor3() {
                                 },
                                 waiting: vec![
                                 ],
-                                _ty: Default::default(),
+                                num_parents: 0,
                             }),
                         ]),
                     },
@@ -382,53 +379,34 @@ fn find_ancestor3() {
                         FinalState {
                             num_parents: 2,
                             state: EndState {
-                                root: CacheKey {
-                                    index: Child {
-                                        index: 11,
-                                        width: 4,
-                                    },
-                                    token_pos: 0,
-                                },
                                 kind: EndKind::Postfix(
-                                    PostfixEnd {
-                                        path: RootedRolePath {
-                                            split_path: RootedSplitPath {
-                                                root: PatternLocation {
-                                                    parent: Child {
-                                                        index: 11,
-                                                        width: 4,
-                                                    },
-                                                    pattern_id: 6,
+                                    RootedRolePath {
+                                        split_path: RootedSplitPath {
+                                            root: PatternLocation {
+                                                parent: Child {
+                                                    index: 11,
+                                                    width: 4,
                                                 },
-                                                sub_path: SubPath {
-                                                    root_entry: 0,
-                                                    path: vec![
-                                                        ChildLocation {
-                                                            parent: Child {
-                                                                index: 10,
-                                                                width: 3,
-                                                            },
-                                                            pattern_id: 4,
-                                                            sub_index: 1,
-                                                        },
-                                                    ],
-                                                },
+                                                pattern_id: 6,
                                             },
-                                            _ty: Default::default(),
+                                            sub_path: SubPath {
+                                                root_entry: 0,
+                                                path: vec![
+                                                    ChildLocation {
+                                                        parent: Child {
+                                                            index: 10,
+                                                            width: 3,
+                                                        },
+                                                        pattern_id: 4,
+                                                        sub_index: 1,
+                                                    },
+                                                ],
+                                            },
                                         },
+                                        _ty: Default::default(),
                                     },
                                 ),
-                                query: QueryRangePath {
-                                    root: vec![
-                                        Child {
-                                            index: 6,
-                                            width: 2,
-                                        },
-                                        Child {
-                                            index: 4,
-                                            width: 1,
-                                        },
-                                    ],
+                                query: QueryState {
                                     start: RolePath {
                                         sub_path: SubPath {
                                             root_entry: 0,

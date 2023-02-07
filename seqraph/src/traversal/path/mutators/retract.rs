@@ -25,7 +25,6 @@ pub trait Retract:
     }
     fn retract<
         Trav: Traversable,
-        R: ResultKind,
     >(&mut self, trav: &Trav) {
         //let graph = trav.graph();
         //// remove segments pointing to mismatch at pattern head
@@ -44,7 +43,7 @@ pub trait Retract:
         let graph = trav.graph();
         // skip path segments with no successors
         if let Some(location) = std::iter::from_fn(|| 
-            self.pop_path()
+            self.path_pop()
         ).find_map(|mut location| {
             let pattern = graph.expect_pattern_at(&location);
             <Trav::Kind as GraphKind>::Direction::pattern_index_prev(pattern.borrow(), location.sub_index)
@@ -53,7 +52,7 @@ pub trait Retract:
                     location
                 })
         }) {
-            self.path_append(trav, location);
+            self.path_append(location);
         } else {
             *self.root_child_pos_mut() = self.prev_exit_pos(trav).unwrap();
         }

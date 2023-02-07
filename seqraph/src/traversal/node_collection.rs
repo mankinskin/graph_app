@@ -3,34 +3,25 @@ use std::iter::Extend;
 
 use super::*;
 
-pub trait ExtendStates<
-    R: ResultKind,
->
-{
+pub trait ExtendStates {
     fn extend<
-        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState<R>)>,
-        T: IntoIterator<Item = (usize, TraversalState<R>), IntoIter=It>
+        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
+        T: IntoIterator<Item = (usize, TraversalState), IntoIter=It>
     >(&mut self, iter: T);
 }
-pub trait NodeCollection<
-    R: ResultKind,
->:
-    ExtendStates<R>
-    //From<StartState<R>>
-    + Iterator<Item=(usize, TraversalState<R>)>
+pub trait NodeCollection:
+    ExtendStates
+    //From<StartState>
+    + Iterator<Item=(usize, TraversalState)>
     + Default
-    where
-        R: ResultKind,
 {
 }
 impl<
-    R: ResultKind,
-    T:
-    ExtendStates<R>
-    //From<StartState<R>>
-    + Iterator<Item=(usize, TraversalState<R>)>
+    T: ExtendStates
+    //From<StartState>
+    + Iterator<Item=(usize, TraversalState)>
     + Default
-> NodeCollection<R> for T
+> NodeCollection for T
 {
 }
 #[derive(Clone, Debug)]
@@ -38,24 +29,22 @@ pub struct PruningState {
     count: usize,
     prune: bool,
 }
-pub struct OrderedTraverser<'a, Trav, R, S, O>
+pub struct OrderedTraverser<'a, Trav, S, O>
     where
         Trav: Traversable,
-        R: ResultKind,
-        S: DirectedTraversalPolicy<R, Trav=Trav>,
-        O: NodeCollection<R>,
+        S: DirectedTraversalPolicy<Trav=Trav>,
+        O: NodeCollection,
 {
     collection: O,
     pruning_map: HashMap<CacheKey, PruningState>,
     trav: &'a Trav,
-    _ty: std::marker::PhantomData<(&'a S, R, Trav)>
+    _ty: std::marker::PhantomData<(&'a S, Trav)>
 }
-impl<'a, Trav, R, S, O> OrderedTraverser<'a, Trav, R, S, O>
+impl<'a, Trav, S, O> OrderedTraverser<'a, Trav, S, O>
     where
         Trav: Traversable,
-        R: ResultKind,
-        S: DirectedTraversalPolicy<R, Trav=Trav>,
-        O: NodeCollection<R>,
+        S: DirectedTraversalPolicy<Trav=Trav>,
+        O: NodeCollection,
 {
     pub fn prune_not_below(&mut self, root: CacheKey) {
         self.pruning_map.iter_mut()
@@ -68,24 +57,22 @@ impl<'a, Trav, R, S, O> OrderedTraverser<'a, Trav, R, S, O>
         self.pruning_map.get_mut(&root).map(|entry| entry.prune = true);
     }
 }
-impl<'a, Trav, R, S, O> Unpin for OrderedTraverser<'a, Trav, R, S, O>
+impl<'a, Trav, S, O> Unpin for OrderedTraverser<'a, Trav, S, O>
     where
         Trav: Traversable,
-        R: ResultKind,
-        S: DirectedTraversalPolicy<R, Trav=Trav>,
-        O: NodeCollection<R>,
+        S: DirectedTraversalPolicy<Trav=Trav>,
+        O: NodeCollection,
 {
 }
-impl<'a, Trav, R, S, O> ExtendStates<R> for OrderedTraverser<'a, Trav, R, S, O>
+impl<'a, Trav, S, O> ExtendStates for OrderedTraverser<'a, Trav, S, O>
     where
         Trav: Traversable,
-        R: ResultKind,
-        S: DirectedTraversalPolicy<R, Trav=Trav>,
-        O: NodeCollection<R>,
+        S: DirectedTraversalPolicy<Trav=Trav>,
+        O: NodeCollection,
 {
     fn extend<
-        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState<R>)>,
-        In: IntoIterator<Item = (usize, TraversalState<R>), IntoIter=It>
+        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
+        In: IntoIterator<Item = (usize, TraversalState), IntoIter=It>
     >(&mut self, iter: In) {
         let states = iter.into_iter().map(|(d, s)| {
                 // count states per root
@@ -103,12 +90,11 @@ impl<'a, Trav, R, S, O> ExtendStates<R> for OrderedTraverser<'a, Trav, R, S, O>
         )
     }
 }
-impl<'a, Trav, S, R, O> TraversalIterator<'a, Trav, S, R> for OrderedTraverser<'a, Trav, R, S, O>
+impl<'a, Trav, S, O> TraversalIterator<'a, Trav, S> for OrderedTraverser<'a, Trav, S, O>
     where
-        Trav: Traversable + 'a + TraversalFolder<S, R>,
-        R: ResultKind,
-        S: DirectedTraversalPolicy<R, Trav=Trav>,
-        O: NodeCollection<R>,
+        Trav: Traversable + 'a + TraversalFolder<S>,
+        S: DirectedTraversalPolicy<Trav=Trav>,
+        O: NodeCollection,
 {
     fn new(trav: &'a Trav) -> Self {
         Self {
@@ -129,14 +115,13 @@ impl<'a, Trav, S, R, O> TraversalIterator<'a, Trav, S, R> for OrderedTraverser<'
         self.trav
     }
 }
-impl<'a, Trav, R, S, O> Iterator for OrderedTraverser<'a, Trav, R, S, O>
+impl<'a, Trav, S, O> Iterator for OrderedTraverser<'a, Trav, S, O>
 where
-    Trav: Traversable + TraversalFolder<S, R>,
-    R: ResultKind,
-    S: DirectedTraversalPolicy<R, Trav=Trav>,
-    O: NodeCollection<R>,
+    Trav: Traversable + TraversalFolder<S>,
+    S: DirectedTraversalPolicy<Trav=Trav>,
+    O: NodeCollection,
 {
-    type Item = (usize, TraversalState<R>);
+    type Item = (usize, TraversalState);
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some((d, s)) = self.collection.next() {
@@ -153,101 +138,79 @@ where
         None
     }
 }
-pub type Bft<'a, Trav, R, S> = OrderedTraverser<'a, Trav, R, S, BftQueue<R>>;
+pub type Bft<'a, Trav, S> = OrderedTraverser<'a, Trav, S, BftQueue>;
 #[allow(unused)]
-pub type Dft<'a, Trav, R, S> = OrderedTraverser<'a, Trav, R, S, DftStack<R>>;
+pub type Dft<'a, Trav, S> = OrderedTraverser<'a, Trav, S, DftStack>;
 
 #[derive(Debug)]
-pub struct BftQueue<R>
-    where
-        R: ResultKind,
-{
-    queue: VecDeque<(usize, TraversalState<R>)>,
-    _ty: std::marker::PhantomData<R>
+pub struct BftQueue {
+    queue: VecDeque<(usize, TraversalState)>,
 }
-//impl<R: ResultKind> From<StartState<R>> for BftQueue<R> {
-//    fn from(start: StartState<R>) -> Self {
+//impl From<StartState> for BftQueue {
+//    fn from(start: StartState) -> Self {
 //        Self {
 //            queue: VecDeque::from([(0, TraversalState::Start(start))]),
 //            _ty: Default::default(),
 //        }
 //    }
 //}
-impl<R> Iterator for BftQueue<R>
-    where
-        R: ResultKind,
-{
-    type Item = (usize, TraversalState<R>);
+impl Iterator for BftQueue {
+    type Item = (usize, TraversalState);
     fn next(&mut self) -> Option<Self::Item> {
         self.queue.pop_front()
     }
 }
-impl<R> ExtendStates<R> for BftQueue<R>
-    where
-        R: ResultKind,
+impl ExtendStates for BftQueue
 {
     fn extend<
-        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState<R>)>,
-        T: IntoIterator<Item = (usize, TraversalState<R>), IntoIter=It>
+        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
+        T: IntoIterator<Item = (usize, TraversalState), IntoIter=It>
     >(&mut self, iter: T) {
         self.queue.extend(iter)
     }
 }
-impl<R> Default for BftQueue<R>
-    where
-        R: ResultKind,
+impl Default for BftQueue
 {
     fn default() -> Self {
         Self {
             queue: Default::default(),
-            _ty: Default::default(),
         }
     }
 }
 #[derive(Debug)]
-pub struct DftStack<R>
-where
-    R: ResultKind,
+pub struct DftStack
 {
-    stack: Vec<(usize, TraversalState<R>)>,
-    _ty: std::marker::PhantomData<R>
+    stack: Vec<(usize, TraversalState)>,
 }
-//impl<R: ResultKind> From<StartState<R>> for DftStack<R> {
-//    fn from(start: StartState<R>) -> Self {
+//impl From<StartState> for DftStack {
+//    fn from(start: StartState) -> Self {
 //        Self {
 //            stack: Vec::from([(0, TraversalState::Start(start))]),
 //            _ty: Default::default(),
 //        }
 //    }
 //}
-impl<R> Iterator for DftStack<R>
-    where
-        R: ResultKind,
+impl Iterator for DftStack
 {
-    type Item = (usize, TraversalState<R>);
+    type Item = (usize, TraversalState);
     fn next(&mut self) -> Option<Self::Item> {
         self.stack.pop()
     }
 }
-impl<R> ExtendStates<R> for DftStack<R>
-    where
-        R: ResultKind,
+impl ExtendStates for DftStack
 {
     fn extend<
-        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState<R>)>,
-        T: IntoIterator<Item = (usize, TraversalState<R>), IntoIter=It>
+        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
+        T: IntoIterator<Item = (usize, TraversalState), IntoIter=It>
     >(&mut self, iter: T) {
         self.stack.extend(iter.into_iter().rev())
     }
 }
-impl<R> Default for DftStack<R>
-    where
-        R: ResultKind,
+impl Default for DftStack
 {
     fn default() -> Self {
         Self {
             stack: Default::default(),
-            _ty: Default::default(),
         }
     }
 }

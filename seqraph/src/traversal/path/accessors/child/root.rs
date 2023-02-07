@@ -47,16 +47,19 @@ impl RootChild<End> for SearchPath {
     }
 }
 //impl_child! { RootChild for PathLeaf, self, trav => self.root_child(trav) }
-impl_child! { RootChild for RootedRolePath<R>, self, trav => trav.graph().expect_child_at(self.path_root().to_child_location(RootChildPos::<R>::root_child_pos(&self.split_path))) }
+impl_child! { RootChild for RootedRolePath<R>, self, trav =>
+    trav.graph().expect_child_at(self.path_root().to_child_location(RootChildPos::<R>::root_child_pos(&self.split_path)))
+}
 
-//impl<R, P: RootChild<R>> RootChild<R> for OriginPath<P> {
-//    fn root_child<
-//        T: Tokenize,
-//        Trav: Traversable<T>,
-//    >(&self, trav: &Trav) -> Child {
-//        self.postfix.root_child(trav)
-//    }
-//}
+impl<'c, R: PathRole> RootChild<R> for CachedQuery<'c>
+    where Self: RootChildPos<R>
+{
+    fn root_child<
+        Trav: Traversable,
+    >(&self, trav: &Trav) -> Child {
+        self.pattern_root_child()
+    }
+}
 impl<P: MatchEndPath> RootChild<Start> for MatchEnd<P> {
     fn root_child<
         Trav: Traversable,
@@ -111,7 +114,11 @@ pub trait PatternRootChild<R>: RootChildPos<R> + PatternRoot {
     }
 }
 impl<R> PatternRootChild<R> for QueryRangePath
-    where QueryRangePath: RootChildPos<R>
+    where Self: RootChildPos<R>
+{
+}
+impl<R> PatternRootChild<R> for CachedQuery<'_>
+    where Self: RootChildPos<R>
 {
 }
 //impl<R> PatternRootChild<R> for PrefixQuery

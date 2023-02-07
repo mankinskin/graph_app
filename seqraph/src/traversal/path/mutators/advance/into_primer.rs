@@ -1,23 +1,23 @@
 use crate::*;
 
-pub trait IntoPrimer<R: ResultKind>: Sized {
+pub trait IntoPrimer: Sized {
     fn into_primer<
         Trav: Traversable,
     >(
         self,
         trav: &Trav,
         parent_entry: ChildLocation,
-    ) -> R::Primer;
+    ) -> Primer;
 }
-impl<R: ResultKind> IntoPrimer<R> for MatchEnd<RootedRolePath<Start>>{
+impl IntoPrimer for MatchEnd<RootedRolePath<Start>>{
     fn into_primer<
         Trav: Traversable,
     >(
         self,
         trav: &Trav,
         parent_entry: ChildLocation,
-    ) -> R::Primer {
-        R::Primer::from(match self {
+    ) -> Primer {
+        Primer::from(match self {
             Self::Complete(_) => RootedRolePath {
                 split_path: RootedSplitPath {
                     sub_path: SubPath {
@@ -29,7 +29,7 @@ impl<R: ResultKind> IntoPrimer<R> for MatchEnd<RootedRolePath<Start>>{
                 _ty: Default::default(),
             },
             Self::Path(mut path) => {
-                path.path_append(trav, parent_entry);
+                path.path_raise(trav, parent_entry);
                 path
             },
         })

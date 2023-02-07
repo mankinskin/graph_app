@@ -30,6 +30,15 @@ impl<R: PathRole> RolePath<R> {
     //pub fn child_location_mut(&mut self) -> &mut ChildLocation {
     //    <Self as GraphRootChild<R>>::root_child_location_mut(self)
     //}
+    pub fn into_rooted<Root: PathRoot>(self, root: Root) -> RootedRolePath<R, Root> {
+        RootedRolePath {
+            split_path: RootedSplitPath {
+                root,
+                sub_path: self.sub_path,
+            },
+            _ty: Default::default(),
+        }
+    }
 }
 impl<R> Deref for RolePath<R> {
     type Target = SubPath;

@@ -27,6 +27,17 @@ impl From<SearchPath> for RootedRolePath<Start, PatternLocation> {
         }
     }
 }
+impl From<SearchPath> for RootedRolePath<End, PatternLocation> {
+    fn from(path: SearchPath) -> Self {
+        Self {
+            split_path: RootedSplitPath {
+                root: path.root,
+                sub_path: path.end.sub_path,
+            },
+            _ty: Default::default(),
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SubPath {
@@ -80,26 +91,5 @@ impl<R: PathRole, Root: PathRoot> RootedPath for RootedRolePath<R, Root> {
     type Root = Root;
     fn path_root(&self) -> &Self::Root {
         &self.split_path.root
-    }
-}
-pub trait RangePath: RootedPath {
-    fn new_range(root: Self::Root, entry: usize, exit: usize) -> Self;
-}
-impl RangePath for QueryRangePath {
-    fn new_range(root: Self::Root, entry: usize, exit: usize) -> Self {
-        Self {
-            root,
-            start: SubPath::new(entry).into(),
-            end: SubPath::new(exit).into(),
-        }
-    }
-}
-impl RangePath for SearchPath {
-    fn new_range(root: Self::Root, entry: usize, exit: usize) -> Self {
-        Self {
-            root,
-            start: SubPath::new(entry).into(),
-            end: SubPath::new(exit).into(),
-        }
     }
 }

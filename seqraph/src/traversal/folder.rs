@@ -1,20 +1,13 @@
 use crate::*;
 use super::*;
 
-pub type Folder<R, Ty>
-    = <Ty as DirectedTraversalPolicy<R>>::Trav;
-
-pub type FolderPathPair<R>
-    = PathPair<<R as ResultKind>::Advanced, <R as ResultKind>::Query>;
+pub type Folder<Ty>
+    = <Ty as DirectedTraversalPolicy>::Trav;
 
 pub trait TraversalFolder<
-    S: DirectedTraversalPolicy<R, Trav=Self>,
-    R: ResultKind,
+    S: DirectedTraversalPolicy<Trav=Self>,
 >: Sized + Traversable {
-    //type Break;
-    //type Continue;
-    //type Result = ControlFlow<Self::Break, Self::Continue>;
-    type NodeCollection: NodeCollection<R>;
+    type NodeCollection: NodeCollection;
 
     //fn map_state(
     //    &self,
@@ -24,17 +17,21 @@ pub trait TraversalFolder<
 
     fn fold_query<P: IntoPattern>(
         &self,
-        query: P,
-    ) -> Result<TraversalResult<R>, (NoMatch, R::Query)> {
-        let query_path = R::Query::new_directed::<<Self::Kind as GraphKind>::Direction, _>(query.borrow())
-            .map_err(|(err, q)| (err, q))?;
-        let index = query_path.leaf_child(self);
+        query_pattern: P,
+    ) -> Result<TraversalResult, (NoMatch, QueryRangePath)> {
+        let query_pattern = query_pattern.into_pattern();
+        let query = QueryState::new::<<Self::Kind as GraphKind>::Direction, _>(query_pattern.borrow())
+            .map_err(|(err, q)| (err, q.to_rooted(query_pattern.clone())))?;
+        let index = query.clone().to_rooted(query_pattern.clone()).role_leaf_child::<End, _>(self);
 
-        let start = StartState::new(index, query_path.clone());
-        let mut states = OrderedTraverser::<_, _, _, Self::NodeCollection>::new(self);
-        let (start_key, mut cache) = TraversalCache::new(&start);
+        let start = StartState {
+            index,
+            query: query.clone(),
+        };
+        let mut states = OrderedTraverser::<_, _, Self::NodeCollection>::new(self);
+        let (start_key, mut cache) = TraversalCache::new(&start, query_pattern.clone());
         states.extend(
-            states.query_start(start_key, start)
+            states.query_start(start_key, query.clone().to_cached(&mut cache), start)
                 .into_states()
                 .into_iter()
                 .map(|n| (1, n))
@@ -43,21 +40,21 @@ pub trait TraversalFolder<
 
         while let Some((depth, next_states)) = states.next_states(&mut cache) {
             match next_states {
-                NextStates::End(prev, matched, state) => {
-                    if matched {
-                        if matches!(state.kind, EndKind::Range(_)) {
+                NextStates::End(next) => {
+                    if next.matched {
+                        if matches!(next.inner.kind, EndKind::Range(_)) {
                             // stop other paths not with this root
                             //states.prune_not_below(state.root_key());
                         }
-                        if let Some(root_key) = state.waiting_root_key() {
+                        if let Some(root_key) = next.inner.waiting_root_key() {
                             states.extend(
                                 cache.continue_waiting(&root_key)
                             );
                         }
-                        end_states.push(state);
+                        end_states.push(next.inner);
                     } else {
                         // stop other paths with this root
-                        states.prune_below(state.root_key());
+                        states.prune_below(next.inner.root_key());
                     }
                 },
                 _ => {
@@ -69,14 +66,14 @@ pub trait TraversalFolder<
                 },
             }
         }
-        if end_states.is_empty() {
-            return Ok(TraversalResult {
-                query: query_path,
-                path: <R as ResultKind>::Found::from(
-                    FoundPath::Complete(index)
-                )
-            });
+        Ok(if end_states.is_empty() {
+            TraversalResult {
+                query: query.to_rooted(query_pattern),
+                path: FoundPath::Complete(index)
+            }
         } else {
+
+            // todo: find single root and end state
             let final_states = end_states.into_iter()
                 .map(|s|
                     FinalState {
@@ -88,49 +85,72 @@ pub trait TraversalFolder<
                 )
                 .sorted() 
                 .collect_vec();
-            let fin = &final_states.last().unwrap();
-            Ok(TraversalResult {
-                query: fin.state.query.clone(),
-                path: <R as ResultKind>::Found::from(if let EndKind::Complete(c) = &fin.state.kind {
+            //println!(
+            //    "#############\n{:#?}",
+            //    cache.entries.values().map(|e|
+            //        (
+            //            e.index, e.top_down.keys().map(|prev|
+            //                PrevDir::TopDown(prev.index)
+            //            ).chain(
+            //                e.bottom_up.keys().map(|prev|
+            //                    PrevDir::BottomUp(prev.index)
+            //                )
+            //            )
+            //            .collect_vec()
+            //        )
+            //    )
+            //    .collect_vec()
+            //);
+            let fin = &final_states.first().unwrap();
+            let query = fin.state.query.clone();
+            let found_path = if let EndKind::Complete(c) = &fin.state.kind {
                     FoundPath::Complete(*c)
                 } else {
                     FoundPath::Path(FoldResult {
                         cache,
                         final_states
                     })
-                }),
-            })
-        }
+                };
+            TraversalResult {
+                query: query.to_rooted(query_pattern),
+                path: found_path,
+            }
+        })
     }
 }
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct FinalState<R: ResultKind> {
-    pub num_parents: usize,
-    pub state: EndState<R>,
+#[derive(Debug)]
+pub enum PrevDir {
+    TopDown(Child),
+    BottomUp(Child),
 }
-impl<R: ResultKind> PartialOrd for FinalState<R> {
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct FinalState {
+    pub num_parents: usize,
+    pub state: EndState,
+}
+impl PartialOrd for FinalState {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
-impl<R: ResultKind> Ord for FinalState<R> {
+impl Ord for FinalState {
     fn cmp(&self, other: &Self) -> Ordering {
-        other.num_parents.cmp(&self.num_parents)
+        self.num_parents.cmp(&other.num_parents)
             .then_with(||
-                self.state.is_complete().cmp(&other.state.is_complete())
+                other.state.is_complete().cmp(&self.state.is_complete())
                     .then_with(||
-                        other.state.root.width().cmp(&self.state.root.width())
+                        other.state.root_key().width().cmp(&self.state.root_key().width())
                     )
             )
     }
 }
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct FoldResult<R: ResultKind> {
-    pub cache: TraversalCache<R>,
-    pub final_states: Vec<FinalState<R>>,
+pub struct FoldResult {
+    pub cache: TraversalCache,
+    pub final_states: Vec<FinalState>,
 }
-impl<R: ResultKind> FoldResult<R> {
-    pub fn root_entry(&self) -> &PositionCache<R> {
+impl FoldResult {
+    pub fn root_entry(&self) -> &PositionCache {
         self.cache.entries.get(&self.root_index().index()).unwrap()
     }
     pub fn root_index(&self) -> Child {
@@ -146,9 +166,8 @@ impl<R: ResultKind> FoldResult<R> {
         );
         root
     }
-    pub fn into_found_path(self) -> <R as ResultKind>::Found {
+    pub fn into_found_path(self) -> FoundPath {
         //todo!("handle complete");
-        let found = FoundPath::Path(self);
-        <R as ResultKind>::Found::from(found)
+        FoundPath::Path(self)
     }
 }

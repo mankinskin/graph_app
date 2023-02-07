@@ -2,15 +2,14 @@ use crate::*;
 
 /// used to represent results after traversal with any path
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum FoundPath<R: ResultKind> {
+pub enum FoundPath {
     Complete(Child),
-    Path(FoldResult<R>),
+    Path(FoldResult),
 }
 impl<
     'a: 'g,
     'g,
-    R: ResultKind,
-> FoundPath<R> {
+> FoundPath {
     //fn num_path_segments(&self) -> usize {
     //    match self {
     //        Self::Complete(_) => 0,

@@ -47,6 +47,16 @@ impl RootChildPos<Start> for QueryRangePath {
         self.start.root_entry
     }
 }
+impl RootChildPos<End> for CachedQuery<'_> {
+    fn root_child_pos(&self) -> usize {
+        self.state.end.root_entry
+    }
+}
+impl RootChildPos<Start> for CachedQuery<'_> {
+    fn root_child_pos(&self) -> usize {
+        self.state.start.root_entry
+    }
+}
 impl RootChildPos<End> for QueryRangePath {
     fn root_child_pos(&self) -> usize {
         self.end.root_entry
@@ -68,6 +78,11 @@ impl RootChildPosMut<End> for QueryRangePath {
 impl RootChildPosMut<End> for SearchPath {
     fn root_child_pos_mut(&mut self) -> &mut usize {
         self.end.root_child_pos_mut()
+    }
+}
+impl RootChildPosMut<End> for CachedQuery<'_> {
+    fn root_child_pos_mut(&mut self) -> &mut usize {
+        &mut self.state.end.sub_path.root_entry
     }
 }
 //impl<R, P: RootChildPos<R>> RootChildPos<R> for OriginPath<P> {

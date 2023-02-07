@@ -10,38 +10,33 @@ pub struct Searcher<G: GraphKind> {
 }
 trait SearchTraversalPolicy<
     G: GraphKind,
-    R: ResultKind,
 >:
     DirectedTraversalPolicy<
-        R,
         Trav=Searcher<G>,
     >
 {
 }
 impl<
     G: GraphKind,
-    R: ResultKind,
 >
-    SearchTraversalPolicy<G, R> for AncestorSearch<G>
+    SearchTraversalPolicy<G> for AncestorSearch<G>
 {}
 impl<
     G: GraphKind,
-    R: ResultKind,
 >
-    SearchTraversalPolicy<G, R> for ParentSearch<G>
+    SearchTraversalPolicy<G> for ParentSearch<G>
 {}
 
 
 impl<
     G: GraphKind,
-    S: SearchTraversalPolicy<G, R>,
-    R: ResultKind,
+    S: SearchTraversalPolicy<G>,
 >
-    TraversalFolder<S, R> for Searcher<G>
+    TraversalFolder<S> for Searcher<G>
 {
     //type Break = TraversalResult<R, Q>;
     //type Continue = TraversalResult<R, Q>;
-    type NodeCollection = BftQueue<R>;
+    type NodeCollection = BftQueue;
 
     //fn map_state(
     //    &self,
@@ -111,17 +106,16 @@ struct AncestorSearch<G: GraphKind> {
 
 impl<
     G: GraphKind,
-    R: ResultKind,
 >
-    DirectedTraversalPolicy<R> for AncestorSearch<G>
+    DirectedTraversalPolicy for AncestorSearch<G>
 {
     type Trav = Searcher<G>;
 
     fn at_postfix(
         _trav: &Self::Trav,
-        path: R::Primer,
-    ) -> R::Postfix {
-        R::Postfix::from(path)
+        path: Primer,
+    ) -> Postfix {
+        Postfix::from(path)
     }
 }
 struct ParentSearch<G: GraphKind> {
@@ -132,30 +126,27 @@ impl<
     'a: 'g,
     'g,
     G: GraphKind,
-    R: ResultKind,
 >
-    DirectedTraversalPolicy<R> for ParentSearch<G>
+    DirectedTraversalPolicy for ParentSearch<G>
 {
     type Trav = Searcher<G>;
 
     fn at_postfix(
         _trav: &Self::Trav,
-        path: R::Primer,
-    ) -> R::Postfix {
-        R::Postfix::from(path)
+        path: Primer,
+    ) -> Postfix {
+        Postfix::from(path)
     }
     fn next_parents(
         _trav: &Self::Trav,
-        _query: &R::Query,
-        _start: &R::Postfix,
-    ) -> Vec<ParentState<R>> {
+        _start: &Postfix,
+        _query: &QueryState,
+    ) -> Vec<ParentState> {
         vec![]
     }
 }
 pub type SearchResult = Result<
-    TraversalResult<
-        BaseResult,
-    >,
+    TraversalResult,
     NoMatch
 >;
 impl<G: GraphKind> Searcher<G> {
@@ -183,27 +174,27 @@ impl<G: GraphKind> Searcher<G> {
         )
     }
     fn bft_search<
-        S: SearchTraversalPolicy<G, BaseResult>,
+        S: SearchTraversalPolicy<G>,
         P: IntoPattern,
     >(
         &self,
         query: P,
     ) -> SearchResult {
-        self.search::<Bft<Self, BaseResult, S>, S, _>(
+        self.search::<Bft<Self, S>, S, _>(
             query,
         )
     }
     #[allow(unused)]
     fn search<
         'a,
-        Ti: TraversalIterator<'a, Self, S, BaseResult>,
-        S: SearchTraversalPolicy<G, BaseResult>,
+        Ti: TraversalIterator<'a, Self, S>,
+        S: SearchTraversalPolicy<G>,
         P: IntoPattern,
     >(
         &'a self,
         query: P,
     ) -> SearchResult {
-        <Self as TraversalFolder<S, _>>::fold_query(self, query)
+        <Self as TraversalFolder<S>>::fold_query(self, query)
             .map_err(|(nm, _)| nm)
     }
     //#[allow(unused)]

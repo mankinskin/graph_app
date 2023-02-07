@@ -28,8 +28,8 @@ impl Child {
     pub fn to_pattern_location(self, pattern_id: PatternId) -> PatternLocation {
         PatternLocation::new(self, pattern_id)
     }
-    pub fn to_child_location(self, pattern_id: PatternId, sub_index: usize) -> ChildLocation {
-        ChildLocation::new(self, pattern_id, sub_index)
+    pub fn to_child_location(self, sub: SubLocation) -> ChildLocation {
+        ChildLocation::new(self, sub.pattern_id, sub.sub_index)
     }
 }
 impl std::cmp::PartialOrd for Child {
