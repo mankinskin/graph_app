@@ -86,7 +86,7 @@ pub trait TraversalIterator<
                 matched: false,
                 inner: S::gen_parent_states(
                     self.trav(),
-                    &state.query,
+                    &query.state,
                     state.index,
                     |trav, p|
                         MatchEnd::Complete(state.index)
@@ -134,22 +134,22 @@ pub trait TraversalIterator<
                     }
                 },
             InnerKind::Child(state) => {
-                match cached {
-                    Ok(key) =>
-                        self.on_child(
-                            cache,
-                            prev,
-                            key,
-                            tstate.matched,
-                            state,
-                        ),
-                    Err(key) => {
-                        //cache.get_entry_mut(&key)
-                        //    .unwrap()
-                        //    .add_back_edge();
-                        NextStates::Empty
-                    }
-                }
+                let key = match cached {
+                    Ok(key) => key,
+                    Err(key) => key,
+                };
+                self.on_child(
+                    cache,
+                    prev,
+                    key,
+                    tstate.matched,
+                    state,
+                )
+
+                //        cache.get_entry_mut(&key)
+                //            .unwrap()
+                //            .add_back_edge();
+                //        NextStates::Empty
             }
             _ => NextStates::Empty,
         };

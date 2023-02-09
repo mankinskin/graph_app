@@ -32,7 +32,7 @@ impl QueryPath for QueryRangePath {
     fn complete(query: impl IntoPattern) -> Self {
         let query = query.into_pattern();
         let len = query.len();
-        Self::new_range(query, 0, len)
+        Self::new_range(query, 0, len-1)
     }
     fn new_directed<
         D: MatchDirection,

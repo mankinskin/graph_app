@@ -206,21 +206,6 @@ impl AdvanceLeaf for CachedQuery<'_> {
         }
     }
 }
-impl AdvanceRootPos<End> for CachedQuery<'_> {
-    fn advance_root_pos<
-        Trav: Traversable,
-    >(&mut self, trav: &Trav) -> ControlFlow<()> {
-        let graph = trav.graph();
-        let pattern = &self.cache.query_root;
-        let exit = self.state.end.root_child_pos_mut();
-        if let Some(next) = TravDir::<Trav>::pattern_index_next(pattern.borrow(), *exit) {
-            *exit = next;
-            ControlFlow::CONTINUE
-        } else {
-            ControlFlow::BREAK
-        }
-    }
-}
 //impl PathAppend for CachedQuery<'_> {
 //    fn path_append(
 //            &mut self,

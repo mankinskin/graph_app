@@ -38,8 +38,24 @@ impl AdvanceRootPos<End> for SearchPath {
     fn advance_root_pos<
         Trav: Traversable,
     >(&mut self, trav: &Trav) -> ControlFlow<()> {
-        if let Some(next) = TravDir::<Trav>::index_next(RootChildPos::<End>::root_child_pos(self)) {
+        let graph = trav.graph();
+        let pattern = self.root_pattern::<Trav>(&graph);
+        if let Some(next) = TravDir::<Trav>::pattern_index_next(pattern.borrow(), RootChildPos::<End>::root_child_pos(self)) {
             *self.root_child_pos_mut() = next;
+            ControlFlow::CONTINUE
+        } else {
+            ControlFlow::BREAK
+        }
+    }
+}
+impl AdvanceRootPos<End> for CachedQuery<'_> {
+    fn advance_root_pos<
+        Trav: Traversable,
+    >(&mut self, trav: &Trav) -> ControlFlow<()> {
+        let pattern = &self.cache.query_root;
+        let exit = self.state.end.root_child_pos_mut();
+        if let Some(next) = TravDir::<Trav>::pattern_index_next(pattern.borrow(), *exit) {
+            *exit = next;
             ControlFlow::CONTINUE
         } else {
             ControlFlow::BREAK
