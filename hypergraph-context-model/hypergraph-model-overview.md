@@ -1,10 +1,18 @@
 # 🏞 Hypergraph Model Overview
 
-A hypergraph is used to store compressed sequences of tokens.
+A hypergraph is a compressed representation of a set of sequences of tokens. The hypergraph defines a grammar for the language of a given corpus.&#x20;
 
-A **hyperedge** is conceptually a set of nodes from a graph. A **directed hyperedge** is an ordered sequence of nodes in the graph. We use this model to represent **patterns of token sequences** (link needed) as hyperedges with an **alphabet** of tokens as nodes.
+A **hyperedge** is conceptually a set of nodes from a graph. A **directed hyperedge** is an ordered sequence of nodes in the graph. We use this model to represent **token sequences.**
 
-**Recursive hyperedges** can contain other hyperedges as nodes. We create an **index** for every hyperedge (or "pattern") when it is found in at least two different **contexts**. These hyperedges exist in a separate graph model, a **recursive hypergraph**, where each hyperedge also exists as a node, that can be connected with a hyperedge. We impose various **rules** on these edges to maximize compression and stored information.
+**Recursive hyperedges** can contain other hyperedges as nodes. These hyperedge nodes exist in a **recursive hypergraph** and can be thought of as rules of the grammar**.** We impose various **rules** on these rules to minimize redundancy and maximize stored information.
+
+$$
+G_R = (V_R, E_R)
+$$
+
+$$
+H = (V_R,
+$$
 
 Larger hyperedges can contain indices of smaller hyperedges. The larger indices are called **parents** and the smaller indices are called **children**. The remaining indices in the larger hyperedge form the **context** of the child in this hyperedge. A hyperedge can have multiple parents and thus multiple different contexts, even within the same parent.
 
@@ -23,5 +31,4 @@ No sequence of indices may occur twice anywhere in all hyperedges. When a known 
 
 We use invariants like this to simplify algorithms for **comparing**, **searching, modifying** and **inserting** hyperedges.
 
-****
-
+***
