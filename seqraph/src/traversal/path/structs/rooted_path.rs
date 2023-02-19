@@ -1,22 +1,30 @@
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RootedRangePath<Root: PathRoot> {
     pub root: Root,
     pub start: RolePath<Start>,
     pub end: RolePath<End>,
 }
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub type SearchPath = RootedRangePath<IndexRoot>;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct IndexRoot {
+    pub location: PatternLocation,
+    pub pos: TokenLocation,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RootedSplitPath<Root: PathRoot> {
     pub root: Root,
     pub sub_path: SubPath,
 }
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RootedRolePath<R: PathRole, Root: PathRoot = PatternLocation> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RootedRolePath<R: PathRole, Root: PathRoot = IndexRoot> {
     pub split_path: RootedSplitPath<Root>,
     pub _ty: std::marker::PhantomData<R>,
 }
-impl From<SearchPath> for RootedRolePath<Start, PatternLocation> {
+impl From<SearchPath> for RootedRolePath<Start, IndexRoot> {
     fn from(path: SearchPath) -> Self {
         Self {
             split_path: RootedSplitPath {
@@ -27,7 +35,7 @@ impl From<SearchPath> for RootedRolePath<Start, PatternLocation> {
         }
     }
 }
-impl From<SearchPath> for RootedRolePath<End, PatternLocation> {
+impl From<SearchPath> for RootedRolePath<End, IndexRoot> {
     fn from(path: SearchPath) -> Self {
         Self {
             split_path: RootedSplitPath {
@@ -39,7 +47,7 @@ impl From<SearchPath> for RootedRolePath<End, PatternLocation> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SubPath {
     pub root_entry: usize,
     pub path: Vec<ChildLocation>,
@@ -62,7 +70,7 @@ pub trait PathRoot {
 }
 impl PathRoot for Pattern {
 }
-impl PathRoot for PatternLocation {
+impl PathRoot for IndexRoot {
 }
 
 pub trait RootedPath {
@@ -76,7 +84,7 @@ impl RootedPath for QueryRangePath {
     }
 }
 impl RootedPath for SearchPath {
-    type Root = PatternLocation;
+    type Root = IndexRoot;
     fn path_root(&self) -> &Self::Root {
         &self.root
     }

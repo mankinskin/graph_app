@@ -1,7 +1,8 @@
 use super::*;
 use std::{
     fmt::Debug,
-    hash::Hasher, borrow::Borrow,
+    hash::Hasher,
+    borrow::Borrow,
 };
 
 #[derive(Debug, Eq, Clone, Copy)]

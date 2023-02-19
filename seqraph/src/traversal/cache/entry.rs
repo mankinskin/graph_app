@@ -8,9 +8,44 @@ pub enum CacheEdge {
     BottomUp(SubLocation),
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct VertexCache {
+    pub(crate) positions: HashMap<TokenLocation, PositionCache>
+}
+impl VertexCache {
+    pub fn start(index: Child) -> Self {
+        let mut positions = HashMap::default();
+        positions.insert(
+            index.width().into(),
+            PositionCache::start(index)
+        );
+        Self {
+            positions,
+        }
+    }
+    pub(crate)fn new_position<
+        Trav: Traversable,
+    >(
+        &mut self,
+        trav: &Trav,
+        key: CacheKey,
+        state: &TraversalState,
+    ) {
+        let ve = PositionCache::new(
+            trav,
+            key.index,
+            state
+        );
+        self.positions.insert(
+            key.pos,
+            ve,
+        );
+    }
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PositionCache {
     pub back_edges: HashMap<CacheKey, CacheEdge>,
     pub num_parents: usize,
+    // for debugging
     pub index: Child,
     pub waiting: Vec<(StateDepth, WaitingState)>,
 }
@@ -27,10 +62,10 @@ impl PositionCache {
     pub fn new<
         Trav: Traversable,
     >(
-        trav: &Trav,
+        _trav: &Trav,
+        index: Child,
         state: &TraversalState,
     ) -> Self {
-        //let cache_node = CacheNode::new(node);
         let mut edges = HashMap::default();
         let num_parents = if let (prev, Some(entry)) = (state.prev_key(), state.entry_location()) {
             match state.node_direction() {
@@ -47,9 +82,9 @@ impl PositionCache {
             0
         };
         Self {
+            index,
             back_edges: edges,
             num_parents,
-            index: state.target_key(trav).index,
             waiting: Default::default(),
         }
     }
@@ -64,23 +99,3 @@ impl PositionCache {
         self.num_parents
     }
 }
-///// Bottom-Up Cache Entry
-//#[derive(Clone, Debug, PartialEq, Eq)]
-//pub struct VertexCache {
-//    pub(crate) positions: HashMap<usize, PositionCache>
-//}
-//impl VertexCache {
-//    pub(crate)fn new_position(
-//        &mut self,
-//        key: CacheKey,
-//        state: &TraversalState,
-//    ) {
-//        let cache = PositionCache::new(
-//            state,
-//        );
-//        self.positions.insert(
-//            key.token_pos,
-//            cache,
-//        );
-//    }
-//}

@@ -1,7 +1,7 @@
 use crate::*;
 
-pub mod path;
-pub use path::*;
+pub mod traversal;
+pub use traversal::*;
 
 pub mod end;
 pub use end::*;

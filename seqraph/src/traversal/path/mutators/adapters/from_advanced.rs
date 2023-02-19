@@ -21,7 +21,7 @@ pub trait FromAdvanced<A: Advanced> {
 //}
 impl FromAdvanced<SearchPath> for RolePath<Start> {
     fn from_advanced<
-        Trav: Traversable
+        Trav: Traversable,
     >(path: SearchPath, _trav: &Trav) -> Self {
         path.start
     }

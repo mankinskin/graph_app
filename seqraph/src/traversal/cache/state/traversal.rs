@@ -13,7 +13,7 @@ pub struct ParentState {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChildState {
-    pub root: CacheKey,
+    //pub root: CacheKey,
     pub paths: PathPair,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -21,13 +21,12 @@ pub struct TraversalState {
     pub prev: CacheKey,
     pub matched: bool,
     pub kind: InnerKind,
-    //pub query: QueryState,
 }
 impl TraversalState {
     pub fn entry_location(&self) -> Option<ChildLocation> {
         match &self.kind {
             InnerKind::Parent(state) => Some(state.path.root_child_location()),
-            InnerKind::Child(state) => state.paths.path().role_leaf_child_location::<End>(),
+            InnerKind::Child(state) => state.paths.path.role_leaf_child_location::<End>(),
             InnerKind::End(state) => state.entry_location(),
         }
     }

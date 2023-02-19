@@ -282,96 +282,116 @@ fn find_ancestor3() {
                     cache: TraversalCache {
                         query_root: query.clone(),
                         entries: HashMap::from_iter([
-                            (6, PositionCache {
-                                back_edges: Default::default(),
-                                index: Child {
-                                    index: 6,
-                                    width: 2,
-                                },
-                                waiting: Default::default(),
-                                num_parents: 0,
-                            }),
-                            (12, PositionCache {
-                                back_edges: HashMap::from_iter([
-                                    (CacheKey {
-                                        index: Child {
-                                            index: 10,
-                                            width: 3,
-                                        },
-                                        token_pos: 0,
-                                    }, CacheEdge::BottomUp(SubLocation {
-                                        pattern_id: 9,
-                                        sub_index: 0,
-                                    })),
-                                ]),
-                                index: Child {
-                                    index: 12,
-                                    width: 5,
-                                },
-                                waiting: Default::default(),
-                                num_parents: 0,
-                            }),
-                            (4, PositionCache {
-                                back_edges: HashMap::from_iter([
-                                    (CacheKey {
-                                        index: Child {
-                                            index: 11,
-                                            width: 4,
-                                        },
-                                        token_pos: 0,
-                                    }, CacheEdge::TopDown(SubLocation {
-                                        pattern_id: 6,
-                                        sub_index: 1,
-                                    })),
-                                ]),
-                                index: Child {
-                                    index: 4,
-                                    width: 1,
-                                },
-                                waiting: vec![
-                                ],
-                                num_parents: 0,
-                            }),
-                            (11, PositionCache {
-                                back_edges: HashMap::from_iter([
-                                    (CacheKey {
-                                        index: Child {
-                                            index: 10,
-                                            width: 3,
-                                        },
-                                        token_pos: 0,
-                                    }, CacheEdge::BottomUp(SubLocation {
-                                        pattern_id: 6,
-                                        sub_index: 0,
-                                    })),
-                                ]),
-                                index: Child {
-                                    index: 11,
-                                    width: 4,
-                                },
-                                waiting: Default::default(),
-                                num_parents: 0,
-                            }),
-                            (10, PositionCache {
-                                back_edges: HashMap::from_iter([
-                                    (CacheKey {
+                            (6, VertexCache {
+                                positions: HashMap::from_iter([
+                                    (0.into(), PositionCache {
+                                        back_edges: Default::default(),
                                         index: Child {
                                             index: 6,
                                             width: 2,
                                         },
-                                        token_pos: 0,
-                                    }, CacheEdge::BottomUp(SubLocation {
-                                        pattern_id: 4,
-                                        sub_index: 1,
-                                    })),
-                                ]),
-                                index: Child {
-                                    index: 10,
-                                    width: 3,
-                                },
-                                waiting: vec![
-                                ],
-                                num_parents: 0,
+                                        waiting: Default::default(),
+                                        num_parents: 0,
+                                    })
+                                ])
+                            }),
+                            (12, VertexCache {
+                                positions: HashMap::from_iter([
+                                    (0.into(), PositionCache {
+                                        back_edges: HashMap::from_iter([
+                                            (CacheKey {
+                                                index: Child {
+                                                    index: 10,
+                                                    width: 3,
+                                                },
+                                                pos: Default::default(),
+                                            }, CacheEdge::BottomUp(SubLocation {
+                                                pattern_id: 9,
+                                                sub_index: 0,
+                                            })),
+                                        ]),
+                                        index: Child {
+                                            index: 12,
+                                            width: 5,
+                                        },
+                                        waiting: Default::default(),
+                                        num_parents: 0,
+                                    })
+                                ])
+                            }),
+                            (4, VertexCache {
+                                positions: HashMap::from_iter([
+                                    (0.into(), PositionCache {
+                                        back_edges: HashMap::from_iter([
+                                            (CacheKey {
+                                                index: Child {
+                                                    index: 11,
+                                                    width: 4,
+                                                },
+                                                pos: Default::default(),
+                                            }, CacheEdge::TopDown(SubLocation {
+                                                pattern_id: 6,
+                                                sub_index: 1,
+                                            })),
+                                        ]),
+                                        index: Child {
+                                            index: 4,
+                                            width: 1,
+                                        },
+                                        waiting: vec![
+                                        ],
+                                        num_parents: 0,
+                                    })
+                                ])
+                            }),
+                            (11, VertexCache {
+                                positions: HashMap::from_iter([
+                                    (0.into(), PositionCache {
+                                        back_edges: HashMap::from_iter([
+                                            (CacheKey {
+                                                index: Child {
+                                                    index: 10,
+                                                    width: 3,
+                                                },
+                                                pos: Default::default(),
+                                            }, CacheEdge::BottomUp(SubLocation {
+                                                pattern_id: 6,
+                                                sub_index: 0,
+                                            })),
+                                        ]),
+                                        index: Child {
+                                            index: 11,
+                                            width: 4,
+                                        },
+                                        waiting: Default::default(),
+                                        num_parents: 0,
+                                    })
+                                ])
+                            }),
+                            (10, VertexCache {
+                                positions: HashMap::from_iter([
+                                    (0.into(), PositionCache {
+                                        back_edges: HashMap::from_iter([
+                                            (CacheKey {
+                                                index: Child {
+                                                    index: 6,
+                                                    width: 2,
+                                                },
+                                                pos: Default::default(),
+                                            }, CacheEdge::BottomUp(SubLocation {
+                                                pattern_id: 4,
+                                                sub_index: 1,
+                                            })),
+                                        ]),
+                                        index: Child {
+                                            index: 10,
+                                            width: 3,
+                                        },
+                                        waiting: vec![
+                                        ],
+                                        num_parents: 0,
+                                    })
+                                ])
                             }),
                         ]),
                     },
@@ -382,12 +402,15 @@ fn find_ancestor3() {
                                 kind: EndKind::Postfix(
                                     RootedRolePath {
                                         split_path: RootedSplitPath {
-                                            root: PatternLocation {
-                                                parent: Child {
-                                                    index: 11,
-                                                    width: 4,
+                                            root: IndexRoot {
+                                                location: PatternLocation {
+                                                    parent: Child {
+                                                        index: 11,
+                                                        width: 4,
+                                                    },
+                                                    pattern_id: 6,
                                                 },
-                                                pattern_id: 6,
+                                                pos: 0.into(),
                                             },
                                             sub_path: SubPath {
                                                 root_entry: 0,
@@ -421,6 +444,7 @@ fn find_ancestor3() {
                                         },
                                         _ty: Default::default(),
                                     },
+                                    pos: 3.into(),
                                 },
                             },
                         },

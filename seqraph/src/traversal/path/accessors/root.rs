@@ -130,12 +130,12 @@ impl<'c> PatternRoot for CachedQuery<'c> {
 //impl_root! { RootChild for RolePath, self => self.child_location().parent }
 //impl_root! { RootChild for PathLeaf, self => self.child_location().parent }
 
-impl_root! { GraphRootPattern for SearchPath, self => self.root }
-impl_root! { GraphRootPattern for RootedSplitPath<PatternLocation>, self => self.root }
+impl_root! { GraphRootPattern for SearchPath, self => self.root.location }
+impl_root! { GraphRootPattern for RootedSplitPath<IndexRoot>, self => self.root.location }
 //impl_root! { GraphRootPattern for RolePath, self => self.child_location().into_pattern_location() }
 //impl_root! { GraphRootPattern for PathLeaf, self => self.child_location().into_pattern_location() }
 impl_root! { GraphRoot for SearchPath, self => self.root_pattern_location().parent }
-impl_root! { GraphRoot for RootedSplitPath<PatternLocation>, self => self.root.parent }
+impl_root! { GraphRoot for RootedSplitPath<IndexRoot>, self => self.root.location.parent }
 
 //impl<R: ResultKind, Q: BaseQuery> GraphRoot for TraversalState<R, Q> {
 //    fn root_parent(&self) -> Child {
@@ -164,12 +164,12 @@ impl<P: MatchEndPath + GraphRoot> GraphRoot for MatchEnd<P> {
         }
     }
 }
-impl<R: PathRole> GraphRoot for RootedRolePath<R, PatternLocation> {
+impl<R: PathRole> GraphRoot for RootedRolePath<R, IndexRoot> {
     fn root_parent(&self) -> Child {
         self.split_path.root_parent()
     }
 }
-impl<R: PathRole> GraphRootPattern for RootedRolePath<R, PatternLocation> {
+impl<R: PathRole> GraphRootPattern for RootedRolePath<R, IndexRoot> {
     fn root_pattern_location(&self) -> PatternLocation {
         self.split_path.root_pattern_location()
     }
@@ -185,7 +185,7 @@ impl<R: PathRole> GraphRootPattern for RootedRolePath<R, PatternLocation> {
 impl_root! { RootPattern for QueryRangePath, self, _trav => PatternRoot::pattern_root_pattern(self) }
 
 impl_root! { RootPattern for SearchPath, self, trav => GraphRootPattern::graph_root_pattern::<Trav>(self, trav) }
-impl_root! { RootPattern for RootedSplitPath<PatternLocation>, self, trav => GraphRootPattern::graph_root_pattern::<Trav>(self, trav) }
+impl_root! { RootPattern for RootedSplitPath<IndexRoot>, self, trav => GraphRootPattern::graph_root_pattern::<Trav>(self, trav) }
 //impl_root! { RootPattern for RolePath, self, trav => GraphRoot::graph_root_pattern(self, trav).borrow() }
 //impl_root! { RootPattern for PathLeaf, self, trav => GraphRoot::graph_root_pattern(self, trav).borrow() }
 impl<R: PathRole> RootPattern for RootedRolePath<R> {

@@ -47,11 +47,12 @@ pub trait TraversalFolder<
                             //states.prune_not_below(state.root_key());
                         }
                         if let Some(root_key) = next.inner.waiting_root_key() {
+                            // this must happen before simplification
                             states.extend(
                                 cache.continue_waiting(&root_key)
                             );
                         }
-                        end_states.push(next.inner);
+                        end_states.push(next.inner.into_simplified(self));
                     } else {
                         // stop other paths with this root
                         states.prune_below(next.inner.root_key());
@@ -65,6 +66,7 @@ pub trait TraversalFolder<
                     );
                 },
             }
+
         }
         Ok(if end_states.is_empty() {
             TraversalResult {
@@ -150,7 +152,7 @@ pub struct FoldResult {
     pub final_states: Vec<FinalState>,
 }
 impl FoldResult {
-    pub fn root_entry(&self) -> &PositionCache {
+    pub fn root_entry(&self) -> &VertexCache {
         self.cache.entries.get(&self.root_index().index()).unwrap()
     }
     pub fn root_index(&self) -> Child {

@@ -82,6 +82,16 @@ impl PathSimplify for EndKind {
         }
     }
 }
+impl PathSimplify for EndState {
+    fn into_simplified<
+        Trav: Traversable,
+    >(self, trav: &Trav) -> Self {
+        Self {
+            kind: self.kind.into_simplified(trav),
+            query: self.query
+        }
+    }
+}
 //impl<R: PathRole> PathSimplify for RolePath<R> {
 //    fn into_simplified<
 //        Trav: Traversable,

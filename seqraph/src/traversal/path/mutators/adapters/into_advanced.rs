@@ -54,22 +54,20 @@ impl IntoAdvanced for RootedRolePath<Start> {
         let graph = trav.graph();
         let pattern = self.root_pattern::<Trav>(&graph).clone();
         if let Some(next) = TravDir::<Trav>::pattern_index_next(pattern.borrow(), entry.sub_index) {
-            //let exit = entry.clone().to_child_location(next);
-            //let child = pattern[next];
             Ok(SearchPath {
-                root: entry.into_pattern_location(),
+                root: IndexRoot {
+                    location: entry.into_pattern_location(),
+                    pos: self.split_path.root.pos,
+                },
+                start: RolePath {
+                    sub_path: self.split_path.sub_path,
+                    _ty: Default::default(),
+                },
                 end: RolePath {
                     sub_path: SubPath {
                         root_entry: next,
                         path: vec![],
                     }.into(),
-                    //width: child.width(),
-                    //token_pos: self.token_pos + child.width(),
-                    //child,
-                    _ty: Default::default(),
-                },
-                start: RolePath {
-                    sub_path: self.split_path.sub_path,
                     _ty: Default::default(),
                 },
             })

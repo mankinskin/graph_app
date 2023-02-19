@@ -36,19 +36,19 @@ impl RootChild<Start> for SearchPath {
     fn root_child<
         Trav: Traversable,
     >(&self, trav: &Trav) -> Child {
-        trav.graph().expect_child_at(self.path_root().to_child_location(self.start.sub_path.root_entry))
+        trav.graph().expect_child_at(self.path_root().location.to_child_location(self.start.sub_path.root_entry))
     }
 }
 impl RootChild<End> for SearchPath {
     fn root_child<
         Trav: Traversable,
     >(&self, trav: &Trav) -> Child {
-        trav.graph().expect_child_at(self.path_root().to_child_location(self.end.sub_path.root_entry))
+        trav.graph().expect_child_at(self.path_root().location.to_child_location(self.end.sub_path.root_entry))
     }
 }
 //impl_child! { RootChild for PathLeaf, self, trav => self.root_child(trav) }
 impl_child! { RootChild for RootedRolePath<R>, self, trav =>
-    trav.graph().expect_child_at(self.path_root().to_child_location(RootChildPos::<R>::root_child_pos(&self.split_path)))
+    trav.graph().expect_child_at(self.path_root().location.to_child_location(RootChildPos::<R>::root_child_pos(&self.split_path)))
 }
 
 impl<'c, R: PathRole> RootChild<R> for CachedQuery<'c>
@@ -56,7 +56,7 @@ impl<'c, R: PathRole> RootChild<R> for CachedQuery<'c>
 {
     fn root_child<
         Trav: Traversable,
-    >(&self, trav: &Trav) -> Child {
+    >(&self, _trav: &Trav) -> Child {
         self.pattern_root_child()
     }
 }
@@ -88,17 +88,17 @@ pub trait GraphRootChild<R>: GraphRootPattern + RootChildPos<R> {
 //}
 impl GraphRootChild<Start> for SearchPath {
     fn root_child_location(&self) -> ChildLocation {
-        self.root.to_child_location(self.start.root_entry)
+        self.root.location.to_child_location(self.start.root_entry)
     }
 }
 impl GraphRootChild<End> for SearchPath {
     fn root_child_location(&self) -> ChildLocation {
-        self.root.to_child_location(self.end.root_entry)
+        self.root.location.to_child_location(self.end.root_entry)
     }
 }
-impl<R: PathRole> GraphRootChild<R> for RootedRolePath<R, PatternLocation> {
+impl<R: PathRole> GraphRootChild<R> for RootedRolePath<R, IndexRoot> {
     fn root_child_location(&self) -> ChildLocation {
-        self.path_root().to_child_location(self.split_path.sub_path.root_entry)
+        self.path_root().location.to_child_location(self.split_path.sub_path.root_entry)
     }
 }
 //impl<R> GraphRootChild<R> for PathLeaf {

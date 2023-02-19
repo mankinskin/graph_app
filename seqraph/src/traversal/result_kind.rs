@@ -180,10 +180,9 @@ pub trait Advanced:
     + HasRolePath<End>
     + GraphRootChild<Start>
     + GraphRootChild<End>
-    + GetCacheKey
     + LeafChild<Start>
     + LeafChild<End>
-    + AdvanceRootPos<End>
+    + MoveRootPos<Right, End>
     + RootChildPosMut<End>
     + GraphRoot
     + PathAppend
@@ -196,12 +195,11 @@ impl<
     + BasePath
     + HasRolePath<Start>
     + HasRolePath<End>
-    + GetCacheKey
     + GraphRootChild<Start>
     + GraphRootChild<End>
     + LeafChild<Start>
     + LeafChild<End>
-    + AdvanceRootPos<End>
+    + MoveRootPos<Right, End>
     + RootChildPosMut<End>
     + PathAppend
 > Advanced for T {

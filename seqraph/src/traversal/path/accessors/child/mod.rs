@@ -84,7 +84,7 @@ impl<R: PathRole> PathChild<R> for SearchPath
     fn path_child_location(&self) -> Option<ChildLocation> {
         Some(
             R::bottom_up_iter(self.path().iter()).next().cloned()
-            .unwrap_or(self.root.to_child_location(self.role_path().root_entry))
+            .unwrap_or(self.root.location.to_child_location(self.role_path().root_entry))
         )
     }
     fn path_child<

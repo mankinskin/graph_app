@@ -1,25 +1,29 @@
 use crate::*;
 
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct QueryRangePath {
-    pub root: Pattern,
-    pub start: RolePath<Start>,
-    pub end: RolePath<End>,
-}
-impl QueryRangePath {
-    pub fn new_postfix(query: impl IntoPattern, entry: usize) -> Self {
-        let query = query.into_pattern();
-        let len = query.len();
-        Self::new_range(query, entry, len)
-    }
-}
+//#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+//pub struct QueryRangePath {
+//    pub root: Pattern,
+//    pub start: RolePath<Start>,
+//    pub end: RolePath<End>,
+//    pub pos: TokenLocation,
+//}
+pub type QueryRangePath = RootedRangePath<Pattern>;
+
+//impl QueryRangePath {
+//    pub fn new_postfix(query: impl IntoPattern, entry: usize) -> Self {
+//        let query = query.into_pattern();
+//        let len = query.len();
+//        Self::new_range(query, entry, len)
+//    }
+//}
+
 pub trait QueryPath:
     BaseQuery
     //+ LeafChildPosMut<End>
     + PathAppend
     + PathPop
-    + AdvanceRootPos<End>
+    + MoveRootPos<Right, End>
 {
     fn complete(pattern: impl IntoPattern) -> Self;
     fn new_directed<

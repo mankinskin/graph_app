@@ -29,7 +29,6 @@ impl NextStates {
                     .map(|s| TraversalState {
                         prev: state.prev,
                         matched: state.matched,
-                        //query: state.query,
                         kind: InnerKind::Parent(s.clone())
                     })
                     .collect_vec(),
@@ -39,7 +38,6 @@ impl NextStates {
                         TraversalState {
                             prev: state.prev,
                             matched: state.matched,
-                            //query: state.query,
                             kind: InnerKind::Child(s.clone()),
                         }
                     )
@@ -48,14 +46,12 @@ impl NextStates {
                 vec![TraversalState {
                     prev: state.prev,
                     matched: state.matched,
-                    //query: state.query,
                     kind: InnerKind::End(state.inner),
                 }],
             Self::Child(state) =>
                 vec![TraversalState {
                     prev: state.prev,
                     matched: state.matched,
-                    //query: state.query,
                     kind: InnerKind::Child(state.inner),
                 }],
             Self::Empty => vec![],
@@ -172,8 +168,12 @@ pub trait TraversalIterator<
                     matched,
                     //query: query.state,
                     inner: ChildState {
-                        root: key,
-                        paths: PathPair::GraphMajor(path, state.query)
+                        //root: key,
+                        paths: PathPair::new(
+                            path,
+                            state.query,
+                            PathPairMode::GraphMajor,
+                        )
                     }
                 },
             ),
@@ -205,7 +205,8 @@ pub trait TraversalIterator<
                 prev: key,
                 matched,
                 inner: EndState {
-                    kind: EndKind::from(postfix.into_simplified(self.trav())),
+                    // todo: proxy state to delay simplification
+                    kind: EndKind::from(postfix),
                     query: query.state,
                 },
             })
@@ -228,11 +229,14 @@ pub trait TraversalIterator<
         state: ChildState,
     ) -> NextStates {
         let ChildState {
-            root,
+            //root,
             paths,
         } = state;
-        let mode = paths.mode();
-        let (path, query) = paths.unpack();
+        let PathPair {
+            query,
+            path,
+            mode,
+        } = paths;
         let query = query.to_cached(cache);
         let path_leaf = path.role_leaf_child::<End, _>(self.trav());
         let query_leaf = query.role_leaf_child::<End, _>(self.trav());
@@ -247,7 +251,7 @@ pub trait TraversalIterator<
                         query,
                         prev,
                         key,
-                        root,
+                        //root,
                     )
                 } else if path_leaf.width() == 1 {
                     self.on_mismatch(
@@ -263,16 +267,24 @@ pub trait TraversalIterator<
                         matched,
                         //query: query.state,
                         inner: self.prefix_states(
-                            root, 
+                            //root, 
                             path_leaf,
-                            PathPair::GraphMajor(path.clone(), query.state.clone()),
+                            PathPair::new(
+                                path.clone(),
+                                query.state.clone(),
+                                PathPairMode::GraphMajor,
+                            ),
                         )
                         .into_iter()
                         .chain(
                             self.prefix_states(
-                                root,
+                                //root,
                                 query_leaf,
-                                PathPair::QueryMajor(query.state, path),
+                                PathPair::new(
+                                    path,
+                                    query.state,
+                                    PathPairMode::QueryMajor,
+                                ),
                             )
                         )
                         .collect_vec()
@@ -285,9 +297,13 @@ pub trait TraversalIterator<
                     matched,
                     //query: query.state,
                     inner: self.prefix_states(
-                        root,
+                        //root,
                         path_leaf,
-                        PathPair::GraphMajor(path, query.state),
+                        PathPair::new(
+                            path,
+                            query.state,
+                            PathPairMode::GraphMajor,
+                        ),
                     )
                 }),
             Ordering::Less =>
@@ -296,9 +312,13 @@ pub trait TraversalIterator<
                     matched,
                     //query: query.state,
                     inner: self.prefix_states(
-                        root, 
+                        //root, 
                         query_leaf,
-                        PathPair::QueryMajor(query.state, path),
+                        PathPair::new(
+                            path,
+                            query.state,
+                            PathPairMode::QueryMajor,
+                        ),
                     )
                 }),
         }
@@ -310,18 +330,16 @@ pub trait TraversalIterator<
         mut query: CachedQuery<'_>,
         prev: CacheKey,
         key: CacheKey,
-        root: CacheKey,
+        //root: CacheKey,
     ) -> NextStates {
-        //path.add_match_width::<_, D, _>(self.trav());
         if query.advance(self.trav()).is_continue() {
             if path.advance(self.trav()).is_continue() {
                 NextStates::Child(NextMatched {
                     prev,
                     matched: true,
-                    //query: query.state,
                     inner: ChildState {
-                        root,
-                        paths: PathPair::from_mode(path, query.state, mode)
+                        //root,
+                        paths: PathPair::new(path, query.state, mode)
                     }
                 })
             } else {
@@ -334,7 +352,7 @@ pub trait TraversalIterator<
             }
         } else {
             //path.child_path_mut::<End>().simplify::<_, D, _>(self.trav());
-            self.on_end(
+            self.on_range_end(
                 true,
                 path,
                 query.state,
@@ -343,7 +361,7 @@ pub trait TraversalIterator<
             )
         }
     }
-    fn on_end(
+    fn on_range_end(
         &mut self,
         matched: bool,
         path: SearchPath,
@@ -354,13 +372,12 @@ pub trait TraversalIterator<
         NextStates::End(NextMatched {
             prev: key,
             matched,
-            //query,
             inner: EndState {
                 query,
                 kind: EndKind::Range(RangeEnd {
                     kind: range_kind,
-                    path: path,
-                }).into_simplified(self.trav())
+                    path,
+                })
             }
         })
     }
@@ -372,7 +389,7 @@ pub trait TraversalIterator<
         key: CacheKey,
     ) -> NextStates {
         path.retract(self.trav());
-        self.on_end(
+        self.on_range_end(
             matched,
             path,
             query,
@@ -383,7 +400,7 @@ pub trait TraversalIterator<
     /// generate child states for index prefixes
     fn prefix_states(
         &self,
-        root: CacheKey,
+        //root: CacheKey,
         index: Child,
         paths: PathPair,
     ) -> Vec<ChildState> {
@@ -396,7 +413,7 @@ pub trait TraversalIterator<
                 let mut paths = paths.clone();
                 paths.push_major(ChildLocation::new(index, pid, sub_index));
                 ChildState {
-                    root,
+                    //root,
                     paths,
                 }
             })

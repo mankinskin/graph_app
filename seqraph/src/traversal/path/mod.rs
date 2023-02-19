@@ -8,12 +8,9 @@ pub use mutators::*;
 
 use crate::*;
 
-use std::hash::Hash;
-
 pub trait BaseQuery:
     Debug
     + Clone
-    + Hash
     + PartialEq
     + Eq
     + Send
@@ -23,7 +20,6 @@ pub trait BaseQuery:
 impl<T:
     Debug
     + Clone
-    + Hash
     + PartialEq
     + Eq
     + Send

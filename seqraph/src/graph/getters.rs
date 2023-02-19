@@ -6,8 +6,6 @@ use crate::{
     *,
 };
 
-use tokio_stream::StreamExt;
-
 impl<'t, G: GraphKind> Hypergraph<G> {
     pub fn get_vertex(
         &self,

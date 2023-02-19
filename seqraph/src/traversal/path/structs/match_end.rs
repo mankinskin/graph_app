@@ -16,7 +16,6 @@ pub trait MatchEndPath:
     //+ Into<FoundPath>
     //+ GetCacheKey
     + BasePath
-    + Hash
     {}
 
 impl<T:
@@ -30,12 +29,11 @@ impl<T:
     //+ From<PathLeaf>
     //+ Into<FoundPath>
     //+ GetCacheKey
-    + Hash
     + BasePath
 > MatchEndPath for T {}
 
 /// Used to represent results after traversal with only a start path
-#[derive(Clone, Debug, PartialEq, Hash, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MatchEnd<P: MatchEndPath> {
     Path(P),
     Complete(Child),
