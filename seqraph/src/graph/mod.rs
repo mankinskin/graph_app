@@ -5,7 +5,6 @@ use std::{
     fmt::Debug,
 };
 
-type HashMap<K, V> = DeterministicHashMap<K, V>;
 mod child_strings;
 mod getters;
 mod insert;

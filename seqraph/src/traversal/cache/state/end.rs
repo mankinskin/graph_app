@@ -6,36 +6,13 @@ use crate::*;
 // - top down match-query end
 // - bottom up-no matching parents
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum RangeKind {
-    /// when the query has ended.
-    QueryEnd,
-    /// at a mismatch.
-    Mismatch,
-}
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum EndKind {
-    Range(RangeEnd),
-    Postfix(Primer),
-    Prefix(RootedRolePath<End>),
-    Complete(Child),
-}
-impl From<MatchEnd<RootedRolePath<Start>>> for EndKind {
-    fn from(postfix: MatchEnd<RootedRolePath<Start>>) -> Self {
-        match postfix {
-            MatchEnd::Complete(c) => EndKind::Complete(c),
-            MatchEnd::Path(path) => EndKind::Postfix(
-                path.into(),
-            ),
-        }
-    }
-}
-#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RangeEnd {
     pub kind: RangeKind,
     pub path: SearchPath,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EndState {
+    pub root_pos: TokenLocation,
     pub kind: EndKind,
     pub query: QueryState,
 }
@@ -59,7 +36,7 @@ impl EndState {
     }
     pub fn waiting_root_key(&self) -> Option<CacheKey> {
         match &self.kind {
-            EndKind::Range(s) => Some(s.path.root_key()),
+            EndKind::Range(_) => Some(self.root_key()),
             EndKind::Postfix(_) => None,
             EndKind::Prefix(_) => None,
             EndKind::Complete(_) => None,
@@ -67,6 +44,30 @@ impl EndState {
     }
     pub fn is_complete(&self) -> bool {
         matches!(self.kind, EndKind::Complete(_))
+    }
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum EndKind {
+    Range(RangeEnd),
+    Postfix(Primer),
+    Prefix(RootedRolePath<End>),
+    Complete(Child),
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RangeKind {
+    /// when the query has ended.
+    QueryEnd,
+    /// at a mismatch.
+    Mismatch,
+}
+impl From<MatchEnd<RootedRolePath<Start>>> for EndKind {
+    fn from(postfix: MatchEnd<RootedRolePath<Start>>) -> Self {
+        match postfix {
+            MatchEnd::Complete(c) => EndKind::Complete(c),
+            MatchEnd::Path(path) => EndKind::Postfix(
+                path.into(),
+            ),
+        }
     }
 }
 //impl PartialOrd for EndKind {

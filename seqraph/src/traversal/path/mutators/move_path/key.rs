@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(Clone, Debug, Copy, Hash, Eq, PartialEq)]
+#[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, Add, Sub)]
 pub struct TokenLocation {
     pub pos: usize,
 }

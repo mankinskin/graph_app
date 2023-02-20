@@ -7,16 +7,19 @@ use std::{
         Ordering,
     },
 };
-type HashSet<T> = DeterministicHashSet<T>;
-
+lazy_static! {
+    static ref VERTEX_ID_COUNTER: Arc<Mutex<usize>> = Arc::new(Mutex::new(0));
+}
 impl<'t, 'g, G> Hypergraph<G>
 where
     G: GraphKind,
 {
-    fn next_pattern_vertex_id() -> VertexIndex {
-        static VERTEX_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
-        VERTEX_ID_COUNTER.fetch_add(1, Ordering::Relaxed)
-    }
+    //fn next_pattern_vertex_id() -> VertexIndex {
+    //    let mut lock = VERTEX_ID_COUNTER.lock().unwrap();
+    //    let tmp = *lock;
+    //    *lock += 1;
+    //    tmp
+    //}
     /// insert single token node
     pub fn insert_vertex(
         &mut self,
@@ -136,7 +139,7 @@ where
         let (width, indices, children) = self.to_width_indices_children(indices);
         let mut new_data = VertexData::new(0, width);
         let pattern_index = new_data.add_pattern_no_update(children);
-        let id = Self::next_pattern_vertex_id();
+        let id = self.vertex_count(); //Self::next_pattern_vertex_id();
         let index = self.insert_vertex(VertexKey::Pattern(id), new_data);
         self.add_parents_to_pattern_nodes(indices, Child::new(index, width), pattern_index);
         (index, pattern_index)

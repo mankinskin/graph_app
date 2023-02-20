@@ -17,24 +17,25 @@ pub trait DirectedTraversalPolicy: Sized {
     /// (parent nodes)
     fn next_parents(
         trav: &Self::Trav,
-        postfix: &Postfix,
-        query: &QueryState,
+        parent: &ParentState,
     ) -> Vec<ParentState> {
         Self::gen_parent_states(
             trav,
-            query,
-            postfix.root_parent(),
-            |trav, p| postfix.clone().into_primer(trav, p)
+            parent.path.root_parent(),
+            |trav, p| {
+                let mut parent = parent.clone();
+                parent.path_raise(trav, p);
+                parent
+            }
         )
     }
     /// generates parent nodes
     fn gen_parent_states<
-        B: (Fn(&Self::Trav, ChildLocation) -> Primer) + Copy,
+        B: (Fn(&Self::Trav, ChildLocation) -> ParentState) + Copy,
     >(
         trav: &Self::Trav,
-        query: &QueryState,
         index: Child,
-        build_start: B,
+        build_parent: B,
     ) -> Vec<ParentState> {
         trav.graph()
             .expect_vertex_data(index)
@@ -49,12 +50,12 @@ pub trait DirectedTraversalPolicy: Sized {
                         ChildLocation::new(p, pi.pattern_id, pi.sub_index)
                     })
             })
-            .sorted_unstable_by(|a, b| TraversalOrder::cmp(a, b))
+            .sorted_by(|a, b| TraversalOrder::cmp(a, b))
             .map(|p| {
-                ParentState {
-                    path: build_start(trav, p),
-                    query: query.clone(),
-                }
+                build_parent(
+                    trav,
+                    p,
+                )
             })
             .collect()
         

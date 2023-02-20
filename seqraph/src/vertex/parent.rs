@@ -2,8 +2,6 @@ use super::*;
 use std::{
     fmt::Debug,
 };
-type HashMap<K, V> = DeterministicHashMap<K, V>;
-type HashSet<T> = DeterministicHashSet<T>;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct PatternIndex {

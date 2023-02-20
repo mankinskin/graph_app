@@ -139,8 +139,7 @@ impl<
     }
     fn next_parents(
         _trav: &Self::Trav,
-        _start: &Postfix,
-        _query: &QueryState,
+        _state: &ParentState,
     ) -> Vec<ParentState> {
         vec![]
     }

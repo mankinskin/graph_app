@@ -7,18 +7,22 @@ pub trait IntoPrimer: Sized {
         self,
         trav: &Trav,
         parent_entry: ChildLocation,
-    ) -> Primer;
+    ) -> ParentState;
 }
-impl IntoPrimer for MatchEnd<RootedRolePath<Start>>{
+impl IntoPrimer for (Child, QueryState) {
     fn into_primer<
         Trav: Traversable,
     >(
         self,
-        trav: &Trav,
+        _trav: &Trav,
         parent_entry: ChildLocation,
-    ) -> Primer {
-        Primer::from(match self {
-            Self::Complete(c) => RootedRolePath {
+    ) -> ParentState {
+        let (c, query) = self;
+        let width = c.width().into();
+        ParentState {
+            prev_pos: width,
+            root_pos: width,
+            path: RootedRolePath {
                 split_path: RootedSplitPath {
                     sub_path: SubPath {
                         root_entry: parent_entry.sub_index,
@@ -26,15 +30,11 @@ impl IntoPrimer for MatchEnd<RootedRolePath<Start>>{
                     },
                     root: IndexRoot {
                         location: parent_entry.into_pattern_location(),
-                        pos: c.width().into(),
                     },
                 },
                 _ty: Default::default(),
             },
-            Self::Path(mut path) => {
-                path.path_raise(trav, parent_entry);
-                path
-            },
-        })
+            query,
+        }
     }
 }

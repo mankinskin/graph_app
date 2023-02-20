@@ -45,9 +45,12 @@ impl MoveRootPos<Right, End> for CachedQuery<'_> {
         Trav: Traversable,
     >(&mut self, _trav: &Trav) -> ControlFlow<()> {
         let pattern = &self.cache.query_root;
-        let exit = self.state.end.root_child_pos_mut();
-        if let Some(next) = TravDir::<Trav>::pattern_index_next(pattern.borrow(), *exit) {
-            *exit = next;
+        if let Some(next) = TravDir::<Trav>::pattern_index_next(
+            pattern.borrow(),
+            self.state.end.root_child_pos(),
+        ) {
+            self.advance_key(pattern[self.state.end.root_child_pos()].width());
+            *self.state.end.root_child_pos_mut() = next;
             ControlFlow::CONTINUE
         } else {
             ControlFlow::BREAK
@@ -59,9 +62,12 @@ impl MoveRootPos<Left, End> for CachedQuery<'_> {
         Trav: Traversable,
     >(&mut self, _trav: &Trav) -> ControlFlow<()> {
         let pattern = &self.cache.query_root;
-        let exit = self.state.end.root_child_pos_mut();
-        if let Some(prev) = TravDir::<Trav>::pattern_index_prev(pattern.borrow(), *exit) {
-            *exit = prev;
+        if let Some(prev) = TravDir::<Trav>::pattern_index_prev(
+            pattern.borrow(),
+            self.state.end.root_child_pos(),
+        ) {
+            self.retract_key(pattern[self.state.end.root_child_pos()].width());
+            *self.state.end.root_child_pos_mut() = prev;
             ControlFlow::CONTINUE
         } else {
             ControlFlow::BREAK

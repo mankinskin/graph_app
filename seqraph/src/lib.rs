@@ -48,6 +48,7 @@ pub use {
     tracing::*,
     tracing_test::traced_test,
     itertools::*,
+    derive_more::{Add, Sub},
     std::{
         fmt::Debug,
         ops::{
@@ -65,8 +66,6 @@ pub use {
         },
         marker::PhantomData,
         collections::{
-            HashSet,
-            HashMap,
             hash_map::DefaultHasher,
         },
         hash::{
@@ -80,6 +79,7 @@ pub use {
             RwLock,
             RwLockReadGuard,
             RwLockWriteGuard,
+            Mutex,
         },
         iter::FromIterator,
     },
@@ -116,9 +116,9 @@ pub use {
         },
     },
 };
-pub type DeterministicHashSet<T> =
-    HashSet<T,
+pub type HashSet<T> =
+    std::collections::HashSet<T,
         BuildHasherDefault<DefaultHasher>
     >;
-pub type DeterministicHashMap<K, V> =
-    HashMap<K, V, BuildHasherDefault<DefaultHasher>>;
+pub type HashMap<K, V> =
+    std::collections::HashMap<K, V, BuildHasherDefault<DefaultHasher>>;

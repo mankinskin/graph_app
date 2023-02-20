@@ -98,7 +98,7 @@ lazy_static::lazy_static! {
                 [abcdef, ghi]
             ]);
             let aba = graph.insert_pattern([ab, a]);
-            // 5
+            // 25
             let abab = graph.insert_patterns([
                 [aba, b],
                 [ab, ab],

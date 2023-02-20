@@ -9,8 +9,6 @@ use std::{
     },
     borrow::Borrow,
 };
-type HashSet<T> = DeterministicHashSet<T>;
-type HashMap<K, V> = DeterministicHashMap<K, V>;
 
 pub mod indexed;
 pub mod vertexed;
@@ -48,6 +46,9 @@ pub enum VertexKey<T: Tokenize> {
     Token(Token<T>),
     Pattern(VertexIndex),
 }
+lazy_static! {
+    static ref PATTERN_ID_COUNTER: Arc<Mutex<usize>> = Arc::new(Mutex::new(0));
+}
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct VertexData {
     pub index: VertexIndex,
@@ -57,8 +58,10 @@ pub struct VertexData {
 }
 impl VertexData {
     fn next_child_pattern_id() -> PatternId {
-        static PATTERN_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
-        PATTERN_ID_COUNTER.fetch_add(1, Ordering::Relaxed)
+        let mut lock = PATTERN_ID_COUNTER.lock().unwrap();
+        let tmp = *lock;
+        *lock = tmp + 1;
+        tmp
     }
     pub fn new(
         index: VertexIndex,
@@ -216,7 +219,7 @@ impl VertexData {
         }
         let id = Self::next_child_pattern_id();
         self.children.insert(id, pat.into_pattern());
-        //self.validate();
+        self.validate();
         id
     }
     #[track_caller]

@@ -36,17 +36,17 @@ impl_query_pos! {
 impl_query_pos! {
     QueryPosition for EndState, self => self.query.pos
 }
-impl_query_pos! {
-    QueryPosition for IndexRoot, self => self.pos
-}
-impl QueryPosition for SearchPath {
-    fn query_pos(&self) -> &TokenLocation {
-        &self.root.pos
-    }
-    fn query_pos_mut(&mut self) -> &mut TokenLocation {
-        &mut self.root.pos
-    }
-}
+//impl_query_pos! {
+//    QueryPosition for IndexRoot, self => self.pos
+//}
+//impl QueryPosition for SearchPath {
+//    fn query_pos(&self) -> &TokenLocation {
+//        &self.root.pos
+//    }
+//    fn query_pos_mut(&mut self) -> &mut TokenLocation {
+//        &mut self.root.pos
+//    }
+//}
 impl QueryPosition for TraversalState {
     fn query_pos(&self) -> &TokenLocation {
         match &self.kind {

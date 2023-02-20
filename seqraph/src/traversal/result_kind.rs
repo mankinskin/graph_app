@@ -83,6 +83,13 @@ pub trait RoleChildPath {
     {
         LeafChild::<R>::leaf_child_location(self)
     }
+    fn role_root_child_pos<
+        R: PathRole,
+    >(&self) -> usize
+        where Self: GraphRootChild<R>
+    {
+        GraphRootChild::<R>::root_child_location(self).sub_index
+    }
     fn role_root_child_location<
         R: PathRole,
     >(&self) -> ChildLocation

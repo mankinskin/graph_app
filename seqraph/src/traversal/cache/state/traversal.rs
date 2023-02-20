@@ -7,13 +7,16 @@ pub struct StartState {
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParentState {
+    pub prev_pos: TokenLocation,
+    pub root_pos: TokenLocation,
     pub path: Primer,
     pub query: QueryState,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChildState {
-    //pub root: CacheKey,
+    pub prev_pos: TokenLocation,
+    pub root_pos: TokenLocation,
     pub paths: PathPair,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]

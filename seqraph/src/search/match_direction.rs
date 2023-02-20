@@ -3,8 +3,6 @@ use itertools::{
     EitherOrBoth,
     Itertools,
 };
-type HashMap<K, V> = DeterministicHashMap<K, V>;
-type HashSet<T> = DeterministicHashSet<T>;
 use std::{fmt::Debug, ops::RangeFrom};
 
 fn to_matching_iterator<'a, I: Indexed + 'a, J: Indexed + 'a>(

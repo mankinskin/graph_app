@@ -52,7 +52,7 @@ pub trait TraversalFolder<
                                 cache.continue_waiting(&root_key)
                             );
                         }
-                        end_states.push(next.inner.into_simplified(self));
+                        end_states.push(next.inner);
                     } else {
                         // stop other paths with this root
                         states.prune_below(next.inner.root_key());

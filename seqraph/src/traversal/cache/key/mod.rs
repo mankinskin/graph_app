@@ -20,7 +20,7 @@ impl From<Child> for CacheKey {
     fn from(index: Child) -> Self {
         Self {
             index,
-            pos: Default::default(),
+            pos: index.width().into(),
         }
     }
 }
@@ -28,11 +28,8 @@ impl From<Child> for CacheKey {
 pub trait GetCacheKey: RootKey + LeafKey {
     fn leaf_key<
         Trav: Traversable,
-    >(&self, trav: &Trav) -> CacheKey {
-        From::from(trav.graph().expect_child_at(self.leaf_location()))
-    }
+    >(&self, trav: &Trav) -> CacheKey;
 }
-impl<T: RootKey + LeafKey> GetCacheKey for T {}
 
 pub trait LeafKey {
     fn leaf_location(&self) -> ChildLocation;
@@ -62,26 +59,34 @@ impl LeafKey for RangeEnd {
 pub trait RootKey {
     fn root_key(&self) -> CacheKey;
 }
-impl RootKey for IndexRoot {
-    fn root_key(&self) -> CacheKey {
-        CacheKey::new(self.location.parent, self.pos)
-    }
-}
-impl RootKey for SearchPath {
-    fn root_key(&self) -> CacheKey {
-        self.root.root_key()
-    }
-}
-impl RootKey for PathPair {
-    fn root_key(&self) -> CacheKey {
-        self.path.root_key()
-    }
-}
+//impl RootKey for IndexRoot {
+//    fn root_key(&self) -> CacheKey {
+//        CacheKey::new(self.location.parent, self.pos)
+//    }
+//}
+//impl RootKey for SearchPath {
+//    fn root_key(&self) -> CacheKey {
+//        self.root.root_key()
+//    }
+//}
+//impl RootKey for PathPair {
+//    fn root_key(&self) -> CacheKey {
+//        self.path.root_key()
+//    }
+//}
 impl RootKey for ParentState {
     fn root_key(&self) -> CacheKey {
-        CacheKey::new(self.path.root_parent(), *self.query_pos())
+        CacheKey::new(
+            self.path.root_parent(),
+            self.root_pos,
+        )
     }
 }
+//impl RootKey for RootedRolePath<Start, IndexRoot> {
+//    fn root_key(&self) -> CacheKey {
+//        self.split_path.root.root_key()
+//    }
+//}
 impl RootKey for StartState {
     fn root_key(&self) -> CacheKey {
         CacheKey::new(self.index, *self.query_pos())
@@ -89,7 +94,20 @@ impl RootKey for StartState {
 }
 impl RootKey for ChildState {
     fn root_key(&self) -> CacheKey {
-        self.paths.root_key()
+        CacheKey::new(
+            self.paths.path.root_parent(),
+            self.root_pos,
+        )
+    }
+}
+impl GetCacheKey for ChildState {
+    fn leaf_key<
+            Trav: Traversable,
+        >(&self, trav: &Trav) -> CacheKey {
+        CacheKey::new(
+            self.paths.path.role_leaf_child::<End, _>(trav),
+            *self.query_pos()
+        )
     }
 }
 impl RootKey for TraversalState {
@@ -104,10 +122,10 @@ impl RootKey for TraversalState {
 impl RootKey for EndState {
     fn root_key(&self) -> CacheKey {
         match &self.kind {
-            EndKind::Range(s) => s.path.root_key(),
-            EndKind::Postfix(path) => CacheKey::new(path.root_parent(), *self.query_pos()),
-            EndKind::Prefix(path) => CacheKey::new(path.root_parent(), *self.query_pos()),
-            EndKind::Complete(c) => CacheKey::new(*c, *self.query_pos()),
+            EndKind::Range(s) => CacheKey::new(s.path.root_parent(), self.root_pos),
+            EndKind::Postfix(path) => CacheKey::new(path.root_parent(), self.root_pos),
+            EndKind::Prefix(path) => CacheKey::new(path.root_parent(), self.root_pos),
+            EndKind::Complete(c) => CacheKey::new(*c, self.root_pos),
         }
     }
 }

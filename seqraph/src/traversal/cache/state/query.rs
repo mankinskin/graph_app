@@ -27,7 +27,7 @@ impl QueryState {
         let query = query.into_pattern();
         let first = *query.first().unwrap();
         let len = query.len();
-        let query = Self::new_range(entry, entry, TokenLocation::default());
+        let query = Self::new_range(entry, entry, first.width().into());
         match len {
             0 => Err((NoMatch::EmptyPatterns, query)),
             1 => Err((NoMatch::SingleIndex(first), query)),

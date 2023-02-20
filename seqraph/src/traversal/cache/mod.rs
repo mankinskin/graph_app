@@ -7,8 +7,6 @@ pub use state::*;
 pub mod key;
 pub use key::*;
 
-type HashMap<K, V> = DeterministicHashMap<K, V>;
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TraversalCache {
     pub(crate) query_root: Pattern,
@@ -18,7 +16,7 @@ impl TraversalCache {
     pub fn new(start: &StartState, query: Pattern) -> (CacheKey, Self) {
         let mut entries = HashMap::default();
         entries.insert(start.index.index(), VertexCache::start(start.index));
-        (CacheKey::new(start.index, 0), Self {
+        (start.root_key(), Self {
             query_root: query,
             entries,
         })
@@ -39,18 +37,18 @@ impl TraversalCache {
     /// adds node to cache and returns the state of the insertion
     pub fn add_state<
         Trav: Traversable,
-    >(&mut self, trav: &Trav, state: &TraversalState) -> Result<CacheKey, CacheKey> {
+    >(&mut self, trav: &Trav, state: &TraversalState) -> (CacheKey, bool) {
         let key = state.target_key(trav);
         if let Some(ve) = self.entries.get_mut(&key.index.index()) {
             if let Some(_) = ve.positions.get_mut(&key.pos) {
-                Err(key)
+                (key, false)
             } else {
                 ve.new_position(
                     trav,
                     key,
                     state,
                 );
-                Ok(key)
+                (key, true)
             }
         } else {
             self.new_vertex(
@@ -58,7 +56,7 @@ impl TraversalCache {
                 key, 
                 state,
             );
-            Ok(key)
+            (key, true)
         }
     }
     fn new_vertex<
