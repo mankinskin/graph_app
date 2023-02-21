@@ -8,18 +8,15 @@ use std::{
     },
 };
 lazy_static! {
-    static ref VERTEX_ID_COUNTER: Arc<Mutex<usize>> = Arc::new(Mutex::new(0));
+    static ref VERTEX_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 }
 impl<'t, 'g, G> Hypergraph<G>
 where
     G: GraphKind,
 {
-    //fn next_pattern_vertex_id() -> VertexIndex {
-    //    let mut lock = VERTEX_ID_COUNTER.lock().unwrap();
-    //    let tmp = *lock;
-    //    *lock += 1;
-    //    tmp
-    //}
+    fn next_pattern_vertex_id() -> VertexIndex {
+        VERTEX_ID_COUNTER.fetch_add(1, Ordering::Relaxed)
+    }
     /// insert single token node
     pub fn insert_vertex(
         &mut self,
@@ -31,7 +28,7 @@ where
         data.index = entry.index();
         let c = Child::new(data.index, data.width);
         entry.or_insert(data);
-        trace!(event = ?logger::Event::NewIndex);
+        //trace!(event = ?logger::Event::NewIndex);
         c
     }
     /// insert single token node
@@ -95,13 +92,14 @@ where
     ) -> PatternId {
         // todo handle token nodes
         let (width, indices, children) = self.to_width_indices_children(indices);
+        let pattern_id = self.next_child_pattern_id();
         let data = self.expect_vertex_data_mut(index.index());
-        let pattern_id = data.add_pattern_no_update(children);
+        data.add_pattern_no_update(pattern_id, children);
         self.add_parents_to_pattern_nodes(indices, Child::new(index, width), pattern_id);
         pattern_id
     }
     /// add pattern to existing node
-    #[track_caller]
+    //#[track_caller]
     pub fn add_patterns_with_update(
         &mut self,
         index: impl Indexed,
@@ -131,18 +129,19 @@ where
         (c.expect("Tried to index empty pattern!"), id)
     }
     /// create new node from a pattern (even if single index)
-    #[track_caller]
+    //#[track_caller]
     pub fn force_insert_pattern_with_id(
         &mut self,
         indices: impl IntoPattern,
     ) -> (Child, PatternId) {
         let (width, indices, children) = self.to_width_indices_children(indices);
         let mut new_data = VertexData::new(0, width);
-        let pattern_index = new_data.add_pattern_no_update(children);
+        let pattern_id = self.next_child_pattern_id();
+        new_data.add_pattern_no_update(pattern_id, children);
         let id = self.vertex_count(); //Self::next_pattern_vertex_id();
         let index = self.insert_vertex(VertexKey::Pattern(id), new_data);
-        self.add_parents_to_pattern_nodes(indices, Child::new(index, width), pattern_index);
-        (index, pattern_index)
+        self.add_parents_to_pattern_nodes(indices, Child::new(index, width), pattern_id);
+        (index, pattern_id)
     }
     /// create new node from a pattern
     pub fn insert_pattern(
@@ -175,7 +174,7 @@ where
         (node, ids)
     }
     /// create new node from multiple patterns
-    #[track_caller]
+    //#[track_caller]
     pub fn insert_patterns(
         &mut self,
         patterns: impl IntoIterator<Item = impl IntoPattern>,

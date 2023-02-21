@@ -3,6 +3,10 @@ use itertools::Itertools;
 use petgraph::graph::DiGraph;
 use std::{
     fmt::Debug,
+    sync::atomic::{
+        AtomicUsize,
+        Ordering,
+    },
 };
 
 mod child_strings;
@@ -60,6 +64,7 @@ impl<G: GraphKind> std::convert::AsMut<Self> for Hypergraph<G> {
 #[derive(Debug)]
 pub struct Hypergraph<G: GraphKind = BaseGraphKind> {
     graph: indexmap::IndexMap<VertexKey<G::Token>, VertexData>,
+    pattern_id_count: AtomicUsize,
     _ty: std::marker::PhantomData<G>,
 }
 lazy_static! {
@@ -70,6 +75,7 @@ impl<G: GraphKind> Default for Hypergraph<G> {
         lazy_static::initialize(&LOGGER);
         Self {
             graph: indexmap::IndexMap::default(),
+            pattern_id_count: AtomicUsize::new(0),
             _ty: Default::default(),
         }
     }
@@ -86,6 +92,9 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G> {
     }
     pub fn vertex_count(&self) -> usize {
         self.graph.len()
+    }
+    pub fn next_child_pattern_id(&mut self) -> PatternId {
+        self.pattern_id_count.fetch_add(1, Ordering::SeqCst)
     }
     //pub fn index_sequence<N: Into<G>, I: IntoIterator<Item = N>>(&mut self, seq: I) -> VertexIndex {
     //    let seq = seq.into_iter();

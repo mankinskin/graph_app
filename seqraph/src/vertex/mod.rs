@@ -3,10 +3,6 @@ use either::Either;
 use std::{
     fmt::Debug,
     slice::SliceIndex,
-    sync::atomic::{
-        AtomicUsize,
-        Ordering,
-    },
     borrow::Borrow,
 };
 
@@ -46,9 +42,7 @@ pub enum VertexKey<T: Tokenize> {
     Token(Token<T>),
     Pattern(VertexIndex),
 }
-lazy_static! {
-    static ref PATTERN_ID_COUNTER: Arc<Mutex<usize>> = Arc::new(Mutex::new(0));
-}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct VertexData {
     pub index: VertexIndex,
@@ -57,12 +51,6 @@ pub struct VertexData {
     pub children: ChildPatterns,
 }
 impl VertexData {
-    fn next_child_pattern_id() -> PatternId {
-        let mut lock = PATTERN_ID_COUNTER.lock().unwrap();
-        let tmp = *lock;
-        *lock = tmp + 1;
-        tmp
-    }
     pub fn new(
         index: VertexIndex,
         width: TokenPosition,
@@ -212,15 +200,14 @@ impl VertexData {
     }
     pub fn add_pattern_no_update(
         &mut self,
+        id: PatternId,
         pat: impl IntoPattern,
-    ) -> PatternId {
+    ) {
         if pat.borrow().len() < 2 {
             assert!(pat.borrow().len() > 1);
         }
-        let id = Self::next_child_pattern_id();
         self.children.insert(id, pat.into_pattern());
         self.validate();
-        id
     }
     #[track_caller]
     pub fn validate_links(&self) {

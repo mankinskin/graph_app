@@ -263,15 +263,15 @@ fn find_ancestor3() {
     // 10
     let (xab, xab_ids) = graph.insert_patterns_with_ids([[x, ab], [xa, b]]);
     let x_ab_id = xab_ids[0];
-    assert!(x_ab_id == 4);
+    assert_eq!(x_ab_id, 4);
     // 11
     let (xaby, xaby_ids) = graph.insert_patterns_with_ids([[xab, y], [xa, by]]);
     let xab_y_id = xaby_ids[0];
-    assert!(xab_y_id == 6);
+    assert_eq!(xab_y_id, 6);
     // 12
     let _xabyz = graph.insert_patterns([[xaby, z], [xab, yz]]);
+    let mut gr = HypergraphRef::from(graph);
 
-    let gr = HypergraphRef::from(graph);
     let query = vec![ab, y];
     let aby_found = gr.find_ancestor(&query);
     assert_eq!(
