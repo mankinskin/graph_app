@@ -4,7 +4,6 @@ use crate::*;
 use std::{
     sync::atomic::{
         AtomicUsize,
-        Ordering,
     },
 };
 lazy_static! {
@@ -14,9 +13,6 @@ impl<'t, 'g, G> Hypergraph<G>
 where
     G: GraphKind,
 {
-    fn next_pattern_vertex_id() -> VertexIndex {
-        VERTEX_ID_COUNTER.fetch_add(1, Ordering::Relaxed)
-    }
     /// insert single token node
     pub fn insert_vertex(
         &mut self,
@@ -92,7 +88,7 @@ where
     ) -> PatternId {
         // todo handle token nodes
         let (width, indices, children) = self.to_width_indices_children(indices);
-        let pattern_id = self.next_child_pattern_id();
+        let pattern_id = self.next_pattern_id();
         let data = self.expect_vertex_data_mut(index.index());
         data.add_pattern_no_update(pattern_id, children);
         self.add_parents_to_pattern_nodes(indices, Child::new(index, width), pattern_id);
@@ -136,9 +132,9 @@ where
     ) -> (Child, PatternId) {
         let (width, indices, children) = self.to_width_indices_children(indices);
         let mut new_data = VertexData::new(0, width);
-        let pattern_id = self.next_child_pattern_id();
+        let pattern_id = self.next_pattern_id();
+        let id = self.next_vertex_id();
         new_data.add_pattern_no_update(pattern_id, children);
-        let id = self.vertex_count(); //Self::next_pattern_vertex_id();
         let index = self.insert_vertex(VertexKey::Pattern(id), new_data);
         self.add_parents_to_pattern_nodes(indices, Child::new(index, width), pattern_id);
         (index, pattern_id)
