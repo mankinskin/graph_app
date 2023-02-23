@@ -48,7 +48,10 @@ impl<'a, Trav, S, O> OrderedTraverser<'a, Trav, S, O>
 {
     pub fn prune_not_below(&mut self, root: CacheKey) {
         self.pruning_map.iter_mut()
-            .filter(|(k, _)| k.index.width >= root.index.width)
+            .filter(|(k, _)|
+                k.index.width > root.index.width ||
+                (k.index.width == root.index.width && k.index != root.index)
+            )
             .for_each(|(_, v)| {
                 v.prune = true;
             });

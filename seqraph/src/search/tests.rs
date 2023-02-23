@@ -6,6 +6,7 @@ use crate::{
     Child,
     traversal::path::SearchPath,
 };
+use futures::stream::Fold;
 use pretty_assertions::{
     assert_eq,
 };
@@ -73,7 +74,7 @@ fn find_parent1() {
     assert_eq!(
         graph.find_parent(&query),
         Ok(TraversalResult {
-            path: FoundPath::Complete(*abc),
+            result: FoldResult::Complete(*abc),
             query: QueryRangePath::new_range(
                 query.clone(),
                 0,
@@ -158,7 +159,7 @@ fn find_ancestor1() {
     assert_eq!(
         graph.find_ancestor(&query),
         Ok(TraversalResult {
-            path: FoundPath::Complete(*abc),
+            result: FoldResult::Complete(*abc),
             query: QueryRangePath::new_range(
                 query.clone(),
                 0,
@@ -168,81 +169,378 @@ fn find_ancestor1() {
         "a_b_c_c"
     );
 }
-
-//#[test]
-//fn find_ancestor2() {
-//    let mut graph = Hypergraph::<BaseGraphKind>::default();
-//    let (a, b, _w, x, y, z) = graph.insert_tokens([
-//        Token::Element('a'),
-//        Token::Element('b'),
-//        Token::Element('w'),
-//        Token::Element('x'),
-//        Token::Element('y'),
-//        Token::Element('z'),
-//    ]).into_iter().next_tuple().unwrap();
-//    let ab = graph.insert_pattern([a, b]);
-//    let by = graph.insert_pattern([b, y]);
-//    let yz = graph.insert_pattern([y, z]);
-//    let xa = graph.insert_pattern([x, a]);
-//    let xab = graph.insert_patterns([[x, ab], [xa, b]]);
-//    let (xaby, xaby_ids) = graph.insert_patterns_with_ids([
-//        vec![xab, y],
-//        vec![xa, by],
-//    ]);
-//    let xa_by_id = xaby_ids[1];
-//    let (xabyz, xabyz_ids) = graph.insert_patterns_with_ids([
-//        vec![xaby, z],
-//        vec![xab, yz],
-//    ]);
-//    let xaby_z_id = xabyz_ids[0];
-//    let graph = HypergraphRef::from(graph);
-//    let query = vec![by, z];
-//    let byz_found = graph.find_ancestor(&query);
-//    assert_eq!(
-//        byz_found,
-//        Ok(TraversalResult {
-//            path: FoundPath::Path(
-//                FoldResult {
-//                    cache: TraversalCache {
-//                        query_root: query.clone(),
-//                        entries: HashMap::default()
+//macro_rules! {
+//    { ( -> )* } => {
+//        FoldResult {
+//            cache: TraversalCache {
+//                query_root: query.clone(),
+//                entries: HashMap::from_iter([
+//                    (12, VertexCache {
+//                        positions: HashMap::from_iter([
+//                            (2.into(), PositionCache {
+//                                back_edges: HashMap::from_iter([
+//                                    (CacheKey {
+//                                        abcd,
+//                                        pos: 2.into(),
+//                                    }, CacheEdge::BottomUp(
+//                                        SubLocation::new(8, 0)
+//                                    )),
+//                                    (CacheKey {
+//                                        index: Child {
+//                                            index: 10,
+//                                            width: 3,
+//                                        },
+//                                        pos: 2.into(),
+//                                    }, CacheEdge::BottomUp(SubLocation {
+//                                        pattern_id: 9,
+//                                        sub_index: 0,
+//                                    })),
+//                                ]),
+//                                index: Child {
+//                                    index: 12,
+//                                    width: 5,
+//                                },
+//                                waiting: Default::default(),
+//                                num_parents: 0,
+//                            })
+//                        ])
+//                    }),
+//                    (7, VertexCache {
+//                        positions: HashMap::from_iter([
+//                            (2.into(), PositionCache {
+//                                back_edges: HashMap::from_iter([
+//                                ]),
+//                                num_parents: 1,
+//                                index: Child {
+//                                    index: 7,
+//                                    width: 2,
+//                                },
+//                                waiting: vec![
+//                                ],
+//                            })
+//                        ])
+//                    }),
+//                    (5, VertexCache {
+//                        positions: HashMap::from_iter([
+//                            (4.into(), PositionCache {
+//                                back_edges: HashMap::from_iter([
+//                                    (CacheKey {
+//                                        index: Child {
+//                                            index: 12,
+//                                            width: 5,
+//                                        },
+//                                        pos: 2.into(),
+//                                    }, CacheEdge::TopDown(SubLocation {
+//                                        pattern_id: 8,
+//                                        sub_index: 1,
+//                                    })),
+//                                ]),
+//                                index: Child {
+//                                    index: 5,
+//                                    width: 1,
+//                                },
+//                                waiting: vec![
+//                                ],
+//                                num_parents: 1,
+//                            })
+//                        ])
+//                    }),
+//                    (11, VertexCache {
+//                        positions: HashMap::from_iter([
+//                            (2.into(), PositionCache {
+//                                back_edges: HashMap::from_iter([
+//                                    (CacheKey {
+//                                        index: Child {
+//                                            index: 7,
+//                                            width: 2,
+//                                        },
+//                                        pos: 2.into(),
+//                                    }, CacheEdge::BottomUp(SubLocation {
+//                                        pattern_id: 7,
+//                                        sub_index: 1,
+//                                    })),
+//                                ]),
+//                                index: Child {
+//                                    index: 11,
+//                                    width: 4,
+//                                },
+//                                waiting: Default::default(),
+//                                num_parents: 0,
+//                            })
+//                        ])
+//                    }),
+//                    (10, VertexCache {
+//                        positions: HashMap::from_iter([
+//                            (2.into(), PositionCache {
+//                                back_edges: HashMap::from_iter([
+//                                    (CacheKey {
+//                                        index: Child {
+//                                            index: 7,
+//                                            width: 2,
+//                                        },
+//                                        pos: 2.into(),
+//                                    }, CacheEdge::BottomUp(SubLocation {
+//                                        pattern_id: 7,
+//                                        sub_index: 1,
+//                                    })),
+//                                ]),
+//                                index: Child {
+//                                    index: 11,
+//                                    width: 4,
+//                                },
+//                                waiting: Default::default(),
+//                                num_parents: 0,
+//                            })
+//                        ])
+//                    }),
+//                ]),
+//            },
+//            final_states: vec![
+//                FinalState {
+//                    num_parents: 0,
+//                    state: EndState {
+//                        root_pos: 2.into(),
+//                        kind: EndKind::Postfix(
+//                            RootedRolePath {
+//                                split_path: RootedSplitPath {
+//                                    root: IndexRoot {
+//                                        location: PatternLocation {
+//                                            parent: Child {
+//                                                index: 12,
+//                                                width: 5,
+//                                            },
+//                                            pattern_id: 8,
+//                                        },
+//                                    },
+//                                    sub_path: SubPath {
+//                                        root_entry: 0,
+//                                        path: vec![
+//                                            ChildLocation {
+//                                                parent: Child {
+//                                                    index: 11,
+//                                                    width: 4,
+//                                                },
+//                                                pattern_id: 7,
+//                                                sub_index: 1,
+//                                            },
+//                                        ],
+//                                    },
+//                                },
+//                                _ty: Default::default(),
+//                            },
+//                        ),
+//                        query: QueryState {
+//                            start: RolePath {
+//                                sub_path: SubPath {
+//                                    root_entry: 0,
+//                                    path: vec![],
+//                                },
+//                                _ty: Default::default(),
+//                            },
+//                            end: RolePath {
+//                                sub_path: SubPath {
+//                                    root_entry: 1,
+//                                    path: vec![],
+//                                },
+//                                _ty: Default::default(),
+//                            },
+//                            pos: 4.into(),
+//                        },
 //                    },
-//                    final_states: vec![
-//                    ]
-//                }
-//            //SearchPath {
-//            //    start: RolePath {
-//            //        path: vec![
-//            //            xabyz.to_pattern_location(xaby_z_id)
-//            //                .to_child_location(0),
-//            //            ChildLocation {
-//            //                parent: xaby,
-//            //                pattern_id: xa_by_id,
-//            //                sub_index: 1,
-//            //            },
-//            //        ],
-//            //        width: 3,
-//            //        child: by,
-//            //        token_pos: 2,
-//            //        _ty: Default::default(),
-//            //    },
-//            //    end: RolePath {
-//            //        path: vec![
-//            //            xabyz.to_pattern_location(xaby_z_id)
-//            //                .to_child_location(1),
-//            //        ],
-//            //        width: 0,
-//            //        child: z,
-//            //        token_pos: 3,
-//            //        _ty: Default::default(),
-//            //    },
-//            //}
-//            ),
-//            query: QueryRangePath::complete(query),
-//        }),
-//        "by_z"
-//    );
-//}
+//                },
+//            ]
+//        }
+//    };
+//};
+#[test]
+fn find_ancestor2() {
+    let mut graph = Hypergraph::<BaseGraphKind>::default();
+    let (a, b, _w, x, y, z) = graph.insert_tokens([
+        Token::Element('a'),
+        Token::Element('b'),
+        Token::Element('w'),
+        Token::Element('x'),
+        Token::Element('y'),
+        Token::Element('z'),
+    ]).into_iter().next_tuple().unwrap();
+    let ab = graph.insert_pattern([a, b]); // 6
+    let by = graph.insert_pattern([b, y]); // 7
+    let yz = graph.insert_pattern([y, z]); // 8
+    let xa = graph.insert_pattern([x, a]); // 9
+    let xab = graph.insert_patterns([[x, ab], [xa, b]]); // 10
+    let (xaby, xaby_ids) = graph.insert_patterns_with_ids([
+        vec![xab, y],
+        vec![xa, by],
+    ]); // 11
+    let xa_by_id = xaby_ids[1];
+    let (xabyz, xabyz_ids) = graph.insert_patterns_with_ids([
+        vec![xaby, z],
+        vec![xab, yz],
+    ]); // 12
+    let xaby_z_id = xabyz_ids[0];
+    let graph = HypergraphRef::from(graph);
+    let query = vec![by, z];
+    let byz_found = graph.find_ancestor(&query);
+    assert_eq!(
+        byz_found,
+        Ok(TraversalResult {
+            result: FoldResult::Incomplete(
+                FoldState {
+                    cache: TraversalCache {
+                        query_root: query.clone(),
+                        entries: HashMap::from_iter([
+                            (12, VertexCache {
+                                positions: HashMap::from_iter([
+                                    (2.into(), PositionCache {
+                                        back_edges: HashMap::from_iter([
+                                            (CacheKey {
+                                                index: xaby,
+                                                pos: 2.into(),
+                                            }, CacheEdge::BottomUp(SubLocation::new(8, 0))),
+                                            //(CacheKey {
+                                            //    index: xab,
+                                            //    pos: 2.into(),
+                                            //}, CacheEdge::BottomUp(SubLocation::new(9, 0))),
+                                        ]),
+                                        index: xabyz,
+                                        waiting: Default::default(),
+                                        num_parents: 0,
+                                    })
+                                ])
+                            }),
+                            (7, VertexCache {
+                                positions: HashMap::from_iter([
+                                    (2.into(), PositionCache {
+                                        back_edges: HashMap::from_iter([]),
+                                        num_parents: 0,
+                                        index: by,
+                                        waiting: vec![],
+                                    })
+                                ])
+                            }),
+                            (z.index, VertexCache {
+                                positions: HashMap::from_iter([
+                                    (4.into(), PositionCache {
+                                        back_edges: HashMap::from_iter([
+                                            (CacheKey {
+                                                index: xabyz,
+                                                pos: 2.into(),
+                                            }, CacheEdge::TopDown(SubLocation::new(8, 1))),
+                                        ]),
+                                        index: z,
+                                        waiting: vec![],
+                                        num_parents: 1,
+                                    })
+                                ])
+                            }),
+                            (xaby.index, VertexCache {
+                                positions: HashMap::from_iter([
+                                    (2.into(), PositionCache {
+                                        back_edges: HashMap::from_iter([
+                                            (CacheKey {
+                                                index: by,
+                                                pos: 2.into(),
+                                            }, CacheEdge::BottomUp(SubLocation::new(7, 1))),
+                                        ]),
+                                        index: xaby,
+                                        waiting: Default::default(),
+                                        num_parents: 0,
+                                    })
+                                ])
+                            }),
+
+                        ]),
+                    },
+                    final_states: vec![
+                        FinalState {
+                            num_parents: 0,
+                            state: EndState {
+                                root_pos: 2.into(),
+                                reason: EndReason::QueryEnd,
+                                matched: true,
+                                kind: EndKind::Postfix(
+                                    RootedRolePath {
+                                        split_path: RootedSplitPath {
+                                            root: IndexRoot {
+                                                location: PatternLocation {
+                                                    parent: Child {
+                                                        index: 12,
+                                                        width: 5,
+                                                    },
+                                                    pattern_id: 8,
+                                                },
+                                            },
+                                            sub_path: SubPath {
+                                                root_entry: 0,
+                                                path: vec![
+                                                    ChildLocation {
+                                                        parent: Child {
+                                                            index: 11,
+                                                            width: 4,
+                                                        },
+                                                        pattern_id: 7,
+                                                        sub_index: 1,
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                        _ty: Default::default(),
+                                    },
+                                ),
+                                query: QueryState {
+                                    start: RolePath {
+                                        sub_path: SubPath {
+                                            root_entry: 0,
+                                            path: vec![],
+                                        },
+                                        _ty: Default::default(),
+                                    },
+                                    end: RolePath {
+                                        sub_path: SubPath {
+                                            root_entry: 1,
+                                            path: vec![],
+                                        },
+                                        _ty: Default::default(),
+                                    },
+                                    pos: 4.into(),
+                                },
+                            },
+                        },
+                    ]
+                }
+            //SearchPath {
+            //    start: RolePath {
+            //        path: vec![
+            //            xabyz.to_pattern_location(xaby_z_id)
+            //                .to_child_location(0),
+            //            ChildLocation {
+            //                parent: xaby,
+            //                pattern_id: xa_by_id,
+            //                sub_index: 1,
+            //            },
+            //        ],
+            //        width: 3,
+            //        child: by,
+            //        token_pos: 2,
+            //        _ty: Default::default(),
+            //    },
+            //    end: RolePath {
+            //        path: vec![
+            //            xabyz.to_pattern_location(xaby_z_id)
+            //                .to_child_location(1),
+            //        ],
+            //        width: 0,
+            //        child: z,
+            //        token_pos: 3,
+            //        _ty: Default::default(),
+            //    },
+            //}
+            ),
+            query: QueryRangePath::complete(query),
+        }),
+        "by_z"
+    );
+}
 
 #[test]
 fn find_ancestor3() {
@@ -277,8 +575,8 @@ fn find_ancestor3() {
     assert_eq!(
         aby_found,
         Ok(TraversalResult {
-            path: FoundPath::Path(
-                FoldResult {
+            result: FoldResult::Incomplete(
+                FoldState {
                     cache: TraversalCache {
                         query_root: query.clone(),
                         entries: HashMap::from_iter([
@@ -425,9 +723,10 @@ fn find_ancestor3() {
                             num_parents: 0,
                             state: EndState {
                                 root_pos: 2.into(),
+                                reason: EndReason::QueryEnd,
+                                matched: true,
                                 kind: EndKind::Range(
                                     RangeEnd {
-                                        kind: RangeKind::QueryEnd,
                                         path: RootedRangePath {
                                             root: IndexRoot {
                                                 location: PatternLocation {
@@ -496,6 +795,8 @@ fn find_ancestor3() {
                             num_parents: 0,
                             state: EndState {
                                 root_pos: 2.into(),
+                                reason: EndReason::QueryEnd,
+                                matched: true,
                                 kind: EndKind::Postfix(
                                     RootedRolePath {
                                         split_path: RootedSplitPath {

@@ -17,7 +17,6 @@ pub enum NodeDirection {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WaitingState {
     pub prev: CacheKey,
-    pub matched: bool,
     pub state: ParentState,
     //pub query: QueryState,
 }

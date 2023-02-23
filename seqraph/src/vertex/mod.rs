@@ -10,14 +10,14 @@ pub mod indexed;
 pub mod vertexed;
 pub mod parent;
 pub mod child;
-pub mod child_location;
+pub mod location;
 pub mod token;
 pub mod wide;
 pub mod pattern;
 pub use {
     indexed::*,
     vertexed::*,
-    child_location::*,
+    location::*,
     parent::*,
     child::*,
     pattern::*,

@@ -124,7 +124,7 @@ impl RootKey for EndState {
         match &self.kind {
             EndKind::Range(s) => CacheKey::new(s.path.root_parent(), self.root_pos),
             EndKind::Postfix(path) => CacheKey::new(path.root_parent(), self.root_pos),
-            EndKind::Prefix(path) => CacheKey::new(path.root_parent(), self.root_pos),
+            EndKind::Prefix(path) => CacheKey::new(path.path.root_parent(), self.root_pos),
             EndKind::Complete(c) => CacheKey::new(*c, self.root_pos),
         }
     }

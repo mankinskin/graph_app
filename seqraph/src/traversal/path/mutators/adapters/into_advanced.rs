@@ -58,6 +58,7 @@ impl IntoAdvanced for ParentState {
                 ChildState {
                     prev_pos: self.prev_pos,
                     root_pos: self.root_pos,
+                    matched: self.matched,
                     paths: PathPair::new(
                         SearchPath {
                             root: self.path.split_path.root,

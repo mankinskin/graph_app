@@ -1,5 +1,4 @@
 mod pattern_stream;
-mod pattern_location;
 mod pattern_range;
 
 use super::{
@@ -7,7 +6,6 @@ use super::{
 };
 pub use {
     pattern_range::*,
-    pattern_location::*,
     pattern_stream::*,
 };
 pub type Pattern = Vec<Child>;

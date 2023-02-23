@@ -87,7 +87,9 @@ impl PathSimplify for (EndState, TokenLocation) {
                         EndKind::Complete(s.path.root_parent()),
                     (true, true, false, _) |
                     (true, true, true, false) =>
-                        EndKind::Prefix(s.path.into()),
+                        EndKind::Prefix(PrefixEnd {
+                            path: s.path.into(),
+                        }),
                     (false, _, true, true) |
                     (true, false, true, true) =>
                         EndKind::Postfix(s.path.into()),

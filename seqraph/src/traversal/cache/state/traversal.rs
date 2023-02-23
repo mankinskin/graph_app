@@ -9,6 +9,7 @@ pub struct StartState {
 pub struct ParentState {
     pub prev_pos: TokenLocation,
     pub root_pos: TokenLocation,
+    pub matched: bool,
     pub path: Primer,
     pub query: QueryState,
 }
@@ -17,12 +18,13 @@ pub struct ParentState {
 pub struct ChildState {
     pub prev_pos: TokenLocation,
     pub root_pos: TokenLocation,
+    pub matched: bool,
     pub paths: PathPair,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TraversalState {
     pub prev: CacheKey,
-    pub matched: bool,
+    //pub matched: bool,
     pub kind: InnerKind,
 }
 impl TraversalState {
@@ -56,7 +58,7 @@ impl From<WaitingState> for TraversalState {
     fn from(state: WaitingState) -> Self {
         Self {
             prev: state.prev,
-            matched: state.matched,
+            //matched: state.matched,
             kind: InnerKind::Parent(state.state),
             //query: state.query,
         }

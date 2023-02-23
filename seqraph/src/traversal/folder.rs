@@ -41,11 +41,9 @@ pub trait TraversalFolder<
         while let Some((depth, next_states)) = states.next_states(&mut cache) {
             match next_states {
                 NextStates::End(next) => {
-                    if next.matched {
-                        if matches!(next.inner.kind, EndKind::Range(_)) {
-                            // stop other paths not with this root
-                            //states.prune_not_below(state.root_key());
-                        }
+                    if next.inner.matched {
+                        // stop other paths not with this root
+                        //states.prune_not_below(next.inner.root_key());
                         if let Some(root_key) = next.inner.waiting_root_key() {
                             // this must happen before simplification
                             states.extend(
@@ -71,7 +69,7 @@ pub trait TraversalFolder<
         Ok(if end_states.is_empty() {
             TraversalResult {
                 query: query.to_rooted(query_pattern),
-                path: FoundPath::Complete(index)
+                result: FoldResult::Complete(index)
             }
         } else {
 
@@ -106,16 +104,16 @@ pub trait TraversalFolder<
             let fin = &final_states.first().unwrap();
             let query = fin.state.query.clone();
             let found_path = if let EndKind::Complete(c) = &fin.state.kind {
-                    FoundPath::Complete(*c)
+                    FoldResult::Complete(*c)
                 } else {
-                    FoundPath::Path(FoldResult {
+                    FoldResult::Incomplete(FoldState {
                         cache,
                         final_states
                     })
                 };
             TraversalResult {
                 query: query.to_rooted(query_pattern),
-                path: found_path,
+                result: found_path,
             }
         })
     }
@@ -147,11 +145,11 @@ impl Ord for FinalState {
     }
 }
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct FoldResult {
+pub struct FoldState {
     pub cache: TraversalCache,
     pub final_states: Vec<FinalState>,
 }
-impl FoldResult {
+impl FoldState {
     pub fn root_entry(&self) -> &VertexCache {
         self.cache.entries.get(&self.root_index().index()).unwrap()
     }
@@ -168,8 +166,14 @@ impl FoldResult {
         );
         root
     }
-    pub fn into_found_path(self) -> FoundPath {
+    pub fn into_fold_result(self) -> FoldResult {
         //todo!("handle complete");
-        FoundPath::Path(self)
+        FoldResult::Incomplete(self)
     }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum FoldResult {
+    Complete(Child),
+    Incomplete(FoldState),
 }

@@ -22,6 +22,7 @@ impl IntoPrimer for (Child, QueryState) {
         ParentState {
             prev_pos: width,
             root_pos: width,
+            matched: false,
             path: RootedRolePath {
                 split_path: RootedSplitPath {
                     sub_path: SubPath {

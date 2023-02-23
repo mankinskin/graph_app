@@ -67,6 +67,7 @@ lazy_static::lazy_static! {
                 [a, bc],
             ]);
             let (cd, cd_id) = graph.insert_pattern_with_id([c, d]);
+            // 13
             let (bcd, bcd_ids) = graph.insert_patterns_with_ids([
                 [bc, d],
                 [b, cd],

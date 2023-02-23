@@ -7,13 +7,18 @@ use crate::*;
 // - bottom up-no matching parents
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RangeEnd {
-    pub kind: RangeKind,
     pub path: SearchPath,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PrefixEnd {
+    pub path: RootedRolePath<End>,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EndState {
+    pub reason: EndReason,
     pub root_pos: TokenLocation,
     pub kind: EndKind,
+    pub matched: bool,
     pub query: QueryState,
 }
 
@@ -50,11 +55,11 @@ impl EndState {
 pub enum EndKind {
     Range(RangeEnd),
     Postfix(Primer),
-    Prefix(RootedRolePath<End>),
+    Prefix(PrefixEnd),
     Complete(Child),
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum RangeKind {
+pub enum EndReason {
     /// when the query has ended.
     QueryEnd,
     /// at a mismatch.

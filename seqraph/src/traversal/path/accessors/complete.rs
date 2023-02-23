@@ -18,7 +18,7 @@ pub trait PathComplete: Sized + Debug {
             .expect(&format!("Unable to unwrap {:?} as complete: {}", self, msg))
     }
 }
-impl PathComplete for FoundPath {
+impl PathComplete for FoldResult {
     /// returns child if reduced to single child
     fn into_complete(&self) -> Option<Child> {
         match self {
