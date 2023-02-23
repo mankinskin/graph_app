@@ -98,4 +98,7 @@ impl PositionCache {
     pub fn num_parents(&self) -> usize {
         self.num_parents
     }
+    pub fn num_bu_edges(&self) -> usize {
+        self.back_edges.values().filter(|v| matches!(v, CacheEdge::BottomUp(_))).count()
+    }
 }

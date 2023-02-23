@@ -41,19 +41,22 @@ pub trait TraversalFolder<
         while let Some((depth, next_states)) = states.next_states(&mut cache) {
             match next_states {
                 NextStates::End(next) => {
-                    if next.inner.matched {
+                    let state = next.inner;
+                    if state.matched {
                         // stop other paths not with this root
-                        //states.prune_not_below(next.inner.root_key());
-                        if let Some(root_key) = next.inner.waiting_root_key() {
+                        if !matches!(state.kind, EndKind::Complete(_)) && cache.expect_entry(&state.root_key()).num_bu_edges() < 2 {
+                            //states.prune_not_below(state.root_key());
+                        }
+                        if let Some(root_key) = state.waiting_root_key() {
                             // this must happen before simplification
                             states.extend(
                                 cache.continue_waiting(&root_key)
                             );
                         }
-                        end_states.push(next.inner);
+                        end_states.push(state);
                     } else {
                         // stop other paths with this root
-                        states.prune_below(next.inner.root_key());
+                        states.prune_below(state.root_key());
                     }
                 },
                 _ => {

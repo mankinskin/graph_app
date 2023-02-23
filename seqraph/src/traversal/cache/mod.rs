@@ -27,6 +27,9 @@ impl TraversalCache {
                 ve.positions.get(&key.pos)
             )
     }
+    pub fn expect_entry(&self, key: &CacheKey) -> &PositionCache {
+        self.get_entry(key).unwrap()
+    }
     pub fn get_entry_mut(&mut self, key: &CacheKey) -> Option<&mut PositionCache> {
         self.entries.get_mut(&key.index.index())
             .and_then(|ve| {
