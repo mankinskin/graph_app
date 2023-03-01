@@ -95,6 +95,7 @@ pub trait TraversalIterator<
                     kind: EndKind::Complete(state.index),
                     query: query.state,
                     matched: false,
+                    target: key,
                 }
             })
         }
@@ -104,7 +105,7 @@ pub trait TraversalIterator<
         cache: &mut TraversalCache,
     ) -> Option<(usize, NextStates)> {
         let (depth, tstate) = self.next()?;
-        let (key, cached) = cache.add_state(self.trav(), &tstate);
+        let (key, cached) = cache.add_state(&tstate);
         let prev = tstate.prev_key();
 
         let keys = EdgeKeys { prev, key };
@@ -113,15 +114,13 @@ pub trait TraversalIterator<
                 if cached {
                     self.on_parent(
                         key,
-                        //tstate.matched,
                         state,
                     )
                 } else {
-                    cache.get_entry_mut(&key)
+                    cache.get_mut(&key)
                         .unwrap()
                         .add_waiting(depth, WaitingState {
                             prev: tstate.prev,
-                            //query: state.query,
                             state,
                         });
                     NextStates::Empty
@@ -133,10 +132,10 @@ pub trait TraversalIterator<
                     state,
                 )
 
-                //        cache.get_entry_mut(&key)
-                //            .unwrap()
-                //            .add_back_edge();
-                //        NextStates::Empty
+                //cache.get_entry_mut(&key)
+                //    .unwrap()
+                //    .add_back_edge();
+                //NextStates::Empty
             }
             _ => NextStates::Empty,
         };
@@ -182,6 +181,7 @@ pub trait TraversalIterator<
                         Postfix::from(parent.path)
                             .into_simplified(self.trav())
                     ),
+                    target: key,
                     matched: parent.matched,
                     query: parent.query,
                 },
@@ -313,7 +313,11 @@ pub trait TraversalIterator<
                         prev_pos,
                         root_pos,
                         matched: true,
-                        paths: PathPair::new(path, query.state, mode)
+                        target: CacheKey::new(
+                            path.role_leaf_child::<End, _>(self.trav()),
+                            *query.state.query_pos()
+                        ),
+                        paths: PathPair::new(path, query.state, mode),
                     }
                 })
             } else {
@@ -354,13 +358,17 @@ pub trait TraversalIterator<
         NextStates::End(NextMatched {
             prev: keys.key,
             inner: (EndState {
+                target: CacheKey::new(
+                    path.role_leaf_child::<End, _>(self.trav()),
+                    *query.query_pos(),
+                ),
                 root_pos,
                 query,
                 reason,
                 matched,
                 kind: EndKind::Range(RangeEnd {
                     path,
-                })
+                }),
             }, prev_pos).into_simplified(self.trav()).0
         })
     }
@@ -406,6 +414,10 @@ pub trait TraversalIterator<
                     prev_pos,
                     root_pos,
                     matched,
+                    target: CacheKey::new(
+                        paths.path.role_leaf_child::<End, _>(self.trav()),
+                        *paths.query.query_pos(),
+                    ),
                     paths,
                 }
             })

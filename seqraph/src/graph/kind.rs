@@ -2,7 +2,7 @@ use crate::*;
 
 pub trait GraphKind: std::fmt::Debug + Clone {
     type Token: Tokenize;
-    type Direction: MatchDirection;
+    type Direction: IndexDirection;
 }
 
 #[derive(Debug, Clone)]

@@ -11,6 +11,34 @@ pub trait PathRole: 'static + Debug + PathBorder {
     fn bottom_up_iter<I: Borrow<ChildLocation>, T: DoubleEndedIterator<Item=I> + ExactSizeIterator>(collection: T) -> std::iter::Rev<Self::TopDownPathIter<I, T>> {
         Self::top_down_iter(collection).rev()
     }
+    /// get remaining pattern agains matching direction excluding index
+    fn back_context<T: AsChild + Clone>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T>;
+    fn normalize_index<T: AsChild>(
+        pattern: &'_ [T],
+        index: usize,
+    ) -> usize;
+    fn split_end<T: AsChild + Clone>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T>;
+    fn split_end_normalized<T: AsChild + Clone>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T> {
+        Self::split_end(pattern, Self::normalize_index(pattern, index))
+    }
+    fn directed_pattern_split<T: AsChild + Clone>(
+        pattern: &'_ [T],
+        index: usize,
+    ) -> (Vec<T>, Vec<T>) {
+        (
+            Self::back_context(pattern, index),
+            Self::split_end_normalized(pattern, index),
+        )
+    }
 }
 
 impl PathRole for Start {
@@ -18,10 +46,46 @@ impl PathRole for Start {
     fn top_down_iter<I: Borrow<ChildLocation>, T: DoubleEndedIterator<Item=I> + ExactSizeIterator>(collection: T) -> Self::TopDownPathIter<I, T> {
         collection.rev()
     }
+    fn back_context<T: AsChild + Clone>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T> {
+        prefix(pattern, index)
+    }
+    fn normalize_index<T: AsChild>(
+        _pattern: &'_ [T],
+        index: usize,
+    ) -> usize {
+        index
+    }
+    fn split_end<T: AsChild + Clone>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T> {
+        postfix(pattern, index)
+    }
 }
 impl PathRole for End {
     type TopDownPathIter<I: Borrow<ChildLocation>, T: DoubleEndedIterator<Item=I> + ExactSizeIterator> = T;
     fn top_down_iter<I: Borrow<ChildLocation>, T: DoubleEndedIterator<Item=I> + ExactSizeIterator>(collection: T) -> Self::TopDownPathIter<I, T> {
         collection
+    }
+    fn back_context<T: AsChild + Clone>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T> {
+        postfix(pattern, index + 1)
+    }
+    fn normalize_index<T: AsChild>(
+        pattern: &'_ [T],
+        index: usize,
+    ) -> usize {
+        pattern.len() - index - 1
+    }
+    fn split_end<T: AsChild + Clone>(
+        pattern: &'_ [T],
+        index: PatternId,
+    ) -> Vec<T> {
+        prefix(pattern, index + 1)
     }
 }

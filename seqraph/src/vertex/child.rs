@@ -32,6 +32,9 @@ impl Child {
     pub fn to_child_location(self, sub: SubLocation) -> ChildLocation {
         ChildLocation::new(self, sub.pattern_id, sub.sub_index)
     }
+    pub fn at_pos(self, pos: impl Into<TokenLocation>) -> CacheKey {
+        CacheKey::new(self, pos)
+    }
 }
 impl std::cmp::PartialOrd for Child {
     fn partial_cmp(

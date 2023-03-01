@@ -45,7 +45,7 @@ impl ChildLocation {
             pattern_id,
         }
     }
-    pub fn into_sub_location(self) -> SubLocation {
+    pub fn to_sub_location(self) -> SubLocation {
         SubLocation {
             pattern_id: self.pattern_id,
             sub_index: self.sub_index,

@@ -1,12 +1,12 @@
 use crate::*;
 
 #[derive(Debug, Clone)]
-pub struct Splitter<G: GraphKind, Side: IndexSide<G::Direction>> {
-    pub(crate) indexer: Indexer<G>,
-    _ty: std::marker::PhantomData<(G, Side)>,
+pub struct Splitter<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> {
+    pub(crate) indexer: Indexer,
+    _ty: std::marker::PhantomData<Side>,
 }
-impl<G: GraphKind, Side: IndexSide<G::Direction>> Splitter<G, Side> {
-    pub fn new(indexer: Indexer<G>) -> Self {
+impl<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> Splitter<Side> {
+    pub fn new(indexer: Indexer) -> Self {
         Self {
             indexer,
             _ty: Default::default()
@@ -14,8 +14,8 @@ impl<G: GraphKind, Side: IndexSide<G::Direction>> Splitter<G, Side> {
     }
 }
 
-impl<G: GraphKind, Side: IndexSide<G::Direction>> Splitter<G, Side> {
-    pub fn pather(&self) -> Pather<G, Side> {
+impl<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> Splitter<Side> {
+    pub fn pather(&self) -> Pather<Side> {
         Pather::new(self.indexer.clone())
     }
     #[instrument(skip(self, path))]

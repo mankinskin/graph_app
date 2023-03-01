@@ -20,11 +20,8 @@ pub use split::*;
 pub use context::*;
 pub use path::*;
 
-impl<'t, 'g, G> HypergraphRef<G>
-where
-    G: GraphKind + 't,
-{
-    pub fn indexer(&self) -> Indexer<G> {
+impl<'t, 'g> HypergraphRef {
+    pub fn indexer(&self) -> Indexer {
         Indexer::new(self.clone())
     }
     pub fn index_pattern(

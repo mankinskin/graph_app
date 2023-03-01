@@ -44,7 +44,7 @@ pub trait TraversalFolder<
                     let state = next.inner;
                     if state.matched {
                         // stop other paths not with this root
-                        if !matches!(state.kind, EndKind::Complete(_)) && cache.expect_entry(&state.root_key()).num_bu_edges() < 2 {
+                        if !matches!(state.kind, EndKind::Complete(_)) && cache.expect(&state.root_key()).num_bu_edges() < 2 {
                             //states.prune_not_below(state.root_key());
                         }
                         if let Some(root_key) = state.waiting_root_key() {
@@ -77,13 +77,14 @@ pub trait TraversalFolder<
         } else {
 
             // todo: find single root and end state
-            let final_states = end_states.into_iter()
-                .map(|s|
+            let final_states = end_states.iter()
+                .map(|state|
                     FinalState {
-                        num_parents: cache.get_entry(&s.root_key())
+                        num_parents: cache
+                            .get(&state.root_key())
                             .unwrap()
                             .num_parents(),
-                        state: s,
+                        state,
                     }
                 )
                 .sorted() 
@@ -104,14 +105,16 @@ pub trait TraversalFolder<
             //    )
             //    .collect_vec()
             //);
-            let fin = &final_states.first().unwrap();
+            let fin = final_states.first().unwrap();
             let query = fin.state.query.clone();
             let found_path = if let EndKind::Complete(c) = &fin.state.kind {
                     FoldResult::Complete(*c)
                 } else {
+                    //cache.trace_subgraph(&end_states);
                     FoldResult::Incomplete(FoldState {
                         cache,
-                        final_states
+                        end_states,
+                        start: start_key,
                     })
                 };
             TraversalResult {
@@ -127,16 +130,16 @@ pub enum PrevDir {
     BottomUp(Child),
 }
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct FinalState {
+pub struct FinalState<'a> {
     pub num_parents: usize,
-    pub state: EndState,
+    pub state: &'a EndState,
 }
-impl PartialOrd for FinalState {
+impl PartialOrd for FinalState<'_> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
-impl Ord for FinalState {
+impl Ord for FinalState<'_> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.num_parents.cmp(&other.num_parents)
             .then_with(||
@@ -150,7 +153,8 @@ impl Ord for FinalState {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct FoldState {
     pub cache: TraversalCache,
-    pub final_states: Vec<FinalState>,
+    pub end_states: Vec<EndState>,
+    pub start: CacheKey,
 }
 impl FoldState {
     pub fn root_entry(&self) -> &VertexCache {
@@ -158,20 +162,28 @@ impl FoldState {
     }
     pub fn root_index(&self) -> Child {
         // assert same root
-        let root = self.final_states.first().unwrap().state.root_key().index;
+        let root = self.end_states.first().unwrap().root_key().index;
         assert!(
-            self.final_states
+            self.end_states
                 .iter()
                 .skip(1)
-                .all(|s|
-                    s.state.root_key().index == root
+                .all(|state|
+                    state.root_key().index == root
                 )
         );
         root
     }
     pub fn into_fold_result(self) -> FoldResult {
-        //todo!("handle complete");
         FoldResult::Incomplete(self)
+    }
+    pub fn roots(&self) -> Vec<CacheKey> {
+        self.end_states.iter().map(|s| s.root_key()).collect()
+    }
+    pub fn leaves(&self, root: &CacheKey) -> Vec<CacheKey> {
+        self.end_states.iter()
+            .filter(|s| s.root_key() == *root)
+            .map(|s| s.target_key())
+            .collect()
     }
 }
 
@@ -180,3 +192,21 @@ pub enum FoldResult {
     Complete(Child),
     Incomplete(FoldState),
 }
+
+// get bottom up edge iterators
+//  - use back edges for late path directly
+//  - trace back edges for early path to gather bottom up edges
+//    - build new cache for this or store forward edges directly in search
+// edge: child location, position
+// tabularize all splits bottom up
+// table: index, position -> split
+// breadth first bottom up traversal , merging splits
+// - start walking edges up from leaf nodes
+// - each edge has location in parent and position
+//    - each edge defines a split in parent at location, possibly merged with nested splits from below path
+// - combine splits into a pair of halves for each position
+//    - each position needs a single pair of halves, built with respect to other positions
+// - continue walk up to parents, write split halves to table for each position
+//    - use table to pass finished splits upwards
+// - combine split context and all positions into pairs of halves for each position
+// - at root, use both edges and splits to build inner and outer pieces

@@ -3,8 +3,8 @@ use crate::*;
 type OppositeContextRange<D, Ty> =
     <<Ty as IndexSide<D>>::Opposite as IndexSide<D>>::ContextRange;
 
-pub trait RelativeSide<G: GraphKind, S: IndexSide<G::Direction>>: Sync + Send + Unpin {
-    type Opposite: RelativeSide<G, S>;
+pub trait RelativeSide<S: IndexSide<<BaseGraphKind as GraphKind>::Direction>>: Sync + Send + Unpin {
+    type Opposite: RelativeSide<S>;
     type Range: PatternRangeIndex + StartInclusive;
     fn is_context_side() -> bool;
     fn is_inner_side() -> bool {
@@ -26,8 +26,8 @@ pub trait RelativeSide<G: GraphKind, S: IndexSide<G::Direction>>: Sync + Send + 
     }
     fn primary_range(index: usize) -> Self::Range;
     fn primary_indexed_pos(index: usize) -> usize;
-    fn secondary_range(index: usize) -> <Self::Opposite as RelativeSide<G, S>>::Range {
-        <Self::Opposite as RelativeSide<G, S>>::primary_range(index)
+    fn secondary_range(index: usize) -> <Self::Opposite as RelativeSide<S>>::Range {
+        <Self::Opposite as RelativeSide<S>>::primary_range(index)
     }
     fn split_primary(pattern: &'_ impl IntoPattern, pos: usize) -> &'_ [Child] {
         &pattern.borrow()[Self::primary_range(pos)]
@@ -36,7 +36,7 @@ pub trait RelativeSide<G: GraphKind, S: IndexSide<G::Direction>>: Sync + Send + 
         &pattern.borrow()[Self::secondary_range(pos)]
     }
     fn outer_inner_order(outer: Child, inner: Child) -> (Child, Child);
-    fn index_inner_and_context(indexer: &mut Indexer<G>, inner: Child, context: Child) -> Child;
+    fn index_inner_and_context(indexer: &mut Indexer, inner: Child, context: Child) -> Child;
     fn has_secondary_exclusive(pattern: &'_ impl IntoPattern, pos: usize) -> bool {
         Self::is_inner_side() && !Self::split_secondary(pattern, pos).is_empty()
             || Self::is_context_side() && Self::split_secondary(pattern, pos).len() > 1
@@ -45,9 +45,9 @@ pub trait RelativeSide<G: GraphKind, S: IndexSide<G::Direction>>: Sync + Send + 
 
 pub struct ContextSide;
 
-impl<G: GraphKind, S: IndexSide<G::Direction>> RelativeSide<G, S> for ContextSide {
+impl<S: IndexSide<<BaseGraphKind as GraphKind>::Direction>> RelativeSide<S> for ContextSide {
     type Opposite = InnerSide;
-    type Range = <S as IndexSide<G::Direction>>::ContextRange;
+    type Range = <S as IndexSide<<BaseGraphKind as GraphKind>::Direction>>::ContextRange;
     fn is_context_side() -> bool {
         true
     }
@@ -66,8 +66,8 @@ impl<G: GraphKind, S: IndexSide<G::Direction>> RelativeSide<G, S> for ContextSid
     fn primary_indexed_pos(index: usize) -> usize {
         S::inner_pos_after_context_indexed(index)
     }
-    fn index_inner_and_context(indexer: &mut Indexer<G>, inner: Child, context: Child) -> Child {
-        let (back, front) = <Self as RelativeSide<G, S>>::outer_inner_order(context, inner);
+    fn index_inner_and_context(indexer: &mut Indexer, inner: Child, context: Child) -> Child {
+        let (back, front) = <Self as RelativeSide<S>>::outer_inner_order(context, inner);
         if let Ok((c, _)) = indexer.index_pattern([back, front]) {
             c
         } else {
@@ -83,14 +83,14 @@ impl<G: GraphKind, S: IndexSide<G::Direction>> RelativeSide<G, S> for ContextSid
 pub struct InnerSide;
 
 
-impl<G: GraphKind, S: IndexSide<G::Direction>> RelativeSide<G, S> for InnerSide {
+impl<S: IndexSide<<BaseGraphKind as GraphKind>::Direction>> RelativeSide<S> for InnerSide {
     type Opposite = ContextSide;
-    type Range = <S as IndexSide<G::Direction>>::InnerRange;
+    type Range = <S as IndexSide<<BaseGraphKind as GraphKind>::Direction>>::InnerRange;
     fn is_context_side() -> bool {
         false
     }
     fn exclusive_primary_index(index: usize) -> Option<usize> {
-        <S as IndexSide<G::Direction>>::next_inner_index(index)
+        S::next_inner_index(index)
     }
     fn exclusive_secondary_index(index: usize) -> Option<usize> {
         Some(index)
@@ -104,8 +104,8 @@ impl<G: GraphKind, S: IndexSide<G::Direction>> RelativeSide<G, S> for InnerSide 
     fn primary_indexed_pos(index: usize) -> usize {
         index
     }
-    fn index_inner_and_context(indexer: &mut Indexer<G>, inner: Child, context: Child) -> Child {
-        let (back, front) = <Self as RelativeSide<G, S>>::outer_inner_order(context, inner);
+    fn index_inner_and_context(indexer: &mut Indexer, inner: Child, context: Child) -> Child {
+        let (back, front) = <Self as RelativeSide<S>>::outer_inner_order(context, inner);
         //indexer.graph_mut().insert_pattern([back, front])
         match indexer.index_pattern([back, front]) {
             Ok((c, _)) => c,

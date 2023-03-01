@@ -1,3 +1,5 @@
+#![deny(clippy::disallowed_methods)]
+
 #![feature(test)]
 #![feature(async_closure)]
 #![feature(assert_matches)]
@@ -67,6 +69,7 @@ pub use {
         marker::PhantomData,
         collections::{
             hash_map::DefaultHasher,
+            VecDeque,
         },
         hash::{
             BuildHasherDefault,

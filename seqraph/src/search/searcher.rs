@@ -5,34 +5,29 @@ use crate::*;
 //};
 
 #[derive(Clone, Debug)]
-pub struct Searcher<G: GraphKind> {
-    pub graph: HypergraphRef<G>,
+pub struct Searcher {
+    pub graph: HypergraphRef,
 }
-trait SearchTraversalPolicy<
-    G: GraphKind,
->:
+trait SearchTraversalPolicy:
     DirectedTraversalPolicy<
-        Trav=Searcher<G>,
+        Trav=Searcher,
     >
 {
 }
 impl<
-    G: GraphKind,
 >
-    SearchTraversalPolicy<G> for AncestorSearch<G>
+    SearchTraversalPolicy for AncestorSearch
 {}
 impl<
-    G: GraphKind,
 >
-    SearchTraversalPolicy<G> for ParentSearch<G>
+    SearchTraversalPolicy for ParentSearch
 {}
 
 
 impl<
-    G: GraphKind,
-    S: SearchTraversalPolicy<G>,
+    S: SearchTraversalPolicy,
 >
-    TraversalFolder<S> for Searcher<G>
+    TraversalFolder<S> for Searcher
 {
     //type Break = TraversalResult<R, Q>;
     //type Continue = TraversalResult<R, Q>;
@@ -100,43 +95,27 @@ impl<
 //    pick_max_result(acc, path)
 //}
 
-struct AncestorSearch<G: GraphKind> {
-    _ty: std::marker::PhantomData<G>,
+struct AncestorSearch {
 }
 
 impl<
-    G: GraphKind,
 >
-    DirectedTraversalPolicy for AncestorSearch<G>
+    DirectedTraversalPolicy for AncestorSearch
 {
-    type Trav = Searcher<G>;
+    type Trav = Searcher;
 
-    fn at_postfix(
-        _trav: &Self::Trav,
-        path: Primer,
-    ) -> Postfix {
-        Postfix::from(path)
-    }
 }
-struct ParentSearch<G: GraphKind> {
-    _ty: std::marker::PhantomData<G>,
+struct ParentSearch {
 }
 
 impl<
     'a: 'g,
     'g,
-    G: GraphKind,
 >
-    DirectedTraversalPolicy for ParentSearch<G>
+    DirectedTraversalPolicy for ParentSearch
 {
-    type Trav = Searcher<G>;
+    type Trav = Searcher;
 
-    fn at_postfix(
-        _trav: &Self::Trav,
-        path: Primer,
-    ) -> Postfix {
-        Postfix::from(path)
-    }
     fn next_parents(
         _trav: &Self::Trav,
         _state: &ParentState,
@@ -148,8 +127,8 @@ pub type SearchResult = Result<
     TraversalResult,
     NoMatch
 >;
-impl<G: GraphKind> Searcher<G> {
-    pub fn new(graph: HypergraphRef<G>) -> Self {
+impl Searcher {
+    pub fn new(graph: HypergraphRef) -> Self {
         Self {
             graph,
         }
@@ -159,7 +138,7 @@ impl<G: GraphKind> Searcher<G> {
         &self,
         pattern: impl IntoPattern,
     ) -> SearchResult {
-        self.bft_search::<ParentSearch<G>, _>(
+        self.bft_search::<ParentSearch, _>(
             pattern,
         )
     }
@@ -168,12 +147,12 @@ impl<G: GraphKind> Searcher<G> {
         &self,
         pattern: impl IntoPattern,
     ) -> SearchResult {
-        self.bft_search::<AncestorSearch<G>, _>(
+        self.bft_search::<AncestorSearch, _>(
             pattern,
         )
     }
     fn bft_search<
-        S: SearchTraversalPolicy<G>,
+        S: SearchTraversalPolicy,
         P: IntoPattern,
     >(
         &self,
@@ -187,7 +166,7 @@ impl<G: GraphKind> Searcher<G> {
     fn search<
         'a,
         Ti: TraversalIterator<'a, Self, S>,
-        S: SearchTraversalPolicy<G>,
+        S: SearchTraversalPolicy,
         P: IntoPattern,
     >(
         &'a self,

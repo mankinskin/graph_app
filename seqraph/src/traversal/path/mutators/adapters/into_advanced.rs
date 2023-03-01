@@ -54,6 +54,7 @@ impl IntoAdvanced for ParentState {
         let graph = trav.graph();
         let pattern = self.path.root_pattern::<Trav>(&graph).clone();
         if let Some(next) = TravDir::<Trav>::pattern_index_next(pattern.borrow(), entry.sub_index) {
+            let index = pattern[next];
             Ok(
                 ChildState {
                     prev_pos: self.prev_pos,
@@ -76,6 +77,10 @@ impl IntoAdvanced for ParentState {
                         },
                         self.query,
                         PathPairMode::GraphMajor,
+                    ),
+                    target: CacheKey::new(
+                        index,
+                        self.root_pos + index.width(),
                     )
                 }
             )

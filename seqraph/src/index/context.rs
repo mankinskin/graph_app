@@ -31,12 +31,12 @@ impl<
 }
 
 #[derive(Debug, Clone)]
-pub struct Contexter<G: GraphKind, Side: IndexSide<G::Direction>> {
-    pub(crate) indexer: Indexer<G>,
+pub struct Contexter<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> {
+    pub(crate) indexer: Indexer,
     _ty: std::marker::PhantomData<Side>,
 }
-impl<G: GraphKind, Side: IndexSide<G::Direction>> Contexter<G, Side> {
-    pub fn new(indexer: Indexer<G>) -> Self {
+impl<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> Contexter<Side> {
+    pub fn new(indexer: Indexer) -> Self {
         Self {
             indexer,
             _ty: Default::default()
@@ -45,9 +45,9 @@ impl<G: GraphKind, Side: IndexSide<G::Direction>> Contexter<G, Side> {
 }
 
 //pub trait IndexContext<T: Tokenize, D: IndexDirection, Side: IndexSide<D>>: Indexing<T, D> {
-impl<G: GraphKind, Side: IndexSide<G::Direction>> Contexter<G, Side> {
+impl<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> Contexter<Side> {
     /// replaces context in pattern at location with child and returns it with new location
-    pub fn pather(&self) -> Pather<G, Side> {
+    pub fn pather(&self) -> Pather<Side> {
         Pather::new(self.indexer.clone())
     }
     #[instrument(skip(self, path))]

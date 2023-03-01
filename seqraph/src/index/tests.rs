@@ -10,7 +10,7 @@ use std::borrow::Borrow;
 
 #[test]
 fn index_pattern1() {
-    let mut graph = Hypergraph::default();
+    let mut graph = Hypergraph::<BaseGraphKind>::default();
     let (a, b, _w, x, y, z) = graph.insert_tokens([
         Token::Element('a'),
         Token::Element('b'),
@@ -51,7 +51,7 @@ fn index_pattern1() {
 }
 #[test]
 fn index_pattern2() {
-    let mut graph = Hypergraph::default();
+    let mut graph = Hypergraph::<BaseGraphKind>::default();
     let (a, b, _w, x, y, z) = graph.insert_tokens([
         Token::Element('a'),
         Token::Element('b'),
@@ -89,7 +89,7 @@ fn index_pattern2() {
     assert_eq!(
         aby_found,
         Ok(TraversalResult {
-            path: FoundPath::Complete(aby),
+            result: FoldResult::Complete(aby),
             query: QueryRangePath::complete(query),
         }),
         "aby"
@@ -98,7 +98,7 @@ fn index_pattern2() {
 
 #[test]
 fn index_infix1() {
-    let mut graph = Hypergraph::default();
+    let mut graph = Hypergraph::<BaseGraphKind>::default();
     let (a, b, w, x, y, z) = graph.insert_tokens([
         Token::Element('a'),
         Token::Element('b'),
@@ -133,7 +133,7 @@ fn index_infix1() {
     assert_eq!(
         aby_found,
         Ok(TraversalResult {
-            path: FoundPath::Complete(aby),
+            result: FoldResult::Complete(aby),
             query: QueryRangePath::complete(query),
         }),
         "aby"

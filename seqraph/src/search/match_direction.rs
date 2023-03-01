@@ -31,25 +31,12 @@ pub trait MatchDirection : Clone + Debug + Send + Sync + 'static + Unpin {
         b: impl DoubleEndedIterator<Item = &'a J>,
     ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)>;
     /// get remaining pattern in matching direction including index
-    fn split_end<T: AsChild + Clone>(
-        pattern: &'_ [T],
-        index: PatternId,
-    ) -> Vec<T>;
-    /// get remaining pattern agains matching direction excluding index
-    fn back_context<T: AsChild + Clone>(
-        pattern: &'_ [T],
-        index: PatternId,
-    ) -> Vec<T>;
     fn pattern_tail<T: AsChild>(pattern: &'_ [T]) -> &'_ [T];
     fn pattern_head<T: AsChild>(pattern: &'_ [T]) -> Option<&T>;
     fn head_index(pattern: impl IntoPattern) -> usize;
     fn last_index(pattern: impl IntoPattern) -> usize {
         Self::Opposite::head_index(pattern)
     }
-    fn normalize_index<T: AsChild>(
-        pattern: &'_ [T],
-        index: usize,
-    ) -> usize;
     fn merge_remainder_with_context<
         A: IntoPattern,
         B: IntoPattern,
@@ -72,12 +59,6 @@ pub trait MatchDirection : Clone + Debug + Send + Sync + 'static + Unpin {
     fn split_head_tail<T: AsChild + Clone>(pattern: &'_ [T]) -> Option<(T, &'_ [T])> {
         Self::pattern_head(pattern).map(|head| (head.clone(), Self::pattern_tail(pattern)))
     }
-    fn split_end_normalized<T: AsChild + Clone>(
-        pattern: &'_ [T],
-        index: PatternId,
-    ) -> Vec<T> {
-        Self::split_end(pattern, Self::normalize_index(pattern, index))
-    }
     fn front_context_range<T>(
         index: PatternId,
     ) -> Self::PostfixRange<T>;
@@ -88,18 +69,18 @@ pub trait MatchDirection : Clone + Debug + Send + Sync + 'static + Unpin {
     ) -> Vec<T> {
         pattern.get(Self::front_context_range::<T>(index)).unwrap_or(&[]).to_vec()
     }
-    fn front_context_normalized<T: AsChild + Clone>(
-        pattern: &'_ [T],
-        index: PatternId,
-    ) -> Vec<T> {
-        Self::front_context(pattern, Self::normalize_index(pattern, index))
-    }
-    fn back_context_normalized<T: AsChild + Clone>(
-        pattern: &'_ [T],
-        index: PatternId,
-    ) -> Vec<T> {
-        Self::back_context(pattern, Self::normalize_index(pattern, index))
-    }
+    //fn front_context_normalized<T: AsChild + Clone>(
+    //    pattern: &'_ [T],
+    //    index: PatternId,
+    //) -> Vec<T> {
+    //    Self::front_context(pattern, Self::normalize_index(pattern, index))
+    //}
+    //fn back_context_normalized<T: AsChild + Clone>(
+    //    pattern: &'_ [T],
+    //    index: PatternId,
+    //) -> Vec<T> {
+    //    Self::back_context(pattern, Self::normalize_index(pattern, index))
+    //}
     fn pattern_index_next(
         pattern: impl IntoPattern,
         index: usize,
@@ -114,15 +95,6 @@ pub trait MatchDirection : Clone + Debug + Send + Sync + 'static + Unpin {
     ) -> Option<usize> {
         Self::index_prev(index).and_then(|i|
             (i < pattern.borrow().len()).then(|| i)
-        )
-    }
-    fn directed_pattern_split<T: AsChild + Clone>(
-        pattern: &'_ [T],
-        index: usize,
-    ) -> (Vec<T>, Vec<T>) {
-        (
-            Self::back_context(pattern, index),
-            Self::split_end_normalized(pattern, index),
         )
     }
     fn next_child(
@@ -163,23 +135,11 @@ impl MatchDirection for Right {
     ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)> {
         to_matching_iterator(a, b).next()
     }
-    fn split_end<T: AsChild + Clone>(
-        pattern: &'_ [T],
-        index: PatternId,
-    ) -> Vec<T> {
-        postfix(pattern, index)
-    }
 
     fn front_context_range<T>(
         index: PatternId,
     ) -> Self::PostfixRange<T> {
         (index + 1)..
-    }
-    fn back_context<T: AsChild + Clone>(
-        pattern: &'_ [T],
-        index: PatternId,
-    ) -> Vec<T> {
-        prefix(pattern, index)
     }
     fn pattern_tail<T: AsChild>(pattern: &'_ [T]) -> &'_ [T] {
         pattern.get(1..).unwrap_or(&[])
@@ -202,12 +162,6 @@ impl MatchDirection for Right {
         index: usize,
     ) -> Option<usize> {
         index.checked_sub(1)
-    }
-    fn normalize_index<T: AsChild>(
-        _pattern: &'_ [T],
-        index: usize,
-    ) -> usize {
-        index
     }
     fn merge_remainder_with_context<
         A: IntoPattern,
@@ -246,22 +200,10 @@ impl MatchDirection for Left {
     ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)> {
         to_matching_iterator(a.rev(), b.rev()).next()
     }
-    fn split_end<T: AsChild + Clone>(
-        pattern: &'_ [T],
-        index: PatternId,
-    ) -> Vec<T> {
-        prefix(pattern, index + 1)
-    }
     fn front_context_range<T>(
         index: PatternId,
     ) -> Self::PostfixRange<T> {
         0..index
-    }
-    fn back_context<T: AsChild + Clone>(
-        pattern: &'_ [T],
-        index: PatternId,
-    ) -> Vec<T> {
-        postfix(pattern, index + 1)
     }
     fn pattern_tail<T: AsChild>(pattern: &'_ [T]) -> &'_ [T] {
         pattern.split_last().map(|(_last, pre)| pre).unwrap_or(&[])
@@ -284,12 +226,6 @@ impl MatchDirection for Left {
         index: usize,
     ) -> Option<usize> {
         index.checked_add(1)
-    }
-    fn normalize_index<T: AsChild>(
-        pattern: &'_ [T],
-        index: usize,
-    ) -> usize {
-        pattern.len() - index - 1
     }
     fn merge_remainder_with_context<
         A: IntoPattern,

@@ -19,6 +19,11 @@ impl SubLocation {
         }
     }
 }
+impl From<ChildLocation> for SubLocation {
+    fn from(value: ChildLocation) -> Self {
+        value.to_sub_location()
+    }
+}
 
 pub trait IntoChildLocation {
     fn into_child_location(self) -> ChildLocation;

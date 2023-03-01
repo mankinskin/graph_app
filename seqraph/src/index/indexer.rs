@@ -2,81 +2,69 @@ use crate::*;
 use super::*;
 
 #[derive(Debug, Clone)]
-pub struct Indexer<G: GraphKind> {
-    pub graph: HypergraphRef<G>,
+pub struct Indexer {
+    pub graph: HypergraphRef,
 }
-pub struct IndexingPolicy<G: GraphKind, R: ResultKind> {
-    _ty: std::marker::PhantomData<(G, R)>,
+pub struct IndexingPolicy {
 }
 impl<
     'a: 'g,
     'g,
-    G: GraphKind,
-    R: ResultKind,
-> DirectedTraversalPolicy for IndexingPolicy<G, R>
+> DirectedTraversalPolicy for IndexingPolicy
 {
-    type Trav = Indexer<G>;
+    type Trav = Indexer;
 
-    #[instrument(skip(trav, primer))]
-    fn at_postfix(
-        trav: &Self::Trav,
-        primer: Primer,
-    ) -> Postfix {
-        let trav = trav.clone();
-        let path = primer.role_path();
-        println!("after end match {:?}", path);
-        // index postfix of match
+    //#[instrument(skip(trav, primer))]
+    //fn at_postfix(
+    //    trav: &Self::Trav,
+    //    primer: Primer,
+    //) -> Postfix {
+    //    let trav = trav.clone();
+    //    let path = primer.role_path();
+    //    println!("after end match {:?}", path);
+    //    // index postfix of match
 
-        let match_end =
-            if let Some(IndexSplitResult {
-                inner: post,
-                location: entry,
-                ..
-            }) = trav
-            .pather::<IndexBack>()
-            .index_primary_path::<InnerSide, _>(
-                path.path().into_iter().chain(
-                    std::iter::once(&path.child_location())
-                ).collect_vec(),
-            ) {
-                MatchEnd::Path(RolePath {
-                    path: vec![entry],
-                    child: post,
-                    width: post.width(),
-                    token_pos: trav.graph().expect_pattern_range_width(entry, 0..entry.sub_index),
-                    _ty: Default::default(),
-                })
-            } else {
-                MatchEnd::Complete(path.child_location().parent)
-            };
-        println!("after end match result {:?}", match_end);
-        R::into_postfix(primer, match_end)
-    }
+    //    let match_end =
+    //        if let Some(IndexSplitResult {
+    //            inner: post,
+    //            location: entry,
+    //            ..
+    //        }) = trav
+    //        .pather::<IndexBack>()
+    //        .index_primary_path::<InnerSide, _>(
+    //            path.path().into_iter().chain(
+    //                std::iter::once(&path.child_location())
+    //            ).collect_vec(),
+    //        ) {
+    //            MatchEnd::Path(RolePath {
+    //                path: vec![entry],
+    //                child: post,
+    //                width: post.width(),
+    //                token_pos: trav.graph().expect_pattern_range_width(entry, 0..entry.sub_index),
+    //                _ty: Default::default(),
+    //            })
+    //        } else {
+    //            MatchEnd::Complete(path.child_location().parent)
+    //        };
+    //    println!("after end match result {:?}", match_end);
+    //    BaseResult::into_postfix(primer, match_end)
+    //}
 }
 
-pub trait IndexerTraversalPolicy<
-    G: GraphKind,
-    R: ResultKind,
->:
+pub trait IndexerTraversalPolicy
+:
     DirectedTraversalPolicy<
-        R,
-        Trav=Indexer<G>,
+        Trav=Indexer,
     >
 {
 }
 impl<
     'a: 'g,
     'g,
-    G: GraphKind,
-    R: ResultKind,
-> IndexerTraversalPolicy<G, R> for IndexingPolicy<G, R>
+> IndexerTraversalPolicy for IndexingPolicy
 {}
 
-impl<G, R> TraversalFolder<IndexingPolicy<G, R>, R> for Indexer<G>
-where 
-    G: GraphKind,
-    R: ResultKind,
-{
+impl TraversalFolder<IndexingPolicy> for Indexer {
     //type Break = TraversalResult<R, Q>;
     //type Continue = TraversalResult<R, Q>;
     //type Result = (<R as ResultKind>::Indexed, Q);
@@ -136,28 +124,32 @@ where
     //}
 }
 
-impl<G: GraphKind> Indexer<G> {
-    pub fn new(graph: HypergraphRef<G>) -> Self {
+impl Indexer {
+    pub fn new(graph: HypergraphRef) -> Self {
         Self {
             graph,
-            _ty: Default::default(),
         }
     }
-    pub fn contexter<Side: IndexSide<G::Direction>>(&self) -> Contexter<G, Side> {
+    pub fn contexter<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>>(&self) -> Contexter<Side> {
         Contexter::new(self.clone())
     }
-    pub fn splitter<Side: IndexSide<G::Direction>>(&self) -> Splitter<G, Side> {
+    pub fn splitter<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>>(&self) -> Splitter<Side> {
         Splitter::new(self.clone())
     }
-    pub fn pather<Side: IndexSide<G::Direction>>(&self) -> Pather<G, Side> {
+    pub fn pather<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>>(&self) -> Pather<Side> {
         Pather::new(self.clone())
     }
     pub fn index_pattern(
         &mut self,
         query: impl IntoPattern,
     ) -> Result<(Child, QueryRangePath), NoMatch> {
-        match <Self as TraversalFolder<_, BaseResult>>::fold_query(self, query) {
-            Ok((result, remaining_query)) => Ok((self.index_found(result), remaining_query)),
+        match <Self as TraversalFolder<_>>::fold_query(self, query) {
+            Ok(result) => match result.result {
+                FoldResult::Complete(c) =>
+                    Ok((c, result.query)),
+                FoldResult::Incomplete(s) =>
+                    Ok((self.index_subgraph(s), result.query)),
+            },
             Err((NoMatch::SingleIndex(c), path)) => Ok((c, path)),
             Err((err, _)) => Err(err),
         }

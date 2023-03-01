@@ -21,52 +21,58 @@ impl TraversalCache {
             entries,
         })
     }
-    pub fn get_entry(&self, key: &CacheKey) -> Option<&PositionCache> {
+    pub fn get(&self, key: &CacheKey) -> Option<&PositionCache> {
         self.entries.get(&key.index.index())
             .and_then(|ve|
                 ve.positions.get(&key.pos)
             )
     }
-    pub fn expect_entry(&self, key: &CacheKey) -> &PositionCache {
-        self.get_entry(key).unwrap()
-    }
-    pub fn get_entry_mut(&mut self, key: &CacheKey) -> Option<&mut PositionCache> {
+    pub fn get_mut(&mut self, key: &CacheKey) -> Option<&mut PositionCache> {
         self.entries.get_mut(&key.index.index())
             .and_then(|ve| {
                 //println!("get_entry positions {:#?}: {:#?}", key, ve.positions);
                 ve.positions.get_mut(&key.pos)
             })
     }
+    pub fn expect(&self, key: &CacheKey) -> &PositionCache {
+        self.get(key).unwrap()
+    }
+    pub fn expect_mut(&mut self, key: &CacheKey) -> &mut PositionCache {
+        self.get_mut(key).unwrap()
+    }
     /// adds node to cache and returns the state of the insertion
-    pub fn add_state<
-        Trav: Traversable,
-    >(&mut self, trav: &Trav, state: &TraversalState) -> (CacheKey, bool) {
-        let key = state.target_key(trav);
+    pub fn add_state(&mut self, state: &TraversalState) -> (CacheKey, bool) {
+        let key = state.target_key();
         if let Some(ve) = self.entries.get_mut(&key.index.index()) {
             if let Some(_) = ve.positions.get_mut(&key.pos) {
                 (key, false)
             } else {
                 ve.new_position(
-                    trav,
                     key,
                     state,
                 );
+                let prev = state.prev_key();
+                match (state.node_direction(), state.entry_location()) {
+                    (NodeDirection::TopDown, Some(_)) => {
+                        self.expect_mut(&prev).edges.bottom.insert(key);
+                    },
+                    (NodeDirection::BottomUp, Some(entry)) => {
+                        self.expect_mut(&prev).edges.top.insert(key, entry.to_sub_location());
+                    },
+                    _ => {}
+                }
                 (key, true)
             }
         } else {
             self.new_vertex(
-                trav,
                 key, 
                 state,
             );
             (key, true)
         }
     }
-    fn new_vertex<
-        Trav: Traversable,
-    >(
+    fn new_vertex(
         &mut self,
-        trav: &Trav,
         key: CacheKey,
         state: &TraversalState,
     ) {
@@ -74,21 +80,39 @@ impl TraversalCache {
             positions: Default::default()
         };
         ve.new_position(
-            trav,
             key,
             state,
         );
         self.entries.insert(key.index.index(), ve);
     }
+    //pub fn trace_down_from(
+    //    &mut self,
+    //    key: &CacheKey,
+    //) {
+    //    let mut queue = VecDeque::new();
+    //    let mut node = self.expect_entry_mut(key);
+    //    queue.extend(node.edges.bottom.iter());
+    //    let mut prev = key;
+    //    while let Some(node_key) = queue.pop_front() {
+    //        let mut node = self.expect_entry_mut(node_key);
+    //        node.edges.top.insert(*prev);
+    //        queue.extend(node.edges.bottom.iter());
+    //    }
+    //}
     pub fn continue_waiting(
         &mut self,
         key: &CacheKey,
     ) -> Vec<(usize, TraversalState)> {
-        self.get_entry_mut(key)
+        self.get_mut(key)
             .unwrap()
             .waiting
             .drain(..)
             .map(|(d, s)| (d, s.into()))
             .collect()
     }
+    //pub fn trace_subgraph(&mut self, end_states: &Vec<EndState>) {
+    //    for state in end_states {
+    //        self.trace_down_from(&state.root_key())    
+    //    }
+    //}
 }

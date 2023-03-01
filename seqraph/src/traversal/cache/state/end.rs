@@ -17,6 +17,7 @@ pub struct PrefixEnd {
 pub struct EndState {
     pub reason: EndReason,
     pub root_pos: TokenLocation,
+    pub target: CacheKey,
     pub kind: EndKind,
     pub matched: bool,
     pub query: QueryState,

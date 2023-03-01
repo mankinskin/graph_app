@@ -1,16 +1,12 @@
 use crate::*;
 
-type HashSet<T> = DeterministicHashSet<T>;
-#[allow(unused)]
-type HashMap<K, V> = DeterministicHashMap<K, V>;
-
 #[derive(Debug, Clone)]
-pub struct Pather<G: GraphKind, Side: IndexSide<G::Direction>> {
-    pub(crate) indexer: Indexer<G>,
+pub struct Pather<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> {
+    pub(crate) indexer: Indexer,
     _ty: std::marker::PhantomData<Side>,
 }
-impl<G: GraphKind, Side: IndexSide<G::Direction>> Pather<G, Side> {
-    pub fn new(indexer: Indexer<G>) -> Self {
+impl<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> Pather<Side> {
+    pub fn new(indexer: Indexer) -> Self {
         Self {
             indexer,
             _ty: Default::default()
@@ -61,10 +57,10 @@ pub struct IndexPathComponents {
 //    }
 //}
 
-impl<G: GraphKind, Side: IndexSide<G::Direction>> Pather<G, Side> {
+impl<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> Pather<Side> {
     #[instrument(skip(self, entry), ret)]
     pub fn index_primary_entry<
-        S: RelativeSide<G, Side>,
+        S: RelativeSide<Side>,
         L: Borrow<ChildLocation> + Debug,
     >(
         &mut self,
@@ -121,7 +117,7 @@ impl<G: GraphKind, Side: IndexSide<G::Direction>> Pather<G, Side> {
     //}
 
     pub fn path_components<
-        S: RelativeSide<G, Side>,
+        S: RelativeSide<Side>,
         P: ContextPath
     >(
         &mut self,
@@ -145,7 +141,7 @@ impl<G: GraphKind, Side: IndexSide<G::Direction>> Pather<G, Side> {
         ))
     }
     pub fn path_entry_components<
-        S: RelativeSide<G, Side>,
+        S: RelativeSide<Side>,
     >(
         &mut self,
         prev: IndexSplitResult,
@@ -178,7 +174,7 @@ impl<G: GraphKind, Side: IndexSide<G::Direction>> Pather<G, Side> {
         }
     }
     pub fn index_components<
-        S: RelativeSide<G, Side>,
+        S: RelativeSide<Side>,
     >(
         &mut self,
         components: IndexPathComponents,
@@ -249,14 +245,13 @@ impl<G: GraphKind, Side: IndexSide<G::Direction>> Pather<G, Side> {
         }
     }
     pub fn path_segment<
-        S: RelativeSide<G, Side>,
+        S: RelativeSide<Side>,
     >(
         &mut self,
         prev: IndexSplitResult,
         location: ChildLocation
     ) -> IndexSplitResult {
-        let components = 
-            self.path_entry_components::<S>(prev, location);
+        let components = self.path_entry_components::<S>(prev, location);
         self.index_components::<S>(
             components,
         )
@@ -264,7 +259,7 @@ impl<G: GraphKind, Side: IndexSide<G::Direction>> Pather<G, Side> {
     #[instrument(skip(self, path))]
     //#[async_recursion]
     pub fn index_primary_path<
-        S: RelativeSide<G, Side>,
+        S: RelativeSide<Side>,
         P: ContextPath,
     >(
         &mut self,
@@ -280,24 +275,24 @@ impl<G: GraphKind, Side: IndexSide<G::Direction>> Pather<G, Side> {
     }
     // primary range, depending on S
     fn index_primary_exclusive<
-        S: RelativeSide<G, Side>,
+        S: RelativeSide<Side>,
         L: Borrow<ChildLocation> + Debug,
     >(
         &mut self,
         location: L,
     ) -> Option<(Pattern, IndexSplitResult)> {
         self.index_primary_entry::<S, _>(
-            <S as RelativeSide<G, Side>>::exclusive_primary_location(*location.borrow())?
+            <S as RelativeSide<Side>>::exclusive_primary_location(*location.borrow())?
         )
     }
     pub fn index_secondary_path<
-        S: RelativeSide<G, Side>,
+        S: RelativeSide<Side>,
         P: ContextPath
     >(
         &mut self,
         path: P,
     ) -> Option<IndexSplitResult> {
-        self.index_primary_path::<<S as RelativeSide<G, Side>>::Opposite, _>(
+        self.index_primary_path::<<S as RelativeSide<Side>>::Opposite, _>(
             path,
         )
     }
@@ -307,7 +302,7 @@ impl<G: GraphKind, Side: IndexSide<G::Direction>> Pather<G, Side> {
     /// along with its location
     #[instrument(skip(self))]
     fn pattern_perfect_split<
-        S: RelativeSide<G, Side>,
+        S: RelativeSide<Side>,
         P: IntoPattern,
         L: Borrow<ChildLocation> + Debug
     >(
@@ -344,7 +339,7 @@ impl<G: GraphKind, Side: IndexSide<G::Direction>> Pather<G, Side> {
     #[instrument(skip(self, parent, child_patterns, offset))]
     //#[async_recursion]
     fn child_pattern_offset_splits<
-        S: RelativeSide<G, Side>,
+        S: RelativeSide<Side>,
     >(
         &mut self,
         parent: Child,
@@ -393,7 +388,7 @@ impl<G: GraphKind, Side: IndexSide<G::Direction>> Pather<G, Side> {
                                     std::iter::once(split.location)
                                 ).collect_vec(),
                             ).unwrap();
-                            (parent.to_child_location(pid, pos), pattern, split, context)
+                            (parent.to_child_location(SubLocation::new(pid, pos)), pattern, split, context)
                         })
                     .collect()
                         
@@ -405,7 +400,7 @@ impl<G: GraphKind, Side: IndexSide<G::Direction>> Pather<G, Side> {
     #[instrument(skip(self, parent, offset))]
     //#[async_recursion]
     pub fn single_offset_split<
-        S: RelativeSide<G, Side>,
+        S: RelativeSide<Side>,
     >(
         &mut self,
         parent: Child,
@@ -519,7 +514,7 @@ impl<G: GraphKind, Side: IndexSide<G::Direction>> Pather<G, Side> {
         } else {
             // add contexts
             let mut backs = HashSet::default();
-            let mut fronts = HashSet::default();
+            let mut fronts: HashSet<Pattern> = HashSet::default();
             for (location, pattern, split, context) in splits {
                 let pos = location.sub_index;
                 let IndexSplitResult {
@@ -529,8 +524,8 @@ impl<G: GraphKind, Side: IndexSide<G::Direction>> Pather<G, Side> {
                 } = split;
                 let (back, front) = Side::context_inner_order(&context, &inner);
                 // todo: order depends on D
-                backs.insert([&G::Direction::back_context(pattern.borrow(), pos)[..], back].concat());
-                fronts.insert([front, &G::Direction::front_context(pattern.borrow(), pos)[..]].concat());
+                backs.insert([&Start::back_context(pattern.borrow(), pos)[..], back].concat());
+                //fronts.insert([front, &End::front_context(pattern.borrow(), pos)[..]].concat());
             }
             
             // index half patterns

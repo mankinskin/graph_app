@@ -18,6 +18,7 @@ pub struct ParentState {
 pub struct ChildState {
     pub prev_pos: TokenLocation,
     pub root_pos: TokenLocation,
+    pub target: CacheKey,
     pub matched: bool,
     pub paths: PathPair,
 }

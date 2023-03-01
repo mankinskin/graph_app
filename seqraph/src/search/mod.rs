@@ -26,11 +26,9 @@ pub enum NoMatch {
     EmptyRange,
 }
 
-impl<'t, 'g, G> HypergraphRef<G>
-where
-    G: GraphKind + 't,
+impl<'t, 'g> HypergraphRef
 {
-    pub fn searcher(&'g self) -> Searcher<G> {
+    pub fn searcher(&'g self) -> Searcher {
         Searcher::new(self.clone())
     }
     //pub fn expect_pattern(
@@ -56,7 +54,7 @@ where
     }
     pub fn find_sequence(
         &self,
-        pattern: impl IntoIterator<Item = impl AsToken<G::Token>>,
+        pattern: impl IntoIterator<Item = impl AsToken<<BaseGraphKind as GraphKind>::Token>>,
     ) -> SearchResult {
         let iter = tokenizing_iter(pattern.into_iter());
         let pattern = self.graph().to_token_children(iter)?;

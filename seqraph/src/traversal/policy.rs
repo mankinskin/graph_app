@@ -8,11 +8,12 @@ pub trait DirectedTraversalPolicy: Sized {
 
     type Trav: Traversable + TraversalFolder<Self>;
 
-    /// Executed after last child of index matched
-    fn at_postfix(
-        _trav: &Self::Trav,
-        path: Primer,
-    ) -> Postfix;
+    ///// Executed after last child of index matched
+    //fn at_postfix(
+    //    _trav: &Self::Trav,
+    //    path: Primer,
+    //) -> Postfix;
+
     /// nodes generated when an index ended
     /// (parent nodes)
     fn next_parents(

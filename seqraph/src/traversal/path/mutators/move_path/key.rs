@@ -18,6 +18,20 @@ impl From<usize> for TokenLocation {
         }
     }
 }
+impl std::ops::Add<usize> for TokenLocation {
+    type Output = Self;
+    fn add(mut self, delta: usize) -> Self {
+        self.pos += delta;
+        self
+    }
+}
+impl std::ops::Sub<usize> for TokenLocation {
+    type Output = Self;
+    fn sub(mut self, delta: usize) -> Self {
+        self.pos -= delta;
+        self
+    }
+}
 
 pub trait MoveKey<D: Direction> {
     type Delta = usize;
