@@ -78,11 +78,7 @@ impl SplitCache {
             .insert(location, split);
     }
 }
-pub struct SplitKey {
-    key: CacheKey,
-}
 impl Indexer {
-
     pub fn index_leaf<R: PathRole>(
         &mut self,
         subgraph: &FoldState,
@@ -90,7 +86,6 @@ impl Indexer {
         frontier: &mut VecDeque<CacheKey>,
         key: &CacheKey,
     ) {
-        let graph = self.graph();
         let (l, r) = R::directed_pattern_split(&[key.index], 0);
         splits.expect_mut(key).final_split = Some(Split {
             left: l,

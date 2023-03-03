@@ -80,7 +80,7 @@ impl IntoAdvanced for ParentState {
                     ),
                     target: CacheKey::new(
                         index,
-                        self.root_pos + index.width(),
+                        self.root_pos, // + index.width(),
                     )
                 }
             )

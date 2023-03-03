@@ -47,20 +47,18 @@ impl TraversalCache {
             if let Some(_) = ve.positions.get_mut(&key.pos) {
                 (key, false)
             } else {
-                ve.new_position(
+                drop(ve);
+                let prev = self.expect_mut(&state.prev_key());
+                let pe = PositionCache::new(
+                    prev,
                     key,
-                    state,
+                    state
                 );
-                let prev = state.prev_key();
-                match (state.node_direction(), state.entry_location()) {
-                    (NodeDirection::TopDown, Some(_)) => {
-                        self.expect_mut(&prev).edges.bottom.insert(key);
-                    },
-                    (NodeDirection::BottomUp, Some(entry)) => {
-                        self.expect_mut(&prev).edges.top.insert(key, entry.to_sub_location());
-                    },
-                    _ => {}
-                }
+                let ve = self.entries.get_mut(&key.index.index()).unwrap();
+                ve.positions.insert(
+                    key.pos,
+                    pe,
+                );
                 (key, true)
             }
         } else {
@@ -79,9 +77,15 @@ impl TraversalCache {
         let mut ve = VertexCache {
             positions: Default::default()
         };
-        ve.new_position(
+        let prev = self.expect_mut(&state.prev_key());
+        let pe = PositionCache::new(
+            prev,
             key,
-            state,
+            state
+        );
+        ve.positions.insert(
+            key.pos,
+            pe,
         );
         self.entries.insert(key.index.index(), ve);
     }

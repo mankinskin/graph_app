@@ -16,20 +16,6 @@ impl VertexCache {
             positions,
         }
     }
-    pub(crate)fn new_position(
-        &mut self,
-        key: CacheKey,
-        state: &TraversalState,
-    ) {
-        let ve = PositionCache::new(
-            key,
-            state
-        );
-        self.positions.insert(
-            key.pos,
-            ve,
-        );
-    }
 }
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Edges {
@@ -46,23 +32,25 @@ impl PositionCache {
     pub fn start(index: Child) -> Self {
         Self {
             index,
-            // todo: update num_parents when creating forward edges
             edges: Default::default(),
             waiting: Default::default(),
         }
     }
     pub fn new(
+        prev: &mut PositionCache,
         key: CacheKey,
         state: &TraversalState,
     ) -> Self {
         let mut edges = Edges::default();
-        if let (prev, Some(entry)) = (state.prev_key(), state.entry_location()) {
+        if let Some(entry) = state.entry_location() {
             match state.node_direction() {
                 NodeDirection::TopDown => {
-                    edges.top.insert(prev, entry.to_sub_location());
+                    edges.top.insert(state.prev_key(), entry.to_sub_location());
+                    prev.edges.bottom.insert(key);
                 },
                 NodeDirection::BottomUp => {
-                    edges.bottom.insert(prev);
+                    edges.bottom.insert(state.prev_key());
+                    prev.edges.top.insert(key, entry.to_sub_location());
                 },
             }
         }

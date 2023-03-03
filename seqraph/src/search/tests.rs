@@ -191,11 +191,13 @@ fn find_ancestor2() {
         vec![xa, by],
     ]); // 11
     let xa_by_id = xaby_ids[1];
+    assert_eq!(xa_by_id, 7);
     let (xabyz, xabyz_ids) = graph.insert_patterns_with_ids([
         vec![xaby, z],
         vec![xab, yz],
     ]); // 12
     let xaby_z_id = xabyz_ids[0];
+    assert_eq!(xaby_z_id, 8);
     let graph = HypergraphRef::from(graph);
     let query = vec![by, z];
     let byz_found = graph.find_ancestor(&query);
@@ -204,7 +206,7 @@ fn find_ancestor2() {
         Ok(TraversalResult {
             result: FoldResult::Incomplete(
                 FoldState {
-                    start: CacheKey::new(b, 0),
+                    start: CacheKey::new(by, 2),
                     cache: TraversalCache {
                         query_root: query.clone(),
                         entries: HashMap::from_iter([
@@ -216,7 +218,11 @@ fn find_ancestor2() {
                                                 CacheKey {
                                                     index: xaby,
                                                     pos: 2.into(),
-                                                }//, Edge::from(SubLocation::new(8, 0))),
+                                                },
+                                                CacheKey {
+                                                    index: z,
+                                                    pos: 2.into(),
+                                                },
                                             ]),
                                             top: Default::default(),
                                         },
@@ -229,22 +235,13 @@ fn find_ancestor2() {
                                 positions: HashMap::from_iter([
                                     (2.into(), PositionCache {
                                         edges: Edges {
-                                            bottom: HashSet::from_iter([
-                                                CacheKey {
-                                                    index: b,
-                                                    pos: 1.into(),
-                                                },
-                                                CacheKey {
-                                                    index: y,
-                                                    pos: 2.into(),
-                                                },
-                                            ]),
+                                            bottom: Default::default(),
                                             top: HashMap::from_iter([
                                                 (CacheKey {
                                                         index: xaby,
                                                         pos: 2.into(),
                                                     },
-                                                    SubLocation::new(8, 1)
+                                                    SubLocation::new(7, 1)
                                                 ),
                                             ]),
                                         },
@@ -255,7 +252,7 @@ fn find_ancestor2() {
                             }),
                             (z.index, VertexCache {
                                 positions: HashMap::from_iter([
-                                    (4.into(), PositionCache {
+                                    (2.into(), PositionCache {
                                         edges: Edges {
                                             top: HashMap::from_iter([
                                                 (CacheKey {
@@ -302,7 +299,7 @@ fn find_ancestor2() {
                             root_pos: 2.into(),
                             reason: EndReason::QueryEnd,
                             matched: true,
-                            target: CacheKey::new(y, 2),
+                            target: CacheKey::new(z, 3),
                             kind: EndKind::Postfix(
                                 RootedRolePath {
                                     split_path: RootedSplitPath {
@@ -347,38 +344,11 @@ fn find_ancestor2() {
                                     },
                                     _ty: Default::default(),
                                 },
-                                pos: 4.into(),
+                                pos: 3.into(),
                             },
                         },
                     ]
                 }
-            //SearchPath {
-            //    start: RolePath {
-            //        path: vec![
-            //            xabyz.to_pattern_location(xaby_z_id)
-            //                .to_child_location(0),
-            //            ChildLocation {
-            //                parent: xaby,
-            //                pattern_id: xa_by_id,
-            //                sub_index: 1,
-            //            },
-            //        ],
-            //        width: 3,
-            //        child: by,
-            //        token_pos: 2,
-            //        _ty: Default::default(),
-            //    },
-            //    end: RolePath {
-            //        path: vec![
-            //            xabyz.to_pattern_location(xaby_z_id)
-            //                .to_child_location(1),
-            //        ],
-            //        width: 0,
-            //        child: z,
-            //        token_pos: 3,
-            //        _ty: Default::default(),
-            //    },
-            //}
             ),
             query: QueryRangePath::complete(query),
         }),
@@ -418,7 +388,7 @@ fn find_ancestor3() {
         [xaby, z],
         [xab, yz]
     ]);
-    let mut gr = HypergraphRef::from(graph);
+    let gr = HypergraphRef::from(graph);
 
     let query = vec![ab, y];
     let aby_found = gr.find_ancestor(&query);
@@ -427,14 +397,25 @@ fn find_ancestor3() {
         Ok(TraversalResult {
             result: FoldResult::Incomplete(
                 FoldState {
-                    start: CacheKey::new(ab, 0),
+                    start: CacheKey::new(ab, 2),
                     cache: TraversalCache {
                         query_root: query.clone(),
                         entries: HashMap::from_iter([
                             (ab.index, VertexCache {
                                 positions: HashMap::from_iter([
                                     (2.into(), PositionCache {
-                                        edges: Default::default(),
+                                        edges: Edges {
+                                            bottom: HashSet::default(),
+                                            top: HashMap::from_iter([
+                                                (
+                                                    CacheKey {
+                                                        index: xab,
+                                                        pos: 2.into(),
+                                                    },
+                                                    SubLocation::new(x_ab_id, 1),
+                                                )
+                                            ]),
+                                        },
                                         index: ab,
                                         waiting: Default::default(),
                                     })
@@ -451,7 +432,7 @@ fn find_ancestor3() {
                                                     pos: 2.into(),
                                                 },
                                                 CacheKey {
-                                                    index: z,
+                                                    index: yz,
                                                     pos: 2.into(),
                                                 },
                                             ]),
@@ -463,35 +444,34 @@ fn find_ancestor3() {
                             }),
                             (y.index, VertexCache {
                                 positions: HashMap::from_iter([
-                                    (4.into(), PositionCache {
+                                    (2.into(), PositionCache {
                                         edges: Edges {
                                             top: HashMap::from_iter([
+                                                //(CacheKey {
+                                                //    index: yz,
+                                                //    pos: 2.into(),
+                                                //}, SubLocation {
+                                                //    pattern_id: 2,
+                                                //    sub_index: 0,
+                                                //}),
                                                 (CacheKey {
                                                     index: xaby,
                                                     pos: 2.into(),
                                                 }, SubLocation {
                                                     pattern_id: 6,
                                                     sub_index: 1,
-                                                }),
-                                                (CacheKey {
-                                                    index: by,
-                                                    pos: 1.into(),
-                                                }, SubLocation {
-                                                    pattern_id: 1,
-                                                    sub_index: 1,
-                                                }),
+                                                })
                                             ]),
                                             bottom: Default::default(),
                                         },
                                         index: y,
-                                        waiting: vec![
-                                        ],
-                                    })
+                                        waiting: vec![],
+                                    }),
                                 ])
                             }),
                             (yz.index, VertexCache {
                                 positions: HashMap::from_iter([
-                                    (4.into(), PositionCache {
+                                    (2.into(), PositionCache {
                                         edges: Edges {
                                             top: HashMap::from_iter([
                                                 (CacheKey {
@@ -503,18 +483,14 @@ fn find_ancestor3() {
                                                 }),
                                             ]),
                                             bottom: HashSet::from_iter([
-                                                (CacheKey {
-                                                    index: y,
-                                                    pos: 2.into(),
-                                                }),
+                                                //(CacheKey {
+                                                //    index: y,
+                                                //    pos: 2.into(),
+                                                //}),
                                             ]),
                                         },
-                                        index: Child {
-                                            index: 8,
-                                            width: 2,
-                                        },
-                                        waiting: vec![
-                                        ],
+                                        index: yz,
+                                        waiting: vec![],
                                     })
                                 ])
                             }),
@@ -525,6 +501,10 @@ fn find_ancestor3() {
                                             bottom: HashSet::from_iter([
                                                 CacheKey {
                                                     index: xab,
+                                                    pos: 2.into(),
+                                                },
+                                                CacheKey {
+                                                    index: y,
                                                     pos: 2.into(),
                                                 },
                                             ]),
@@ -545,7 +525,22 @@ fn find_ancestor3() {
                                                     pos: 2.into(),
                                                 },
                                             ]),
-                                            top: HashMap::default(),
+                                            top: HashMap::from_iter([
+                                                (
+                                                    CacheKey {
+                                                        index: xabyz,
+                                                        pos: 2.into(),
+                                                    },
+                                                    SubLocation::new(9, 0),
+                                                ),
+                                                (
+                                                    CacheKey {
+                                                        index: xaby,
+                                                        pos: 2.into(),
+                                                    },
+                                                    SubLocation::new(6, 0),
+                                                ),
+                                            ]),
                                         },
                                         index: xab,
                                         waiting: vec![],
@@ -555,6 +550,55 @@ fn find_ancestor3() {
                         ]),
                     },
                     end_states: vec![
+                        EndState {
+                            root_pos: 2.into(),
+                            reason: EndReason::QueryEnd,
+                            matched: true,
+                            target: y.at_pos(3),
+                            kind: EndKind::Postfix(
+                                RootedRolePath {
+                                    split_path: RootedSplitPath {
+                                        root: IndexRoot {
+                                            location: PatternLocation {
+                                                parent: xaby,
+                                                pattern_id: 6,
+                                            },
+                                        },
+                                        sub_path: SubPath {
+                                            root_entry: 0,
+                                            path: vec![
+                                                ChildLocation {
+                                                    parent: Child {
+                                                        index: 10,
+                                                        width: 3,
+                                                    },
+                                                    pattern_id: 4,
+                                                    sub_index: 1,
+                                                },
+                                            ],
+                                        },
+                                    },
+                                    _ty: Default::default(),
+                                },
+                            ),
+                            query: QueryState {
+                                start: RolePath {
+                                    sub_path: SubPath {
+                                        root_entry: 0,
+                                        path: vec![],
+                                    },
+                                    _ty: Default::default(),
+                                },
+                                end: RolePath {
+                                    sub_path: SubPath {
+                                        root_entry: 1,
+                                        path: vec![],
+                                    },
+                                    _ty: Default::default(),
+                                },
+                                pos: 3.into(),
+                            },
+                        },
                         EndState {
                             root_pos: 2.into(),
                             reason: EndReason::QueryEnd,
@@ -613,56 +657,7 @@ fn find_ancestor3() {
                                     },
                                     _ty: Default::default(),
                                 },
-                                pos: 4.into(),
-                            },
-                        },
-                        EndState {
-                            root_pos: 2.into(),
-                            reason: EndReason::QueryEnd,
-                            matched: true,
-                            target: y.at_pos(3),
-                            kind: EndKind::Postfix(
-                                RootedRolePath {
-                                    split_path: RootedSplitPath {
-                                        root: IndexRoot {
-                                            location: PatternLocation {
-                                                parent: xaby,
-                                                pattern_id: 6,
-                                            },
-                                        },
-                                        sub_path: SubPath {
-                                            root_entry: 0,
-                                            path: vec![
-                                                ChildLocation {
-                                                    parent: Child {
-                                                        index: 10,
-                                                        width: 3,
-                                                    },
-                                                    pattern_id: 4,
-                                                    sub_index: 1,
-                                                },
-                                            ],
-                                        },
-                                    },
-                                    _ty: Default::default(),
-                                },
-                            ),
-                            query: QueryState {
-                                start: RolePath {
-                                    sub_path: SubPath {
-                                        root_entry: 0,
-                                        path: vec![],
-                                    },
-                                    _ty: Default::default(),
-                                },
-                                end: RolePath {
-                                    sub_path: SubPath {
-                                        root_entry: 1,
-                                        path: vec![],
-                                    },
-                                    _ty: Default::default(),
-                                },
-                                pos: 4.into(),
+                                pos: 3.into(),
                             },
                         },
                     ]

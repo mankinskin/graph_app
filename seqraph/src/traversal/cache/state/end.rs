@@ -59,7 +59,7 @@ pub enum EndKind {
     Prefix(PrefixEnd),
     Complete(Child),
 }
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum EndReason {
     /// when the query has ended.
     QueryEnd,
