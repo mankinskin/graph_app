@@ -6,6 +6,7 @@ mod side;
 mod context;
 mod split;
 mod indexing;
+mod partition;
 mod path;
 
 #[cfg(test)]
@@ -19,6 +20,8 @@ pub use side::*;
 pub use split::*;
 pub use context::*;
 pub use path::*;
+pub use partition::*;
+pub use indexing::*;
 
 impl<'t, 'g> HypergraphRef {
     pub fn indexer(&self) -> Indexer {

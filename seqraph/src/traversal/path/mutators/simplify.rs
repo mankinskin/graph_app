@@ -51,52 +51,66 @@ impl<P: MatchEndPath> PathSimplify for MatchEnd<P> {
         }
     }
 }
-impl PathSimplify for (EndState, TokenLocation) {
-    fn into_simplified<
+impl RootedRolePath<Start, IndexRoot> {
+    pub fn simplify<
         Trav: Traversable,
-    >(mut self, trav: &Trav) -> Self {
-        match self.0.kind {
-            EndKind::Complete(_) |
-            EndKind::Postfix(_) |
-            EndKind::Prefix(_) => self,
-            EndKind::Range(mut s) => {
-                s.path.child_path_mut::<Start>().simplify(trav);
-                s.path.child_path_mut::<End>().simplify(trav);
+    >(mut self, trav: &Trav) -> EndKind {
+        self.role_path.simplify(trav);
+        match (
+            Start::is_at_border(trav.graph(), self.role_root_child_location::<Start>()),
+            self.role_path.raw_child_path::<Start>().is_empty(),
+        ) 
+        {
+            (true, true) => {
+                EndKind::Complete(self.root_parent())
+            },
+            _ => {
+                let graph = trav.graph();
+                let root = self.role_root_child_location();
+                let pattern = graph.expect_pattern_at(root);
+                EndKind::Postfix(PostfixEnd {
+                    path: self,
+                    inner_width: pattern_width(&pattern[root.sub_index+1..])
+                })
+            },
+        }
+    }
+}
+impl RangeEnd {
+    pub fn simplify<
+        Trav: Traversable,
+    >(mut self, trav: &Trav) -> EndKind {
+        self.path.child_path_mut::<Start>().simplify(trav);
+        self.path.child_path_mut::<End>().simplify(trav);
 
-                while s.path.role_root_child_pos::<Start>() == s.path.role_root_child_pos::<End>() {
-                    if (&mut self.0.root_pos, &mut s).path_lower(trav).is_break() {
-                        let graph = trav.graph();
-                        let pattern = graph.expect_pattern_at(&s.path.root.location);
-                        let entry = s.path.start.sub_path.root_entry;
-                        self.0.root_pos.retract_key(
-                            self.0.root_pos.pos - self.1.pos
-                        );
-                        self.0.kind = EndKind::Complete(pattern[entry]);
-                        return self;
-                    }
-                }
-
-                self.0.kind = match (
-                    Start::is_at_border(trav.graph(), s.path.role_root_child_location::<Start>()),
-                    s.path.raw_child_path::<Start>().is_empty(),
-                    End::is_at_border(trav.graph(), s.path.role_root_child_location::<End>()),
-                    s.path.raw_child_path::<End>().is_empty(),
-                ) 
-                {
-                    (true, true, true, true) =>
-                        EndKind::Complete(s.path.root_parent()),
-                    (true, true, false, _) |
-                    (true, true, true, false) =>
-                        EndKind::Prefix(PrefixEnd {
-                            path: s.path.into(),
-                        }),
-                    (false, _, true, true) |
-                    (true, false, true, true) =>
-                        EndKind::Postfix(s.path.into()),
-                    _ => EndKind::Range(s),
-                };
-                self
-            }
+        match (
+            Start::is_at_border(trav.graph(), self.path.role_root_child_location::<Start>()),
+            self.path.raw_child_path::<Start>().is_empty(),
+            End::is_at_border(trav.graph(), self.path.role_root_child_location::<End>()),
+            self.path.raw_child_path::<End>().is_empty(),
+        ) 
+        {
+            (true, true, true, true) => {
+                EndKind::Complete(self.path.root_parent())
+            },
+            (true, true, false, _) |
+            (true, true, true, false) =>
+                EndKind::Prefix(PrefixEnd {
+                    path: self.path.into(),
+                    target: self.target,
+                }),
+            (false, _, true, true) |
+            (true, false, true, true) => {
+                let graph = trav.graph();
+                let path: Primer = self.path.into(); 
+                let root = path.role_root_child_location();
+                let pattern = graph.expect_pattern_at(root);
+                EndKind::Postfix(PostfixEnd {
+                    path,
+                    inner_width: pattern_width(&pattern[root.sub_index+1..])
+                })
+            },
+            _ => EndKind::Range(self),
         }
     }
 }

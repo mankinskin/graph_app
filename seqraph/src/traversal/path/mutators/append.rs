@@ -13,7 +13,7 @@ impl PathAppend for RootedRolePath<End> {
         &mut self,
         parent_entry: ChildLocation,
     ) {
-        self.split_path.sub_path.path_append(parent_entry)
+        self.role_path.sub_path.path_append(parent_entry)
     }
 }
 impl PathAppend for SubPath {

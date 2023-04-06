@@ -91,6 +91,7 @@ lazy_static::lazy_static! {
             let cdef = graph.insert_pattern([c, def]);
             // index 22
             let abcdef = graph.insert_patterns([
+                [abcd, ef],
                 [abc, def],
                 [ab, cdef]
             ]);

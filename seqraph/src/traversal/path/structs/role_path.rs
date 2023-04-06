@@ -32,11 +32,8 @@ impl<R: PathRole> RolePath<R> {
     //}
     pub fn into_rooted<Root: PathRoot>(self, root: Root) -> RootedRolePath<R, Root> {
         RootedRolePath {
-            split_path: RootedSplitPath {
-                root,
-                sub_path: self.sub_path,
-            },
-            _ty: Default::default(),
+            root,
+            role_path: self,
         }
     }
 }

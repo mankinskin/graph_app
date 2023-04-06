@@ -1,6 +1,5 @@
 #[allow(clippy::many_single_char_names)]
 use super::*;
-use crate::*;
 use pretty_assertions::assert_eq;
 use itertools::*;
 use maplit::hashset;
@@ -24,9 +23,19 @@ fn index_pattern1() {
     let by = graph.insert_pattern([b, y]);
     let yz = graph.insert_pattern([y, z]);
     let xa = graph.insert_pattern([x, a]);
-    let xab = graph.insert_patterns([[x, ab], [xa, b]]);
-    let xaby = graph.insert_patterns([vec![xab, y], vec![xa, by]]);
-    let _xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
+    let xab = graph.insert_patterns([
+        [x, ab],
+        [xa, b],
+    ]);
+    let xaby = graph.insert_patterns([
+        [xab, y],
+        [xa, by],
+    ]);
+    let _xabyz = graph.insert_patterns([
+        [xaby, z],
+        [xab, yz],
+    ]);
+    // todo: split sub patterns not caught by query search
     let graph = HypergraphRef::from(graph);
     let query = vec![by, z];
     let (byz, _) = graph.index_pattern(query.borrow()).expect("Indexing failed");

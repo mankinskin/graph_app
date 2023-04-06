@@ -1,6 +1,3 @@
-use std::collections::VecDeque;
-use std::iter::Extend;
-
 use super::*;
 
 pub trait ExtendStates {
@@ -15,14 +12,7 @@ pub trait NodeCollection:
     + Iterator<Item=(usize, TraversalState)>
     + Default
 {
-}
-impl<
-    T: ExtendStates
-    //From<StartState>
-    + Iterator<Item=(usize, TraversalState)>
-    + Default
-> NodeCollection for T
-{
+    fn clear(&mut self);
 }
 #[derive(Clone, Debug)]
 pub struct PruningState {
@@ -36,18 +26,29 @@ pub struct OrderedTraverser<'a, Trav, S, O>
         O: NodeCollection,
 {
     collection: O,
-    pruning_map: HashMap<CacheKey, PruningState>,
+    pruning_map: PruningMap,
     trav: &'a Trav,
     _ty: std::marker::PhantomData<(&'a S, Trav)>
 }
-impl<'a, Trav, S, O> OrderedTraverser<'a, Trav, S, O>
+impl<'a, Trav, S, O> PruneStates for OrderedTraverser<'a, Trav, S, O>
     where
         Trav: Traversable,
         S: DirectedTraversalPolicy<Trav=Trav>,
         O: NodeCollection,
 {
-    pub fn prune_not_below(&mut self, root: CacheKey) {
-        self.pruning_map.iter_mut()
+    fn clear(&mut self) {
+        self.collection.clear();
+    }
+    fn pruning_map(&mut self) -> &mut PruningMap {
+        &mut self.pruning_map
+    }
+}
+pub type PruningMap = HashMap<DirectedKey, PruningState>;
+pub trait PruneStates {
+    fn clear(&mut self);
+    fn pruning_map(&mut self) -> &mut PruningMap;
+    fn prune_not_below(&mut self, root: DirectedKey) {
+        self.pruning_map().iter_mut()
             .filter(|(k, _)|
                 k.index.width > root.index.width ||
                 (k.index.width == root.index.width && k.index != root.index)
@@ -56,8 +57,18 @@ impl<'a, Trav, S, O> OrderedTraverser<'a, Trav, S, O>
                 v.prune = true;
             });
     }
-    pub fn prune_below(&mut self, root: CacheKey) {
-        self.pruning_map.get_mut(&root).map(|entry| entry.prune = true);
+    fn prune_smaller(&mut self, root: Child) {
+        self.pruning_map().iter_mut()
+            .filter(|(k, _)|
+                k.index.width < root.width ||
+                (k.index.width == root.width && k.index != root)
+            )
+            .for_each(|(_, v)| {
+                v.prune = true;
+            });
+    }
+    fn prune_below(&mut self, root: DirectedKey) {
+        self.pruning_map().get_mut(&root).map(|entry| entry.prune = true);
     }
 }
 impl<'a, Trav, S, O> Unpin for OrderedTraverser<'a, Trav, S, O>
@@ -102,7 +113,7 @@ impl<'a, Trav, S, O> TraversalIterator<'a, Trav, S> for OrderedTraverser<'a, Tra
     fn new(trav: &'a Trav) -> Self {
         Self {
             //pruning_map: HashMap::from([
-            //    (CacheKey::new(start.index, 0), PruningState {
+            //    (DirectedKey::new(start.index, 0), PruningState {
             //        count: 1,
             //        prune: false,
             //    })
@@ -147,20 +158,51 @@ pub type Dft<'a, Trav, S> = OrderedTraverser<'a, Trav, S, DftStack>;
 
 #[derive(Debug)]
 pub struct BftQueue {
-    queue: VecDeque<(usize, TraversalState)>,
+    queue: BinaryHeap<QueueEntry>,
 }
-//impl From<StartState> for BftQueue {
-//    fn from(start: StartState) -> Self {
-//        Self {
-//            queue: VecDeque::from([(0, TraversalState::Start(start))]),
-//            _ty: Default::default(),
-//        }
-//    }
-//}
+impl NodeCollection for BftQueue {
+    fn clear(&mut self) {
+        self.queue.clear()
+    }
+}
+#[derive(Debug, PartialEq, Eq)]
+struct QueueEntry(usize, TraversalState);
+
+impl Ord for QueueEntry {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.0.cmp(&self.0).then_with(||
+            self.1.cmp(&other.1)
+        )
+    }
+}
+impl PartialOrd for QueueEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+pub trait TraversalOrder: Wide {
+    fn sub_index(&self) -> usize;
+    fn cmp(&self, other: impl TraversalOrder) -> Ordering {
+        match other.width().cmp(&self.width()) {
+            Ordering::Equal => self.sub_index().cmp(&other.sub_index()),
+            r => r,
+        }
+    }
+}
+impl<T: TraversalOrder> TraversalOrder for &T {
+    fn sub_index(&self) -> usize {
+        TraversalOrder::sub_index(*self)
+    }
+}
+impl TraversalOrder for ChildLocation {
+    fn sub_index(&self) -> usize {
+        self.sub_index
+    }
+}
 impl Iterator for BftQueue {
     type Item = (usize, TraversalState);
     fn next(&mut self) -> Option<Self::Item> {
-        self.queue.pop_front()
+        self.queue.pop().map(|QueueEntry(d, s)| (d, s))
     }
 }
 impl ExtendStates for BftQueue
@@ -169,7 +211,7 @@ impl ExtendStates for BftQueue
         It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
         T: IntoIterator<Item = (usize, TraversalState), IntoIter=It>
     >(&mut self, iter: T) {
-        self.queue.extend(iter)
+        self.queue.extend(iter.into_iter().map(|(d, s)| QueueEntry(d, s)))
     }
 }
 impl Default for BftQueue
@@ -193,6 +235,11 @@ pub struct DftStack
 //        }
 //    }
 //}
+impl NodeCollection for DftStack {
+    fn clear(&mut self) {
+        self.stack.clear()
+    }
+}
 impl Iterator for DftStack
 {
     type Item = (usize, TraversalState);

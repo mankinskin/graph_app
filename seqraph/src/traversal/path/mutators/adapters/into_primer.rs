@@ -22,18 +22,17 @@ impl IntoPrimer for (Child, QueryState) {
         ParentState {
             prev_pos: width,
             root_pos: width,
-            matched: false,
             path: RootedRolePath {
-                split_path: RootedSplitPath {
+                root: IndexRoot {
+                    location: parent_entry.into_pattern_location(),
+                },
+                role_path: RolePath {
                     sub_path: SubPath {
                         root_entry: parent_entry.sub_index,
                         path: vec![],
                     },
-                    root: IndexRoot {
-                        location: parent_entry.into_pattern_location(),
-                    },
+                    _ty: Default::default(),
                 },
-                _ty: Default::default(),
             },
             query,
         }

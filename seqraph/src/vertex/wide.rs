@@ -45,7 +45,7 @@ impl Wide for VertexData {
         self.width
     }
 }
-impl Wide for CacheKey {
+impl Wide for DirectedKey {
     fn width(&self) -> usize {
         self.index.width()
     }

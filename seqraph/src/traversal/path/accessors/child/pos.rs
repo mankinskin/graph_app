@@ -11,12 +11,17 @@ impl<R: PathRole> RootChildPos<R> for RolePath<R> {
 }
 impl<R: PathRole> RootChildPos<R> for RootedRolePath<R> {
     fn root_child_pos(&self) -> usize {
-        RootChildPos::<R>::root_child_pos(&self.split_path)
+        RootChildPos::<R>::root_child_pos(&self.role_path)
     }
 }
 impl<R: PathRole, Root: PathRoot> RootChildPos<R> for RootedSplitPath<Root> {
     fn root_child_pos(&self) -> usize {
         RootChildPos::<R>::root_child_pos(&self.sub_path)
+    }
+}
+impl<R: PathRole, Root: PathRoot> RootChildPos<R> for RootedSplitPathRef<'_, Root> {
+    fn root_child_pos(&self) -> usize {
+        RootChildPos::<R>::root_child_pos(self.sub_path)
     }
 }
 impl<R: PathRole> RootChildPos<R> for SubPath {

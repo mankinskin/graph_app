@@ -103,9 +103,16 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     ) -> &ChildPatterns {
         self.expect_vertex_data(index).get_child_patterns()
     }
+
     #[track_caller]
     pub fn expect_any_child_pattern(&self, index: impl Indexed) -> (&PatternId, &Pattern) {
         self.expect_vertex_data(index).expect_any_child_pattern()
+    }
+    pub fn expect_child_offset(
+        &self,
+        loc: &ChildLocation,
+    ) -> usize {
+        self.expect_vertex_data(&loc.index()).expect_child_offset(&loc.to_sub_location())
     }
     #[track_caller]
     pub fn expect_vertex_mut(
@@ -352,6 +359,13 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         index: impl Indexed,
     ) -> &mut VertexParents {
         self.expect_vertex_data_mut(index).get_parents_mut()
+    }
+    pub fn expect_is_at_end(
+        &self,
+        location: &ChildLocation
+    ) -> bool {
+        self.expect_vertex_data(location.index())
+            .expect_pattern_len(&location.pattern_id) == location.sub_index + 1
     }
     pub fn get_child(
         &self,

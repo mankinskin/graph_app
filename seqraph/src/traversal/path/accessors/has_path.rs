@@ -131,6 +131,14 @@ impl HasRolePath<End> for SearchPath {
         &mut self.end
     }
 }
+impl<R: PathRole, Root: PathRoot> HasRolePath<R> for RootedRolePath<R, Root> {
+    fn role_path(&self) -> &RolePath<R> {
+        &self.role_path
+    }
+    fn role_path_mut(&mut self) -> &mut RolePath<R> {
+        &mut self.role_path
+    }
+}
 impl HasRolePath<Start> for CachedQuery<'_> {
     fn role_path(&self) -> &RolePath<Start> {
         &self.state.start
@@ -185,6 +193,6 @@ impl<R> HasSinglePath for RolePath<R> {
 }
 impl<R: PathRole, Root: PathRoot> HasSinglePath for RootedRolePath<R, Root> {
     fn single_path(&self) -> &[ChildLocation] {
-        &self.split_path.sub_path.path.borrow()
+        &self.role_path.sub_path.path.borrow()
     }
 }

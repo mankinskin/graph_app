@@ -8,18 +8,23 @@ use crate::*;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RangeEnd {
     pub path: SearchPath,
+    pub target: DirectedKey,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrefixEnd {
     pub path: RootedRolePath<End>,
+    pub target: DirectedKey,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PostfixEnd {
+    pub path: Primer,
+    pub inner_width: usize,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EndState {
     pub reason: EndReason,
     pub root_pos: TokenLocation,
-    pub target: CacheKey,
     pub kind: EndKind,
-    pub matched: bool,
     pub query: QueryState,
 }
 
@@ -40,7 +45,7 @@ impl EndState {
             EndKind::Complete(_) => NodeDirection::BottomUp,
         }
     }
-    pub fn waiting_root_key(&self) -> Option<CacheKey> {
+    pub fn waiting_root_key(&self) -> Option<DirectedKey> {
         match &self.kind {
             EndKind::Range(_) => Some(self.root_key()),
             EndKind::Postfix(_) => None,
@@ -48,14 +53,30 @@ impl EndState {
             EndKind::Complete(_) => None,
         }
     }
+    pub fn end_path(&self) -> Option<RootedSplitPathRef<'_>> {
+        match &self.kind {
+            EndKind::Range(e) => Some(e.path.end_path()),
+            EndKind::Postfix(_) => None,
+            EndKind::Prefix(e) => Some((&e.path).into()),
+            EndKind::Complete(_) => None,
+        }
+    }
     pub fn is_complete(&self) -> bool {
         matches!(self.kind, EndKind::Complete(_))
+    }
+    pub fn width(&self) -> usize {
+        match &self.kind {
+            EndKind::Range(p) => p.target.pos.pos().pos + p.target.index.width(),
+            EndKind::Prefix(p) => p.target.pos.pos().pos + p.target.index.width(),
+            EndKind::Postfix(p) => self.root_pos.pos + p.inner_width,
+            EndKind::Complete(c) => c.width(),
+        }
     }
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EndKind {
     Range(RangeEnd),
-    Postfix(Primer),
+    Postfix(PostfixEnd),
     Prefix(PrefixEnd),
     Complete(Child),
 }
@@ -66,16 +87,18 @@ pub enum EndReason {
     /// at a mismatch.
     Mismatch,
 }
-impl From<MatchEnd<RootedRolePath<Start>>> for EndKind {
-    fn from(postfix: MatchEnd<RootedRolePath<Start>>) -> Self {
-        match postfix {
-            MatchEnd::Complete(c) => EndKind::Complete(c),
-            MatchEnd::Path(path) => EndKind::Postfix(
-                path.into(),
-            ),
-        }
-    }
-}
+//impl From<MatchEnd<RootedRolePath<Start>>> for EndKind {
+//    fn from(postfix: MatchEnd<RootedRolePath<Start>>) -> Self {
+//        match postfix {
+//            MatchEnd::Complete(c) => EndKind::Complete(c),
+//            MatchEnd::Path(p) => EndKind::Postfix(
+//                PostfixEnd {
+//                    path: p.into(),
+//                }
+//            ),
+//        }
+//    }
+//}
 //impl PartialOrd for EndKind {
 //    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
 //        match (self, other) {

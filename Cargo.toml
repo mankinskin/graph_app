@@ -5,12 +5,12 @@ authors = ["Linus Behrbohm <linusbehrbohm@web.de>"]
 edition = "2018"
 
 
-[workspace]
-members = [
-  "seqraph",
-  "tax_dao",
-  "."
-]
+#[workspace]
+#members = [
+#  "seqraph",
+#  "tax_dao",
+#  "."
+#]
 
 [dependencies]
 rfd = "0.4"

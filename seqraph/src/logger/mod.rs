@@ -61,7 +61,7 @@ impl Default for Logger {
         };
 
         #[cfg(feature = "log_stdout")]
-        #[cfg(not(test))]
+        //#[cfg(not(test))]
         let registry = {
             let stdout_writer = std::io::stdout
                 .with_max_level(Level::TRACE);

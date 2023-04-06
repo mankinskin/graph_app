@@ -32,8 +32,11 @@ impl Child {
     pub fn to_child_location(self, sub: SubLocation) -> ChildLocation {
         ChildLocation::new(self, sub.pattern_id, sub.sub_index)
     }
-    pub fn at_pos(self, pos: impl Into<TokenLocation>) -> CacheKey {
-        CacheKey::new(self, pos)
+    pub fn top_down(self, pos: impl Into<TokenLocation>) -> DirectedKey {
+        DirectedKey::down(self, pos)
+    }
+    pub fn bottom_up(self, pos: impl Into<TokenLocation>) -> DirectedKey {
+        DirectedKey::up(self, pos)
     }
 }
 impl std::cmp::PartialOrd for Child {
@@ -52,14 +55,14 @@ impl std::hash::Hash for Child {
         self.index.hash(h);
     }
 }
-impl std::cmp::Ord for Child {
-    fn cmp(
-        &self,
-        other: &Self,
-    ) -> std::cmp::Ordering {
-        self.index.cmp(&other.index)
-    }
-}
+//impl std::cmp::Ord for Child {
+//    fn cmp(
+//        &self,
+//        other: &Self,
+//    ) -> std::cmp::Ordering {
+//        self.index.cmp(&other.index)
+//    }
+//}
 impl PartialEq for Child {
     fn eq(
         &self,

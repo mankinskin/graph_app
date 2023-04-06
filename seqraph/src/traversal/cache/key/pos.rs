@@ -54,8 +54,8 @@ impl QueryPosition for TraversalState {
                 => &state.query.pos,
             InnerKind::Child(state)
                 => &state.paths.query.pos,
-            InnerKind::End(state)
-                => &state.query.pos,
+            //InnerKind::End(state)
+            //    => &state.query.pos,
         }
     }
     fn query_pos_mut(&mut self) -> &mut TokenLocation {
@@ -64,8 +64,8 @@ impl QueryPosition for TraversalState {
                 => &mut state.query.pos,
             InnerKind::Child(state)
                 => &mut state.paths.query.pos,
-            InnerKind::End(state)
-                => &mut state.query.pos,
+            //InnerKind::End(state)
+            //    => &mut state.query.pos,
         }
     }
 }

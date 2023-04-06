@@ -48,9 +48,15 @@ pub use {
 #[allow(unused)]
 pub use {
     tracing::*,
+    linked_hash_set::*,
     tracing_test::traced_test,
     itertools::*,
-    derive_more::{Add, Sub},
+    derive_more::{
+        Add,
+        Sub,
+        Deref,
+        DerefMut,
+    },
     std::{
         fmt::Debug,
         ops::{
@@ -70,6 +76,9 @@ pub use {
         collections::{
             hash_map::DefaultHasher,
             VecDeque,
+            BTreeMap,
+            BTreeSet,
+            binary_heap::BinaryHeap,
         },
         hash::{
             BuildHasherDefault,
@@ -84,7 +93,10 @@ pub use {
             RwLockWriteGuard,
             Mutex,
         },
-        iter::FromIterator,
+        iter::{
+            FromIterator,
+            Extend,
+        },
     },
     //tracing_mutex::{
     //    stdsync::{

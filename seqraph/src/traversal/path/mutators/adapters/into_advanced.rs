@@ -59,28 +59,14 @@ impl IntoAdvanced for ParentState {
                 ChildState {
                     prev_pos: self.prev_pos,
                     root_pos: self.root_pos,
-                    matched: self.matched,
                     paths: PathPair::new(
-                        SearchPath {
-                            root: self.path.split_path.root,
-                            start: RolePath {
-                                sub_path: self.path.split_path.sub_path,
-                                _ty: Default::default(),
-                            },
-                            end: RolePath {
-                                sub_path: SubPath {
-                                    root_entry: next,
-                                    path: vec![],
-                                }.into(),
-                                _ty: Default::default(),
-                            },
-                        },
+                        self.path.into_range(next),
                         self.query,
                         PathPairMode::GraphMajor,
                     ),
-                    target: CacheKey::new(
+                    target: DirectedKey::down(
                         index,
-                        self.root_pos, // + index.width(),
+                        self.root_pos,
                     )
                 }
             )

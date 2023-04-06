@@ -368,9 +368,7 @@ mod tests {
         *,
         index::*,
     };
-
-
-    
+    #[test]
     fn token_offset_split() {
         let pattern = mock::pattern_from_widths([
             1,

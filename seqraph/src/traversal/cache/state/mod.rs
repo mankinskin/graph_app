@@ -8,7 +8,7 @@ pub use end::*;
 
 pub mod query;
 pub use query::*;
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Copy, Hash)]
 pub enum NodeDirection {
     BottomUp,
     TopDown,
@@ -16,7 +16,6 @@ pub enum NodeDirection {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WaitingState {
-    pub prev: CacheKey,
+    pub prev: DirectedKey,
     pub state: ParentState,
-    //pub query: QueryState,
 }

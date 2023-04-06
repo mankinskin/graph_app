@@ -611,7 +611,7 @@ fn read_multiple_overlaps1() {
         deabc.vertex(&g).get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
         hashset![
             vec![de, abc],
-            //vec![dea, bc],
+            vec![dea, bc],
             vec![deab, c],
         ]
     );

@@ -133,6 +133,16 @@ impl VertexData {
             .and_then(|p| p.get(pos))
             .ok_or(NoMatch::NoChildPatterns)
     }
+    pub fn get_child_pattern_with_prefix_width(
+        &self,
+        width: NonZeroUsize,
+    ) -> Option<(&PatternId, &Pattern)> {
+        self.children
+            .iter()
+            .find(|(pid, pat)|
+                pat[0].width == width.get()
+            )
+    }
     pub fn get_child_pattern(
         &self,
         id: &PatternId,
@@ -140,12 +150,33 @@ impl VertexData {
         self.children.get(id)
             .ok_or(NoMatch::InvalidPattern(*id))
     }
+    pub fn get_child_at(
+        &self,
+        location: &SubLocation,
+    ) -> Result<&Child, NoMatch> {
+        self.children.get(&location.pattern_id)
+            .ok_or(NoMatch::InvalidPattern(location.pattern_id))?
+            .get(location.sub_index)
+            .ok_or(NoMatch::InvalidChild(location.sub_index))
+    }
+    pub fn expect_child_at(
+        &self,
+        location: &SubLocation,
+    ) -> &Child {
+        self.get_child_at(location).unwrap()
+    }
     #[track_caller]
     pub fn expect_pattern_len(
         &self,
         id: &PatternId,
     ) -> usize {
         self.expect_child_pattern(id).len()
+    }
+    pub fn expect_child_offset(
+        &self,
+        loc: &SubLocation,
+    ) -> usize {
+        pattern_width(&self.expect_child_pattern(&loc.pattern_id)[0..loc.sub_index])
     }
     pub fn find_child_pattern_id(
         &self,

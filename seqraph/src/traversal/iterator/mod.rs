@@ -8,7 +8,8 @@ use super::*;
 
 #[derive(Clone, Debug)]
 pub struct NextMatched<T> {
-    pub prev: CacheKey,
+    pub prev: DirectedKey,
+    pub new: Vec<NewEntry>,
     pub inner: T,
 }
 #[derive(Clone, Debug)]
@@ -26,6 +27,7 @@ impl NextStates {
                 state.inner.iter()
                     .map(|s| TraversalState {
                         prev: state.prev,
+                        new: state.new.clone(),
                         kind: InnerKind::Parent(s.clone())
                     })
                     .collect_vec(),
@@ -34,18 +36,23 @@ impl NextStates {
                     .map(|s|
                         TraversalState {
                             prev: state.prev,
+                            new: state.new.clone(),
                             kind: InnerKind::Child(s.clone()),
                         }
                     )
                     .collect_vec(),
-            Self::End(state) =>
-                vec![TraversalState {
-                    prev: state.prev,
-                    kind: InnerKind::End(state.inner),
-                }],
+            Self::End(_) =>
+                vec![
+                    //TraversalState {
+                    //    prev: state.prev,
+                    //    new: state.new,
+                    //    kind: InnerKind::End(state.inner),
+                    //}
+                ],
             Self::Child(state) =>
                 vec![TraversalState {
                     prev: state.prev,
+                    new: state.new,
                     kind: InnerKind::Child(state.inner),
                 }],
             Self::Empty => vec![],
@@ -54,14 +61,14 @@ impl NextStates {
 }
 #[derive(Clone, Debug)]
 pub struct EdgeKeys {
-    pub key: CacheKey,
-    pub prev: CacheKey,
+    pub key: DirectedKey,
+    pub prev: DirectedKey,
 }
 pub trait TraversalIterator<
     'a, 
     Trav: Traversable + 'a + TraversalFolder<S>,
     S: DirectedTraversalPolicy<Trav=Trav>,
->: Iterator<Item = (usize, TraversalState)> + Sized + ExtendStates
+>: Iterator<Item = (usize, TraversalState)> + Sized + ExtendStates + PruneStates
 {
 
     fn new(trav: &'a Trav) -> Self;
@@ -71,7 +78,7 @@ pub trait TraversalIterator<
     /// (query end or start parent states)
     fn query_start(
         &self,
-        key: CacheKey,
+        key: DirectedKey,
         mut query: CachedQuery<'_>,
         state: StartState,
     ) -> NextStates {
@@ -80,6 +87,7 @@ pub trait TraversalIterator<
             query.retract_key(state.index.width());
             NextStates::Parents(NextMatched {
                 prev: key,
+                new: vec![],
                 inner: S::gen_parent_states(
                     self.trav(),
                     state.index,
@@ -91,13 +99,12 @@ pub trait TraversalIterator<
         } else {
             NextStates::End(NextMatched {
                 prev: key,
+                new: vec![],
                 inner: EndState {
                     reason: EndReason::QueryEnd,
                     root_pos: state.index.width().into(),
                     kind: EndKind::Complete(state.index),
                     query: query.state,
-                    matched: false,
-                    target: key,
                 }
             })
         }
@@ -106,53 +113,79 @@ pub trait TraversalIterator<
         &mut self,
         cache: &mut TraversalCache,
     ) -> Option<(usize, NextStates)> {
-        let (depth, tstate) = self.next()?;
-        let (key, cached) = cache.add_state(&tstate);
-        let prev = tstate.prev_key();
-
+        let (depth, mut tstate) = self.next()?;
+        let key = tstate.target_key();
+        let exists = cache.exists(&key);
+        //let prev = tstate.prev_key();
+        //if !exists {
+        //    cache.add_state((&tstate).into());
+        //}
+        if !exists && matches!(tstate.kind, InnerKind::Parent(_)) {
+            tstate.new.push((&tstate).into());
+        }
         let next_states = match tstate.kind {
             InnerKind::Parent(state) => {
-                if cached {
+                //debug!("Parent({}, {})", key.index.index(), key.index.width());
+                if !exists {
                     self.on_parent(
                         key,
                         state,
+                        tstate.new,
                     )
                 } else {
-                    cache.get_mut(&key)
-                        .unwrap()
-                        .add_waiting(depth, WaitingState {
-                            prev,
-                            state,
-                        });
+                    //cache.get_mut(&key)
+                    //    .unwrap()
+                    //    .add_waiting(depth, WaitingState {
+                    //        prev,
+                    //        state,
+                    //    });
+                    for entry in tstate.new {
+                        cache.add_state(entry, true);
+                    }
                     NextStates::Empty
                 }
             },
             InnerKind::Child(state) => {
-                self.on_child(
-                    cache,
-                    key,
-                    state,
-                )
-
-                //cache.get_entry_mut(&key)
-                //    .unwrap()
-                //    .add_back_edge();
-                //NextStates::Empty
+                //let root = state.paths.path.root_parent();
+                //debug!("Child({}, {}), root = ({}, {})",
+                //    key.index.index(),
+                //    key.index.width(),
+                //    root.index(),
+                //    root.width(),
+                //);
+                if !exists {
+                    self.on_child(
+                        cache,
+                        key,
+                        state,
+                        tstate.new,
+                    )
+                } else {
+                    cache.add_path(
+                        self.trav(),
+                        state.paths.path.role_root_child_location::<Start>().sub_index,
+                        &state.paths.path,
+                        state.root_pos,
+                        false,
+                    );
+                    NextStates::Empty
+                }
             }
-            _ => NextStates::Empty,
         };
         Some((depth + 1, next_states))
     }
     fn on_parent(
         &mut self,
-        key: CacheKey,
+        key: DirectedKey,
         state: ParentState,
+        new: Vec<NewEntry>,
     ) -> NextStates {
         match state.into_advanced(self.trav()) {
             // first child state in this parent
             Ok(advanced) => NextStates::Child(
                 NextMatched {
-                    prev: key,
+                    prev: key.flipped(),
+                    new,
                     inner: advanced
                 },
             ),
@@ -160,47 +193,17 @@ pub trait TraversalIterator<
             Err(state) => self.next_parents(
                 state,
                 key,
+                new,
             )
-        }
-    }
-    fn next_parents(
-        &mut self,
-        parent: ParentState,
-        key: CacheKey,
-    ) -> NextStates {
-        // get next parents
-        let parents = S::next_parents(
-            self.trav(),
-            &parent,
-        );
-        if parents.is_empty() {
-            NextStates::End(NextMatched {
-                prev: key,
-                inner: EndState {
-                    reason: EndReason::Mismatch,
-                    root_pos: parent.root_pos,
-                    kind: EndKind::from(
-                        Postfix::from(parent.path)
-                            .into_simplified(self.trav())
-                    ),
-                    target: key,
-                    matched: parent.matched,
-                    query: parent.query,
-                },
-            })
-        } else {
-            NextStates::Parents(NextMatched {
-                prev: key,
-                inner: parents,
-            })
         }
     }
     /// match query position with graph position
     fn on_child(
         &mut self,
         cache: &mut TraversalCache,
-        key: CacheKey,
+        key: DirectedKey,
         state: ChildState,
+        new: Vec<NewEntry>,
     ) -> NextStates {
         let PathPair {
             query,
@@ -222,24 +225,25 @@ pub trait TraversalIterator<
                         path,
                         query,
                         key,
+                        new,
                     )
                 } else if path_leaf.width() == 1 {
                     self.on_mismatch(
                         state.prev_pos,
                         state.root_pos,
-                        state.matched,
                         path,
                         query,
                         key,
+                        new,
                     )
                 } else {
                     // expand states to find matching prefix
                     NextStates::Prefixes(NextMatched {
                         prev: key,
+                        new,
                         inner: self.prefix_states(
                             state.prev_pos,
                             state.root_pos,
-                            state.matched,
                             path_leaf,
                             PathPair::new(
                                 path.clone(),
@@ -252,7 +256,6 @@ pub trait TraversalIterator<
                             self.prefix_states(
                                 state.prev_pos,
                                 state.root_pos,
-                                state.matched,
                                 query_leaf,
                                 PathPair::new(
                                     path,
@@ -268,10 +271,10 @@ pub trait TraversalIterator<
                 // continue in prefix of child
                 NextStates::Prefixes(NextMatched {
                     prev: key,
+                    new,
                     inner: self.prefix_states(
                         state.prev_pos,
                         state.root_pos,
-                        state.matched,
                         path_leaf,
                         PathPair::new(
                             path,
@@ -283,10 +286,10 @@ pub trait TraversalIterator<
             Ordering::Less =>
                 NextStates::Prefixes(NextMatched {
                     prev: key,
+                    new,
                     inner: self.prefix_states(
                         state.prev_pos,
                         state.root_pos,
-                        state.matched,
                         query_leaf,
                         PathPair::new(
                             path,
@@ -304,22 +307,37 @@ pub trait TraversalIterator<
         mode: PathPairMode,
         mut path: SearchPath,
         mut query: CachedQuery<'_>,
-        key: CacheKey,
+        key: DirectedKey,
+        new: Vec<NewEntry>,
     ) -> NextStates {
+        self.clear();
+        for entry in new {
+            query.cache.add_state(entry, true);
+        }
+        //query.cache.add_path(
+        //    self.trav(),
+        //    path.end_path(),
+        //    root_pos,
+        //    false,
+        //);
         if query.advance(self.trav()).is_continue() {
             if path.advance(self.trav()).is_continue() {
                 // gen next child
                 NextStates::Child(NextMatched {
                     prev: key,
+                    new: vec![],
                     inner: ChildState {
                         prev_pos,
                         root_pos,
-                        matched: true,
-                        target: CacheKey::new(
+                        target: DirectedKey::down(
                             path.role_leaf_child::<End, _>(self.trav()),
                             *query.state.query_pos()
                         ),
-                        paths: PathPair::new(path, query.state, mode),
+                        paths: PathPair::new(
+                            path,
+                            query.state,
+                            mode,
+                        ),
                     }
                 })
             } else {
@@ -327,11 +345,11 @@ pub trait TraversalIterator<
                     ParentState {
                         prev_pos,
                         root_pos,
-                        matched: true,
                         path: Primer::from(path),
                         query: query.state,
                     },
                     key,
+                    vec![],
                 )
             }
         } else {
@@ -339,77 +357,143 @@ pub trait TraversalIterator<
             self.on_range_end(
                 prev_pos,
                 root_pos,
-                true,
                 path,
-                query.state,
+                query,
                 key,
-                EndReason::QueryEnd
+                EndReason::QueryEnd,
+                vec![],
             )
+        }
+    }
+    fn next_parents(
+        &mut self,
+        parent: ParentState,
+        key: DirectedKey,
+        new: Vec<NewEntry>
+    ) -> NextStates {
+        // get next parents
+        let parents = S::next_parents(
+            self.trav(),
+            &parent,
+        );
+        if parents.is_empty() {
+            NextStates::End(NextMatched {
+                prev: key,
+                new,
+                inner: EndState {
+                    reason: EndReason::Mismatch,
+                    root_pos: parent.root_pos,
+                    kind: parent.path.simplify(self.trav()),
+                    query: parent.query,
+                },
+            })
+        } else {
+            NextStates::Parents(NextMatched {
+                prev: key,
+                new,
+                inner: parents,
+            })
         }
     }
     fn on_range_end(
         &mut self,
         prev_pos: TokenLocation,
         root_pos: TokenLocation,
-        matched: bool,
         path: SearchPath,
-        mut query: QueryState,
-        key: CacheKey,
+        mut query: CachedQuery<'_>,
+        key: DirectedKey,
         reason: EndReason,
+        new: Vec<NewEntry>,
     ) -> NextStates {
         let target_index = path.role_leaf_child::<End, _>(self.trav());
+        let pos = query.state.pos;
         query.advance_key(target_index.width());
         NextStates::End(NextMatched {
             prev: key,
-            inner: (EndState {
-                target: CacheKey::new(
-                    target_index,
-                    *query.query_pos(),
-                ),
+            new,
+            inner: EndState {
                 root_pos,
-                query,
+                query: query.state,
                 reason,
-                matched,
-                kind: EndKind::Range(RangeEnd {
+                kind: RangeEnd {
                     path,
-                }),
-            }, prev_pos).into_simplified(self.trav()).0
+                    target: DirectedKey::down(
+                        target_index,
+                        pos,
+                    ),
+                }.simplify(self.trav()),
+            }
         })
     }
     fn on_mismatch(
         &mut self,
         prev_pos: TokenLocation,
-        root_pos: TokenLocation,
-        matched: bool,
+        mut root_pos: TokenLocation,
         mut path: SearchPath,
         mut query: CachedQuery<'_>,
-        key: CacheKey,
+        key: DirectedKey,
+        new: Vec<NewEntry>,
     ) -> NextStates {
-        path.retract(self.trav());
         query.retract(self.trav());
-        self.on_range_end(
-            prev_pos,
-            root_pos,
-            matched,
-            path,
-            query.state,
-            key,
-            EndReason::Mismatch
-        )
+        path.retract(self.trav());
+        if let Some(index) = loop {
+            if path.role_root_child_pos::<Start>() == path.role_root_child_pos::<End>() {
+                if (&mut root_pos, &mut path).path_lower(self.trav()).is_break() {
+                    let graph = self.trav().graph();
+                    let pattern = graph.expect_pattern_at(&path.root.location);
+                    let entry = path.start.sub_path.root_entry;
+                    root_pos = prev_pos;
+                    break Some(pattern[entry]);
+                }
+            } else {
+                break None;
+            }
+        } {
+            NextStates::End(NextMatched {
+                prev: key,
+                new,
+                inner: EndState {
+                    root_pos,
+                    query: query.state,
+                    reason: EndReason::Mismatch,
+                    kind: EndKind::Complete(index),
+                }
+            })
+        } else {
+            NextStates::End(NextMatched {
+                prev: key,
+                new,
+                inner: EndState {
+                    root_pos,
+                    reason: EndReason::Mismatch,
+                    kind: RangeEnd {
+                        target: DirectedKey::down(
+                            path.role_leaf_child::<End, _>(self.trav()),
+                            query.state.pos,
+                        ),
+                        path,
+                    }.simplify(self.trav()),
+                    query: query.state,
+                },
+            })
+        }
     }
     /// generate child states for index prefixes
     fn prefix_states(
         &self,
         prev_pos: TokenLocation,
         root_pos: TokenLocation,
-        matched: bool,
         index: Child,
         paths: PathPair,
     ) -> Vec<ChildState> {
         self.trav().graph()
             .expect_vertex_data(index)
             .get_child_patterns().iter()
-            .sorted_unstable_by_key(|(_, p)| p.first().unwrap().width)
+            .sorted_unstable_by(|(_, a), (_, b)|
+                b.first().unwrap().width.cmp(
+                    &a.first().unwrap().width
+                )
+            )
             .map(|(&pid, child_pattern)| {
                 let sub_index = <Trav::Kind as GraphKind>::Direction::head_index(child_pattern.borrow());
                 let mut paths = paths.clone();
@@ -417,8 +501,7 @@ pub trait TraversalIterator<
                 ChildState {
                     prev_pos,
                     root_pos,
-                    matched,
-                    target: CacheKey::new(
+                    target: DirectedKey::down(
                         paths.path.role_leaf_child::<End, _>(self.trav()),
                         *paths.query.query_pos(),
                     ),

@@ -48,7 +48,7 @@ impl RootChild<End> for SearchPath {
 }
 //impl_child! { RootChild for PathLeaf, self, trav => self.root_child(trav) }
 impl_child! { RootChild for RootedRolePath<R>, self, trav =>
-    trav.graph().expect_child_at(self.path_root().location.to_child_location(RootChildPos::<R>::root_child_pos(&self.split_path)))
+    trav.graph().expect_child_at(self.path_root().location.to_child_location(RootChildPos::<R>::root_child_pos(&self.role_path)))
 }
 
 impl<'c, R: PathRole> RootChild<R> for CachedQuery<'c>
@@ -98,7 +98,17 @@ impl GraphRootChild<End> for SearchPath {
 }
 impl<R: PathRole> GraphRootChild<R> for RootedRolePath<R, IndexRoot> {
     fn root_child_location(&self) -> ChildLocation {
-        self.path_root().location.to_child_location(self.split_path.sub_path.root_entry)
+        self.path_root().location.to_child_location(self.role_path.sub_path.root_entry)
+    }
+}
+impl<R: PathRole> GraphRootChild<R> for RootedSplitPath<IndexRoot> {
+    fn root_child_location(&self) -> ChildLocation {
+        self.path_root().location.to_child_location(self.sub_path.root_entry)
+    }
+}
+impl<R: PathRole> GraphRootChild<R> for RootedSplitPathRef<'_, IndexRoot> {
+    fn root_child_location(&self) -> ChildLocation {
+        self.path_root().location.to_child_location(self.sub_path.root_entry)
     }
 }
 //impl<R> GraphRootChild<R> for PathLeaf {

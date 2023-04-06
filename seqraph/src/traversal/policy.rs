@@ -51,7 +51,7 @@ pub trait DirectedTraversalPolicy: Sized {
                         ChildLocation::new(p, pi.pattern_id, pi.sub_index)
                     })
             })
-            .sorted_by(|a, b| TraversalOrder::cmp(a, b))
+            .sorted_by(|a, b| TraversalOrder::cmp(b, a))
             .map(|p| {
                 build_parent(
                     trav,

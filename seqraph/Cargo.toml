@@ -39,6 +39,7 @@ async-recursion = "1"
 console-subscriber = "0.1"
 tracing-mutex = "0.2"
 derive_more = "0.99"
+linked_hash_set = "0.1.4"
 
 [dependencies.tracing-egui]
 path = "../../tracing-egui"
