@@ -43,21 +43,62 @@ impl SplitCache {
 pub fn position_splits<'a>(
     patterns: impl Iterator<Item=(&'a PatternId, &'a Pattern)>,
     parent_offset: NonZeroUsize,
-) -> Vec<SubSplitLocation> {
+) -> PatternSubSplits {
     patterns
         .map(|(pid, pat)| { 
             let (sub_index, inner_offset) = <IndexBack as IndexSide<Right>>::token_offset_split(
                 pat.borrow(),
                 parent_offset,
             ).unwrap();
-            let location = SubLocation::new(*pid, sub_index);
-            SubSplitLocation {
-                location,
+            (*pid, PatternSplitPos {
+                sub_index,
                 inner_offset,
-            }
+            })
         })
         .collect()
 }
+pub fn range_splits<'a>(
+    patterns: impl Iterator<Item=(&'a PatternId, &'a Pattern)>,
+    parent_range: (NonZeroUsize, NonZeroUsize),
+) -> (OffsetSplits, OffsetSplits) {
+    let (ls, rs) = patterns
+        .map(|(pid, pat)| { 
+            let (li, lo) = <IndexBack as IndexSide<Right>>::token_offset_split(
+                pat.borrow(),
+                parent_range.0,
+            ).unwrap();
+            let (ri, ro) = <IndexBack as IndexSide<Right>>::token_offset_split(
+                pat.borrow(),
+                parent_range.1,
+            ).unwrap();
+            (
+                (*pid,
+                    PatternSplitPos {
+                        sub_index: li,
+                        inner_offset: lo,
+                    }
+                ),
+                (*pid,
+                    PatternSplitPos {
+                        sub_index: ri,
+                        inner_offset: ro,
+                    }
+                ),
+            )
+        })
+        .unzip();
+    (
+        OffsetSplits {
+            offset: parent_range.0,
+            splits: ls,
+        },
+        OffsetSplits {
+            offset: parent_range.1,
+            splits: rs,
+        },
+    )
+}
+
 pub fn cleaned_position_splits<'a>(
     patterns: impl Iterator<Item=(&'a PatternId, &'a Pattern)>,
     parent_offset: NonZeroUsize,

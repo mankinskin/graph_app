@@ -5,7 +5,7 @@ name = "seqraph"
 version = "0.1.0"
 
 [features]
-default = ["log_stdout", "log_gui"]
+default = [] #["log_stdout", "log_gui"]
 log_file = []
 log_stdout = []
 log_gui = []

@@ -1,4 +1,3 @@
-
 use crate::*;
 
 #[derive(Debug, Default)]
@@ -21,7 +20,7 @@ impl SplitVertexCache {
             .or_default()
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PatternSplitPos {
     pub inner_offset: Option<NonZeroUsize>,
     pub sub_index: usize,
@@ -59,6 +58,16 @@ impl SplitPositionCache {
             pattern_splits: subs.into_iter().map(Into::into).collect(),
             final_split: None,
         }
+    }
+    pub fn find_clean_split(&self) -> Option<SubLocation> {
+        self.pattern_splits.iter().find_map(|(pid, s)|
+            s.inner_offset.is_none().then_some(
+                SubLocation {
+                    pattern_id: *pid,
+                    sub_index: s.sub_index,
+                }
+            )
+        )
     }
     //pub fn add_location_split(&mut self, location: SubLocation, split: Split) {
     //    self.pattern_splits.insert(location, split);

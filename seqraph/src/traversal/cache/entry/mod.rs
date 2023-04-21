@@ -146,10 +146,22 @@ impl VertexCache {
                             .filter(|(pid, _)|
                                 !pids.contains(pid)
                             );
-                        locs.extend(position_splits(
-                            missing,
-                            parent_offset,
-                        ))
+                        locs.extend(
+                            position_splits(
+                                missing,
+                                parent_offset,
+                            )
+                            .into_iter()
+                            .map(|(pid, loc)|
+                                SubSplitLocation {
+                                    location: SubLocation::new(
+                                        pid,
+                                        loc.sub_index,
+                                    ),
+                                    inner_offset: loc.inner_offset,
+                                }
+                            )
+                        )
                     }
                     (
                         parent_offset,

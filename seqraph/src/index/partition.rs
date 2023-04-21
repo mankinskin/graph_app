@@ -1,15 +1,16 @@
 use crate::*;
 pub enum RootPartitions {
-    Prefix(Child, Pattern),
-    Postfix(Pattern, Child),
-    Inner(Pattern, Child, Pattern),
+    Prefix(Child, OptCleanSplit, Pattern),
+    Postfix(Pattern, OptCleanSplit, Child),
+    Infix(Pattern, OptCleanSplit, Child, OptCleanSplit, Pattern),
 }
+type OptCleanSplit = Option<SubLocation>;
 impl RootPartitions {
     pub fn inner(&self) -> &Child {
         match self {
-            Self::Inner(_, inner, _) => inner,
-            Self::Prefix(inner, _) => inner,
-            Self::Postfix(_, inner) => inner,
+            Self::Infix(_, _, inner, _, _) => inner,
+            Self::Prefix(inner, _, _) => inner,
+            Self::Postfix(_, _, inner) => inner,
         }
     }
 }
@@ -80,7 +81,7 @@ impl Indexer {
                         Ok((pid, None, pos.sub_index..))
                     }
                 },
-                (None, None) => unreachable!(), //Err(child),
+                (None, None) => Err(child),
             }
         }).collect()
     }
@@ -370,8 +371,8 @@ impl Indexer {
                         pos_cache,
                         index,
                     );
+                let first_offset = pos_cache.find_clean_split();
                 let (_prev_offset, prev_cache) = (parent_offset, pos_cache);
-        
                 let (parent_offset, pos_cache) = offset_iter.next().unwrap();
                 let inner =
                     self.inner_partition(
@@ -381,6 +382,7 @@ impl Indexer {
                         index,
                     );
 
+                let second_offset = pos_cache.find_clean_split();
                 let (_prev_offset, prev_cache) = (parent_offset, pos_cache);
                 let postfix =
                     self.last_pattern_partition(
@@ -388,9 +390,11 @@ impl Indexer {
                         prev_cache,
                         index,
                     );
-                RootPartitions::Inner(
+                RootPartitions::Infix(
                     prefix,
+                    first_offset,
                     inner,
+                    second_offset,
                     postfix,
                 )
             },
@@ -402,6 +406,7 @@ impl Indexer {
                         pos_cache,
                         index,
                     );
+                let offset = pos_cache.find_clean_split();
                 let (_prev_offset, prev_cache) = (parent_offset, pos_cache);
                 let postfix =
                     self.last_pattern_partition(
@@ -411,6 +416,7 @@ impl Indexer {
                     );
                 RootPartitions::Prefix(
                     inner,
+                    offset,
                     postfix,
                 )
             },
@@ -422,8 +428,8 @@ impl Indexer {
                         pos_cache,
                         index,
                     );
+                let offset = pos_cache.find_clean_split();
                 let (_prev_offset, prev_cache) = (parent_offset, pos_cache);
-
                 let inner =
                     self.last_child_partition(
                         cache,
@@ -432,6 +438,7 @@ impl Indexer {
                     );
                 RootPartitions::Postfix(
                     prefix,
+                    offset,
                     inner,
                 )
             },
@@ -447,40 +454,338 @@ impl Indexer {
         //    creates smallest indices required by larger indices
         // 2. merge partitions in size ascending order into final splits
         //    make sure to include smaller new indices in larger ones
-
+        let graph = self.graph();
         let vert_cache = cache.entries.get(&index.index).unwrap();
+        let patterns = graph.expect_child_patterns(index).clone();
+        let offset_splits = vert_cache.positions.iter().map(|(off, cache)|
+            (*off, cache.pattern_splits.clone())
+        )
+        .collect();
+        drop(graph);
+        self.index_offset_partitions(
+            cache,
+            *index,
+            &patterns,
+            &offset_splits,
+        )
+        .into_iter()
+        .map(|part| part.index)
+        .collect()
 
-        let mut offset_iter = vert_cache.positions.iter();
-        let (parent_offset, pos_cache) = offset_iter.next().unwrap();
-        let mut partitions = vec![
-            self.first_child_partition(
-                cache,
-                pos_cache,
-                index,
-            )
-        ];
-        let (mut prev_offset, mut prev_cache) = (parent_offset, pos_cache);
-        partitions.extend(
-            offset_iter.map(|(parent_offset, pos_cache)| {
-                let part = self.inner_partition(
-                    cache,
-                    prev_cache,
-                    pos_cache,
-                    index,
-                );
-                (prev_offset, prev_cache) = (parent_offset, pos_cache);
-                part
-            })
-        );
-        partitions.push(
-            self.last_child_partition(
-                cache,
-                prev_cache,
-                index,
-            )
-        );
-        partitions
+        //let mut offset_iter = vert_cache.positions.iter();
+        //let (parent_offset, pos_cache) = offset_iter.next().unwrap();
+        //let mut partitions = vec![
+        //    self.first_child_partition(
+        //        cache,
+        //        pos_cache,
+        //        index,
+        //    )
+        //];
+        //let (mut prev_offset, mut prev_cache) = (parent_offset, pos_cache);
+        //partitions.extend(
+        //    offset_iter.map(|(parent_offset, pos_cache)| {
+        //        let part = self.inner_partition(
+        //            cache,
+        //            prev_cache,
+        //            pos_cache,
+        //            index,
+        //        );
+        //        (prev_offset, prev_cache) = (parent_offset, pos_cache);
+        //        part
+        //    })
+        //);
+        //partitions.push(
+        //    self.last_child_partition(
+        //        cache,
+        //        prev_cache,
+        //        index,
+        //    )
+        //);
+        //partitions
     }
+    /// calls `index_range` for each offset partition
+    fn index_offset_partitions(
+        &mut self,
+        cache: &SplitCache,
+        index: Child,
+        patterns: &HashMap<PatternId, Pattern>,
+        offset_splits: &BTreeMap<NonZeroUsize, impl Borrow<PatternSubSplits>>,
+    ) -> Vec<IndexedPartition> {
+        assert!(offset_splits.len() > 1);
+        let mut iter = offset_splits.iter()
+            .map(|(&offset, splits)|
+                OffsetSplitsRef {
+                    offset,
+                    splits: splits.borrow(),
+                });
+        let mut prev = iter.next().unwrap();
+        iter.map(|offset| {
+            let part = self.index_range(
+                cache,
+                index,
+                patterns,
+                (prev, offset)
+            );
+            prev = offset;
+            part
+        })
+        .collect()
+    }
+    ///
+    fn range_patterns<'a, O: AsOffsetSplits<'a>>(
+        &mut self,
+        cache: &SplitCache,
+        index: Child,
+        patterns: &HashMap<PatternId, Pattern>,
+        range: (O, O),
+    ) -> Result<(Vec<Pattern>, (Option<PatternId> ,Option<PatternId>)), IndexedPartition> {
+        // collect infos about partition in each pattern
+        match Self::range_partition_info(
+            cache,
+            patterns,
+            range,
+        ) {
+            Ok(info) => {
+                // index inner sub ranges
+                let bundle = info.bundle.iter()
+                    .map(|info| {
+                        self.index_range_info(
+                            cache,
+                            index,
+                            patterns,
+                            info,
+                        )
+                    })
+                    .collect_vec();
+                    
+                Ok((
+                    bundle,
+                    info.perfect,
+                ))
+            },
+            Err(part) => Err(part),
+        }
+    }
+    fn index_range<'a, O: AsOffsetSplits<'a>>(
+        &mut self,
+        cache: &SplitCache,
+        index: Child,
+        patterns: &HashMap<PatternId, Pattern>,
+        range: (O, O),
+    ) -> IndexedPartition {
+        match self.range_patterns(
+            cache,
+            index,
+            patterns,
+            range,
+        ) {
+            Ok((bundle, perfect)) => {
+                let mut graph = self.graph_mut();
+                let index = graph.insert_patterns(
+                    bundle
+                );
+                IndexedPartition {
+                    index,
+                    perfect,
+                }
+            }
+            Err(part) => part,
+        }
+    }
+    fn index_range_info(
+        &mut self,
+        cache: &SplitCache,
+        index: Child,
+        patterns: &HashMap<PatternId, Pattern>,
+        info: &PatternPartitionInfo,
+    ) -> Pattern {
+        if let Some(context) = info.inner_range.as_ref().map(|range_info| {
+            // index inner range
+            let inner = self.index_range(
+                cache,
+                index,
+                patterns,
+                range_splits(patterns.iter(), range_info.offsets)
+            );
+            let mut graph = self.graph_mut();
+            // replace range and with new index
+            graph.insert_range_in(
+                index.to_pattern_location(info.pattern_id),
+                range_info.range.clone(),
+            ).unwrap()
+        }) {
+            vec![info.left, context, info.right]
+        } else {
+            vec![info.left, info.right]
+        }
+    }
+    fn range_partition_info<'a, O: AsOffsetSplits<'a>>(
+        cache: &SplitCache,
+        patterns: &HashMap<PatternId, Pattern>,
+        range: (O, O),
+    ) -> Result<PartitionBundle, IndexedPartition> {
+        let (ls, rs) = (range.0.as_offset_splits(), range.1.as_offset_splits());
+        let urange = (ls.offset.get(), rs.offset.get());
+        let mut perfect = (None, None);
+        ls.splits.iter().zip(rs.splits.iter()).map(|((&pid, prev_pos), (_, pos))| {
+            // todo detect if prev offset is in same index (to use inner partition as result)
+            let pattern = patterns.get(&pid).unwrap();
+
+            let prev_child = pattern[prev_pos.sub_index];
+            let prev_split = prev_pos.inner_offset.map(|inner_offset|
+                cache.expect_final_split(&SplitKey::new(prev_child, inner_offset))
+            );
+
+            let child = pattern[pos.sub_index];
+            let inner_split = pos.inner_offset.map(|inner_offset|
+                cache.expect_final_split(&SplitKey::new(child, inner_offset))
+            );
+
+            // get split parts in this partition
+            let context_range = prev_pos.sub_index+1..pos.sub_index;
+            let context = pattern.get(prev_pos.sub_index+1..pos.sub_index).unwrap_or(&[]);
+            let context_range = (!context.is_empty()).then(|| context_range);
+            if prev_split.is_none() {
+                perfect.0 = Some(pid);
+            }
+            if inner_split.is_none() {
+                perfect.1 = Some(pid);
+            }
+            match (
+                prev_pos.sub_index == pos.sub_index,
+                prev_split,
+                inner_split,
+            ) {
+                (true, Some(prev_split), Some(inner_split)) => {
+                    // todo find inner partition
+                    unimplemented!();
+                    //self.get_partition(
+                    //    merges,
+                    //    offsets,
+                    //    range,
+                    //)
+                    Err(IndexedPartition {
+                        index: inner_split.left,
+                        perfect,
+                    })
+                },
+                (true, None, Some(inner_split)) => {
+                    // todo find inner partition
+                    unimplemented!();
+                    Err(IndexedPartition {
+                        index: inner_split.left,
+                        perfect,
+                    })
+                },
+                (true, Some(prev_split), None) => {
+                    unreachable!("Invalid split position or invalid offset order");
+                },
+                (true, None, None) =>
+                    Err(IndexedPartition {
+                        index: child,
+                        perfect,
+                    }),
+                (false, Some(prev_split), Some(inner_split)) =>
+                    Ok(PatternPartitionInfo {
+                        pattern_id: pid,
+                        left: prev_split.right,
+                        right: inner_split.left,
+                        inner_range: context_range.map(|range|
+                            InnerRangeInfo {
+                                range,
+                                offsets: to_non_zero_range(
+                                    urange.0 + prev_split.right.width(),
+                                    urange.1 - inner_split.left.width()
+                                ),
+                            }
+                        ),
+                    }),
+                (false, None, Some(inner_split)) =>
+                    Ok(PatternPartitionInfo {
+                        pattern_id: pid,
+                        left: prev_child,
+                        right: inner_split.left,
+                        inner_range: context_range.map(|range|
+                            InnerRangeInfo {
+                                range,
+                                offsets: to_non_zero_range(
+                                    urange.0 + prev_child.width(),
+                                    urange.1 - inner_split.left.width()
+                                ),
+                            }
+                        ),
+                    }),
+                (false, Some(prev_split), None) =>
+                    Ok(PatternPartitionInfo {
+                        pattern_id: pid,
+                        left: prev_split.right,
+                        right: child,
+                        inner_range: context_range.map(|range|
+                            InnerRangeInfo {
+                                range,
+                                offsets: to_non_zero_range(
+                                    urange.0 + prev_split.right.width(),
+                                    urange.1 - child.width()
+                                ),
+                            }
+                        ),
+                    }),
+                (false, None, None) =>
+                    Ok(PatternPartitionInfo {
+                        pattern_id: pid,
+                        left: prev_child,
+                        right: child,
+                        inner_range: context_range.map(|range|
+                            InnerRangeInfo {
+                                range,
+                                offsets: to_non_zero_range(
+                                    urange.0 + prev_child.width(),
+                                    urange.1 - child.width()
+                                ),
+                            }
+                        ),
+                    }),
+
+            }
+        })
+        .collect::<Result<Vec<_>, _>>()
+        .map(|bundle|
+            PartitionBundle {
+                bundle,
+                perfect,
+            }
+        )
+    }
+    //fn index_ranges(
+    //    &mut self,
+    //    cache: &SplitCache,
+    //    index: Child,
+    //    patterns: &HashMap<PatternId, Pattern>,
+    //    ranges: &Vec<(OffsetSplits, OffsetSplits)>,
+    //) -> Vec<Child> {
+    //    let mut inner_offsets = BTreeMap::new();
+    //    let infos = ranges.iter()
+    //        .flat_map(|(l, r)|
+    //            self.range_partition_info(
+    //                cache,
+    //                index,
+    //                patterns,
+    //                (l, r),
+    //            )
+    //        )
+    //        .map(|(l, r)| {
+    //            inner_offsets.insert(l.offset, l.splits);
+    //            inner_offsets.insert(r.offset, r.splits);
+    //            (l.offset, r.offset)
+    //        })
+    //        .collect();
+    //    let partitions = self.index_offset_partitions(
+    //        cache,
+    //        index,
+    //        patterns,
+    //        &inner_offsets,
+    //    );
+    //}
     fn get_partition(
         &mut self,
         merges: &HashMap<Range<usize>, Child>,
@@ -514,137 +819,177 @@ impl Indexer {
             pat2[0]
         })
     }
-    pub fn merge_partitions(
-        &mut self,
-        partitions: &Vec<Child>,
-    ) -> HashMap<Range<usize>, Child> {
-        let mut graph = self.graph_mut();
-        //let split_map: BTreeMap<_, Split<Option<Child>>> = Default::default();
-
-        // this will contain all future indices
-        let mut range_map = HashMap::default();
-
-        let num_offsets = partitions.len() - 1;
-        for (i, part) in partitions.iter().enumerate() {
-            range_map.insert(
-                i..i, 
-                *part,
-            );
-        }
-        for len in 1..num_offsets {
-            for start in 0..num_offsets-len+1 {
-                let range = start..start + len;
-                range_map.insert(
-                    range,
-                    graph.insert_patterns(
-                        (start..start + len).into_iter()
-                            .map(|ri| {
-                                let &left = range_map.get(&(start..ri))
-                                    .unwrap();
-                                    //.unwrap_or(&partitions[start]);
-                                let &right = range_map.get(&(ri..start + len))
-                                    .unwrap();
-                                    //.unwrap_or(&partitions[start + len]);
-                                vec![left, right]
-                            })
-                    ),
-                );
-            } 
-        } 
-        range_map
-    }
-    //pub fn find_ranges<
-    //    'a,
-    //>(
-    //    &mut self,
-    //    offset_caches: &mut HashMap<NonZeroUsize, SplitPositionCache>,
-    //    root: VertexIndex,
-    //) -> RangeMap {
-    //    // maybe only for inner node
-
-    //    // range -> child partitions
-    //    // range -> offsets
-    //    // offset -> parent ranges
-
-    //    // 1. iterate ranges
-    //    //      1.2. fill top edges
-    //    //      1.3. add child partitions
-    //    // 2. 
-
-    //    let mut graph = self.graph_mut();
-    //    let node = graph.expect_vertex_data(root);
-
-    //    let offsets: BTreeSet<NonZeroUsize> = offset_caches.keys().cloned().collect();
-    //    let num_offsets = offsets.len();
-    //    let mut queue = VecDeque::new();
-
-    //    for len in 1..num_offsets {
-    //        for start in 0..num_offsets-len+1 {
-    //            queue.push_back(
-    //                offsets.iter().nth(start).unwrap().get()
-    //                ..
-    //                offsets.iter().nth(start + len).unwrap().get()
-    //            );
-    //        }
-    //    }
-
-    //    let mut ranges = HashMap::default();
-    //    for range in queue {
-    //        queue.extend(
-    //            self.range_children(
-    //                &offsets,
-    //                &node.children,
-    //                &mut ranges,
+    //fn inner_ranges_offset_splits(
+    //    patterns: &HashMap<PatternId, Pattern>,
+    //    range: &(OffsetSplits, OffsetSplits),
+    //) -> Vec<(OffsetSplits, OffsetSplits)> {
+    //    // find offsets for inner ranges
+    //    patterns.iter()
+    //        .filter_map(|(pid, p)| {
+    //            Self::inner_range_offset_splits(
+    //                patterns,
+    //                pid,
+    //                p,
     //                range,
-    //            )
-    //        );
-    //    }
-    //    ranges
-    //}
-    //pub fn range_children<
-    //    'a,
-    //>(
-    //    &mut self,
-    //    offsets: &BTreeSet<NonZeroUsize>,
-    //    patterns: &ChildPatterns,
-    //    ranges: &mut HashMap<Range<usize>, PartitionCache>,
-    //    range: Range<usize>,
-    //) {
-    //    // find inner ranges in original patterns
-    //    let inner_ranges = Self::inner_ranges(
-    //        patterns.iter(),
-    //        range,
-    //    );
-
-    //    // for new ranges:
-    //    // find overlaps with other ranges
-    //}
-    //pub fn inner_ranges<'a>(
-    //    patterns: impl Iterator<Item=(&'a PatternId, &'a Pattern)>,
-    //    range: Range<usize>,
-    //) -> Vec<Range<usize>> {
-    //    patterns
-    //        .filter_map(|(pid, pat)| { 
-    //            let (li, left_offset) = <IndexBack as IndexSide<Right>>::token_offset_split(
-    //                pat.borrow(),
-    //                range.start,
-    //            ).unwrap();
-    //            let (ri, right_offset) = <IndexBack as IndexSide<Right>>::token_offset_split(
-    //                pat.borrow(),
-    //                range.end,
-    //            ).unwrap();
-    //            (ri - li > 3).then(||
-    //                range.start + pat[li].width() - left_offset.map(NonZeroUsize::get).unwrap_or_default()
-    //                ..
-    //                range.end - right_offset.map(NonZeroUsize::get).unwrap_or_default()
     //            )
     //        })
     //        .collect()
     //}
+    // find split locations for each inner range of each pattern, if any
+    //fn inner_range_offset_splits(
+    //    patterns: &HashMap<PatternId, Pattern>,
+    //    &pid: &PatternId,
+    //    pattern: &Pattern,
+    //    range: &(OffsetSplits, OffsetSplits),
+    //) -> Option<(OffsetSplits, OffsetSplits)> {
+    //    let l = range.0.splits.get(&pid).unwrap();
+    //    let r = range.1.splits.get(&pid).unwrap();
+    //    let u_range = (range.0.offset.get(), range.1.offset.get());
+    //    match (&l.inner_offset, &r.inner_offset) {
+    //        (Some(lo), Some(ro)) =>
+    //            (r.sub_index - l.sub_index > 2).then_some(
+    //                (
+    //                    l.sub_index + 1,
+    //                    u_range.0 + lo.get(),
+    //                    r.sub_index,
+    //                    u_range.1 - ro.get(),
+    //                )
+    //            ),
+    //        (None, None) =>
+    //            (r.sub_index - l.sub_index > 4).then_some(
+    //                (
+    //                    l.sub_index + 1,
+    //                    u_range.0 + pattern[l.sub_index].width(),
+    //                    r.sub_index - 1,
+    //                    u_range.1 - pattern[r.sub_index-1].width(),
+    //                )
+    //            ),
+    //        (None, Some(ro)) =>
+    //            (r.sub_index - l.sub_index > 2).then_some(
+    //                (
+    //                    l.sub_index + 1,
+    //                    u_range.0 + pattern[l.sub_index].width(),
+    //                    r.sub_index,
+    //                    u_range.1 + ro.get(),
+    //                )
+    //            ),
+    //        (Some(lo), None) =>
+    //            (r.sub_index - l.sub_index > 3).then_some(
+    //                (
+    //                    l.sub_index + 1,
+    //                    u_range.0 + lo.get(),
+    //                    r.sub_index - 1,
+    //                    u_range.1 - pattern[r.sub_index-1].width(),
+    //                )
+    //            ),
+    //    }.map(|(li, lo, ri, ro)| {
+    //        // find splits for other patterns
+    //        let (lo, ro) = (
+    //            NonZeroUsize::new(lo).unwrap(),
+    //            NonZeroUsize::new(ro).unwrap(),
+    //        );
+    //        let mut ls =
+    //            position_splits(
+    //                patterns.iter().filter(|(id, _)| **id != pid),
+    //                lo,
+    //            );
+    //        ls.insert(
+    //            pid,
+    //            PatternSplitPos {
+    //                sub_index: li,
+    //                inner_offset: None,
+    //            },
+    //        );
+    //        let mut rs =
+    //            position_splits(
+    //                patterns.iter().filter(|(id, _)| **id != pid),
+    //                ro,
+    //            );
+    //        rs.insert(
+    //            pid,
+    //            PatternSplitPos {
+    //                sub_index: ri,
+    //                inner_offset: None,
+    //            },
+    //        );
+    //        (
+    //            OffsetSplits {
+    //                offset: lo,
+    //                splits: ls,
+    //            },
+    //            OffsetSplits {
+    //                offset: ro,
+    //                splits: rs,
+    //            },
+    //        )
+    //    })
+    //}
 }
-pub type RangeMap = HashMap<Range<usize>, PartitionCache>;
 
+fn to_non_zero_range(
+    l: usize,
+    r: usize,
+) -> (NonZeroUsize, NonZeroUsize) {
+    (
+        NonZeroUsize::new(l).unwrap(),
+        NonZeroUsize::new(r).unwrap(),
+    )
+}
 #[derive(Debug)]
-pub enum PartitionCache {
-    SubSplits(PatternSubSplits),
+pub struct PatternPartitionInfo {
+    pub pattern_id: PatternId,
+    pub inner_range: Option<InnerRangeInfo>,
+    pub left: Child,
+    pub right: Child,
+}
+#[derive(Debug)]
+pub struct PartitionBundle {
+    pub bundle: Vec<PatternPartitionInfo>,
+    pub perfect: (Option<PatternId>, Option<PatternId>),
+}
+#[derive(Debug)]
+pub struct IndexedPartition {
+    pub index: Child,
+    pub perfect: (Option<PatternId>, Option<PatternId>),
+}
+#[derive(Debug)]
+pub struct IndexedPattern {
+    pub pattern: Pattern,
+    pub perfect: (Option<PatternId>, Option<PatternId>),
+}
+#[derive(Debug)]
+pub struct InnerRangeInfo {
+    pub range: Range<usize>,
+    pub offsets: (NonZeroUsize, NonZeroUsize),
+}
+#[derive(Debug)]
+pub struct OffsetSplits {
+    pub offset: NonZeroUsize,
+    pub splits: PatternSubSplits,
+}
+#[derive(Debug, Clone, Copy)]
+pub struct OffsetSplitsRef<'a> {
+    pub offset: NonZeroUsize,
+    pub splits: &'a PatternSubSplits,
+}
+trait AsOffsetSplits<'a>: 'a {
+    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't;
+}
+impl<'a, O: AsOffsetSplits<'a>> AsOffsetSplits<'a> for &'a O {
+    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't {
+        (*self).as_offset_splits()
+    }
+}
+impl<'a> AsOffsetSplits<'a> for OffsetSplits {
+    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't {
+        OffsetSplitsRef {
+            offset: self.offset,
+            splits: &self.splits,
+        }
+    }
+}
+impl<'a> AsOffsetSplits<'a> for OffsetSplitsRef<'a> {
+    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't {
+        *self
+    }
 }
