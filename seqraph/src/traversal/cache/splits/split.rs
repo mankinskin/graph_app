@@ -4,7 +4,7 @@ pub trait SplitInner: Debug + Clone {}
 impl<T: Debug + Clone> SplitInner for T {}
 
 #[derive(Debug, Clone)]
-pub struct Split<T: SplitInner> {
+pub struct Split<T: SplitInner = Child> {
     pub left: T,
     pub right: T,
 }

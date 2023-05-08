@@ -355,7 +355,6 @@ pub trait TraversalIterator<
         } else {
             //path.child_path_mut::<End>().simplify(self.trav());
             self.on_range_end(
-                prev_pos,
                 root_pos,
                 path,
                 query,
@@ -397,7 +396,6 @@ pub trait TraversalIterator<
     }
     fn on_range_end(
         &mut self,
-        prev_pos: TokenLocation,
         root_pos: TokenLocation,
         path: SearchPath,
         mut query: CachedQuery<'_>,

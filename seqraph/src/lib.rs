@@ -49,6 +49,7 @@ pub use {
 pub use {
     tracing::*,
     linked_hash_set::*,
+    linked_hash_map::*,
     tracing_test::traced_test,
     itertools::*,
     derive_more::{

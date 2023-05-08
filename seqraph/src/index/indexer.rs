@@ -147,7 +147,7 @@ impl Indexer {
                 FoldResult::Complete(c) =>
                     Ok((c, result.query)),
                 FoldResult::Incomplete(s) =>
-                    Ok((self.index_subgraph(s), result.query)),
+                    Ok((self.join_subgraph(s), result.query)),
             },
             Err((NoMatch::SingleIndex(c), path)) => Ok((c, path)),
             Err((err, _)) => Err(err),

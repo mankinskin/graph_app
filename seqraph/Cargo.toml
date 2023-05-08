@@ -40,6 +40,7 @@ console-subscriber = "0.1"
 tracing-mutex = "0.2"
 derive_more = "0.99"
 linked_hash_set = "0.1.4"
+linked-hash-map = "0.5.6"
 
 [dependencies.tracing-egui]
 path = "../../tracing-egui"

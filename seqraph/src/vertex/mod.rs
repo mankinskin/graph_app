@@ -139,7 +139,7 @@ impl VertexData {
     ) -> Option<(&PatternId, &Pattern)> {
         self.children
             .iter()
-            .find(|(pid, pat)|
+            .find(|(_pid, pat)|
                 pat[0].width == width.get()
             )
     }

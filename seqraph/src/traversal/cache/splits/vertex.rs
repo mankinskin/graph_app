@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct SplitVertexCache {
     pub positions: BTreeMap<NonZeroUsize, SplitPositionCache>,
 }
@@ -26,13 +26,18 @@ pub struct PatternSplitPos {
     pub sub_index: usize,
 }
 pub type PatternSubSplits = HashMap<PatternId, PatternSplitPos>;
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct SplitPositionCache {
     pub top: HashSet<SplitKey>,
     pub pattern_splits: PatternSubSplits,
     pub final_split: Option<FinalSplit>,
 }
 
+impl Borrow<PatternSubSplits> for SplitPositionCache {
+    fn borrow(&self) -> &PatternSubSplits {
+        &self.pattern_splits
+    }
+}
 impl From<SubSplitLocation> for (PatternId, PatternSplitPos) {
     fn from(sub: SubSplitLocation) -> Self {
         (

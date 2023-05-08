@@ -5,7 +5,7 @@ mod index_direction;
 mod side;
 mod context;
 mod split;
-mod indexing;
+mod join;
 mod partition;
 mod path;
 mod merge;
@@ -22,7 +22,7 @@ pub use split::*;
 pub use context::*;
 pub use path::*;
 pub use partition::*;
-pub use indexing::*;
+pub use join::*;
 pub use merge::*;
 
 impl<'t, 'g> HypergraphRef {
