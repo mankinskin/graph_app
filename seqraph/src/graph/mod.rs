@@ -117,7 +117,7 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G> {
             let data = self.expect_vertex_data(index);
             assert!(!data.children.is_empty());
             data.children.values().fold(None, |acc, p| {
-                let exp = self.pattern_token_indices(p.borrow());
+                let exp = self.pattern_token_indices(p.borrow() as &[Child]);
                 acc.map(|acc| {
                     assert_eq!(acc, exp);
                     acc
@@ -140,7 +140,7 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G> {
             .iter()
             .fold(Vec::new(), |mut acc: Vec<VertexIndex>, (_pid, p)| {
                 assert!(!p.is_empty());
-                let exp = self.pattern_token_indices(p.borrow());
+                let exp = self.pattern_token_indices(p.borrow() as &[Child]);
                 if acc.is_empty() {
                     acc = exp;
                 } else {

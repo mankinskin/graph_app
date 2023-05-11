@@ -35,23 +35,21 @@ impl<'p> Partitioner<'p> {
     pub fn index_partition<'a, P: AsPartition<'a>>(
         &mut self,
         part: P,
-    ) -> IndexedPartition {
-        part.as_partition()
-            .join(self)
+    ) -> Result<JoinedPartition, Child> {
+        part.join(self)
     }
     pub fn indexed_partition_patterns<'a, P: AsPartition<'a>>(
         &mut self,
         part: P,
-    ) -> Result<IndexedPatterns, IndexedPartition> {
-        part.as_partition()
-            .info_bundle(self)
+    ) -> Result<JoinedPatterns, Child> {
+        part.info_bundle(self)
             .map(|b| b.join_patterns(self))
     }
     pub fn index_partitions(
         &mut self,
         sub_splits: impl HasSubSplits,
-    ) -> Vec<IndexedPartition> {
-        let offset_splits = sub_splits.sub_splits();
+    ) -> Vec<Child> {
+        let offset_splits = sub_splits.sub_splits(self.cache);
         let len = offset_splits.len();
         assert!(len > 0);
         let mut iter = offset_splits.iter()
@@ -63,23 +61,16 @@ impl<'p> Partitioner<'p> {
         let mut prev = iter.next().unwrap();
         let mut parts = Vec::with_capacity(1 + len);
         parts.push(
-            FirstPartition {
-                inner: prev,
-            }.join(self)
+            ((), prev).join(self).into()
         );
         for offset in iter {
             parts.push(
-                InnerPartition {
-                    left: prev,
-                    right: offset,
-                }.join(self)
+                (prev, offset).join(self).into()
             );
             prev = offset;
         }
         parts.push(
-            LastPartition {
-                inner: prev,
-            }.join(self)
+            (prev, ()).join(self).into()
         );
         parts
     }

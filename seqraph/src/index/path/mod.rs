@@ -350,7 +350,10 @@ impl<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> Pather<Side> {
         let len = child_patterns.len();
         match child_patterns
             .try_fold(Vec::with_capacity(len), |mut acc, (pid, pattern)| {
-                let (index, inner_offset) = Side::token_offset_split(pattern.borrow(), offset).unwrap();
+                let (index, inner_offset) = Side::token_offset_split(
+                    pattern.borrow() as &[Child],
+                    offset,
+                ).unwrap();
                 if let Some(inner_offset) = inner_offset {
                     acc.push((pid, pattern, index, inner_offset));
                     ControlFlow::Continue(acc)

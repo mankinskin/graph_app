@@ -380,21 +380,21 @@ mod tests {
         let width = pattern_width(&pattern);
         assert_eq!(
             <IndexBack as IndexSide<Right>>::token_offset_split(
-                pattern.borrow(),
+                pattern.borrow() as &[Child],
                 NonZeroUsize::new(2).unwrap(),
             ),
             Some((2, None)),
         );
         assert_eq!(
             <IndexFront as IndexSide<Right>>::token_offset_split(
-                pattern.borrow(),
+                pattern.borrow() as &[Child],
                 NonZeroUsize::new(width-2).unwrap(),
             ),
             Some((2, None)),
         );
         assert_eq!(
             <IndexFront as IndexSide<Right>>::token_offset_split(
-                pattern.borrow(),
+                pattern.borrow() as &[Child],
                 NonZeroUsize::new(width-4).unwrap(),
             ),
             Some((2, NonZeroUsize::new(1))),

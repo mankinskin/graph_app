@@ -493,7 +493,9 @@ pub trait TraversalIterator<
                 )
             )
             .map(|(&pid, child_pattern)| {
-                let sub_index = <Trav::Kind as GraphKind>::Direction::head_index(child_pattern.borrow());
+                let sub_index = <Trav::Kind as GraphKind>::Direction::head_index(
+                    child_pattern.borrow() as &[Child]
+                );
                 let mut paths = paths.clone();
                 paths.push_major(ChildLocation::new(index, pid, sub_index));
                 ChildState {

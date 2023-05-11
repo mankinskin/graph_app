@@ -8,7 +8,7 @@ pub struct FoldState {
     pub(crate) root: Child,
     pub(crate) end_pos: TokenLocation,
 }
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum RootMode {
     Prefix,
     Postfix,

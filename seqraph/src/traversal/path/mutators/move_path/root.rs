@@ -13,7 +13,7 @@ impl MoveRootPos<Right, End> for SearchPath {
         let graph = trav.graph();
         let pattern = self.root_pattern::<Trav>(&graph);
         if let Some(next) = TravDir::<Trav>::pattern_index_next(
-            pattern.borrow(),
+            pattern.borrow() as &[Child],
             RootChildPos::<End>::root_child_pos(self),
         ) {
             *self.root_child_pos_mut() = next;
@@ -30,7 +30,7 @@ impl MoveRootPos<Left, End> for SearchPath {
         let graph = trav.graph();
         let pattern = self.root_pattern::<Trav>(&graph);
         if let Some(prev) = TravDir::<Trav>::pattern_index_prev(
-            pattern.borrow(),
+            pattern.borrow() as &[Child],
             RootChildPos::<End>::root_child_pos(self),
         ) {
             *self.root_child_pos_mut() = prev;
@@ -46,7 +46,7 @@ impl MoveRootPos<Right, End> for CachedQuery<'_> {
     >(&mut self, _trav: &Trav) -> ControlFlow<()> {
         let pattern = &self.cache.query_root;
         if let Some(next) = TravDir::<Trav>::pattern_index_next(
-            pattern.borrow(),
+            pattern.borrow() as &[Child],
             self.state.end.root_child_pos(),
         ) {
             self.advance_key(pattern[self.state.end.root_child_pos()].width());
@@ -63,7 +63,7 @@ impl MoveRootPos<Left, End> for CachedQuery<'_> {
     >(&mut self, _trav: &Trav) -> ControlFlow<()> {
         let pattern = &self.cache.query_root;
         if let Some(prev) = TravDir::<Trav>::pattern_index_prev(
-            pattern.borrow(),
+            pattern.borrow() as &[Child],
             self.state.end.root_child_pos(),
         ) {
             self.retract_key(pattern[self.state.end.root_child_pos()].width());

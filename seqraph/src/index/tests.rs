@@ -38,7 +38,7 @@ fn index_pattern1() {
     // todo: split sub patterns not caught by query search
     let graph = HypergraphRef::from(graph);
     let query = vec![by, z];
-    let (byz, _) = graph.index_pattern(query.borrow()).expect("Indexing failed");
+    let (byz, _) = graph.index_pattern(query.borrow() as &[Child]).expect("Indexing failed");
     assert_eq!(byz, Child {
         index: 13,
         width: 3,
@@ -50,7 +50,7 @@ fn index_pattern1() {
         "byz"
     );
     let query = vec![ab, y];
-    let (aby, _) = graph.index_pattern(query.borrow()).expect("Indexing failed");
+    let (aby, _) = graph.index_pattern(query.borrow() as &[Child]).expect("Indexing failed");
     let aby_found = graph.find_parent(&query);
     assert_eq!(
         aby_found,
@@ -79,7 +79,7 @@ fn index_pattern2() {
     let graph_ref = HypergraphRef::from(graph);
 
     let query = vec![a, b, y, x];
-    let (aby, _) = graph_ref.index_pattern(query.borrow()).expect("Indexing failed");
+    let (aby, _) = graph_ref.index_pattern(query.borrow() as &[Child]).expect("Indexing failed");
     assert_eq!(aby.width(), 3);
     let ab = graph_ref.find_sequence("ab".chars()).unwrap().expect_complete("ab");
 

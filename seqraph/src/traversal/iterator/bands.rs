@@ -34,7 +34,10 @@ pub trait BandIterator<
                 .expect_child_patterns(index)
                 .iter()
                 .map(|(pid, pattern)|
-                    P::map_band(PatternLocation::new(index, *pid), pattern.borrow())
+                    P::map_band(
+                        PatternLocation::new(index, *pid),
+                        pattern.borrow() as &[Child]
+                    )
                 )
         )
     }

@@ -47,6 +47,14 @@ impl std::cmp::PartialOrd for Child {
         self.index.partial_cmp(&other.index)
     }
 }
+impl<A: Borrow<Child>, B: Borrow<Child>> From<Result<A, B>> for Child {
+    fn from(value: Result<A, B>) -> Self {
+        match value {
+            Ok(a) => *a.borrow(),
+            Err(b) => *b.borrow(),
+        }
+    }
+}
 impl std::hash::Hash for Child {
     fn hash<H: Hasher>(
         &self,

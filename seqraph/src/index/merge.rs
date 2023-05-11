@@ -33,8 +33,8 @@ impl RangeMap {
 impl<'p> Partitioner<'p> {
     pub fn merge_partitions(
         &mut self,
-        offsets: &BTreeMap<NonZeroUsize, SplitPositionCache>,
-        partitions: &Vec<IndexedPartition>,
+        offsets: &mut BTreeMap<NonZeroUsize, SplitPositionCache>,
+        partitions: &Vec<Child>,
     ) -> RangeMap {
 
         let mut range_map = RangeMap::from(partitions);
@@ -46,10 +46,8 @@ impl<'p> Partitioner<'p> {
                 // create PartitionBundle
                 let lo = offsets.iter().nth(start).unwrap();
                 let ro = offsets.iter().nth(start + len).unwrap();
-                let ls = lo.as_offset_splits();
-                let rs = ro.as_offset_splits();
 
-                let joined = self.indexed_partition_patterns((&ls, &rs));
+                let joined = self.indexed_partition_patterns((lo, ro));
 
                 // how to handle full index?
                 let index = match joined {
@@ -64,16 +62,13 @@ impl<'p> Partitioner<'p> {
                             patterns
                         );
                         // todo: make sure to build new perfect partitions correctly
-                        IndexedPartition {
-                            index,
-                            perfect: bundle.perfect,
-                        }
+                        index
                     },
                     Err(part) => part,
                 };
                 range_map.insert(
                     range,
-                    index.index,
+                    index,
                 );
             } 
         }
@@ -81,14 +76,15 @@ impl<'p> Partitioner<'p> {
     }
     pub fn merge_node(
         &mut self,
-        partitions: &Vec<IndexedPartition>,
+        partitions: &Vec<Child>,
     ) -> LinkedHashMap<SplitKey, Split> {
-        let vert_cache = (*self.cache.entries.get(&self.index.index).unwrap()).clone();
-        let offsets = &vert_cache.positions;
+        let index = self.index.index;
+        let mut vert_cache = (*self.cache.entries.get(&index).unwrap()).clone();
+        let mut offsets = &mut vert_cache.positions;
         assert!(partitions.len() == offsets.len() + 1);
 
         let merges = self.merge_partitions(
-            &offsets,
+            &mut offsets,
             &partitions,
         );
 

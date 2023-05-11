@@ -24,8 +24,10 @@ pub trait TraversalFolder<
     ) -> Result<TraversalResult, (NoMatch, QueryRangePath)> {
         let query_pattern = query_pattern.into_pattern();
         debug!("fold {:?}", query_pattern);
-        let query = QueryState::new::<<Self::Kind as GraphKind>::Direction, _>(query_pattern.borrow())
-            .map_err(|(err, q)| (err, q.to_rooted(query_pattern.clone())))?;
+        let query = QueryState::new::<<Self::Kind as GraphKind>::Direction, _>(
+            query_pattern.borrow() as &[Child]
+        )
+        .map_err(|(err, q)| (err, q.to_rooted(query_pattern.clone())))?;
         let start_index = query.clone().to_rooted(query_pattern.clone()).role_leaf_child::<End, _>(self);
 
         let start = StartState {

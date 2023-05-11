@@ -18,61 +18,156 @@ type OptCleanSplit = Option<SubLocation>;
 
 pub struct FirstPartition<'a> {
     pub inner: OffsetSplitsRef<'a>,
-    //cache: &'a SplitCache,
 }
 pub struct InnerPartition<'a> {
     pub left: OffsetSplitsRef<'a>,
     pub right: OffsetSplitsRef<'a>,
-    //cache: &'a SplitCache,
 }
 pub struct LastPartition<'a> {
     pub inner: OffsetSplitsRef<'a>,
-    //cache: &'a SplitCache,
+}
+#[derive(Debug)]
+pub struct OffsetSplits {
+    pub offset: NonZeroUsize,
+    pub splits: PatternSubSplits,
+}
+#[derive(Debug, Clone, Copy)]
+pub struct OffsetSplitsRef<'a> {
+    pub offset: NonZeroUsize,
+    pub splits: &'a PatternSubSplits,
+}
+pub trait AsOffsetSplits<'a>: 'a {
+    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't;
+}
+impl<'a, O: AsOffsetSplits<'a>> AsOffsetSplits<'a> for &'a O {
+    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't {
+        (*self).as_offset_splits()
+    }
+}
+impl<'a> AsOffsetSplits<'a> for OffsetSplits {
+    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't {
+        OffsetSplitsRef {
+            offset: self.offset,
+            splits: &self.splits,
+        }
+    }
+}
+impl<'a, N: Borrow<NonZeroUsize> + 'a> AsOffsetSplits<'a> for (N, &'a SplitPositionCache) {
+    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't {
+        OffsetSplitsRef {
+            offset: self.0.borrow().clone(),
+            splits: &self.1.pattern_splits,
+        }
+    }
+}
+impl<'a, N: Borrow<NonZeroUsize> + 'a> AsOffsetSplits<'a> for (N, SplitPositionCache) {
+    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't {
+        OffsetSplitsRef {
+            offset: self.0.borrow().clone(),
+            splits: &self.1.pattern_splits,
+        }
+    }
+}
+impl<'a> AsOffsetSplits<'a> for OffsetSplitsRef<'a> {
+    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't {
+        *self
+    }
+}
+
+pub trait HasSubSplits {
+    type Split: Borrow<PatternSubSplits>;
+    fn sub_splits<'s>(&self, cache: &'s SplitCache) -> &'s BTreeMap<NonZeroUsize, Self::Split>;
+}
+impl<C: Indexed> HasSubSplits for C {
+    type Split = SplitPositionCache;
+    fn sub_splits<'s>(&self, cache: &'s SplitCache) -> &'s BTreeMap<NonZeroUsize, Self::Split> {
+        &cache.entries.get(&self.index()).unwrap().positions
+    }
+}
+pub trait AsPartition<'a>: 'a {
+    type Partition<'t>: PartitionRangeSplits where 'a: 't;
+    fn as_partition<'t>(&'t self) -> Self::Partition<'t> where 'a: 't;
+}
+impl<'a, A: AsOffsetSplits<'a>, B: AsOffsetSplits<'a>> AsPartition<'a> for (A, B) {
+    type Partition<'t> = InnerPartition<'t> where 'a: 't;
+    fn as_partition<'t>(&'t self) -> Self::Partition<'t> where 'a: 't {
+        InnerPartition {
+            left: self.0.as_offset_splits(),
+            right: self.1.as_offset_splits(),
+        }
+    }
+}
+impl<'a, B: AsOffsetSplits<'a>> AsPartition<'a> for ((), B) {
+    type Partition<'t> = FirstPartition<'t> where 'a: 't;
+    fn as_partition<'t>(&'t self) -> Self::Partition<'t> where 'a: 't {
+        FirstPartition {
+            inner: self.1.as_offset_splits(),
+        }
+    }
+}
+impl<'a, A: AsOffsetSplits<'a>> AsPartition<'a> for (A, ()) {
+    type Partition<'t> = LastPartition<'t> where 'a: 't;
+    fn as_partition<'t>(&'t self) -> Self::Partition<'t> where 'a: 't {
+        LastPartition {
+            inner: self.0.as_offset_splits(),
+        }
+    }
+}
+#[derive(Debug)]
+pub struct PatternPartitionResult {
+    pub info: PatternPartitionInfo,
+    pub perfect: Perfect,
+    pub delta: usize,
 }
 pub trait PartitionRangeSplits: Sized {
-    fn pattern_range_info(
+    fn pattern_partition(
         &self,
         pid: &PatternId,
         pattern: &Pattern,
         cache: &SplitCache,
-    ) -> Result<(PatternPartitionInfo, Perfect), IndexedPartition>;
+    ) -> Result<PatternPartitionResult, Child>;
 
     /// bundle pattern range infos of each pattern
     fn info_bundle<'p>(
         self,
         ctx: &mut Partitioner<'p>,
-    ) -> Result<PartitionBundle, IndexedPartition> {
+    ) -> Result<PartitionBundle, Child> {
         ctx.patterns().iter().map(|(pid, pattern)| {
-            self.pattern_range_info(pid, pattern, ctx.cache)
+            self.pattern_partition(pid, pattern, ctx.cache)
         })
         .collect()
-    }
-    fn join_patterns<'p>(
-        self,
-        ctx: &mut Partitioner<'p>,
-    ) -> IndexedPartition {
-        match self.info_bundle(ctx) {
-            Ok(bundle) => bundle.join(ctx),
-            Err(part) => part,
-        }
     }
     fn join<'p>(
         self,
         ctx: &mut Partitioner<'p>,
-    ) -> IndexedPartition {
+    ) -> Result<JoinedPartition, Child> {
         match self.info_bundle(ctx) {
-            Ok(bundle) => bundle.join(ctx),
-            Err(part) => part,
+            Ok(bundle) => Ok(bundle.join(ctx)),
+            Err(part) => Err(part),
         }
     }
 }
-impl<'a> PartitionRangeSplits for FirstPartition<'a> {
-    fn pattern_range_info(
+impl<'a, P: AsPartition<'a>> PartitionRangeSplits for P {
+    fn pattern_partition(
         &self,
         pid: &PatternId,
         pattern: &Pattern,
         cache: &SplitCache,
-    ) -> Result<(PatternPartitionInfo, Perfect), IndexedPartition> {
+    ) -> Result<PatternPartitionResult, Child> {
+        self.as_partition().pattern_partition(
+            pid,
+            pattern,
+            cache,
+        )
+    }
+}
+impl<'a> PartitionRangeSplits for FirstPartition<'a> {
+    fn pattern_partition(
+        &self,
+        pid: &PatternId,
+        pattern: &Pattern,
+        cache: &SplitCache,
+    ) -> Result<PatternPartitionResult, Child> {
         // todo detect if prev offset is in same index (to use inner partition as result)
         let right_pos = self.inner.splits.get(pid).unwrap();
         let urange = (0, self.inner.offset.get());
@@ -93,6 +188,7 @@ impl<'a> PartitionRangeSplits for FirstPartition<'a> {
             None,
             right_split.is_none().then_some(*pid),
         );
+        let delta = right_pos.sub_index.saturating_sub(2);
 
         match (
             0 == right_pos.sub_index,
@@ -106,16 +202,13 @@ impl<'a> PartitionRangeSplits for FirstPartition<'a> {
                 //    offsets,
                 //    range,
                 //)
-                Err(IndexedPartition {
-                    index: right_split.left,
-                    perfect,
-                })
+                Err(right_split.left)
             },
             (true, None) => {
                 unreachable!("Invalid split position or invalid offset order");
             },
-            (false, Some(right_split)) => Ok((
-                PatternPartitionInfo {
+            (false, Some(right_split)) => Ok(PatternPartitionResult {
+                info: PatternPartitionInfo {
                     pattern_id: *pid,
                     left: left_child,
                     right: right_split.left,
@@ -130,9 +223,10 @@ impl<'a> PartitionRangeSplits for FirstPartition<'a> {
                     ),
                 },
                 perfect,
-            )),
-            (false, None) => Ok((
-                PatternPartitionInfo {
+                delta,
+            }),
+            (false, None) => Ok(PatternPartitionResult {
+                info: PatternPartitionInfo {
                     pattern_id: *pid,
                     left: left_child,
                     right: right_child,
@@ -147,18 +241,19 @@ impl<'a> PartitionRangeSplits for FirstPartition<'a> {
                     ),
                 },
                 perfect,
-            )),
+                delta,
+            }),
 
         }
     }
 }
 impl<'a> PartitionRangeSplits for InnerPartition<'a> {
-    fn pattern_range_info(
+    fn pattern_partition(
         &self,
         pid: &PatternId,
         pattern: &Pattern,
         cache: &SplitCache,
-    ) -> Result<(PatternPartitionInfo, Perfect), IndexedPartition> {
+    ) -> Result<PatternPartitionResult, Child> {
         // todo detect if prev offset is in same index (to use inner partition as result)
         let (left_pos, right_pos) = (self.left.splits.get(pid).unwrap(), self.right.splits.get(pid).unwrap());
         let urange = (self.left.offset.get(), self.right.offset.get());
@@ -182,6 +277,7 @@ impl<'a> PartitionRangeSplits for InnerPartition<'a> {
             left_split.is_none().then_some(*pid),
             right_split.is_none().then_some(*pid),
         );
+        let delta = right_pos.sub_index.saturating_sub(left_pos.sub_index+2);
 
         match (
             left_pos.sub_index == right_pos.sub_index,
@@ -196,29 +292,19 @@ impl<'a> PartitionRangeSplits for InnerPartition<'a> {
                 //    offsets,
                 //    range,
                 //)
-                Err(IndexedPartition {
-                    index: right_split.left,
-                    perfect,
-                })
+                Err(right_split.left)
             },
             (true, None, Some(right_split)) => {
                 // todo find inner partition
                 unimplemented!();
-                Err(IndexedPartition {
-                    index: right_split.left,
-                    perfect,
-                })
+                Err(right_split.left)
             },
             (true, Some(left_split), None) => {
                 unreachable!("Invalid split position or invalid offset order");
             },
-            (true, None, None) =>
-                Err(IndexedPartition {
-                    index: right_child,
-                    perfect,
-                }),
-            (false, Some(left_split), Some(right_split)) => Ok((
-                PatternPartitionInfo {
+            (true, None, None) => Err(right_child),
+            (false, Some(left_split), Some(right_split)) => Ok(PatternPartitionResult {
+                info: PatternPartitionInfo {
                     pattern_id: *pid,
                     left: left_split.right,
                     right: right_split.left,
@@ -233,9 +319,10 @@ impl<'a> PartitionRangeSplits for InnerPartition<'a> {
                     ),
                 },
                 perfect,
-            )),
-            (false, None, Some(right_split)) => Ok((
-                PatternPartitionInfo {
+                delta,
+            }),
+            (false, None, Some(right_split)) => Ok(PatternPartitionResult {
+                info: PatternPartitionInfo {
                     pattern_id: *pid,
                     left: left_child,
                     right: right_split.left,
@@ -250,9 +337,10 @@ impl<'a> PartitionRangeSplits for InnerPartition<'a> {
                     ),
                 },
                 perfect,
-            )),
-            (false, Some(left_split), None) => Ok((
-                PatternPartitionInfo {
+                delta,
+        }),
+            (false, Some(left_split), None) => Ok(PatternPartitionResult {
+                info: PatternPartitionInfo {
                     pattern_id: *pid,
                     left: left_split.right,
                     right: right_child,
@@ -267,9 +355,10 @@ impl<'a> PartitionRangeSplits for InnerPartition<'a> {
                     ),
                 },
                 perfect,
-            )),
-            (false, None, None) => Ok((
-                PatternPartitionInfo {
+                delta,
+            }),
+            (false, None, None) => Ok(PatternPartitionResult {
+                info: PatternPartitionInfo {
                     pattern_id: *pid,
                     left: left_child,
                     right: right_child,
@@ -284,18 +373,19 @@ impl<'a> PartitionRangeSplits for InnerPartition<'a> {
                     ),
                 },
                 perfect,
-            )),
+                delta,
+            }),
 
         }
     }
 }
 impl<'a> PartitionRangeSplits for LastPartition<'a> {
-    fn pattern_range_info(
+    fn pattern_partition(
         &self,
         pid: &PatternId,
         pattern: &Pattern,
         cache: &SplitCache,
-    ) -> Result<(PatternPartitionInfo, Perfect), IndexedPartition> {
+    ) -> Result<PatternPartitionResult, Child> {
         // todo detect if prev offset is in same index (to use inner partition as result)
         let left_pos = self.inner.splits.get(pid).unwrap();
         let urange = (0, self.inner.offset.get());
@@ -317,6 +407,7 @@ impl<'a> PartitionRangeSplits for LastPartition<'a> {
             left_split.is_none().then_some(*pid),
             None,
         );
+        let delta = len.saturating_sub(left_pos.sub_index+1);
 
         match (
             left_pos.sub_index == len - 1,
@@ -330,20 +421,14 @@ impl<'a> PartitionRangeSplits for LastPartition<'a> {
                 //    offsets,
                 //    range,
                 //)
-                Err(IndexedPartition {
-                    index: left_split.right,
-                    perfect,
-                })
+                Err(left_split.right)
             },
             (true, None) => {
                 //unreachable!("Invalid split position or invalid offset order");
-                Err(IndexedPartition {
-                    index: left_child,
-                    perfect,
-                })
+                Err(left_child)
             },
-            (false, Some(left_split)) => Ok((
-                PatternPartitionInfo {
+            (false, Some(left_split)) => Ok(PatternPartitionResult {
+                info: PatternPartitionInfo {
                     pattern_id: *pid,
                     left: left_split.right,
                     right: right_child,
@@ -358,9 +443,10 @@ impl<'a> PartitionRangeSplits for LastPartition<'a> {
                     ),
                 },
                 perfect,
-            )),
-            (false, None) => Ok((
-                PatternPartitionInfo {
+                delta,
+            }),
+            (false, None) => Ok(PatternPartitionResult {
+                info: PatternPartitionInfo {
                     pattern_id: *pid,
                     left: left_child,
                     right: right_child,
@@ -375,7 +461,8 @@ impl<'a> PartitionRangeSplits for LastPartition<'a> {
                     ),
                 },
                 perfect,
-            )),
+                delta,
+            }),
 
         }
     }

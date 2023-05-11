@@ -9,103 +9,53 @@ pub use splits::*;
 
 
 #[derive(Debug)]
-pub struct IndexedPartition {
+pub struct JoinedPartition {
     pub index: Child,
     pub perfect: Perfect,
+    pub delta: PatternSubDeltas,
 }
-impl Borrow<Child> for &IndexedPartition {
+impl Borrow<Child> for JoinedPartition {
+    fn borrow(&self) -> &Child {
+        &self.index
+    }
+}
+impl Borrow<Child> for &JoinedPartition {
     fn borrow(&self) -> &Child {
         &self.index
     }
 }
 #[derive(Debug)]
-pub struct IndexedPatterns {
+pub struct JoinedPatterns {
     pub patterns: Vec<JoinedPattern>,
     pub perfect: Perfect,
+    pub delta: PatternSubDeltas,
+}
+
+impl<'p> JoinedPatterns {
+    pub fn patterns(&self) -> Vec<Pattern> {
+        self.patterns.iter()
+            .map(|p| p.into_pattern())
+            .collect()
+    }
+    pub fn join(
+        self,
+        ctx: &mut Partitioner<'p>,
+    ) -> JoinedPartition {
+        // collect infos about partition in each pattern
+        let index = ctx.graph.insert_patterns(
+            self.patterns()
+        );
+        JoinedPartition {
+            index,
+            perfect: self.perfect,
+            delta: self.delta,
+        }
+    }
 }
 #[derive(Debug)]
 pub struct InnerRangeInfo {
     pub range: Range<usize>,
     pub offsets: (NonZeroUsize, NonZeroUsize),
-}
-#[derive(Debug)]
-pub struct OffsetSplits {
-    pub offset: NonZeroUsize,
-    pub splits: PatternSubSplits,
-}
-#[derive(Debug, Clone, Copy)]
-pub struct OffsetSplitsRef<'a> {
-    pub offset: NonZeroUsize,
-    pub splits: &'a PatternSubSplits,
-}
-pub trait AsOffsetSplits<'a>: 'a {
-    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't;
-}
-impl<'a, O: AsOffsetSplits<'a>> AsOffsetSplits<'a> for &'a O {
-    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't {
-        (*self).as_offset_splits()
-    }
-}
-impl<'a> AsOffsetSplits<'a> for OffsetSplits {
-    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't {
-        OffsetSplitsRef {
-            offset: self.offset,
-            splits: &self.splits,
-        }
-    }
-}
-impl<'a, N: Borrow<NonZeroUsize> + 'a> AsOffsetSplits<'a> for (N, &'a SplitPositionCache) {
-    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't {
-        OffsetSplitsRef {
-            offset: self.0.borrow().clone(),
-            splits: &self.1.pattern_splits,
-        }
-    }
-}
-impl<'a> AsOffsetSplits<'a> for OffsetSplitsRef<'a> {
-    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't {
-        *self
-    }
-}
-
-pub trait HasSubSplits {
-    type Split: Borrow<PatternSubSplits>;
-    fn sub_splits<'s>(&'s self) -> &'s BTreeMap<NonZeroUsize, Self::Split>;
-}
-impl<C: Indexed> HasSubSplits for (C, &'_ SplitCache) {
-    type Split = SplitPositionCache;
-    fn sub_splits<'s>(&'s self) -> &'s BTreeMap<NonZeroUsize, Self::Split> {
-        &self.1.entries.get(&self.0.index()).unwrap().positions
-    }
-}
-pub trait AsPartition<'a>: 'a {
-    type Partition<'t>: PartitionRangeSplits where 'a: 't;
-    fn as_partition<'t>(&'t self) -> Self::Partition<'t> where 'a: 't;
-}
-impl<'a, A: AsOffsetSplits<'a>, B: AsOffsetSplits<'a>> AsPartition<'a> for (A, B) {
-    type Partition<'t> = InnerPartition<'t> where 'a: 't;
-    fn as_partition<'t>(&'t self) -> Self::Partition<'t> where 'a: 't {
-        InnerPartition {
-            left: self.0.as_offset_splits(),
-            right: self.1.as_offset_splits(),
-        }
-    }
-}
-impl<'a, B: AsOffsetSplits<'a>> AsPartition<'a> for ((), B) {
-    type Partition<'t> = FirstPartition<'t> where 'a: 't;
-    fn as_partition<'t>(&'t self) -> Self::Partition<'t> where 'a: 't {
-        FirstPartition {
-            inner: self.1.as_offset_splits(),
-        }
-    }
-}
-impl<'a, A: AsOffsetSplits<'a>> AsPartition<'a> for (A, ()) {
-    type Partition<'t> = LastPartition<'t> where 'a: 't;
-    fn as_partition<'t>(&'t self) -> Self::Partition<'t> where 'a: 't {
-        LastPartition {
-            inner: self.0.as_offset_splits(),
-        }
-    }
 }
 impl Indexer {
     //pub fn first_partition(

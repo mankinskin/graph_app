@@ -57,6 +57,7 @@ pub use {
         Sub,
         Deref,
         DerefMut,
+        IntoIterator
     },
     std::{
         fmt::Debug,

@@ -55,7 +55,7 @@ impl<K: MoveKey<Right, Delta=usize>> MoveLeaf<Right> for KeyedLeaf<'_, Right, K>
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(&*self.location);
         if let Some(next) = TravDir::<Trav>::pattern_index_next(
-            pattern.borrow(),
+            pattern.borrow() as &[Child],
             self.location.sub_index,
         ) {
             let prev = &pattern[self.location.sub_index];
@@ -74,7 +74,7 @@ impl MoveLeaf<Right> for ChildLocation {
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(&*self);
         if let Some(next) = TravDir::<Trav>::pattern_index_next(
-            pattern.borrow(),
+            pattern.borrow() as &[Child],
             self.sub_index,
         ) {
             self.sub_index = next;
@@ -91,7 +91,7 @@ impl<K: MoveKey<Left, Delta=usize>> MoveLeaf<Left> for KeyedLeaf<'_, Left, K> {
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(&*self.location);
         if let Some(prev) = TravDir::<Trav>::pattern_index_prev(
-            pattern.borrow(),
+            pattern.borrow() as &[Child],
             self.location.sub_index,
         ) {
             let c = &pattern[self.location.sub_index];
@@ -110,7 +110,7 @@ impl MoveLeaf<Left> for ChildLocation {
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(&*self);
         if let Some(prev) = TravDir::<Trav>::pattern_index_prev(
-            pattern.borrow(),
+            pattern.borrow() as &[Child],
             self.sub_index,
         ) {
             self.sub_index = prev;

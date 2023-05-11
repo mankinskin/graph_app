@@ -26,6 +26,7 @@ pub struct PatternSplitPos {
     pub sub_index: usize,
 }
 pub type PatternSubSplits = HashMap<PatternId, PatternSplitPos>;
+
 #[derive(Debug, Default, Clone)]
 pub struct SplitPositionCache {
     pub top: HashSet<SplitKey>,
@@ -33,9 +34,24 @@ pub struct SplitPositionCache {
     pub final_split: Option<FinalSplit>,
 }
 
+impl std::ops::Sub<PatternSubDeltas> for SplitPositionCache {
+    type Output = Self;
+    fn sub(mut self, rhs: PatternSubDeltas) -> Self::Output {
+        self.pattern_splits.iter_mut()
+            .for_each(|(pid, pos)|
+                pos.sub_index -= rhs[pid]
+            );
+        self
+    }
+}
 impl Borrow<PatternSubSplits> for SplitPositionCache {
     fn borrow(&self) -> &PatternSubSplits {
         &self.pattern_splits
+    }
+}
+impl BorrowMut<PatternSubSplits> for SplitPositionCache {
+    fn borrow_mut(&mut self) -> &mut PatternSubSplits {
+        &mut self.pattern_splits
     }
 }
 impl From<SubSplitLocation> for (PatternId, PatternSplitPos) {

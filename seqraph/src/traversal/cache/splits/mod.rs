@@ -47,7 +47,7 @@ pub fn position_splits<'a>(
     patterns
         .map(|(pid, pat)| { 
             let (sub_index, inner_offset) = <IndexBack as IndexSide<Right>>::token_offset_split(
-                pat.borrow(),
+                pat.borrow() as &[Child],
                 parent_offset,
             ).unwrap();
             (*pid, PatternSplitPos {
@@ -64,11 +64,11 @@ pub fn range_splits<'a>(
     let (ls, rs) = patterns
         .map(|(pid, pat)| { 
             let (li, lo) = <IndexBack as IndexSide<Right>>::token_offset_split(
-                pat.borrow(),
+                pat.borrow() as &[Child],
                 parent_range.0,
             ).unwrap();
             let (ri, ro) = <IndexBack as IndexSide<Right>>::token_offset_split(
-                pat.borrow(),
+                pat.borrow() as &[Child],
                 parent_range.1,
             ).unwrap();
             (
@@ -106,7 +106,7 @@ pub fn cleaned_position_splits<'a>(
     patterns
         .map(|(pid, pat)| { 
             let (sub_index, inner_offset) = <IndexBack as IndexSide<Right>>::token_offset_split(
-                pat.borrow(),
+                pat.borrow() as &[Child],
                 parent_offset,
             ).unwrap();
             let location = SubLocation::new(*pid, sub_index);

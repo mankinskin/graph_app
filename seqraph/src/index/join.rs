@@ -39,7 +39,7 @@ impl Indexer {
                             index: key.index,
                             graph: self.graph_mut(),
                         },
-                        cache: &splits,
+                        cache: &mut splits,
                     }.join_node()
                 };
                 for (key, split) in finals {
@@ -58,7 +58,7 @@ impl Indexer {
                 index: subgraph.root,
                 graph: self.graph_mut(),
             },
-            cache: &splits,
+            cache: &mut splits,
         };
         partitioner.join_root()
     }
@@ -68,7 +68,7 @@ impl<'p> Partitioner<'p> {
         &mut self,
     ) -> LinkedHashMap<SplitKey, Split> {
         let partitions = self.index_partitions(
-            (self.index, self.cache),
+            self.index,
         );
         self.merge_node(
             &partitions,
@@ -78,128 +78,147 @@ impl<'p> Partitioner<'p> {
         &mut self,
     ) -> Child {
         let index = self.index;
-        let node = (index.index, self.cache);
-        let offsets = node.sub_splits();
+        let root_mode = self.cache.root_mode;
+        let offsets = index.sub_splits(self.cache);
         let num_offsets = offsets.len();
         let mut offset_iter = offsets.iter();
         let offset = offset_iter.next().unwrap();
 
-        match self.cache.root_mode {
+        match root_mode {
             RootMode::Prefix => {
                 assert_eq!(num_offsets, 1);
-                let part = ((), offset).as_partition()
-                    .join(self);
-
-                if let Some(pid) = part.perfect.1 {
-                    let pos = &offset.1.pattern_splits[&pid];
-                    self.graph.replace_in_pattern(
-                        index.to_pattern_location(pid),
-                        0..pos.sub_index,
-                        [part.index],
-                    )
-                } else {
-                    let post = (offset, ()).as_partition()
-                        .join(self);
-                    self.graph.add_pattern_with_update(
-                        index,
-                        [part.index, post.index],
-                    );
+                match ((), offset).join(self) {
+                    Ok(part) => {
+                        if let Some(pid) = part.perfect.1 {
+                            let pos = &offset.1.pattern_splits[&pid];
+                            self.graph.replace_in_pattern(
+                                index.to_pattern_location(pid),
+                                0..pos.sub_index,
+                                [part.index],
+                            )
+                        } else {
+                            let post = (offset, ()).join(self).unwrap();
+                            self.graph.add_pattern_with_update(
+                                index,
+                                [part.index, post.index],
+                            );
+                        }
+                        part.index
+                    },
+                    Err(c) => c,
                 }
-                part.index
             },
             RootMode::Postfix => {
                 assert_eq!(num_offsets, 1);
-                let part = (offset, ()).as_partition()
-                    .join(self);
-
-                if let Some(pid) = part.perfect.1 {
-                    let pos = &offset.1.pattern_splits[&pid];
-                    self.graph.replace_in_pattern(
-                        index.to_pattern_location(pid),
-                        pos.sub_index..,
-                        [part.index],
-                    )
-                } else {
-                    let pre = ((), offset).as_partition()
-                        .join(self);
-                    self.graph.add_pattern_with_update(index,
-                        [pre.index, part.index],
-                    );
+                match (offset, ()).join(self) {
+                    Ok(part) => {
+                        if let Some(pid) = part.perfect.1 {
+                            let pos = &offset.1.pattern_splits[&pid];
+                            self.graph.replace_in_pattern(
+                                index.to_pattern_location(pid),
+                                pos.sub_index..,
+                                [part.index],
+                            )
+                        } else {
+                            let pre = ((), offset).join(self).unwrap();
+                            self.graph.add_pattern_with_update(index,
+                                [pre.index, part.index],
+                            );
+                        }
+                        part.index
+                    },
+                    Err(c) => c,
                 }
-                part.index
             },
             RootMode::Infix => {
                 assert_eq!(num_offsets, 2);
                 let prev_offset = offset;
                 let offset = offset_iter.next().unwrap();
-                let part = (prev_offset, offset).as_partition()
-                    .join(self);
-                if (None, None) == part.perfect {
-                    let pre = ((), prev_offset).as_partition()
-                        .join(self);
-                    let post = (offset, ()).as_partition()
-                        .join(self);
-                    self.graph.add_pattern_with_update(
-                        index,
-                        [pre.index, part.index, post.index],
-                    );
-                } else if part.perfect.0 == part.perfect.1 {
-                    let (ll, rl) = (part.perfect.0.unwrap(), part.perfect.1.unwrap());
-                    let lpos = prev_offset.1.pattern_splits[&ll].sub_index;
-                    let rpos = offset.1.pattern_splits[&rl].sub_index;
-                    self.graph.replace_in_pattern(
-                        index.to_pattern_location(ll),
-                        lpos..rpos,
-                        [part.index],
-                    )
-                } else {
-                    if let Some(ll) = part.perfect.0 {
-                        let lpos = prev_offset.1.pattern_splits[&ll].sub_index;
-                        let loc = index.to_pattern_location(ll);
-                        let post = (offset, ()).as_partition()
-                            .join(self);
-                        let post_patterns = (offset, ()).as_partition()
-                            .info_bundle(self).unwrap()
-                            .join_patterns(self);
-                        let wrapper = self.graph.insert_patterns(
-                            std::iter::once(vec![part.index, post.index])
-                                .chain(
-                                    post_patterns.patterns.into_iter().map(|p|
-                                        (p.borrow() as &[Child]).into_iter().cloned().collect_vec()
-                                    )
-                                ),
-                        );
-                        self.graph.replace_in_pattern(
-                            loc,
-                            lpos..,
-                            [wrapper],
-                        );
-                    }
-                    if let Some(rl) = part.perfect.1 {
-                        let rpos = offset.1.pattern_splits[&rl].sub_index;
-                        let loc = index.to_pattern_location(rl);
-                        let pre = ((), prev_offset).as_partition()
-                            .join(self);
-                        let pre_patterns = ((), prev_offset).as_partition()
-                            .info_bundle(self).unwrap()
-                            .join_patterns(self);
-                        let wrapper = self.graph.insert_patterns(
-                            std::iter::once(vec![pre.index, part.index])
-                                .chain(
-                                    pre_patterns.patterns.into_iter().map(|p|
-                                        (p.borrow() as &[Child]).into_iter().cloned().collect_vec()
-                                    )
-                                ),
-                        );
 
-                        self.graph.replace_in_pattern(
-                            loc,
-                            0..rpos,
-                            [wrapper],
-                        );
-                    }
+                match (prev_offset, offset).join(self) {
+                    Ok(part) => {
+                        let mut prev_offset = (prev_offset.0, prev_offset.1.clone());
+                        let mut offset = (offset.0, (offset.1.clone() - part.delta));
+
+                        if (None, None) == part.perfect {
+                            // no perfect border
+                            //        [               ]
+                            // |     |      |      |     |   |
+                            let pre = ((), prev_offset).join(self).unwrap();
+
+                            let offset = (offset.0, &(offset.1.clone() - pre.delta));
+
+                            let post = (offset, ()).join(self).unwrap();
+                            self.graph.add_pattern_with_update(
+                                index,
+                                [pre.index, part.index, post.index],
+                            );
+                        } else if part.perfect.0 == part.perfect.1 {
+                            // perfect borders in same pattern
+                            //       [               ]
+                            // |     |       |       |      |
+                            let (ll, rl) = (part.perfect.0.unwrap(), part.perfect.1.unwrap());
+                            let lpos = prev_offset.1.pattern_splits[&ll].sub_index;
+                            let rpos = offset.1.pattern_splits[&rl].sub_index;
+                            self.graph.replace_in_pattern(
+                                index.to_pattern_location(ll),
+                                lpos..rpos,
+                                [part.index],
+                            )
+                        } else {
+                            // one or both are perfect in different patterns
+                            if let Some(rp) = part.perfect.1 {
+                                //           [              ]
+                                // |     |       |     |    |     |
+
+                                // todo: improve syntax
+                                let pre = ((), &prev_offset).join(self).unwrap();
+                                prev_offset.1 = prev_offset.1 - pre.delta;
+
+                                let wrap_patterns = ((), &offset)
+                                    .info_bundle(self).unwrap()
+                                    .join_patterns(self);
+                                let patterns = wrap_patterns.patterns().clone();
+                                offset.1 = offset.1 - wrap_patterns.delta;
+                                let wrapper = self.graph.insert_patterns(
+                                    std::iter::once(vec![pre.index, part.index])
+                                        .chain(patterns),
+                                );
+
+                                let ri = offset.1.pattern_splits[&rp].sub_index;
+                                let loc = index.to_pattern_location(rp);
+                                self.graph.replace_in_pattern(
+                                    loc,
+                                    0..ri,
+                                    [wrapper],
+                                );
+                            }
+                            if let Some(lp) = part.perfect.0 {
+                                //       [                 ]
+                                // |     |       |      |      |
+                                let post = (offset, ()).join(self).unwrap();
+
+                                let li = prev_offset.1.pattern_splits[&lp].sub_index;
+                                let wrap_patterns = (prev_offset, ())
+                                    .info_bundle(self).unwrap()
+                                    .join_patterns(self);
+
+                                let wrapper = self.graph.insert_patterns(
+                                    std::iter::once(vec![part.index, post.index])
+                                        .chain(wrap_patterns.patterns()),
+                                );
+                                let loc = index.to_pattern_location(lp);
+                                self.graph.replace_in_pattern(
+                                    loc,
+                                    li..,
+                                    [wrapper],
+                                );
+                            }
+                        }
+                        part.index
+                    },
+                    Err(c) => c,
                 }
-                part.index
             }
         }
     }
