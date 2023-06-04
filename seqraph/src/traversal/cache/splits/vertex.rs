@@ -19,6 +19,105 @@ impl SplitVertexCache {
         self.positions.entry(pos)
             .or_default()
     }
+    pub fn offset_range_partition<'a, K: RangeRole>(&'a self, range: K::Range) -> PartitionRef<'a, K> {
+        range.get_partition(self)
+    }
+    pub fn inner_offsets<'a, K: RangeRole, P: AsPartition<'a, K>>(
+        ctx: BundlingContext,
+        part: P,
+    ) -> Vec<NonZeroUsize>
+        //where <P::Range as RangeRole>::Splits: AsPartition<'a, Range = P::Range>
+    {
+        part.info_bundle(&ctx).map(|bundle|
+            //let merges = range_map.range_sub_merges(start..start + len);
+            bundle.patterns.into_iter().flat_map(|(pid, info)|
+                info.inner_range.map(|range| {
+                    let splits = range.offsets.as_splits(ctx);
+                    Self::inner_offsets(
+                        ctx,
+                        splits,
+                    )
+                })
+            )
+            .flatten()
+            .collect()
+        ).unwrap_or_default()
+    }
+    pub fn inner_trace_states<'a, K: RangeRole, P: AsPartition<'a, K>>(
+        ctx: BundlingContext,
+        part: P,
+        prev: SplitKey,
+    ) -> Vec<TraceState>
+        //where <<P::Range as RangeRole>::Kind as RangeKind>::Splits: AsPartition<'a, Range = P::Range>
+    {
+        Self::inner_offsets(ctx, part)
+            .into_iter().map(|offset|
+                TraceState {
+                    offset,
+                    index: ctx.index,
+                    prev,
+                },
+            )
+            .collect()
+    }
+    pub fn complete_node<'a, Trav: TraversableMut<GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph>> + 'a>(
+        &self,
+        trav: Trav,
+        index: Child,
+        prev: SplitKey,
+    ) -> Vec<TraceState> {
+        let num_offsets = self.positions.len();
+        let mut states = Vec::new();
+        let ctx = JoinContext {
+            graph: trav.graph_mut(),
+            index,
+        }.as_bundling_context();
+        for len in 1..num_offsets {
+            for start in 0..num_offsets-len+1 {
+                let part = self.offset_range_partition::<In>(start..start + len);
+                states.extend(
+                    Self::inner_trace_states(
+                        ctx,
+                        part,
+                        prev,
+                    )
+                );
+            } 
+        }
+        states
+    }
+    pub fn complete_root<'a, Trav: TraversableMut<GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph>> + 'a>(
+        &self,
+        trav: Trav,
+        index: Child,
+        prev: SplitKey,
+        root_mode: RootMode
+    ) -> Vec<TraceState> {
+        let ctx = JoinContext {
+            graph: trav.graph_mut(),
+            index,
+        }.as_bundling_context();
+        match root_mode {
+            RootMode::Infix =>
+                Self::inner_trace_states(
+                    ctx,
+                    OffsetIndexRange::<In>::get_partition(&(0..1), self),
+                    prev,
+                ),
+            RootMode::Prefix =>
+                Self::inner_trace_states(
+                    ctx,
+                    OffsetIndexRange::<Pre>::get_partition(&(0..1), self),
+                    prev,
+                ),
+            RootMode::Postfix =>
+                Self::inner_trace_states(
+                    ctx,
+                    (0..).get_partition(self),
+                    prev,
+                ),
+        }
+    }
 }
 #[derive(Debug, Clone)]
 pub struct PatternSplitPos {

@@ -31,6 +31,11 @@ impl StartInclusive for std::ops::RangeInclusive<usize> {
         *self.start()
     }
 }
+impl StartInclusive for std::ops::RangeTo<usize> {
+    fn start(&self) -> usize {
+        0
+    }
+}
 impl StartInclusive for std::ops::RangeFrom<usize> {
     fn start(&self) -> usize {
         self.start

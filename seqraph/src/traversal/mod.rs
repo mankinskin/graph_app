@@ -5,7 +5,7 @@ pub mod iterator;
 pub mod policy;
 pub mod cache;
 pub mod result;
-pub mod node_collection;
+pub mod visitor;
 pub mod result_kind;
 
 pub use super::*;
@@ -16,5 +16,5 @@ pub use iterator::*;
 pub use policy::*;
 pub use cache::*;
 pub use result::*;
-pub use node_collection::*;
+pub use visitor::*;
 pub use result_kind::*;

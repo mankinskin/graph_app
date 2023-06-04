@@ -10,6 +10,7 @@ pub use {
 };
 pub type Pattern = Vec<Child>;
 pub type PatternView<'a> = &'a [Child];
+pub type Patterns = Vec<Pattern>;
 
 /// trait for types which can be converted to a pattern with a known size
 pub trait IntoPattern:

@@ -31,7 +31,7 @@ impl<
 {
     //type Break = TraversalResult<R, Q>;
     //type Continue = TraversalResult<R, Q>;
-    type NodeCollection = BftQueue;
+    type NodeVisitor = BftQueue;
 
     //fn map_state(
     //    &self,

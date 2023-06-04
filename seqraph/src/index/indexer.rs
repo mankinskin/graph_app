@@ -67,7 +67,7 @@ impl TraversalFolder<IndexingPolicy> for Indexer {
     //type Break = TraversalResult<R, Q>;
     //type Continue = TraversalResult<R, Q>;
     //type Result = (<R as ResultKind>::Indexed, Q);
-    type NodeCollection = BftQueue;
+    type NodeVisitor = BftQueue;
 
     //fn map_state(
     //    &self,

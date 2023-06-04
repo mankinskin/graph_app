@@ -146,3 +146,11 @@ impl AsRef<[Child]> for Child {
         self.borrow()
     }
 }
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub struct ChildWidth(pub usize);
+
+impl Borrow<ChildWidth> for Child {
+    fn borrow(&self) -> &ChildWidth {
+        &ChildWidth(self.width)
+    }
+}

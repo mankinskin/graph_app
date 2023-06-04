@@ -1,7 +1,11 @@
 use crate::*;
 use super::*;
+
 pub mod state;
 pub use state::*;
+
+pub mod tracer;
+pub use tracer::*;
 
 pub type Folder<Ty>
     = <Ty as DirectedTraversalPolicy>::Trav;
@@ -9,7 +13,7 @@ pub type Folder<Ty>
 pub trait TraversalFolder<
     S: DirectedTraversalPolicy<Trav=Self>,
 >: Sized + Traversable {
-    type NodeCollection: NodeCollection;
+    type NodeVisitor: NodeVisitor;
 
     //fn map_state(
     //    &self,
@@ -34,7 +38,7 @@ pub trait TraversalFolder<
             index: start_index,
             query: query.clone(),
         };
-        let mut states = OrderedTraverser::<_, _, Self::NodeCollection>::new(self);
+        let mut states = OrderedTraverser::<_, _, Self::NodeVisitor>::new(self);
         let (start_key, mut cache) = TraversalCache::new(&start, query_pattern.clone());
         states.extend(
             states.query_start(start_key, query.clone().to_cached(&mut cache), start)

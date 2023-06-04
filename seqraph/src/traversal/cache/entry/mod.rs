@@ -151,6 +151,7 @@ impl VertexCache {
                                 missing,
                                 parent_offset,
                             )
+                            .splits
                             .into_iter()
                             .map(|(pid, loc)|
                                 SubSplitLocation {
@@ -222,6 +223,7 @@ impl NodeType for InnerNode {
 pub type OffsetLocations = HashMap<Offset, Vec<SubSplitLocation>>;
 pub type CompleteLocations = HashMap<Offset, Result<Vec<SubSplitLocation>, SubLocation>>;
 
+/// optional offset inside of pattern sub location
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SubSplitLocation {
     pub location: SubLocation,

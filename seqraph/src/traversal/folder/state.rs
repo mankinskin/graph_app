@@ -49,238 +49,33 @@ impl FoldState {
             .map(|s| s.target_key())
             .collect()
     }
-    pub fn add_split_position<Trav: Traversable>(
-        &mut self,
-        trav: &Trav,
-        index: Child,
-        offset: NonZeroUsize,
-        prev: SplitKey,
-        states: &mut VecDeque<TraceState>,
-        leaves: &mut Vec<SplitKey>,
-    ) -> SplitPositionCache {
-        let graph = trav.graph();
-        let (_, node) = graph.expect_vertex(index);
-        //let entry = self.cache.entries.get(&index.index).unwrap();
-
-        // handle clean splits
-        match cleaned_position_splits(
-            node.children.iter(),
-            offset,
-        ) {
-            Ok(subs) => {
-                states.extend(self.to_trace_states(
-                    trav,
-                    &index,
-                    HashMap::from_iter([(offset, subs.clone())]),
-                    leaves,
-                ));
-                SplitPositionCache::new(prev, subs)
-            },
-            Err(location) => {
-                leaves.push(SplitKey::new(index, offset));
-                SplitPositionCache::new(prev, vec![
-                    SubSplitLocation {
-                        location,
-                        inner_offset: None,
-                    }
-                ])
-            }
-        }
-    }
-    pub fn add_split_vertex<Trav: Traversable>(
-        &mut self,
-        trav: &Trav,
-        index: Child,
-        offset: NonZeroUsize,
-        prev: SplitKey,
-        states: &mut VecDeque<TraceState>,
-        leaves: &mut Vec<SplitKey>,
-    ) -> SplitVertexCache {
-        let mut subs = self.complete_splits::<_, InnerNode>(
-            trav,
-            &index,
-        );
-        if subs.get(&offset).is_none() {
-            let graph = trav.graph();
-            let (_, node) = graph.expect_vertex(index);
-            //let entry = self.cache.entries.get(&index.index).unwrap();
-            subs.insert(offset,
-                cleaned_position_splits(
-                    node.children.iter(),
-                    offset,
-                )
-            );
-        }
-        states.extend(self.to_trace_states(
-            trav,
-            &index,
-            subs.clone()
-                .into_iter()
-                .filter_map(|(parent_offset, res)|
-                    match res {
-                        Ok(locs) => Some((parent_offset, locs)),
-                        Err(_) => {
-                            leaves.push(SplitKey::new(index, parent_offset));
-                            None
-                        },
-                    }
-                )
-                .collect_vec(),
-            leaves,
-        ));
-
-        SplitVertexCache {
-            positions: subs.into_iter().map(|(offset, res)|
-                (offset, SplitPositionCache::new(
-                    prev,
-                    res.unwrap_or_else(|location|
-                        vec![
-                            SubSplitLocation {
-                                location,
-                                inner_offset: None,
-                            }
-                        ]
-                    )
-                ))
-            ).collect()
-        }
-    }
-    pub fn add_root_vertex<Trav: Traversable>(
-        &mut self,
-        trav: &Trav,
-        index: Child,
-        states: &mut VecDeque<TraceState>,
-        leaves: &mut Vec<SplitKey>,
-    ) -> (SplitVertexCache, RootMode) {
-        let (subs, root_mode) = self.complete_splits::<_, RootNode>(
-            trav,
-            &index,
-        );
-        states.extend(self.to_trace_states(
-            trav,
-            &index,
-            subs.clone()
-                .into_iter()
-                .filter_map(|(parent_offset, res)|
-                    match res {
-                        Ok(locs) => Some((parent_offset, locs)),
-                        Err(_) => {
-                            leaves.push(SplitKey::new(index, parent_offset));
-                            None
-                        },
-                    }
-                )
-                .collect_vec(),
-            leaves,
-        ));
-        (
-            SplitVertexCache {
-                positions: subs.into_iter().map(|(offset, res)|
-                    (offset, SplitPositionCache::root(
-                        res.unwrap_or_else(|location|
-                            vec![
-                                SubSplitLocation {
-                                    location,
-                                    inner_offset: None,
-                                }
-                            ]
-                        )
-                    ))
-                ).collect()
-            },
-            root_mode,
-        )
-    }
     pub fn into_split_graph<Trav: Traversable>(
         &mut self,
         trav: &Trav,
     ) -> SplitCache {
-        let mut states = VecDeque::default();
-        let mut entries = HashMap::default();
-        let mut leaves = Vec::default();
-
-        let (root_vertex, root_mode) = self.add_root_vertex(
+        let mut cache = SplitCache::new(
+            self,
             trav,
-            self.root,
-            &mut states,
-            &mut leaves,
         );
-        entries.insert(
-            self.root.index(),
-            root_vertex,
-        );
-        while let Some(TraceState { index, offset, prev }) = states.pop_front() {
-            if let Some(ve) = entries.get_mut(&index.index()) {
-                ve.positions.entry(offset)
-                    .and_modify(|pe| {
-                        pe.top.insert(prev);
-                    })
-                    .or_insert_with(||
-                        self.add_split_position(
-                            trav,
-                            index,
-                            offset,
-                            prev,
-                            &mut states,
-                            &mut leaves
-                        )
-                    );
-            } else {
-                entries.insert(
-                    index.index(),
-                    self.add_split_vertex(
-                        trav,
-                        index,
-                        offset,
-                        prev,
-                        &mut states,
-                        &mut leaves,
-                    )
-                );
+        // stores past states
+        let incomplete = BTreeSet::<Child>::default();
+        // traverse top down by width
+        // cache indices without range infos
+        // calc range infos for larger indices when smaller index is traversed
+        while let Some(state) = cache.states.pop_front() {
+            // trace offset splits top down by width
+            // complete past states larger than current state
+            // store offsets and filter leaves
+            cache.trace(trav, self, state);
+            incomplete.insert(state.index);
+            let complete = incomplete.split_off(&ChildWidth(state.index.width() + 1));
+            for c in complete {
+                let new = cache.complete(trav, self, c);
+                // todo: force order
+                cache.states.extend(new.into_iter());
             }
         };
-        SplitCache {
-            entries,
-            leaves,
-            root_mode,
-        }
-    }
-    pub fn to_trace_states<Trav: Traversable>(
-        &mut self,
-        trav: &Trav,
-        index: &Child,
-        sub_splits: impl IntoIterator<Item=(Offset, Vec<SubSplitLocation>)>,
-        leaves: &mut Vec<SplitKey>,
-    ) -> Vec<TraceState> {
-        let graph = trav.graph();
-        let (_, node) = graph.expect_vertex(index);
-        let (states, new_leaves) = sub_splits.into_iter()
-            .fold((vec![], vec![]), |(mut states, mut leaves), (parent_offset, locs)| {
-                let len = locs.len();
-                states.extend(locs.into_iter()
-                    .flat_map(|sub| {
-                        // filter sub locations without offset (perfect splits)
-                        sub.inner_offset.map(|offset|
-                            TraceState {
-                                index: *node.expect_child_at(&sub.location),
-                                offset,
-                                prev: SplitKey {
-                                    index: *index,
-                                    pos: parent_offset,
-                                }
-                            }
-                        ).or_else(|| {
-                            if len == 1 {
-                                leaves.push(SplitKey::new(*index, parent_offset));
-                            }
-                            None
-                        })
-                    })
-                );
-                (states, leaves)
-            });
-        leaves.extend(new_leaves);
-        states
+        cache
     }
     pub fn complete_splits<Trav: Traversable, N: NodeType>(
         &mut self,
@@ -299,7 +94,7 @@ impl FoldState {
         &mut self,
         trav: &Trav,
         index: &Child,
-        leaves: &mut Vec<SplitKey>,
+        cache: &mut SplitCache
     ) -> Vec<TraceState> {
         let subs =
             self.complete_splits::<_, InnerNode>(
@@ -312,11 +107,10 @@ impl FoldState {
                     (parent_offset, locs)
                 )
             );
-        self.to_trace_states(
+        cache.leaves.filter_trace_states(
             trav,
             index,
             subs,
-            leaves
         )
     }
     //pub fn trace_entry<Trav: Traversable>(
@@ -339,13 +133,6 @@ impl FoldState {
     //    // 5. 
     //    
     //}
-}
-
-#[derive(Debug, Clone)]
-pub struct TraceState {
-    index: Child,
-    offset: NonZeroUsize,
-    prev: SplitKey,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

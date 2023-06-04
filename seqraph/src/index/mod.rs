@@ -1,14 +1,13 @@
 use crate::*;
 
-mod indexer;
-mod index_direction;
-mod side;
-mod context;
-mod split;
-mod join;
-mod partition;
-mod path;
-mod merge;
+pub mod indexer;
+pub mod index_direction;
+pub mod side;
+pub mod context;
+pub mod split;
+pub mod join;
+pub mod partition;
+pub mod path;
 
 #[cfg(test)]
 #[macro_use]
@@ -23,7 +22,6 @@ pub use context::*;
 pub use path::*;
 pub use partition::*;
 pub use join::*;
-pub use merge::*;
 
 impl<'t, 'g> HypergraphRef {
     pub fn indexer(&self) -> Indexer {

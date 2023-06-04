@@ -1,5 +1,35 @@
 use crate::*;
 
+pub mod joined;
+pub use joined::*;
+pub mod merge;
+pub use merge::*;
+pub mod delta;
+pub use delta::*;
+
+
+#[derive(Debug)]
+pub struct JoinContext<'p> {
+    pub graph: RwLockWriteGuard<'p, Hypergraph>,
+    pub index: Child,
+}
+impl<'p> JoinContext<'p> {
+    pub fn new(
+        graph: RwLockWriteGuard<'p, Hypergraph>,
+        index: Child,
+    ) -> Self {
+        Self {
+            graph,
+            index,
+        }
+    }
+    pub fn patterns(
+        &self,
+    ) -> &ChildPatterns {
+        self.graph.expect_child_patterns(self.index)
+    }
+}
+
 #[derive(Debug, Default, Deref, DerefMut)]
 pub struct SplitFrontier {
     pub queue: LinkedHashSet<SplitKey>,
@@ -21,7 +51,17 @@ impl Indexer {
         &mut self,
         mut subgraph: FoldState,
     ) -> Child {
-        let mut splits = subgraph.into_split_graph(self);
+        let splits = subgraph.into_split_graph(self);
+        self.join_children(
+            subgraph,
+            splits,
+        )
+    }
+    pub fn join_children(
+        &mut self,
+        subgraph: FoldState,
+        mut splits: SplitCache,
+    ) -> Child {
         // todo: how to get child splits of offsets induced by inner ranges?
         // - augment to split graph
         // or - locate dynamically (child is guaranteed to exist because inner range offset are always consistent)
@@ -33,15 +73,11 @@ impl Indexer {
                 )
         } {
             if splits.get_final_split(&key).is_none() {
-                let finals = {
-                    Partitioner {
-                        ctx: JoinContext {
-                            index: key.index,
-                            graph: self.graph_mut(),
-                        },
-                        cache: &mut splits,
-                    }.join_node()
-                };
+                let finals = JoinContext::new(
+                    self.graph_mut(),
+                    key.index,
+                    //&mut splits,
+                ).join_node();
                 for (key, split) in finals {
                     splits.expect_mut(&key).final_split = Some(split);
                 }
@@ -53,28 +89,29 @@ impl Indexer {
                     .cloned()
             );
         }
-        let mut partitioner = Partitioner {
-            ctx: JoinContext {
-                index: subgraph.root,
-                graph: self.graph_mut(),
-            },
-            cache: &mut splits,
-        };
-        partitioner.join_root()
+        JoinContext::new(
+            self.graph_mut(),
+            subgraph.root,
+            //&mut splits,
+        ).join_root()
     }
 }
-impl<'p> Partitioner<'p> {
-    pub fn join_node(
+pub trait JoinInfos {
+    fn join_node_infos(
         &mut self,
     ) -> LinkedHashMap<SplitKey, Split> {
         let partitions = self.index_partitions(
             self.index,
         );
+        assert_eq!(
+            self.index.width(),
+            partitions.iter().map(Child::width).sum::<usize>()
+        );
         self.merge_node(
             &partitions,
         )
     }
-    pub fn join_root(
+    fn join_root_infos(
         &mut self,
     ) -> Child {
         let index = self.index;
@@ -87,9 +124,9 @@ impl<'p> Partitioner<'p> {
         match root_mode {
             RootMode::Prefix => {
                 assert_eq!(num_offsets, 1);
-                match ((), offset).join(self) {
+                match ((), offset).join_partition(self) {
                     Ok(part) => {
-                        if let Some(pid) = part.perfect.1 {
+                        if let Some(pid) = part.perfect {
                             let pos = &offset.1.pattern_splits[&pid];
                             self.graph.replace_in_pattern(
                                 index.to_pattern_location(pid),
@@ -97,7 +134,7 @@ impl<'p> Partitioner<'p> {
                                 [part.index],
                             )
                         } else {
-                            let post = (offset, ()).join(self).unwrap();
+                            let post = (offset, ()).join_partition(self).unwrap();
                             self.graph.add_pattern_with_update(
                                 index,
                                 [part.index, post.index],
@@ -110,9 +147,9 @@ impl<'p> Partitioner<'p> {
             },
             RootMode::Postfix => {
                 assert_eq!(num_offsets, 1);
-                match (offset, ()).join(self) {
+                match (offset, ()).join_partition(self) {
                     Ok(part) => {
-                        if let Some(pid) = part.perfect.1 {
+                        if let Some(pid) = part.perfect {
                             let pos = &offset.1.pattern_splits[&pid];
                             self.graph.replace_in_pattern(
                                 index.to_pattern_location(pid),
@@ -120,7 +157,7 @@ impl<'p> Partitioner<'p> {
                                 [part.index],
                             )
                         } else {
-                            let pre = ((), offset).join(self).unwrap();
+                            let pre = ((), offset).join_partition(self).unwrap();
                             self.graph.add_pattern_with_update(index,
                                 [pre.index, part.index],
                             );
@@ -135,7 +172,7 @@ impl<'p> Partitioner<'p> {
                 let prev_offset = offset;
                 let offset = offset_iter.next().unwrap();
 
-                match (prev_offset, offset).join(self) {
+                match (prev_offset, offset).join_partition(self) {
                     Ok(part) => {
                         let mut prev_offset = (prev_offset.0, prev_offset.1.clone());
                         let mut offset = (offset.0, (offset.1.clone() - part.delta));
@@ -144,11 +181,11 @@ impl<'p> Partitioner<'p> {
                             // no perfect border
                             //        [               ]
                             // |     |      |      |     |   |
-                            let pre = ((), prev_offset).join(self).unwrap();
+                            let pre = ((), prev_offset).join_partition(self).unwrap();
 
                             let offset = (offset.0, &(offset.1.clone() - pre.delta));
 
-                            let post = (offset, ()).join(self).unwrap();
+                            let post = (offset, ()).join_partition(self).unwrap();
                             self.graph.add_pattern_with_update(
                                 index,
                                 [pre.index, part.index, post.index],
@@ -172,7 +209,7 @@ impl<'p> Partitioner<'p> {
                                 // |     |       |     |    |     |
 
                                 // todo: improve syntax
-                                let pre = ((), &prev_offset).join(self).unwrap();
+                                let pre = ((), &prev_offset).join_partition(self).unwrap();
                                 prev_offset.1 = prev_offset.1 - pre.delta;
 
                                 let wrap_patterns = ((), &offset)
@@ -196,12 +233,14 @@ impl<'p> Partitioner<'p> {
                             if let Some(lp) = part.perfect.0 {
                                 //       [                 ]
                                 // |     |       |      |      |
-                                let post = (offset, ()).join(self).unwrap();
+                                let post = (offset, ()).join_partition(self).unwrap();
 
                                 let li = prev_offset.1.pattern_splits[&lp].sub_index;
-                                let wrap_patterns = (prev_offset, ())
-                                    .info_bundle(self).unwrap()
-                                    .join_patterns(self);
+                                let mut info_bundle = (prev_offset, ())
+                                    .info_bundle(self).unwrap();
+                                // todo: skip lp in info_bundle already
+                                info_bundle.bundle.remove(&lp);
+                                let wrap_patterns = info_bundle.join_patterns(self);
 
                                 let wrapper = self.graph.insert_patterns(
                                     std::iter::once(vec![part.index, post.index])

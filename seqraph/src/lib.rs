@@ -68,7 +68,9 @@ pub use {
             Range,
             RangeInclusive,
             RangeFrom,
+            RangeTo,
         },
+        convert::TryInto,
         cmp::Ordering,
         borrow::{
             Borrow,
@@ -132,6 +134,7 @@ pub use {
             FutureExt,
         },
     },
+    derive_more::*,
 };
 pub type HashSet<T> =
     std::collections::HashSet<T,
