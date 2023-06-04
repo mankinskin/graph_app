@@ -120,6 +120,17 @@ impl SplitCache {
             );
         }
     }
+    pub fn complete_node<'a>(
+        &mut self,
+        ctx: JoinContext<'a>,
+        fold_state: &mut FoldState,
+        prev: SplitKey,
+    ) -> Vec<TraceState> {
+        self.entries.get_mut(&ctx.index.index()).unwrap().complete_node(
+            ctx,
+            prev,
+        )
+    }
     pub fn new_root_vertex<Trav: Traversable>(
         trav: &Trav,
         states: &mut VecDeque<TraceState>,

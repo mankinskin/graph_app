@@ -124,162 +124,162 @@ impl BorderInfo<Right> {
     }
 }
 
-pub trait PartitionInnerInfo<K: RangeRole>: Sized {
-    //fn outer_children(&self) -> Option<ChildrenOf<K>>;
-    fn perfect(&self) -> BooleanPerfectOf<K>;
-    //fn inner_offsets(&self) -> InnerOffsetsOf<K>;
-    fn inner_range(&self) -> InnerRangeOf<K>;
-    fn has_inner_range(&self, pattern: &Pattern) -> bool;
-    fn inner_info(&self, pattern: &Pattern) -> Option<InnerRangeInfo<K>> {
-        self.has_inner_range(pattern).then_some(())
-            .and_then(|_| self.outer_children())
-            .map(|children|
-                InnerRangeInfo {
-                    range: self.inner_range(),
-                    offsets: self.inner_offsets(),
-                    children,
-                }
-            )
-    }
+//pub trait PartitionInnerInfo<K: RangeRole>: Sized {
+//    //fn outer_children(&self) -> Option<ChildrenOf<K>>;
+//    fn perfect(&self) -> BooleanPerfectOf<K>;
+//    //fn inner_offsets(&self) -> InnerOffsetsOf<K>;
+//    fn inner_range(&self) -> InnerRangeOf<K>;
+//    fn has_inner_range(&self, pattern: &Pattern) -> bool;
+//    fn inner_info(&self, pattern: &Pattern) -> Option<InnerRangeInfo<K>> {
+//        self.has_inner_range(pattern).then_some(())
+//            .and_then(|_| self.outer_children())
+//            .map(|children|
+//                InnerRangeInfo {
+//                    range: self.inner_range(),
+//                    offsets: self.inner_offsets(),
+//                    children,
+//                }
+//            )
+//    }
+//
+//    fn join_inner_info(
+//        self,
+//        pid: PatternId,
+//        pattern: &Pattern,
+//    ) -> Result<PatternRangeInfo<K>, Child> {
+//        let perfect = self.perfect();
+//        //let outer_range = left_border.outer_index()..right_border.outer_index();
+//        if let Some(info) = self.inner_info(pattern) {
+//            let inner = pattern.get(info.range).unwrap();
+//            let delta = inner.len().saturating_sub(1);
+//            Ok(PatternRangeInfo {
+//                pattern_id: pid,
+//                info: RangeInfo {
+//                    inner_range: Some(info),
+//                    delta,
+//                },
+//                perfect,
+//            })
+//        } else {
+//
+//        }
+//    }
+//}
+//impl PartitionInnerInfo<Pre> for BorderInfo<Right> {
+//    //fn outer_children(&self) -> Option<ChildrenOf<Pre>> {
+//    //    self.inner_offset.is_some().then_some(self.child)
+//    //}
+//    fn perfect(&self) -> BooleanPerfectOf<Pre> {
+//        self.inner_offset.is_none()
+//    }
+//    //fn inner_offsets(&self) -> InnerOffsetsOf<Pre> {
+//    //    self.inner_offset
+//    //}
+//    fn inner_range(&self) -> InnerRangeOf<Pre> {
+//        0..self.inner_index
+//    }
+//    fn has_inner_range(&self, _pattern: &Pattern) -> bool {
+//        self.inner_index > 1
+//    }
+//}
+//impl PartitionInnerInfo<Post> for BorderInfo<Left> {
+//    //fn outer_children(&self) -> Option<ChildrenOf<Post>> {
+//    //    self.inner_offset.is_some().then_some(self.child)
+//    //}
+//    fn perfect(&self) -> BooleanPerfectOf<Post> {
+//        self.inner_offset.is_none()
+//    }
+//    //fn inner_offsets(&self) -> InnerOffsetsOf<Post> {
+//    //    self.inner_offset
+//    //}
+//    fn inner_range(&self) -> InnerRangeOf<Post> {
+//        self.inner_index..
+//    }
+//    fn has_inner_range(&self, pattern: &Pattern) -> bool {
+//        pattern.len() - self.inner_index > 1
+//    }
+//}
+//impl PartitionInnerInfo<In> for (BorderInfo<Left>, BorderInfo<Right>) {
+//    //fn outer_children(&self) -> Option<ChildrenOf<Infix>> {
+//    //    match (self.0.perfect(), self.1.perfect()) {
+//    //        (true, true) => None,
+//    //        (false, false) => Some(
+//    //            InfixChildren::Both(self.0.child, self.1.child),
+//    //        ),
+//    //        (true, false) => Some(
+//    //            InfixChildren::Right(self.1.child),
+//    //        ),
+//    //        (false, true) => Some(
+//    //            InfixChildren::Left(self.0.child),
+//    //        ),
+//    //    }
+//    //}
+//    fn perfect(&self) -> BooleanPerfectOf<In> {
+//        (
+//            self.0.perfect(),
+//            self.1.perfect(),
+//        )
+//    }
+//    //fn inner_offsets(&self) -> InnerOffsetsOf<Infix> {
+//    //    (
+//    //        self.0.inner_offset,
+//    //        self.1.inner_offset,
+//    //    )
+//    //}
+//    fn inner_range(&self) -> InnerRangeOf<In> {
+//        self.0.inner_index..self.1.inner_index
+//    }
+//    fn has_inner_range(&self, _pattern: &Pattern) -> bool {
+//        self.1.inner_index - self.0.inner_index > 1
+//    }
+//}
 
-    fn join_inner_info(
-        self,
-        pid: PatternId,
-        pattern: &Pattern,
-    ) -> Result<PatternRangeInfo<K>, Child> {
-        let perfect = self.perfect();
-        //let outer_range = left_border.outer_index()..right_border.outer_index();
-        if let Some(info) = self.inner_info(pattern) {
-            let inner = pattern.get(info.range).unwrap();
-            let delta = inner.len().saturating_sub(1);
-            Ok(PatternRangeInfo {
-                pattern_id: pid,
-                info: RangeInfo {
-                    inner_range: Some(info),
-                    delta,
-                },
-                perfect,
-            })
-        } else {
-
-        }
-    }
-}
-impl PartitionInnerInfo<Pre> for BorderInfo<Right> {
-    //fn outer_children(&self) -> Option<ChildrenOf<Pre>> {
-    //    self.inner_offset.is_some().then_some(self.child)
-    //}
-    fn perfect(&self) -> BooleanPerfectOf<Pre> {
-        self.inner_offset.is_none()
-    }
-    //fn inner_offsets(&self) -> InnerOffsetsOf<Pre> {
-    //    self.inner_offset
-    //}
-    fn inner_range(&self) -> InnerRangeOf<Pre> {
-        0..self.inner_index
-    }
-    fn has_inner_range(&self, _pattern: &Pattern) -> bool {
-        self.inner_index > 1
-    }
-}
-impl PartitionInnerInfo<Post> for BorderInfo<Left> {
-    //fn outer_children(&self) -> Option<ChildrenOf<Post>> {
-    //    self.inner_offset.is_some().then_some(self.child)
-    //}
-    fn perfect(&self) -> BooleanPerfectOf<Post> {
-        self.inner_offset.is_none()
-    }
-    //fn inner_offsets(&self) -> InnerOffsetsOf<Post> {
-    //    self.inner_offset
-    //}
-    fn inner_range(&self) -> InnerRangeOf<Post> {
-        self.inner_index..
-    }
-    fn has_inner_range(&self, pattern: &Pattern) -> bool {
-        pattern.len() - self.inner_index > 1
-    }
-}
-impl PartitionInnerInfo<In> for (BorderInfo<Left>, BorderInfo<Right>) {
-    //fn outer_children(&self) -> Option<ChildrenOf<Infix>> {
-    //    match (self.0.perfect(), self.1.perfect()) {
-    //        (true, true) => None,
-    //        (false, false) => Some(
-    //            InfixChildren::Both(self.0.child, self.1.child),
-    //        ),
-    //        (true, false) => Some(
-    //            InfixChildren::Right(self.1.child),
-    //        ),
-    //        (false, true) => Some(
-    //            InfixChildren::Left(self.0.child),
-    //        ),
-    //    }
-    //}
-    fn perfect(&self) -> BooleanPerfectOf<In> {
-        (
-            self.0.perfect(),
-            self.1.perfect(),
-        )
-    }
-    //fn inner_offsets(&self) -> InnerOffsetsOf<Infix> {
-    //    (
-    //        self.0.inner_offset,
-    //        self.1.inner_offset,
-    //    )
-    //}
-    fn inner_range(&self) -> InnerRangeOf<In> {
-        self.0.inner_index..self.1.inner_index
-    }
-    fn has_inner_range(&self, _pattern: &Pattern) -> bool {
-        self.1.inner_index - self.0.inner_index > 1
-    }
-}
-
-pub trait PartitionBorders<K: RangeRole>: PartitionInnerInfo<K> {
-    type Splits;
-    fn border_info(
-        //cache: &SplitCache,
-        pattern: &Pattern,
-        splits: &Self::Splits,
-    ) -> Self;
-}
-impl<K: RangeRole<Borders=Self>> PartitionBorders<K> for BorderInfo<Left> 
-    where BorderInfo<Left>: PartitionInnerInfo<K>,
-{
-    type Splits = PatternSplitPos;
-    fn border_info(
-        //cache: &SplitCache,
-        pattern: &Pattern,
-        splits: &Self::Splits,
-    ) -> Self {
-        Self::new(pattern, splits)
-    }
-}
-impl<K: RangeRole<Borders=Self>> PartitionBorders<K> for BorderInfo<Right>
-    where BorderInfo<Right>: PartitionInnerInfo<K>
-{
-    type Splits = PatternSplitPos;
-    fn border_info(
-        //cache: &SplitCache,
-        pattern: &Pattern,
-        splits: &Self::Splits,
-    ) -> Self {
-        Self::new(pattern, splits)
-    }
-}
-impl PartitionBorders<In> for (BorderInfo<Left>, BorderInfo<Right>)
-{
-    type Splits = (
-        <BorderInfo::<Left> as PartitionBorders<Post>>::Splits,
-        <BorderInfo::<Right> as PartitionBorders<Pre>>::Splits,
-    );
-    fn border_info(
-        //cache: &SplitCache,
-        pattern: &Pattern,
-        splits: &Self::Splits,
-    ) -> Self {
-        (
-            BorderInfo::<Left>::new(pattern, &splits.0),
-            BorderInfo::<Right>::new(pattern, &splits.1),
-        )
-    }
-}
+//pub trait PartitionBorders<K: RangeRole>: PartitionInnerInfo<K> {
+//    type Splits;
+//    fn border_info(
+//        //cache: &SplitCache,
+//        pattern: &Pattern,
+//        splits: &Self::Splits,
+//    ) -> Self;
+//}
+//impl<K: RangeRole<Borders=Self>> PartitionBorders<K> for BorderInfo<Left> 
+//    where BorderInfo<Left>: PartitionInnerInfo<K>,
+//{
+//    type Splits = PatternSplitPos;
+//    fn border_info(
+//        //cache: &SplitCache,
+//        pattern: &Pattern,
+//        splits: &Self::Splits,
+//    ) -> Self {
+//        Self::new(pattern, splits)
+//    }
+//}
+//impl<K: RangeRole<Borders=Self>> PartitionBorders<K> for BorderInfo<Right>
+//    where BorderInfo<Right>: PartitionInnerInfo<K>
+//{
+//    type Splits = PatternSplitPos;
+//    fn border_info(
+//        //cache: &SplitCache,
+//        pattern: &Pattern,
+//        splits: &Self::Splits,
+//    ) -> Self {
+//        Self::new(pattern, splits)
+//    }
+//}
+//impl PartitionBorders<In> for (BorderInfo<Left>, BorderInfo<Right>)
+//{
+//    type Splits = (
+//        <BorderInfo::<Left> as PartitionBorders<Post>>::Splits,
+//        <BorderInfo::<Right> as PartitionBorders<Pre>>::Splits,
+//    );
+//    fn border_info(
+//        //cache: &SplitCache,
+//        pattern: &Pattern,
+//        splits: &Self::Splits,
+//    ) -> Self {
+//        (
+//            BorderInfo::<Left>::new(pattern, &splits.0),
+//            BorderInfo::<Right>::new(pattern, &splits.1),
+//        )
+//    }
+//}

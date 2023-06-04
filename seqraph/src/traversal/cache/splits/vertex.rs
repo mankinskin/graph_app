@@ -43,13 +43,19 @@ impl SplitVertexCache {
             .collect()
         ).unwrap_or_default()
     }
-    pub fn inner_trace_states<'a, K: RangeRole, P: AsPartition<'a, K>>(
-        ctx: BundlingContext,
+    pub fn inner_trace_states<
+        'a,
+        C: AsBundlingContext<'a>,
+        K: RangeRole,
+        P: AsPartition<'a, K>,
+    >(
+        ctx: C,
         part: P,
         prev: SplitKey,
     ) -> Vec<TraceState>
         //where <<P::Range as RangeRole>::Kind as RangeKind>::Splits: AsPartition<'a, Range = P::Range>
     {
+        let ctx = ctx.as_bundling_context();
         Self::inner_offsets(ctx, part)
             .into_iter().map(|offset|
                 TraceState {
@@ -60,18 +66,14 @@ impl SplitVertexCache {
             )
             .collect()
     }
-    pub fn complete_node<'a, Trav: TraversableMut<GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph>> + 'a>(
+    pub fn complete_node<'a>(
         &self,
-        trav: Trav,
-        index: Child,
+        ctx: JoinContext<'a>,
         prev: SplitKey,
     ) -> Vec<TraceState> {
         let num_offsets = self.positions.len();
         let mut states = Vec::new();
-        let ctx = JoinContext {
-            graph: trav.graph_mut(),
-            index,
-        }.as_bundling_context();
+        let ctx = ctx.as_bundling_context();
         for len in 1..num_offsets {
             for start in 0..num_offsets-len+1 {
                 let part = self.offset_range_partition::<In>(start..start + len);
@@ -86,17 +88,12 @@ impl SplitVertexCache {
         }
         states
     }
-    pub fn complete_root<'a, Trav: TraversableMut<GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph>> + 'a>(
+    pub fn complete_root<'a, Trav: TraversableMut + 'a>(
         &self,
-        trav: Trav,
-        index: Child,
+        ctx: JoinContext<'a>,
         prev: SplitKey,
         root_mode: RootMode
     ) -> Vec<TraceState> {
-        let ctx = JoinContext {
-            graph: trav.graph_mut(),
-            index,
-        }.as_bundling_context();
         match root_mode {
             RootMode::Infix =>
                 Self::inner_trace_states(

@@ -49,7 +49,7 @@ impl FoldState {
             .map(|s| s.target_key())
             .collect()
     }
-    pub fn into_split_graph<Trav: Traversable>(
+    pub fn into_split_graph<'a, Trav: TraversableMut<GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph>> + 'a>(
         &mut self,
         trav: &Trav,
     ) -> SplitCache {
@@ -57,8 +57,9 @@ impl FoldState {
             self,
             trav,
         );
+        // TODO: complete root
         // stores past states
-        let incomplete = BTreeSet::<Child>::default();
+        let incomplete = BTreeMap::<Child, SplitKey>::default();
         // traverse top down by width
         // cache indices without range infos
         // calc range infos for larger indices when smaller index is traversed
@@ -67,10 +68,17 @@ impl FoldState {
             // complete past states larger than current state
             // store offsets and filter leaves
             cache.trace(trav, self, state);
-            incomplete.insert(state.index);
+            incomplete.insert(state.index, state.prev);
             let complete = incomplete.split_off(&ChildWidth(state.index.width() + 1));
-            for c in complete {
-                let new = cache.complete(trav, self, c);
+            for (c, prev) in complete {
+                let new = cache.complete_node(
+                    JoinContext {
+                        graph: trav.graph_mut(),
+                        index: c,
+                    },
+                    self,
+                    prev,
+                );
                 // todo: force order
                 cache.states.extend(new.into_iter());
             }

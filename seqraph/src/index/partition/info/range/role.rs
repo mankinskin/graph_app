@@ -112,7 +112,7 @@ pub trait RangeRole: Debug + Clone {
     type Range: OffsetIndexRange<Self>;
     type PartitionSplits;
     type Children: RangeChildren<Self>;
-    type Borders: PartitionBorders<Self, Splits = <Self::Splits as PatternSplits>::Split>;
+    //type Borders: PartitionBorders<Self, Splits = <Self::Splits as PatternSplits>::Split>;
     type Splits: PatternSplits + for<'a> AsPartition<'a, Self>;
     type SplitsRef<'a>: PatternSplits<Split = <Self::Splits as PatternSplits>::Split> + AsPartition<'a, Self>;
     fn to_partition(
@@ -145,7 +145,7 @@ impl RangeRole for Pre {
     type Kind = Outer;
     type Children = Child;
     type PartitionSplits = ((), OffsetSplits);
-    type Borders = BorderInfo<Right>;
+    //type Borders = BorderInfo<Right>;
     type Splits = OffsetSplits;
     type SplitsRef<'a> = OffsetSplitsRef<'a>;
     type Offsets = NonZeroUsize;
@@ -165,7 +165,7 @@ impl RangeRole for In {
     type Kind = Inner;
     type Children = InfixChildren;
     type PartitionSplits = (OffsetSplits, OffsetSplits);
-    type Borders = (BorderInfo<Left>, BorderInfo<Right>);
+    //type Borders = (BorderInfo<Left>, BorderInfo<Right>);
     type Splits = (OffsetSplits, OffsetSplits);
     type SplitsRef<'a> = (OffsetSplitsRef<'a>, OffsetSplitsRef<'a>);
     type Offsets = (NonZeroUsize, NonZeroUsize);
@@ -185,7 +185,7 @@ impl RangeRole for Post {
     type Kind = Outer;
     type Children = Child;
     type PartitionSplits = (OffsetSplits, ());
-    type Borders = BorderInfo<Left>;
+    //type Borders = BorderInfo<Left>;
     type Splits = OffsetSplits;
     type SplitsRef<'a> = OffsetSplitsRef<'a>;
     type Offsets = NonZeroUsize;
