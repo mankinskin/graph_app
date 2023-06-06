@@ -77,7 +77,7 @@ impl Indexer {
                     self.graph_mut(),
                     key.index,
                     //&mut splits,
-                ).join_node();
+                ).join_node_infos();
                 for (key, split) in finals {
                     splits.expect_mut(&key).final_split = Some(split);
                 }
@@ -93,11 +93,11 @@ impl Indexer {
             self.graph_mut(),
             subgraph.root,
             //&mut splits,
-        ).join_root()
+        ).join_root_infos()
     }
 }
-pub trait JoinInfos {
-    fn join_node_infos(
+impl<'p> JoinContext<'p> {
+    pub fn join_node_infos(
         &mut self,
     ) -> LinkedHashMap<SplitKey, Split> {
         let partitions = self.index_partitions(
@@ -111,7 +111,7 @@ pub trait JoinInfos {
             &partitions,
         )
     }
-    fn join_root_infos(
+    pub fn join_root_infos(
         &mut self,
     ) -> Child {
         let index = self.index;
@@ -124,7 +124,7 @@ pub trait JoinInfos {
         match root_mode {
             RootMode::Prefix => {
                 assert_eq!(num_offsets, 1);
-                match ((), offset).join_partition(self) {
+                match Prefix(offset).join_partition(self) {
                     Ok(part) => {
                         if let Some(pid) = part.perfect {
                             let pos = &offset.1.pattern_splits[&pid];
@@ -181,11 +181,11 @@ pub trait JoinInfos {
                             // no perfect border
                             //        [               ]
                             // |     |      |      |     |   |
-                            let pre = ((), prev_offset).join_partition(self).unwrap();
+                            let pre = Prefix(prev_offset).join_partition(self).unwrap();
 
                             let offset = (offset.0, &(offset.1.clone() - pre.delta));
 
-                            let post = (offset, ()).join_partition(self).unwrap();
+                            let post = Postfix(offset).join_partition(self).unwrap();
                             self.graph.add_pattern_with_update(
                                 index,
                                 [pre.index, part.index, post.index],
@@ -209,10 +209,10 @@ pub trait JoinInfos {
                                 // |     |       |     |    |     |
 
                                 // todo: improve syntax
-                                let pre = ((), &prev_offset).join_partition(self).unwrap();
+                                let pre = Prefix(&prev_offset).join_partition(self).unwrap();
                                 prev_offset.1 = prev_offset.1 - pre.delta;
 
-                                let wrap_patterns = ((), &offset)
+                                let wrap_patterns = Prefix(&offset)
                                     .info_bundle(self).unwrap()
                                     .join_patterns(self);
                                 let patterns = wrap_patterns.patterns().clone();
@@ -233,13 +233,13 @@ pub trait JoinInfos {
                             if let Some(lp) = part.perfect.0 {
                                 //       [                 ]
                                 // |     |       |      |      |
-                                let post = (offset, ()).join_partition(self).unwrap();
+                                let post = Postfix(offset).join_partition(self).unwrap();
 
                                 let li = prev_offset.1.pattern_splits[&lp].sub_index;
-                                let mut info_bundle = (prev_offset, ())
+                                let mut info_bundle = Postfix(prev_offset)
                                     .info_bundle(self).unwrap();
                                 // todo: skip lp in info_bundle already
-                                info_bundle.bundle.remove(&lp);
+                                info_bundle.patterns.remove(&lp);
                                 let wrap_patterns = info_bundle.join_patterns(self);
 
                                 let wrapper = self.graph.insert_patterns(

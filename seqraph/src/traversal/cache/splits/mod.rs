@@ -124,12 +124,22 @@ impl SplitCache {
         &mut self,
         ctx: JoinContext<'a>,
         fold_state: &mut FoldState,
-        prev: SplitKey,
     ) -> Vec<TraceState> {
-        self.entries.get_mut(&ctx.index.index()).unwrap().complete_node(
-            ctx,
-            prev,
-        )
+        self.entries.get_mut(&ctx.index.index()).unwrap()
+            .complete_node(
+                ctx,
+            )
+    }
+    pub fn complete_root<'a>(
+        &mut self,
+        ctx: JoinContext<'a>,
+        root_mode: RootMode,
+    ) -> Vec<TraceState> {
+        self.entries.get_mut(&ctx.index.index()).unwrap()
+            .complete_root(
+                ctx,
+                root_mode,
+            )
     }
     pub fn new_root_vertex<Trav: Traversable>(
         trav: &Trav,
@@ -274,23 +284,23 @@ impl SplitCache {
 }
 
 pub fn position_splits<'a>(
-    patterns: impl Iterator<Item=(&'a PatternId, &'a Pattern)>,
+    patterns: impl IntoIterator<Item=(&'a PatternId, &'a Pattern)>,
     offset: NonZeroUsize,
 ) -> OffsetSplits {
     OffsetSplits {
         offset,
-        splits: patterns
-        .map(|(pid, pat)| { 
-            let (sub_index, inner_offset) = <IndexBack as IndexSide<Right>>::token_offset_split(
-                pat.borrow() as &[Child],
-                offset,
-            ).unwrap();
-            (*pid, PatternSplitPos {
-                sub_index,
-                inner_offset,
+        splits: patterns.into_iter()
+            .map(|(pid, pat)| { 
+                let (sub_index, inner_offset) = <IndexBack as IndexSide<Right>>::token_offset_split(
+                    pat.borrow() as &[Child],
+                    offset,
+                ).unwrap();
+                (*pid, PatternSplitPos {
+                    sub_index,
+                    inner_offset,
+                })
             })
-        })
-        .collect(),
+            .collect(),
     }
 }
 pub fn range_splits<'a>(

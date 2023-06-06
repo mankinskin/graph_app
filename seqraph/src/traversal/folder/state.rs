@@ -57,9 +57,16 @@ impl FoldState {
             self,
             trav,
         );
-        // TODO: complete root
+        let mut graph = trav.graph_mut();
+        cache.complete_root(
+            JoinContext {
+                graph,
+                index: self.root,
+            },
+            self.root_mode(),
+        );
         // stores past states
-        let incomplete = BTreeMap::<Child, SplitKey>::default();
+        let incomplete = BTreeSet::<Child>::default();
         // traverse top down by width
         // cache indices without range infos
         // calc range infos for larger indices when smaller index is traversed
@@ -68,16 +75,15 @@ impl FoldState {
             // complete past states larger than current state
             // store offsets and filter leaves
             cache.trace(trav, self, state);
-            incomplete.insert(state.index, state.prev);
+            incomplete.insert(state.index);
             let complete = incomplete.split_off(&ChildWidth(state.index.width() + 1));
-            for (c, prev) in complete {
+            for c in complete {
                 let new = cache.complete_node(
                     JoinContext {
-                        graph: trav.graph_mut(),
+                        graph,
                         index: c,
                     },
                     self,
-                    prev,
                 );
                 // todo: force order
                 cache.states.extend(new.into_iter());

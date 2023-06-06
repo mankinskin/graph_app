@@ -25,9 +25,7 @@ impl SplitVertexCache {
     pub fn inner_offsets<'a, K: RangeRole, P: AsPartition<'a, K>>(
         ctx: BundlingContext,
         part: P,
-    ) -> Vec<NonZeroUsize>
-        //where <P::Range as RangeRole>::Splits: AsPartition<'a, Range = P::Range>
-    {
+    ) -> Vec<NonZeroUsize> {
         part.info_bundle(&ctx).map(|bundle|
             //let merges = range_map.range_sub_merges(start..start + len);
             bundle.patterns.into_iter().flat_map(|(pid, info)|
@@ -43,33 +41,43 @@ impl SplitVertexCache {
             .collect()
         ).unwrap_or_default()
     }
-    pub fn inner_trace_states<
+    pub fn add_inner_offsets<
         'a,
         C: AsBundlingContext<'a>,
         K: RangeRole,
         P: AsPartition<'a, K>,
     >(
+        &mut self,
         ctx: C,
         part: P,
-        prev: SplitKey,
-    ) -> Vec<TraceState>
-        //where <<P::Range as RangeRole>::Kind as RangeKind>::Splits: AsPartition<'a, Range = P::Range>
-    {
+    ) -> Vec<TraceState> {
         let ctx = ctx.as_bundling_context();
-        Self::inner_offsets(ctx, part)
-            .into_iter().map(|offset|
-                TraceState {
-                    offset,
-                    index: ctx.index,
-                    prev,
-                },
+        let offsets = Self::inner_offsets(ctx, part);
+        let splits = offsets.into_iter().map(|offset|
+            (offset, SplitPositionCache::root(
+                position_splits(ctx.patterns, offset)
+            ))
+        );
+        let states = splits.into_iter().flat_map(|(offset, cache)| {
+            let key = SplitKey::new(ctx.index, offset);
+            cache.pattern_splits.iter().flat_map(|(pid, pos)|
+                pos.inner_offset.map(|inner_offset| {
+                    let pattern = &ctx.patterns[pid];
+                    TraceState {
+                        index: pattern[pos.sub_index],
+                        offset: inner_offset,
+                        prev: key,
+                    }
+                })
             )
-            .collect()
+        })
+        .collect();
+        self.positions.extend(splits);
+        states
     }
     pub fn complete_node<'a>(
-        &self,
+        &mut self,
         ctx: JoinContext<'a>,
-        prev: SplitKey,
     ) -> Vec<TraceState> {
         let num_offsets = self.positions.len();
         let mut states = Vec::new();
@@ -78,40 +86,35 @@ impl SplitVertexCache {
             for start in 0..num_offsets-len+1 {
                 let part = self.offset_range_partition::<In>(start..start + len);
                 states.extend(
-                    Self::inner_trace_states(
+                    self.add_inner_offsets(
                         ctx,
                         part,
-                        prev,
                     )
                 );
             } 
         }
         states
     }
-    pub fn complete_root<'a, Trav: TraversableMut + 'a>(
-        &self,
+    pub fn complete_root<'a>(
+        &mut self,
         ctx: JoinContext<'a>,
-        prev: SplitKey,
         root_mode: RootMode
     ) -> Vec<TraceState> {
         match root_mode {
             RootMode::Infix =>
-                Self::inner_trace_states(
+                self.add_inner_offsets(
                     ctx,
                     OffsetIndexRange::<In>::get_partition(&(0..1), self),
-                    prev,
                 ),
             RootMode::Prefix =>
-                Self::inner_trace_states(
+                self.add_inner_offsets(
                     ctx,
                     OffsetIndexRange::<Pre>::get_partition(&(0..1), self),
-                    prev,
                 ),
             RootMode::Postfix =>
-                Self::inner_trace_states(
+                self.add_inner_offsets(
                     ctx,
                     (0..).get_partition(self),
-                    prev,
                 ),
         }
     }
@@ -122,7 +125,32 @@ pub struct PatternSplitPos {
     pub sub_index: usize,
 }
 pub type PatternSubSplits = HashMap<PatternId, PatternSplitPos>;
-
+pub trait ToPatternSubSplits {
+    fn to_pattern_sub_splits(self) -> PatternSubSplits;
+}
+impl ToPatternSubSplits for PatternSubSplits {
+    fn to_pattern_sub_splits(self) -> PatternSubSplits {
+        self
+    }
+}
+impl ToPatternSubSplits for Vec<SubSplitLocation> {
+    fn to_pattern_sub_splits(self) -> PatternSubSplits {
+        self.into_iter().map(|loc|
+            (
+                loc.location.pattern_id,
+                PatternSplitPos {
+                    inner_offset: loc.inner_offset,
+                    sub_index: loc.location.sub_index,
+                },
+            )
+        )
+        .collect()
+    }
+}impl ToPatternSubSplits for OffsetSplits {
+    fn to_pattern_sub_splits(self) -> PatternSubSplits {
+        self.splits
+    }
+}
 #[derive(Debug, Default, Clone)]
 pub struct SplitPositionCache {
     pub top: HashSet<SplitKey>,
@@ -162,16 +190,16 @@ impl From<SubSplitLocation> for (PatternId, PatternSplitPos) {
     }
 }
 impl SplitPositionCache {
-    pub fn root(subs: Vec<SubSplitLocation>) -> Self {
+    pub fn root(subs: impl ToPatternSubSplits) -> Self {
         Self {
             top: HashSet::default(),
-            pattern_splits: subs.into_iter().map(Into::into).collect(),
+            pattern_splits: subs.to_pattern_sub_splits(),
             final_split: None,
         }
     }
     pub fn new(prev: SplitKey, subs: Vec<SubSplitLocation>) -> Self {
         Self {
-            top: HashSet::from_iter([prev]),
+            top: HashSet::from_iter(Some(prev)),
             pattern_splits: subs.into_iter().map(Into::into).collect(),
             final_split: None,
         }
