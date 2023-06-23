@@ -41,7 +41,7 @@ fn index_pattern1() {
     let (byz, _) = graph.index_pattern(query.borrow() as &[Child]).expect("Indexing failed");
     assert_eq!(byz, Child {
         index: 13,
-        width: 3,
+        width: 3.into(),
     }, "byz");
     let byz_found = graph.find_ancestor(&query);
     assert_eq!(
@@ -126,7 +126,7 @@ fn index_infix1() {
     let ab = graph_ref.find_ancestor([a, b]).unwrap().expect_complete("ab");
     let graph = graph_ref.graph();
     let aby_vertex = graph.expect_vertex_data(aby);
-    assert_eq!(aby.width, 3, "aby");
+    assert_eq!(aby.width(), 3, "aby");
     assert_eq!(aby_vertex.parents.len(), 1, "aby");
     assert_eq!(aby_vertex.children.len(), 1, "aby");
     assert_eq!(

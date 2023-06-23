@@ -8,6 +8,7 @@ pub mod split;
 pub mod join;
 pub mod partition;
 pub mod path;
+pub mod cache;
 
 #[cfg(test)]
 #[macro_use]
@@ -22,6 +23,7 @@ pub use context::*;
 pub use path::*;
 pub use partition::*;
 pub use join::*;
+pub use cache::*;
 
 impl<'t, 'g> HypergraphRef {
     pub fn indexer(&self) -> Indexer {

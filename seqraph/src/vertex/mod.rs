@@ -140,7 +140,7 @@ impl VertexData {
         self.children
             .iter()
             .find(|(_pid, pat)|
-                pat[0].width == width.get()
+                pat[0].width() == width.get()
             )
     }
     pub fn get_child_pattern(

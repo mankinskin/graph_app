@@ -1,82 +1,107 @@
 use crate::*;
 
+#[derive(Debug, Clone)]
 pub struct Partition<K: RangeRole> {
     pub offsets: K::Splits,
 }
-pub struct PartitionRef<'a, K: RangeRole> {
-    pub offsets: K::SplitsRef<'a>,
+//#[derive(Clone, Copy)]
+//pub struct PartitionRef<'a, K: RangeRole>
+//    where K::Splits: 'a
+//{
+//    pub offsets: &'a K::Splits,
+//}
+pub trait AsPartition<K: RangeRole>: VisitPartition<K> {
+    fn as_partition(self) -> Partition<K>;
 }
-pub trait AsPartition<'a, K: RangeRole>: 'a {
-    fn as_partition<'t>(&'t self) -> PartitionRef<'t, K> where 'a: 't;
-}
-impl<'a, K: RangeRole + 'a> AsPartition<'a, K> for PartitionRef<'a, K> {
-    fn as_partition<'t>(&'t self) -> PartitionRef<'t, K> where 'a: 't {
-        *self
+impl<K: RangeRole> AsPartition<K> for Partition<K>
+{
+    fn as_partition(self) -> Partition<K> {
+        self
     }
 }
-impl<'a, K: RangeRole + 'a> AsPartition<'a, K> for Partition<K> {
-    fn as_partition<'t>(&'t self) -> PartitionRef<'t, K> where 'a: 't {
-        self.offsets.as_partition()
-    }
-}
-impl<'a, A: AsOffsetSplits<'a>, B: AsOffsetSplits<'a>> AsPartition<'a, In> for Infix<'a, A, B> {
-    fn as_partition<'t>(&'t self) -> PartitionRef<'t, In> where 'a: 't {
-        (self.0, self.1).as_partition()
-    }
-}
-impl<'a, A: AsOffsetSplits<'a>, B: AsOffsetSplits<'a>> AsPartition<'a, In> for (A, B) {
-    fn as_partition<'t>(&'t self) -> PartitionRef<'t, In> where 'a: 't {
-        PartitionRef {
+//impl<'a, K: RangeRole + 'a> AsPartition<'a, K> for &'a Partition<K> {
+//    fn as_partition<'t>(self) -> &'t Partition<K> where 'a: 't {
+//        PartitionRef {
+//            offsets: (&self.offsets).as_ref()
+//        }
+//    }
+//}
+impl<'a, M: InVisitMode, A: AsOffsetSplits, B: AsOffsetSplits> AsPartition<In<M>> for Infix<A, B> {
+    fn as_partition(self) -> Partition<In<M>> {
+        Partition {
             offsets: (
-                self.0.as_offset_splits(),
-                self.1.as_offset_splits(),
+                self.left.as_offset_splits(),
+                self.right.as_offset_splits(),
             ),
         }
     }
 }
-impl<'a, A: AsOffsetSplits<'a>> AsPartition<'a, Pre> for A {
-    fn as_partition<'t>(&'t self) -> PartitionRef<'t, Pre> where 'a: 't {
-        PartitionRef {
+impl<'a, M: InVisitMode> AsPartition<In<M>> for (OffsetSplits, OffsetSplits) {
+    fn as_partition(self) -> Partition<In<M>> {
+        Partition {
+            offsets: (
+                self.0,
+                self.1,
+            )
+        }
+    }
+}
+impl<'a, M: InVisitMode> AsPartition<In<M>> for &'a (OffsetSplits, OffsetSplits) {
+    fn as_partition(self) -> Partition<In<M>> {
+        Partition {
+            offsets: (
+                self.0.clone(),
+                self.1.clone(),
+            )
+        }
+    }
+}
+impl<'a, M: PreVisitMode, A: AsOffsetSplits> AsPartition<Pre<M>> for A {
+    fn as_partition(self) -> Partition<Pre<M>> {
+        Partition {
             offsets: self.as_offset_splits(),
         }
     }
 }
-impl<'a, A: AsOffsetSplits<'a>> AsPartition<'a, Post> for A {
-    fn as_partition<'t>(&'t self) -> PartitionRef<'t, Post> where 'a: 't {
-        PartitionRef {
+impl<'a, M: PostVisitMode, A: AsOffsetSplits> AsPartition<Post<M>> for A {
+    fn as_partition(self) -> Partition<Post<M>> {
+        Partition {
             offsets: self.as_offset_splits(),
         }
     }
 }
-pub struct Infix<
-    'a,
-    A: AsOffsetSplits<'a>,
-    B: AsOffsetSplits<'a>,
->(pub &'a A, pub &'a B);
-pub struct Prefix<'a, O: AsOffsetSplits<'a>>(pub &'a O);
-pub struct Postfix<'a, O: AsOffsetSplits<'a>>(pub &'a O);
+impl<'a, M: PreVisitMode, B: AsOffsetSplits> AsPartition<Pre<M>> for Prefix<B> {
+    fn as_partition(self) -> Partition<Pre<M>> {
+        Partition {
+            offsets: self.split.as_offset_splits(),
+        }
+    }
+}
+impl<'a, M: PostVisitMode, A: AsOffsetSplits> AsPartition<Post<M>> for Postfix<A> {
+    fn as_partition(self) -> Partition<Post<M>> {
+        Partition {
+            offsets: self.split.as_offset_splits(),
+        }
+    }
+}
 
-impl<'a, B: AsOffsetSplits<'a>> AsPartition<'a, Pre> for Prefix<'a, B> {
-    fn as_partition<'t>(&'t self) -> PartitionRef<'t, Pre> where 'a: 't {
-        PartitionRef {
-            offsets: self.0.as_offset_splits(),
-        }
-    }
+#[derive(new, Clone, Copy)]
+pub struct Infix<
+    A: AsOffsetSplits,
+    B: AsOffsetSplits,
+> {
+    pub left: A,
+    pub right: B,
 }
-//impl<'a, A: AsOffsetSplits<'a>> AsPartition<'a, Post> for A {
-//    fn as_partition<'t>(&'t self) -> PartitionRef<'t, Post> where 'a: 't {
-//        PartitionRef {
-//            offsets: self.as_offset_splits(),
-//        }
-//    }
-//}
-impl<'a, A: AsOffsetSplits<'a>> AsPartition<'a, Post> for Postfix<'a, A> {
-    fn as_partition<'t>(&'t self) -> PartitionRef<'t, Post> where 'a: 't {
-        PartitionRef {
-            offsets: self.0.as_offset_splits(),
-        }
-    }
+#[derive(new, Clone)]
+pub struct Prefix<O: AsOffsetSplits> {
+    pub split: O,
 }
+#[derive(new, Clone)]
+pub struct Postfix<O: AsOffsetSplits> {
+    pub split: O,
+}
+
 //pub trait IntoPartition<K: RangeRole> {
 //    fn into_partition<'p>(self, ctx: &'p mut Partitioner<'p>) -> Partition<K>;
 //}

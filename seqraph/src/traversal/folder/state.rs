@@ -51,22 +51,22 @@ impl FoldState {
     }
     pub fn into_split_graph<'a, Trav: TraversableMut<GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph>> + 'a>(
         &mut self,
-        trav: &Trav,
+        trav: &'a mut Trav,
     ) -> SplitCache {
         let mut cache = SplitCache::new(
             self,
             trav,
         );
-        let mut graph = trav.graph_mut();
+        let graph = trav.graph_mut();
         cache.complete_root(
-            JoinContext {
-                graph,
-                index: self.root,
-            },
+            TraceContext::new(
+                &graph,
+                self.root,
+            ),
             self.root_mode(),
         );
         // stores past states
-        let incomplete = BTreeSet::<Child>::default();
+        let mut incomplete = BTreeSet::<Child>::default();
         // traverse top down by width
         // cache indices without range infos
         // calc range infos for larger indices when smaller index is traversed
@@ -74,16 +74,15 @@ impl FoldState {
             // trace offset splits top down by width
             // complete past states larger than current state
             // store offsets and filter leaves
-            cache.trace(trav, self, state);
+            cache.trace(&graph, self, &state);
             incomplete.insert(state.index);
             let complete = incomplete.split_off(&ChildWidth(state.index.width() + 1));
             for c in complete {
                 let new = cache.complete_node(
-                    JoinContext {
-                        graph,
-                        index: c,
-                    },
-                    self,
+                    TraceContext::new(
+                        &graph,
+                        c,
+                    ),
                 );
                 // todo: force order
                 cache.states.extend(new.into_iter());
@@ -92,7 +91,7 @@ impl FoldState {
         cache
     }
     pub fn complete_splits<Trav: Traversable, N: NodeType>(
-        &mut self,
+        &self,
         trav: &Trav,
         index: &Child,
     ) -> N::CompleteSplitOutput {

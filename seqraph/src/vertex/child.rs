@@ -5,10 +5,18 @@ use std::{
     borrow::Borrow,
 };
 
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, From)]
+pub struct ChildWidth(pub usize);
+
+impl Borrow<ChildWidth> for Child {
+    fn borrow(&self) -> &ChildWidth {
+        &self.width
+    }
+}
 #[derive(Debug, Eq, Clone, Copy)]
 pub struct Child {
     pub index: VertexIndex,   // the child index
-    pub width: TokenPosition, // the token width
+    pub width: ChildWidth, // the token width
 }
 impl Child {
     pub fn new(
@@ -17,11 +25,11 @@ impl Child {
     ) -> Self {
         Self {
             index: index.index(),
-            width,
+            width: ChildWidth(width),
         }
     }
     pub fn get_width(&self) -> TokenPosition {
-        self.width
+        self.width.0
     }
     pub fn get_index(&self) -> VertexIndex {
         self.index
@@ -128,12 +136,12 @@ impl Indexed for Child {
 }
 impl Wide for Child {
     fn width(&self) -> usize {
-        self.width
+        self.width.0
     }
 }
 impl WideMut for Child {
     fn width_mut(&mut self) -> &mut usize {
-        &mut self.width
+        &mut self.width.0
     }
 }
 impl Borrow<[Child]> for Child {
@@ -144,13 +152,5 @@ impl Borrow<[Child]> for Child {
 impl AsRef<[Child]> for Child {
     fn as_ref(&self) -> &[Child] {
         self.borrow()
-    }
-}
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct ChildWidth(pub usize);
-
-impl Borrow<ChildWidth> for Child {
-    fn borrow(&self) -> &ChildWidth {
-        &ChildWidth(self.width)
     }
 }

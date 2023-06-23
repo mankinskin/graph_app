@@ -17,4 +17,10 @@ pub use policy::*;
 pub use cache::*;
 pub use result::*;
 pub use visitor::*;
-pub use result_kind::*;
+pub use result_kind::{
+    Advanced,
+    Primer,
+    RoleChildPath,
+    BaseResult,
+    PathPrimer,
+};

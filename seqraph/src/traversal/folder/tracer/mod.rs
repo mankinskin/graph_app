@@ -6,14 +6,3 @@ pub struct TraceState {
     pub offset: NonZeroUsize,
     pub prev: SplitKey,
 }
-
-//pub struct Tracer<V: NodeVisitor> {
-//    frontier: _,
-//    iterator: V,
-//}
-//
-//impl Tracer {
-//    pub fn new() -> Self {
-//
-//    }
-//}

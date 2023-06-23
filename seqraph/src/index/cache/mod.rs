@@ -25,15 +25,15 @@ impl Leaves {
         &mut self,
         trav: &Trav,
         index: &Child,
-        sub_splits: impl IntoIterator<Item=(Offset, Vec<SubSplitLocation>)>,
+        split_pos: impl IntoIterator<Item=(Offset, Vec<SubSplitLocation>)>,
     ) -> Vec<TraceState> {
         let graph = trav.graph();
         let (_, node) = graph.expect_vertex(index);
-        sub_splits.into_iter()
+        let (perfect, next) = split_pos.into_iter()
             .flat_map(|(parent_offset, locs)| {
                 let len = locs.len();
                 locs.into_iter()
-                    .flat_map(|sub| {
+                    .map(move |sub|
                         // filter sub locations without offset (perfect splits)
                         sub.inner_offset.map(|offset|
                             TraceState {
@@ -44,22 +44,74 @@ impl Leaves {
                                     pos: parent_offset,
                                 }
                             }
-                        ).or_else(|| {
-                            if len == 1 {
-                                self.push(SplitKey::new(*index, parent_offset));
-                            }
-                            None
-                        })
-                    })
-            }).collect()
+                        ).ok_or_else(||
+                            (len == 1).then(||
+                                SplitKey::new(*index, parent_offset)
+                            )
+                        )
+                    )
+            })
+            .fold((Vec::new(), Vec::new()), |(mut p, mut n), res| {
+                match res {
+                    Ok(s) => n.push(s),
+                    Err(Some(k)) => p.push(k),
+                    Err(None) => {}
+                }
+                (p, n)
+            });
+        self.extend(perfect);
+        next
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Deref, DerefMut)]
 pub struct SplitCache {
     pub entries: HashMap<VertexIndex, SplitVertexCache>,
+    #[deref]
+    #[deref_mut]
+    pub context: CacheContext,
+    pub root_mode: RootMode,
+}
+#[derive(Debug)]
+pub struct CacheContext {
     pub leaves: Leaves,
     pub states: VecDeque<TraceState>,
-    pub root_mode: RootMode,
+}
+impl CacheContext {
+    pub fn new_split_position<Trav: Traversable>(
+        &mut self,
+        trav: &Trav,
+        index: Child,
+        offset: NonZeroUsize,
+        prev: SplitKey,
+    ) -> SplitPositionCache {
+        let graph = trav.graph();
+        let (_, node) = graph.expect_vertex(index);
+
+        // handle clean splits
+        match cleaned_position_splits(
+            node.children.iter(),
+            offset,
+        ) {
+            Ok(subs) => {
+                let next = self.leaves.filter_trace_states(
+                    trav,
+                    &index,
+                    HashMap::from_iter([(offset, subs.clone())]),
+                );
+                self.states.extend(next);
+                SplitPositionCache::new(prev, subs)
+            },
+            Err(location) => {
+                self.leaves.push(SplitKey::new(index, offset));
+                SplitPositionCache::new(prev, vec![
+                    SubSplitLocation {
+                        location,
+                        inner_offset: None,
+                    }
+                ])
+            }
+        }
+    }
 }
 impl SplitCache {
     pub fn new<Trav: Traversable>(
@@ -81,65 +133,12 @@ impl SplitCache {
         );
         SplitCache {
             entries,
-            leaves,
             root_mode,
-            states,
+            context: CacheContext {
+                leaves,
+                states,
+            }
         }
-    }
-    pub fn trace<Trav: Traversable>(
-        &mut self,
-        trav: &Trav,
-        fold_state: &mut FoldState,
-        state: TraceState,
-    ) {
-        let TraceState { index, offset, prev } = state;
-        if let Some(ve) = self.entries.get_mut(&index.index()) {
-            ve.positions.entry(offset)
-                .and_modify(|pe| {
-                    pe.top.insert(prev);
-                })
-                .or_insert_with(||
-                    self.new_split_position(
-                        trav,
-                        index,
-                        offset,
-                        prev,
-                    )
-                );
-        } else {
-            let vertex = self.new_split_vertex(
-                trav,
-                index,
-                offset,
-                prev,
-                fold_state,
-            );
-            self.entries.insert(
-                index.index(),
-                vertex,
-            );
-        }
-    }
-    pub fn complete_node<'a>(
-        &mut self,
-        ctx: JoinContext<'a>,
-        fold_state: &mut FoldState,
-    ) -> Vec<TraceState> {
-        self.entries.get_mut(&ctx.index.index()).unwrap()
-            .complete_node(
-                ctx,
-            )
-    }
-    pub fn complete_root<'a>(
-        &mut self,
-        ctx: JoinContext<'a>,
-        root_mode: RootMode,
-    ) -> Vec<TraceState> {
-        self.entries.get_mut(&ctx.index.index()).unwrap()
-            .complete_root(
-                ctx,
-                root_mode,
-            )
     }
     pub fn new_root_vertex<Trav: Traversable>(
         trav: &Trav,
@@ -151,10 +150,11 @@ impl SplitCache {
             trav,
             &fold_state.root,
         );
+        let split_pos = leaves.filter_leaves(&fold_state.root, offsets.clone());
         states.extend(leaves.filter_trace_states(
             trav,
             &fold_state.root,
-            leaves.filter_leaves(&fold_state.root, offsets.clone()),
+            split_pos
         ));
         (
             SplitVertexCache {
@@ -197,11 +197,13 @@ impl SplitCache {
                 )
             );
         }
-        self.states.extend(self.leaves.filter_trace_states(
+        let split_pos = self.leaves.filter_leaves(&index, subs.clone());
+        let next = self.leaves.filter_trace_states(
             trav,
             &index,
-            self.leaves.filter_leaves(&index, subs.clone()),
-        ));
+            split_pos,
+        );
+        self.states.extend(next);
         SplitVertexCache {
             positions: subs.into_iter().map(|(offset, res)|
                 (offset, SplitPositionCache::new(
@@ -218,41 +220,63 @@ impl SplitCache {
             ).collect()
         }
     }
-    pub fn new_split_position<Trav: Traversable>(
+    /// complete offsets across all children
+    pub fn trace<Trav: Traversable>(
         &mut self,
         trav: &Trav,
-        index: Child,
-        offset: NonZeroUsize,
-        prev: SplitKey,
-        //states: &mut VecDeque<TraceState>,
-    ) -> SplitPositionCache {
-        let graph = trav.graph();
-        let (_, node) = graph.expect_vertex(index);
-        //let entry = self.cache.entries.get(&index.index).unwrap();
-
-        // handle clean splits
-        match cleaned_position_splits(
-            node.children.iter(),
-            offset,
-        ) {
-            Ok(subs) => {
-                self.states.extend(self.leaves.filter_trace_states(
-                    trav,
-                    &index,
-                    HashMap::from_iter([(offset, subs.clone())]),
-                ));
-                SplitPositionCache::new(prev, subs)
-            },
-            Err(location) => {
-                self.leaves.push(SplitKey::new(index, offset));
-                SplitPositionCache::new(prev, vec![
-                    SubSplitLocation {
-                        location,
-                        inner_offset: None,
-                    }
-                ])
-            }
+        fold_state: &mut FoldState,
+        state: &TraceState,
+    ) {
+        let &TraceState { index, offset, prev } = state;
+        if let Some(ve) = self.entries.get_mut(&index.index()) {
+            let ctx = &mut self.context;
+            ve.positions.entry(offset)
+                .and_modify(|pe| {
+                    pe.top.insert(prev);
+                })
+                .or_insert_with(||
+                    ctx.new_split_position(
+                        trav,
+                        index,
+                        offset,
+                        prev,
+                    )
+                );
+        } else {
+            let vertex = self.new_split_vertex(
+                trav,
+                index,
+                offset,
+                prev,
+                fold_state,
+            );
+            self.entries.insert(
+                index.index(),
+                vertex,
+            );
         }
+    }
+    /// complete inner range offsets for non-roots
+    pub fn complete_node<'a>(
+        &mut self,
+        ctx: TraceContext<'a>,
+    ) -> Vec<TraceState> {
+        self.entries.get_mut(&ctx.index.index()).unwrap()
+            .complete_node(
+                ctx,
+            )
+    }
+    /// complete inner range offsets for root
+    pub fn complete_root<'a>(
+        &mut self,
+        ctx: TraceContext<'a>,
+        root_mode: RootMode,
+    ) -> Vec<TraceState> {
+        self.entries.get_mut(&ctx.index.index()).unwrap()
+            .complete_root(
+                ctx,
+                root_mode,
+            )
     }
     pub fn get(&self, key: &SplitKey) -> Option<&SplitPositionCache> {
         self.entries.get(&key.index.index())
@@ -272,15 +296,15 @@ impl SplitCache {
     pub fn expect_mut(&mut self, key: &SplitKey) -> &mut SplitPositionCache {
         self.get_mut(key).unwrap()
     }
-    pub fn get_final_split(&self, key: &SplitKey) -> Option<&FinalSplit> {
-        self.get(key)
-            .and_then(|e|
-                e.final_split.as_ref()
-            )
-    }
-    pub fn expect_final_split(&self, key: &SplitKey) -> &FinalSplit {
-        self.expect(key).final_split.as_ref().unwrap()
-    }
+    //pub fn get_final_split(&self, key: &SplitKey) -> Option<&FinalSplit> {
+    //    self.get(key)
+    //        .and_then(|e|
+    //            e.final_split.as_ref()
+    //        )
+    //}
+    //pub fn expect_final_split(&self, key: &SplitKey) -> &FinalSplit {
+    //    self.expect(key).final_split.as_ref().unwrap()
+    //}
 }
 
 pub fn position_splits<'a>(

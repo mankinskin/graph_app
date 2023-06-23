@@ -1,5 +1,7 @@
 use crate::*;
 
+use super::ModePatternCtxOf;
+
 pub trait BoolPerfect: Default + Debug + Clone {
     type Result: BorderPerfect<Boolean = Self>;
     fn then_some(self, pid: PatternId) -> Self::Result;
@@ -58,228 +60,289 @@ impl BorderPerfect for (Option<PatternId>, Option<PatternId>) {
 pub type OffsetsOf<K> = <K as RangeRole>::Offsets;
 pub type BooleanPerfectOf<K> = <<K as RangeRole>::Perfect as BorderPerfect>::Boolean;
 pub type ChildrenOf<K> = <K as RangeRole>::Children;
-pub type InnerRangeOf<K> = <K as RangeRole>::Range;
-//pub type InnerOffsetsOf<K> = <<K as RangeRole>::Kind as RangeKind>::InnerOffsets;
+pub type RangeOf<K> = <K as RangeRole>::Range;
+//pub type SubOffsetsOf<K> = <K as RangeRole>::SubOffsets;
 
-pub struct BorderInfo<S>  {
-    //child: Child,
-    inner_index: usize,
+pub struct BorderInfo  {
+    sub_index: usize,
     inner_offset: Option<NonZeroUsize>,
-    _ty: std::marker::PhantomData<S>
+    outer_offset: Option<NonZeroUsize>,
 }
-impl BorderInfo<Left> {
+impl BorderInfo {
     fn new(
         //cache: &SplitCache,
         pattern: &Pattern,
         pos: &PatternSplitPos,
     ) -> Self {
-        if let Some(inner_offset) = pos.inner_offset {
-            BorderInfo {
-                inner_index: pos.sub_index + 1,
-                //child: cache.expect_final_split(&SplitKey::new(pattern[pos.sub_index], inner_offset)).right,
-                inner_offset: Some(inner_offset),
-                _ty: Default::default(),
-            }
-        } else {
-            BorderInfo {
-                inner_index: pos.sub_index,
-                //child: pattern[pos.sub_index],
-                inner_offset: None,
-                _ty: Default::default(),
-            }
+        let offset = pattern_offset(pattern, pos.sub_index);
+        BorderInfo {
+            sub_index: pos.sub_index,
+            inner_offset: pos.inner_offset,
+            outer_offset: NonZeroUsize::new(offset),
         }
-    }
-    fn outer_index(&self) -> usize {
-        if self.inner_offset.is_none() {
-            self.inner_index
-        } else {
-            self.inner_index - 1
-        }
-    }
-}
-impl BorderInfo<Right> {
-    fn new(
-        //cache: &SplitCache,
-        pattern: &Pattern,
-        pos: &PatternSplitPos,
-    ) -> Self {
-        if let Some(inner_offset) = pos.inner_offset {
-            BorderInfo {
-                inner_index: pos.sub_index,
-                //child: cache.expect_final_split(&SplitKey::new(pattern[pos.sub_index], inner_offset)).left,
-                inner_offset: Some(inner_offset),
-                _ty: Default::default(),
-            }
-        } else {
-            BorderInfo {
-                inner_index: pos.sub_index,
-                //child: pattern[pos.sub_index-1],
-                inner_offset: None,
-                _ty: Default::default(),
-            }
-        }
-    }
-    fn outer_index(&self) -> usize {
-        self.inner_index
     }
 }
 
-//pub trait PartitionInnerInfo<K: RangeRole>: Sized {
-//    //fn outer_children(&self) -> Option<ChildrenOf<K>>;
-//    fn perfect(&self) -> BooleanPerfectOf<K>;
-//    //fn inner_offsets(&self) -> InnerOffsetsOf<K>;
-//    fn inner_range(&self) -> InnerRangeOf<K>;
-//    fn has_inner_range(&self, pattern: &Pattern) -> bool;
-//    fn inner_info(&self, pattern: &Pattern) -> Option<InnerRangeInfo<K>> {
-//        self.has_inner_range(pattern).then_some(())
-//            .and_then(|_| self.outer_children())
-//            .map(|children|
+pub trait PartitionBorder<K: RangeRole>: Sized {
+    fn perfect(&self) -> BooleanPerfectOf<K>;
+    fn offsets(&self) -> OffsetsOf<K>;
+}
+impl<
+    P: BorderPerfect<Boolean = bool>,
+    K: RangeRole<Perfect = P, Offsets = NonZeroUsize>,
+> PartitionBorder<K> for BorderInfo
+{
+    fn perfect(&self) -> BooleanPerfectOf<K> {
+        self.inner_offset.is_none()
+    }
+    fn offsets(&self) -> OffsetsOf<K> {
+        self.outer_offset.map(|o|
+            self.inner_offset.map(|io|
+                o.checked_add(io.get()).unwrap()
+            ).unwrap_or(o)
+        )
+        .unwrap_or_else(|| self.inner_offset.unwrap())
+    }
+}
+impl<M: InVisitMode> PartitionBorder<In<M>> for (BorderInfo, BorderInfo) {
+    fn perfect(&self) -> BooleanPerfectOf<In<M>> {
+        (
+            <_ as PartitionBorder::<Pre<M>>>::perfect(&self.0),
+            <_ as PartitionBorder::<Post<M>>>::perfect(&self.1),
+        )
+    }
+    fn offsets(&self) -> OffsetsOf<In<M>> {
+        (
+            <_ as PartitionBorder::<Pre<M>>>::offsets(&self.0),
+            <_ as PartitionBorder::<Post<M>>>::offsets(&self.1),
+        )
+    }
+}
+pub trait VisitBorders<'a, K: RangeRole>: Sized + PartitionBorder<K> {
+    type Splits;
+    fn make_borders(
+        pattern: &Pattern,
+        splits: &Self::Splits,
+    ) -> Self;
+    fn inner_range_offsets(&self, pattern: &Pattern) -> Option<OffsetsOf<K>>;
+    fn inner_range(&self) -> RangeOf<K>;
+    fn outer_range(&self) -> RangeOf<K>;
+
+}
+pub trait JoinBorders<'a, K: RangeRole<Mode = Join>>: VisitBorders<'a, K> {
+    fn children(
+        &self,
+        ctx: &ModePatternCtxOf<'a, K>,
+    ) -> Option<ModeChildrenOf<K>>;
+}
+pub trait TraceBorders<'a, K: RangeRole>: VisitBorders<'a, K> {
+    fn inner_info(
+        &self,
+        ctx: &ModePatternCtxOf<'a, K>,
+    ) -> Option<InnerRangeInfo<K>>;
+    fn join_inner_info(
+        self,
+        ctx: &ModePatternCtxOf<'a, K>,
+    ) -> Result<PatternRangeInfo<K>, Child> {
+        let perfect = self.perfect();
+        //let outer_range = left_border.outer_index()..right_border.outer_index();
+        let range = self.outer_range();
+        let offsets = self.offsets();
+        let inner = self.inner_info(ctx);
+
+        let ctx = ctx.as_pattern_trace_context();
+        inner.as_ref().map(|inner| {
+            let inner_pat = ctx.pattern.get(inner.range.clone()).unwrap();
+            (inner_pat.len() != 1)
+                .then(|| inner_pat.len().saturating_sub(1))
+                .ok_or_else(|| inner_pat[0])
+        })
+        .unwrap_or(Ok(0))
+        .map(|delta|
+            PatternRangeInfo {
+                pattern_id: ctx.pattern_id,
+                info: RangeInfo {
+                    inner_range: inner,
+                    delta: delta,
+                    offsets,
+                    range,
+                },
+                perfect,
+            }
+        )
+    }
+}
+impl<'a, K: RangeRole> TraceBorders<'a, K> for K::Borders<'a>
+{
+    fn inner_info(
+        &self,
+        ctx: &ModePatternCtxOf<'a, K>,
+    ) -> Option<InnerRangeInfo<K>> {
+        let pctx = ctx.as_pattern_trace_context();
+        self.inner_range_offsets(pctx.pattern)
+            .map(|offsets|
+                InnerRangeInfo {
+                    range: self.inner_range(),
+                    offsets,
+                    children: ModeOf::<K>::border_children(self, ctx),
+                }
+            )
+    }
+}
+//impl<'a, K: RangeRole<Mode = Join>> TraceBorders<'a, K> for K::Borders<'a> {
+//    fn inner_info(
+//        &self,
+//        ctx: &PatternJoinContext<'a>,
+//    ) -> Option<InnerRangeInfo<K>> {
+//        let pctx = ctx.as_pattern_join_context();
+//        self.inner_range_offsets(pctx.pattern)
+//            .map(|offsets|
 //                InnerRangeInfo {
 //                    range: self.inner_range(),
-//                    offsets: self.inner_offsets(),
-//                    children,
+//                    offsets,
+//                    children: self.children(ctx).expect("inner range needs children"),
 //                }
 //            )
 //    }
-//
-//    fn join_inner_info(
-//        self,
-//        pid: PatternId,
-//        pattern: &Pattern,
-//    ) -> Result<PatternRangeInfo<K>, Child> {
-//        let perfect = self.perfect();
-//        //let outer_range = left_border.outer_index()..right_border.outer_index();
-//        if let Some(info) = self.inner_info(pattern) {
-//            let inner = pattern.get(info.range).unwrap();
-//            let delta = inner.len().saturating_sub(1);
-//            Ok(PatternRangeInfo {
-//                pattern_id: pid,
-//                info: RangeInfo {
-//                    inner_range: Some(info),
-//                    delta,
-//                },
-//                perfect,
-//            })
-//        } else {
-//
-//        }
-//    }
 //}
-//impl PartitionInnerInfo<Pre> for BorderInfo<Right> {
-//    //fn outer_children(&self) -> Option<ChildrenOf<Pre>> {
-//    //    self.inner_offset.is_some().then_some(self.child)
-//    //}
-//    fn perfect(&self) -> BooleanPerfectOf<Pre> {
-//        self.inner_offset.is_none()
-//    }
-//    //fn inner_offsets(&self) -> InnerOffsetsOf<Pre> {
-//    //    self.inner_offset
-//    //}
-//    fn inner_range(&self) -> InnerRangeOf<Pre> {
-//        0..self.inner_index
-//    }
-//    fn has_inner_range(&self, _pattern: &Pattern) -> bool {
-//        self.inner_index > 1
-//    }
-//}
-//impl PartitionInnerInfo<Post> for BorderInfo<Left> {
-//    //fn outer_children(&self) -> Option<ChildrenOf<Post>> {
-//    //    self.inner_offset.is_some().then_some(self.child)
-//    //}
-//    fn perfect(&self) -> BooleanPerfectOf<Post> {
-//        self.inner_offset.is_none()
-//    }
-//    //fn inner_offsets(&self) -> InnerOffsetsOf<Post> {
-//    //    self.inner_offset
-//    //}
-//    fn inner_range(&self) -> InnerRangeOf<Post> {
-//        self.inner_index..
-//    }
-//    fn has_inner_range(&self, pattern: &Pattern) -> bool {
-//        pattern.len() - self.inner_index > 1
-//    }
-//}
-//impl PartitionInnerInfo<In> for (BorderInfo<Left>, BorderInfo<Right>) {
-//    //fn outer_children(&self) -> Option<ChildrenOf<Infix>> {
-//    //    match (self.0.perfect(), self.1.perfect()) {
-//    //        (true, true) => None,
-//    //        (false, false) => Some(
-//    //            InfixChildren::Both(self.0.child, self.1.child),
-//    //        ),
-//    //        (true, false) => Some(
-//    //            InfixChildren::Right(self.1.child),
-//    //        ),
-//    //        (false, true) => Some(
-//    //            InfixChildren::Left(self.0.child),
-//    //        ),
-//    //    }
-//    //}
-//    fn perfect(&self) -> BooleanPerfectOf<In> {
-//        (
-//            self.0.perfect(),
-//            self.1.perfect(),
-//        )
-//    }
-//    //fn inner_offsets(&self) -> InnerOffsetsOf<Infix> {
-//    //    (
-//    //        self.0.inner_offset,
-//    //        self.1.inner_offset,
-//    //    )
-//    //}
-//    fn inner_range(&self) -> InnerRangeOf<In> {
-//        self.0.inner_index..self.1.inner_index
-//    }
-//    fn has_inner_range(&self, _pattern: &Pattern) -> bool {
-//        self.1.inner_index - self.0.inner_index > 1
-//    }
-//}
+impl<'a, M: PostVisitMode> VisitBorders<'a, Post<M>> for BorderInfo {
+    type Splits = PatternSplitPos;
+    fn make_borders(
+        pattern: &Pattern,
+        splits: &Self::Splits,
+    ) -> Self {
+        Self::new(pattern, splits)
+    }
+    fn inner_range_offsets(&self, pattern: &Pattern) -> Option<OffsetsOf<Post<M>>> {
+        (self.inner_offset.is_some() && pattern.len() - self.sub_index > 1)
+            .then(|| {
+                let w = pattern[self.sub_index].width();
+                self.outer_offset.map(|o|
+                    o.get() + w
+                ).unwrap_or(w)
+            })
+            .and_then(NonZeroUsize::new)
+    }
+    fn inner_range(&self) -> RangeOf<Post<M>> {
+        self.sub_index + self.inner_offset.is_some() as usize..
+    }
+    fn outer_range(&self) -> RangeOf<Post<M>> {
+        self.sub_index..
+    }
+}
+impl<'a> JoinBorders<'a, Post<Join>> for BorderInfo {
+    fn children(
+        &self,
+        ctx: &PatternJoinContext<'a>,
+    ) -> Option<ChildrenOf<Post<Join>>> {
+        let ctx = ctx.as_pattern_join_context();
+        self.inner_offset.map(|o|
+            ctx.sub_splits.get(&SplitKey::new(ctx.pattern[self.sub_index], o)).unwrap().right
+        )
+    }
+}
 
-//pub trait PartitionBorders<K: RangeRole>: PartitionInnerInfo<K> {
-//    type Splits;
-//    fn border_info(
-//        //cache: &SplitCache,
-//        pattern: &Pattern,
-//        splits: &Self::Splits,
-//    ) -> Self;
+impl<'a, M: PreVisitMode> VisitBorders<'a, Pre<M>> for BorderInfo {
+    type Splits = PatternSplitPos;
+    fn make_borders(
+        pattern: &Pattern,
+        splits: &Self::Splits,
+    ) -> Self {
+        Self::new(pattern, splits)
+    }
+    fn inner_range_offsets(&self, _pattern: &Pattern) -> Option<OffsetsOf<Pre<M>>> {
+        (self.inner_offset.is_some() && self.sub_index > 0)
+            .then(|| self.outer_offset)
+            .flatten()
+    }
+    fn inner_range(&self) -> RangeOf<Pre<M>> {
+        0..self.sub_index
+    }
+    fn outer_range(&self) -> RangeOf<Pre<M>> {
+        0..self.sub_index + self.inner_offset.is_some() as usize
+    }
+}
+impl<'a> JoinBorders<'a, Pre<Join>> for BorderInfo {
+    fn children(
+        &self,
+        ctx: &PatternJoinContext<'a>,
+    ) -> Option<ChildrenOf<Pre<Join>>> {
+        let ctx = ctx.as_pattern_join_context();
+        self.inner_offset.map(|o|
+            ctx.sub_splits.get(&SplitKey::new(ctx.pattern[self.sub_index], o)).unwrap().left
+        )
+    }
+}
+impl<'a, M: InVisitMode> VisitBorders<'a, In<M>> for (BorderInfo, BorderInfo) {
+    type Splits = (
+        <BorderInfo as VisitBorders<'a, Post<M>>>::Splits,
+        <BorderInfo as VisitBorders<'a, Pre<M>>>::Splits,
+    );
+    fn make_borders(
+        pattern: &Pattern,
+        splits: &Self::Splits,
+    ) -> Self {
+        (
+            BorderInfo::new(pattern, &splits.0),
+            BorderInfo::new(pattern, &splits.1),
+        )
+    }
+    fn inner_range_offsets(&self, pattern: &Pattern) -> Option<OffsetsOf<In<M>>> {
+        let a = VisitBorders::<Pre<M>>::inner_range_offsets(&self.0, pattern);
+        let b = VisitBorders::<Post<M>>::inner_range_offsets(&self.1, pattern);
+        a.map(|lio|
+            (
+                lio,
+                b.unwrap_or(
+                    VisitBorders::<Post<M>>::inner_range_offsets(&self.1, pattern).unwrap()
+                )
+            )
+        )
+        .or_else(||
+            b.map(|rio|
+                (
+                    VisitBorders::<Pre<M>>::inner_range_offsets(&self.0, pattern).unwrap(),
+                    rio,
+                )
+            )
+        )
+    }
+    fn inner_range(&self) -> RangeOf<In<M>> {
+        self.0.sub_index..self.1.sub_index
+    }
+    fn outer_range(&self) -> RangeOf<In<M>> {
+        self.0.sub_index..self.1.sub_index
+    }
+}
+impl<'a> JoinBorders<'a, In<Join>> for (BorderInfo, BorderInfo) {
+    fn children(
+        &self,
+        ctx: &PatternJoinContext<'a>,
+    ) -> Option<ChildrenOf<In<Join>>> {
+        let ctx = ctx.as_pattern_join_context();
+        let (lc, rc) = (ctx.pattern[self.0.sub_index], ctx.pattern[self.1.sub_index]);
+        match (self.0.inner_offset, self.1.inner_offset) {
+            (Some(l), Some(r)) => Some(InfixChildren::Both(
+                ctx.sub_splits.get(&SplitKey::new(lc, l)).unwrap().right,
+                ctx.sub_splits.get(&SplitKey::new(rc, r)).unwrap().left,
+            )),
+            (None, Some(r)) => Some(InfixChildren::Right(
+                ctx.sub_splits.get(&SplitKey::new(rc, r)).unwrap().left,
+            )),
+            (Some(l), None) => Some(InfixChildren::Left(
+                ctx.sub_splits.get(&SplitKey::new(lc, l)).unwrap().right,
+            )),
+            (None, None) => None,
+        }
+    }
+}
+
+//pub trait PartitionBorders<'a, K: RangeRole, Ctx: AsPatternTraceContext<'a>>: VisitBorders<'a, K, Ctx> {
 //}
-//impl<K: RangeRole<Borders=Self>> PartitionBorders<K> for BorderInfo<Left> 
-//    where BorderInfo<Left>: PartitionInnerInfo<K>,
+//impl<'a, K: RangeRole<Borders<'a, Ctx>=Self>, Ctx: AsPatternTraceContext<'a>> PartitionBorders<'a, K, Ctx> for BorderInfo 
+//    where BorderInfo: VisitBorders<'a, K, Ctx>,
 //{
-//    type Splits = PatternSplitPos;
-//    fn border_info(
-//        //cache: &SplitCache,
-//        pattern: &Pattern,
-//        splits: &Self::Splits,
-//    ) -> Self {
-//        Self::new(pattern, splits)
-//    }
 //}
-//impl<K: RangeRole<Borders=Self>> PartitionBorders<K> for BorderInfo<Right>
-//    where BorderInfo<Right>: PartitionInnerInfo<K>
+//impl<'a, M: InVisitMode, Ctx: AsPatternTraceContext<'a>> PartitionBorders<'a, In<M>, Ctx> for (BorderInfo, BorderInfo)
 //{
-//    type Splits = PatternSplitPos;
-//    fn border_info(
-//        //cache: &SplitCache,
-//        pattern: &Pattern,
-//        splits: &Self::Splits,
-//    ) -> Self {
-//        Self::new(pattern, splits)
-//    }
-//}
-//impl PartitionBorders<In> for (BorderInfo<Left>, BorderInfo<Right>)
-//{
-//    type Splits = (
-//        <BorderInfo::<Left> as PartitionBorders<Post>>::Splits,
-//        <BorderInfo::<Right> as PartitionBorders<Pre>>::Splits,
-//    );
-//    fn border_info(
-//        //cache: &SplitCache,
-//        pattern: &Pattern,
-//        splits: &Self::Splits,
-//    ) -> Self {
-//        (
-//            BorderInfo::<Left>::new(pattern, &splits.0),
-//            BorderInfo::<Right>::new(pattern, &splits.1),
-//        )
-//    }
 //}

@@ -6,8 +6,6 @@ pub mod entry;
 pub use entry::*;
 pub mod state;
 pub use state::*;
-pub mod splits;
-pub use splits::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TraversalCache {

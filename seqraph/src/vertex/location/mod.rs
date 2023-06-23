@@ -61,7 +61,7 @@ impl Indexed for ChildLocation {
 }
 impl Wide for ChildLocation {
     fn width(&self) -> usize {
-        self.parent.width
+        self.parent.width()
     }
 }
 

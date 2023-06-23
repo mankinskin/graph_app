@@ -1,56 +1,67 @@
 use crate::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OffsetSplits {
     pub offset: NonZeroUsize,
-    pub splits: PatternSubSplits,
+    pub splits: VertexSplitPos,
 }
-#[derive(Debug, Clone, Copy)]
-pub struct OffsetSplitsRef<'a> {
-    pub offset: NonZeroUsize,
-    pub splits: &'a PatternSubSplits,
+//#[derive(Debug, Clone, Copy)]
+//pub struct OffsetSplitsRef<'a> {
+//    pub offset: NonZeroUsize,
+//    pub splits: &'a VertexSplitPos,
+//}
+pub trait AsOffsetSplits: Clone {
+    fn as_offset_splits(self) -> OffsetSplits;
 }
-pub trait AsOffsetSplits<'a>: 'a {
-    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't;
-}
-impl<'a, O: AsOffsetSplits<'a>> AsOffsetSplits<'a> for &'a O {
-    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't {
-        (*self).as_offset_splits()
+impl AsOffsetSplits for OffsetSplits {
+    fn as_offset_splits(self) -> OffsetSplits {
+        self
     }
 }
-//impl<'a, K: RangeRole> AsOffsetSplits<'a> for K::Splits 
-//    where K::Splits: 'a
-//{
-//    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't {
+impl<'a> AsOffsetSplits for &'a OffsetSplits {
+    fn as_offset_splits(self) -> OffsetSplits {
+        self.clone()
+    }
+}
+impl<'a, S: SplitKind> AsOffsetSplits for (&'a NonZeroUsize, S) {
+    fn as_offset_splits(self) -> OffsetSplits {
+        OffsetSplits {
+            offset: self.0.clone(),
+            splits: self.1.borrow().clone(),
+        }
+    }
+}
+//impl<'a, O: AsOffsetSplits<'a>> AsOffsetSplits<'a> for &'a O {
+//    fn as_offset_splits<'t>(self) -> OffsetSplitsRef<'t> where 'a: 't {
 //        (*self).as_offset_splits()
 //    }
 //}
-//impl<'a> From<OffsetSplits> for OffsetSplitsRef<'a> {
-//    fn from(value: OffsetSplits) -> Self {
-//        Self {
-//            offset: value.offset,
-//            splits: &value.splits,
+//impl<'a> AsOffsetSplits<'a> for &'a SplitPositionCache {
+//    fn as_offset_splits<'t>(self) -> OffsetSplitsRef<'t> where 'a: 't {
+//        (*self).as_offset_splits()
+//    }
+//}
+//impl<'a> AsOffsetSplits<'a> for &'a OffsetSplits {
+//    fn as_offset_splits<'t>(self) -> &'t OffsetSplits where 'a: 't {
+//        &OffsetSplits {
+//            offset: self.offset,
+//            splits: self.splits,
 //        }
 //    }
 //}
-impl<'a> AsOffsetSplits<'a> for OffsetSplits {
-    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't {
-        OffsetSplitsRef {
-            offset: self.offset,
-            splits: &self.splits,
-        }
-    }
-}
-impl<'a, N: Borrow<NonZeroUsize> + 'a, S: Borrow<PatternSubSplits> + 'a> AsOffsetSplits<'a> for (N, &'a S) {
-    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't {
-        OffsetSplitsRef {
-            offset: self.0.borrow().clone(),
-            splits: self.1.borrow(),
-        }
-    }
-}
-impl<'a> AsOffsetSplits<'a> for OffsetSplitsRef<'a> {
-    fn as_offset_splits<'t>(&'t self) -> OffsetSplitsRef<'t> where 'a: 't {
-        *self
-    }
-}
+//impl<'a> AsOffsetSplits<'a> for (&'a NonZeroUsize, &'a SplitPositionCache) {
+//    fn as_offset_splits<'t>(self) -> OffsetSplitsRef<'t> where 'a: 't {
+//        OffsetSplitsRef {
+//            offset: self.0.clone(),
+//            splits: self.1.borrow(),
+//        }
+//    }
+//}
+//impl<'a> AsOffsetSplits<'a> for (&'a NonZeroUsize, &'a VertexSplitPos) {
+//    fn as_offset_splits<'t>(self) -> OffsetSplitsRef<'t> where 'a: 't {
+//        OffsetSplitsRef {
+//            offset: self.0.clone(),
+//            splits: self.1,
+//        }
+//    }
+//}

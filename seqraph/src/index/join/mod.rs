@@ -6,29 +6,8 @@ pub mod merge;
 pub use merge::*;
 pub mod delta;
 pub use delta::*;
-
-
-#[derive(Debug)]
-pub struct JoinContext<'p> {
-    pub graph: RwLockWriteGuard<'p, Hypergraph>,
-    pub index: Child,
-}
-impl<'p> JoinContext<'p> {
-    pub fn new(
-        graph: RwLockWriteGuard<'p, Hypergraph>,
-        index: Child,
-    ) -> Self {
-        Self {
-            graph,
-            index,
-        }
-    }
-    pub fn patterns(
-        &self,
-    ) -> &ChildPatterns {
-        self.graph.expect_child_patterns(self.index)
-    }
-}
+pub mod context;
+pub use context::*;
 
 #[derive(Debug, Default, Deref, DerefMut)]
 pub struct SplitFrontier {
@@ -52,34 +31,30 @@ impl Indexer {
         mut subgraph: FoldState,
     ) -> Child {
         let splits = subgraph.into_split_graph(self);
-        self.join_children(
-            subgraph,
-            splits,
-        )
-    }
-    pub fn join_children(
-        &mut self,
-        subgraph: FoldState,
-        mut splits: SplitCache,
-    ) -> Child {
         // todo: how to get child splits of offsets induced by inner ranges?
         // - augment to split graph
         // or - locate dynamically (child is guaranteed to exist because inner range offset are always consistent)
         let mut frontier = SplitFrontier::new(splits.leaves.iter().cloned().rev());
+        let mut final_splits = HashMap::default();
         while let Some(key) = {
             frontier.pop_front()
                 .and_then(|key|
                     (key.index != subgraph.root).then(|| key)
                 )
         } {
-            if splits.get_final_split(&key).is_none() {
-                let finals = JoinContext::new(
-                    self.graph_mut(),
-                    key.index,
-                    //&mut splits,
-                ).join_node_infos();
+            if final_splits.get(&key).is_none() {
+                let finals = {
+                    let mut ctx = JoinContext::new(
+                        self.graph_mut(),
+                        key.index,
+                        splits.entries.get(&key.index.index()).unwrap(),
+                        &final_splits,
+                    );
+                    ctx.join_node_partitions()
+                };
+
                 for (key, split) in finals {
-                    splits.expect_mut(&key).final_split = Some(split);
+                    final_splits.insert(key, split);
                 }
             }
             //todo: store final split in frontier
@@ -89,34 +64,38 @@ impl Indexer {
                     .cloned()
             );
         }
-        JoinContext::new(
+        let entry = splits.entries.get(&subgraph.root.index()).unwrap();
+        let mut ctx = JoinContext::new(
             self.graph_mut(),
             subgraph.root,
-            //&mut splits,
-        ).join_root_infos()
+            entry,
+            &final_splits,
+        );
+        ctx.join_root_partitions(splits.root_mode)
     }
 }
 impl<'p> JoinContext<'p> {
-    pub fn join_node_infos(
+    pub fn join_node_partitions(
         &mut self,
     ) -> LinkedHashMap<SplitKey, Split> {
         let partitions = self.index_partitions(
-            self.index,
+            self.split_pos,
         );
         assert_eq!(
             self.index.width(),
             partitions.iter().map(Child::width).sum::<usize>()
         );
         self.merge_node(
+            self.split_pos,
             &partitions,
         )
     }
-    pub fn join_root_infos(
+    pub fn join_root_partitions(
         &mut self,
+        root_mode: RootMode,
     ) -> Child {
         let index = self.index;
-        let root_mode = self.cache.root_mode;
-        let offsets = index.sub_splits(self.cache);
+        let offsets = self.split_pos;
         let num_offsets = offsets.len();
         let mut offset_iter = offsets.iter();
         let offset = offset_iter.next().unwrap();
@@ -124,7 +103,7 @@ impl<'p> JoinContext<'p> {
         match root_mode {
             RootMode::Prefix => {
                 assert_eq!(num_offsets, 1);
-                match Prefix(offset).join_partition(self) {
+                match Prefix::new(offset).join_partition(self) {
                     Ok(part) => {
                         if let Some(pid) = part.perfect {
                             let pos = &offset.1.pattern_splits[&pid];
@@ -134,7 +113,7 @@ impl<'p> JoinContext<'p> {
                                 [part.index],
                             )
                         } else {
-                            let post = (offset, ()).join_partition(self).unwrap();
+                            let post = Postfix::new(offset).join_partition(self).unwrap();
                             self.graph.add_pattern_with_update(
                                 index,
                                 [part.index, post.index],
@@ -147,7 +126,7 @@ impl<'p> JoinContext<'p> {
             },
             RootMode::Postfix => {
                 assert_eq!(num_offsets, 1);
-                match (offset, ()).join_partition(self) {
+                match Postfix::new(offset).join_partition(self) {
                     Ok(part) => {
                         if let Some(pid) = part.perfect {
                             let pos = &offset.1.pattern_splits[&pid];
@@ -157,7 +136,7 @@ impl<'p> JoinContext<'p> {
                                 [part.index],
                             )
                         } else {
-                            let pre = ((), offset).join_partition(self).unwrap();
+                            let pre = Prefix::new(offset).join_partition(self).unwrap();
                             self.graph.add_pattern_with_update(index,
                                 [pre.index, part.index],
                             );
@@ -172,20 +151,20 @@ impl<'p> JoinContext<'p> {
                 let prev_offset = offset;
                 let offset = offset_iter.next().unwrap();
 
-                match (prev_offset, offset).join_partition(self) {
+                match Infix::new(prev_offset, offset).join_partition(self) {
                     Ok(part) => {
                         let mut prev_offset = (prev_offset.0, prev_offset.1.clone());
-                        let mut offset = (offset.0, (offset.1.clone() - part.delta));
+                        let mut offset = (offset.0, offset.1.clone() - part.delta);
 
                         if (None, None) == part.perfect {
                             // no perfect border
                             //        [               ]
                             // |     |      |      |     |   |
-                            let pre = Prefix(prev_offset).join_partition(self).unwrap();
+                            let pre = Prefix::new(prev_offset).join_partition(self).unwrap();
 
                             let offset = (offset.0, &(offset.1.clone() - pre.delta));
 
-                            let post = Postfix(offset).join_partition(self).unwrap();
+                            let post = Postfix::new(offset).join_partition(self).unwrap();
                             self.graph.add_pattern_with_update(
                                 index,
                                 [pre.index, part.index, post.index],
@@ -209,11 +188,11 @@ impl<'p> JoinContext<'p> {
                                 // |     |       |     |    |     |
 
                                 // todo: improve syntax
-                                let pre = Prefix(&prev_offset).join_partition(self).unwrap();
+                                let pre = Prefix::new(prev_offset.clone()).join_partition(self).unwrap();
                                 prev_offset.1 = prev_offset.1 - pre.delta;
 
-                                let wrap_patterns = Prefix(&offset)
-                                    .info_bundle(self).unwrap()
+                                let wrap_patterns = Prefix::new(offset.clone())
+                                    .visit_partition(self).unwrap()
                                     .join_patterns(self);
                                 let patterns = wrap_patterns.patterns().clone();
                                 offset.1 = offset.1 - wrap_patterns.delta;
@@ -233,11 +212,11 @@ impl<'p> JoinContext<'p> {
                             if let Some(lp) = part.perfect.0 {
                                 //       [                 ]
                                 // |     |       |      |      |
-                                let post = Postfix(offset).join_partition(self).unwrap();
+                                let post = Postfix::new(offset).join_partition(self).unwrap();
 
                                 let li = prev_offset.1.pattern_splits[&lp].sub_index;
-                                let mut info_bundle = Postfix(prev_offset)
-                                    .info_bundle(self).unwrap();
+                                let mut info_bundle = Postfix::new(prev_offset)
+                                    .visit_partition(self).unwrap();
                                 // todo: skip lp in info_bundle already
                                 info_bundle.patterns.remove(&lp);
                                 let wrap_patterns = info_bundle.join_patterns(self);

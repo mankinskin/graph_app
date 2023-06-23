@@ -1,5 +1,4 @@
 use crate::*;
-use super::*;
 
 //pub trait ResultKind: Eq + Clone + Debug + Send + Sync + Unpin {
 //    type Query: QueryPath;
@@ -11,7 +10,7 @@ use super::*;
 //    fn into_postfix(primer: Self::Primer, match_end: MatchEnd<RootedRolePath<Start>>) -> Self::Postfix;
 //}
 pub type Primer = RootedRolePath<Start>;
-pub type Postfix = MatchEnd<Primer>;
+pub(crate) type Postfix = MatchEnd<Primer>;
 
 pub trait Found
     : BasePath
