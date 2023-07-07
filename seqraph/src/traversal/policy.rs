@@ -6,7 +6,7 @@ impl<R, T: RootChild<R> + Send + Clone + Eq + Debug> NodePath<R> for T {}
 
 pub trait DirectedTraversalPolicy: Sized {
 
-    type Trav: Traversable + TraversalFolder<Self>;
+    type Trav: TraversalFolder;
 
     ///// Executed after last child of index matched
     //fn at_postfix(

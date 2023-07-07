@@ -48,7 +48,7 @@ impl PathAppend for QueryRangePath {
         self.end.sub_path.path.push(parent_entry);
     }
 }
-impl PathAppend for CachedQuery<'_> {
+impl PathAppend for QueryStateContext<'_> {
     fn path_append(
         &mut self,
         parent_entry: ChildLocation,

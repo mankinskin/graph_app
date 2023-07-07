@@ -1,13 +1,12 @@
 use crate::*;
 
 mod searcher;
-mod match_direction;
+
 #[macro_use]
 #[cfg(test)]
 pub mod tests;
 
 pub use searcher::*;
-pub use match_direction::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum NoMatch {

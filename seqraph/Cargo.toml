@@ -11,6 +11,8 @@ log_stdout = []
 log_gui = []
 tracing_off = ["tracing/max_level_off"]
 
+[[bin]]
+name = "seqraph"
 
 [dependencies]
 async-std = "1.12"
@@ -42,6 +44,8 @@ derive_more = "0.99"
 linked_hash_set = "0.1.4"
 linked-hash-map = "0.5.6"
 derive-new = "0.5"
+inquire = "0.6"
+auto_impl = "1.1.0"
 
 [dependencies.tracing-egui]
 path = "../../tracing-egui"

@@ -3,7 +3,6 @@ use crate::*;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NewEntry {
     pub prev: DirectedKey,
-    //pub prev_pos: TokenLocation,
     pub root_pos: TokenLocation,
     pub kind: NewKind,
 }
@@ -12,19 +11,17 @@ impl NewEntry {
         match &self.kind {
             NewKind::Parent(state) => Some(state.entry),
             NewKind::Child(state) => state.end_leaf,
-            //NewKind::End(state) => state.entry_location(),
         }
     }
     pub fn prev_key(&self) -> DirectedKey {
         self.prev
     }
-    pub fn node_direction(&self) -> NodeDirection {
+    pub fn state_direction(&self) -> StateDirection {
         match &self.kind {
             NewKind::Parent(_)
-                => NodeDirection::BottomUp,
+                => StateDirection::BottomUp,
             NewKind::Child(_)
-                => NodeDirection::TopDown,
-            //NewKind::End(state) => state.node_direction()
+                => StateDirection::TopDown,
         }
     }
 }
@@ -32,7 +29,6 @@ impl From<&TraversalState> for NewEntry {
     fn from(state: &TraversalState) -> Self {
         Self {
             prev: state.prev_key(),
-            //prev_pos: state.prev_pos(),
             root_pos: state.root_pos(),
             kind: (&state.kind).into(),
         }
@@ -45,8 +41,6 @@ impl From<&InnerKind> for NewKind {
                 => Self::Parent(state.into()),
             InnerKind::Child(state)
                 => Self::Child(state.into()),
-            //InnerKind::End(state)
-            //    => Self::End(state.into()),
         }
     }
 }
@@ -54,11 +48,10 @@ impl From<&InnerKind> for NewKind {
 pub enum NewKind {
     Parent(NewParent),
     Child(NewChild),
-    //End(NewEnd),
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NewParent {
-    pub root: DirectedKey,
+    pub root: UpKey,
     pub entry: ChildLocation
 }
 impl From<&ParentState> for NewParent {
@@ -71,7 +64,7 @@ impl From<&ParentState> for NewParent {
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NewChild {
-    pub root: DirectedKey,
+    pub root: UpKey,
     pub target: DirectedKey,
     pub end_leaf: Option<ChildLocation>
 }
@@ -92,7 +85,7 @@ pub struct NewRangeEnd {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum NewEnd {
     Range(NewRangeEnd),
-    Postfix(DirectedKey),
+    Postfix(UpKey),
     Prefix(DirectedKey),
     Complete(DirectedKey),
 }
@@ -123,12 +116,12 @@ impl NewEnd {
             Self::Complete(_) => None,
         }
     }
-    pub fn node_direction(&self) -> NodeDirection {
+    pub fn state_direction(&self) -> StateDirection {
         match self {
-            Self::Range(_) => NodeDirection::TopDown,
-            Self::Postfix(_) => NodeDirection::BottomUp,
-            Self::Prefix(_) => NodeDirection::TopDown,
-            Self::Complete(_) => NodeDirection::BottomUp,
+            Self::Range(_) => StateDirection::TopDown,
+            Self::Postfix(_) => StateDirection::BottomUp,
+            Self::Prefix(_) => StateDirection::TopDown,
+            Self::Complete(_) => StateDirection::BottomUp,
         }
     }
 }

@@ -6,11 +6,11 @@ pub struct QueryState {
     pub pos: TokenLocation,
 }
 impl QueryState {
-    pub fn to_cached(self, cache: &mut TraversalCache) -> CachedQuery<'_> {
-        CachedQuery {
-            state: self,
-            cache,
-        }
+    pub fn to_ctx<'a, 'b: 'a, I: TraversalIterator<'b>>(
+        &'a mut self,
+        ctx: &TraversalContext<'a, 'b, I>,
+    ) -> QueryStateContext<'a> {
+        ctx.query_state(self)
     }
     pub fn to_rooted(self, root: Pattern) -> QueryRangePath {
         QueryRangePath {
@@ -20,10 +20,10 @@ impl QueryState {
         }
     }
     pub fn new<
-        D: MatchDirection,
+        G: GraphKind,
         P: IntoPattern,
     >(query: P) -> Result<Self, (NoMatch, Self)> {
-        let entry = D::head_index(query.borrow());
+        let entry = G::Direction::head_index(query.borrow());
         let query = query.into_pattern();
         let first = *query.first().unwrap();
         let len = query.len();
@@ -41,8 +41,4 @@ impl QueryState {
             pos,
         }
     }
-}
-pub struct CachedQuery<'c> {
-    pub cache: &'c mut TraversalCache, 
-    pub state: QueryState,
 }

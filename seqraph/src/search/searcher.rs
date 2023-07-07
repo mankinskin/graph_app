@@ -8,7 +8,7 @@ use crate::*;
 pub struct Searcher {
     pub graph: HypergraphRef,
 }
-trait SearchTraversalPolicy:
+pub trait SearchTraversalPolicy:
     DirectedTraversalPolicy<
         Trav=Searcher,
     >
@@ -24,98 +24,19 @@ impl<
 {}
 
 
-impl<
-    S: SearchTraversalPolicy,
->
-    TraversalFolder<S> for Searcher
-{
-    //type Break = TraversalResult<R, Q>;
-    //type Continue = TraversalResult<R, Q>;
-    type NodeVisitor = BftQueue;
-
-    //fn map_state(
-    //    &self,
-    //    acc: ControlFlow<Self::Break, Self::Continue>,
-    //    node: TraversalState<R, Q>,
-    //) -> ControlFlow<Self::Break, Self::Continue> {
-    //    match node {
-    //        TraversalState::QueryEnd(_, _, found) => {
-    //            ControlFlow::Break(found)
-    //        },
-    //        TraversalState::MatchEnd(_, _, match_end, query) => {
-    //            let found = TraversalResult::new(
-    //                match_end,
-    //                query,
-    //            );
-    //            ControlFlow::Continue(search::pick_max_result::<R, _>(acc, found))
-    //        },
-    //        TraversalState::Mismatch(_, _, found) =>
-    //            ControlFlow::Continue(search::pick_max_result::<R, _>(acc, found)),
-    //        _ => ControlFlow::Continue(acc)
-    //    }
-    //}
-}
-//pub fn pick_max_result<
-//    R: ResultKind,
-//    Q: BaseQuery,
-//>(
-//    acc: Option<TraversalResult<R, Q>>,
-//    res: TraversalResult<R, Q>,
-//) -> Option<TraversalResult<R, Q>> {
-//    Some(
-//        if let Some(acc) = acc {
-//            std::cmp::max_by(
-//                res,
-//                acc,
-//                |res, acc|
-//                    res.path.cmp(&acc.path)
-//            )
-//        } else {
-//            res
-//        }
-//    )
-//}
-//pub fn fold_match<
-//    'a: 'g,
-//    'g,
-//    T: Tokenize,
-//    D: MatchDirection,
-//    Q: BaseQuery,
-//    R: ResultKind,
-//    Folder: TraversalFolder<T, D, Q, R, Continue=Option<TraversalResult<R, Q>>>
-//>(
-//    trav: &'a Folder::Trav,
-//    acc: Folder::Continue,
-//    mut path: SearchPath,
-//    query: Q
-//) -> Option<TraversalResult<R, Q>> {
-//    path.role_path_mut().simplify::<_, D, _>(trav);
-//    //let found = 
-//    //    path.into_range_path().into_result(query);
-//    pick_max_result(acc, path)
-//}
-
-struct AncestorSearch {
+impl TraversalFolder for Searcher {
+    type Iterator<'a> = Bft<'a, Self, AncestorSearch>;
 }
 
-impl<
->
-    DirectedTraversalPolicy for AncestorSearch
-{
+pub struct AncestorSearch { }
+
+impl DirectedTraversalPolicy for AncestorSearch {
     type Trav = Searcher;
-
 }
-struct ParentSearch {
-}
+pub struct ParentSearch { }
 
-impl<
-    'a: 'g,
-    'g,
->
-    DirectedTraversalPolicy for ParentSearch
-{
+impl DirectedTraversalPolicy for ParentSearch {
     type Trav = Searcher;
-
     fn next_parents(
         _trav: &Self::Trav,
         _state: &ParentState,
@@ -158,21 +79,19 @@ impl Searcher {
         &self,
         query: P,
     ) -> SearchResult {
-        self.search::<Bft<Self, S>, S, _>(
+        self.search::<Bft<Self, S>, _>(
             query,
         )
     }
-    #[allow(unused)]
     fn search<
         'a,
-        Ti: TraversalIterator<'a, Self, S>,
-        S: SearchTraversalPolicy,
+        Ti: TraversalIterator<'a, Trav=Self>,
         P: IntoPattern,
     >(
         &'a self,
         query: P,
     ) -> SearchResult {
-        <Self as TraversalFolder<S>>::fold_query(self, query)
+        <Self as TraversalFolder>::fold_query(self, query)
             .map_err(|(nm, _)| nm)
     }
     //#[allow(unused)]

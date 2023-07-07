@@ -1,5 +1,4 @@
 use crate::*;
-use super::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TraversalResult {

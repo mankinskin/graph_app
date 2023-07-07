@@ -17,16 +17,22 @@ pub struct Context {
     pub cd_id: PatternId,
     pub bcd: Child,
     pub b_cd_id: PatternId,
+    pub def: Child,
     pub abc: Child,
     pub a_bc_id: PatternId,
     pub abcd: Child,
     pub a_bcd_id: PatternId,
     pub abc_d_id: PatternId,
     pub ef: Child,
+    pub e_f_id: PatternId,
     pub cdef: Child,
     pub efghi: Child,
     pub abab: Child,
     pub ababab: Child,
+    pub abcdef: Child,
+    pub abcd_ef_id: PatternId,
+    pub abc_def_id: PatternId,
+    pub abcdefghi: Child,
     pub ababababcdefghi: Child,
 }
 lazy_static::lazy_static! {
@@ -79,7 +85,7 @@ lazy_static::lazy_static! {
                 [a, bcd],
             ]);
             // index 15
-            let ef = graph.insert_pattern([e, f]);
+            let (ef, e_f_id) = graph.insert_pattern_with_id([e, f]);
             let gh = graph.insert_pattern([g, h]);
             let ghi = graph.insert_pattern([gh, i]);
             let efgh = graph.insert_pattern([ef, gh]);
@@ -90,7 +96,7 @@ lazy_static::lazy_static! {
             let def = graph.insert_pattern([d, ef]);
             let cdef = graph.insert_pattern([c, def]);
             // index 22
-            let abcdef = graph.insert_patterns([
+            let (abcdef, abcdef_ids) = graph.insert_patterns_with_ids([
                 [abcd, ef],
                 [abc, def],
                 [ab, cdef]
@@ -153,6 +159,12 @@ lazy_static::lazy_static! {
                 abc_d_id: abcd_ids[0],
                 a_bcd_id: abcd_ids[1],
                 ef,
+                e_f_id: e_f_id.unwrap(),
+                def,
+                abcdef,
+                abcd_ef_id: abcdef_ids[0],
+                abc_def_id: abcdef_ids[1],
+                abcdefghi,
                 cdef,
                 efghi,
                 abab,

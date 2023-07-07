@@ -20,7 +20,7 @@ impl PathPop for QueryRangePath {
         self.end.path_pop()
     }
 }
-impl PathPop for CachedQuery<'_> {
+impl PathPop for QueryStateContext<'_> {
     fn path_pop(&mut self) -> Option<ChildLocation> {
         self.state.end.path_pop()
     }

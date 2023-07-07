@@ -2,8 +2,6 @@ use crate::*;
 
 pub mod offset;
 pub use offset::*;
-pub mod partition;
-pub use partition::*;
 
 pub type SplitPos<S> = BTreeMap<NonZeroUsize, <S as HasSplitPos>::Split>;
 

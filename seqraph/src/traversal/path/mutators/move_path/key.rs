@@ -1,35 +1,39 @@
 use crate::*;
 
-#[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, Add, Sub)]
-pub struct TokenLocation {
-    pub pos: usize,
-}
+#[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, Add, Sub, Deref, DerefMut)]
+pub struct TokenLocation(pub usize);
 impl Default for TokenLocation {
     fn default() -> Self {
-        Self {
-            pos: 0,
-        }
+        Self(0)
     }
 }
 impl From<usize> for TokenLocation {
     fn from(pos: usize) -> Self {
-        Self {
-            pos,
-        }
+        Self(pos)
     }
 }
 impl std::ops::Add<usize> for TokenLocation {
     type Output = Self;
     fn add(mut self, delta: usize) -> Self {
-        self.pos += delta;
+        self.0 += delta;
         self
     }
 }
 impl std::ops::Sub<usize> for TokenLocation {
     type Output = Self;
     fn sub(mut self, delta: usize) -> Self {
-        self.pos -= delta;
+        self.0 -= delta;
         self
+    }
+}
+impl std::ops::AddAssign<usize> for TokenLocation {
+    fn add_assign(&mut self, delta: usize) {
+        self.0 += delta;
+    }
+}
+impl std::ops::SubAssign<usize> for TokenLocation {
+    fn sub_assign(&mut self, delta: usize) {
+        self.0 -= delta;
     }
 }
 
@@ -55,10 +59,10 @@ impl<T: MoveKey<Left>> RetractKey for T {
 impl MoveKey<Right> for TokenLocation {
     type Delta = usize;
     fn move_key(&mut self, delta: Self::Delta) {
-        self.pos += delta;
+        *self += delta;
     }
 }
-impl MoveKey<Right> for CachedQuery<'_> {
+impl MoveKey<Right> for QueryStateContext<'_> {
     type Delta = usize;
     fn move_key(&mut self, delta: Self::Delta) {
         self.state.advance_key(delta)
@@ -74,10 +78,10 @@ impl MoveKey<Right> for QueryState {
 impl MoveKey<Left> for TokenLocation {
     type Delta = usize;
     fn move_key(&mut self, delta: Self::Delta) {
-        self.pos -= delta;
+        *self -= delta;
     }
 }
-impl MoveKey<Left> for CachedQuery<'_> {
+impl MoveKey<Left> for QueryStateContext<'_> {
     type Delta = usize;
     fn move_key(&mut self, delta: Self::Delta) {
         self.state.retract_key(delta)

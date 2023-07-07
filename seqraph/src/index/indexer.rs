@@ -63,11 +63,11 @@ impl<
 > IndexerTraversalPolicy for IndexingPolicy
 {}
 
-impl TraversalFolder<IndexingPolicy> for Indexer {
+impl TraversalFolder for Indexer {
     //type Break = TraversalResult<R, Q>;
     //type Continue = TraversalResult<R, Q>;
     //type Result = (<R as ResultKind>::Indexed, Q);
-    type NodeVisitor = BftQueue;
+    type Iterator<'a> = Bft<'a, Self, IndexingPolicy>;
 
     //fn map_state(
     //    &self,
@@ -129,20 +129,20 @@ impl Indexer {
             graph,
         }
     }
-    pub fn contexter<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>>(&self) -> Contexter<Side> {
-        Contexter::new(self.clone())
-    }
-    pub fn splitter<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>>(&self) -> Splitter<Side> {
-        Splitter::new(self.clone())
-    }
-    pub fn pather<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>>(&self) -> Pather<Side> {
-        Pather::new(self.clone())
-    }
+    //pub fn contexter<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>>(&self) -> Contexter<Side> {
+    //    Contexter::new(self.clone())
+    //}
+    //pub fn splitter<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>>(&self) -> Splitter<Side> {
+    //    Splitter::new(self.clone())
+    //}
+    //pub fn pather<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>>(&self) -> Pather<Side> {
+    //    Pather::new(self.clone())
+    //}
     pub fn index_pattern(
         &mut self,
         query: impl IntoPattern,
     ) -> Result<(Child, QueryRangePath), NoMatch> {
-        match <Self as TraversalFolder<_>>::fold_query(self, query) {
+        match <Self as TraversalFolder>::fold_query(self, query) {
             Ok(result) => match result.result {
                 FoldResult::Complete(c) =>
                     Ok((c, result.query)),

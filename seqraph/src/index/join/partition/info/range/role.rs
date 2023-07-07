@@ -11,9 +11,28 @@ pub struct Join;
 #[derive(Debug, Clone, Copy)]
 pub struct Trace;
 
+pub type OffsetsOf<K> = <K as RangeRole>::Offsets;
+pub type BooleanPerfectOf<K> = <<K as RangeRole>::Perfect as BorderPerfect>::Boolean;
+pub type ChildrenOf<K> = <K as RangeRole>::Children;
+pub type RangeOf<K> = <K as RangeRole>::Range;
 pub type ModeOf<K> = <K as RangeRole>::Mode;
 pub type ModeChildrenOf<K> = <ModeOf<K> as ModeChildren::<K>>::Result;
+pub type PatternCtxOf<'a, K> = <ModeCtxOf<'a, K> as AsTraceContext<'a>>::PatternCtx<'a>;
+pub type ModeCtxOf<'a, K> = <<K as RangeRole>::Mode as ModeContext<'a>>::Result;
+pub type ModePatternCtxOf<'a, K> = <<K as RangeRole>::Mode as ModeContext<'a>>::PatternResult;
 
+pub trait ModeContext<'a> {
+    type Result: AsTraceContext<'a, PatternCtx<'a> = Self::PatternResult>;
+    type PatternResult: AsPatternTraceContext<'a>;
+}
+impl<'a> ModeContext<'a> for Trace {
+    type Result = TraceContext<'a>;
+    type PatternResult = PatternTraceContext<'a>;
+}
+impl<'a> ModeContext<'a> for Join {
+    type Result = JoinContext<'a>;
+    type PatternResult = PatternJoinContext<'a>;
+}
 pub trait ModeChildren<K: RangeRole> {
     type Result: Clone + Debug;
 }
@@ -106,7 +125,6 @@ impl<M: PreVisitMode> RangeRole for Pre<M> {
     type PartitionSplits = ((), OffsetSplits);
     type Borders<'a> = BorderInfo;
     type Splits = OffsetSplits;
-    //type SplitsRef<'a> = OffsetSplitsRef<'a>;
     type Offsets = NonZeroUsize;
     type Perfect = Option<PatternId>;
     fn to_partition(
@@ -139,10 +157,8 @@ impl<M: InVisitMode> RangeRole for In<M> {
     type PartitionSplits = (OffsetSplits, OffsetSplits);
     type Borders<'a> = (BorderInfo, BorderInfo);
     type Splits = (OffsetSplits, OffsetSplits);
-    //type SplitsRef<'a> = (OffsetSplitsRef<'a>, OffsetSplitsRef<'a>);
     type Offsets = (NonZeroUsize, NonZeroUsize);
     type Perfect = (Option<PatternId>, Option<PatternId>);
-    //type SubOffsets = (Option<NonZeroUsize>, Option<NonZeroUsize>);
     fn to_partition(
         splits: Self::Splits,
     ) -> Partition<Self> {
@@ -161,10 +177,8 @@ impl<M: PostVisitMode> RangeRole for Post<M> {
     type PartitionSplits = (OffsetSplits, ());
     type Borders<'a> = BorderInfo;
     type Splits = OffsetSplits;
-    //type SplitsRef<'a> = OffsetSplitsRef<'a>;
     type Offsets = NonZeroUsize;
     type Perfect = Option<PatternId>;
-    //type SubOffsets = Option<NonZeroUsize>;
     fn to_partition(splits: Self::Splits) -> Partition<Self> {
         Partition {
             offsets: splits,

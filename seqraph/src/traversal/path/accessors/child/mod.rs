@@ -37,7 +37,7 @@ pub trait LeafChildPosMut<R>: RootChildPosMut<R> {
 //        }
 //    }
 //}
-impl LeafChildPosMut<End> for CachedQuery<'_> {
+impl LeafChildPosMut<End> for QueryStateContext<'_> {
     fn leaf_child_pos_mut(&mut self) -> &mut usize {
         self.state.end.leaf_child_pos_mut()
     }
@@ -53,6 +53,7 @@ impl LeafChildPosMut<End> for RolePath<End> {
 }
 
 /// used to get a descendant in a Graph, pointed to by a child path
+#[auto_impl(&mut)]
 pub trait PathChild<R: PathRole>: HasPath<R> {
     fn path_child_location(&self) -> Option<ChildLocation> {
         R::bottom_up_iter(self.path().iter()).next().cloned()
@@ -68,11 +69,19 @@ pub trait PathChild<R: PathRole>: HasPath<R> {
         )
     }
 }
+//impl<R: PathRole, P: PathChild<R>> PathChild<R> for &'_ P
+//    where Self: HasPath<R> + PatternRootChild<R>
+//{
+//}
+//impl<R: PathRole, P: PathChild<R>> PathChild<R> for &'_ mut P
+//    where Self: HasPath<R> + PatternRootChild<R>
+//{
+//}
 impl<R: PathRole> PathChild<R> for QueryRangePath
     where Self: HasPath<R> + PatternRootChild<R>
 {
 }
-impl<R: PathRole> PathChild<R> for CachedQuery<'_>
+impl<R: PathRole> PathChild<R> for QueryStateContext<'_>
     where Self: HasPath<R> + PatternRootChild<R>
 {
 }

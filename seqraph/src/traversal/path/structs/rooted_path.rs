@@ -19,7 +19,6 @@ pub type SearchPath = RootedRangePath<IndexRoot>;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct IndexRoot {
     pub location: PatternLocation,
-    //pub pos: TokenLocation,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -84,7 +83,6 @@ impl From<SearchPath> for RootedRolePath<End, IndexRoot> {
         }
     }
 }
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SubPath {
     pub root_entry: usize,

@@ -37,15 +37,15 @@ impl EndState {
             EndKind::Complete(_) => None,
         }
     }
-    pub fn node_direction(&self) -> NodeDirection {
+    pub fn state_direction(&self) -> StateDirection {
         match self.kind {
-            EndKind::Range(_) => NodeDirection::TopDown,
-            EndKind::Postfix(_) => NodeDirection::BottomUp,
-            EndKind::Prefix(_) => NodeDirection::TopDown,
-            EndKind::Complete(_) => NodeDirection::BottomUp,
+            EndKind::Range(_) => StateDirection::TopDown,
+            EndKind::Postfix(_) => StateDirection::BottomUp,
+            EndKind::Prefix(_) => StateDirection::TopDown,
+            EndKind::Complete(_) => StateDirection::BottomUp,
         }
     }
-    pub fn waiting_root_key(&self) -> Option<DirectedKey> {
+    pub fn waiting_root_key(&self) -> Option<UpKey> {
         match &self.kind {
             EndKind::Range(_) => Some(self.root_key()),
             EndKind::Postfix(_) => None,
@@ -64,11 +64,13 @@ impl EndState {
     pub fn is_complete(&self) -> bool {
         matches!(self.kind, EndKind::Complete(_))
     }
-    pub fn width(&self) -> usize {
+}
+impl Wide for EndState {
+    fn width(&self) -> usize {
         match &self.kind {
-            EndKind::Range(p) => p.target.pos.pos().pos + p.target.index.width(),
-            EndKind::Prefix(p) => p.target.pos.pos().pos + p.target.index.width(),
-            EndKind::Postfix(p) => self.root_pos.pos + p.inner_width,
+            EndKind::Range(p) => p.target.pos.pos().0 + p.target.index.width(),
+            EndKind::Prefix(p) => p.target.pos.pos().0 + p.target.index.width(),
+            EndKind::Postfix(p) => self.root_pos.0 + p.inner_width,
             EndKind::Complete(c) => c.width(),
         }
     }
@@ -82,9 +84,7 @@ pub enum EndKind {
 }
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum EndReason {
-    /// when the query has ended.
     QueryEnd,
-    /// at a mismatch.
     Mismatch,
 }
 //impl From<MatchEnd<RootedRolePath<Start>>> for EndKind {

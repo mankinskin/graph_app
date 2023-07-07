@@ -9,22 +9,26 @@ use std::{
     },
 };
 
-mod child_strings;
-mod getters;
-mod insert;
-mod validation;
+pub mod child_strings;
+pub use child_strings::*;
+
+pub mod getters;
+pub use getters::*;
+
+pub mod insert;
+pub use insert::*;
+
+pub mod validation;
+
 pub mod kind;
+pub use kind::*;
+
+pub mod direction;
+pub use direction::*;
 
 #[cfg(test)]
 #[macro_use]
 pub mod tests;
-
-pub use {
-    child_strings::*,
-    getters::*,
-    insert::*,
-    kind::*,
-};
 
 #[derive(Debug, Clone, Default)]
 pub struct HypergraphRef<G: GraphKind = BaseGraphKind>(pub Arc<RwLock<Hypergraph<G>>>);

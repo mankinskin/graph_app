@@ -1,6 +1,7 @@
 use crate::*;
 
 /// access to a rooted path pointing to a descendant
+#[auto_impl(&mut)]
 pub trait HasPath<R> {
     fn path(&self) -> &Vec<ChildLocation>;
     fn path_mut(&mut self) -> &mut Vec<ChildLocation>;
@@ -55,7 +56,7 @@ impl<R: 'static> HasPath<R> for SearchPath
         HasRolePath::<R>::role_path_mut(self).path_mut()
     }
 }
-impl<R: 'static> HasPath<R> for CachedQuery<'_>
+impl<R: 'static> HasPath<R> for QueryStateContext<'_>
     where Self: HasRolePath<R>
 {
     fn path(&self) -> &Vec<ChildLocation> {
@@ -139,7 +140,7 @@ impl<R: PathRole, Root: PathRoot> HasRolePath<R> for RootedRolePath<R, Root> {
         &mut self.role_path
     }
 }
-impl HasRolePath<Start> for CachedQuery<'_> {
+impl HasRolePath<Start> for QueryStateContext<'_> {
     fn role_path(&self) -> &RolePath<Start> {
         &self.state.start
     }
@@ -147,7 +148,7 @@ impl HasRolePath<Start> for CachedQuery<'_> {
         &mut self.state.start
     }
 }
-impl HasRolePath<End> for CachedQuery<'_> {
+impl HasRolePath<End> for QueryStateContext<'_> {
     fn role_path(&self) -> &RolePath<End> {
         &self.state.end
     }

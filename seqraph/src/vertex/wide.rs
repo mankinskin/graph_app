@@ -50,6 +50,16 @@ impl Wide for DirectedKey {
         self.index.width()
     }
 }
+impl Wide for UpKey {
+    fn width(&self) -> usize {
+        self.index.width()
+    }
+}
+impl Wide for DownKey {
+    fn width(&self) -> usize {
+        self.index.width()
+    }
+}
 
 pub trait WideMut: Wide {
     fn width_mut(&mut self) -> &mut usize;

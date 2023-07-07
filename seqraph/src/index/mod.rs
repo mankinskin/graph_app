@@ -1,29 +1,31 @@
 use crate::*;
 
+pub mod trace;
+pub use trace::*;
+
 pub mod indexer;
-pub mod index_direction;
+pub use indexer::*;
+
 pub mod side;
-pub mod context;
-pub mod split;
+pub use side::*;
+
 pub mod join;
-pub mod partition;
-pub mod path;
+pub use join::*;
+
+//pub mod context;
+//pub use context::*;
+
+//pub mod path;
+//pub use path::*;
+
 pub mod cache;
+pub use cache::*;
 
 #[cfg(test)]
 #[macro_use]
 pub mod tests;
 
 
-pub use indexer::*;
-pub use index_direction::*;
-pub use side::*;
-pub use split::*;
-pub use context::*;
-pub use path::*;
-pub use partition::*;
-pub use join::*;
-pub use cache::*;
 
 impl<'t, 'g> HypergraphRef {
     pub fn indexer(&self) -> Indexer {

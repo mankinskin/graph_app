@@ -9,22 +9,59 @@ pub use leaf::*;
 pub use root::*;
 pub use target::*;
 
+#[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, From)]
+pub struct UpPosition(TokenLocation);
+
+impl UpPosition {
+    pub fn flipped(self) -> DownPosition {
+        DownPosition(self.0)
+    }
+}
+impl From<usize> for UpPosition {
+    fn from(value: usize) -> Self {
+        Self(value.into())
+    }
+}
+#[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, From)]
+pub struct DownPosition(TokenLocation);
+impl DownPosition {
+    pub fn flipped(self) -> UpPosition {
+        UpPosition(self.0)
+    }
+}
+impl From<usize> for DownPosition {
+    fn from(value: usize) -> Self {
+        Self(value.into())
+    }
+}
+
+#[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, new)]
+pub struct UpKey {
+    pub index: Child,
+    pub pos: UpPosition,
+}
+#[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, new)]
+pub struct DownKey {
+    pub index: Child,
+    pub pos: DownPosition,
+}
+
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq)]
 pub enum DirectedPosition {
-    BottomUp(TokenLocation),
-    TopDown(TokenLocation),
+    BottomUp(UpPosition),
+    TopDown(DownPosition),
 }
 impl DirectedPosition {
     pub fn pos(&self) -> &TokenLocation {
         match self {
-            Self::BottomUp(pos) => pos,
-            Self::TopDown(pos) => pos,
+            Self::BottomUp(pos) => &pos.0,
+            Self::TopDown(pos) => &pos.0,
         }
     }
     pub fn flipped(self) -> Self {
         match self {
-            Self::BottomUp(pos) => Self::TopDown(pos),
-            Self::TopDown(pos) => Self::BottomUp(pos),
+            Self::BottomUp(pos) => Self::TopDown(pos.flipped()),
+            Self::TopDown(pos) => Self::BottomUp(pos.flipped()),
         }
     }
 }
@@ -45,13 +82,13 @@ impl DirectedKey {
             pos: pos.into(),
         }
     }
-    pub fn up(index: Child, pos: impl Into<TokenLocation>) -> Self {
+    pub fn up(index: Child, pos: impl Into<UpPosition>) -> Self {
         Self {
             index,
             pos: DirectedPosition::BottomUp(pos.into()),
         }
     }
-    pub fn down(index: Child, pos: impl Into<TokenLocation>) -> Self {
+    pub fn down(index: Child, pos: impl Into<DownPosition>) -> Self {
         Self {
             index,
             pos: DirectedPosition::TopDown(pos.into()),
@@ -72,6 +109,22 @@ impl From<Child> for DirectedKey {
         }
     }
 }
+impl From<UpKey> for DirectedKey {
+    fn from(key: UpKey) -> Self {
+        Self {
+            index: key.index,
+            pos: DirectedPosition::BottomUp(key.pos),
+        }
+    }
+}
+impl From<DownKey> for DirectedKey {
+    fn from(key: DownKey) -> Self {
+        Self {
+            index: key.index,
+            pos: DirectedPosition::TopDown(key.pos),
+        }
+    }
+}
 
 pub trait GetCacheKey: RootKey + LeafKey {
     fn leaf_key(&self) -> DirectedKey;
@@ -89,10 +142,12 @@ pub struct SplitKey {
     pub pos: NonZeroUsize,
 }
 impl SplitKey {
-    pub fn new(index: Child, pos: impl Into<NonZeroUsize>) -> Self {
+    pub fn new<P: TryInto<NonZeroUsize>>(index: Child, pos: P) -> Self 
+        where P::Error: Debug
+    {
         Self {
             index,
-            pos: pos.into(),
+            pos: pos.try_into().unwrap(),
         }
     }
 }

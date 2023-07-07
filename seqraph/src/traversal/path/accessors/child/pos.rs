@@ -1,6 +1,7 @@
 use crate::*;
 
 /// access to the position of a child
+#[auto_impl(&, &mut)]
 pub trait RootChildPos<R> {
     fn root_child_pos(&self) -> usize;
 }
@@ -52,12 +53,12 @@ impl RootChildPos<Start> for QueryRangePath {
         self.start.root_entry
     }
 }
-impl RootChildPos<End> for CachedQuery<'_> {
+impl RootChildPos<End> for QueryStateContext<'_> {
     fn root_child_pos(&self) -> usize {
         self.state.end.root_entry
     }
 }
-impl RootChildPos<Start> for CachedQuery<'_> {
+impl RootChildPos<Start> for QueryStateContext<'_> {
     fn root_child_pos(&self) -> usize {
         self.state.start.root_entry
     }
@@ -85,7 +86,7 @@ impl RootChildPosMut<End> for SearchPath {
         self.end.root_child_pos_mut()
     }
 }
-impl RootChildPosMut<End> for CachedQuery<'_> {
+impl RootChildPosMut<End> for QueryStateContext<'_> {
     fn root_child_pos_mut(&mut self) -> &mut usize {
         &mut self.state.end.sub_path.root_entry
     }

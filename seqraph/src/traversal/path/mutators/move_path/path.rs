@@ -35,7 +35,7 @@ pub trait MovePath<D: Direction, R: PathRole = End>:
         }
     }
 }
-impl MovePath<Right, End> for CachedQuery<'_> {
+impl MovePath<Right, End> for QueryStateContext<'_> {
     fn move_leaf<
         Trav: Traversable,
     >(
@@ -47,7 +47,7 @@ impl MovePath<Right, End> for CachedQuery<'_> {
             .advance_leaf(trav)
     }
 }
-impl MovePath<Left, End> for CachedQuery<'_> {
+impl MovePath<Left, End> for QueryStateContext<'_> {
     fn move_leaf<
         Trav: Traversable,
     >(

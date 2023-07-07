@@ -1,5 +1,6 @@
 use crate::*;
 
+#[auto_impl(&, &mut)]
 pub trait RootChild<R>: RootChildPos<R> {
     fn root_child<
         Trav: Traversable,
@@ -20,6 +21,24 @@ macro_rules! impl_child {
         }
     };
 }
+//impl<R: PathRole, P: RootChild<R>> RootChild<R> for &'_ P
+//    where P: RootChildPos<R>
+//{
+//    fn root_child<
+//        Trav: Traversable,
+//    >(&self, trav: &Trav) -> Child {
+//        (*self).root_child(trav)
+//    }
+//}
+//impl<R: PathRole, P: RootChild<R>> RootChild<R> for &'_ mut P
+//    where P: RootChildPos<R>
+//{
+//    fn root_child<
+//        Trav: Traversable,
+//    >(&self, trav: &Trav) -> Child {
+//        (*self).root_child(trav)
+//    }
+//}
 impl_child! { RootChild for QueryRangePath, self, _trav => self.root[self.root_child_pos()] }
 //impl_child! { RootChild for PrefixQuery, self, trav => self.root_child(trav) }
 //impl RootChild<End> for OverlapPrimer {
@@ -51,7 +70,7 @@ impl_child! { RootChild for RootedRolePath<R>, self, trav =>
     trav.graph().expect_child_at(self.path_root().location.to_child_location(RootChildPos::<R>::root_child_pos(&self.role_path)))
 }
 
-impl<'c, R: PathRole> RootChild<R> for CachedQuery<'c>
+impl<'c, R: PathRole> RootChild<R> for QueryStateContext<'c>
     where Self: RootChildPos<R>
 {
     fn root_child<
@@ -127,7 +146,7 @@ impl<R> PatternRootChild<R> for QueryRangePath
     where Self: RootChildPos<R>
 {
 }
-impl<R> PatternRootChild<R> for CachedQuery<'_>
+impl<R> PatternRootChild<R> for QueryStateContext<'_>
     where Self: RootChildPos<R>
 {
 }

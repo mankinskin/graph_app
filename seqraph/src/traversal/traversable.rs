@@ -28,6 +28,9 @@ macro_rules! impl_traversable_mut {
 pub(crate) use impl_traversable;
 pub(crate) use impl_traversable_mut;
 
+pub type GraphKindOf<T> = <T as Traversable>::Kind;
+pub type DirectionOf<T> = <GraphKindOf<T> as GraphKind>::Direction;
+
 pub trait Traversable: Sized + std::fmt::Debug {
     type Kind: GraphKind;
     type Guard<'a>: Traversable<Kind=Self::Kind> + Deref<Target=Hypergraph<Self::Kind>> where Self: 'a;
@@ -106,49 +109,6 @@ impl_traversable_mut! {
     self => self.graph.write().unwrap();
     <'a> RwLockWriteGuard<'a, Hypergraph>
 }
-impl<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> Traversable for Pather<Side> {
-    type Kind = BaseGraphKind;
-    type Guard<'a> = RwLockReadGuard<'a, Hypergraph<Self::Kind>> where Side: 'a, Self::Kind: 'a;
-    fn graph<'a>(&'a self) -> Self::Guard<'a> {
-        self.indexer.graph()
-    }
-}
-impl<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> TraversableMut for Pather<Side> {
-    type GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph<Self::Kind>> where Side: 'a, Self::Kind: 'a;
-    fn graph_mut<'a>(&'a mut self) -> Self::GuardMut<'a> {
-        self.indexer.graph_mut()
-    }
-}
-
-impl<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> Traversable for Splitter<Side> {
-    type Kind = BaseGraphKind;
-    type Guard<'a> = RwLockReadGuard<'a, Hypergraph<Self::Kind>> where Side: 'a, Self::Kind: 'a;
-    fn graph<'a>(&'a self) -> Self::Guard<'a> {
-        self.indexer.graph()
-    }
-}
-impl<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> TraversableMut for Splitter<Side> {
-    type GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph<Self::Kind>> where Side: 'a, Self::Kind: 'a;
-    fn graph_mut<'a>(&'a mut self) -> Self::GuardMut<'a> {
-        self.indexer.graph_mut()
-    }
-}
-
-impl<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> Traversable for Contexter<Side> {
-    type Kind = BaseGraphKind;
-    type Guard<'a> = RwLockReadGuard<'a, Hypergraph<Self::Kind>> where Side: 'a, Self::Kind: 'a;
-    fn graph<'a>(&'a self) -> Self::Guard<'a> {
-        self.indexer.graph()
-    }
-}
-
-impl<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> TraversableMut for Contexter<Side> {
-    type GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph<Self::Kind>> where Side: 'a, Self::Kind: 'a;
-    fn graph_mut<'a>(&'a mut self) -> Self::GuardMut<'a> {
-        self.indexer.graph_mut()
-    }
-}
-
 //impl_traversable! {
 //    impl <D: IndexDirection> for Reader<T, D>,
 //    self => self.graph.read().unwrap();

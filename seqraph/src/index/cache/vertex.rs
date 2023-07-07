@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct SplitVertexCache {
     pub positions: BTreeMap<NonZeroUsize, SplitPositionCache>,
 }
@@ -19,15 +19,13 @@ impl SplitVertexCache {
         self.positions.entry(pos)
             .or_default()
     }
-    pub fn offset_range_partition<'a, K: RangeRole>(&'a self, range: K::Range) -> Partition<K>
-    {
+    pub fn offset_range_partition<'a, K: RangeRole>(&'a self, range: K::Range) -> Partition<K> {
         range.get_splits(self).as_partition()
     }
     pub fn inner_offsets<'a: 't, 't, K: RangeRole<Mode = Trace>, P: AsPartition<K>>(
         ctx: TraceContext<'a>,
         part: P,
-    ) -> Vec<NonZeroUsize>
-    {
+    ) -> Vec<NonZeroUsize> {
         part.visit_partition(&ctx).map(|bundle|
             //let merges = range_map.range_sub_merges(start..start + len);
             bundle.patterns.into_iter().flat_map(|(_pid, info)|
@@ -123,7 +121,7 @@ impl SplitVertexCache {
         next
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct PatternSplitPos {
     pub inner_offset: Option<NonZeroUsize>,
     pub sub_index: usize,
@@ -155,11 +153,10 @@ impl ToVertexSplitPos for Vec<SubSplitLocation> {
         self.splits
     }
 }
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct SplitPositionCache {
     pub top: HashSet<SplitKey>,
     pub pattern_splits: VertexSplitPos,
-    //pub final_split: Option<FinalSplit>,
 }
 
 impl std::ops::Sub<PatternSubDeltas> for SplitPositionCache {

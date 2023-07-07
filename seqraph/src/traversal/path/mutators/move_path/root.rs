@@ -40,11 +40,11 @@ impl MoveRootPos<Left, End> for SearchPath {
         }
     }
 }
-impl MoveRootPos<Right, End> for CachedQuery<'_> {
+impl MoveRootPos<Right, End> for QueryStateContext<'_> {
     fn move_root_pos<
         Trav: Traversable,
     >(&mut self, _trav: &Trav) -> ControlFlow<()> {
-        let pattern = &self.cache.query_root;
+        let pattern = &self.ctx.query_root;
         if let Some(next) = TravDir::<Trav>::pattern_index_next(
             pattern.borrow() as &[Child],
             self.state.end.root_child_pos(),
@@ -57,11 +57,11 @@ impl MoveRootPos<Right, End> for CachedQuery<'_> {
         }
     }
 }
-impl MoveRootPos<Left, End> for CachedQuery<'_> {
+impl MoveRootPos<Left, End> for QueryStateContext<'_> {
     fn move_root_pos<
         Trav: Traversable,
     >(&mut self, _trav: &Trav) -> ControlFlow<()> {
-        let pattern = &self.cache.query_root;
+        let pattern = &self.ctx.query_root;
         if let Some(prev) = TravDir::<Trav>::pattern_index_prev(
             pattern.borrow() as &[Child],
             self.state.end.root_child_pos(),

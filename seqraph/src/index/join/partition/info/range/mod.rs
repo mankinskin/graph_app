@@ -6,6 +6,13 @@ pub mod splits;
 pub use splits::*;
 use crate::*;
 
+#[derive(Debug)]
+pub struct PatternRangeInfo<K: RangeRole> {
+    pub pattern_id: PatternId,
+    pub info: RangeInfo<K>,
+    pub perfect: <K::Perfect as BorderPerfect>::Boolean,
+}
+
 #[derive(Debug, Clone)]
 pub struct InnerRangeInfo<K: RangeRole>
     where K::Mode: ModeChildren::<K>

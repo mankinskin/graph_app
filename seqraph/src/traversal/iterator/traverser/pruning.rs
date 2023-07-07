@@ -5,11 +5,11 @@ pub struct PruningState {
     pub count: usize,
     pub prune: bool,
 }
-pub type PruningMap = HashMap<DirectedKey, PruningState>;
+pub type PruningMap = HashMap<UpKey, PruningState>;
 pub trait PruneStates {
     fn clear(&mut self);
     fn pruning_map(&mut self) -> &mut PruningMap;
-    fn prune_not_below(&mut self, root: DirectedKey) {
+    fn prune_not_below(&mut self, root: UpKey) {
         self.pruning_map().iter_mut()
             .filter(|(k, _)|
                 k.index.width > root.index.width ||
@@ -29,7 +29,7 @@ pub trait PruneStates {
                 v.prune = true;
             });
     }
-    fn prune_below(&mut self, root: DirectedKey) {
+    fn prune_below(&mut self, root: UpKey) {
         self.pruning_map().get_mut(&root).map(|entry| entry.prune = true);
     }
 }
@@ -44,5 +44,13 @@ impl<'a, Trav, S, O> PruneStates for OrderedTraverser<'a, Trav, S, O>
     }
     fn pruning_map(&mut self) -> &mut PruningMap {
         &mut self.pruning_map
+    }
+}
+impl<'a, 'b: 'a, I: TraversalIterator<'b>> PruneStates for TraversalContext<'a, 'b, I> {
+    fn clear(&mut self) {
+        self.iter.clear();
+    }
+    fn pruning_map(&mut self) -> &mut PruningMap {
+        self.iter.pruning_map()
     }
 }

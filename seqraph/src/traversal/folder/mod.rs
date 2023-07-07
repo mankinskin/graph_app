@@ -1,25 +1,12 @@
 use crate::*;
-use super::*;
 
 pub mod state;
 pub use state::*;
 
-pub mod tracer;
-pub use tracer::*;
+use super::cache::trace::Trace;
 
-pub type Folder<Ty>
-    = <Ty as DirectedTraversalPolicy>::Trav;
-
-pub trait TraversalFolder<
-    S: DirectedTraversalPolicy<Trav=Self>,
->: Sized + Traversable {
-    type NodeVisitor: NodeVisitor;
-
-    //fn map_state(
-    //    &self,
-    //    acc: ControlFlow<Self::Break, Self::Continue>,
-    //    node: TraversalState<R, Q>
-    //) -> ControlFlow<Self::Break, Self::Continue>;
+pub trait TraversalFolder: Sized + Traversable {
+    type Iterator<'a>: TraversalIterator<'a, Trav=Self> + From<&'a Self> where Self: 'a;
 
     //#[instrument(skip(self))]
     fn fold_query<P: IntoPattern>(
@@ -27,101 +14,82 @@ pub trait TraversalFolder<
         query_pattern: P,
     ) -> Result<TraversalResult, (NoMatch, QueryRangePath)> {
         let query_pattern = query_pattern.into_pattern();
-        debug!("fold {:?}", query_pattern);
-        let query = QueryState::new::<<Self::Kind as GraphKind>::Direction, _>(
-            query_pattern.borrow() as &[Child]
-        )
-        .map_err(|(err, q)| (err, q.to_rooted(query_pattern.clone())))?;
-        let start_index = query.clone().to_rooted(query_pattern.clone()).role_leaf_child::<End, _>(self);
+        //debug!("fold {:?}", query_pattern);
+        let query = QueryState::new::<Self::Kind, _>(
+                query_pattern.borrow() as &[Child]
+            )
+            .map_err(|(err, q)|
+                (err, q.to_rooted(query_pattern.clone()))
+            )?;
+        let start_index = query.clone()
+            .to_rooted(query_pattern.clone())
+            .role_leaf_child::<End, _>(self);
+        let query_root = QueryContext::new(query_pattern);
 
-        let start = StartState {
-            index: start_index,
-            query: query.clone(),
-        };
-        let mut states = OrderedTraverser::<_, _, Self::NodeVisitor>::new(self);
-        let (start_key, mut cache) = TraversalCache::new(&start, query_pattern.clone());
-        states.extend(
-            states.query_start(start_key, query.clone().to_cached(&mut cache), start)
+        //let query_ctx = QueryContext::new(query_pattern.clone());
+        let (mut start, mut cache) = TraversalCache::new(start_index, query.clone());
+        let mut states = Self::Iterator::from(self);
+        let init = {
+            let mut ctx = TraversalContext::new(&query_root, &mut cache, &mut states);
+            start.next_states(&mut ctx)
                 .into_states()
                 .into_iter()
                 .map(|n| (1, n))
-        );
+        };
+        states.extend(init);
         let mut end_states = vec![];
         let mut max_width = 0;
 
         // 1. expand first parents
         // 2. expand next children/parents
 
-        while let Some((depth, next_states)) = states.next_states(&mut cache) {
-            match next_states {
-                NextStates::End(next) => {
-                    let state = next.inner;
-                    debug!("{:#?}", state);
-                    let width = state.width();
-                    if width > start_index.width() && width >= max_width {
-                        match &state.kind {
-                            EndKind::Range(p) => {
-                                let root_entry = p.path.role_root_child_location::<Start>().sub_index;
-                                cache.add_path(
-                                    self,
-                                    root_entry,
-                                    &p.path,
-                                    state.root_pos,
-                                    true,
-                                )
-                            },
-                            EndKind::Prefix(p) =>
-                                cache.add_path(
-                                    self,
-                                    0,
-                                    &p.path,
-                                    state.root_pos,
-                                    true,
-                                ),
-                            _ => {}
-                        }
-                        // stop other paths not with this root
-                        //if !matches!(state.kind, EndKind::Complete(_)) && cache.expect(&state.root_key()).num_bu_edges() < 2 {
-                        //}
-                        if let Some(root_key) = state.waiting_root_key() {
+        while let Some((depth, tstate)) = states.next() {
+            if let Some(next_states) = {
+                let mut ctx = TraversalContext::new(&query_root, &mut cache, &mut states);
+                tstate.next_states(&mut ctx)
+            } {
+                if let NextStates::End(StateNext { inner: end, .. }) = next_states {
+                    //debug!("{:#?}", state);
+                    if end.width() > start_index.width() && end.width() >= max_width {
+                        end.trace(self, &mut cache);
+                        if let Some(root_key) = end.waiting_root_key() {
                             // this must happen before simplification
                             states.extend(
                                 cache.continue_waiting(&root_key)
                             );
                         }
-
-                        if width > max_width {
-                            max_width = width;
+                        if end.width() > max_width {
+                            max_width = end.width();
                             end_states.clear();
                         }
-                        let is_final = state.reason == EndReason::QueryEnd && matches!(state.kind, EndKind::Complete(_));
-                        end_states.push(state);
+                        let is_final = end.reason == EndReason::QueryEnd
+                            && matches!(end.kind, EndKind::Complete(_));
+                        end_states.push(end);
                         if is_final {
                             break;
                         }
                     } else {
                         // stop other paths with this root
-                        states.prune_below(state.root_key());
+                        states.prune_below(end.root_key());
                     }
-                },
-                _ => {
+                } else {
                     states.extend(
                         next_states.into_states()
                             .into_iter()
-                            .map(|nstate| (depth, nstate))
+                            .map(|nstate| (depth + 1, nstate))
                     );
-                },
+                }
             }
         }
-        debug!("end roots: {:#?}", end_states.iter()
-            .map(|s| {
-                let root = s.root_parent();
-                (root.index(), root.width(), s.root_pos.pos)
-            }).collect_vec()
-        );
+        //debug!("end roots: {:#?}", end_states.iter()
+        //    .map(|s| {
+        //        let root = s.root_parent();
+        //        (root.index(), root.width(), s.root_pos.0)
+        //    }).collect_vec()
+        //);
         Ok(if end_states.is_empty() {
             TraversalResult {
-                query: query.to_rooted(query_pattern),
+                query: query.to_rooted(query_root.query_root),
                 result: FoldResult::Complete(start_index)
             }
         } else {
@@ -129,7 +97,7 @@ pub trait TraversalFolder<
                 .map(|state|
                     FinalState {
                         num_parents: cache
-                            .get(&state.root_key())
+                            .get(&DirectedKey::from(state.root_key()))
                             .unwrap()
                             .num_parents(),
                         state,
@@ -154,13 +122,12 @@ pub trait TraversalFolder<
                         root,
                         end_pos: end_pos.into(),
                         end_states,
-                        start: start_key.index,
+                        start: start.key.index,
                     };
-                    //state.trace_subgraph(self);
                     FoldResult::Incomplete(state)
                 };
             TraversalResult {
-                query: query.to_rooted(query_pattern),
+                query: query.to_rooted(query_root.query_root),
                 result: found_path,
             }
         })

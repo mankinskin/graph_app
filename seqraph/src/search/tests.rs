@@ -103,7 +103,7 @@ fn find_ancestor1() {
         abcd,
         ababababcdefghi,
         ..
-     } = &*context();
+    } = &*context();
     let a_bc_pattern = vec![Child::new(a, 1), Child::new(bc, 2)];
     let ab_c_pattern = vec![Child::new(ab, 2), Child::new(c, 1)];
     let a_bc_d_pattern = vec![Child::new(a, 1), Child::new(bc, 2), Child::new(d, 1)];
@@ -211,7 +211,6 @@ fn find_ancestor2() {
                     start: by,
                     end_pos: 3.into(),
                     cache: TraversalCache {
-                        query_root: query.clone(),
                         entries: HashMap::from_iter([
                             (xabyz.index, VertexCache {
                                 index: xabyz,
@@ -411,7 +410,6 @@ fn find_ancestor3() {
                     start: ab,
                     end_pos: 3.into(),
                     cache: TraversalCache {
-                        query_root: query.clone(),
                         entries: HashMap::from_iter([
                             //(xabyz.index, VertexCache {
                             //    index: xabyz,

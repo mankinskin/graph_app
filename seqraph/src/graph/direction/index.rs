@@ -1,9 +1,6 @@
 use std::ops::{Range, RangeInclusive};
 
-use crate::{
-    index::*,
-};
-pub use crate::direction::*;
+use crate::*;
 
 pub trait IndexDirection: MatchDirection + Clone {
     type Opposite: IndexDirection;

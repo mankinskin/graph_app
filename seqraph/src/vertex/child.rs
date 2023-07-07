@@ -40,11 +40,11 @@ impl Child {
     pub fn to_child_location(self, sub: SubLocation) -> ChildLocation {
         ChildLocation::new(self, sub.pattern_id, sub.sub_index)
     }
-    pub fn top_down(self, pos: impl Into<TokenLocation>) -> DirectedKey {
-        DirectedKey::down(self, pos)
+    pub fn down_key(self, pos: impl Into<DownPosition>) -> DownKey {
+        DownKey::new(self, pos.into())
     }
-    pub fn bottom_up(self, pos: impl Into<TokenLocation>) -> DirectedKey {
-        DirectedKey::up(self, pos)
+    pub fn up_key(self, pos: impl Into<UpPosition>) -> UpKey {
+        UpKey::new(self, pos.into())
     }
 }
 impl std::cmp::PartialOrd for Child {

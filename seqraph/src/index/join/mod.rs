@@ -8,6 +8,8 @@ pub mod delta;
 pub use delta::*;
 pub mod context;
 pub use context::*;
+pub mod partition;
+pub use partition::*;
 
 #[derive(Debug, Default, Deref, DerefMut)]
 pub struct SplitFrontier {
@@ -25,21 +27,23 @@ impl Extend<SplitKey> for SplitFrontier {
         self.queue.extend(iter)
     }
 }
+// how to get child splits of offsets induced by inner ranges?
+// - augment to split graph
+// or - locate dynamically (child is guaranteed to exist because inner range offset are always consistent)
 impl Indexer {
     pub fn join_subgraph(
         &mut self,
-        mut subgraph: FoldState,
+        fold_state: FoldState,
     ) -> Child {
-        let splits = subgraph.into_split_graph(self);
-        // todo: how to get child splits of offsets induced by inner ranges?
-        // - augment to split graph
-        // or - locate dynamically (child is guaranteed to exist because inner range offset are always consistent)
+        let root = fold_state.root;
+        let splits = SplitCache::new(self, fold_state);
+
         let mut frontier = SplitFrontier::new(splits.leaves.iter().cloned().rev());
         let mut final_splits = HashMap::default();
         while let Some(key) = {
             frontier.pop_front()
                 .and_then(|key|
-                    (key.index != subgraph.root).then(|| key)
+                    (key.index != root).then(|| key)
                 )
         } {
             if final_splits.get(&key).is_none() {
@@ -57,17 +61,16 @@ impl Indexer {
                     final_splits.insert(key, split);
                 }
             }
-            //todo: store final split in frontier
             frontier.extend(
                 splits.expect(&key).top.iter()
                     .sorted_by(|a, b| a.index.width().cmp(&b.index.width()))
                     .cloned()
             );
         }
-        let entry = splits.entries.get(&subgraph.root.index()).unwrap();
+        let entry = splits.entries.get(&root.index()).unwrap();
         let mut ctx = JoinContext::new(
             self.graph_mut(),
-            subgraph.root,
+            root,
             entry,
             &final_splits,
         );

@@ -48,6 +48,7 @@ pub use {
 };
 #[allow(unused)]
 pub use {
+    auto_impl::auto_impl,
     tracing::*,
     linked_hash_set::*,
     linked_hash_map::*,

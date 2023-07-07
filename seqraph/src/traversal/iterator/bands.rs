@@ -1,10 +1,4 @@
-use std::collections::VecDeque;
-
-use itertools::Itertools;
-
-use crate::{PatternLocation, ChildLocation, Child, Wide};
-
-use super::*;
+use crate::*;
 
 pub trait BandExpandingPolicy<
     Trav: Traversable,
@@ -22,19 +16,19 @@ pub struct PostfixExpandingPolicy<D: MatchDirection> {
 pub trait BandIterator<
     'a,
     Trav: Traversable + 'a,
-    P: BandExpandingPolicy<Trav>,
 >: Iterator<Item = (ChildLocation, Child)>
 {
+    type Policy: BandExpandingPolicy<Trav>;
     fn new(trav: &'a Trav, root: Child) -> Self;
     fn trav(&self) -> &'a Trav;
     /// get all postfixes of index with their locations
     fn next_children(&self, index: Child) -> Vec<(ChildLocation, Child)> {
-        P::map_batch(
+        Self::Policy::map_batch(
             self.trav().graph()
                 .expect_child_patterns(index)
                 .iter()
                 .map(|(pid, pattern)|
-                    P::map_band(
+                    Self::Policy::map_band(
                         PatternLocation::new(index, *pid),
                         pattern.borrow() as &[Child]
                     )
@@ -73,11 +67,12 @@ pub type PostfixIterator<'a, Trav>
     = BandExpandingIterator<'a, Trav, PostfixExpandingPolicy<<Trav as GraphKind>::Direction>>;
 
 
-impl<'a, Trav, P> BandIterator<'a, Trav, P> for BandExpandingIterator<'a, Trav, P>
+impl<'a, Trav, P> BandIterator<'a, Trav> for BandExpandingIterator<'a, Trav, P>
 where
     Trav: Traversable,
     P: BandExpandingPolicy<Trav>,
 {
+    type Policy = P;
     fn new(trav: &'a Trav, root: Child) -> Self {
         Self {
             trav,

@@ -57,11 +57,6 @@ impl BorderPerfect for (Option<PatternId>, Option<PatternId>) {
         )
     }
 }
-pub type OffsetsOf<K> = <K as RangeRole>::Offsets;
-pub type BooleanPerfectOf<K> = <<K as RangeRole>::Perfect as BorderPerfect>::Boolean;
-pub type ChildrenOf<K> = <K as RangeRole>::Children;
-pub type RangeOf<K> = <K as RangeRole>::Range;
-//pub type SubOffsetsOf<K> = <K as RangeRole>::SubOffsets;
 
 pub struct BorderInfo  {
     sub_index: usize,
@@ -288,20 +283,24 @@ impl<'a, M: InVisitMode> VisitBorders<'a, In<M>> for (BorderInfo, BorderInfo) {
         )
     }
     fn inner_range_offsets(&self, pattern: &Pattern) -> Option<OffsetsOf<In<M>>> {
-        let a = VisitBorders::<Pre<M>>::inner_range_offsets(&self.0, pattern);
-        let b = VisitBorders::<Post<M>>::inner_range_offsets(&self.1, pattern);
+        let a = VisitBorders::<Post<M>>::inner_range_offsets(&self.0, pattern);
+        let b = VisitBorders::<Pre<M>>::inner_range_offsets(&self.1, pattern);
         a.map(|lio|
             (
                 lio,
-                b.unwrap_or(
-                    VisitBorders::<Post<M>>::inner_range_offsets(&self.1, pattern).unwrap()
-                )
+                b.unwrap_or({
+                    let w = pattern[self.1.sub_index].width();
+                    let o = self.1.outer_offset.map(|o|
+                        o.get() + w
+                    ).unwrap_or(w);
+                    NonZeroUsize::new(o).unwrap()
+                })
             )
         )
         .or_else(||
             b.map(|rio|
                 (
-                    VisitBorders::<Pre<M>>::inner_range_offsets(&self.0, pattern).unwrap(),
+                    self.0.outer_offset.unwrap(),
                     rio,
                 )
             )
