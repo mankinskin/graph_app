@@ -1,0 +1,219 @@
+\documentclass[10pt]{report}
+
+% Language setting
+% Replace `english' with e.g. `spanish' to change the document language
+\usepackage[english]{babel}
+
+% Set page size and margins
+% Replace `letterpaper' with `a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+% Useful packages
+\usepackage{amsmath, amsthm}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{tkz-graph}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+%\usepackage{unicode-math} 
+
+%\usepackage{mathfont} 
+%\usepackage{unicode-math} 
+%\usepackage{fourier}
+%\usepackage{kpfonts}
+%\usepackage{mathptmx}
+%\usepackage{euler}
+%\usepackage{newtxmath}
+%\usepackage{tgtermes}
+%\usepackage{tgschola}
+%\usepackage{tgpagella}
+%\usepackage{lmodern}
+%\usepackage{bookman}
+%\usepackage[ebgaramond]{fontsetup}
+%\usepackage[cmintegrals,cmbraces]{newtxmath}
+%\usepackage{ebgaramond-maths}
+%\usepackage{tgbonum}
+
+\usepackage{blindtext}
+\usepackage{subfiles}
+\usepackage{tikz}
+\DeclareMathSizes{10}{12}{12}{9}
+
+%\usepackage{euler}
+
+\usepackage{microtype}
+\DisableLigatures{encoding = *, family = *}
+\everymath{\displaystyle}
+
+
+\title{Your Paper}
+\author{Linus Behrbohm}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+// write abstract
+
+\end{abstract}
+
+\newpage
+
+% table of contents 
+\renewcommand*\contentsname{Outline}
+\tableofcontents
+
+\newpage
+
+\chapter{Introduction}
+Latest neural language models (NLMs) based on the transformer architecture have set new 
+standards for natural language generation and translation. However neural models  
+remain notoriously hard to interpret and are still prone to exhibiting behaviour 
+inconsistent with reality, making it difficult to train reliable models.
+This thesis describes a method for constructing a structured formal grammar for a corpus 
+of training sequences capturing all of the syntactic relationships between subsequences 
+of the corpus, as a transformer would using self-attention.
+We will walk through the role of self-attention in LMs and previous methods
+of grammar induction and NLP on grammars. We will describe the 
+algorithm for inducing our grammatical structure.
+
+\section{Problem}
+\begin{itemize}
+    \item NLMs suffer from hallucinations
+    \item NLMs are hard to explain
+    \item NLMs are hard to update
+\end{itemize}
+\section{Solution}
+\begin{itemize}
+    \item use a model without hallucinations for reconstrucing a training corpus
+    \item use an explicit symbolic model to help with explainability and updates
+    \item allow for creative outputs under controlled conditions
+\end{itemize}
+\section{Graphics}
+\begin{itemize}
+    \item visualize attention matrix of transformers
+    \item ambiguous grammar to shared packet parse forest
+\end{itemize}
+
+\section{Background}
+
+\subsection{Information Retrieval}
+\subsection{Distributional Semantics}
+
+In the research field of distributional semantics, the similarity between linguistic 
+items is defined as the the similarity of their respective context distributions in a 
+given text corpus. The so-called distributional hypothesis postulates that "items which 
+appear in similar contexts are similar in their semantic meaning" or "words are 
+characterized by the company they keep".
+Previous methods have mainly focussed on embedding tokens from sequences in a 
+high-dimensional vector space in a way that captures the distributional features of each 
+token. These token embeddings can then be used to estimate the most likely context tokens 
+and can be easily compared in similarity of their (distributional) semantic value.
+Models based on vector embeddings have successfully been applied to a variety of 
+problems, i.e. semantic search, language translation, question answering and many others.
+
+\subsection{Self-Attention}
+The most notable innovation in the recently introduced large language models (LLMs) called transformers is their heavy use of the attention mechanism. Intuitively, these models use a trainable set of parameters to weigh all pairwise connections between all individual tokens within a context window. These weights are then used to estimate the most likely token being observed in a given context of tokens.
+In a process called token embedding, each token is mapped to a high-dimensional vector representation. For each positional slot in the context window a unique constant value is added to these embeddings, disambiguing the different positions a token can occur in.
+Each of these embeddings is a point in a hyperdimensional space, representing each of the tokens at a given position.
+For calculating the attention relationship between two positional token embeddings, these embeddings are mapped to two different spaces using linear transformation matrices, resulting in points representing both the incoming and outgoing roles in the pairwise attention relationship. The attention value from one positioned token to another is then essentially given by the dot product between these two representations.
+Optimizing these linear transformations to maximize the attention weights for all token pairs within the training sequences moves these transformed points closer together for pairs of positioned tokens which appear more frequently.
+
+\subsection{Hallucinations and Creativity}
+\begin{itemize}
+    \item models can generate inconsistent outputs
+    \item required tradeoff to enable novel creative outputs
+\end{itemize}
+
+\subsection{N-Gram Language models}
+Early research of language models, 
+\begin{itemize}
+    \item no hallucinations or creativity, instead issues with sparsity
+    \item long range relationships require large n-grams with high cost
+    \item hierarchical n-grams can use multiple context windows widths
+    \item use markov processes to predict new tokens
+    \item can be smoothed to estimate unknown sequences for creativity, at cost of hallucinations
+\end{itemize}
+\paragraph{Katz Back-Off Model}
+\begin{itemize}
+    \item able to find largest n-gram to predict next token
+\end{itemize}
+\paragraph{Markov-Processes}
+\begin{itemize}
+    \item only require looking at one node at a time to make prediction
+\end{itemize}
+\paragraph{Probabilistic Context-Free Grammars}
+\begin{itemize}
+    \item apply stochastic weighing to grammar parsing and generation
+\end{itemize}
+\paragraph{Counting}
+\begin{itemize}
+    \item 
+\end{itemize}
+\subsection{Compression}
+\begin{itemize}
+    \item relies on replacing repetitions with special symbols to avoid redundancy
+    \item useful to decrease hierarchical n-gram size
+    \item compressed representation is a grammar generating the uncompressed input
+    \item form of grammar induction
+\end{itemize}
+\subsection{Grammar Induction}
+\begin{itemize}
+    \item
+\end{itemize}
+\subsection{Explainability of Language Models}
+\begin{itemize}
+    \item provides explanations for predictions
+    \item makes it easy to find cause for behavior
+\end{itemize}
+\paragraph{GLR-Parser}
+The Generalized Left Right (GLR) Parser is a parsing algorithm that is able to parse 
+ambiguous
+and non-deterministic grammars \cite{lang1974deterministic}. It is able to do so by tracking multiple parse trees in a graph-structured stack.
+\paragraph{Shared-Packet Parse Forests}
+
+\paragraph{Grammar Induction}
+
+\section{Related Methods}
+\paragraph{Sequitur}
+The Sequitur algorithm \cite{nevill1997identifying} is a method of grammar induction 
+usable for data compression and discovery of lexical structure. The algorithm 
+recursively replaces repeated sections in a given input string with new grammar rules, iteratively extending a context-free grammar yielding the original string. The Sequitur algorithm enforces two constraints during its operation:
+\begin{itemize}
+    \item \textit{Digram Uniqueness}: each subsequent pair of symbols occurs at most once in all rules of the grammar. This constraint prevents redundant digrams in the grammar's rules.
+    \item \textit{Rule Utility}: Every rule is used at least twice. This constraint prevents redundant rules.
+\end{itemize}
+These constraints not only reduce the size of the grammar, allowing for compression, but also capture some of the lexical structure in the original string. Although the algorithm operates in linear space and time, it does not capture all lexical relationships of repeated substrings if there exist overlapping repetitions in the original string. The Sequitur algorithm always replaces the left-most repetition with a non-terminal symbol and does not consider any repetitions starting from within this replaced substring. This causes relationships of some repeated phrases to not be captured, which poses a problem when looking for the complete distribution of contexts of arbitrary sequences, as not all sequences are fully linked with their contexts.
+To relieve this issue we introduce a new constraint on the grammar induction, which enforces that for each 
+
+
+\paragraph{Re-Pair}
+\paragraph{R-Trees}
+\paragraph{Top-Trees}
+\paragraph{Byte-Pair Encoding}
+\paragraph{Sequence Alignment}
+\paragraph{Hierarchical N-Grams}
+\paragraph{Recursive Hypergraph}
+\newpage
+
+\subfile{chapter2}
+
+\section{Analysis}
+\subsection{Search}
+\subsection{Insert}
+
+\section{Application}
+\subsection{Reconstruction}
+\subsection{Update Training Data}
+\subsection{Reconstruct Context}
+\subsection{Similarity}
+\subsection{Predict Context}
+
+\section{Conclusion}
+
+
+\bibliographystyle{alpha}
+\bibliography{bibliography.bib}
+%\nocite{*} % allows for uncited references
+
+\end{document}
