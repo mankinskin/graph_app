@@ -1,0 +1,156 @@
+
+%\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+
+\usepackage[tmargin=2cm,rmargin=1in,lmargin=1in,margin=0.85in,bmargin=2cm,footskip=.2in]{geometry}
+\usepackage{amsmath,amsfonts,amsthm,amssymb,mathtools}
+\usepackage{mathtools}
+\usepackage{hyperref,theoremref}
+\hypersetup{
+	pdftitle={Assignment},
+	colorlinks=true, linkcolor=doc!90,
+	bookmarksnumbered=true,
+	bookmarksopen=true
+}
+\usepackage{multicol,array}
+\usepackage{tikz-cd}
+\usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+\usepackage{comment} % enables the use of multi-line comments (\ifx \fi) 
+\usepackage{import}
+\usepackage{microtype}
+\usepackage{fancyhdr}
+\usepackage{tikzsymbols}
+\renewcommand\qedsymbol{$\Laughey$}
+%\usepackage{graphicx}
+%\usepackage{latexsym}
+%\usepackage[dvips]{graphics}
+%\usepackage{pgf}
+%\usepackage[dcucite]{harvard}
+%\usepackage[english]{babel}
+\usepackage{tabularray}
+%\UseTblrLibrary{siunitx}
+
+\usepackage[scaled]{helvet}
+\usepackage{tkz-graph}
+%\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+%\usepackage{unicode-math} 
+%\usepackage{xstring}
+%\usepackage{expl3}
+%\usepackage{xparse}
+\usepackage{xcolor}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+
+\usepackage{bookmark}
+\usepackage{soul}
+\DeclareRobustCommand{\hlc}[2]{{\sethlcolor{#1}\hl{#2}}}
+\usepackage{caption}
+\DeclareCaptionType{equ}[][]
+
+%\usepackage{listings}
+%\lstset{language=C}
+\usepackage{interval} 
+\intervalconfig {
+    soft open fences,
+    separator symbol =;,
+}
+\usepackage{mathtools}
+\DeclarePairedDelimiter\ceil{\lceil}{\rceil}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+
+\usepackage{todonotes}
+\usepackage{blindtext}
+\usepackage{subfiles}
+\usepackage{tikz}
+
+\usetikzlibrary{
+  arrows,backgrounds,calc,trees,graphs,graphdrawing,positioning, matrix,fit,tikzmark}
+\usegdlibrary{layered}
+
+\setlength\parskip{\baselineskip}
+
+%\usepackage{algpseudocode}
+%\usepackage{algorithm}
+%
+%% algorithm "match environment"
+%\algnewcommand\algorithmicmatch{\textbf{match}}
+%\algnewcommand\algorithmiccase{\textbf{case}}
+%\algnewcommand\algorithmicassert{\texttt{assert}}
+%\algnewcommand\Assert[1]{\State \algorithmicassert(#1)}%
+%
+%\algdef{SE}[MATCH]{Match}{EndMatch}[1]{\algorithmicmatch\ #1\ \algorithmicdo}{\algorithmicend\ \algorithmicmatch}%
+%\algdef{SE}[CASE]{Case}{EndCase}[1]{\algorithmiccase\ #1:}{
+%    \algorithmicend\ \algorithmiccase%
+%}%
+%
+%\algtext*{EndMatch}%
+%\algtext*{EndCase}%
+
+%\bibliographystyle{harvard} % change this for alternative citation options. 
+
+
+%%%% Templates
+
+\input{template/preamble.tex}
+%\input{template/macros.tex}
+%\input{template/letterfonts.tex}
+
+%END IMPORTS
+
+\DisableLigatures{encoding = *, family = *}
+\everymath{\displaystyle}
+
+% set up page size. 
+%\sloppy
+%\setlength{\textheight}{630pt}
+%\setlength{\textwidth}{15cm}
+%\setlength{\oddsidemargin}{42pt}
+%\setlength{\evensidemargin}{-22pt}
+
+
+%\setlength{\headrulewidth}{0.4pt}
+%\setlength{\footrulewidth}{0.4pt}
+
+%\makeatletter
+%\def\@makechapterhead#1{%
+%  \vspace*{10\p@}%
+%%  {\parindent \z@ \centering \reset@font
+%  {\parindent \z@ \reset@font        
+%		\par\nobreak
+%        \vspace*{2\p@}%
+%        {\Huge \bfseries \thechapter\quad #1\par\nobreak}
+%        \par\nobreak
+%        \vspace*{2\p@}%
+%    \vskip 40\p@
+%    %\vskip 100\p@
+%  }}
+%\def\@makeschapterhead#1{%
+%  \vspace*{10\p@}%
+%  {\parindent \z@ \reset@font
+%        \par\nobreak
+%        \vspace*{2\p@}%
+%        {\Huge \bfseries #1\par\nobreak}
+%        \par\nobreak
+%        \vspace*{2\p@}%
+%    \vskip 40\p@
+%  }}
+%\makeatother
+
+
+\pagestyle{fancy}
+%\fancyhead{} % clear all fields
+%\fancyhead[LO,RE]{\thepage}
+
+%\renewcommand{\headrulewidth}{0.4pt} %obere Trennlinie
+\renewcommand{\footrulewidth}{-0.4pt} %untere Trennlinie
+
+%\renewcommand{\chaptermark}[1]{ \markboth{#1}{} }
+
+%\lhead 
+
+%\newenvironment{definition}[1]{\vspace{0.5cm} \hspace{0.5cm} \begin{minipage}{13cm} {\sc Definition (#1)}  \begin{sf}}{\end{sf} \end{minipage} \vspace{.7cm}}
+%\newenvironment{notlist}{\setlength{\columnsep}{1cm} \begin{multicols}{2}\begin{list}{}{\setlength{\itemsep}{0pt}%
+%		\setlength{\labelwidth}{12pt}%
+%		\setlength{\leftmargin}{20pt}}}{\end{list}\end{multicols}}
+
+\newcommand{\NN}{\mathbb{N}}

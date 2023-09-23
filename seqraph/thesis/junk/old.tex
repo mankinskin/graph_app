@@ -1,0 +1,114 @@
+\documentclass[11pt]{report}
+
+% Language setting
+% Replace `english' with e.g. `spanish' to change the document language
+\usepackage[english]{babel}
+
+% Set page size and margins
+% Replace `letterpaper' with `a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+% Useful packages
+\usepackage{amsmath, amsthm}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{tkz-graph}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage{unicode-math} 
+\usepackage{xstring}
+\usepackage{expl3}
+\usepackage{xparse}
+\usepackage{multicol}
+\usepackage{xcolor}
+\usepackage{soul}
+\DeclareRobustCommand{\hlc}[2]{{\sethlcolor{#1}\hl{#2}}}
+\usepackage{caption}
+\DeclareCaptionType{equ}[][]
+\usepackage{listings}
+\lstset{language=C}
+\usepackage{interval} 
+\intervalconfig {
+    soft open fences,
+    separator symbol =;,
+}
+\usepackage{mathtools}
+\DeclarePairedDelimiter\ceil{\lceil}{\rceil}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+\usepackage{todonotes}
+
+%\setmathfont{Libertinus Math}
+
+%\usepackage{mathptmx} 
+%\usepackage{unicode-math} 
+%\usepackage{fourier}
+%\usepackage{kpfonts}
+%\usepackage{mathptmx}
+%\usepackage{euler}
+%\usepackage{newtxmath}
+%\usepackage{tgtermes}
+%\usepackage{tgschola}
+%\usepackage{tgpagella}
+%\usepackage{lmodern}
+%\usepackage{bookman}
+%\usepackage[ebgaramond]{fontsetup}
+%\usepackage[cmintegrals,cmbraces]{newtxmath}
+%\usepackage{ebgaramond-maths}
+%\usepackage{tgbonum}
+\usepackage{blindtext}
+\usepackage{subfiles}
+\usepackage{tikz}
+
+\usetikzlibrary{arrows,backgrounds,calc,trees,graphs,graphdrawing,positioning, matrix, fit}
+\usegdlibrary{layered}
+
+\usepackage{algpseudocode}
+\usepackage{algorithm}
+%\DeclareMathSizes{10}{12}{12}{9}
+
+%\usepackage{euler}
+
+% algorithm "match environment"
+\algnewcommand\algorithmicmatch{\textbf{match}}
+\algnewcommand\algorithmiccase{\textbf{case}}
+\algnewcommand\algorithmicassert{\texttt{assert}}
+\algnewcommand\Assert[1]{\State \algorithmicassert(#1)}%
+
+\algdef{SE}[MATCH]{Match}{EndMatch}[1]{\algorithmicmatch\ #1\ \algorithmicdo}{\algorithmicend\ \algorithmicmatch}%
+\algdef{SE}[CASE]{Case}{EndCase}[1]{\algorithmiccase\ #1:}{
+    \algorithmicend\ \algorithmiccase%
+}%
+
+\algtext*{EndMatch}%
+\algtext*{EndCase}%
+
+\usepackage{microtype}
+
+%END IMPORTS
+
+\DisableLigatures{encoding = *, family = *}
+\everymath{\displaystyle}
+
+
+%% ###########################
+\title{Interpretable Language Model based on compressing N-Gram Grammars}
+\author{Linus Behrbohm}
+
+\begin{document}
+\maketitle
+
+% table of contents 
+\renewcommand*\contentsname{Outline}
+\tableofcontents
+
+\newpage
+
+\chapter{Introduction}
+
+
+
+\bibliographystyle{alpha}
+\bibliography{bibliography.bib}
+%\nocite{*} % allows for uncited references
+
+\end{document}

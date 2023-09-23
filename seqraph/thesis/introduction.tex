@@ -1,0 +1,46 @@
+
+\chapter{Introduction}
+
+Latest neural language models (NLMs) based on the transformer architecture have set new 
+standards for natural language generation and translation. However neural models  
+remain notoriously hard to interpret and are still prone to exhibiting behaviour 
+inconsistent with reality, making it difficult to train reliable models.
+This thesis describes a method for constructing a structured formal grammar for a corpus 
+of training sequences capturing all of the syntactic relationships between subsequences 
+of the corpus, as a transformer would using self-attention.
+We will walk through the role of self-attention in LMs and previous methods
+of grammar induction and NLP on grammars. We will describe the 
+algorithm for inducing our grammatical structure.
+
+
+\section{Distributional Semantics}
+
+In the research field of distributional semantics, the similarity between linguistic 
+items is defined as the the similarity of their respective context distributions in a 
+given text corpus. The so-called distributional hypothesis postulates that "items which 
+appear in similar contexts are similar in their semantic meaning" or "words are 
+characterized by the company they keep".
+Previous methods have mainly focussed on embedding tokens from sequences in a 
+high-dimensional vector space in a way that captures the distributional features of each 
+token. These token embeddings can then be used to estimate the most likely context tokens 
+and can be easily compared in similarity of their (distributional) semantic value.
+Models based on vector embeddings have successfully been applied to a variety of 
+problems, i.e. semantic search, language translation, question answering and many others.
+
+\section{Self-Attention}
+The most notable innovation in the recently introduced large language models (LLMs) called transformers is their heavy use of the attention mechanism. Intuitively, these models use a trainable set of parameters to weigh all pairwise connections between all individual tokens within a context window. These weights are then used to estimate the most likely token being observed in a given context of tokens.
+In a process called token embedding, each token is mapped to a high-dimensional vector representation. For each positional slot in the context window a unique constant value is added to these embeddings, disambiguing the different positions a token can occur in.
+Each of these embeddings is a point in a hyperdimensional space, representing each of the tokens at a given position.
+For calculating the attention relationship between two positional token embeddings, these embeddings are mapped to two different spaces using linear transformation matrices, resulting in points representing both the incoming and outgoing roles in the pairwise attention relationship. The attention value from one positioned token to another is then essentially given by the dot product between these two representations.
+Optimizing these linear transformations to maximize the attention weights for all token pairs within the training sequences moves these transformed points closer together for pairs of positioned tokens which appear more frequently.
+
+We have described fundamental problems arising from language models based on neural networks and word embeddings, namely these models struggle with the following qualities:
+
+\begin{itemize}
+\item \textbf{Explainability}
+Decisions made by the model are difficult to explain based on the trained representation.
+\item \textbf{Predictability}
+The range of possible outputs these models are able to generate is difficult to gauge.
+\item \textbf{Updatability}
+The behaviour of these models is difficult to adjust after they have been trained.
+\end{itemize}

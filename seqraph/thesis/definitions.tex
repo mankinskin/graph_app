@@ -1,0 +1,228 @@
+
+\section{Problems}
+
+Define a language model that is explainable, updatable and controllable.
+
+We define a language model as a model of statistical probabilities of strings with the following abilities: 
+\begin{itemize}
+    \item predict most likely context of a given string
+    \item estimate probability of a given string
+\end{itemize}
+A language model is explainable if 
+\begin{itemize}
+    \item it can point to the training data that was used for a given prediction
+    \item we have a reasonable support for an individual decision of the system
+\end{itemize}
+
+\section{Definitions}
+
+\section{Foundations}
+
+
+We also described alternative implementations of language models, which deliver at least some of these qualities, but have other shortcomings:
+\begin{itemize}
+\item \textbf{Hierarchical N-Grams} Easily explainable, predictable, updatable, but struggle with long-range dependencies due to large memory footprint and sparse training data.
+\item \textbf{Probabilistic Grammars} Easily explainable, predictable, updatable, but are not easy to train from a raw data corpus.
+\end{itemize}
+
+This chapter will describe a language modelling framework that seeks to solve the previously described problems. The framework automatically induces a hierarchical, graph based N-Gram structure from raw text, which is easy to explain, predict and efficiently updateable. The structure models the text as a hyperedge which has been compressed into a grammar-like structure of nested hyperedges. The structure avoids repetitions and other redundancy while maintaining all of the containment relations between elements which are used for a count-based language modelling.
+
+A \textit{hypergraph} generalizes regular graphs to allow for edges over multiple vertices. Edges of a hypergraph are called \textit{hyperedges}.
+
+
+A recursive hypergraph treats hyperedges as vertices and can define edges over multiple other hyperedges.
+
+A grammar is a formalism of rules for constructing or recognizing elements of a set. Usually these elements are continuous sequences or strings. The set of strings accepted by a grammar is called the language of the grammar. We will use the hierarchical structure of a recursive hypergraph as a grammar to model the target language. The target language will be given by a corpus of examples. In this paper, we will focus on languages of strings of characters, however the mechanisms in this paper can be applied to arbitrary tokens. We also believe that the framework can be expanded to more complex graph structures than linear lists, however this remains to be investigated by future research.
+The structure is induced from positive examples of the target language and essentially compresses them into a single grammar. The process is therefore unsupervised and can be applied directly on a given set of observations to be modelled.
+In abstract terms the induction procedure populates a given grammar $G$ with new rules for a given example $x$ by first compressing $x$ using the grammar and then inserting the compressed representation into the grammar as a new rule:
+\begin{align*}
+    \texttt{INSERT}(\texttt{COMPRESS}(x, G), G)
+\end{align*}
+It is important to note that the compressed structure is not primarily designed to reduce the size of the input, but to improve the efficiency of specific queries that are common in stochastic language modelling and semantic representation while retaining the exact lexical structure of the input.
+
+There is a specific set of rules that is placed on the structure of the grammar, which ensure that the structure is both efficient to store and navigate.
+
+In the hyper
+
+\paragraph*{Language Modelling}
+Let $\Sigma$ be the token alphabet of a language $L \subseteq \Sigma^*$ and let $O \subseteq L$ be a given training corpus of positive examples from $L$.
+A language model $M$ estimates the unknown language $L$.
+A conditional probability distribution for the next token $t_{n+1} \in \Sigma$ given a surrounding context of $n$ fixed tokens, $(t_i)_{i = 1}^n \in \Sigma^n$:
+\begin{align*}
+    P_M(t_{n+1} \mid t_1, \ldots, t_n)
+\end{align*}
+
+When this conditional distribution is known, it is possible to estimate probabilities for given sequences of arbitrary length by conditioning each token on the sequence of previous tokens. The following equality holds:
+\begin{align*}
+    P(t_1, t_2, \ldots, t_N) =\  &P(t_1) * P(t_2  \mid t_1) * P(t_3 \mid t1, t2)\\
+                          *\  &\ldots\\
+                          *\  &P(t_N \mid t_1, \ldots, t_{N-1})
+\end{align*}
+In n-Gram models, these individual probabilities are estimated by counting the frequency of each configuration of $n$ tokens. Let $C(t)$ be the absolute frequency or count of the given n-gram $t$. Then the conditional probability is estimated with the relative frequency of the given $n$-gram and its $n-1$ prefix:
+\begin{align*}
+    P(t_i \mid t_{i-n+1}, \ldots, t_{i-1}) = \frac{C(t_{i-n+1}, \ldots, t_i)}{C(t_{i-n+1}, \ldots, t_{i-1})}
+\end{align*}
+
+Because larger $n$-grams contain smaller $n$-grams aswell
+
+\noindent In our model a string-containment graph is used to store the containment relationship between frequent substrings in the training corpus $O$. This structure effectively stores all the different context relationship between substrings of the corpus.
+
+\paragraph*{String-Containment Graph}
+The string-containment graph $G = (V, E)$ of a string $t \in \Sigma^+$ is the graph of the string-containment relation on substrings of $t$. With the \textbf{strict substring relation} $x \sqsubset y$ (''$x$ is strictly contained in $y$'') defined as:
+\begin{align*}
+    \exists \ a, b \in \Sigma^*, (a, b) \neq (\epsilon, \epsilon): y = a \cdot x \cdot b
+\end{align*}
+where $ \cdot $ denotes string concatination.
+
+%% vertex set
+\noindent
+Let $I_V$ denote the index set for all vertices. Then we define the vertex set as:
+\begin{align*}
+V := {\{ v_i \}}_{i \in I_V}
+\end{align*}
+\noindent
+With each vertex $v_i$ we associate one of the substrings of $t$:
+\begin{align*}
+\mathtt{string}(v_i) \in \Sigma^+
+\end{align*}
+
+\noindent
+An edge $e_i = (x, y, o) \in E$ between two vertices $x$ and $y$ exists iff $\mathtt{string}(x)$ is a substring of $\mathtt{string}(y)$ at offset $o \in \NN$. As a string can be a contained in another string at multiple different positions, it is possible to have multiple edges connecting two vertices in the graph with different offsets. The offset is defined as the length of the preceding string of the substring:
+\begin{align*}
+    \forall (x, y, o) \in E, \exists \ a, b \in \Sigma^*, \mathtt{string}(y) = a \cdot \mathtt{string}(x) \cdot b: o := |a|
+\end{align*}
+
+\noindent With a string containment graph, we can easily find all of the strings which appear within other strings and thus we can also easily find which strings appear close to other strings. It is also possible to count how frequently individual strings appear by counting the number of different offsets each substring appears at in any superstring.
+
+However, if we store this data structure explicitly, with each individual substring, it can quickly become unpractical. For a corpus of length $N$ the number of all possible substrings of length $n$ is $N - n + 1$. If we store every string of length n directly, the total number of tokens we have to store is:
+\begin{align*}
+    \sum_{n=1}^{N}{n * (N - n + 1)}
+    &= (N + 1)\sum_{n=1}^{N}{n} -
+    \sum_{n=1}^{N}{n^2}\\
+    &= (N + 1)\frac{N^2 + N}{2} - \frac{(N^2 + N)(2N + 1)}{6}\\
+    &= (N + 1 - \frac{2N + 1}{18})\frac{N^2 + N}{2}
+\end{align*}
+which is of the order $O(N^3)$. In addition to the strings we need to store all the substring relations which amount to exactly the number of substrings for each string of length $n$, which is of the order $O(n^2)$. If we need to store this for every substring of the corpus with length $N$, the number of edges we need to store is of the order $O(N^4)$. We would like to reduce these space requirements as much as possible, while maintaining the information stored in the data structure. To do this, we introduce a number of compression rules which are going to be enforced by our algorithm. These rules do not only reduce the final size of the data structure, but also provide us with valuable invariants we can rely upon at runtime when searching or modifying the structure.
+
+\paragraph*{String-Partition Graph}
+
+First of all, it is easy to avoid storing every single substring explicitly, as it can be built from its substrings provided the leaves of the graph (1-grams) are stored explicitly. Inductively we can show that this allows us to rebuild each $n+1$-gram and thus all nodes in the graph up to the root, representing the entire corpus of length $N$.
+
+Each node will then 
+
+\noindent
+This leaves us with a space complexity of $O(N^2 + k)$ to store the nodes of the graph, where $k$ is the number of tokens in the alphabet $\Sigma$. However, as $k$ can be bounded by $N$ (there can not be more tokens than the length of the corpus), this is simply $O(N^2)$.
+
+Furthermore it is typical to only store each n-gram once, which is limited by $k$. The total number of possible n-grams which can be built over an alphabet of $k$ symbols is $k^n$. This means that for small $n$, the number of possible n-grams may be much smaller than is indicated by the number of possible substrings: $N - n + 1$. With this rule, the equation for the total number of nodes becomes:
+\begin{align*}
+    O(|V|) = \sum_{n \in \interval{1}{N}}{\min\{k^n, N - n + 1\}}
+\end{align*}
+As both expressions are monotonous with respect to $n$, we can split the sum into two parts at the intersection $n^*$:
+\begin{equation} \label{eq:1}
+    k^{n^*} = N - n^* + 1 \Leftrightarrow \log_k(k^{n^*} - n^*) = \log_k(N + 1)
+\end{equation}
+In this manner:
+\begin{align*}
+    O(|V|) = \sum_{n \in \interval{1}{n^*}}{k^n} + \sum_{n \in \interval[open left]{n^*}{N}}{N - n + 1}
+\end{align*}
+%!\ref{eq:1}% 
+Unfortunately, equation is a transcendental function, so there is no algebraic solution for $n^*$, but we can get a decent estimate by exploiting that
+\begin{align*}
+    \log(s + t) = \log(s) + \log(1 + \frac{t}{s}) \approx \log(\max\{s, t\})
+\end{align*}
+This way we can approximate $\log_k(k^{n^*} - n^*) \approx n^* = \log_k(N + 1)$, if $k^{n^*} \gg -n^*$. This approximation can be numerically refined further by applying Newton's method, a numeric method for approximating roots of a function.
+
+\noindent
+Since $n^*$ is the length of a substring, we can coerce it into an integer. If we assume the approximation $n^* = \floor{\log_k(N + 1)}$ to be sufficiently accurate, we can deduce 
+\begin{align*}
+    O(|V|) = \sum_{n \in \interval{1}{n^*}}{k^n}
+    + \sum_{n \in \interval[open left]{n^*}{N}}{N - n + 1}
+\end{align*}
+
+\paragraph{Ambiguous Grammars}
+
+\paragraph{Grammar Traversal}
+%Essential to using the model is the search of known sequences.
+%In this section we will describe how the model can be used to parse an input string,
+%effectively searching the model for known information about the string.
+This provides us with one example of how the nodes and edges of the graph can be
+iteratively visited and worked on.
+In principle the parsing stage employs a bottom up, Generalized-Left-Right(GLR)-Parsing 
+process, which uses a graph-structured stack (GSS) to traverse all possible parse trees 
+of the input.
+%\begin{align}
+%
+%\end{align}
+
+\paragraph{GLR-Parsing}
+The algorithm works by walking upwards over all parent nodes of the starting symbol of 
+the input.
+For each parent, it attempts to compare the remaining input with the remaining input of 
+the parent node.
+Abstractly, the algorithm will continue to expand nodes upwards until it finds a parent 
+with a matching
+continuation (or exhausted all known contexts and reports a mismatch).
+When a matching continuation is found, all alternative parse trees can be abandoned as 
+they all lead either
+to different contexts than the smallest unique one, or must lead to the same parent.
+(convincing formal proof)
+This can be derived from the equal children axiom and the fact that breadth first search 
+will search parents
+in a width-ascending order.
+
+All sequences known to the model can be found by starting at any symbol and traversing 
+its parent contexts in a bottom up iterative process. When given a search query in the 
+form of a sequence, we can start with any of the symbols and match the surrounding 
+symbols in the query with the contexts stored in the model grammar. This is basically a 
+parsing problem where we try to parse a given word of a grammar.
+
+Not all of the symbols in the query need to be atomic symbols. We can match non-atomic symbols the same way we match symbols in model grammar rules. We provide an overview of the algorithm and a more detailed pseudo-code representation below. The result of the parsing process is a rooted sub-graph structure containing the paths traversed during the parsing process, with the smallest symbol containing the entire known sequence as a root. 
+
+\subsection{Construction}
+
+\paragraph{Reusing partitions}
+With navigational information from search, an infrequent sequence can be compressed into an identifying symbol. This is needed to compress larger sequences of smaller known sequences.
+
+During search, paths over the grammar are traced and combined to a sub-graph visiting all leaf nodes of a subsequence in a root symbol.
+
+\paragraph{Partitioning Rules}
+The sub-graph structure resulting from a search contains all of the information needed to create a new symbol representing the identified sequence. The paths contained in the sub-graph point to the exact locations where the partition intersects rules in the grammar, which we need to modify to support the new symbol about to be added to the index.
+
+The basic idea is to find all of the locations where intersected symbols need to be split into partitions which can then be used to build larger symbols without repeating sequences in any rules (which would violate invariant 3).
+
+\subsection{Counting}
+Upper bound for repeated substrings in a string of length $N$ over an alphabet of $k$ symbols:
+
+
+\subsection{Consuming Sequences}
+In order to consume new sequences and add them to the model, we require a set of algorithms on the grammar structure described in the remainder of this section. The process can be divided in three major stages, each working on the results of the previous stage:
+\begin{enumerate}
+\item Search largest known partition at position
+\item Join partition sub-graph into new symbol
+\item Join found partitions into new symbol for the entire input sequence
+\end{enumerate}
+
+When reading new symbols, we want to construct them in a way that upholds certain properties to make the resulting graph structure space efficient and useful for traversal:
+\begin{itemize}
+    \item \textbf{Digram Uniqueness} Every string of symbols in all rules in the graph occurs at most once.
+    \begin{gather*}
+        \forall r_a, r_b \in R, i \in \{ 0, ..., |r_a| - 2 \}, j \in \{ 0, ..., |r_b| - 2 \}:\\
+        a \neq b \lor i \neq j \Longrightarrow (r_a[i], r_a[i + 1]) \neq (r_b[j], r_b[j + 1])
+    \end{gather*}
+
+    \item \textbf{Deterministic Expansions} Each symbol represents a single string. Every rule of the symbol produces the same string.
+    \begin{align*}
+        \forall s \in V, r_i, r_j \in R_s: \texttt{expand}_G(r_i) = \texttt{expand}_G(r_j)
+    \end{align*}
+
+    \item \textbf{Edge Completeness} Every symbol must contain all largest symbols representing any of its sub-strings in its rules.
+    \begin{align*}
+        \forall a, s \in V&: \texttt{expand}_G(a) \text{ substring of } \texttt{expand}_G(s) \\
+        &\nexists b \in V: \texttt{expand}_G(a) \text{ substring of } \texttt{expand}_G(b) \\
+        %%&\land  \texttt{expand}_G(b) \text{ substring of } \texttt{expand}_G(s) \RightArrow \exists r \in s: a \in r
+    \end{align*}
+
+    \item \textbf{No Shared Boundaries} All boundaries between two rule symbols in a symbol represent unique positions in the expanded string.
+    \begin{gather*}
+    \end{gather*}
+\end{itemize}

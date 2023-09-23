@@ -1,0 +1,437 @@
+
+\section{Insert}
+To construct the grammar for a raw given string, vertices for new substrings must be inserted into the grammar. New nodes must uphold the invariants of a correct grammar for this to produce a new consistent grammar.
+
+As described in chapter XXX \todo{ref chapter}, the invariants all nodes must uphold are:
+\begin{itemize}
+    \item \textbf{Digram Uniqueness}\\
+    No contiguous sequence of rule symbols may appear more than once across all nodes.
+    \item \textbf{Boundary Uniqueness}\\
+    No boundary between rule symbols may appear at each token position more than once across all rules of a node.
+    \item \textbf{Containment Path Completeness}\\
+    There exists a path from every node to all of its substring nodes. 
+\end{itemize}
+
+The general principle of creating new nodes under these constraints is to reuse as many nodes from the existing grammar as possible, and \textit{splitting} any partially matching nodes up into an ``inside'' and an ``outside'' partition.
+
+The resulting partitions for each node are then \textit{joined} together from smallest to largest to represent a single node for the respective string.
+
+\subsection{Splitting Nodes}
+
+A \texttt{TraceGraph} obtained from the \texttt{SEARCH} algorithm locates all of the positions where nodes are intersected by the matched string. These are the nodes containing parts of the matched string which need to be reused.
+
+\noindent The \texttt{TraceGraph} consists of two sets of ``upwards'' and ``downwards'' paths over grammar nodes intersected by the matching string. The paths both connect with the \textit{root node} representing the smallest string containing the entire matched string.
+Each set of paths represents the begin and end boundaries of the match respectively. 
+\todo{visual example}
+
+\noindent The rules of each node contain largest known substrings by the path completeness invariant, thus allowing us to directly determine the appropriate symbols to represent each partition of a node.
+
+\noindent Each partially matching node is visited by at least one path of a boundary, at a token position relative to the respective node. Thus the \texttt{TraceGraph} annotates every intersected node with positions where the given node needs to be split into partitions. 
+
+\noindent The \textit{root partition} is formed by the boundaries in the root node and represents exactly the matching string as a partition in the root node. Therefore the root node can at most be split at two positions (once for the begin boundary and once for the end boundary).
+
+\noindent Smaller child nodes can only contain partial matches and may generally be split at every possible position. An example of a node requiring a split at every of its $n$ positions would be an $n$-gram of a single repeating token. This kind of node would exist at every single shift in a larger node repeating the token a greater number of times:
+
+{
+    \ttfamily
+    \begin{multicols}{3}
+    \noindent
+    \begin{align*}
+        \text{aaaaaa} ::= &\ \text{aaaaa,a}\\
+                |&\ \text{aaaa,aa}\\
+                |&\ \text{aaa,aaa}\\
+                |&\ \text{aa,aaaa}\\
+                |&\ \text{a,aaaaa}
+    \end{align*}
+    \begin{align*}
+        \text{aaaaa} ::= &\ \text{aaaa,a}\\
+                |&\ \text{aaa,aa}\\
+                |&\ \text{aa,aaa}\\
+                |&\ \text{a,aaaa}
+    \end{align*}
+    \begin{align*}
+        \text{aaaa} ::= &\ \text{aaa,a}\\
+                |&\ \text{aa,aa}\\
+                |&\ \text{a,aaa}
+    \end{align*}
+    \end{multicols}
+}
+\captionof{figure}{Excerpt from example grammar}\bigskip
+
+In this example, a split of $\texttt{aaaaaa}$ ($\texttt{a}^6$) after $1$ and $3$ tokens would incur splits in $\texttt{aaaa}$ ($\texttt{a}^4$) at its relative positions $1$,$2$ and $3$ because it exists in $\texttt{aaaaa}$ ($\texttt{a}^5$) with a shift of $1$, so when $\texttt{a}^5$ is split at position $3$, it requires a split at position $2$ in $\texttt{a}^4$.
+
+\noindent The algorithm to split the nodes consistently with the grammar's invariants works by iteratively joining the partitions of smaller nodes into the surrounding context in their parent to create the larger partitions of the parent.
+
+\noindent An outer loop traverses all of the nodes from the bottom up, starting at the leaves and following their edges upwards in the \texttt{TraceGraph}. Each edge represents a split of a child node with an ``inside'' and ``outside'' half. When these splits have already been computed for all children of a node, we can locally split the node at all requested positions.
+{
+    \ttfamily
+    \begin{multicols}{3}
+    \noindent
+    \begin{align*}
+        \text{xyabcdefxy} ::= &\ \text{xy,abcdef,xy}\\
+        \text{abcdef} ::= &\ \text{ab,cde,f}\\
+                |&\ \text{a,bc,def}
+    \end{align*}
+    \begin{align*}
+        \text{cde} ::= &\ \text{c,de}\\
+        \text{def} ::= &\ \text{de,f}\\
+        \text{bc} ::= &\ \text{b,c}
+    \end{align*}
+    \begin{align*}
+        \text{ab} ::= &\ \text{a,b}\\
+        \text{de} ::= &\ \text{d,e}\\
+        \text{xy} ::= &\ \text{x,y}
+    \end{align*}
+    \end{multicols}
+}
+\captionof{figure}{Excerpt from example grammar}
+\bigskip%
+
+Given this grammar and the objective $\texttt{SPLIT}(\texttt{abcdef}, {4})$ we can see that we require the child splits $(\texttt{cde}, 2)$ and $(\texttt{def}, 1)$. Assuming these have already been computed as
+{
+    \ttfamily
+    \noindent
+    \begin{align*}
+        \text{SPLIT}(\text{cde}, 2) = (\text{cd}, \text{e})
+        \qquad
+        \textrm{and}
+        \qquad
+        \text{SPLIT}(\text{def}, 1) = (\text{d}, \text{ef})
+    \end{align*}
+}
+We can now collect the split halves of all of $\texttt{abcdef}$'s rules, by placing each child split next to its one-sided context from its rule:
+{
+    \ttfamily
+    \noindent
+    \begin{align*}
+        \begin{bmatrix}
+            \text{ab,cde,f}\\
+            \text{a,bc,def}
+        \end{bmatrix}
+        \qquad
+        \longrightarrow
+        \qquad
+        \begin{bmatrix}
+            \text{ab,cd}\\
+            \text{a,bc,d}
+        \end{bmatrix}
+        \qquad
+        \begin{bmatrix}
+            \text{e,f}\\
+            \text{ef}
+        \end{bmatrix}
+    \end{align*}
+}
+These new rules can then be joined into new nodes, yielding a representation for each half of the split which can be used in the next steps of the algorithm. Keep in mind that in this example we only split the node at one position, while in practice, it is possible that each node requires multiple splits.
+\bigbreak%
+In any case, splitting rules and joining them into new nodes may create structures which are not consistent with the required invariants. In the example above we would violate the digram uniqueness and rule utility invariants if we inserted the new rules:
+
+\begin{itemize}
+    \item The left collected half contains the pattern $\texttt{a,bc,d}$, repeating the sequence $\texttt{a,bc}$ from the second rule of $\texttt{abcdef}$, which violates \textit{digram uniqueness}.
+    \item The right half contains a rule of a single node, which renders the other rules obsolete, as they must already be present in that given single node, which violates \textit{rule utility}.
+\end{itemize}
+The other invariants, path completeness and boundary uniqueness, are satisfied, as we simply reused the nodes and boundaries in previously consistent rules at the same locations and no new larger nodes have been created. We will later show in a proof that this is true.\todo{proof}
+
+\bigbreak%
+First, let us address how to handle rule utility and digram uniqueness. Rule utility is straight-forward, as it is easy to detect if a new set of rules contains a rule with only a single node that can be used instead. Digram uniqueness requires us to put in a little more effort.
+
+\subsection{Avoiding Repetitions}
+
+When we split rules to reuse their parts, we may always end up with partitions repeating sequences already present in the original rules.
+{
+    \ttfamily
+    \noindent
+    \begin{align*}
+        \texttt{SPLIT}\left(
+        \begin{bmatrix}
+            \text{\hlc{gray!30}{a,bc,d}\hlc{gray!10}{ef,gh, ij,kl}\hlc{gray!30}{m,no}}\\
+            \text{\hlc{gray!30}{ab, cd}\hlc{gray!10}{e,fg,hi,jk,l}\hlc{gray!30}{mn,o}}
+        \end{bmatrix}
+        , \{4, 12\}
+        \right)
+        \longrightarrow
+        \begin{bmatrix}
+            \text{a,bc,d}\\
+            \text{ab,cd}
+        \end{bmatrix}
+        \quad
+        \begin{bmatrix}
+            \text{ef,gh,ij,kl}\\
+            \text{e,fg,hi,jk,l}
+        \end{bmatrix}
+        \quad
+        \begin{bmatrix}
+            \text{m,no}\\
+            \text{mn,o}
+        \end{bmatrix}
+    \end{align*}
+}
+
+\noindent This generally occurs when a partition created by one or more splits spans more than two node boundaries in a rule, because then the partition contain at least a whole digram from the original rule.
+\bigbreak%
+A split position in a node is defined by:
+\begin{itemize}
+    \item a \textbf{token offset position}, describing the number of tokens preceding the split in the respective node
+
+    \item for \textbf{every rule} in the node:
+    \begin{itemize}
+        \item an \textbf{index position}, describing the symbol in the rule that the split occurs in
+        \item an \textbf{inner offset}, describing the token position inside the child node pointed to by the index position
+    \end{itemize}
+\end{itemize}
+Split positions may look like this:
+\begin{align*}
+    \texttt{SPLIT\_POS}\left(
+    \begin{bmatrix}
+        \text{ab,cde,g}\\
+        \text{a,bc,def}
+    \end{bmatrix},
+    4
+    \right) = \left(
+    4,
+    \begin{bmatrix}
+        \texttt{(1, 2)}\\
+        \texttt{(2, 1)}
+    \end{bmatrix}
+    \right)
+    \quad
+    \textrm{or}
+    \quad
+    \texttt{SPLIT\_POS}\left(
+    \begin{bmatrix}
+        \text{d, ef}\\
+    \end{bmatrix},
+    1
+    \right) = \left(
+    1,
+    \begin{bmatrix}
+        \texttt{(1, 0)}
+    \end{bmatrix}
+\right)
+\end{align*}
+As shown in the example, split positions may of course also have an inner offset of $0$ in one of the rules. In that case they exist at a boundary already present in that rule, and the split is called a \textit{perfect split} in the respective rule in the node. Due to the boundary uniqueness invariant a split can only be perfect in a single rule of a node.
+
+When perfect splits participate in forming a partition, the boundary they occur on is also spanned by that partition and may contribute to a repeated digram being formed. For example in
+
+\begin{align*}
+    \texttt{SPLIT}(
+\begin{bmatrix}
+    \texttt{ab,cd,ef,ghi}
+\end{bmatrix}
+, \{2, 7\}) = \left\{
+\begin{bmatrix}
+    \texttt{ab}
+\end{bmatrix}
+,
+\begin{bmatrix}
+    \texttt{cd,ef,g}
+\end{bmatrix},
+\begin{bmatrix}
+    \texttt{hi}
+\end{bmatrix}
+\right\}
+\end{align*}
+
+The sequence $\begin{bmatrix}\texttt{cd,ef}\end{bmatrix}$ is repeated in the result of the splits and has to be handled to avoid a repetition before inserting it into a node.
+
+To handle these repeated sequences within requested partitions, they need to be replaced by a single node in the original rule and the new rule. This means they require an extra partition, which is called an \textit{inner partition}, as it occurs within an outer partition. The splits of an inner partition always occur on existing boundaries in the same rule and are thus always perfect in the same rule.
+
+To create nodes for these inner partitions consistently, we need to treat them the same way as regular partitions which are created from split positions derived from the trace graph and join splits from all rules of a node.
+
+The split positions for the inner partitions need to be included before joining any partitions, otherwise not all nodes below a node with an inner partition would know about the splits they need to perform. Thus we need a \texttt{COMPLETE} step before actually performing the splitting and joining of partitions, to add any missing split positions to the trace graph.
+
+The \texttt{COMPLETE} algorithm simply walks top-down through every node in the trace graph and adds the splits for any inner partitions within the partitions already being requested. Inner partitions from top nodes may of course induce additional inner partitions in bottom nodes, which is why a top-down iteration is required.
+
+%\begin{algorithm}
+%    \caption{COMPLETE}\label{alg:complete}
+%    \begin{flushleft}
+%        \textbf{Input:} $\texttt{TraceGraph}\ trace$\\
+%        \textbf{Output:} $\texttt{TraceGraph}$
+%    \end{flushleft}
+%    \begin{algorithmic}
+%        \State$queue \gets [trace.root]$
+%        \While{$v \text{ in }queue$}
+%            \State{add inner partition split positions to $v$}
+%            \State{$queue.\texttt{append}(\text{child nodes of } v \text{ in } trace)$}
+%        \EndWhile%
+%        \State$\texttt{return }trace$
+%    \end{algorithmic}
+%\end{algorithm}
+
+To differentiate between splits created for inner partitions and partitions requested by larger nodes, we will call them ``inner splits'' and ``top splits'' respectively. As a top split may also be perfect, it may also participate in an inner partition, and can also be considered as an inner split. However it is only the top splits forming the partitions to be passed upwards to the larger nodes and the inner partition are merely used to form these ``top partitions''.
+
+\subsection{Joining Partitions}
+
+After the inner splits have been added to the trace graph, no partitions can contain any unknown inner partitions and the partitions are ready to be joined. The joining procedure has to join all partitions in the trace graph from smallest to largest to ensure all newly created nodes to be included in larger nodes. This bottom-up approach applies first on the graph level and then on the individual node level. An outer loop visits all nodes from the bottom up, joining their partitions and thus making them available for their top nodes. Within each node, the partitions are also created starting with the smallest and joining them into the largest partitions requested by their top nodes. When a node is being processed inside the outer loop, it can assume all top splits for their children to be available.
+\newpage
+
+%\begin{algorithm}
+%    \caption{JOIN}\label{alg:join}
+%
+%    \begin{flushleft}
+%        \textbf{Input:} $\texttt{TraceGraph}\ trace,\ \texttt{Grammar}\ G$\\
+%        \textbf{Output:} $\texttt{VertexIndex}$
+%    \end{flushleft}
+%    \begin{algorithmic}
+%        \State$\texttt{COMPLETE}(trace, G)$
+%        \State $queue \gets trace.leaves$
+%        \While{next $v$ in $queue$}
+%            \State$queue.\texttt{append}(v.\texttt{get\_top\_nodes}())$
+%        \EndWhile%
+%    \end{algorithmic}
+%\end{algorithm}
+
+\begin{samepage}
+\noindent When each node is processed, the algorithm is able to request all of the partitions from child nodes and can construct partitions formed by any pair of split positions (including the node's borders). It starts by joining all of the inner partitions and replacing the respective sequences in the rules with them. We are going to look at an example for the objective
+\end{samepage}
+
+{
+\ttfamily
+\begin{align*}
+    \text{SPLIT}\left(
+    \begin{bmatrix}
+        \text{a,bcd,ef,gh,ijk,lm,no}\\
+        \text{ab,cde,fg,hi,jkl,mn,o}
+    \end{bmatrix}
+    , \{3, 10\}
+    \right)
+\end{align*}
+}
+After augmenting the inner splits, the ordered representation of the set of splits becomes $(3, 4, 5, 8, 9, 10, 11, 12)$. Using the available bottom splits we can construct a partition of the rules between each of these positions:
+{
+    \ttfamily
+    \noindent
+    \begin{align*}
+        \begin{bmatrix}
+            \text{a,bc}\\
+            \text{ab,c}
+        \end{bmatrix}
+        \quad
+        \begin{bmatrix}
+            \text{d}
+        \end{bmatrix}
+        \quad
+        \begin{bmatrix}
+            \text{e}
+        \end{bmatrix}
+        \quad
+        \begin{bmatrix}
+            \text{f,gh}
+        \end{bmatrix}
+        \quad
+        \begin{bmatrix}
+            \text{i}
+        \end{bmatrix}
+        \quad
+        \begin{bmatrix}
+            \text{j}
+        \end{bmatrix}
+        \quad
+        \begin{bmatrix}
+            \text{k}
+        \end{bmatrix}
+        \quad
+        \begin{bmatrix}
+            \text{l}
+        \end{bmatrix}
+        \quad
+        \begin{bmatrix}
+            \text{m,no}\\
+            \text{mn,o}
+        \end{bmatrix}
+    \end{align*}
+}
+These representations can be inserted as new nodes into the grammar and these nodes will be stored in a \textit{range map} for the runtime of the joining procedure for the current node. The range map makes individual partitions accessible by their range in the ordered split position space (with $0$ and the index after last referencing the node borders):
+\begin{align*}
+    range\_map[(0, 1)] = \texttt{abc}
+    \quad
+    \text{or}
+    \quad
+    range\_map[(3, 4)] = \texttt{fgh}
+\end{align*}
+
+It is possible to encounter partitions formed from two perfect splits, which allows us to modify the original rules of the node directly and replace the given range in the rules with the joined partition. So far this applies for the partition for \texttt{mno}, which forms a perfect partition with the split $8$ and the right node border. We can replace the sequence in the original rule with the joined partition.
+
+After all partitions of width $1$ (referring to the number of cells between
+splits being spanned) have been joined, we continue joining partitions of length $2$. In this case we can not only consider the rules in the node, but also need to include all of the smaller partitions within the same range into the representation for the new node. For the range $(2, 4)$, we retrieve the partitions for ranges $(2,3)$ and $(3,4)$ from $range\_map$ and add them to the split partition $(2,4)$ retrieved from the rules:
+{
+    \ttfamily
+    \noindent
+    \begin{align*}
+        \begin{bmatrix}
+            \text{e,fgh}\\
+        \end{bmatrix}
+        \cup
+        \begin{bmatrix}
+            \text{ef,gh}\\
+            \text{e,fg,h}
+        \end{bmatrix}
+        =
+        \begin{bmatrix}
+            \text{e,fgh}\\
+            \text{ef,gh}\\
+            \text{e,fg,h}
+        \end{bmatrix}
+    \end{align*}
+}
+\noindent Because the split at index $3$ is perfect in the second rule, the representation contains a duplicated boundary. This needs to be expected when using partitions which were created from one perfect and one non-perfect split, in this case the partition $(3,4)$ or \texttt{fgh}. However as the joined partitions we retrieved from $range\_map$ must always contain nodes at least as large as in the original rules, as we created them by joining nodes from the rules, we can safely discard any rules extracted from the node and give the rule retrieved from $range\_map$ precedence, producing 
+{
+    \ttfamily
+    \noindent
+    \begin{align*}
+        \begin{bmatrix}
+            \text{e,fgh}\\
+            \text{ef,gh}
+        \end{bmatrix}
+    \end{align*}
+}
+Again we encounter perfect partitions, which we replace in the original rules. The perfect partitions of length $2$ are \texttt{efgh}, \texttt{fghi} and \texttt{lmno} and \texttt{mno}. After inserting them, the rules of the node \texttt{abcdefghijklmno} become
+
+{
+\ttfamily
+\begin{align*}
+    \begin{bmatrix}
+        \text{a,bcd,efgh,ijk,lmno}\\
+        \text{ab,cde,fghi,jkl,mno}
+    \end{bmatrix}
+\end{align*}
+}
+We can proceed joining the larger partitions this way, until we encounter partitions which can not be contained in any of the top partitions anymore. We only need to join partitions which are required by top nodes and not those which may be formed by inner splits but exist outside of those top partitions. An example of such a partition is $(0,8)$, which is not contained in any of the partitions formed by the top splits with index $1$ (with token position $3$) and $6$ (token position $10$), namely the partitions $(0,1)$, $(1, 9)$, $(0, 6)$ and $(6,9)$. Generally a partition $(x, y)$ only needs to be created if there is at least one top split $s$ where
+\begin{align*}
+x \geq s \land y \geq s \lor x \leq s \land y \leq s
+\end{align*}
+meaning, there is at least one top split on either side of the partition. As the node borders do not count as top splits, the partition $(0, 8)$ does not satisfy this condition and must not be joined.
+
+To finalize the joining procedure on a single node, the joined partitions for every top split have to be inserted into the rules of the node. In case any of the top splits is perfect, the respective rule with the matching boundary may be replaced, as the top partitions span every other boundary in the rule and have been constructed to contain any other smaller partitions of the node. For the example this leaves us with the rules:
+%{
+%\ttfamily
+%\begin{align*}
+%    \begin{bmatrix}
+%        \text{abc,defghijklmno}\\
+%        \text{abcdefghij,klmno}\\
+%        \text{abcdefghi,jklmno}\\
+%        \text{abcdefgh,ijklmno}
+%    \end{bmatrix}
+%\end{align*}
+%}
+%\begin{algorithm}
+%    \caption{SPLIT}\label{alg:split}
+%
+%    \begin{flushleft}
+%        \textbf{Input:} $\texttt{TraceNode}\ node,\ \texttt{Grammar}\ G$\\
+%        \textbf{Output:} $\texttt{VertexIndex}$
+%    \end{flushleft}
+%    \begin{algorithmic}
+%        \State$range\_map \gets []$
+%        \State$n\_splits \gets \texttt{length}(node.split\_positions)$
+%        \For{$len \text{ in } 1, \ldots, n\_splits-1$}
+%            \For{$start \text{ in } 0, \ldots, n\_splits-len$}
+%                \State{$range \gets (start, start + len)$}
+%                \State{$part \gets \text{split } node.rules \text{ at } range$}
+%                \State{$subs \gets range\_map.\texttt{sub\_partitions}(range)$}
+%                \State{$p \gets G.\texttt{insert\_node}(part \cup subs)$}
+%                \State{$range\_map.\texttt{insert}(range \rightarrow p)$}
+%            \EndFor
+%        \EndFor
+%    \end{algorithmic}
+%\end{algorithm}
