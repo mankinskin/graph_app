@@ -1,6 +1,6 @@
 # 🌟 Motivation
 
-training grammar based transformer on language structure and artificial rules
+training grammar based language model on language structure and artificial rules
 
 * input (sequence of tokens) -> (rule based inner state) -> output
 
