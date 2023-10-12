@@ -1,4 +1,4 @@
-\section{Induction}
+\section{Induction}\label{sec:induction}
 Now that we know how to modify the grammar to represent a part of a known string with a dedicated node, we still need to understand how to add representations for entirely new strings into the grammar. A new string can contain unknown tokens and unknown sequences of tokens or even indices for known nodes in a new context. Let $\Sigma$ be the alphabet of input tokens and $I_V$ be the index set of nodes in the grammar. Then a new input sequence is an element $x \in (\Sigma \cup I_V)^*$ with $x = x_1, \ldots, x_n$.
 
 A sequence like this can be parsed by a given grammar $G$ using the search algorithm which returns a trace graph for the largest matching prefix. This trace graph can then be joined using the insert algorithm to ensure there is a designated vertex for the matching prefix of the string. By repeating this operation and continuously updating the grammar to include larger and larger parts of the given input string, we can eventually represent any entire input string as a consistent node in the grammar.
@@ -21,12 +21,6 @@ If the largest postfix does not have a parent matching with the remaining input 
 \bigbreak%
 When overlaps are found, the process will record a chain of overlapping nodes represented in the input string. All the nodes in the chain share a child node as a postfix or prefix respectively, also referred to as the overlap between these nodes. Each overlap must skip at least one token and thus a chain of overlaps can at most be as long as the token width of the first overlapped node $n_1$.
 %\NewColumnType{m}[1][]{Q[l,cmd=\sisetup{#1}\unit]}
-\NewTableCommand{\mcc}[1][1]{\multicolumn{#1}{c}}
-\newcommand{\newcell}[3]{
-    hline{#2-{#2+1}}={#1-{#1 + #3 - 1}}{solid},
-    vline{#1, #1+#3}={#2}{solid},
-    cell{#2}{#1}={c=#3}{c},
-}
 \begin{table}[!ht]
     \ttfamily
     \centering

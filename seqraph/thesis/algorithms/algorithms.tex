@@ -3,6 +3,16 @@
 
 %In this chapter we describe the algorithms for constructing the hierarchical n-gram grammar and applying it as a language model. First we describe the target structure and how it can be used to predict completions for a given sequence, then we describe an algorithm for inducing the structure from a single input string or a set of strings.
 
+In this chapter we describe the fundamental algorithms required to implement the automatic induction procedure (described in \ref{sec:induction}) constructing the model architecture defined in \ref{chp:model}. The procedure is divided into three main operations:
+
+\begin{itemize}
+\item \textbf{Search} Uses an input query string to locate the parse tree in the structure corresponding to the largest matching prefix of the query. The output is a subgraph in the structure annotated with positions to locate the exact range of the match. 
+\item \textbf{Insert} Uses the subgraph from the search step to guarantee a dedicated node for the string that has been found and increments relevant frequency counts.
+\item \textbf{Induce} Repeatedly inserts nodes for largest known substrings found in an input string and constructs the nodes required for representing the entire input string.
+\end{itemize}
+
+Each operation is built using the previous operations, however each can be used independently of the others to construct more operations on the model structure.
+
 \subfile{alg_search}
 
 \subfile{alg_insert}

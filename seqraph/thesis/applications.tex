@@ -1,0 +1,108 @@
+\chapter{Applications}
+
+\subsection{Knowledge Base}
+
+\subsection{Language Inference}
+
+From the substring relation graph we have described so far, it is easy to model the most likely contexts for a given node in the graph. The conditional probability can be defined analogously to regular N-grams:
+\begin{align*}
+    P(x \mid v) = \frac{C(x)}{C(v)}
+\end{align*}
+where $x, v \in V$ are nodes representing strings $\bar{x}$ and $\bar{v}$ and $v$ is a substring of $v$ in $G$. Note that this relationship holds true not only for direct substrings in $G$, but any substring.
+
+\paragraph{Smoothing Techniques}
+As with regular N-Grams, especially with larger sizes of N-Grams, data sparsity becomes a problem. There will simply not be any examples in the training data set for many of the possible strings. This could be considered a good thing as it prevents the model from generating nonsensical strings it has not support for, however for some applications we do want to allow for some reasonable creativity.
+
+A solution to reduce this overfitting of the model is to \textit{smooth} the probability distributions to \textit{similar} N-Grams by some similarity measure. Naive approaches also simply assign all possible N-Grams an artificial lower bound to the count to prevent any probabilities to be zero and allow for N-Grams which have never been seen in practice to be generated (Laplace Smoothing). These techniques however do not utilize the similarity of the N-Grams, as would be intuitive, and make unwanted outputs more likely.
+In practice we assume the training data to be a subset of a language following some hidden rules and being modified by random noise. Thus we would assume a higher probability for N-Grams which are similar to the instances we have actually seen during training by some definition.
+
+\paragraph{Similarity Measures}
+Similarity of texts can be defined in terms of orthographic structure or in terms of semantic meaning, which refers to the hidden rules used to generate the examples, which are unknown to the model, but can be estimated.
+
+The orthographic similarity of two texts is usually quantified by their distance in a space over edit operations, also called edit distance. There are several types of edit distance, depending on which edit operations are allowed and how they are counted. We are going to use the \textit{Levenshtein Distance} for this example.
+
+\dfn{Levenshtein Distance}{
+    The Levenshtein Distance $\text{lev}(x_1, x_2)$ of two texts $x_1$, $x_2$ is the minumum number of \textbf{insertions}, \textbf{deletions} or \textbf{substitutions} of characters needed to transform one text into the other.
+    
+    An orthographic similarity metric can then be defined as
+    
+    \begin{align*}
+        \text{sim}_\text{orth}(x_1, x_2) = 1 - \frac{\text{lev}(x_1, x_2)}{\max\{|x_1|, |x_2|\}}
+    \end{align*}
+    where $\max\{|x_1|, |x_2|\}$ gives the maximum possible Levenshtein distancee for $x_1$ and $x_2$. Thus the similarity ranges between 0 and 1.
+}
+A core advantage of the structure we have devised so far is its ability to easily traverse the most similar nodes according to the Levenshtein distance. We can derive an upper bound for the distance (and a lower bound of the orthographic similarity) of the most similar N-Grams using the substring relations.
+
+\dfn{Edit-Distance in $G$}{
+    For the edit distance $\text{lev}(x_1, x_2): V \times V \rightarrow \NN$ of two nodes $x_1, x_2 \in V$ is
+    \begin{itemize}
+        \item $\text{lev}(x_1, x_2) = ||x_1| - |x_2||$ if one is a substring of the other,
+        \item $\text{lev}(x_1, x_2) \leq \text{lev}(x_1, x_3) + \text{lev}(x_2, x_3)$ if there exists a shared substring $x_3$ 
+        \item $\text{lev}(x_1, x_2) = \max\{|x_1|, |x_2|\}$ if there are no shared substrings
+    \end{itemize}
+}
+Because each node is connected to its most similar sub- and superstrings, we can traverse the set of orthographically similar strings in an approximately similarity-descending order by visiting the parents the substrings and their parents. With each edge traversed we either add to or remove context from the given node.
+
+When adding new context to a substring by visiting one of its parents, it is possible that it shares other substrings with context that was previously removed from the starting node. To find exact similarities the algorithm would need to expand substrings until all shared substrings are found in the same order and all mismatching ranges have been proven to mismatch.
+
+\paragraph{Semantic Similarity}
+The semantic similarity of two texts can be defined on lexical terms as the similarity of the possible contexts the texts may appear in. The following classes of words illustrate this relationship:
+\begin{itemize}
+    \item Synonyms (words carrying the same meaning) --- can generally be used in the same contexts interchangably
+        \begin{itemize}
+            \item drink --- beverage
+            \item big --- large
+            \item buy --- purchase
+        \end{itemize}
+    \item Homonyms (words carrying multiple meanings) --- specialize their meaning depending on the surrounding context
+        \begin{itemize}
+            \item bow --- a tied ribbon, action of bending forward in respect, a weapon for shooting arrows
+            \item bat --- a flying animal, a stick used for hitting
+            \item tear --- a drop of liquid secreted from the eyes, action to pull apart or destroy by force
+        \end{itemize}
+\end{itemize}
+
+Thus the semantic distance of two distinct N-Grams can be defined as the average orthographic edit-distance between all of their contexts.
+\dfn{Semantic Distance}{
+    The semantic distance $\text{dist}_\text{sem}(x_1, x_2): V \times V \rightarrow \NN$ of two nodes $x_1, x_2 \in V$ is the average minimum edit distance between contexts of $x_1$ and $x_2$
+    \begin{align*}
+        \text{dist}_\text{sem}(x_1, x_2) := \text{avg}(\{\min\{\text{lev}(c_1, c_2) \mid c_2 \in \text{Ctx}(x_2)\} \mid c_1 \in \text{Ctx}(x_1)\})
+    \end{align*}
+}
+The semantic distance captures the orthographic edit operations required to
+transform the known contexts of one text into the contexts of the other text and
+thus quantifies their similarity of compatibility with the remaining corpus.
+
+Similarily to how attention weights in a self-attention unit of the transformer architecture are trained to point to their contexts in a corpus, the nodes in a substring relation are linked with other strings they appear in context with. By comparing the similarity of these links we can quantify the semantic similarity by the same definition of distributional semantics.
+
+One difference is that in the self-attention mechanism, tokens link to other tokens, even when they never appear in the same context. When $a$ and $b$ appear in the same context and thus $a$ is weighed towards $b$, $a$ is also weighed towards tokens similar to $b$ even if they are never seen in the same contexts.
+
+To replicate this behaviour in the substring relation graph, we need to modify the edit distance of contexts to discount replacements with high semantic similarity. The semantic distance between two texts should be lower when the contexts can be transformed into oneanother using semantically similar nodes.
+
+To find the semantically most similar nodes of a given node, we need to find the possible replacements for it in its contexts. This can be achieved by finding the alternative contexts for each context of the original node. In a recursive procedure we keep traversing the substring relation in a breadth-first manner until we find nodes with no contexts or no children, keeping track of the minimum path lengths for each transformation. Because the structure stores direct edges between the most similar substrings, paths between most similar nodes will be shortest and a lower bound can be placed on transformations not fully explored. This way the semantic similarity of nodes can be incrementally approximated according resource requirements.
+
+Although we believe a formal definition of this procedure to be an interesting topic for future research, we are not going to focus on this aspect any further in this paper.
+
+\paragraph{Handling Unknown Inputs}
+For inputs seen in the training corpus it is easy to predict the appropriate context, as there exists a node in the graph structure to derive contexts from. However in general, input strings can be composed of novel combinations of tokens which have only partially been seen in training, if at all. To allow the model to predict contexts for new sequences of nodes, we need to allow it to draw information from similar nodes not exactly given in the input.
+
+A simple way to address this in common N-Gram models is to use \textit{backoff smoothing}. 
+
+\dfn{Backoff Smoothing}{
+    The Backoff probability of an N-Gram $w_{i - n + 1}, \ldots, w_i$ is defined as
+    \begin{align*}
+        P_{bo}(w_i \mid w_{i - n + 1}, \ldots, w_{i-1})
+        =\begin{dcases}
+            \frac{C(w_{i - n + 1}, \ldots, w_i)}{C(w_{i - n + 1}, \ldots, w_{i-1})} &\text{ if } C(w_{i - n + 1}, \ldots, w_i) > 0,\\
+            P_{bo}(w_i \mid w_{i - n + 2}, \ldots, w_{i-1}) &\text{ otherwise}
+        \end{dcases}
+    \end{align*}
+    Meaning the length of context to be conditioned upon will be reduced as long
+    as there exists no support for the resulting N-Gram in the model. Instead the N-Gram probability of the largest context available in the model is used.
+}
+We could apply the same form of smoothing in the hierarchy of the substring relation, however it could be better to instead search for nodes similar to the input by the edit distance measure and use their contexts for prediction instead.
+
+\paragraph{Generating Novel Outputs}
+Although it may be desirable to limit the model's output to sequences it has been explicitly trained on, some applications will want to allow for some form of creative outputs even when it increases the risk of inconsistency or harmful outputs.
+
+

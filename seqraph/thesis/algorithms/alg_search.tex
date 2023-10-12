@@ -1,8 +1,31 @@
 
 \section{Search}
 
-The search algorithm enables us to find the location of a given string (which we will call the query) in the index structure. In case not the entire query exists, only the largest matching prefix of the query is located. It returns a \texttt{TraceGraph} which contains the nodes and edges which were traversed during search of the complete graph. The \texttt{TraceGraph} can be seen as an augmented subgraph of the original graph which is rooted at the smallest vertex containing all of the matched string with paths to the location of both the beginning and end of the matched string.
+The search algorithm finds the location of a given string (calld the \emph{query}) in a given model structure. In case not the entire query exists, only the largest matching prefix of the query is located. The algorithm constructs a \emph{trace graph} which contains the nodes and edges which were traversed during search in the complete graph. The \emph{trace graph} is thus an augmented subgraph of the original graph which is rooted at the smallest vertex containing all of the matched string with paths to the location of both the beginning and end of the matched string.
 
+\dfn{Trace Graph}{
+    The trace graph $T_G^w$ of string $w \in \Sigma^*$ in context graph $G$ is a rooted subgraph found in $G$, representing $w$. The edges of $T$ at least one path starting from the first node, passing through the root node and ending in the last node representing substrings of the query.\par
+    The edges can be divided into \emph{upward} and \emph{downward} edges, where upwards edges point to larger nodes and downwards edges point to smaller nodes.
+    \begin{align*}
+        \text{d}(a, b) =
+        \begin{cases}
+            \texttt{up}, &\text{ if } |a| < |b|\\
+            \texttt{down}, &\text{ if } |a| > |b|\\
+            \texttt{undefined}, &\text{ if } |a| = |b|\\
+        \end{cases}
+    \end{align*}
+
+    to the last node (mirroring traversal order of the search algorithm).
+    Edges are annotated with a distance $\text{dist}(e)$ to the first token, relative to the nodes they connect.
+    \begin{align*}
+        \text{dist}((a, b)) =
+        \begin{cases}
+            \text{prefix length before }w_0 \text{ in } a, &\text{ if } (a, b) \text{ is upwards edge,}\\
+            \text{distance from }w_0 \text{ to beginning of } b, &\text{ if } (a, b) \text{ is downwards edge}\\
+        \end{cases}
+    \end{align*}
+    The distance values are later used to determine the relative positions a node needs to be split at to construct new nodes from partial overlaps with other nodes.
+}
 \noindent To describe the search algorithm, let us assume there is an exising hypergraph structure that is correct according to our invariants. We can use our definition to make assumptions about the structure at every operation of the algorithm. A simple example of such a graph structure is given by the graph containing a single sequence without repetitions.
 
 \noindent The search query is given as a string of vertex indices $q = (q_i)_{i \in \NN} \in I_V^*$, representing a string of either 1-gram tokens or larger n-gram substrings, meaning we are not limited to raw string search queries. The query is the pattern we are trying to find in the graph.

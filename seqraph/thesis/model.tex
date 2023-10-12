@@ -1,0 +1,148 @@
+\chapter{Model Definition}\label{chp:model}
+
+This chapter will describe a language modelling framework that seeks to achieve a compromise between the speed and expressivity of neural attention based models and the accurracy and controllability of N-Gram models.
+The framework we are going to describe uses a hierarchical structure of N-Grams with a compressed containment relation connecting related N-Grams. A major challenge of the structure is to handle the large number of possible N-Grams and relationships between them, however we show that the amount of storage needed can be limited by representing longer N-Grams using shorter ones. It is also a known fact that, following Zipf's Law, the frequency of most larger N-Grams is not larger than 1 and by not storing these N-Grams individually, we can already mitigate the space requirements by 60\% compared to a model storing every N-Gram of the same length explicitly.
+
+\section{Context Relation}
+The fundamental idea behind the model is to represent the frequent context relationships of all tokens in the corpus as efficiently as possible. As a starting point, we define the containment order on the set of all N-grams in the corpus of any order $n$. Then we minimize the graph for the containment order using \textit{transitively reduced}, to obtain the graph with the minimal set of edges while keeping the paths between any two N-grams. N-gram frequency counts can be used to calculate conditional probabilities of moving from one N-gram to another.
+
+\dfn{Substring Relation}{
+    The substring graph $G = (V, E)$ of a string $w \in \Sigma^*$ represent the \textbf{strict containment} order on substrings of $w$. Let $x < y$ denote the partial order on the set of substrings of $w$:
+    \begin{align*}
+        a < b \iff \exists x,y \in \Sigma^*, (x, y) \neq (\epsilon, \epsilon): b = x \cdot a \cdot y
+    \end{align*}
+    where $ \cdot $ denotes string concatination. We may write $a \leq b$ to allow for $a = b$.
+    The nodes of the graph are given by the set of substrings of $w$ and the edges are given by the strict substring relation over these substrings:
+    \begin{align*}
+        V := \{v \in \Sigma^+ \mid v \leq w \},\quad
+        E := \{(a, b) \in V^2 \mid a < b \}
+    \end{align*}
+}
+
+In the substring graph, every two N-Grams are connected if and only if one represents a
+substring of the other. The number of possible substrings of length $n$ for a superstring of length $N$ is $N - n + 1$. This amounts to 
+\begin{align*}
+    \sum_{i=1}^{N}{N-i+1} = \frac{N(N + 1)}{2}
+\end{align*}
+substring edges for every N-Gram of length $N$ in the worst case (when no substring occurs more than once). As there are $\frac{N(N + 1)}{2}$ many nodes for a corpus of length $N$ by the same argument, the total number of edges would be $\frac{n^2(n + 1)^2}{4}$, considering no substring would occur more than once. This would be a space complexity of $O(N^4)$ which we want to reduce.
+
+\dfn{Transitive Reduction}{
+    The transitive reduction $G^t = (V, E^t)$ of a graph $G$ with no cycles is the result of removing all edges from $G$ for which there exists a longer path connecting their endpoints. The graph $G^t$ has the properties
+    \begin{enumerate}[label= (\roman*)]
+        \item\label{itm:first} There is a path between nodes $u$ and $v$ in $G^t$ if and only if there is a path between $u$ and $v$ in $G$. The graphs have the same \textit{reachability} relation.
+        \item There is no graph with less edges than $G^t$ fulfilling property~\ref{itm:first}
+    \end{enumerate}
+}
+In the transitive reduction of the substring relation of a corpus, edges can be omitted if there exists another path between the endpoints. This means the only downward edges that need to be stored for each node are to those substring which can not be contained in any other node. Luckily, there are only $2$ substrings of each N-Gram with this property, the prefix and the postfix of length $n-1$.
+\begin{table}[!ht]
+    \ttfamily
+    \centering
+    $\expanded{\noexpand\begin{tblr}{
+        hline{1}={1-Z}{solid},
+        hline{2}={1-Z}{solid},
+        vline{1}={1}{solid},
+        vline{2-7}={1}{dashed},
+        vline{7}={1}{solid},
+        \newcell{1}{2}{5},
+        \newcell{2}{3}{5},
+        hspan = even,
+    }}
+    \quad&\quad&\quad&\quad&\quad&\quad\\
+    prefix&\\
+    \quad&postfix
+    \end{tblr}$
+\end{table}
+
+With the transitive reduction, the number of edges in the substring relation can be reduced to $N(N + 1)$ in the worst case, as we only have to store $2$ edges for each node, considering no substring occurs more than once. However every substring is still reachable from every node, by travelling over all the largest substrings recursively.
+
+In some cases, the same substring can appear at multiple different positions in a larger string. To account for this, we associate each edge in the relation with an integer representing its token offset in the superstring. The resulting graph may contain multiple edges between two nodes, for each position the substring occurs in the superstring.
+
+\dfn{Offset Relation}{
+    The offset relation is a function $\text{offsets}(e): E^t \rightarrow \mathcal{P}(\NN)$ which assigns each edge of the reduced substring relation $G^t$ the set of offsets where the substring occurs in the superstring ($\mathcal{P}(\cdot)$ denotes the powerset).
+    \begin{align*}
+        \text{offsets}((x, y)) := \{|a| \mid \forall a, b \in \Sigma^*: \text{string}(x) = a \cdot \text{string}(y) \cdot b\}
+    \end{align*}
+    where $\text{string}(\cdot)$ gives the string associated with a node in $G^t$. Each offset is defined as the number of tokens preceding the substring in the superstring.
+}
+With the offset relation we are able to reconstruct the entire original string from the reduced substring relation $G^t$, as we now know where each substring needs to be placed. Because nodes in $G^t$ must be able to reach all of their substrings, we are able to reach each of the tokens represented by the node. With the offsets relation, providing us with a relative position of each substring, we can also derive the absolute position of each token.
+
+The goal of the model is to connect frequent substrings of the corpus with their various contexts and to derive probabilities for different extensions of a given string. For this we do not need to store dedicated nodes for N-Grams which occur only in a single context, and instead store only the edges to other frequent nodes with multiple different contexts.
+
+\dfn{Frequency Counts}{
+    The count relation $\text{count}(v): V \rightarrow \NN$ assigns each node in the substring relation $G^t$ the number of occurrences in the corpus.
+}
+
+\paragraph{Maximum number of nodes over an alphabet}
+It is typical to only store each N-gram once, which is limited by $k$. The total number of possible n-grams which can be built over an alphabet of $k$ symbols is $k^n$. This means that for small $n$, the number of possible n-grams may be much smaller than is indicated by the number of possible substrings: $N - n + 1$. With this rule, the equation for the total number of possible nodes becomes:
+\begin{align*}
+    |V| = \sum_{n \in \interval{1}{N}}{\min\{k^n, N - n + 1\}}
+\end{align*}
+Both expressions are monotonic with respect to $n$. $k^n$ is an increasing function and $N - n + 1$ is a decreasing function. Thus we can split the sum into two parts at the intersection of the two functions $n^*$, where
+\begin{equation} \label{eq:1}
+    k^{n^*} = N - n^* + 1 \Leftrightarrow \log_k(k^{n^*} - n^*) = \log_k(N + 1)
+\end{equation}
+With the intersection point, can then express the sum as two parts, summing each side of the intersection independently:
+\begin{align} \label{eq:2}
+    |V| = \sum_{n \in \interval{1}{n^*}}{k^n} + \sum_{n \in \interval[open left]{n^*}{N}}{N - n + 1}
+\end{align}
+%!\ref{eq:1}% 
+Because equation~\ref{eq:1} is a transcendental function, there is no algebraic solution for $n^*$, but we can get a sufficient estimate by utilising that
+\begin{align*}
+    \log(s + t) = \log(s) + \log(1 + \frac{t}{s}) \approx \log(\max\{s, t\}), \text{ if } |s - t| \gg 0
+\end{align*}
+which allows us to rewrite equation~\ref{eq:1} as 
+\begin{align*}
+    \log_k(k^{n^*} - n^*) = \log_k(N + 1) &\approx \log_k(\max\{k^{n^*}, - n^*\}) = n^*, \text{ if } k^{n^*} \gg -n^*
+\end{align*}
+giving a sufficient approximation of $n^* \approx \log_k(N + 1)$ for large $N$.
+
+\noindent
+Further, we can approximate equation~\ref{eq:2} with an integral form
+\begin{align*}
+    |V| &\approx \int_{1}^{n^*}{k^n}\diff n + \int_{n^*}^{N}{\left(N - n + 1\right)}\diff n\\
+        &= {\left[\frac{k^n}{\ln(k)} \right]}_{1}^{n^*} + {\left[(N + 1)n - \frac{n^2}{2} \right]}_{n^*}^{N}
+        = \frac{k^{n^*} - k}{\ln(k)} + \frac{N^2}{2} + N - \left((N + 1)n^* - \frac{{n^*}^2}{2}\right)
+\end{align*}
+and replacing $n^*$
+\begin{align*}
+    |V| \approx \frac{(N + 1) - k}{\ln(k)} + \frac{N^2}{2} + N - (N + 1)\log_k(N + 1) + \frac{{\log_k(N+1)}^2}{2}
+\end{align*}
+
+gives an asymptotic order of $O(N^2 + N\log_k(N))$ for the total number of possible substrings for a corpus of length $N$ over an alphabet of $k$ tokens.
+\dfn{Frequency Reduction}{
+}
+We can further reduce the relation graph this way by removing any nodes with only one parent in $G^t$ and replacing its edge from its parent with the edges to its children in $G^t$.
+
+\dfn{Children \& Parents}{
+    The set of directly adjacient substring-smaller nodes are called \textit{children} of $v \in V$:
+    \begin{align*}
+        \text{Children}(v) := \{ x \in N(v) \mid x < v \}
+    \end{align*}
+    where $N(v)$ is the neighborhood of $v$.
+    Complementary to this we define the parents of a node as its directly adjacient larger nodes.
+    \begin{align*}
+        \text{Parents}(v) := \{ x \in N(v) \mid v < x \}
+    \end{align*}
+    As the substring relation is transitive, the sets are disjoint $\text{Parents}(v) \cap \text{Children}(v) = \emptyset$ and there are no cycles in the relation graph.
+}
+
+\dfn{Context Function}{
+    The contexts $\text{Ctx}(v)$ of a given node $v \in V$ are given by the set of nodes larger than $v$ in the substring relation:
+    \begin{align*}
+        \text{Ctx}(v) := \{x \in V \mid v < x \}
+    \end{align*}
+    Complementary to this we define the set of substrings $\text{Sub}(v)$ of a node as the set of smaller nodes:
+    \begin{align*}
+        \text{Sub}(v) := \{x \in V \mid x < v \}
+    \end{align*}
+    Each of these sets forms a subgraph of the substring relation, by adding the edges from the (reduced) substring relation:
+    \begin{align*}
+        E_{\text{Ctx}}(v) &:= \{(x, y) \in E^t \mid x \in \text{Ctx}(v) \land y \in \text{Ctx}(v)\}\\
+        E_{\text{Sub}}(v) &:= \{(x, y) \in E^t \mid x \in \text{Sub}(v) \land y \in \text{Sub}(v)\}\\
+        G_{\text{Ctx}}(v) &:= (\text{Ctx}(v), E_{\text{Ctx}}(v))\\
+        G_{\text{Ctx}}(v) &:= (\text{Sub}(v), E_{\text{Sub}}(v))\\
+    \end{align*}
+}
+
+\dfn{String-Partition Graph}{
+}

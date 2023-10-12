@@ -1,17 +1,27 @@
 
 \chapter{Introduction}
 
-Latest neural language models (NLMs) based on the transformer architecture have set new 
-standards for natural language generation and translation. However neural models  
-remain notoriously hard to interpret and are still prone to exhibiting behaviour 
-inconsistent with reality, making it difficult to train reliable models.
-This thesis describes a method for constructing a structured formal grammar for a corpus 
-of training sequences capturing all of the syntactic relationships between subsequences 
-of the corpus, as a transformer would using self-attention.
-We will walk through the role of self-attention in LMs and previous methods
-of grammar induction and NLP on grammars. We will describe the 
-algorithm for inducing our grammatical structure.
+Neural models of the latest generation have proved their ability to learn complex conceptual relationships in extremely large corpora of natural language using a mechanism called self-attention. Given the convincing generative results of these models, new interest in applying these models at a larger scale has sparked. Natural language model now make considerable contributions to creative writing, knowledge representation and extraction, language translation and programming. Despite the impressive advancement of the field, neural language models remain fundamentally opaque, even to knowledgable users, and give no guarantees regarding the truthfulness of their responses and often produce inconsistent outputs. Additionally, neural models are inherently difficult to modify in a targeted manner after they have been trained, further increasing the cost of building reliable language models using neural methods.
 
+In this paper we investigate the specific strengths and weaknesses of attention-based neural language models in comparison to classic N-Gram based modelling approaches. We propose the use of explicit relationships between lexical elements to address the problems of neural models and augment a classical N-Gram model with a contextual relationship structure to capture information similar to the attention weights used in neural models. Further we devise a compression scheme on the resulting hierarchical N-Gram graph to increase the capacity to store long-range dependencies.
+
+
+There are however fundamental disadvantages of neural models over count based models.
+
+\dfn{Interpretability}{
+    The interpretability of a language model quantifies the degree a human can understand the model's decisions and parameters.
+}
+\dfn{Updatability}{
+    The updatability of a language model refers to the ability to update a trained language model with new knowledge or modify its behavior.
+}
+\dfn{Controllability}{
+
+}
+\section{Hallucinating Language Models}
+
+\section{Opaque Language Models}
+
+\section{Unpredictable Language Models}
 
 \section{Distributional Semantics}
 
@@ -36,11 +46,5 @@ Optimizing these linear transformations to maximize the attention weights for al
 
 We have described fundamental problems arising from language models based on neural networks and word embeddings, namely these models struggle with the following qualities:
 
-\begin{itemize}
-\item \textbf{Explainability}
-Decisions made by the model are difficult to explain based on the trained representation.
-\item \textbf{Predictability}
-The range of possible outputs these models are able to generate is difficult to gauge.
-\item \textbf{Updatability}
-The behaviour of these models is difficult to adjust after they have been trained.
-\end{itemize}
+
+

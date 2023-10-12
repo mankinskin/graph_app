@@ -1,15 +1,14 @@
-\documentclass{report}
+\documentclass[12pt]{report}
+
 
 \input{preamble.tex}
 \input{title.tex}
 
 \begin{document}
 
-
 \maketitle
 
-
-\pagenumbering{roman}
+\pagenumbering{gobble}
 \input{pretext.tex}
 
 %\newpage
@@ -25,9 +24,18 @@
 
 \subfile{introduction}
 
-\subfile{definitions}
+\subfile{related_work}
+
+\subfile{foundations}
+
+\subfile{model}
 
 \subfile{algorithms/algorithms.tex}
 
+\subfile{applications}
+
+\subfile{conclusion}
+
+\printbibliography
 
 \end{document}
