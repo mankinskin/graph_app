@@ -35,7 +35,7 @@ impl App {
         }
     }
     #[allow(unused)]
-    pub fn from_graph_ref(graph: HypergraphRef<char>) -> Self {
+    pub fn from_graph_ref(graph: HypergraphRef) -> Self {
         Self {
             graph_file: None,
             graph: Graph::new_from_graph_ref(graph),
@@ -49,7 +49,7 @@ impl App {
             ui.text_edit_singleline(&mut self.graph.insert_text);
             if ui.button("Go").clicked() {
                 let insert_text = self.graph.insert_text.clone();
-                self.graph.read_text(insert_text, ui.ctx());
+                //self.graph.read_text(insert_text, ui.ctx());
                 self.graph.insert_text = String::new();
                 ui.close_menu();
             }
@@ -153,7 +153,7 @@ impl eframe::App for App {
                     ui.text_edit_multiline(&mut self.graph.insert_text);
                     if ui.button("Insert").clicked() {
                         let insert_text = self.graph.insert_text.clone();
-                        self.read_task = Some(self.graph.read_text(insert_text, ctx));
+                        //self.read_task = Some(self.graph.read_text(insert_text, ctx));
                         self.graph.insert_text = String::new();
                     }
                 });

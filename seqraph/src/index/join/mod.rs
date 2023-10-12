@@ -51,7 +51,7 @@ impl Indexer {
                     let mut ctx = JoinContext::new(
                         self.graph_mut(),
                         key.index,
-                        splits.entries.get(&key.index.index()).unwrap(),
+                        splits.entries.get(&key.index.vertex_index()).unwrap(),
                         &final_splits,
                     );
                     ctx.join_node_partitions()
@@ -67,7 +67,7 @@ impl Indexer {
                     .cloned()
             );
         }
-        let entry = splits.entries.get(&root.index()).unwrap();
+        let entry = splits.entries.get(&root.vertex_index()).unwrap();
         let mut ctx = JoinContext::new(
             self.graph_mut(),
             root,

@@ -24,7 +24,7 @@ impl Child {
         width: TokenPosition,
     ) -> Self {
         Self {
-            index: index.index(),
+            index: index.vertex_index(),
             width: ChildWidth(width),
         }
     }
@@ -118,7 +118,7 @@ impl<T: Into<Child> + Clone> From<&'_ T> for Child {
 }
 impl From<NewTokenIndex> for Child {
     fn from(o: NewTokenIndex) -> Self {
-        Self::new(o.index(), 1)
+        Self::new(o.vertex_index(), 1)
     }
 }
 impl IntoIterator for Child {
@@ -130,7 +130,7 @@ impl IntoIterator for Child {
 }
 
 impl Indexed for Child {
-    fn index(&self) -> VertexIndex {
+    fn vertex_index(&self) -> VertexIndex {
         self.index
     }
 }

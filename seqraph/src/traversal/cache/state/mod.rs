@@ -126,7 +126,7 @@ impl TraversalState {
                     //        state,
                     //    });
                     for entry in self.new {
-                        ctx.cache.add_state(entry, true);
+                        ctx.cache.add_state(ctx.trav(), entry, true);
                     }
                     NextStates::Empty
                 }

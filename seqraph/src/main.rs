@@ -1,9 +1,6 @@
-use seqraph::*;
-use inquire::{
-    error::InquireResult,
-    Text,
-};
-fn main() {
-    let mut graph = HypergraphRef::<BaseGraphKind>::default();
 
+use seqraph::*;
+
+fn main() {
+    tests::ngrams::test_ngrams()
 }

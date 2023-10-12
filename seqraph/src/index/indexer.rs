@@ -4,6 +4,8 @@ use super::*;
 pub struct Indexer {
     pub graph: HypergraphRef,
 }
+
+#[derive(Debug)]
 pub struct IndexingPolicy {
 }
 impl<

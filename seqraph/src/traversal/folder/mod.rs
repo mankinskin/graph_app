@@ -27,7 +27,8 @@ pub trait TraversalFolder: Sized + Traversable {
         let query_root = QueryContext::new(query_pattern);
 
         //let query_ctx = QueryContext::new(query_pattern.clone());
-        let (mut start, mut cache) = TraversalCache::new(start_index, query.clone());
+        
+        let (mut start, mut cache) = TraversalCache::new(self, start_index, query.clone());
         let mut states = Self::Iterator::from(self);
         let init = {
             let mut ctx = TraversalContext::new(&query_root, &mut cache, &mut states);

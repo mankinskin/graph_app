@@ -26,38 +26,44 @@ pub enum NoMatch {
     EmptyRange,
 }
 
-impl<'t, 'g> HypergraphRef
-{
-    pub fn searcher(&'g self) -> Searcher {
-        Searcher::new(self.clone())
-    }
+pub trait Searchable: Traversable {
+    fn searcher(&self) -> Searcher<Self>;
     //pub fn expect_pattern(
     //    &self,
     //    pattern: impl IntoIterator<Item = impl AsToken<T>>,
     //) -> Child {
     //    self.find_sequence(pattern).unwrap().unwrap_complete()
     //}
-    pub fn find_ancestor(
+    fn find_ancestor(
         &self,
         pattern: impl IntoIterator<Item = impl Indexed>,
     ) -> SearchResult {
         let pattern = self.graph().to_children(pattern);
         self.searcher().find_pattern_ancestor(pattern)
     }
-    #[allow(unused)]
-    pub fn find_parent(
+    fn find_parent(
         &self,
         pattern: impl IntoIterator<Item = impl Indexed>,
     ) -> SearchResult {
         let pattern = self.graph().to_children(pattern);
         self.searcher().find_pattern_parent(pattern)
     }
-    pub fn find_sequence(
+    fn find_sequence(
         &self,
-        pattern: impl IntoIterator<Item = impl AsToken<<BaseGraphKind as GraphKind>::Token>>,
+        pattern: impl IntoIterator<Item = impl AsToken<TokenOf<GraphKindOf<Self>>>>,
     ) -> SearchResult {
         let iter = tokenizing_iter(pattern.into_iter());
         let pattern = self.graph().to_token_children(iter)?;
         self.find_ancestor(pattern)
+    }
+}
+impl<'g> Searchable for &'g Hypergraph {
+    fn searcher(&self) -> Searcher<Self> {
+        Searcher::new(self)
+    }
+}
+impl Searchable for HypergraphRef {
+    fn searcher(&self) -> Searcher<Self> {
+        Searcher::new(self.clone())
     }
 }

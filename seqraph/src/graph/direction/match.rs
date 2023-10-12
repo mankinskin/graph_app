@@ -12,7 +12,7 @@ fn to_matching_iterator<'a, I: Indexed + 'a, J: Indexed + 'a>(
     a.zip_longest(b)
         .enumerate()
         .skip_while(|(_, eob)| match eob {
-            EitherOrBoth::Both(a, b) => a.index() == b.index(),
+            EitherOrBoth::Both(a, b) => a.vertex_index() == b.vertex_index(),
             _ => false,
         })
 }

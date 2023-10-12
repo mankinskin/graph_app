@@ -52,9 +52,12 @@ impl NextStates {
     }
 }
 
+pub type IterTrav<'a, It> = <It as TraversalIterator<'a>>::Trav;
+pub type IterKind<'a, It> = TravKind<IterTrav<'a, It>>;
+
 pub trait TraversalIterator<
     'a, 
->: Iterator<Item = (usize, TraversalState)> + Sized + ExtendStates + PruneStates {
+>: Iterator<Item = (usize, TraversalState)> + Sized + ExtendStates + PruneStates + Debug {
     type Trav: TraversalFolder + 'a;
     type Policy: DirectedTraversalPolicy<Trav=Self::Trav>;
     type NodeVisitor: NodeVisitor;

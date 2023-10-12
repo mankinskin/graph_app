@@ -212,7 +212,7 @@ fn find_ancestor2() {
                     end_pos: 3.into(),
                     cache: TraversalCache {
                         entries: HashMap::from_iter([
-                            (xabyz.index, VertexCache {
+                            (lab!(xabyz), VertexCache {
                                 index: xabyz,
                                 top_down: HashMap::from_iter([
                                     //(2.into(), PositionCache {
@@ -245,7 +245,7 @@ fn find_ancestor2() {
                                     })
                                 ])
                             }),
-                            (xaby.index, VertexCache {
+                            (lab!(xaby), VertexCache {
                                 index: xaby,
                                 top_down: HashMap::from_iter([]),
                                 bottom_up: HashMap::from_iter([
@@ -269,7 +269,7 @@ fn find_ancestor2() {
                                     })
                                 ])
                             }),
-                            (by.index, VertexCache {
+                            (lab!(by), VertexCache {
                                 index: by,
                                 top_down: HashMap::from_iter([]),
                                 bottom_up: HashMap::from_iter([
@@ -444,7 +444,7 @@ fn find_ancestor3() {
                             //        })
                             //    ])
                             //}),
-                            (xaby.index, VertexCache {
+                            (lab!(xaby), VertexCache {
                                 index: xaby,
                                 top_down: HashMap::from_iter([
                                     //(2.into(), PositionCache {
@@ -477,7 +477,7 @@ fn find_ancestor3() {
                                     })
                                 ]),
                             }),
-                            (xab.index, VertexCache {
+                            (lab!(xab), VertexCache {
                                 index: xab,
                                 top_down: HashMap::from_iter([]),
                                 bottom_up: HashMap::from_iter([
@@ -505,7 +505,7 @@ fn find_ancestor3() {
                                     })
                                 ])
                             }),
-                            (ab.index, VertexCache {
+                            (lab!(ab), VertexCache {
                                 index: ab,
                                 top_down: HashMap::from_iter([]),
                                 bottom_up: HashMap::from_iter([

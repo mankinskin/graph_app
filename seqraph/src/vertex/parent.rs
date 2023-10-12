@@ -3,6 +3,7 @@ use std::{
     fmt::Debug,
 };
 
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct PatternIndex {
     pub pattern_id: PatternId,

@@ -23,31 +23,14 @@ pub mod index;
 pub mod logger;
 pub mod mock;
 //pub mod read;
+pub mod tests;
 
-pub use search::*;
-pub use vertex::*;
-pub use traversal::*;
-pub use logger::*;
-pub use direction::*;
-pub use index::*;
-//pub use read::*;
 
 #[cfg(test)]
 pub use graph::tests::*;
-
-pub use {
-    graph::*,
-    vertex::{
-        Token,
-        VertexKey,
-        VertexData,
-        Tokenize,
-        Child,
-        PatternId,
-    },
-};
 #[allow(unused)]
 pub use {
+    petgraph::graph::DiGraph,
     auto_impl::auto_impl,
     tracing::*,
     linked_hash_set::*,
@@ -63,7 +46,10 @@ pub use {
     },
     derive_new::*,
     std::{
-        fmt::Debug,
+        fmt::{
+            Debug,
+            Display,
+        },
         ops::{
             Deref,
             DerefMut,
@@ -73,6 +59,7 @@ pub use {
             RangeFrom,
             RangeTo,
         },
+        slice::SliceIndex,
         convert::TryInto,
         cmp::Ordering,
         borrow::{
@@ -90,6 +77,7 @@ pub use {
         hash::{
             BuildHasherDefault,
             Hash,
+            Hasher,
         },
         num::NonZeroUsize,
         pin::{Pin, pin},
@@ -99,6 +87,10 @@ pub use {
             RwLockReadGuard,
             RwLockWriteGuard,
             Mutex,
+            atomic::{
+                self,
+                AtomicUsize,
+            },
         },
         iter::{
             FromIterator,
@@ -138,6 +130,24 @@ pub use {
         },
     },
     derive_more::*,
+};
+pub use {
+    search::*,
+    vertex::*,
+    traversal::*,
+    logger::*,
+    direction::*,
+    index::*,
+    //read::*,
+    graph::*,
+    vertex::{
+        Token,
+        VertexKey,
+        VertexData,
+        Tokenize,
+        Child,
+        PatternId,
+    },
 };
 pub type HashSet<T> =
     std::collections::HashSet<T,

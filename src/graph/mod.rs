@@ -19,15 +19,15 @@ use tokio::task::JoinHandle;
 
 #[derive(Clone)]
 pub struct Graph {
-    pub graph: HypergraphRef<char>,
+    pub graph: HypergraphRef,
     pub vis: Arc<RwLock<GraphVis>>,
     pub insert_text: String,
 }
 impl Graph {
-    pub fn new_from_graph(graph: Hypergraph<char>) -> Self {
+    pub fn new_from_graph(graph: Hypergraph) -> Self {
         Self::new_from_graph_ref(HypergraphRef::from(graph))
     }
-    pub fn new_from_graph_ref(graph: HypergraphRef<char>) -> Self {
+    pub fn new_from_graph_ref(graph: HypergraphRef) -> Self {
         let vis = Arc::new(RwLock::new(GraphVis::default()));
         let new = Self {
             graph,
@@ -42,13 +42,13 @@ impl Graph {
         let graph = Hypergraph::default();
         Self::new_from_graph(graph)
     }
-    pub fn try_read(&self) -> Option<RwLockReadGuard<'_, Hypergraph<char>>> {
+    pub fn try_read(&self) -> Option<RwLockReadGuard<'_, Hypergraph>> {
         self.graph.read().ok()
     }
-    pub fn read(&self) -> RwLockReadGuard<'_, Hypergraph<char>> {
+    pub fn read(&self) -> RwLockReadGuard<'_, Hypergraph> {
         self.try_read().unwrap()
     }
-    pub fn write(&self) -> RwLockWriteGuard<'_, Hypergraph<char>> {
+    pub fn write(&self) -> RwLockWriteGuard<'_, Hypergraph> {
         self.graph.write().unwrap()
     }
     #[allow(unused)]
@@ -58,22 +58,22 @@ impl Graph {
     pub fn vis_mut(&self) -> RwLockWriteGuard<'_, GraphVis> {
         self.vis.write().unwrap()
     }
-    pub fn set_graph(&self, graph: Hypergraph<char>) {
+    pub fn set_graph(&self, graph: Hypergraph) {
         *self.write() = graph;
     }
     pub fn clear(&mut self) {
         *self = Self::new();
     }
-    pub fn read_text(&mut self, text: impl ToString, ctx: &egui::Context) -> JoinHandle<()> {
-        let text = text.to_string();
-        let ctx = ctx.clone();
-        let mut graph = self.graph.clone();
-        tokio::task::spawn_blocking(move || {
-            graph.read_sequence(text.chars());
-            println!("done reading");
-            ctx.request_repaint();
-        })
-    }
+    //pub fn read_text(&mut self, text: impl ToString, ctx: &egui::Context) -> JoinHandle<()> {
+    //    let text = text.to_string();
+    //    let ctx = ctx.clone();
+    //    let mut graph = self.graph.clone();
+    //    tokio::task::spawn_blocking(move || {
+    //        graph.read_sequence(text.chars());
+    //        println!("done reading");
+    //        ctx.request_repaint();
+    //    })
+    //}
     pub fn poll_events(&self) -> Vec<tracing_egui::LogEvent> {
         //println!("polling..");
         tracing_egui::poll_events()

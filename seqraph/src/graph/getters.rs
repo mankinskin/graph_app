@@ -1,10 +1,5 @@
-use std::slice::SliceIndex;
-
-use crate::{
-    vertex::*,
-    search::*,
-    *,
-};
+use crate::*;
+use crate::vertex::indexed::Indexed;
 
 impl<'t, G: GraphKind> Hypergraph<G> {
     pub fn get_vertex(
@@ -12,7 +7,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         index: impl Indexed,
     ) -> Result<(&VertexKey<G::Token>, &VertexData), NoMatch> {
         self.graph
-            .get_index(index.index())
+            .get_index(index.vertex_index())
             .ok_or(NoMatch::UnknownIndex)
     }
     pub fn get_vertex_mut(
@@ -20,7 +15,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         index: impl Indexed,
     ) -> Result<(&mut VertexKey<G::Token>, &mut VertexData), NoMatch> {
         self.graph
-            .get_index_mut(index.index())
+            .get_index_mut(index.vertex_index())
             .ok_or(NoMatch::UnknownIndex)
     }
     #[track_caller]
@@ -28,7 +23,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         &self,
         index: impl Indexed,
     ) -> (&VertexKey<G::Token>, &VertexData) {
-        let index = index.index();
+        let index = index.vertex_index();
         self.get_vertex(index)
             .unwrap_or_else(|_| panic!("Index {} does not exist!", index))
     }
@@ -112,14 +107,14 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         &self,
         loc: &ChildLocation,
     ) -> usize {
-        self.expect_vertex_data(&loc.index()).expect_child_offset(&loc.to_sub_location())
+        self.expect_vertex_data(&loc.vertex_index()).expect_child_offset(&loc.to_sub_location())
     }
     #[track_caller]
     pub fn expect_vertex_mut(
         &mut self,
         index: impl Indexed,
     ) -> (&mut VertexKey<G::Token>, &mut VertexData) {
-        let index = index.index();
+        let index = index.vertex_index();
         self.get_vertex_mut(index)
             .unwrap_or_else(|_| panic!("Index {} does not exist!", index))
     }
@@ -364,7 +359,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         &self,
         location: &ChildLocation
     ) -> bool {
-        self.expect_vertex_data(location.index())
+        self.expect_vertex_data(location.vertex_index())
             .expect_pattern_len(&location.pattern_id) == location.sub_index + 1
     }
     pub fn get_child(
@@ -377,7 +372,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         &self,
         index: impl Indexed,
     ) -> Child {
-        Child::new(index.index(), self.index_width(&index))
+        Child::new(index.vertex_index(), self.index_width(&index))
     }
     pub fn to_children(
         &self,
@@ -394,7 +389,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
             .into_iter()
             .map(|index| {
                 let vertex = self.expect_vertex_data(index);
-                vertex.get_parent(parent.index()).map(Clone::clone)
+                vertex.get_parent(parent.vertex_index()).map(Clone::clone)
             })
             .collect()
     }

@@ -1,6 +1,6 @@
 use seqraph::*;
 
-pub fn build_graph1() -> Hypergraph<char> {
+pub fn build_graph1() -> Hypergraph {
     let mut graph = Hypergraph::default();
     if let [a, b, w, x, y, z] = graph.insert_tokens([
         Token::Element('a'),
@@ -24,7 +24,7 @@ pub fn build_graph1() -> Hypergraph<char> {
     }
     graph
 }
-pub fn build_graph2() -> Hypergraph<char> {
+pub fn build_graph2() -> Hypergraph {
     let mut graph = Hypergraph::default();
     if let [a, b, c, d, e, f, g, h, i] = graph.insert_tokens([
         Token::Element('a'),
@@ -69,7 +69,7 @@ pub fn build_graph2() -> Hypergraph<char> {
     }
     graph
 }
-pub fn build_graph3() -> Hypergraph<char> {
+pub fn build_graph3() -> Hypergraph {
     let mut graph = Hypergraph::default();
     if let [
         d, i, e, space,

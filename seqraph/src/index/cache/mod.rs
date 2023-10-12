@@ -15,7 +15,7 @@ pub struct TraceState {
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct SplitCache {
-    pub entries: HashMap<VertexIndex, SplitVertexCache>,
+    pub entries: HashMap<VertexCacheKey, SplitVertexCache>,
     #[deref]
     #[deref_mut]
     pub context: CacheContext,
@@ -36,7 +36,7 @@ impl SplitCache {
             &mut leaves,
         );
         entries.insert(
-            fold_state.root.index(),
+            build_key(trav, fold_state.root),
             root_vertex,
         );
         let mut cache = Self {
@@ -87,7 +87,7 @@ impl SplitCache {
         fold_state: &FoldState,
         index: &Child,
     ) -> N::CompleteSplitOutput {
-        fold_state.cache.entries.get(&index.index()).map(|e|
+        fold_state.cache.entries.get(&index.vertex_index()).map(|e|
             e.complete_splits::<_, N>(
                 trav,
                 fold_state.end_pos,
@@ -209,7 +209,7 @@ impl SplitCache {
         state: &TraceState,
     ) {
         let &TraceState { index, offset, prev } = state;
-        if let Some(ve) = self.entries.get_mut(&index.index()) {
+        if let Some(ve) = self.entries.get_mut(&index.vertex_index()) {
             let ctx = &mut self.context;
             ve.positions.entry(offset)
                 .and_modify(|pe| {
@@ -232,7 +232,7 @@ impl SplitCache {
                 prev,
             );
             self.entries.insert(
-                index.index(),
+                build_key(trav, index),
                 vertex,
             );
         }
@@ -242,7 +242,7 @@ impl SplitCache {
         &mut self,
         ctx: TraceContext<'a>,
     ) -> Vec<TraceState> {
-        self.entries.get_mut(&ctx.index.index()).unwrap()
+        self.entries.get_mut(&ctx.index.vertex_index()).unwrap()
             .complete_node(
                 ctx,
             )
@@ -253,7 +253,7 @@ impl SplitCache {
         ctx: TraceContext<'a>,
         root_mode: RootMode,
     ) -> Vec<TraceState> {
-        self.entries.get_mut(&ctx.index.index()).unwrap()
+        self.entries.get_mut(&ctx.index.vertex_index()).unwrap()
             .complete_root(
                 ctx,
                 root_mode,
@@ -278,13 +278,13 @@ impl SplitCache {
         }
     }
     pub fn get(&self, key: &SplitKey) -> Option<&SplitPositionCache> {
-        self.entries.get(&key.index.index())
+        self.entries.get(&key.index.vertex_index())
             .and_then(|ve|
                 ve.positions.get(&key.pos)
             )
     }
     pub fn get_mut(&mut self, key: &SplitKey) -> Option<&mut SplitPositionCache> {
-        self.entries.get_mut(&key.index.index())
+        self.entries.get_mut(&key.index.vertex_index())
             .and_then(|ve|
                 ve.positions.get_mut(&key.pos)
             )
@@ -427,6 +427,7 @@ pub fn cleaned_position_splits<'a>(
         })
         .collect()
 }
+
 #[cfg(test)]
 mod tests {
     use crate::*;
@@ -449,15 +450,18 @@ mod tests {
             ef,
             e_f_id,
             ..
-        } = &mut *context_mut();
+        } = &*context_mut();
+
         let query = vec![*a, *bc, *d, *e];
         let res = graph.searcher().find_pattern_ancestor(query)
             .unwrap().result
             .unwrap_incomplete();
+
         assert_eq!(res.start, *a);
         assert_eq!(res.end_pos, 5.into());
+
         assert_eq!(res.cache.entries, HashMap::from_iter([
-            (a.index, VertexCache {
+            (lab!(a), VertexCache {
                 index: *a,
                 bottom_up: HashMap::from_iter([
                     (1.into(), PositionCache {
@@ -468,7 +472,7 @@ mod tests {
                 ]),
                 top_down: HashMap::from_iter([]),
             }),
-            (bc.index, VertexCache {
+            (lab!(bc), VertexCache {
                 index: *bc,
                 bottom_up: HashMap::from_iter([]),
                 top_down: HashMap::from_iter([
@@ -479,7 +483,7 @@ mod tests {
                     })
                 ]),
             }),
-            (abc.index, VertexCache {
+            (lab!(abc), VertexCache {
                 index: *abc,
                 bottom_up: HashMap::from_iter([
                     (1.into(), PositionCache {
@@ -498,7 +502,7 @@ mod tests {
                 ]),
                 top_down: HashMap::from_iter([]),
             }),
-            (abcd.index, VertexCache {
+            (lab!(abcd), VertexCache {
                 index: *abcd,
                 bottom_up: HashMap::from_iter([
                     (3.into(), PositionCache {
@@ -517,7 +521,7 @@ mod tests {
                 ]),
                 top_down: HashMap::from_iter([]),
             }),
-            (abcdef.index, VertexCache {
+            (lab!(abcdef), VertexCache {
                 index: *abcdef,
                 bottom_up: HashMap::from_iter([
                     (4.into(), PositionCache {
@@ -562,7 +566,7 @@ mod tests {
                     })
                 ]),
             }),
-            (ef.index, VertexCache {
+            (lab!(ef), VertexCache {
                 index: *ef,
                 bottom_up: HashMap::from_iter([]),
                 top_down: HashMap::from_iter([
@@ -581,7 +585,7 @@ mod tests {
                     })
                 ]),
             }),
-            (e.index, VertexCache {
+            (lab!(e), VertexCache {
                 index: *e,
                 top_down: HashMap::from_iter([
                     (4.into(), PositionCache {
@@ -592,7 +596,7 @@ mod tests {
                 ]),
                 bottom_up: HashMap::from_iter([]),
             }),
-            (d.index, VertexCache {
+            (lab!(d), VertexCache {
                 index: *d,
                 top_down: HashMap::from_iter([
                     (3.into(), PositionCache {
@@ -604,6 +608,21 @@ mod tests {
                 bottom_up: HashMap::from_iter([]),
             }),
         ]));
+        drop(graph);
+        let Context {
+            graph,
+            a,
+            d,
+            e,
+            bc,
+            abc,
+            abcd,
+            abcdef,
+            //abc_def_id,
+            //def,
+            ef,
+            ..
+        } = &mut *context_mut();
         let splits = SplitCache::new(
             &mut *graph,
             res,
@@ -611,10 +630,10 @@ mod tests {
         assert_eq!(
             splits.entries,
             HashMap::from_iter([
-                (a.index, SplitVertexCache {
+                (lab!(a), SplitVertexCache {
                     positions: BTreeMap::default(),
                 }),
-                (bc.index, SplitVertexCache {
+                (lab!(bc), SplitVertexCache {
                     positions: BTreeMap::from_iter([
                         (1.try_into().unwrap(), SplitPositionCache {
                             top: HashSet::from_iter([
@@ -624,26 +643,26 @@ mod tests {
                         })
                     ]),
                 }),
-                (abc.index, SplitVertexCache {
+                (lab!(abc), SplitVertexCache {
                     positions: BTreeMap::from_iter([
                     ]),
                 }),
-                (abcd.index, SplitVertexCache {
+                (lab!(abcd), SplitVertexCache {
                     positions: BTreeMap::from_iter([
                     ]),
                 }),
-                (abcdef.index, SplitVertexCache {
+                (lab!(abcdef), SplitVertexCache {
                     positions: BTreeMap::from_iter([
                     ]),
                 }),
-                (ef.index, SplitVertexCache {
+                (lab!(ef), SplitVertexCache {
                     positions: BTreeMap::from_iter([
                     ]),
                 }),
-                (e.index, SplitVertexCache {
+                (lab!(e), SplitVertexCache {
                     positions: BTreeMap::default(),
                 }),
-                (d.index, SplitVertexCache {
+                (lab!(d), SplitVertexCache {
                     positions: BTreeMap::default(),
                 }),
             ])

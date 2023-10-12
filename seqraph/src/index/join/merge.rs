@@ -105,7 +105,8 @@ impl<'p> JoinContext<'p> {
                     Ok(info) => {
                         let merges = range_map.range_sub_merges(start..start + len);
                         let joined = info.patterns.into_iter().map(|(pid, info)|
-                            (info.join_pattern_inner(pid, self).borrow() as &[Child]).into_iter().cloned().collect_vec()
+                            (info.join_pattern_inner(pid, self).borrow() as &[Child])
+                                .into_iter().cloned().collect_vec()
                         );
                         // todo: insert into perfect context
                         let patterns = merges.into_iter().chain(joined).collect_vec();
@@ -123,12 +124,12 @@ impl<'p> JoinContext<'p> {
     }
 }
 
-#[derive(Debug, Deref, DerefMut)]
-pub struct RangeMap {
+#[derive(Debug, Deref, DerefMut, Default)]
+pub struct RangeMap<R = Range<usize>> {
     #[deref]
-    map: HashMap<Range<usize>, Child>,
+    map: HashMap<R, Child>,
 }
-impl<C: Borrow<Child>, I: IntoIterator<Item=C>> From<I> for RangeMap {
+impl<C: Borrow<Child>, I: IntoIterator<Item=C>> From<I> for RangeMap<Range<usize>> {
     fn from(iter: I) -> Self {
         let mut map = HashMap::default();
         for (i, part) in iter.into_iter().enumerate() {
@@ -140,7 +141,7 @@ impl<C: Borrow<Child>, I: IntoIterator<Item=C>> From<I> for RangeMap {
         Self { map }
     }
 }
-impl RangeMap {
+impl RangeMap<Range<usize>> {
     pub fn range_sub_merges(&self, range: Range<usize>) -> impl IntoIterator<Item=Pattern> + '_ {
         let (start, end) = (range.start, range.end);
         range.into_iter()

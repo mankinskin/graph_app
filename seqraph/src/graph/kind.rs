@@ -1,9 +1,10 @@
 use crate::*;
 
 pub trait GraphKind: Debug + Clone + Default {
-    type Token: Tokenize;
+    type Token: Tokenize + Display;
     type Direction: IndexDirection;
 }
+pub type TokenOf<K> = <K as GraphKind>::Token;
 
 #[derive(Debug, Clone, Default)]
 pub struct BaseGraphKind;

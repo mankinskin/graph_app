@@ -4,7 +4,11 @@ pub trait Trace {
     fn trace<Trav: Traversable>(&self, trav: &Trav, cache: &mut TraversalCache);
 }
 impl Trace for EndState {
-    fn trace<Trav: Traversable>(&self, trav: &Trav, cache: &mut TraversalCache) {
+    fn trace<Trav: Traversable>(
+        &self,
+        trav: &Trav,
+        cache: &mut TraversalCache,
+    ) {
         match &self.kind {
             EndKind::Range(p) => {
                 let root_entry = p.path

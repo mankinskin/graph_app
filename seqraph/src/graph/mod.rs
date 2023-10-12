@@ -1,13 +1,5 @@
 use crate::*;
-use itertools::Itertools;
-use petgraph::graph::DiGraph;
-use std::{
-    fmt::Debug,
-    sync::atomic::{
-        AtomicUsize,
-        Ordering,
-    },
-};
+
 
 pub mod child_strings;
 pub use child_strings::*;
@@ -90,20 +82,23 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G> {
     pub fn new() -> Self {
         Self::default()
     }
+    pub fn to_ref(self) -> HypergraphRef<G> {
+        self.into()
+    }
     pub fn index_width(
         &self,
         index: &impl Indexed,
     ) -> TokenPosition {
-        self.expect_vertex_data(index.index()).width
+        self.expect_vertex_data(index.vertex_index()).width
     }
     pub fn vertex_count(&self) -> usize {
         self.graph.len()
     }
-    fn next_vertex_id(&mut self) -> VertexIndex {
-        self.vertex_id_count.fetch_add(1, Ordering::SeqCst)
+    pub fn next_vertex_id(&mut self) -> VertexIndex {
+        self.vertex_id_count.fetch_add(1, atomic::Ordering::SeqCst)
     }
     pub fn next_pattern_id(&mut self) -> PatternId {
-        self.pattern_id_count.fetch_add(1, Ordering::SeqCst)
+        self.pattern_id_count.fetch_add(1, atomic::Ordering::SeqCst)
     }
     //pub fn index_sequence<N: Into<G>, I: IntoIterator<Item = N>>(&mut self, seq: I) -> VertexIndex {
     //    let seq = seq.into_iter();
@@ -116,7 +111,7 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G> {
         index: impl AsChild,
     ) -> Vec<VertexIndex> {
         if index.width() == 1 {
-            vec![index.index()]
+            vec![index.vertex_index()]
         } else {
             let data = self.expect_vertex_data(index);
             assert!(!data.children.is_empty());
@@ -207,8 +202,8 @@ where
     ) -> ChildStrings {
         let nodes = pattern.into_iter().map(|child| {
             (
-                self.index_string(child.index()),
-                self.expect_vertex_data(child.index())
+                self.index_string(child.vertex_index()),
+                self.expect_vertex_data(child.vertex_index())
                     .to_pattern_strings(self),
             )
         });
@@ -222,7 +217,7 @@ where
     ) -> String {
         pattern
             .into_iter()
-            .map(|child| self.index_string(child.index()))
+            .map(|child| self.index_string(child.vertex_index()))
             .join(separator)
     }
     pub fn separated_pattern_string(

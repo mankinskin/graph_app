@@ -38,7 +38,7 @@ pub fn clone_child_patterns(children: &'_ ChildPatterns) -> impl Iterator<Item=P
     children.iter().map(|(_, p)| p.clone())
 }
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
-pub enum VertexKey<T: Tokenize> {
+pub enum VertexKey<T: Tokenize = TokenOf<BaseGraphKind>> {
     Token(Token<T>),
     Pattern(VertexIndex),
 }
@@ -69,7 +69,7 @@ impl VertexData {
         &self,
         index: impl Indexed,
     ) -> Result<&Parent, NoMatch> {
-        let index = index.index();
+        let index = index.vertex_index();
         self.parents
             .get(&index)
             .ok_or(NoMatch::NoMatchingParent(index))
@@ -78,7 +78,7 @@ impl VertexData {
         &mut self,
         index: impl Indexed,
     ) -> Result<&mut Parent, NoMatch> {
-        let index = index.index();
+        let index = index.vertex_index();
         self.parents
             .get_mut(&index)
             .ok_or(NoMatch::NoMatchingParent(index))
@@ -240,6 +240,18 @@ impl VertexData {
         self.children.insert(id, pat.into_pattern());
         self.validate();
     }
+    pub fn add_patterns_no_update(
+        &mut self,
+        patterns: impl IntoIterator<Item=(PatternId, impl IntoPattern)>,
+    ) {
+        for (id, pat) in patterns {
+            if pat.borrow().len() < 2 {
+                assert!(pat.borrow().len() > 1);
+            }
+            self.children.insert(id, pat.into_pattern());
+        }
+        self.validate();
+    }
     #[track_caller]
     pub fn validate_links(&self) {
         assert!(self.children.len() != 1 || self.parents.len() != 1);
@@ -275,16 +287,14 @@ impl VertexData {
     }
     pub fn add_parent(
         &mut self,
-        parent: impl AsChild,
-        pattern: usize,
-        index: PatternId,
+        loc: ChildLocation,
     ) {
-        if let Some(parent) = self.parents.get_mut(&parent.index()) {
-            parent.add_pattern_index(pattern, index);
+        if let Some(parent) = self.parents.get_mut(&loc.parent.vertex_index()) {
+            parent.add_pattern_index(loc.pattern_id, loc.sub_index);
         } else {
-            let mut parent_rel = Parent::new(parent.width());
-            parent_rel.add_pattern_index(pattern, index);
-            self.parents.insert(parent.index(), parent_rel);
+            let mut parent_rel = Parent::new(loc.parent.width());
+            parent_rel.add_pattern_index(loc.pattern_id, loc.sub_index);
+            self.parents.insert(loc.parent.vertex_index(), parent_rel);
         }
         // not while indexing
         //self.validate_links();
@@ -293,7 +303,7 @@ impl VertexData {
         &mut self,
         vertex: impl Indexed,
     ) {
-        self.parents.remove(&vertex.index());
+        self.parents.remove(&vertex.vertex_index());
         // not while indexing
         //self.validate_links();
     }
@@ -303,11 +313,11 @@ impl VertexData {
         pattern: usize,
         index: PatternId,
     ) {
-        if let Some(parent) = self.parents.get_mut(&vertex.index()) {
+        if let Some(parent) = self.parents.get_mut(&vertex.vertex_index()) {
             if parent.pattern_indices.len() > 1 {
                 parent.remove_pattern_index(pattern, index);
             } else {
-                self.parents.remove(&vertex.index());
+                self.parents.remove(&vertex.vertex_index());
             }
         }
         // not while indexing
@@ -348,21 +358,48 @@ impl VertexData {
         parent_index: impl Indexed,
         cond: impl Fn(&&Parent) -> bool,
     ) -> Result<&'_ Parent, NoMatch> {
-        let index = parent_index.index();
+        let index = parent_index.vertex_index();
         self.get_parent(index)
             .ok()
             .filter(cond)
             .ok_or(NoMatch::NoMatchingParent(index))
     }
+    pub fn get_parents_at_prefix(
+        &self,
+    ) -> HashMap<VertexIndex, PatternId> {
+        self.get_parents_with_index_at(0)
+    }
+    pub fn get_parents_at_postfix(
+        &self,
+        graph: &Hypergraph,
+    ) -> HashMap<VertexIndex, PatternId> {
+        self.parents.iter()
+            .filter_map(|(id, parent)|
+                parent.get_index_at_postfix_of(graph.expect_vertex_data(id))
+                    .map(|pat| (*id, pat.pattern_id))
+            )
+            .collect()
+    }
+    pub fn get_parents_with_index_at(
+        &self,
+        offset: usize,
+    ) -> HashMap<VertexIndex, PatternId> {
+        self.parents.iter()
+            .filter_map(|(id, parent)|
+                parent.get_index_at_pos(offset)
+                    .map(|pat| (*id, pat.pattern_id))
+            )
+            .collect()
+    }
     pub fn get_parent_to_starting_at(
         &self,
         parent_index: impl Indexed,
-        offset: usize,
+        index_offset: usize,
     ) -> Result<PatternIndex, NoMatch> {
-        let index = parent_index.index();
+        let index = parent_index.vertex_index();
         self.get_parent(index)
             .ok()
-            .and_then(|parent| parent.get_index_at_pos(offset))
+            .and_then(|parent| parent.get_index_at_pos(index_offset))
             .ok_or(NoMatch::NoMatchingParent(index))
     }
     pub fn get_parent_to_ending_at(

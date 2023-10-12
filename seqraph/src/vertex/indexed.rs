@@ -1,9 +1,8 @@
 use crate::traversal::traversable::Traversable;
-
 use super::*;
 
 pub trait Indexed: Sized {
-    fn index(&self) -> VertexIndex;
+    fn vertex_index(&self) -> VertexIndex;
     fn expect_child_patterns<
         Trav: Traversable,
     >(&self, trav: &Trav) -> ChildPatterns {
@@ -16,29 +15,29 @@ pub trait Indexed: Sized {
     }
 }
 impl<I: Indexed> Indexed for &'_ I {
-    fn index(&self) -> VertexIndex {
-        (**self).index()
+    fn vertex_index(&self) -> VertexIndex {
+        (**self).vertex_index()
     }
 }
 impl<I: Indexed> Indexed for &'_ mut I {
-    fn index(&self) -> VertexIndex {
-        (**self).index()
+    fn vertex_index(&self) -> VertexIndex {
+        (**self).vertex_index()
     }
 }
 impl Indexed for VertexIndex {
-    fn index(&self) -> VertexIndex {
+    fn vertex_index(&self) -> VertexIndex {
         *self
     }
 }
 impl Indexed for VertexData {
-    fn index(&self) -> VertexIndex {
+    fn vertex_index(&self) -> VertexIndex {
         self.index
     }
 }
 
 pub trait AsChild: Indexed + Wide + std::fmt::Debug {
     fn as_child(&self) -> Child {
-        Child::new(self.index(), self.width())
+        Child::new(self.vertex_index(), self.width())
     }
 }
 impl<T: Indexed + Wide + std::fmt::Debug> AsChild for T {}

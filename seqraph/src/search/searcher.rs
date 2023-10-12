@@ -5,38 +5,37 @@ use crate::*;
 //};
 
 #[derive(Clone, Debug)]
-pub struct Searcher {
-    pub graph: HypergraphRef,
+pub struct Searcher<T: Traversable> {
+    pub graph: T,
 }
-pub trait SearchTraversalPolicy:
+pub trait SearchTraversalPolicy<T: Traversable>:
     DirectedTraversalPolicy<
-        Trav=Searcher,
+        Trav=Searcher<T>,
     >
 {
 }
-impl<
->
-    SearchTraversalPolicy for AncestorSearch
+impl<T: Traversable> SearchTraversalPolicy<T> for (T, AncestorSearch)
 {}
-impl<
->
-    SearchTraversalPolicy for ParentSearch
+impl<T: Traversable> SearchTraversalPolicy<T> for (T, ParentSearch)
 {}
 
 
-impl TraversalFolder for Searcher {
-    type Iterator<'a> = Bft<'a, Self, AncestorSearch>;
+impl<T: Traversable> TraversalFolder for Searcher<T> {
+    type Iterator<'a> = Bft<'a, Self, (T, AncestorSearch)> where T: 'a;
 }
 
+#[derive(Debug)]
 pub struct AncestorSearch { }
 
-impl DirectedTraversalPolicy for AncestorSearch {
-    type Trav = Searcher;
+impl<T: Traversable> DirectedTraversalPolicy for (T, AncestorSearch) {
+    type Trav = Searcher<T>;
 }
+
+#[derive(Debug)]
 pub struct ParentSearch { }
 
-impl DirectedTraversalPolicy for ParentSearch {
-    type Trav = Searcher;
+impl<T: Traversable> DirectedTraversalPolicy for (T, ParentSearch) {
+    type Trav = Searcher<T>;
     fn next_parents(
         _trav: &Self::Trav,
         _state: &ParentState,
@@ -48,8 +47,8 @@ pub type SearchResult = Result<
     TraversalResult,
     NoMatch
 >;
-impl Searcher {
-    pub fn new(graph: HypergraphRef) -> Self {
+impl<T: Traversable> Searcher<T> {
+    pub fn new(graph: T) -> Self {
         Self {
             graph,
         }
@@ -59,7 +58,7 @@ impl Searcher {
         &self,
         pattern: impl IntoPattern,
     ) -> SearchResult {
-        self.bft_search::<ParentSearch, _>(
+        self.bft_search::<(T, AncestorSearch), _>(
             pattern,
         )
     }
@@ -68,12 +67,12 @@ impl Searcher {
         &self,
         pattern: impl IntoPattern,
     ) -> SearchResult {
-        self.bft_search::<AncestorSearch, _>(
+        self.bft_search::<(T, AncestorSearch), _>(
             pattern,
         )
     }
     fn bft_search<
-        S: SearchTraversalPolicy,
+        S: SearchTraversalPolicy<T>,
         P: IntoPattern,
     >(
         &self,

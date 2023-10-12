@@ -1,10 +1,9 @@
 use crate::*;
-
 macro_rules! impl_traversable {
     {
         impl $(< $( $par:ident $( : $bhead:tt $( + $btail:tt )*)? ),* >)? for $target:ty, $self_:ident => $func:expr; <$lt:lifetime> $guard:ty
     } => {
-        impl <$( $(, $par $(: $bhead $( + $btail )* )? ),* )?> Traversable for $target {
+        impl <$( $( $par $(: $bhead $( + $btail )* )? ),* )?> Traversable for $target {
             type Kind = BaseGraphKind;
             type Guard<$lt> = $guard where Self: $lt, Self::Kind: $lt;
             fn graph<'a>(&'a $self_) -> Self::Guard<'a> {
@@ -36,8 +35,9 @@ pub trait Traversable: Sized + std::fmt::Debug {
     type Guard<'a>: Traversable<Kind=Self::Kind> + Deref<Target=Hypergraph<Self::Kind>> where Self: 'a;
     fn graph<'a>(&'a self) -> Self::Guard<'a>;
 }
-pub type TravDir<Trav> = <<Trav as Traversable>::Kind as GraphKind>::Direction;
-pub type TravToken<Trav> = <<Trav as Traversable>::Kind as GraphKind>::Token;
+pub type TravKind<Trav> = <Trav as Traversable>::Kind;
+pub type TravDir<Trav> = <TravKind<Trav> as GraphKind>::Direction;
+pub type TravToken<Trav> = <TravKind<Trav> as GraphKind>::Token;
 
 impl_traversable! {
     impl for &'_ Hypergraph, self => self; <'a> &'a Hypergraph
@@ -54,15 +54,33 @@ impl_traversable! {
 impl_traversable! {
     impl for HypergraphRef, self => self.read().unwrap(); <'a> RwLockReadGuard<'a, Hypergraph>
 }
-impl_traversable! {
-    impl for Searcher,
-    self => self.graph.read().unwrap();
-    <'a> RwLockReadGuard<'a, Hypergraph>
+impl<T: Traversable> Traversable for Searcher<T> {
+    type Kind = T::Kind;
+    type Guard<'a> = T::Guard<'a> where T: 'a;
+    fn graph<'a>(&'a self) -> Self::Guard<'a> {
+        self.graph.graph()
+    }
 }
-impl_traversable! {
-    impl for &'_ Searcher,
-    self => self.graph.read().unwrap();
-    <'a> RwLockReadGuard<'a, Hypergraph>
+impl<'g, T: Traversable> Traversable for &'g Searcher<T> {
+    type Kind = T::Kind;
+    type Guard<'a> = T::Guard<'a> where T: 'a, 'g: 'a;
+    fn graph<'a>(&'a self) -> Self::Guard<'a> {
+        self.graph.graph()
+    }
+}
+impl<'c, 'g, 'b: 'g, I: TraversalIterator<'b>> Traversable for &'c TraversalContext<'g, 'b, I> {
+    type Kind = IterKind<'b, I>;
+    type Guard<'a> = <IterTrav<'b, I> as Traversable>::Guard<'a> where I: 'a, 'c: 'a;
+    fn graph<'a>(&'a self) -> Self::Guard<'a> {
+        self.trav().graph()
+    }
+}
+impl<'c, 'g, 'b: 'g, I: TraversalIterator<'b>> Traversable for &'c mut TraversalContext<'g, 'b, I> {
+    type Kind = IterKind<'b, I>;
+    type Guard<'a> = <IterTrav<'b, I> as Traversable>::Guard<'a> where I: 'a, 'c: 'a;
+    fn graph<'a>(&'a self) -> Self::Guard<'a> {
+        self.trav().graph()
+    }
 }
 
 impl_traversable! {

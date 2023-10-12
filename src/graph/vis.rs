@@ -265,9 +265,9 @@ impl NodeVis {
     fn state_mut(&self) -> RwLockWriteGuard<'_, NodeState> {
         self.state.write().unwrap()
     }
-    fn child_patterns_vis<T: Tokenize + std::fmt::Display>(
-        graph: &Hypergraph<T>,
-        node_indices: &HashMap<VertexKey<T>, NodeIndex>,
+    fn child_patterns_vis(
+        graph: &Hypergraph,
+        node_indices: &HashMap<VertexKey, NodeIndex>,
         data: &VertexData,
     ) -> ChildPatternsVis {
         data.get_child_patterns()
@@ -365,9 +365,9 @@ impl std::ops::Deref for ChildVis {
     }
 }
 impl ChildVis {
-    fn new<T: Tokenize + std::fmt::Display>(
-        graph: &Hypergraph<T>,
-        node_indices: &HashMap<VertexKey<T>, NodeIndex>,
+    fn new(
+        graph: &Hypergraph,
+        node_indices: &HashMap<VertexKey, NodeIndex>,
         child: Child,
     ) -> Self {
         let key = graph.expect_vertex_key(child.index);

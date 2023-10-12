@@ -11,13 +11,13 @@ pub trait VertexedMut: Vertexed {
     ) -> &'a mut VertexData
         where Self: 'a
     {
-        graph.expect_vertex_data_mut(self.index())
+        graph.expect_vertex_data_mut(self.vertex_index())
     }
     fn vertex_ref_mut<'a, G: GraphKind + 'a, R: Deref<Target=Hypergraph<G>> + DerefMut>(
         &'a mut self,
         graph: &'a mut R,
     ) -> &'a mut VertexData {
-        graph.expect_vertex_data_mut(self.index())
+        graph.expect_vertex_data_mut(self.vertex_index())
     }
 }
 impl VertexedMut for Child {}
@@ -61,13 +61,13 @@ pub trait Vertexed: AsChild + Sized {
     ) -> &'a VertexData
         where Self: 'a
     {
-        graph.expect_vertex_data(self.index())
+        graph.expect_vertex_data(self.vertex_index())
     }
     fn vertex_ref<'a, G: GraphKind + 'a, R: Deref<Target=Hypergraph<G>>>(
         &'a self,
         graph: &'a R,
     ) -> &'a VertexData {
-        graph.expect_vertex_data(self.index())
+        graph.expect_vertex_data(self.vertex_index())
     }
 }
 impl Vertexed for Child {}

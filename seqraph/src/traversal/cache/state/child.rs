@@ -104,7 +104,7 @@ impl ChildState {
         let key = self.target_key();
         ctx.clear();
         for entry in new {
-            ctx.cache.add_state(entry, true);
+            ctx.cache.add_state(ctx.trav(), entry, true);
         }
         //query.cache.add_path(
         //    self.trav(),

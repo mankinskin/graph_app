@@ -55,7 +55,7 @@ impl IntoPatternLocation for &ChildLocation {
     }
 }
 impl Indexed for ChildLocation {
-    fn index(&self) -> VertexIndex {
+    fn vertex_index(&self) -> VertexIndex {
         self.parent.index
     }
 }

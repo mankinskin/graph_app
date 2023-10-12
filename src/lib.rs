@@ -46,7 +46,7 @@ pub fn start(canvas_id: &str) -> Result<(), eframe::wasm_bindgen::JsValue> {
     eframe::start_web(canvas_id, Box::new(app))
 }
 
-pub async fn open(graph: HypergraphRef<char>) {
+pub async fn open(graph: HypergraphRef) {
     let app = App::from_graph_ref(graph);
     eframe::run_native(
         "Graph App",

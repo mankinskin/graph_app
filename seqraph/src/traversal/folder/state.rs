@@ -41,7 +41,7 @@ pub struct FoldState {
 }
 impl FoldState {
     pub fn root_entry(&self) -> &VertexCache {
-        self.cache.entries.get(&self.root().index()).unwrap()
+        self.cache.entries.get(&self.root().vertex_index()).unwrap()
     }
     pub fn root_mode(&self) -> RootMode {
         let e = self.root_entry();

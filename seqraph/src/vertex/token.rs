@@ -60,7 +60,7 @@ impl Wide for NewTokenIndex {
     }
 }
 impl Indexed for NewTokenIndex {
-    fn index(&self) -> VertexIndex {
+    fn vertex_index(&self) -> VertexIndex {
         match self {
             Self::New(i) => *i,
             Self::Known(i) => *i,

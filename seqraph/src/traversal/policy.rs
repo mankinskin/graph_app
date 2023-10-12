@@ -4,15 +4,9 @@ pub trait NodePath<R>: RootChild<R> + Send + Clone + Eq + Debug {}
 impl<R, T: RootChild<R> + Send + Clone + Eq + Debug> NodePath<R> for T {}
 
 
-pub trait DirectedTraversalPolicy: Sized {
+pub trait DirectedTraversalPolicy: Sized + Debug {
 
     type Trav: TraversalFolder;
-
-    ///// Executed after last child of index matched
-    //fn at_postfix(
-    //    _trav: &Self::Trav,
-    //    path: Primer,
-    //) -> Postfix;
 
     /// nodes generated when an index ended
     /// (parent nodes)

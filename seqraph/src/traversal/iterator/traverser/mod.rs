@@ -32,9 +32,11 @@ pub trait NodeVisitor:
     ExtendStates
     + Iterator<Item=(usize, TraversalState)>
     + Default
+    + Debug
 {
     fn clear(&mut self);
 }
+#[derive(Debug)]
 pub struct OrderedTraverser<'a, Trav, S, O>
     where
         Trav: Traversable,
