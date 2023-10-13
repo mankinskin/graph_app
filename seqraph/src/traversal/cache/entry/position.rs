@@ -40,17 +40,26 @@ impl PositionCache {
             waiting: Default::default(),
         }
     }
-    pub fn new(
-        prev: Option<&mut PositionCache>,
+    pub fn new<Trav: Traversable>(
+        cache: &mut TraversalCache,
+        trav: &Trav,
         key: DirectedKey,
         state: NewEntry,
+        add_edges: bool,
     ) -> Self {
         let mut edges = Edges::default();
-        match (state.state_direction(), prev, state.entry_location()) {
-            (StateDirection::BottomUp, Some(_prev), Some(entry)) => {
-                edges.bottom.insert(state.prev_key(), entry.to_sub_location());
+        match (add_edges, state.state_direction(), state.entry_location()) {
+            (true, StateDirection::BottomUp, Some(entry)) => {
+                edges.bottom.insert(
+                    state.prev_key().backwards(),
+                    entry.to_sub_location(),
+                );
             },
-            (StateDirection::TopDown, Some(prev), Some(entry)) => {
+            (true, StateDirection::TopDown, Some(entry)) => {
+                let prev = cache.force_mut(
+                    trav,
+                    &state.prev_key().prev_target
+                );
                 prev.edges.bottom.insert(key, entry.to_sub_location());
             },
             _ => {},

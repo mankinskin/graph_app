@@ -50,8 +50,11 @@ impl<T> AsPatternMut for T
 pub fn pattern_width<T: Borrow<Child>>(pat: impl IntoIterator<Item = T>) -> TokenPosition {
     pat.into_iter().map(|c| c.borrow().width()).sum()
 }
-pub fn pattern_offset<T: Borrow<Child>>(pat: impl IntoIterator<Item = T>, sub_index: usize) -> TokenPosition {
+pub fn pattern_pre_ctx_width<T: Borrow<Child>>(pat: impl IntoIterator<Item = T>, sub_index: usize) -> TokenPosition {
     pattern_width(pat.into_iter().take(sub_index))
+}
+pub fn pattern_post_ctx_width<T: Borrow<Child>>(pat: impl IntoIterator<Item = T>, sub_index: usize) -> TokenPosition {
+    pattern_width(pat.into_iter().skip(sub_index + 1))
 }
 pub fn prefix<T: AsChild + Clone>(
     pattern: &'_ [T],

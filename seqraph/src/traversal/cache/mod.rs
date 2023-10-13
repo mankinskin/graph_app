@@ -6,104 +6,57 @@ pub mod entry;
 pub use entry::*;
 pub mod state;
 pub use state::*;
+pub mod labelled_key;
+pub use labelled_key::*;
 pub mod trace;
 
-#[cfg(test)]
-mod vkey {
-    use super::*;
-    pub type VertexCacheKey = LabelledKey;
-    pub fn build_key<Trav: Traversable>(trav: &Trav, child: Child) -> VertexCacheKey
-        where TravToken<Trav>: Display
-    {
-        LabelledKey::build(trav, child)
-    }
-    macro_rules! lab {
-        ($x:ident) => {
-            LabelledKey::new($x, stringify!($x))
-        }
-    }
-    pub(crate) use lab;
-
-    #[derive(Clone, Debug, PartialEq, Eq)]
-    pub struct LabelledKey {
-        index: VertexIndex,
-        label: String,
-    }
-    impl LabelledKey {
-        pub fn new(child: impl Borrow<Child>, label: impl ToString) -> Self {
-            Self {
-                label: label.to_string(),            
-                index: child.borrow().vertex_index(),
-            }
-        }
-        pub fn build<Trav: Traversable>(trav: &Trav, child: Child) -> Self
-            where TravToken<Trav>: Display
-        {
-            let index = child.vertex_index();
-            Self {
-                label: trav.graph().index_string(index),            
-                index,
-            }
-        }
-    }
-    impl Borrow<VertexIndex> for LabelledKey {
-        fn borrow(&self) -> &VertexIndex {
-            &self.index
-        }
-    }
-    impl Hash for LabelledKey {
-        fn hash<H: Hasher>(&self, h: &mut H) {
-            self.index.hash(h)
-        }
-    }
-    impl Display for LabelledKey {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{}", self.label)
-        }
-    }
-}
-
-#[cfg(not(test))]
-mod vkey {
-    use super::*;
-    pub type VertexCacheKey = VertexIndex;
-    pub fn build_key<Trav: Traversable>(trav: &Trav, child: Child) -> VertexCacheKey
-        where TravToken<Trav>: Display
-    {
-        child.vertex_index()
-    }
-}
-pub use vkey::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TraversalCache {
     pub(crate) entries: HashMap<VertexCacheKey, VertexCache>,
 }
 
-impl TraversalCache
-{
-    pub fn new<Trav: Traversable>(
-        trav: &Trav,
+impl TraversalCache {
+
+    pub fn new<'a, Folder: TraversalFolder>(
+        folder: &'a Folder,
         start_index: Child,
+        query_root: &QueryContext,
         query_state: QueryState,
-    ) -> (StartState, Self)
-        where TravToken<Trav>: Display
+    ) -> (Folder::Iterator<'a>, Self)
+        where TravToken<Folder>: Display
     {
         let mut entries = HashMap::default();
-
-        entries.insert(build_key(trav, start_index), VertexCache::start(start_index));
-        let key = UpKey::new(
-            start_index,
-            TokenLocation(start_index.width()).into(),
+        entries.insert(
+            build_key(folder, start_index),
+            VertexCache::start(start_index),
         );
-        let start = StartState {
+        let mut start = StartState {
             index: start_index,
-            key,
+            key: UpKey::new(
+                start_index,
+                0.into(),//TokenLocation(start_index.width()).into(),
+            ),
             query: query_state,
         };
-        (start, Self {
+
+        let mut cache = Self {
             entries,
-        })
+        };
+        let mut states = Folder::Iterator::from(folder);
+
+        let init = {
+            let mut ctx = TraversalContext::new(&query_root, &mut cache, &mut states);
+            start.next_states(&mut ctx)
+                .into_states()
+                .into_iter()
+                .map(|n| (1, n))
+        };
+        states.extend(init);
+        (
+            states,
+            cache,
+        )
     }
     pub fn add_state<Trav: Traversable>(
         &mut self,
@@ -120,16 +73,12 @@ impl TraversalCache
             } else {
                 drop(ve);
 
-                let prev = add_edges.then(||
-                    self.force_mut(
-                        trav,
-                        &state.prev_key(),
-                    )
-                );
                 let pe = PositionCache::new(
-                    prev,
+                    self,
+                    trav,
                     key,
                     state,
+                    add_edges,
                 );
                 let ve = self.entries.get_mut(&key.index.vertex_index()).unwrap();
                 ve.insert(
@@ -185,34 +134,38 @@ impl TraversalCache
             graph.expect_child_at(&root_exit),
             root_down_pos.into(),
         );
+        let mut prev_key: DirectedKey = root_down_key.into();
+        let mut target_key = exit_down_key.into();
         self.add_state(
             trav,
             NewEntry {
-                prev: root_down_key.into(),
-                root_pos: root_up_pos,
+                prev: prev_key.to_prev(0),
                 kind: NewKind::Child(NewChild {
                     root: root_up_key,
-                    target: exit_down_key.into(),
+                    target: target_key,
                     end_leaf: Some(root_exit),
                 }),
             },
             add_edges,
         );
-        let mut prev_key: DirectedKey = root_down_key.into();
         for loc in path.raw_child_path::<End>() {
-            (prev_key, _) = self.add_state(
+            prev_key = target_key;
+            let delta = graph.expect_child_offset(loc);
+            prev_key.advance_key(delta);
+            target_key = DirectedKey::down(
+                graph.expect_child_at(loc),
+                *prev_key.pos.pos(),
+            );
+            self.add_state(
                 trav,
                 NewEntry {
-                    prev: prev_key,
-                    root_pos: root_up_pos,
+                    //root_pos: root_up_pos,
+                    prev: prev_key.to_prev(0),
                     kind: NewKind::Child(NewChild {
                         root: root_up_key.into(),
-                        target: DirectedKey::down(
-                            graph.expect_child_at(loc),
-                            root_down_pos.0 + graph.expect_child_offset(loc),
-                        ),
-                        end_leaf: None,
-                    })
+                        target: target_key,
+                        end_leaf: Some(*loc),
+                    }),
                 },
                 add_edges,
             );
@@ -228,16 +181,12 @@ impl TraversalCache
         where TravToken<Trav>: Display
     {
         let mut ve = VertexCache::from(key.index);
-        let prev = add_edges.then(||
-            self.force_mut(
-                trav,
-                &state.prev_key()
-            )
-        );
         let pe = PositionCache::new(
-            prev,
+            self,
+            trav,
             key,
-            state
+            state,
+            add_edges,
         );
         ve.insert(
             &key.pos,

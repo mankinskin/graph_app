@@ -69,7 +69,7 @@ impl BorderInfo {
         pattern: &Pattern,
         pos: &PatternSplitPos,
     ) -> Self {
-        let offset = pattern_offset(pattern, pos.sub_index);
+        let offset = pattern_pre_ctx_width(pattern, pos.sub_index);
         BorderInfo {
             sub_index: pos.sub_index,
             inner_offset: pos.inner_offset,

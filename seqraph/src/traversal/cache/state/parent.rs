@@ -29,13 +29,18 @@ impl ParentState {
         let key = self.target_key();
         match self.into_advanced(ctx.trav()) {
             // first child state in this parent
-            Ok(advanced) => NextStates::Child(
-                StateNext {
-                    prev: key.flipped(),
-                    new,
-                    inner: advanced
-                },
-            ),
+            Ok(advanced) => {
+                let delta = <_ as GraphRootChild<Start>>::root_post_ctx_width(
+                    &advanced.paths.path, ctx.trav(),
+                );
+                NextStates::Child(
+                    StateNext {
+                        prev: key.flipped().to_prev(delta),
+                        new,
+                        inner: advanced
+                    },
+                )
+            },
             // no child state, bottom up path at end of parent
             Err(state) => state.next_parents(
                 ctx,
@@ -54,9 +59,10 @@ impl ParentState {
             ctx.trav(),
             &self,
         );
+        let delta = self.path.root_post_ctx_width(ctx.trav());
         if parents.is_empty() {
             NextStates::End(StateNext {
-                prev: key,
+                prev: key.to_prev(delta),
                 new,
                 inner: EndState {
                     reason: EndReason::Mismatch,
@@ -67,7 +73,7 @@ impl ParentState {
             })
         } else {
             NextStates::Parents(StateNext {
-                prev: key,
+                prev: key.to_prev(delta),
                 new,
                 inner: parents,
             })

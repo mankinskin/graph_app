@@ -45,3 +45,174 @@ impl Trace for ChildState {
         );
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use crate::*;
+
+    pub fn build_trace1() -> FoldState {
+        let Context {
+            graph,
+            a,
+            d,
+            e,
+            bc,
+            ..
+        } = &*context_mut();
+        let query = vec![*a, *bc, *d, *e];
+        graph.searcher().find_pattern_ancestor(query)
+            .unwrap().result
+            .unwrap_incomplete()
+    }
+    #[test]
+    fn trace_graph1() {
+        let res = build_trace1();
+        let Context {
+            graph,
+            a,
+            d,
+            e,
+            bc,
+            abc,
+            abcd,
+            abc_d_id,
+            abcdef,
+            //abc_def_id,
+            abcd_ef_id,
+            //def,
+            ef,
+            e_f_id,
+            ..
+        } = &*context_mut();
+
+        assert_eq!(res.start, *a);
+        assert_eq!(res.end_pos, 5.into());
+
+        assert_eq!(
+            res.cache.entries[&lab!(a)], 
+            VertexCache {
+                index: *a,
+                bottom_up: HashMap::from_iter([]),
+                top_down: HashMap::from_iter([]),
+            },
+        );
+        assert_eq!(
+            res.cache.entries[&lab!(abcd)], 
+            VertexCache {
+                index: *abcd,
+                bottom_up: HashMap::from_iter([
+                    (3.into(), PositionCache {
+                        edges: Edges {
+                            top: Default::default(),
+                            bottom: HashMap::from_iter([
+                                (
+                                    DirectedKey::up(*abc, 3),
+                                    SubLocation::new(*abc_d_id, 0),
+                                )
+                            ]),
+                        },
+                        index: *abcd,
+                        waiting: Default::default(),
+                    })
+                ]),
+                top_down: HashMap::from_iter([]),
+            }
+        );
+        assert_eq!(
+            res.cache.entries[&lab!(ef)], 
+            VertexCache {
+                index: *ef,
+                bottom_up: HashMap::from_iter([]),
+                top_down: HashMap::from_iter([
+                    (4.into(), PositionCache {
+                        edges: Edges {
+                            top: HashSet::from_iter([]),
+                            bottom: HashMap::from_iter([
+                                (
+                                    DirectedKey::down(*e, 4),
+                                    SubLocation::new(*e_f_id, 0),
+                                )
+                            ]),
+                        },
+                        index: *ef,
+                        waiting: Default::default(),
+                    })
+                ]),
+            }
+        );
+        assert_eq!(
+            res.cache.entries[&lab!(e)], 
+            VertexCache {
+                index: *e,
+                top_down: HashMap::from_iter([
+                    (4.into(), PositionCache {
+                        edges: Default::default(),
+                        index: *e,
+                        waiting: Default::default(),
+                    })
+                ]),
+                bottom_up: HashMap::from_iter([]),
+            },
+        );
+        assert_eq!(
+            res.cache.entries[&lab!(abc)], 
+            VertexCache {
+                index: *abc,
+                bottom_up: HashMap::from_iter([
+                    (1.into(), PositionCache {
+                        edges: Edges {
+                            top: Default::default(),
+                            bottom: HashMap::from_iter([
+                                (
+                                    DirectedKey::up(*a, 1),
+                                    SubLocation::new(3, 0),
+                                )
+                            ]),
+                        },
+                        index: *abc,
+                        waiting: Default::default(),
+                    })
+                ]),
+                top_down: HashMap::from_iter([]),
+            }
+        );
+        assert_eq!(
+            res.cache.entries[&lab!(abcdef)], 
+            VertexCache {
+                index: *abcdef,
+                bottom_up: HashMap::from_iter([
+                    (4.into(), PositionCache {
+                        edges: Edges {
+                            top: HashSet::from_iter([]),
+                            bottom: HashMap::from_iter([
+                                (
+                                    DirectedKey::up(*abcd, 4),
+                                    SubLocation::new(*abcd_ef_id, 0),
+                                ),
+                            ]),
+                        },
+                        index: *abcdef,
+                        waiting: Default::default(),
+                    })
+                ]),
+                top_down: HashMap::from_iter([
+                    (4.into(), PositionCache {
+                        edges: Edges {
+                            top: HashSet::from_iter([]),
+                            bottom: HashMap::from_iter([
+                                (
+                                    DirectedKey::down(*ef, 4),
+                                    SubLocation::new(*abcd_ef_id, 1),
+                                )
+                            ]),
+                        },
+                        index: *abcdef,
+                        waiting: Default::default(),
+                    })
+                ]),
+            },
+        );
+        assert_eq!(res.cache.entries.len(), 6);
+    }
+
+}

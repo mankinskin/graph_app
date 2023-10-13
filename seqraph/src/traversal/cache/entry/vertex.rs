@@ -19,11 +19,11 @@ impl From<Child> for VertexCache {
 }
 impl VertexCache {
     pub fn start(index: Child) -> Self {
-        let mut bottom_up = HashMap::default();
-        bottom_up.insert(
-            index.width().into(),
-            PositionCache::start(index)
-        );
+        let bottom_up = HashMap::default();
+        //bottom_up.insert(
+        //    index.width().into(),
+        //    PositionCache::start(index)
+        //);
         Self {
             bottom_up,
             index,

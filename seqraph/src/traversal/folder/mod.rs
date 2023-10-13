@@ -28,16 +28,13 @@ pub trait TraversalFolder: Sized + Traversable {
 
         //let query_ctx = QueryContext::new(query_pattern.clone());
         
-        let (mut start, mut cache) = TraversalCache::new(self, start_index, query.clone());
-        let mut states = Self::Iterator::from(self);
-        let init = {
-            let mut ctx = TraversalContext::new(&query_root, &mut cache, &mut states);
-            start.next_states(&mut ctx)
-                .into_states()
-                .into_iter()
-                .map(|n| (1, n))
-        };
-        states.extend(init);
+        let (mut states, mut cache) = TraversalCache::new(
+            self,
+            start_index,
+            &query_root,
+            query.clone(),
+        );
+
         let mut end_states = vec![];
         let mut max_width = 0;
 
@@ -49,36 +46,42 @@ pub trait TraversalFolder: Sized + Traversable {
                 let mut ctx = TraversalContext::new(&query_root, &mut cache, &mut states);
                 tstate.next_states(&mut ctx)
             } {
-                if let NextStates::End(StateNext { inner: end, .. }) = next_states {
-                    //debug!("{:#?}", state);
-                    if end.width() > start_index.width() && end.width() >= max_width {
-                        end.trace(self, &mut cache);
-                        if let Some(root_key) = end.waiting_root_key() {
-                            // this must happen before simplification
-                            states.extend(
-                                cache.continue_waiting(&root_key)
-                            );
+                match next_states {
+                    NextStates::Child(_) |
+                    NextStates::Prefixes(_) |
+                    NextStates::Parents(_) => {
+                        states.extend(
+                            next_states.into_states()
+                                .into_iter()
+                                .map(|nstate| (depth + 1, nstate))
+                        );
+                    },
+                    NextStates::Empty => {},
+                    NextStates::End(StateNext { inner: end, .. }) => {
+                        //debug!("{:#?}", state);
+                        if end.width() > start_index.width() && end.width() >= max_width {
+                            end.trace(self, &mut cache);
+                            if let Some(root_key) = end.waiting_root_key() {
+                                // this must happen before simplification
+                                states.extend(
+                                    cache.continue_waiting(&root_key)
+                                );
+                            }
+                            if end.width() > max_width {
+                                max_width = end.width();
+                                end_states.clear();
+                            }
+                            let is_final = end.reason == EndReason::QueryEnd
+                                && matches!(end.kind, EndKind::Complete(_));
+                            end_states.push(end);
+                            if is_final {
+                                break;
+                            }
+                        } else {
+                            // stop other paths with this root
+                            states.prune_below(end.root_key());
                         }
-                        if end.width() > max_width {
-                            max_width = end.width();
-                            end_states.clear();
-                        }
-                        let is_final = end.reason == EndReason::QueryEnd
-                            && matches!(end.kind, EndKind::Complete(_));
-                        end_states.push(end);
-                        if is_final {
-                            break;
-                        }
-                    } else {
-                        // stop other paths with this root
-                        states.prune_below(end.root_key());
                     }
-                } else {
-                    states.extend(
-                        next_states.into_states()
-                            .into_iter()
-                            .map(|nstate| (depth + 1, nstate))
-                    );
                 }
             }
         }
@@ -123,7 +126,7 @@ pub trait TraversalFolder: Sized + Traversable {
                         root,
                         end_pos: end_pos.into(),
                         end_states,
-                        start: start.key.index,
+                        start: start_index,
                     };
                     FoldResult::Incomplete(state)
                 };

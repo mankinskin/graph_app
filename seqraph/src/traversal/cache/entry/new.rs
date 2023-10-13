@@ -2,8 +2,7 @@ use crate::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NewEntry {
-    pub prev: DirectedKey,
-    pub root_pos: TokenLocation,
+    pub prev: PrevKey,
     pub kind: NewKind,
 }
 impl NewEntry {
@@ -13,8 +12,8 @@ impl NewEntry {
             NewKind::Child(state) => state.end_leaf,
         }
     }
-    pub fn prev_key(&self) -> DirectedKey {
-        self.prev
+    pub fn prev_key(&self) -> PrevKey {
+        self.prev.clone()
     }
     pub fn state_direction(&self) -> StateDirection {
         match &self.kind {
@@ -29,7 +28,7 @@ impl From<&TraversalState> for NewEntry {
     fn from(state: &TraversalState) -> Self {
         Self {
             prev: state.prev_key(),
-            root_pos: state.root_pos(),
+            //root_pos: state.root_pos(),
             kind: (&state.kind).into(),
         }
     }

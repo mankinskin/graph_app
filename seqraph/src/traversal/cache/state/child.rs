@@ -51,7 +51,7 @@ impl ChildState {
                 } else {
                     // expand states to find matching prefix
                     NextStates::Prefixes(StateNext {
-                        prev: key,
+                        prev: key.to_prev(0),
                         new,
                         inner: self.clone().tap_mut(|s|
                             s.paths.mode = PathPairMode::GraphMajor
@@ -74,7 +74,7 @@ impl ChildState {
             Ordering::Greater =>
                 // continue in prefix of child
                 NextStates::Prefixes(StateNext {
-                    prev: key,
+                    prev: key.to_prev(0),
                     new,
                     inner: self.tap_mut(|s|
                         s.paths.mode = PathPairMode::GraphMajor
@@ -85,7 +85,7 @@ impl ChildState {
                 }),
             Ordering::Less =>
                 NextStates::Prefixes(StateNext {
-                    prev: key,
+                    prev: key.to_prev(0),
                     new,
                     inner: self.tap_mut(|s|
                         s.paths.mode = PathPairMode::QueryMajor
@@ -119,7 +119,7 @@ impl ChildState {
             if path.advance(ctx.trav()).is_continue() {
                 // gen next child
                 NextStates::Child(StateNext {
-                    prev: key,
+                    prev: key.to_prev(0),
                     new: vec![],
                     inner: ChildState {
                         prev_pos: self.prev_pos,
@@ -177,7 +177,7 @@ impl ChildState {
             }
         } {
             NextStates::End(StateNext {
-                prev: key,
+                prev: key.to_prev(0),
                 new,
                 inner: EndState {
                     root_pos: self.root_pos,
@@ -188,7 +188,7 @@ impl ChildState {
             })
         } else {
             NextStates::End(StateNext {
-                prev: key,
+                prev: key.to_prev(0),
                 new,
                 inner: EndState {
                     root_pos: self.root_pos,
@@ -220,7 +220,7 @@ impl ChildState {
         let pos = query.pos;
         query.advance_key(target_index.width());
         NextStates::End(StateNext {
-            prev: key,
+            prev: key.to_prev(0),
             new,
             inner: EndState {
                 root_pos: self.root_pos,

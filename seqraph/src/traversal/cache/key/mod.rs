@@ -2,15 +2,19 @@ pub mod pos;
 pub mod leaf;
 pub mod root;
 pub mod target;
+pub mod prev;
+
+use std::ops::{AddAssign, Add};
 
 use crate::*;
 pub use pos::*; 
 pub use leaf::*;
 pub use root::*;
 pub use target::*;
+pub use prev::*;
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, From)]
-pub struct UpPosition(TokenLocation);
+pub struct UpPosition(pub TokenLocation);
 
 impl UpPosition {
     pub fn flipped(self) -> DownPosition {
@@ -22,8 +26,19 @@ impl From<usize> for UpPosition {
         Self(value.into())
     }
 }
+impl AddAssign<usize> for UpPosition {
+    fn add_assign(&mut self, rhs: usize) {
+        self.0 += rhs;
+    }
+}
+impl Add<usize> for UpPosition {
+    type Output = Self;
+    fn add(self, rhs: usize) -> Self::Output {
+        Self(self.0 + rhs)
+    }
+}
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, From)]
-pub struct DownPosition(TokenLocation);
+pub struct DownPosition(pub TokenLocation);
 impl DownPosition {
     pub fn flipped(self) -> UpPosition {
         UpPosition(self.0)
@@ -32,6 +47,17 @@ impl DownPosition {
 impl From<usize> for DownPosition {
     fn from(value: usize) -> Self {
         Self(value.into())
+    }
+}
+impl AddAssign<usize> for DownPosition {
+    fn add_assign(&mut self, rhs: usize) {
+        self.0 += rhs;
+    }
+}
+impl Add<usize> for DownPosition {
+    type Output = Self;
+    fn add(self, rhs: usize) -> Self::Output {
+        Self(self.0 + rhs)
     }
 }
 
@@ -68,6 +94,23 @@ impl DirectedPosition {
 impl From<usize> for DirectedPosition {
     fn from(value: usize) -> Self {
         Self::BottomUp(value.into())
+    }
+}
+impl Add<usize> for DirectedPosition {
+    type Output = Self;
+    fn add(self, rhs: usize) -> Self::Output {
+        match self {
+            Self::BottomUp(p) => Self::BottomUp(p + rhs),
+            Self::TopDown(p) => Self::TopDown(p + rhs)
+        }
+    }
+}
+impl AddAssign<usize> for DirectedPosition {
+    fn add_assign(&mut self, rhs: usize) {
+        match self {
+            Self::BottomUp(p) => *p += rhs,
+            Self::TopDown(p) => *p += rhs
+        }
     }
 }
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq)]

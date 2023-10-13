@@ -46,6 +46,9 @@ linked-hash-map = "0.5.6"
 derive-new = "0.5"
 inquire = "0.6"
 auto_impl = "1.1.0"
+nrfind = "1"
+ngram = "0.1"
+csv = "1"
 
 [dependencies.tracing-egui]
 path = "../../tracing-egui"

@@ -14,12 +14,13 @@ impl StartState {
         where Self: 'a
     {
         let mut query = self.query.to_ctx(ctx);
+        let delta = self.index.width();
         if query.advance(ctx.trav()).is_continue() {
             // undo extra key advance
             query.retract_key(self.index.width());
             drop(query);
             NextStates::Parents(StateNext {
-                prev: self.key.into(),
+                prev: self.key.to_prev(delta),
                 new: vec![],
                 inner: I::Policy::gen_parent_states(
                     ctx.trav(),
@@ -31,7 +32,7 @@ impl StartState {
             })
         } else {
             NextStates::End(StateNext {
-                prev: self.key.into(),
+                prev: self.key.to_prev(delta),
                 new: vec![],
                 inner: EndState {
                     reason: EndReason::QueryEnd,

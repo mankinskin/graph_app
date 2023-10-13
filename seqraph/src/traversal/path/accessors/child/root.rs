@@ -98,6 +98,22 @@ pub trait GraphRootChild<R>: GraphRootPattern + RootChildPos<R> {
     >(&self, trav: &Trav) -> Child {
         trav.graph().expect_child_at(<_ as GraphRootChild<R>>::root_child_location(self))
     }
+    fn root_post_ctx_width<
+        Trav: Traversable,
+    >(&self, trav: &Trav) -> usize {
+        let i = self.root_child_location().sub_index;
+        let g = trav.graph();
+        let p = self.graph_root_pattern::<Trav>(&g);
+        pattern_post_ctx_width(p, i)
+    }
+    fn root_pre_ctx_width<
+        Trav: Traversable,
+    >(&self, trav: &Trav) -> usize {
+        let i = self.root_child_location().sub_index;
+        let g = trav.graph();
+        let p = self.graph_root_pattern::<Trav>(&g);
+        pattern_pre_ctx_width(p, i)
+    }
 }
 
 //impl<R, P: GraphRootChild<R>> GraphRootChild<R> for OriginPath<P> {

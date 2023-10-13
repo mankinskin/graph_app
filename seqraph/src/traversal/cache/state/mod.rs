@@ -11,6 +11,53 @@ pub use parent::*;
 pub mod start;
 pub use start::*;
 
+#[derive(Clone, Debug)]
+pub struct StateNext<T> {
+    pub prev: PrevKey,
+    pub new: Vec<NewEntry>,
+    pub inner: T,
+}
+#[derive(Clone, Debug)]
+pub enum NextStates {
+    Parents(StateNext<Vec<ParentState>>),
+    Prefixes(StateNext<Vec<ChildState>>),
+    End(StateNext<EndState>),
+    Child(StateNext<ChildState>),
+    Empty,
+}
+impl NextStates {
+    pub fn into_states(self) -> Vec<TraversalState> {
+        match self {
+            Self::Parents(state) =>
+                state.inner.iter()
+                    .map(|s| TraversalState {
+                        prev: state.prev.clone(),
+                        new: state.new.clone(),
+                        kind: InnerKind::Parent(s.clone())
+                    })
+                    .collect_vec(),
+            Self::Prefixes(state) =>
+                state.inner.iter()
+                    .map(|s|
+                        TraversalState {
+                            prev: state.prev.clone(),
+                            new: state.new.clone(),
+                            kind: InnerKind::Child(s.clone()),
+                        }
+                    )
+                    .collect_vec(),
+            Self::Child(state) =>
+                vec![TraversalState {
+                    prev: state.prev,
+                    new: state.new,
+                    kind: InnerKind::Child(state.inner),
+                }],
+            Self::End(_) => vec![],
+            Self::Empty => vec![],
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Copy, Hash)]
 pub enum StateDirection {
     BottomUp,
@@ -19,7 +66,7 @@ pub enum StateDirection {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WaitingState {
-    pub prev: DirectedKey,
+    pub prev: PrevKey,
     pub state: ParentState,
 }
 
@@ -46,7 +93,7 @@ impl PartialOrd for InnerKind {
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TraversalState {
-    pub prev: DirectedKey,
+    pub prev: PrevKey,
     pub new: Vec<NewEntry>,
     pub kind: InnerKind,
 }
@@ -76,8 +123,8 @@ impl TraversalState {
             InnerKind::Child(state) => state.paths.path.role_leaf_child_location::<End>(),
         }
     }
-    pub fn prev_key(&self) -> DirectedKey {
-        self.prev
+    pub fn prev_key(&self) -> PrevKey {
+        self.prev.clone()
     }
     pub fn root_pos(&self) -> TokenLocation {
         match &self.kind {
@@ -97,12 +144,14 @@ impl TraversalState {
                 => StateDirection::TopDown,
         }
     }
+    /// Retrieves next unvisited states and adds edges to cache
     pub fn next_states<'a, 'b: 'a, I: TraversalIterator<'b>>(
         mut self,
         ctx: &mut TraversalContext<'a, 'b, I>,
     ) -> Option<NextStates> {
         let key = self.target_key();
         let exists = ctx.cache.exists(&key);
+
         //let prev = tstate.prev_key();
         //if !exists {
         //    cache.add_state((&tstate).into());
@@ -119,12 +168,7 @@ impl TraversalState {
                         self.new,
                     )
                 } else {
-                    //cache.get_mut(&key)
-                    //    .unwrap()
-                    //    .add_waiting(depth, WaitingState {
-                    //        prev,
-                    //        state,
-                    //    });
+                    // add other edges leading to this parent
                     for entry in self.new {
                         ctx.cache.add_state(ctx.trav(), entry, true);
                     }
