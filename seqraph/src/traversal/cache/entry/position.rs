@@ -51,7 +51,7 @@ impl PositionCache {
         match (add_edges, state.state_direction(), state.entry_location()) {
             (true, StateDirection::BottomUp, Some(entry)) => {
                 edges.bottom.insert(
-                    state.prev_key().backwards(),
+                    state.prev_key().prev_target,
                     entry.to_sub_location(),
                 );
             },

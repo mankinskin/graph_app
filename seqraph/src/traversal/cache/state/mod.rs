@@ -70,7 +70,6 @@ pub struct WaitingState {
     pub state: ParentState,
 }
 
-use super::trace::Trace;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InnerKind {
     Parent(ParentState),
@@ -183,7 +182,7 @@ impl TraversalState {
                     )
                 } else {
                     // add bottom up path
-                    state.trace(ctx.trav(), ctx.cache);
+                    //state.trace(ctx.trav(), ctx.cache);
                     NextStates::Empty
                 }
             }

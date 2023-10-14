@@ -1,6 +1,8 @@
 use crate::*;
 pub mod vertex;
 pub use vertex::*;
+pub mod position;
+pub use position::*;
 pub mod split;
 pub use split::*;
 pub mod leaves;
@@ -26,14 +28,11 @@ impl SplitCache {
         trav: &'a mut Trav,
         mut fold_state: FoldState,
     ) -> Self {
-        let mut states = VecDeque::default();
         let mut entries = HashMap::default();
-        let mut leaves = Leaves::default();
-        let (root_vertex, root_mode) = Self::new_root_vertex(
+
+        let (root_vertex, root_mode, states, leaves) = Self::new_root_vertex(
             trav,
             &fold_state,
-            &mut states,
-            &mut leaves,
         );
         entries.insert(
             build_key(trav, fold_state.root),
@@ -53,7 +52,7 @@ impl SplitCache {
                 &graph,
                 fold_state.root,
             ),
-            fold_state.root_mode(),
+            root_mode,
         );
         // stores past states
         let mut incomplete = BTreeSet::<Child>::default();
@@ -90,7 +89,7 @@ impl SplitCache {
         fold_state.cache.entries.get(&index.vertex_index()).map(|e|
             e.complete_splits::<_, N>(
                 trav,
-                fold_state.end_pos,
+                fold_state.end_state.width().into(),
             )
         )
         .unwrap_or_default()
@@ -122,9 +121,9 @@ impl SplitCache {
     pub fn new_root_vertex<Trav: Traversable>(
         trav: &Trav,
         fold_state: &FoldState,
-        states: &mut VecDeque<TraceState>,
-        leaves: &mut Leaves,
-    ) -> (SplitVertexCache, RootMode) {
+    ) -> (SplitVertexCache, RootMode, VecDeque<TraceState>, Leaves) {
+        let mut states = VecDeque::default();
+        let mut leaves = Leaves::default();
         let (offsets, root_mode) = Self::completed_splits::<_, RootNode>(
             trav,
             fold_state,
@@ -152,6 +151,8 @@ impl SplitCache {
                 ).collect()
             },
             root_mode,
+            states,
+            leaves
         )
     }
     pub fn new_split_vertex<Trav: Traversable>(
@@ -432,20 +433,27 @@ pub fn cleaned_position_splits<'a>(
 mod tests {
     use crate::*;
     use pretty_assertions::assert_eq;
+    macro_rules! nz {
+        ($x:expr) => {
+            NonZeroUsize::new($x).unwrap()
+        };
+    }
     #[test]
     fn split_graph1() {
 
         let res = trace::tests::build_trace1();
         let Context {
             graph,
-            a,
-            d,
-            e,
-            bc,
-            abc,
-            abcd,
+            def,
+            d_ef_id,
+            c_def_id,
+            cdef,
             abcdef,
+            abcd_ef_id,
+            ab_cdef_id,
+            abc_def_id,
             ef,
+            e_f_id,
             ..
         } = &mut *context_mut();
         let splits = SplitCache::new(
@@ -453,44 +461,101 @@ mod tests {
             res,
         );
         assert_eq!(
-            splits.entries,
-            HashMap::from_iter([
-                (lab!(a), SplitVertexCache {
-                    positions: BTreeMap::default(),
-                }),
-                (lab!(bc), SplitVertexCache {
-                    positions: BTreeMap::from_iter([
-                        (1.try_into().unwrap(), SplitPositionCache {
-                            top: HashSet::from_iter([
-                                SplitKey::new(*abc, 3),
-                            ]),
-                            pattern_splits: HashMap::from_iter([]),
-                        })
-                    ]),
-                }),
-                (lab!(abc), SplitVertexCache {
-                    positions: BTreeMap::from_iter([
-                    ]),
-                }),
-                (lab!(abcd), SplitVertexCache {
-                    positions: BTreeMap::from_iter([
-                    ]),
-                }),
-                (lab!(abcdef), SplitVertexCache {
-                    positions: BTreeMap::from_iter([
-                    ]),
-                }),
-                (lab!(ef), SplitVertexCache {
-                    positions: BTreeMap::from_iter([
-                    ]),
-                }),
-                (lab!(e), SplitVertexCache {
-                    positions: BTreeMap::default(),
-                }),
-                (lab!(d), SplitVertexCache {
-                    positions: BTreeMap::default(),
-                }),
-            ])
-        )
+            splits.entries[&lab!(ef)],
+            SplitVertexCache {
+                positions: BTreeMap::from_iter([
+                    (nz!(1), SplitPositionCache {
+                        top: HashSet::from_iter([
+                            SplitKey {
+                                index: *abcdef,
+                                pos: nz!(5),
+                            },
+                            SplitKey {
+                                index: *def,
+                                pos: nz!(2),
+                            },
+                        ]),
+                        pattern_splits: HashMap::from_iter([
+                            (*e_f_id, PatternSplitPos {
+                                inner_offset: None,
+                                sub_index: 1,
+                            })
+                        ])
+                    })
+                ]),
+            },
+        );
+        assert_eq!(
+            splits.entries[&lab!(def)],
+            SplitVertexCache {
+                positions: BTreeMap::from_iter([
+                    (nz!(2), SplitPositionCache {
+                        top: HashSet::from_iter([
+                            SplitKey {
+                                index: *abcdef,
+                                pos: nz!(5),
+                            },
+                            SplitKey {
+                                index: *cdef,
+                                pos: nz!(3),
+                            },
+                        ]),
+                        pattern_splits: HashMap::from_iter([
+                            (*d_ef_id, PatternSplitPos {
+                                inner_offset: Some(nz!(1)),
+                                sub_index: 1,
+                            })
+                        ])
+                    })
+                ]),
+            },
+        );
+        assert_eq!(
+            splits.entries[&lab!(cdef)],
+            SplitVertexCache {
+                positions: BTreeMap::from_iter([
+                    (nz!(3), SplitPositionCache {
+                        top: HashSet::from_iter([
+                            SplitKey {
+                                index: *abcdef,
+                                pos: nz!(5),
+                            },
+                        ]),
+                        pattern_splits: HashMap::from_iter([
+                            (*c_def_id, PatternSplitPos {
+                                inner_offset: Some(nz!(2)),
+                                sub_index: 1,
+                            })
+                        ])
+                    })
+                ]),
+            },
+        );
+        assert_eq!(
+            splits.entries[&lab!(abcdef)],
+            SplitVertexCache {
+                positions: BTreeMap::from_iter([
+                    (nz!(5), SplitPositionCache {
+                        top: HashSet::from_iter([
+                        ]),
+                        pattern_splits: HashMap::from_iter([
+                            (*abcd_ef_id, PatternSplitPos {
+                                inner_offset: Some(nz!(1)),
+                                sub_index: 1,
+                            }),
+                            (*abc_def_id, PatternSplitPos {
+                                inner_offset: Some(nz!(2)),
+                                sub_index: 1,
+                            }),
+                            (*ab_cdef_id, PatternSplitPos {
+                                inner_offset: Some(nz!(3)),
+                                sub_index: 1,
+                            }),
+                        ])
+                    })
+                ]),
+            },
+        );
+        assert_eq!(splits.entries.len(), 4);
     }
 }

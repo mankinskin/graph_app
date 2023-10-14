@@ -6,7 +6,7 @@ pub struct PrevKey {
     pub delta: usize,
 }
 impl PrevKey {
-    pub fn backwards(&self) -> DirectedKey {
+    pub fn advanced(&self) -> DirectedKey {
         let mut target = self.prev_target.clone();
         target.pos += self.delta;
         target

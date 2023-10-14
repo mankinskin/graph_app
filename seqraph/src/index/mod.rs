@@ -9,17 +9,11 @@ pub use indexer::*;
 pub mod side;
 pub use side::*;
 
-pub mod join;
-pub use join::*;
-
 //pub mod context;
 //pub use context::*;
 
 //pub mod path;
 //pub use path::*;
-
-pub mod cache;
-pub use cache::*;
 
 #[cfg(test)]
 #[macro_use]

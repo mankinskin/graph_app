@@ -34,21 +34,22 @@ impl Trace for EndState {
         }
     }
 }
-impl Trace for ChildState {
-    fn trace<Trav: Traversable>(&self, trav: &Trav, cache: &mut TraversalCache) {
-        cache.trace_path(
-            trav,
-            self.paths.path.role_root_child_location::<Start>().sub_index,
-            &self.paths.path,
-            self.root_pos,
-            false,
-        );
-    }
-}
+//impl Trace for ChildState {
+//    fn trace<Trav: Traversable>(&self, trav: &Trav, cache: &mut TraversalCache) {
+//        cache.trace_path(
+//            trav,
+//            self.paths.path.role_root_child_location::<Start>().sub_index,
+//            &self.paths.path,
+//            self.root_pos,
+//            false,
+//        );
+//    }
+//}
 
 #[cfg(test)]
-pub mod tests {
+pub(crate) mod tests {
     use crate::*;
+    use pretty_assertions::assert_eq;
 
     pub fn build_trace1() -> FoldState {
         let Context {
@@ -68,11 +69,8 @@ pub mod tests {
     fn trace_graph1() {
         let res = build_trace1();
         let Context {
-            graph,
             a,
-            d,
             e,
-            bc,
             abc,
             abcd,
             abc_d_id,
@@ -86,7 +84,7 @@ pub mod tests {
         } = &*context_mut();
 
         assert_eq!(res.start, *a);
-        assert_eq!(res.end_pos, 5.into());
+        assert_eq!(res.end_state.width(), 5);
 
         assert_eq!(
             res.cache.entries[&lab!(a)], 
@@ -106,7 +104,7 @@ pub mod tests {
                             top: Default::default(),
                             bottom: HashMap::from_iter([
                                 (
-                                    DirectedKey::up(*abc, 3),
+                                    DirectedKey::up(*abc, 1),
                                     SubLocation::new(*abc_d_id, 0),
                                 )
                             ]),
@@ -164,7 +162,7 @@ pub mod tests {
                             top: Default::default(),
                             bottom: HashMap::from_iter([
                                 (
-                                    DirectedKey::up(*a, 1),
+                                    DirectedKey::up(*a, 0),
                                     SubLocation::new(3, 0),
                                 )
                             ]),
@@ -186,7 +184,7 @@ pub mod tests {
                             top: HashSet::from_iter([]),
                             bottom: HashMap::from_iter([
                                 (
-                                    DirectedKey::up(*abcd, 4),
+                                    DirectedKey::up(*abcd, 3),
                                     SubLocation::new(*abcd_ef_id, 0),
                                 ),
                             ]),

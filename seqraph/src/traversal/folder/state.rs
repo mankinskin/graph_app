@@ -34,26 +34,25 @@ impl FoldResult {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct FoldState {
     pub cache: TraversalCache,
-    pub end_states: Vec<EndState>,
+    pub end_state: EndState,
     pub(crate) start: Child,
     pub(crate) root: Child,
-    pub(crate) end_pos: TokenLocation,
 }
 impl FoldState {
     pub fn root_entry(&self) -> &VertexCache {
         self.cache.entries.get(&self.root().vertex_index()).unwrap()
     }
-    pub fn root_mode(&self) -> RootMode {
-        let e = self.root_entry();
-        if e.bottom_up.is_empty() {
-            assert!(!e.top_down.is_empty());
-            RootMode::Prefix
-        } else if e.top_down.is_empty() {
-            RootMode::Postfix
-        } else {
-            RootMode::Infix
-        }
-    }
+    //pub fn root_mode(&self) -> RootMode {
+    //    let e = self.root_entry();
+    //    if e.bottom_up.is_empty() {
+    //        assert!(!e.top_down.is_empty());
+    //        RootMode::Prefix
+    //    } else if e.top_down.is_empty() {
+    //        RootMode::Postfix
+    //    } else {
+    //        RootMode::Infix
+    //    }
+    //}
     pub fn start_key(&self) -> DirectedKey {
         DirectedKey::new(self.start, self.start.width())
     }
@@ -63,11 +62,12 @@ impl FoldState {
     pub fn into_fold_result(self) -> FoldResult {
         FoldResult::Incomplete(self)
     }
-    pub fn leaves(&self, root: &Child) -> Vec<DirectedKey> {
-        self.end_states.iter()
-            .filter(|s| s.root_key().index == *root)
-            .map(|s| s.target_key())
-            .collect()
+    pub fn leaf(&self) -> DirectedKey {
+        self.end_state.target_key()
+            //.iter()
+            //.filter(|s| s.root_key().index == *root)
+            //.map(|s| s.target_key())
+            //.collect()
     }
 }
 

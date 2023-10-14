@@ -35,8 +35,8 @@ pub trait TraversalFolder: Sized + Traversable {
             query.clone(),
         );
 
-        let mut end_states = vec![];
-        let mut max_width = 0;
+        let mut end_state = None;
+        let mut max_width = start_index.width();
 
         // 1. expand first parents
         // 2. expand next children/parents
@@ -59,25 +59,30 @@ pub trait TraversalFolder: Sized + Traversable {
                     NextStates::Empty => {},
                     NextStates::End(StateNext { inner: end, .. }) => {
                         //debug!("{:#?}", state);
-                        if end.width() > start_index.width() && end.width() >= max_width {
+                        if end.width() >= max_width {
+
                             end.trace(self, &mut cache);
-                            if let Some(root_key) = end.waiting_root_key() {
-                                // this must happen before simplification
-                                states.extend(
-                                    cache.continue_waiting(&root_key)
-                                );
-                            }
+
+                            // note: not really needed with completion
+                            //if let Some(root_key) = end.waiting_root_key() {
+                            //    // continue paths also arrived at this root
+                            //    // this must happen before simplification
+                            //    states.extend(
+                            //        cache.continue_waiting(&root_key)
+                            //    );
+                            //}
                             if end.width() > max_width {
                                 max_width = end.width();
-                                end_states.clear();
+                                //end_states.clear();
                             }
                             let is_final = end.reason == EndReason::QueryEnd
                                 && matches!(end.kind, EndKind::Complete(_));
-                            end_states.push(end);
+                            end_state = Some(end);
                             if is_final {
                                 break;
                             }
                         } else {
+                            // larger root already found
                             // stop other paths with this root
                             states.prune_below(end.root_key());
                         }
@@ -91,41 +96,29 @@ pub trait TraversalFolder: Sized + Traversable {
         //        (root.index(), root.width(), s.root_pos.0)
         //    }).collect_vec()
         //);
-        Ok(if end_states.is_empty() {
-            TraversalResult {
-                query: query.to_rooted(query_root.query_root),
-                result: FoldResult::Complete(start_index)
-            }
-        } else {
-            let final_states = end_states.iter()
-                .map(|state|
-                    FinalState {
-                        num_parents: cache
-                            .get(&DirectedKey::from(state.root_key()))
-                            .unwrap()
-                            .num_parents(),
-                        state,
-                    }
-                )
-                .sorted() 
-                .collect_vec();
-            let fin = final_states.first().unwrap();
-            let query = fin.state.query.clone();
-            let found_path = if let EndKind::Complete(c) = &fin.state.kind {
+        Ok(if let Some(state) = end_state {
+            let final_state = 
+                FinalState {
+                    num_parents: cache
+                        .get(&DirectedKey::from(state.root_key()))
+                        .unwrap()
+                        .num_parents(),
+                    state: &state,
+                };
+            let query = final_state.state.query.clone();
+            let found_path = if let EndKind::Complete(c) = &final_state.state.kind {
                     FoldResult::Complete(*c)
                 } else {
                     // todo: complete bottom edges of root if 
                     // assert same root
-                    let min_end = end_states.iter()
-                        .min_by(|a, b| a.root_key().index.width().cmp(&b.root_key().index.width()))
-                        .unwrap();
-                    let root = min_end.root_key().index;
-                    let end_pos = min_end.width();
+                    //let min_end = end_states.iter()
+                    //    .min_by(|a, b| a.root_key().index.width().cmp(&b.root_key().index.width()))
+                    //    .unwrap();
+                    let root = state.root_key().index;
                     let state = FoldState {
                         cache,
                         root,
-                        end_pos: end_pos.into(),
-                        end_states,
+                        end_state: state,
                         start: start_index,
                     };
                     FoldResult::Incomplete(state)
@@ -133,6 +126,11 @@ pub trait TraversalFolder: Sized + Traversable {
             TraversalResult {
                 query: query.to_rooted(query_root.query_root),
                 result: found_path,
+            }
+        } else {
+            TraversalResult {
+                query: query.to_rooted(query_root.query_root),
+                result: FoldResult::Complete(start_index)
             }
         })
     }

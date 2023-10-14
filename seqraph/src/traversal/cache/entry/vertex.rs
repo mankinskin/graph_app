@@ -60,6 +60,7 @@ impl VertexCache {
         node: &VertexData,
     ) -> N::GlobalSplitOutput {
         let mut output = N::GlobalSplitOutput::default();
+        let (mut front, mut back) = (false, false);
         for (inner_width, cache) in &self.bottom_up {
             for location in cache.edges.bottom.values() {
                 let child = node.expect_child_at(location);
@@ -69,16 +70,20 @@ impl VertexCache {
                     inner_offset,
                 };
                 let offset = node.expect_child_offset(location);
-                if let Some(parent_offset) = inner_offset.and_then(|o| o.checked_add(offset))
-                    .or(NonZeroUsize::new(offset)) {
-                    output.splits_mut().entry(parent_offset).and_modify(|e: &mut Vec<_>|
-                        e.push(bottom.clone())
-                    )
-                    .or_insert_with(||
-                        vec![bottom]
-                    );
+                if let Some(parent_offset) = inner_offset
+                    .and_then(|o| o.checked_add(offset))
+                    .or(NonZeroUsize::new(offset))
+                {
+                    output.splits_mut()
+                        .entry(parent_offset)
+                        .and_modify(|e: &mut Vec<_>|
+                            e.push(bottom.clone())
+                        )
+                        .or_insert_with(||
+                            vec![bottom]
+                        );
+                    front = true;
                 } else {
-                    output.set_root_mode(RootMode::Prefix);
                     break;
                 }
             }
@@ -108,16 +113,15 @@ impl VertexCache {
                             vec![bottom]
                         );
                     }
-                } else {
-                    output.set_root_mode(RootMode::Postfix)
+                    back = true;
                 }
             }
         }
-        match (self.bottom_up.is_empty(), self.top_down.is_empty()) {
-            (false, false) => output.set_root_mode(RootMode::Infix),
-            (true, false) => output.set_root_mode(RootMode::Prefix),
-            (false, true) => output.set_root_mode(RootMode::Postfix),
-            (true, true) => unreachable!(),
+        match (front, back) {
+            (true, true) => output.set_root_mode(RootMode::Infix),
+            (false, true) => output.set_root_mode(RootMode::Prefix),
+            (true, false) => output.set_root_mode(RootMode::Postfix),
+            (false, false) => unreachable!(),
         }
         output
     }

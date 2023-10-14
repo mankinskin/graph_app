@@ -209,7 +209,6 @@ fn find_ancestor2() {
                 FoldState {
                     root: xabyz,
                     start: by,
-                    end_pos: 3.into(),
                     cache: TraversalCache {
                         entries: HashMap::from_iter([
                             (lab!(xabyz), VertexCache {
@@ -309,7 +308,7 @@ fn find_ancestor2() {
                             //}),
                         ]),
                     },
-                    end_states: vec![
+                    end_state:
                         EndState {
                             root_pos: 2.into(),
                             reason: EndReason::QueryEnd,
@@ -356,7 +355,6 @@ fn find_ancestor2() {
                                 pos: 3.into(),
                             },
                         },
-                    ]
                 }
             ),
             query: QueryRangePath::complete(query),
@@ -408,7 +406,6 @@ fn find_ancestor3() {
                 FoldState {
                     root: xaby,
                     start: ab,
-                    end_pos: 3.into(),
                     cache: TraversalCache {
                         entries: HashMap::from_iter([
                             //(xabyz.index, VertexCache {
@@ -576,7 +573,7 @@ fn find_ancestor3() {
                             //}),
                         ]),
                     },
-                    end_states: vec![
+                    end_state:
                         EndState {
                             root_pos: 2.into(),
                             reason: EndReason::QueryEnd,
@@ -685,7 +682,6 @@ fn find_ancestor3() {
                         //        pos: 3.into(),
                         //    },
                         //},
-                    ]
                 }
             ),
             query: QueryRangePath::complete(query),

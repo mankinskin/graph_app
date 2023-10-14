@@ -22,6 +22,7 @@ pub mod traversal;
 pub mod index;
 pub mod logger;
 pub mod mock;
+pub mod split;
 //pub mod read;
 pub mod tests;
 
@@ -139,6 +140,7 @@ pub use {
     direction::*,
     index::*,
     //read::*,
+    split::*,
     graph::*,
     vertex::{
         Token,
