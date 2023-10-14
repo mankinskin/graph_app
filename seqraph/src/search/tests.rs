@@ -252,7 +252,7 @@ fn find_ancestor2() {
                                         edges: Edges {
                                             bottom: HashMap::from_iter([
                                                 (
-                                                    DirectedKey::up(by, 2),
+                                                    DirectedKey::up(by, 0),
                                                     SubLocation::new(7, 1)
                                                 )
                                             ]),
@@ -272,19 +272,19 @@ fn find_ancestor2() {
                                 index: by,
                                 top_down: HashMap::from_iter([]),
                                 bottom_up: HashMap::from_iter([
-                                    (2.into(), PositionCache {
-                                        edges: Edges {
-                                            bottom: Default::default(),
-                                            top: HashSet::from_iter([
-                                                //DirectedKey {
-                                                //    index: xaby,
-                                                //    pos: 2.into(),
-                                                //},
-                                            ]),
-                                        },
-                                        index: by,
-                                        waiting: vec![],
-                                    })
+                                    //(2.into(), PositionCache {
+                                    //    edges: Edges {
+                                    //        bottom: Default::default(),
+                                    //        top: HashSet::from_iter([
+                                    //            //DirectedKey {
+                                    //            //    index: xaby,
+                                    //            //    pos: 2.into(),
+                                    //            //},
+                                    //        ]),
+                                    //    },
+                                    //    index: by,
+                                    //    waiting: vec![],
+                                    //})
                                 ])
                             }),
                             //(z.index, VertexCache {
@@ -482,7 +482,7 @@ fn find_ancestor3() {
                                         edges: Edges {
                                             bottom: HashMap::from_iter([
                                                 (
-                                                    DirectedKey::up(ab, 2),
+                                                    DirectedKey::up(ab, 0),
                                                     SubLocation::new(x_ab_id, 1),
                                                 )
                                             ]),
@@ -506,19 +506,19 @@ fn find_ancestor3() {
                                 index: ab,
                                 top_down: HashMap::from_iter([]),
                                 bottom_up: HashMap::from_iter([
-                                    (2.into(), PositionCache {
-                                        edges: Edges {
-                                            bottom: HashMap::default(),
-                                            top: HashSet::from_iter([
-                                                //DirectedKey {
-                                                //    index: xab,
-                                                //    pos: 2.into(),
-                                                //},
-                                            ]),
-                                        },
-                                        index: ab,
-                                        waiting: Default::default(),
-                                    })
+                                    //(2.into(), PositionCache {
+                                    //    edges: Edges {
+                                    //        bottom: HashMap::default(),
+                                    //        top: HashSet::from_iter([
+                                    //            //DirectedKey {
+                                    //            //    index: xab,
+                                    //            //    pos: 2.into(),
+                                    //            //},
+                                    //        ]),
+                                    //    },
+                                    //    index: ab,
+                                    //    waiting: Default::default(),
+                                    //})
                                 ])
                             }),
                             //(yz.index, VertexCache {
