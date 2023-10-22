@@ -10,7 +10,7 @@ use crate::*;
 pub struct PatternRangeInfo<K: RangeRole> {
     pub pattern_id: PatternId,
     pub info: RangeInfo<K>,
-    pub perfect: <K::Perfect as BorderPerfect>::Boolean,
+    //pub perfect: <K::Perfect as BorderPerfect>::Boolean,
 }
 
 #[derive(Debug, Clone)]

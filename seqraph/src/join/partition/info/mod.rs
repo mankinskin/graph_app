@@ -19,10 +19,14 @@ pub trait JoinPartition<K: RangeRole<Mode = Join>>: VisitPartition<K> {
 impl<'a, K: RangeRole<Mode = Join> + 'a, P: VisitPartition<K>> JoinPartition<K> for P {
 }
 pub trait VisitPartition<K: RangeRole>: Sized + Clone {
-    fn info_pattern_range<'t>(
+    //fn info_pattern_range<'t>(
+    //    self,
+    //    ctx: ModePatternCtxOf<'t, K>,
+    //) -> Result<PatternRangeInfo<K>, Child>;
+    fn info_borders<'t>(
         self,
-        ctx: ModePatternCtxOf<'t, K>,
-    ) -> Result<PatternRangeInfo<K>, Child>;
+        ctx: PatternTraceContext,
+    ) -> K::Borders<'t>;
 
     fn pattern_ctxs<'t>(
         &self,
@@ -35,47 +39,52 @@ pub trait VisitPartition<K: RangeRole>: Sized + Clone {
         self,
         ctx: &'t ModeNodeCtxOf<'t, K>,
     ) -> Result<PartitionInfo<K>, Child> {
-        // collects pa
-        self.pattern_ctxs(ctx).into_iter().map(|pctx|
-            self.clone().info_pattern_range(
-                pctx
+        let ctxs = self.pattern_ctxs(ctx);
+        let (borders, perfect): (Vec<_>, K::Perfect) = ctxs
+            .iter()
+            .map(|pctx| {
+                let pctx = pctx.as_pattern_trace_context();
+                let borders = self.clone().info_borders(
+                    pctx
+                );
+                let perfect = borders.perfect().then_some(pctx.loc.id);
+                (borders, perfect)
+            })
+            .unzip();
+        let patterns: Result<_, _> = ctxs.into_iter().zip(borders)
+            .map(|(pctx, borders)|
+                borders.info_pattern_range(
+                    &pctx
+                ).map(Into::into)
             )
+            .collect();
+        patterns.map(|infos|
+            PartitionInfo {
+                patterns: infos,
+                perfect,
+            }
         )
-        .collect()
     }
 }
-impl<K: RangeRole> FromIterator<PatternRangeInfo<K>> for PartitionInfo<K> {
-    fn from_iter<T: IntoIterator<Item = PatternRangeInfo<K>>>(iter: T) -> Self {
-        let mut perf = K::Perfect::default();
-        let patterns =
-            iter.into_iter()
-                .map(|PatternRangeInfo {
-                    pattern_id,
-                    info,
-                    perfect,
-                }| {
-                    perf.fold_or(perfect.then_some(pattern_id));
-                    (pattern_id, info)
-                })
-                .collect();
-        PartitionInfo {
-            patterns,
-            perfect: perf,
-        }
+impl<K: RangeRole> Into<(PatternId, RangeInfo<K>)> for PatternRangeInfo<K> {
+    fn into(self) -> (PatternId, RangeInfo<K>) {
+        (
+            self.pattern_id,
+            self.info,
+        )
     }
 }
 impl<K: RangeRole, P: AsPartition<K>> VisitPartition<K> for P {
-    fn info_pattern_range<'t>(
+    fn info_borders<'t>(
         self,
-        ctx: ModePatternCtxOf<'t, K>,
-    ) -> Result<PatternRangeInfo<K>, Child> {
+        ctx: PatternTraceContext,
+    ) -> K::Borders<'t> {
         let part = self.as_partition();
         // todo detect if prev offset is in same index (to use inner partition as result)
         let pctx = ctx.as_pattern_trace_context();
         let splits = part.offsets.get(&pctx.loc.id).unwrap();
 
         K::Borders::info_border(pctx.pattern, &splits)
-            .info_pattern_range(&ctx)
     }
     fn pattern_ctxs<'t>(
         &self,

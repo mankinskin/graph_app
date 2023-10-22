@@ -5,6 +5,7 @@ pub trait TraceBorders<'a, K: RangeRole<Borders<'a> = Self>>: VisitBorders<'a, K
         &self,
         ctx: &ModePatternCtxOf<'a, K>,
     ) -> Option<InnerRangeInfo<K>>;
+
     fn info_pattern_range(
         self,
         ctx: &ModePatternCtxOf<'a, K>,
@@ -36,7 +37,6 @@ pub trait TraceBorders<'a, K: RangeRole<Borders<'a> = Self>>: VisitBorders<'a, K
                     range,
                     children,
                 },
-                perfect,
             })
         } else {
             Err(pat[0])

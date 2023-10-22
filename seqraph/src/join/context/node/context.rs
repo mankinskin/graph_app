@@ -158,7 +158,7 @@ impl<'p> NodeJoinContext<'p> {
                 assert_eq!(num_offsets, 1);
                 match Prefix::new(offset).join_partition(self) {
                     Ok(part) => {
-                        if let Some(pid) = part.perfect {
+                        if let Some(pid) = part.perfect.into() {
                             let pos = &offset.1.pattern_splits[&pid];
                             self.graph.replace_in_pattern(
                                 index.to_pattern_location(pid),
@@ -182,7 +182,7 @@ impl<'p> NodeJoinContext<'p> {
                 match Postfix::new(offset).join_partition(self) {
                     Ok(part) => {
                         println!("{:#?}", part);
-                        if let Some(pid) = part.perfect {
+                        if let Some(pid) = part.perfect.into() {
                             let pos = &offset.1.pattern_splits[&pid];
                             self.graph.replace_in_pattern(
                                 index.to_pattern_location(pid),
@@ -211,7 +211,7 @@ impl<'p> NodeJoinContext<'p> {
                         let mut prev_offset = (prev_offset.0, prev_offset.1.clone());
                         let mut offset = (offset.0, offset.1.clone() - part.delta);
 
-                        if (None, None) == part.perfect {
+                        if (None, None) == part.perfect.into() {
                             // no perfect border
                             //        [               ]
                             // |     |      |      |     |   |

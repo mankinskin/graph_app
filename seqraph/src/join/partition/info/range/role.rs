@@ -125,7 +125,7 @@ impl<M: PreVisitMode> RangeRole for Pre<M> {
     type Borders<'a> = BorderInfo;
     type Splits = OffsetSplits;
     type Offsets = NonZeroUsize;
-    type Perfect = Option<PatternId>;
+    type Perfect = SinglePerfect;
     fn to_partition(
         splits: Self::Splits,
     ) -> Partition<Self> {
@@ -157,7 +157,7 @@ impl<M: InVisitMode> RangeRole for In<M> {
     type Borders<'a> = (BorderInfo, BorderInfo);
     type Splits = (OffsetSplits, OffsetSplits);
     type Offsets = (NonZeroUsize, NonZeroUsize);
-    type Perfect = (Option<PatternId>, Option<PatternId>);
+    type Perfect = DoublePerfect;
     fn to_partition(
         splits: Self::Splits,
     ) -> Partition<Self> {
@@ -177,7 +177,7 @@ impl<M: PostVisitMode> RangeRole for Post<M> {
     type Borders<'a> = BorderInfo;
     type Splits = OffsetSplits;
     type Offsets = NonZeroUsize;
-    type Perfect = Option<PatternId>;
+    type Perfect = SinglePerfect;
     fn to_partition(splits: Self::Splits) -> Partition<Self> {
         Partition {
             offsets: splits,
