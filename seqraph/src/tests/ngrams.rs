@@ -1,8 +1,8 @@
+#![allow(non_snake_case, unused)]
 use ngram::*;
 use crate::*;
 use std::{
     path::Path,
-    fs::File,
 };
 
 fn read_corpus(file_path: impl AsRef<Path>) -> String {

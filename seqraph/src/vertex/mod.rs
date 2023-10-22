@@ -265,9 +265,12 @@ impl VertexData {
                 assert!(!p.is_empty());
                 let mut p = p.iter().fold(Vec::new(), |mut pa, c| {
                     offset += c.width();
-                    assert!(acc.iter().find(|pr|
-                        pr.contains(&offset)
-                    ).is_none());
+                    assert!(
+                        acc.iter().find(|pr|
+                            pr.contains(&offset)
+                        ).is_none(),
+                        "Duplicate border in index child patterns"
+                    );
                     pa.push(offset);
                     pa
                 });

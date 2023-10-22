@@ -1,83 +1,129 @@
 use crate::*;
 
-pub mod joined;
-pub use joined::*;
-pub mod merge;
-pub use merge::*;
-pub mod delta;
-pub use delta::*;
-pub mod context;
-pub use context::*;
-pub mod partition;
-pub use partition::*;
-
-#[derive(Debug, Default, Deref, DerefMut)]
-pub struct SplitFrontier {
-    pub queue: LinkedHashSet<SplitKey>,
+#[derive(Debug, Clone, Copy)]
+pub struct NodeTraceContext<'p> {
+    pub patterns: &'p ChildPatterns,
+    pub index: Child,
 }
-impl SplitFrontier {
-    pub fn new(keys: impl IntoIterator<Item=SplitKey>) -> Self {
+impl<'p> NodeTraceContext<'p> {
+    pub fn new(
+        graph: &'p RwLockWriteGuard<'p, Hypergraph>,
+        index: Child,
+    ) -> Self {
         Self {
-            queue: LinkedHashSet::from_iter(keys),
+            patterns: graph.expect_child_patterns(index),
+            index,
         }
     }
 }
-impl Extend<SplitKey> for SplitFrontier {
-    fn extend<T: IntoIterator<Item = SplitKey>>(&mut self, iter: T) {
-        self.queue.extend(iter)
+
+pub trait AsNodeTraceContext<'p>: 'p {
+    fn as_trace_context<'t>(&'t self) -> NodeTraceContext<'t> where Self: 't, 'p: 't;
+}
+impl<'p> AsNodeTraceContext<'p> for NodeTraceContext<'p> {
+    fn as_trace_context<'t>(&'t self) -> NodeTraceContext<'t> where Self: 't, 'p: 't {
+        *self
     }
 }
-// how to get child splits of offsets induced by inner ranges?
-// - augment to split graph
-// or - locate dynamically (child is guaranteed to exist because inner range offset are always consistent)
-impl Indexer {
-    pub fn join_subgraph(
+#[derive(Debug, Deref, DerefMut)]
+pub struct NodeJoinContext<'p, S: HasSplitPos + 'p = SplitVertexCache> {
+    #[deref]
+    #[deref_mut]
+    pub ctx: JoinContext<'p>,
+    pub index: Child,
+    pub split_pos: &'p SplitPos<S>,
+}
+impl<'p, S: HasSplitPos + 'p> AsNodeTraceContext<'p> for NodeJoinContext<'p, S> {
+    fn as_trace_context<'t>(&'t self) -> NodeTraceContext<'t> where Self: 't, 'p: 't {
+        NodeTraceContext {
+            patterns: self.borrow().patterns(),
+            index: self.borrow().index,
+        }
+    }
+}
+
+pub trait ToPatternContext<'p> {
+    type PatternCtx<'a>: AsPatternTraceContext<'p> where Self: 'a, 'a: 'p;
+    fn to_pattern_context<'t>(self,  pattern_id: &PatternId) -> Self::PatternCtx<'t> where Self: 't, 't: 'p;
+}
+impl<'p, SP: HasSplitPos + 'p> AsPatternContext<'p> for NodeJoinContext<'p, SP> {
+    type PatternCtx<'a> = PatternJoinContext<'a> where Self: 'a, 'a: 'p;
+    fn as_pattern_context<'t>(&'t self, pattern_id: &PatternId) -> Self::PatternCtx<'t> where Self: 't, 't: 'p {
+
+        let ctx = PatternTraceContext {
+            loc: self.index.to_pattern_location(*pattern_id),
+            pattern: self.as_trace_context().patterns.get(pattern_id).unwrap(),
+        };
+        PatternJoinContext {
+            //graph: self.graph,
+            ctx,
+            sub_splits: self.borrow().sub_splits,
+        }
+    }
+}
+pub trait AsPatternContext<'p> {
+    type PatternCtx<'a>: AsPatternTraceContext<'p> where Self: 'a, 'a: 'p;
+    fn as_pattern_context<'t>(&'t self,  pattern_id: &PatternId) -> Self::PatternCtx<'t> where Self: 't, 't: 'p;
+}
+impl<'p> AsPatternContext<'p> for NodeTraceContext<'p> {
+    type PatternCtx<'a> = PatternTraceContext<'p> where Self: 'a, 'a: 'p;
+    fn as_pattern_context<'t>(&'t self, pattern_id: &PatternId) -> Self::PatternCtx<'t> where Self: 't, 't: 'p {
+        PatternTraceContext {
+            loc: self.index.to_pattern_location(*pattern_id),
+            pattern: self.as_trace_context().patterns.get(pattern_id).unwrap(),
+        }
+    }
+}
+impl<'p, SP: HasSplitPos + 'p> NodeJoinContext<'p, SP> {
+    pub fn new(
+        ctx: JoinContext<'p>,
+        index: Child,
+        split_pos: &'p SP,
+    ) -> Self {
+        Self {
+            ctx,
+            index,
+            split_pos: split_pos.split_pos(),
+        }
+    }
+    pub fn patterns(&self) -> &ChildPatterns {
+        self.ctx.graph.expect_child_patterns(self.index)
+    }
+}
+impl<'p> NodeJoinContext<'p> {
+    pub fn index_partitions<'t, S: HasSplitPos + 'p>(
         &mut self,
-        fold_state: FoldState,
-    ) -> Child {
-        let root = fold_state.root;
-        let splits = SplitCache::new(self, fold_state);
-
-        let mut frontier = SplitFrontier::new(splits.leaves.iter().cloned().rev());
-        let mut final_splits = HashMap::default();
-        while let Some(key) = {
-            frontier.pop_front()
-                .and_then(|key|
-                    (key.index != root).then(|| key)
-                )
-        } {
-            if final_splits.get(&key).is_none() {
-                let finals = {
-                    let mut ctx = JoinContext::new(
-                        self.graph_mut(),
-                        key.index,
-                        splits.entries.get(&key.index.vertex_index()).unwrap(),
-                        &final_splits,
-                    );
-                    ctx.join_node_partitions()
-                };
-
-                for (key, split) in finals {
-                    final_splits.insert(key, split);
+        split_pos: S,
+    ) -> Vec<Child>
+        where 'p: 't
+    {
+        let offset_splits = split_pos.split_pos();
+        let len = offset_splits.len();
+        assert!(len > 0);
+        let mut iter = offset_splits.iter()
+            .map(|(&offset, splits)|
+                OffsetSplits {
+                    offset,
+                    splits: splits.borrow().clone(),
                 }
-            }
-            frontier.extend(
-                splits.expect(&key).top.iter()
-                    .sorted_by(|a, b| a.index.width().cmp(&b.index.width()))
-                    .cloned()
             );
-        }
-        let entry = splits.entries.get(&root.vertex_index()).unwrap();
-        let mut ctx = JoinContext::new(
-            self.graph_mut(),
-            root,
-            entry,
-            &final_splits,
+        let mut prev = iter.next().unwrap();
+        let mut parts = Vec::with_capacity(1 + len);
+        parts.push(
+            Prefix::new(&prev).join_partition(self).into()
         );
-        ctx.join_root_partitions(splits.root_mode)
+        for offset in iter {
+            parts.push(
+                Infix::new(&prev, &offset).join_partition(self).into()
+            );
+            prev = offset;
+        }
+        parts.push(
+            Postfix::new(prev).join_partition(self).into()
+        );
+        println!("{:#?}", parts);
+        parts
     }
-}
-impl<'p> JoinContext<'p> {
     pub fn join_node_partitions(
         &mut self,
     ) -> LinkedHashMap<SplitKey, Split> {
@@ -87,6 +133,10 @@ impl<'p> JoinContext<'p> {
         assert_eq!(
             self.index.width(),
             partitions.iter().map(Child::width).sum::<usize>()
+        );
+        assert_eq!(
+            partitions.len(),
+            self.split_pos.len() + 1,
         );
         self.merge_node(
             self.split_pos,
@@ -131,6 +181,7 @@ impl<'p> JoinContext<'p> {
                 assert_eq!(num_offsets, 1);
                 match Postfix::new(offset).join_partition(self) {
                     Ok(part) => {
+                        println!("{:#?}", part);
                         if let Some(pid) = part.perfect {
                             let pos = &offset.1.pattern_splits[&pid];
                             self.graph.replace_in_pattern(
@@ -140,6 +191,7 @@ impl<'p> JoinContext<'p> {
                             )
                         } else {
                             let pre = Prefix::new(offset).join_partition(self).unwrap();
+                            println!("{:#?}", pre);
                             self.graph.add_pattern_with_update(index,
                                 [pre.index, part.index],
                             );
@@ -195,7 +247,7 @@ impl<'p> JoinContext<'p> {
                                 prev_offset.1 = prev_offset.1 - pre.delta;
 
                                 let wrap_patterns = Prefix::new(offset.clone())
-                                    .visit_partition(self).unwrap()
+                                    .info_partition(self).unwrap()
                                     .join_patterns(self);
                                 let patterns = wrap_patterns.patterns().clone();
                                 offset.1 = offset.1 - wrap_patterns.delta;
@@ -219,7 +271,7 @@ impl<'p> JoinContext<'p> {
 
                                 let li = prev_offset.1.pattern_splits[&lp].sub_index;
                                 let mut info_bundle = Postfix::new(prev_offset)
-                                    .visit_partition(self).unwrap();
+                                    .info_partition(self).unwrap();
                                 // todo: skip lp in info_bundle already
                                 info_bundle.patterns.remove(&lp);
                                 let wrap_patterns = info_bundle.join_patterns(self);
@@ -243,14 +295,4 @@ impl<'p> JoinContext<'p> {
             }
         }
     }
-    // merge 0, 1, 2, ... = [-0, 0-], [-1, 1-], 
-    // merge [0, 1], [1, 2], ... = [[m0, 1-], [-0, m1]], [[m1, 2-], [-1, m2]]
-    // merge [0, 1, 2], [1, 2, 3], ... = [[m01, 2-], [-0, m12]], [[m12, 3-], [-1, m23]]
-    // merge [0, 1, 2, 3], [1, 2, 3, 4], ... = [[m012, 3-], [m01, m23], [-0, m123]], [[m123, 4-], [m12, m34], [-1, m234]]
-    // merge [0, 1, 2, 3, 4], [1, 2, 3, 4, 5], ... = [
-    //      [m0123, 4-],
-    //      [m012, m34],
-    //      [m01, m234],
-    //      [-0, m1234]
-    // ],
 }

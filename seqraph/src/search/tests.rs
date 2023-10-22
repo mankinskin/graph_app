@@ -319,7 +319,7 @@ fn find_ancestor2() {
                                     root: IndexRoot {
                                         location: PatternLocation {
                                             parent: xabyz,
-                                            pattern_id: 8,
+                                            id: 8,
                                         },
                                     },
                                     role_path: RolePath {
@@ -584,7 +584,7 @@ fn find_ancestor3() {
                                     root: IndexRoot {
                                         location: PatternLocation {
                                             parent: xaby,
-                                            pattern_id: 6,
+                                            id: 6,
                                         },
                                     },
                                     role_path: RolePath {

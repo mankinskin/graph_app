@@ -17,20 +17,20 @@ pub type ChildrenOf<K> = <K as RangeRole>::Children;
 pub type RangeOf<K> = <K as RangeRole>::Range;
 pub type ModeOf<K> = <K as RangeRole>::Mode;
 pub type ModeChildrenOf<K> = <ModeOf<K> as ModeChildren::<K>>::Result;
-pub type PatternCtxOf<'a, K> = <ModeCtxOf<'a, K> as AsTraceContext<'a>>::PatternCtx<'a>;
-pub type ModeCtxOf<'a, K> = <<K as RangeRole>::Mode as ModeContext<'a>>::Result;
+pub type PatternCtxOf<'a, K> = <<K as RangeRole>::Mode as ModeContext<'a>>::PatternResult;
+pub type ModeNodeCtxOf<'a, K> = <<K as RangeRole>::Mode as ModeContext<'a>>::NodeResult;
 pub type ModePatternCtxOf<'a, K> = <<K as RangeRole>::Mode as ModeContext<'a>>::PatternResult;
 
 pub trait ModeContext<'a> {
-    type Result: AsTraceContext<'a, PatternCtx<'a> = Self::PatternResult>;
+    type NodeResult: AsNodeTraceContext<'a> + AsPatternContext<'a, PatternCtx<'a> = Self::PatternResult>;
     type PatternResult: AsPatternTraceContext<'a>;
 }
 impl<'a> ModeContext<'a> for Trace {
-    type Result = TraceContext<'a>;
+    type NodeResult = NodeTraceContext<'a>;
     type PatternResult = PatternTraceContext<'a>;
 }
 impl<'a> ModeContext<'a> for Join {
-    type Result = JoinContext<'a>;
+    type NodeResult = NodeJoinContext<'a>;
     type PatternResult = PatternJoinContext<'a>;
 }
 pub trait ModeChildren<K: RangeRole> {
@@ -44,13 +44,13 @@ impl<K: RangeRole<Mode = Join>> ModeChildren<K> for Join {
 }
 
 pub trait VisitMode<K: RangeRole<Mode = Self>>: Debug + Clone + Copy + ModeChildren<K> + for<'a> ModeContext<'a> {
-    fn border_children<'a>(
+    fn get_child_splits<'a>(
         borders: &K::Borders<'a>,
         ctx: &ModePatternCtxOf<'a, K>,
     ) -> ModeChildrenOf<K>;
 }
 impl<K: RangeRole<Mode = Self>> VisitMode<K> for Trace {
-    fn border_children<'a>(
+    fn get_child_splits<'a>(
         _borders: &K::Borders<'a>,
         _ctx: &ModePatternCtxOf<'a, K>,
     ) -> ModeChildrenOf<K> {
@@ -60,11 +60,11 @@ impl<K: RangeRole<Mode = Self>> VisitMode<K> for Trace {
 impl<K: RangeRole<Mode = Self>> VisitMode<K> for Join
     where for<'a> K::Borders<'a>: JoinBorders<'a, K>
 {
-    fn border_children<'a>(
+    fn get_child_splits<'a>(
         borders: &K::Borders<'a>,
         ctx: &ModePatternCtxOf<'a, K>,
     ) -> ModeChildrenOf<K> {
-        borders.children(ctx).expect("inner range needs children")
+        borders.get_child_splits(ctx).expect("inner range needs children")
     }
 }
 
@@ -84,7 +84,6 @@ pub trait RangeRole: Debug + Clone + Copy {
     type Children: RangeChildren<Self>;
     type Borders<'a>: VisitBorders<'a, Self, Splits = <Self::Splits as PatternSplits>::Pos>;
     type Splits: PatternSplits + AsPartition<Self>;
-    //type SplitsRef<'a>: PatternSplitsRef<'a, Ref<'a> = Self::SplitsRef<'a>, Pos = <Self::Splits as PatternSplits>::Pos> + Copy + AsPartition<'a, Self>;
     fn to_partition(
         splits: Self::Splits,
     ) -> Partition<Self>;

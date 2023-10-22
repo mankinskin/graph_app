@@ -39,10 +39,10 @@ impl ChildLocation {
             ..self
         }
     }
-    pub fn to_pattern_location(self, pattern_id: usize) -> PatternLocation {
+    pub fn to_pattern_location(self, id: usize) -> PatternLocation {
         PatternLocation {
             parent: self.parent,
-            pattern_id,
+            id,
         }
     }
     pub fn to_sub_location(self) -> SubLocation {

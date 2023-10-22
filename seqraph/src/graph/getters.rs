@@ -34,7 +34,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         let location = location.into_pattern_location();
         let vertex = self.get_vertex_data(location.parent)?;
         let child_patterns = vertex.get_child_patterns();
-        child_patterns.get(&location.pattern_id)
+        child_patterns.get(&location.id)
             .ok_or(NoMatch::NoChildPatterns) // todo: better error
     }
     #[track_caller]
@@ -433,7 +433,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         self
             .get_vertex_data(loc.parent)?
             .get_child_pattern_range(
-                &loc.pattern_id,
+                &loc.id,
                 range,
             )
     }
@@ -447,7 +447,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         self
             .expect_vertex_data(loc.parent)
             .expect_child_pattern_range(
-                &loc.pattern_id,
+                &loc.id,
                 range,
             )
     }

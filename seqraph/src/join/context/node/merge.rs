@@ -1,48 +1,16 @@
 use crate::*;
 
-impl<'p> JoinContext<'p> {
-    pub fn index_partitions<'t, S: HasSplitPos + 'p>(
-        &mut self,
-        split_pos: S,
-    ) -> Vec<Child>
-        where 'p: 't
-    {
-        let offset_splits = split_pos.split_pos();
-        let len = offset_splits.len();
-        assert!(len > 0);
-        let mut iter = offset_splits.iter()
-            .map(|(&offset, splits)|
-                OffsetSplits {
-                    offset,
-                    splits: splits.borrow().clone(),
-                }
-            );
-        let mut prev = iter.next().unwrap();
-        let mut parts = Vec::with_capacity(1 + len);
-        parts.push(
-            Prefix::new(&prev).join_partition(self).into()
-        );
-        for offset in iter {
-            parts.push(
-                Infix::new(&prev, &offset).join_partition(self).into()
-            );
-            prev = offset;
-        }
-        parts.push(
-            Postfix::new(prev).join_partition(self).into()
-        );
-        parts
-    }
-    pub fn indexed_partition_patterns<'a, K: RangeRole<Mode = Join> + 'p, P: AsPartition<K>>(
-        &mut self,
-        part: P,
-    ) -> Result<JoinedPatterns<K>, Child>
-        where 'p: 'a,
-            &'a K::Splits: AsPartition<K>
-    {
-        part.visit_partition(&*self)
-            .map(|b| b.join_patterns(self))
-    }
+impl<'p> NodeJoinContext<'p> {
+    //pub fn indexed_partition_patterns<'a, K: RangeRole<Mode = Join> + 'p, P: AsPartition<K>>(
+    //    &mut self,
+    //    part: P,
+    //) -> Result<JoinedPatterns<K>, Child>
+    //    where 'p: 'a,
+    //        &'a K::Splits: AsPartition<K>
+    //{
+    //    part.visit_partition(&*self)
+    //        .map(|b| b.join_patterns(self))
+    //}
     pub fn merge_node<S: HasSplitPos>(
         &mut self,
         splits: S,
@@ -99,13 +67,13 @@ impl<'p> JoinContext<'p> {
                 let ro = offsets.iter().nth(start + len).unwrap();
 
                 // todo: could be read from cache
-                let res = Infix::new(lo, ro).visit_partition(self);
+                let res = Infix::new(lo, ro).info_partition(self);
 
                 let index = match res {
                     Ok(info) => {
                         let merges = range_map.range_sub_merges(start..start + len);
                         let joined = info.patterns.into_iter().map(|(pid, info)|
-                            (info.join_pattern_inner(pid, self).borrow() as &[Child])
+                            (info.joined_pattern(self, &pid).borrow() as &[Child])
                                 .into_iter().cloned().collect_vec()
                         );
                         // todo: insert into perfect context
@@ -123,7 +91,6 @@ impl<'p> JoinContext<'p> {
         range_map
     }
 }
-
 #[derive(Debug, Deref, DerefMut, Default)]
 pub struct RangeMap<R = Range<usize>> {
     #[deref]

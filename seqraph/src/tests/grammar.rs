@@ -1,3 +1,4 @@
+#![allow(non_snake_case, unused)]
 use crate::*;
 
 type BuildKey = RangeInclusive<usize>;
@@ -122,16 +123,16 @@ impl GraphBuilder {
             self.add_rules(node);
         }
     }
-    fn postfix_count(&self, index: Child) -> usize {
-        self.graph.expect_vertex_data(index)
-            .get_parents_with_index_at(1)
-            .len()
-    }
-    fn prefix_count(&self, index: Child) -> usize {
-        self.graph.expect_vertex_data(index)
-            .get_parents_with_index_at(0)
-            .len()
-    }
+    //fn postfix_count(&self, index: Child) -> usize {
+    //    self.graph.expect_vertex_data(index)
+    //        .get_parents_with_index_at(1)
+    //        .len()
+    //}
+    //fn prefix_count(&self, index: Child) -> usize {
+    //    self.graph.expect_vertex_data(index)
+    //        .get_parents_with_index_at(0)
+    //        .len()
+    //}
     pub fn saturated_grammar(mut self, k: usize) -> Hypergraph {
         self.fill_grammar();
         let mut ctx = RewireContext::new(k, self);

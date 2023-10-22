@@ -28,7 +28,7 @@ impl TraversalCache {
     {
         let mut entries = HashMap::default();
         entries.insert(
-            build_key(folder, start_index),
+            labelled_key(folder, start_index),
             VertexCache::start(start_index),
         );
         let mut start = StartState {
@@ -192,7 +192,7 @@ impl TraversalCache {
             &key.pos,
             pe,
         );
-        self.entries.insert(build_key(trav, key.index), ve);
+        self.entries.insert(labelled_key(trav, key.index), ve);
     }
     pub fn continue_waiting(
         &mut self,
@@ -225,7 +225,7 @@ impl TraversalCache {
                     &key.pos,
                     pe,
                 );
-                self.entries.insert(build_key(trav, key.index), ve);
+                self.entries.insert(labelled_key(trav, key.index), ve);
             }
         }
         self.expect_mut(key)

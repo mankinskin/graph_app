@@ -19,39 +19,44 @@ pub struct InnerRangeInfo<K: RangeRole>
 {
     pub range: K::Range,
     pub offsets: K::Offsets,
-    pub children: ModeChildrenOf<K>,
-}
-impl<K: RangeRole<Mode = Join>> InnerRangeInfo<K> {
-    pub fn join_inner(
-        self,
-        inner: Child,
-    ) -> JoinedPattern {
-        self.children.join_inner(inner)
-    }
 }
 /// created for unmerged ranges
 #[derive(Debug, Clone)]
 pub struct RangeInfo<K: RangeRole> {
     pub inner_range: Option<InnerRangeInfo<K>>,
     pub range: K::Range,
+    pub children: ModeChildrenOf<K>,
     pub offsets: K::Offsets,
     pub delta: usize,
 }
 impl<'a, K: RangeRole<Mode = Join>> RangeInfo<K> {
-    pub fn join_pattern_inner<'t>(
+    //pub fn pattern_with_inner(
+    //    self,
+    //    inner: Child,
+    //) -> JoinedPattern {
+    //    self.children.insert_inner(inner)
+    //}
+    pub fn joined_pattern<'t>(
         self,
-        pattern_id: PatternId,
-        ctx: &mut JoinContext<'a>,
-    ) -> JoinedPattern
-    {
-        let loc = ctx.index.to_pattern_location(pattern_id);
-        if let Some(inner_range) = self.inner_range {
+        ctx: &mut NodeJoinContext<'a>,
+        pattern_id: &PatternId,
+    ) -> JoinedPattern {
+        let inner = self.index_pattern_inner(ctx, pattern_id);
+        self.children.insert_inner(inner).unwrap()
+    }
+    pub fn index_pattern_inner<'t>(
+        &self,
+        ctx: &mut NodeJoinContext<'a>,
+        pattern_id: &PatternId,
+    ) -> Option<Child> {
+        if let Some(inner_range) = &self.inner_range {
             let index = match inner_range.offsets
-                .as_splits(&*ctx)
+                .as_splits(ctx.as_trace_context())
                 .join_partition(ctx)
             {
                 Ok(inner) => {
                     // replace range and with new index
+                    let loc = ctx.index.to_pattern_location(*pattern_id);
                     ctx.graph.replace_in_pattern(
                         loc,
                         inner_range.range.clone(),
@@ -61,12 +66,9 @@ impl<'a, K: RangeRole<Mode = Join>> RangeInfo<K> {
                 }
                 Err(p) => p
             };
-            inner_range.join_inner(index)
+            Some(index)
         } else {
-            ctx.graph.get_child_pattern_range(
-                loc,
-                self.range
-            ).unwrap().into()
+            None
         }
     }
 }

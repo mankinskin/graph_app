@@ -4,7 +4,7 @@ use crate::*;
 mod vkey {
     use super::*;
     pub type VertexCacheKey = LabelledKey;
-    pub fn build_key<Trav: Traversable>(trav: &Trav, child: Child) -> VertexCacheKey
+    pub fn labelled_key<Trav: Traversable>(trav: &Trav, child: Child) -> VertexCacheKey
         where TravToken<Trav>: Display
     {
         LabelledKey::build(trav, child)
@@ -59,7 +59,7 @@ mod vkey {
 mod vkey {
     use super::*;
     pub type VertexCacheKey = VertexIndex;
-    pub fn build_key<Trav: Traversable>(_trav: &Trav, child: Child) -> VertexCacheKey
+    pub fn labelled_key<Trav: Traversable>(_trav: &Trav, child: Child) -> VertexCacheKey
         where TravToken<Trav>: Display
     {
         child.vertex_index()

@@ -28,7 +28,7 @@ impl<'p, K: RangeRole> JoinedPatterns<K> {
             .map(|p| p.into_pattern())
             .collect()
     }
-    pub fn join(
+    pub fn insert_patterns(
         self,
         ctx: &mut JoinContext<'p>,
     ) -> JoinedPartition<K> {

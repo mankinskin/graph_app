@@ -1,8 +1,5 @@
 use crate::*;
 
-pub mod trace;
-pub use trace::*;
-
 pub mod indexer;
 pub use indexer::*;
 

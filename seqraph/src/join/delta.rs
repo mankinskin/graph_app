@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(Debug, Default, IntoIterator)]
+#[derive(Debug, Default, IntoIterator, DerefMut)]
 pub struct PatternSubDeltas {
     pub inner: PatternSubDeltasInner,
 }

@@ -1,20 +1,20 @@
 use crate::*;
 
 pub trait RangeOffsets<K: RangeRole>: Debug + Clone + Copy {
-    fn as_splits<'a, C: AsTraceContext<'a>>(&'a self, ctx: C) -> K::Splits;
+    fn as_splits<'a, C: AsNodeTraceContext<'a>>(&'a self, ctx: C) -> K::Splits;
 }
 impl<M: InVisitMode> RangeOffsets<In<M>> for (NonZeroUsize, NonZeroUsize) {
-    fn as_splits<'a, C: AsTraceContext<'a>>(&'a self, ctx: C) -> <In<M> as RangeRole>::Splits {
+    fn as_splits<'a, C: AsNodeTraceContext<'a>>(&'a self, ctx: C) -> <In<M> as RangeRole>::Splits {
         range_splits(ctx.as_trace_context().patterns.iter(), *self)
     }
 }
 impl<M: PreVisitMode> RangeOffsets<Pre<M>> for NonZeroUsize {
-    fn as_splits<'a, C: AsTraceContext<'a>>(&'a self, ctx: C) -> <Pre<M> as RangeRole>::Splits {
+    fn as_splits<'a, C: AsNodeTraceContext<'a>>(&'a self, ctx: C) -> <Pre<M> as RangeRole>::Splits {
         position_splits(ctx.as_trace_context().patterns.iter(), *self)
     }
 }
 impl<M: PostVisitMode> RangeOffsets<Post<M>> for NonZeroUsize {
-    fn as_splits<'a, C: AsTraceContext<'a>>(&'a self, ctx: C) -> <Post<M> as RangeRole>::Splits {
+    fn as_splits<'a, C: AsNodeTraceContext<'a>>(&'a self, ctx: C) -> <Post<M> as RangeRole>::Splits {
         position_splits(ctx.as_trace_context().patterns.iter(), *self)
     }
 }
@@ -23,6 +23,7 @@ pub trait PatternSplits: Debug {
     type Pos;
     type Offsets;
     fn get(&self, pid: &PatternId) -> Option<Self::Pos>;
+    fn ids<'a>(&'a self) -> impl Iterator<Item = &'a PatternId>;
     fn offsets(&self) -> Self::Offsets;
 }
 //pub trait PatternSplitsRef<'a>: PatternSplits + Copy + 'a {
@@ -45,21 +46,27 @@ pub trait PatternSplits: Debug {
 //        *self
 //    }
 //}
-impl<'a> PatternSplits for OffsetSplits {
+impl PatternSplits for OffsetSplits {
     type Pos = PatternSplitPos;
     type Offsets = usize;
     fn get(&self, pid: &PatternId) -> Option<Self::Pos> {
         self.splits.get(pid).cloned()
+    }
+    fn ids<'a>(&'a self) -> impl Iterator<Item = &'a PatternId> {
+        self.splits.keys()
     }
     fn offsets(&self) -> Self::Offsets {
         self.offset.get()
     }
 }
-impl<'a> PatternSplits for &'a OffsetSplits {
+impl<'b> PatternSplits for &'b OffsetSplits {
     type Pos = PatternSplitPos;
     type Offsets = usize;
     fn get(&self, pid: &PatternId) -> Option<Self::Pos> {
         self.splits.get(pid).cloned()
+    }
+    fn ids<'a>(&'a self) -> impl Iterator<Item = &'a PatternId> {
+        self.splits.keys()
     }
     fn offsets(&self) -> Self::Offsets {
         self.offset.get()
@@ -82,6 +89,9 @@ impl<
             let b = self.1.get(pid).unwrap();
             (a, b)
         })
+    }
+    fn ids<'a>(&'a self) -> impl Iterator<Item = &'a PatternId> {
+        self.0.ids()
     }
     fn offsets(&self) -> Self::Offsets {
         (

@@ -42,16 +42,13 @@ impl IntoPatternLocation for ChildLocation {
     fn into_pattern_location(self) -> PatternLocation {
         PatternLocation {
             parent: self.parent,
-            pattern_id: self.pattern_id,
+            id: self.pattern_id,
         }
     }
 }
 impl IntoPatternLocation for &ChildLocation {
     fn into_pattern_location(self) -> PatternLocation {
-        PatternLocation {
-            parent: self.parent,
-            pattern_id: self.pattern_id,
-        }
+        (*self).into_pattern_location()
     }
 }
 impl Indexed for ChildLocation {

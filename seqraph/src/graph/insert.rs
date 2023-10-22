@@ -207,11 +207,11 @@ where
     ) -> Result<Result<Child, Child>, NoMatch> {
         let location = location.into_pattern_location();
         let vertex = self.expect_vertex_data(location.parent);
-        vertex.get_child_pattern(&location.pattern_id)
+        vertex.get_child_pattern(&location.id)
             .map(|pattern| pattern.to_vec())
             .and_then(|pattern|
                 pattern::get_child_pattern_range(
-                    &location.pattern_id,
+                    &location.id,
                     pattern.borrow(),
                     range.clone()
                 )
@@ -267,7 +267,7 @@ where
         let location = location.into_pattern_location();
         let parent = location.parent;
         let parent_index = parent.vertex_index();
-        let pat = location.pattern_id;
+        let pat = location.id;
         let (replaced, width, start, new_end, rem) = {
             let vertex = self.expect_vertex_data_mut(parent);
             let width = vertex.width;

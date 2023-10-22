@@ -10,7 +10,7 @@
 #![feature(pin_macro)]
 #![feature(exact_size_is_empty)]
 #![feature(associated_type_defaults)]
-//#![feature(return_position_impl_trait_in_trait)]
+#![feature(return_position_impl_trait_in_trait)]
 
 extern crate test;
 
@@ -25,6 +25,8 @@ pub mod mock;
 pub mod split;
 //pub mod read;
 pub mod tests;
+pub mod join;
+
 
 
 #[cfg(test)]
@@ -150,6 +152,7 @@ pub use {
         Child,
         PatternId,
     },
+    join::*,
 };
 pub type HashSet<T> =
     std::collections::HashSet<T,
