@@ -19,7 +19,7 @@ impl<M: PostVisitMode> RangeOffsets<Post<M>> for NonZeroUsize {
     }
 }
 
-pub trait PatternSplits: Debug {
+pub trait PatternSplits: Debug + Clone {
     type Pos;
     type Offsets;
     fn get(&self, pid: &PatternId) -> Option<Self::Pos>;

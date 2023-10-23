@@ -19,7 +19,6 @@ pub struct BorderInfo  {
 }
 impl BorderInfo {
     fn new(
-        //cache: &SplitCache,
         pattern: &Pattern,
         pos: &PatternSplitPos,
     ) -> Self {

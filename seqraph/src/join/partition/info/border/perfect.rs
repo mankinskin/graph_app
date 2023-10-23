@@ -29,10 +29,10 @@ impl BoolPerfect for (bool, bool) {
 pub trait BorderPerfect: Default + Debug + Clone + Extend<Self> {
     type Boolean: BoolPerfect<Result=Self>;
     fn new(boolean: Self::Boolean, pid: PatternId) -> Self;
-    //fn fold_or(&mut self, other: Self);
     fn complete(&self) -> SinglePerfect;
+    fn as_bool(self) -> Self::Boolean;
 }
-#[derive(Debug, Default, Clone, Copy, From, Into)]
+#[derive(Debug, Default, Clone, Copy, From, Into, Deref)]
 pub struct SinglePerfect(pub Option<PatternId>);
 
 #[derive(Debug, Default, Clone, Copy, From, Into)]
@@ -41,6 +41,10 @@ pub struct DoublePerfect(pub Option<PatternId>, pub Option<PatternId>);
 impl std::ops::Add for SinglePerfect {
     type Output = Self;
     fn add(self, x: Self) -> Self::Output {
+        assert!(
+            self.0 == x.0 || self.0.is_none() || x.0.is_none(),
+            "Different patterns can't be perfect at same position"
+        );
         self.0.or(x.0).into()
     }
 }
@@ -48,8 +52,8 @@ impl std::ops::Add for DoublePerfect {
     type Output = Self;
     fn add(self, x: Self) -> Self::Output {
         (
-            self.0.or(x.0),
-            self.1.or(x.1),
+            (SinglePerfect(self.0) + SinglePerfect(x.0)).0,
+            (SinglePerfect(self.1) + SinglePerfect(x.1)).0,
         ).into()
     }
 }
@@ -100,6 +104,9 @@ impl BorderPerfect for SinglePerfect {
     fn complete(&self) -> SinglePerfect {
         *self
     }
+    fn as_bool(self) -> Self::Boolean {
+        self.0.is_some()
+    }
 }
 impl BorderPerfect for DoublePerfect {
     type Boolean = (bool, bool);
@@ -117,5 +124,11 @@ impl BorderPerfect for DoublePerfect {
         SinglePerfect(self.0).complete().0.and_then(|pid|
             SinglePerfect(self.1).complete().0.filter(|i| *i == pid)
         ).into()
+    }
+    fn as_bool(self) -> Self::Boolean {
+        (
+            self.0.is_some(),
+            self.1.is_some(),
+        )
     }
 }

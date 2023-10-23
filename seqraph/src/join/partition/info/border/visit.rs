@@ -1,6 +1,6 @@
 use crate::*;
 
-pub trait VisitBorders<'a, K: RangeRole>: Sized + PartitionBorder<K> {
+pub trait VisitBorders<K: RangeRole>: Sized + PartitionBorder<K> {
     type Splits;
     fn info_border(
         pattern: &Pattern,
@@ -10,7 +10,7 @@ pub trait VisitBorders<'a, K: RangeRole>: Sized + PartitionBorder<K> {
     fn inner_range(&self) -> RangeOf<K>;
     fn outer_range(&self) -> RangeOf<K>;
 }
-impl<'a, M: PostVisitMode> VisitBorders<'a, Post<M>> for BorderInfo {
+impl<M: PostVisitMode> VisitBorders<Post<M>> for BorderInfo {
     type Splits = PatternSplitPos;
     fn info_border(
         pattern: &Pattern,
@@ -35,7 +35,7 @@ impl<'a, M: PostVisitMode> VisitBorders<'a, Post<M>> for BorderInfo {
         self.sub_index..
     }
 }
-impl<'a, M: PreVisitMode> VisitBorders<'a, Pre<M>> for BorderInfo {
+impl<M: PreVisitMode> VisitBorders<Pre<M>> for BorderInfo {
     type Splits = PatternSplitPos;
     fn info_border(
         pattern: &Pattern,
@@ -55,10 +55,10 @@ impl<'a, M: PreVisitMode> VisitBorders<'a, Pre<M>> for BorderInfo {
         0..self.sub_index + self.inner_offset.is_some() as usize
     }
 }
-impl<'a, M: InVisitMode> VisitBorders<'a, In<M>> for (BorderInfo, BorderInfo) {
+impl<M: InVisitMode> VisitBorders<In<M>> for (BorderInfo, BorderInfo) {
     type Splits = (
-        <BorderInfo as VisitBorders<'a, Post<M>>>::Splits,
-        <BorderInfo as VisitBorders<'a, Pre<M>>>::Splits,
+        <BorderInfo as VisitBorders<Post<M>>>::Splits,
+        <BorderInfo as VisitBorders<Pre<M>>>::Splits,
     );
     fn info_border(
         pattern: &Pattern,

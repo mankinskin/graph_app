@@ -5,33 +5,33 @@ pub use range::*;
 pub mod border;
 pub use border::*;
 
-pub trait JoinPartition<K: RangeRole<Mode = Join>>: VisitPartition<K> {
+pub trait JoinPartition<K: RangeRole<Mode = Join>>: VisitPartition<K>
+    where K::Borders: JoinBorders<K>
+{
     fn join_partition<'a>(
         self,
         ctx: &mut NodeJoinContext<'a>,
     ) -> Result<JoinedPartition<K>, Child> {
         match self.info_partition(ctx) {
-            Ok(info) => Ok(info.join_info(ctx)),
+            Ok(info) => Ok(JoinedPartition::from_partition_info(info, ctx)),
             Err(c) => Err(c),
         }
     }
 }
-impl<'a, K: RangeRole<Mode = Join> + 'a, P: VisitPartition<K>> JoinPartition<K> for P {
+impl<K: RangeRole<Mode = Join>, P: VisitPartition<K>> JoinPartition<K> for P
+    where K::Borders: JoinBorders<K>
+{
 }
 pub trait VisitPartition<K: RangeRole>: Sized + Clone {
-    //fn info_pattern_range<'t>(
-    //    self,
-    //    ctx: ModePatternCtxOf<'t, K>,
-    //) -> Result<PatternRangeInfo<K>, Child>;
     fn info_borders<'t>(
         self,
         ctx: PatternTraceContext,
-    ) -> K::Borders<'t>;
+    ) -> K::Borders;
 
     fn pattern_ctxs<'t>(
         &self,
         ctx: &'t ModeNodeCtxOf<'t, K>,
-    ) -> Vec<ModePatternCtxOf<'t, K>>;
+    ) -> HashMap<PatternId, ModePatternCtxOf<'t, K>>;
 
     /// bundle pattern range infos of each pattern
     /// or extract complete child for range
@@ -41,19 +41,27 @@ pub trait VisitPartition<K: RangeRole>: Sized + Clone {
     ) -> Result<PartitionInfo<K>, Child> {
         let ctxs = self.pattern_ctxs(ctx);
         let (borders, perfect): (Vec<_>, K::Perfect) = ctxs
-            .iter()
-            .map(|pctx| {
-                let pctx = pctx.as_pattern_trace_context();
-                let borders = self.clone().info_borders(
-                    pctx
-                );
-                let perfect = borders.perfect().then_some(pctx.loc.id);
-                (borders, perfect)
+            .into_iter()
+            .map(|(_, pctx)| {
+                let (perfect, borders) = {
+                    let pctx = pctx.as_pattern_trace_context();
+                    let borders = self.clone().info_borders(
+                            pctx
+                        );
+                    (
+                        borders.perfect().then_some(pctx.loc.id),
+                        borders,
+                    )
+                };
+                ((pctx, borders), perfect)
             })
             .unzip();
-        let patterns: Result<_, _> = ctxs.into_iter().zip(borders)
+        let patterns: Result<_, _> = borders
+            .into_iter()
+            .sorted_by_key(|(_, borders)| !borders.perfect().all_perfect())
             .map(|(pctx, borders)|
-                borders.info_pattern_range(
+                RangeInfoOf::<K>::info_pattern_range(
+                    borders,
                     &pctx
                 ).map(Into::into)
             )
@@ -66,19 +74,11 @@ pub trait VisitPartition<K: RangeRole>: Sized + Clone {
         )
     }
 }
-impl<K: RangeRole> Into<(PatternId, RangeInfo<K>)> for PatternRangeInfo<K> {
-    fn into(self) -> (PatternId, RangeInfo<K>) {
-        (
-            self.pattern_id,
-            self.info,
-        )
-    }
-}
 impl<K: RangeRole, P: AsPartition<K>> VisitPartition<K> for P {
     fn info_borders<'t>(
         self,
         ctx: PatternTraceContext,
-    ) -> K::Borders<'t> {
+    ) -> K::Borders {
         let part = self.as_partition();
         // todo detect if prev offset is in same index (to use inner partition as result)
         let pctx = ctx.as_pattern_trace_context();
@@ -89,61 +89,43 @@ impl<K: RangeRole, P: AsPartition<K>> VisitPartition<K> for P {
     fn pattern_ctxs<'t>(
         &self,
         ctx: &'t ModeNodeCtxOf<'t, K>,
-    ) -> Vec<ModePatternCtxOf<'t, K>> {
+    ) -> HashMap<PatternId, ModePatternCtxOf<'t, K>> {
         let part = self.clone().as_partition();
         part.offsets.ids().map(|id|
-            ctx.as_pattern_context(id)
-        ).collect_vec()
+            (*id, ctx.as_pattern_context(id))
+        ).collect()
+    }
+}
+impl<K: RangeRole> Into<(PatternId, RangeInfoOf<K>)> for PatternRangeInfo<K> {
+    fn into(self) -> (PatternId, RangeInfoOf<K>) {
+        (
+            self.pattern_id,
+            self.info,
+        )
     }
 }
 
 #[derive(Debug, Default)]
 pub struct PartitionInfo<K: RangeRole> {
-    pub patterns: HashMap<PatternId, RangeInfo<K>>,
+    pub patterns: HashMap<PatternId, RangeInfoOf<K>>,
     pub perfect: K::Perfect,
 }
 
-impl<'a, K: RangeRole<Mode = Join>> PartitionInfo<K> {
-    pub fn join_patterns(
+impl<'a, K: RangeRole<Mode = Join>> PartitionInfo<K> 
+    where K::Borders: JoinBorders<K>
+{
+    pub fn to_joined_patterns(
         self,
         ctx: &mut NodeJoinContext<'a>,
     ) -> JoinedPatterns<K>
     {
-        // assert: no complete perfect child
-        let perfect = self.perfect;
-        // todo: index inner ranges and get child splits
-        //
-        // index inner range
-        // cases:
-        // - (child, inner, child)
-        // - (child, inner)
-        // - (inner, child),
-        // - (child, child),
-        // - child: not possible, handled earlier
-        let (delta, patterns) = self.patterns.into_iter()
-            .map(|(pid, info)| {
-                let delta = info.delta;
-                let pattern = info.joined_pattern(ctx, &pid);
-                (
-                    (pid, delta),
-                    pattern,
-                )
-            })
-            .unzip();
-
-        JoinedPatterns {
-            patterns,
-            perfect,
-            delta,
-        }
+        JoinedPatterns::from_partition_info(self, ctx)
     }
-    pub fn join_info(
+    pub fn to_joined_partition(
         self,
         ctx: &mut NodeJoinContext<'a>,
-    ) -> JoinedPartition<K>
-    {
-        // collect infos about partition in each pattern
-        self.join_patterns(ctx).insert_patterns(ctx)
+    ) -> JoinedPartition<K> {
+        JoinedPartition::from_partition_info(self, ctx)
     }
 }
 //pub(crate) trait TracePartition<'a, K: RangeRole>: VisitPartition<'a, K, NodeTraceContext<'a>> {

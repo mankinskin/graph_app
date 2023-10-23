@@ -1,13 +1,13 @@
 use crate::*;
 
-pub trait JoinBorders<'a, K: RangeRole<Mode = Join>>: VisitBorders<'a, K> {
-    fn get_child_splits(
+pub trait JoinBorders<K: RangeRole<Mode = Join>>: TraceBorders<K> {
+    fn get_child_splits<'a>(
         &self,
         ctx: &ModePatternCtxOf<'a, K>,
     ) -> Option<ModeChildrenOf<K>>;
 }
-impl<'a> JoinBorders<'a, Post<Join>> for BorderInfo {
-    fn get_child_splits(
+impl JoinBorders<Post<Join>> for BorderInfo {
+    fn get_child_splits<'a>(
         &self,
         ctx: &PatternJoinContext<'a>,
     ) -> Option<ChildrenOf<Post<Join>>> {
@@ -17,8 +17,8 @@ impl<'a> JoinBorders<'a, Post<Join>> for BorderInfo {
     }
 }
 
-impl<'a> JoinBorders<'a, Pre<Join>> for BorderInfo {
-    fn get_child_splits(
+impl JoinBorders<Pre<Join>> for BorderInfo {
+    fn get_child_splits<'a>(
         &self,
         ctx: &PatternJoinContext<'a>,
     ) -> Option<ChildrenOf<Pre<Join>>> {
@@ -27,8 +27,8 @@ impl<'a> JoinBorders<'a, Pre<Join>> for BorderInfo {
         )
     }
 }
-impl<'a> JoinBorders<'a, In<Join>> for (BorderInfo, BorderInfo) {
-    fn get_child_splits(
+impl JoinBorders<In<Join>> for (BorderInfo, BorderInfo) {
+    fn get_child_splits<'a>(
         &self,
         ctx: &PatternJoinContext<'a>,
     ) -> Option<ChildrenOf<In<Join>>> {

@@ -190,10 +190,15 @@ impl<'p> NodeJoinContext<'p> {
                                 [part.index],
                             )
                         } else {
-                            let pre = Prefix::new(offset).join_partition(self).unwrap();
-                            println!("{:#?}", pre);
+                            let pre = match Prefix::new(offset).join_partition(self) {
+                                Ok(pre) => {
+                                    println!("{:#?}", pre);
+                                    pre.index
+                                },
+                                Err(c) => c,
+                            };
                             self.graph.add_pattern_with_update(index,
-                                [pre.index, part.index],
+                                [pre, part.index],
                             );
                         }
                         part.index
@@ -248,8 +253,8 @@ impl<'p> NodeJoinContext<'p> {
 
                                 let wrap_patterns = Prefix::new(offset.clone())
                                     .info_partition(self).unwrap()
-                                    .join_patterns(self);
-                                let patterns = wrap_patterns.patterns().clone();
+                                    .to_joined_patterns(self);
+                                let patterns = wrap_patterns.patterns.clone();
                                 offset.1 = offset.1 - wrap_patterns.delta;
                                 let wrapper = self.graph.insert_patterns(
                                     std::iter::once(vec![pre.index, part.index])
@@ -274,11 +279,11 @@ impl<'p> NodeJoinContext<'p> {
                                     .info_partition(self).unwrap();
                                 // todo: skip lp in info_bundle already
                                 info_bundle.patterns.remove(&lp);
-                                let wrap_patterns = info_bundle.join_patterns(self);
+                                let wrap_patterns = info_bundle.to_joined_patterns(self);
 
                                 let wrapper = self.graph.insert_patterns(
                                     std::iter::once(vec![part.index, post.index])
-                                        .chain(wrap_patterns.patterns()),
+                                        .chain(wrap_patterns.patterns),
                                 );
                                 let loc = index.to_pattern_location(lp);
                                 self.graph.replace_in_pattern(

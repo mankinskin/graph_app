@@ -67,7 +67,7 @@ impl<'p> NodeJoinContext<'p> {
                 let ro = offsets.iter().nth(start + len).unwrap();
 
                 // todo: could be read from cache
-                let res = Infix::new(lo, ro).info_partition(self);
+                let res: Result<PartitionInfo<In<Join>>, _> = Infix::new(lo, ro).info_partition(self);
 
                 let index = match res {
                     Ok(info) => {

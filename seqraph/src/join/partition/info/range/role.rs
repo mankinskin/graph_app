@@ -12,10 +12,12 @@ pub struct Join;
 pub struct Trace;
 
 pub type OffsetsOf<K> = <K as RangeRole>::Offsets;
-pub type BooleanPerfectOf<K> = <<K as RangeRole>::Perfect as BorderPerfect>::Boolean;
+pub type PerfectOf<K> = <K as RangeRole>::Perfect;
+pub type BooleanPerfectOf<K> = <PerfectOf<K> as BorderPerfect>::Boolean;
 pub type ChildrenOf<K> = <K as RangeRole>::Children;
 pub type RangeOf<K> = <K as RangeRole>::Range;
 pub type ModeOf<K> = <K as RangeRole>::Mode;
+pub type BordersOf<K> = <K as RangeRole>::Borders;
 pub type ModeChildrenOf<K> = <ModeOf<K> as ModeChildren::<K>>::Result;
 pub type PatternCtxOf<'a, K> = <<K as RangeRole>::Mode as ModeContext<'a>>::PatternResult;
 pub type ModeNodeCtxOf<'a, K> = <<K as RangeRole>::Mode as ModeContext<'a>>::NodeResult;
@@ -43,31 +45,6 @@ impl<K: RangeRole<Mode = Join>> ModeChildren<K> for Join {
     type Result = K::Children; 
 }
 
-pub trait VisitMode<K: RangeRole<Mode = Self>>: Debug + Clone + Copy + ModeChildren<K> + for<'a> ModeContext<'a> {
-    fn get_child_splits<'a>(
-        borders: &K::Borders<'a>,
-        ctx: &ModePatternCtxOf<'a, K>,
-    ) -> ModeChildrenOf<K>;
-}
-impl<K: RangeRole<Mode = Self>> VisitMode<K> for Trace {
-    fn get_child_splits<'a>(
-        _borders: &K::Borders<'a>,
-        _ctx: &ModePatternCtxOf<'a, K>,
-    ) -> ModeChildrenOf<K> {
-        ()
-    }
-}
-impl<K: RangeRole<Mode = Self>> VisitMode<K> for Join
-    where for<'a> K::Borders<'a>: JoinBorders<'a, K>
-{
-    fn get_child_splits<'a>(
-        borders: &K::Borders<'a>,
-        ctx: &ModePatternCtxOf<'a, K>,
-    ) -> ModeChildrenOf<K> {
-        borders.get_child_splits(ctx).expect("inner range needs children")
-    }
-}
-
 pub trait RangeKind: Debug + Clone {
 }
 impl RangeKind for Inner {
@@ -82,7 +59,7 @@ pub trait RangeRole: Debug + Clone + Copy {
     type Range: OffsetIndexRange<Self>;
     type PartitionSplits;
     type Children: RangeChildren<Self>;
-    type Borders<'a>: VisitBorders<'a, Self, Splits = <Self::Splits as PatternSplits>::Pos>;
+    type Borders: VisitBorders<Self, Splits = <Self::Splits as PatternSplits>::Pos>;
     type Splits: PatternSplits + AsPartition<Self>;
     fn to_partition(
         splits: Self::Splits,
@@ -122,7 +99,7 @@ impl<M: PreVisitMode> RangeRole for Pre<M> {
     type Kind = Outer;
     type Children = Child;
     type PartitionSplits = ((), OffsetSplits);
-    type Borders<'a> = BorderInfo;
+    type Borders = BorderInfo;
     type Splits = OffsetSplits;
     type Offsets = NonZeroUsize;
     type Perfect = SinglePerfect;
@@ -134,15 +111,15 @@ impl<M: PreVisitMode> RangeRole for Pre<M> {
         }
     }
 }
-pub trait PreVisitMode: VisitMode<Pre<Self>> + ModeChildren<Pre<Self>> {}
+pub trait PreVisitMode: VisitMode<Pre<Self>> {}
 impl PreVisitMode for Trace {}
 impl PreVisitMode for Join {}
 
-pub trait PostVisitMode: VisitMode<Post<Self>> + ModeChildren<Post<Self>> {}
+pub trait PostVisitMode: VisitMode<Post<Self>> {}
 impl PostVisitMode for Trace {}
 impl PostVisitMode for Join {}
 
-pub trait InVisitMode: VisitMode<In<Self>> + ModeChildren<In<Self>> + PreVisitMode + PostVisitMode {}
+pub trait InVisitMode: VisitMode<In<Self>> + PreVisitMode + PostVisitMode {}
 impl InVisitMode for Trace {}
 impl InVisitMode for Join {}
 
@@ -154,7 +131,7 @@ impl<M: InVisitMode> RangeRole for In<M> {
     type Kind = Inner;
     type Children = InfixChildren;
     type PartitionSplits = (OffsetSplits, OffsetSplits);
-    type Borders<'a> = (BorderInfo, BorderInfo);
+    type Borders = (BorderInfo, BorderInfo);
     type Splits = (OffsetSplits, OffsetSplits);
     type Offsets = (NonZeroUsize, NonZeroUsize);
     type Perfect = DoublePerfect;
@@ -174,7 +151,7 @@ impl<M: PostVisitMode> RangeRole for Post<M> {
     type Kind = Outer;
     type Children = Child;
     type PartitionSplits = (OffsetSplits, ());
-    type Borders<'a> = BorderInfo;
+    type Borders = BorderInfo;
     type Splits = OffsetSplits;
     type Offsets = NonZeroUsize;
     type Perfect = SinglePerfect;

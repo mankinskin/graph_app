@@ -27,7 +27,7 @@ pub struct Partition<K: RangeRole> {
     pub offsets: K::Splits,
 }
 
-pub trait AsPartition<K: RangeRole>: VisitPartition<K> {
+pub trait AsPartition<K: RangeRole>: Clone {
     fn as_partition(self) -> Partition<K>;
 }
 impl<K: RangeRole> AsPartition<K> for Partition<K> {

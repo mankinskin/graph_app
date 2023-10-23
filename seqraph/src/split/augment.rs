@@ -32,7 +32,7 @@ impl SplitVertexCache {
         ctx: NodeTraceContext<'a>,
         part: P,
     ) -> (BTreeMap<NonZeroUsize, SplitPositionCache>, Vec<TraceState>)
-        where K::Mode: ModeChildren::<K>,
+        //where K::Mode: ModeChildren::<K>,
     {
         let offsets = Self::inner_offsets(ctx, part);
         let splits: BTreeMap<_, _> = offsets.into_iter().map(|offset|
