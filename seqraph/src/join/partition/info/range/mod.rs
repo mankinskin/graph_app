@@ -75,7 +75,7 @@ impl<K: RangeRole<Mode=Join>> ModeRangeInfo<K> for JoinRangeInfo<K>
         match (pat.len(), children) {
             (0, _) => panic!("Empty range"),
             (1, Some(children)) =>
-                    Err(children.to_child().unwrap()),
+                Err(children.to_child().unwrap()),
             (1, None) => Err(pat[0]),
             (_, children) =>
                 Ok(PatternRangeInfo {
@@ -103,22 +103,12 @@ impl<'a, K: RangeRole<Mode = Join>> InnerRangeInfo<K>
     pub fn index_pattern_inner<'t>(
         &self,
         ctx: &mut NodeJoinContext<'a>,
-        pattern_id: &PatternId,
     ) -> Child {
         match self.offsets
             .as_splits(ctx.as_trace_context())
             .join_partition(ctx)
         {
-            Ok(inner) => {
-                // replace range and with new index
-                let loc = ctx.index.to_pattern_location(*pattern_id);
-                ctx.graph.replace_in_pattern(
-                    loc,
-                    self.range.clone(),
-                    inner.index,
-                );
-                inner.index
-            }
+            Ok(inner) => inner.index,
             Err(p) => p
         }
     }
@@ -144,15 +134,18 @@ impl<'a, K: RangeRole<Mode = Join>> JoinRangeInfo<K>
         pattern_id: &PatternId,
     ) -> Pattern {
         let inner = self.inner_range.map(|r|
-            r.index_pattern_inner(ctx, pattern_id)
+            r.index_pattern_inner(ctx)
         );
         match (inner, self.children) {
             (inner, Some(children)) =>
                 children.insert_inner(inner).unwrap(),
+            (None, None) =>
+                ctx.graph.expect_pattern_range(
+                    ctx.index.to_pattern_location(*pattern_id),
+                    self.range,
+                ).into_pattern(),
             (Some(_), None) =>
                 panic!("inner range without children"),
-            (None, None) =>
-                panic!("unjoined complete pattern"),
             //let pat = ctx.pattern.get(range.clone()).unwrap();
         }
     }

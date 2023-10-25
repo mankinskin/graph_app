@@ -265,7 +265,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         location: impl IntoPatternLocation,
         range: impl PatternRangeIndex
     ) -> usize {
-        pattern_width(self.expect_child_pattern_range(location, range))
+        pattern_width(self.expect_pattern_range(location, range))
     }
     #[track_caller]
     pub fn expect_token_child(
@@ -424,7 +424,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         self.get_common_pattern_in_parent(pattern, parent)
             .expect("No common pattern in parent for children.")
     }
-    pub fn get_child_pattern_range<'a, R: PatternRangeIndex>(
+    pub fn get_pattern_range<'a, R: PatternRangeIndex>(
         &'a self,
         id: impl IntoPatternLocation,
         range: R,
@@ -438,7 +438,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
             )
     }
     #[track_caller]
-    pub fn expect_child_pattern_range<'a, R: PatternRangeIndex>(
+    pub fn expect_pattern_range<'a, R: PatternRangeIndex>(
         &'a self,
         id: impl IntoPatternLocation,
         range: R,

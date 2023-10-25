@@ -24,7 +24,7 @@ impl<K: RangeRole<Mode = Join>, P: VisitPartition<K>> JoinPartition<K> for P
 }
 pub trait VisitPartition<K: RangeRole>: Sized + Clone {
     fn info_borders<'t>(
-        self,
+        &self,
         ctx: PatternTraceContext,
     ) -> K::Borders;
 
@@ -45,7 +45,7 @@ pub trait VisitPartition<K: RangeRole>: Sized + Clone {
             .map(|(_, pctx)| {
                 let (perfect, borders) = {
                     let pctx = pctx.as_pattern_trace_context();
-                    let borders = self.clone().info_borders(
+                    let borders = self.info_borders(
                             pctx
                         );
                     (
@@ -76,10 +76,10 @@ pub trait VisitPartition<K: RangeRole>: Sized + Clone {
 }
 impl<K: RangeRole, P: AsPartition<K>> VisitPartition<K> for P {
     fn info_borders<'t>(
-        self,
+        &self,
         ctx: PatternTraceContext,
     ) -> K::Borders {
-        let part = self.as_partition();
+        let part = self.clone().as_partition();
         // todo detect if prev offset is in same index (to use inner partition as result)
         let pctx = ctx.as_pattern_trace_context();
         let splits = part.offsets.get(&pctx.loc.id).unwrap();

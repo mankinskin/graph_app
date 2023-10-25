@@ -22,7 +22,7 @@ impl<M: PostVisitMode> VisitBorders<Post<M>> for BorderInfo {
         (self.inner_offset.is_some() && pattern.len() - self.sub_index > 1)
             .then(|| {
                 let w = pattern[self.sub_index].width();
-                self.outer_offset.map(|o|
+                self.start_offset.map(|o|
                     o.get() + w
                 ).unwrap_or(w)
             })
@@ -45,7 +45,7 @@ impl<M: PreVisitMode> VisitBorders<Pre<M>> for BorderInfo {
     }
     fn inner_range_offsets(&self, _pattern: &Pattern) -> Option<OffsetsOf<Pre<M>>> {
         (self.inner_offset.is_some() && self.sub_index > 0)
-            .then(|| self.outer_offset)
+            .then(|| self.start_offset)
             .flatten()
     }
     fn inner_range(&self) -> RangeOf<Pre<M>> {
@@ -72,31 +72,30 @@ impl<M: InVisitMode> VisitBorders<In<M>> for (BorderInfo, BorderInfo) {
     fn inner_range_offsets(&self, pattern: &Pattern) -> Option<OffsetsOf<In<M>>> {
         let a = VisitBorders::<Post<M>>::inner_range_offsets(&self.0, pattern);
         let b = VisitBorders::<Pre<M>>::inner_range_offsets(&self.1, pattern);
-        a.map(|lio|
-            (
-                lio,
-                b.unwrap_or({
+        let r = match (a, b) {
+            (Some(lio), Some(rio)) => Some((lio, rio)),
+            (Some(lio), None) => Some((
+                lio, 
+                {
                     let w = pattern[self.1.sub_index].width();
-                    let o = self.1.outer_offset.map(|o|
-                        o.get() + w
-                    ).unwrap_or(w);
+                    let o = self.1.start_offset.unwrap().get() + w;
                     NonZeroUsize::new(o).unwrap()
-                })
-            )
-        )
-        .or_else(||
-            b.map(|rio|
+                },
+            )),
+            (None, Some(rio)) => Some(
                 (
-                    self.0.outer_offset.unwrap(),
+                    self.0.start_offset.unwrap(),
                     rio,
                 )
-            )
-        )
+            ),
+            (None, None) => None,
+        };
+        r.filter(|(l, r)| l != r)
     }
     fn inner_range(&self) -> RangeOf<In<M>> {
         self.0.sub_index..self.1.sub_index
     }
     fn outer_range(&self) -> RangeOf<In<M>> {
-        self.0.sub_index..self.1.sub_index
+        self.0.sub_index..self.1.sub_index + self.1.inner_offset.is_some() as usize
     }
 }

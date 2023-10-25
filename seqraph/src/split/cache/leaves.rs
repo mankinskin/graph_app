@@ -21,11 +21,11 @@ impl Leaves {
         &mut self,
         trav: &Trav,
         index: &Child,
-        split_pos: impl IntoIterator<Item=(Offset, Vec<SubSplitLocation>)>,
+        pos_splits: impl IntoIterator<Item=(Offset, Vec<SubSplitLocation>)>,
     ) -> Vec<TraceState> {
         let graph = trav.graph();
         let (_, node) = graph.expect_vertex(index);
-        let (perfect, next) = split_pos.into_iter()
+        let (perfect, next) = pos_splits.into_iter()
             .flat_map(|(parent_offset, locs)| {
                 let len = locs.len();
                 locs.into_iter()

@@ -72,11 +72,11 @@ impl SplitCacheBuilder {
             fold_state,
             &fold_state.root,
         );
-        let split_pos = leaves.filter_leaves(&fold_state.root, offsets.clone());
+        let pos_splits = leaves.filter_leaves(&fold_state.root, offsets.clone());
         states.extend(leaves.filter_trace_states(
             trav,
             &fold_state.root,
-            split_pos
+            pos_splits
         ));
         (
             SplitVertexCache {
@@ -122,11 +122,11 @@ impl SplitCacheBuilder {
                 )
             );
         }
-        let split_pos = self.leaves.filter_leaves(&index, subs.clone());
+        let pos_splits = self.leaves.filter_leaves(&index, subs.clone());
         let next = self.leaves.filter_trace_states(
             trav,
             &index,
-            split_pos,
+            pos_splits,
         );
         self.states.extend(next);
         SplitVertexCache {

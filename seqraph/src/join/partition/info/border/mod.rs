@@ -15,7 +15,8 @@ pub use visit::*;
 pub struct BorderInfo  {
     sub_index: usize,
     inner_offset: Option<NonZeroUsize>,
-    outer_offset: Option<NonZeroUsize>,
+    /// start offset of index with border
+    start_offset: Option<NonZeroUsize>,
 }
 impl BorderInfo {
     fn new(
@@ -26,7 +27,7 @@ impl BorderInfo {
         BorderInfo {
             sub_index: pos.sub_index,
             inner_offset: pos.inner_offset,
-            outer_offset: NonZeroUsize::new(offset),
+            start_offset: NonZeroUsize::new(offset),
         }
     }
 }
@@ -44,7 +45,7 @@ impl<
         self.inner_offset.is_none()
     }
     fn offsets(&self) -> OffsetsOf<K> {
-        self.outer_offset.map(|o|
+        self.start_offset.map(|o|
             self.inner_offset.map(|io|
                 o.checked_add(io.get()).unwrap()
             ).unwrap_or(o)

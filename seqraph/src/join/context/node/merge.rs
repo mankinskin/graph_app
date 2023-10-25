@@ -11,15 +11,15 @@ impl<'p> NodeJoinContext<'p> {
     //    part.visit_partition(&*self)
     //        .map(|b| b.join_patterns(self))
     //}
-    pub fn merge_node<S: HasSplitPos>(
+    pub fn merge_node<S: HasPosSplits>(
         &mut self,
         splits: S,
         partitions: &Vec<Child>,
     ) -> LinkedHashMap<SplitKey, Split>
         where for<'t> &'t S::Split: SplitKind,
-            SplitPos<S>: HasSplitPos<Split = S::Split>
+            PosSplits<S>: HasPosSplits<Split = S::Split>
     {
-        let offsets = splits.split_pos();
+        let offsets = splits.pos_splits();
         assert!(partitions.len() == offsets.len() + 1);
 
         let merges = self.merge_partitions(
@@ -46,15 +46,15 @@ impl<'p> NodeJoinContext<'p> {
         }
         finals
     }
-    pub fn merge_partitions<S: HasSplitPos>(
+    pub fn merge_partitions<S: HasPosSplits>(
         &mut self,
         splits: S,
         partitions: &Vec<Child>,
     ) -> RangeMap
         where for<'t> &'t S::Split: SplitKind,
-            SplitPos<S>: HasSplitPos<Split = S::Split>
+            PosSplits<S>: HasPosSplits<Split = S::Split>
     {
-        let offsets = splits.split_pos();
+        let offsets = splits.pos_splits();
         let num_offsets = offsets.len();
 
         let mut range_map = RangeMap::from(partitions);

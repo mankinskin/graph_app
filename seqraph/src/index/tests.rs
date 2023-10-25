@@ -167,3 +167,58 @@ fn index_infix1() {
         "xxabyzw"
     );
 }
+
+#[test]
+fn index_infix2() {
+    let mut graph = Hypergraph::<BaseGraphKind>::default();
+    let (a, b, c, d, x, y) = graph.insert_tokens([
+        Token::Element('a'),
+        Token::Element('b'),
+        Token::Element('c'),
+        Token::Element('d'),
+        Token::Element('x'),
+        Token::Element('y'),
+        //Token::Element('z'),
+    ]).into_iter().next_tuple().unwrap();
+    // index 6
+    let yy = graph.insert_pattern([y, y]);
+    let xx = graph.insert_pattern([x, x]);
+    let xy = graph.insert_pattern([x, y]);
+    let xxy = graph.insert_patterns([
+        [xx, y],
+        [x, xy],
+    ]);
+    let abcdx = graph.insert_pattern([a, b, c, d, x]);
+    let yabcdx = graph.insert_pattern([y, abcdx]);
+    let abcdxx = graph.insert_pattern([abcdx, x]);
+    let _xxyyabcdxxyy = graph.insert_patterns([
+        [xx, yy, abcdxx, yy],
+        [xxy, yabcdx, xy, y],
+    ]);
+
+    let graph_ref = HypergraphRef::from(graph);
+
+    let (abcd, _) = graph_ref.index_pattern([a, b, c, d]).expect("Indexing failed");
+    let graph = graph_ref.graph();
+    let abcd_vertex = graph.expect_vertex_data(abcd);
+    assert_eq!(abcd.width(), 4, "abcd");
+    assert_eq!(abcd_vertex.parents.len(), 2, "abcd");
+    assert_eq!(abcd_vertex.children.len(), 1, "abcd");
+    assert_eq!(
+        abcd_vertex.get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![a, b, c, d]
+        ],
+        "abc"
+    );
+    drop(graph);
+    let graph = graph_ref.graph();
+    let abcdx_vertex = graph.expect_vertex_data(abcdx);
+    assert_eq!(
+        abcdx_vertex.get_child_pattern_set().into_iter().collect::<HashSet<_>>(),
+        hashset![
+            vec![abcd, x],
+        ],
+        "abcx"
+    );
+}

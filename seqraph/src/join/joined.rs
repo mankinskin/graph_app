@@ -10,12 +10,21 @@ impl<'a, K: RangeRole<Mode=Join>> JoinedPartition<K>
 {
     pub fn from_joined_patterns(
         pats: JoinedPatterns<K>,
-        ctx: &mut JoinContext<'a>,
+        ctx: &mut NodeJoinContext<'a>,
     ) -> Self {
         // collect infos about partition in each pattern
         let index = ctx.graph.insert_patterns(
             pats.patterns
         );
+        // todo: replace if perfect
+        if let SinglePerfect(Some(pid)) = pats.perfect.complete() {
+            let loc = ctx.index.to_pattern_location(pid);
+            ctx.graph.replace_in_pattern(
+                loc,
+                pats.range.unwrap(),
+                index,
+            );
+        }
         Self {
             index,
             perfect: pats.perfect,
@@ -46,6 +55,7 @@ impl<K: RangeRole> Borrow<Child> for &JoinedPartition<K> {
 pub struct JoinedPatterns<K: RangeRole> {
     pub patterns: Vec<Pattern>,
     pub perfect: K::Perfect,
+    pub range: Option<K::Range>,
     pub delta: PatternSubDeltas,
 }
 
@@ -67,6 +77,11 @@ impl<'a, K: RangeRole<Mode=Join>> JoinedPatterns<K>
         // - (inner, child),
         // - (child, child),
         // - child: not possible, handled earlier
+        let range = if let SinglePerfect(Some(pid)) = info.perfect.complete() {
+            Some(info.patterns[&pid].range.clone())
+        } else {
+            None
+        };
         let (delta, patterns) = info.patterns.into_iter()
             .map(|(pid, pinfo)|
                 (
@@ -75,24 +90,16 @@ impl<'a, K: RangeRole<Mode=Join>> JoinedPatterns<K>
                 )
             )
             .unzip();
-        //if let SinglePerfect(Some(pid)) = info.perfect.complete() {
-        //    let pinfo = info.patterns[&pid];
-        //    (
-        //        PatternSubDeltas::from_iter([(pid, pinfo.delta)]),
-        //        JoinedP
-        //    )
-        //    
-        //} else {
-        //}
         Self {
             patterns,
             perfect: info.perfect,
+            range,
             delta,
         }
     }
     pub fn to_joined_partition(
         self,
-        ctx: &mut JoinContext<'a>,
+        ctx: &mut NodeJoinContext<'a>,
     ) -> JoinedPartition<K> {
         JoinedPartition::from_joined_patterns(self, ctx)
     }
