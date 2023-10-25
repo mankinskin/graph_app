@@ -25,7 +25,7 @@ pub type ModePatternCtxOf<'a, K> = <<K as RangeRole>::Mode as ModeContext<'a>>::
 
 pub trait ModeContext<'a> {
     type NodeResult: AsNodeTraceContext<'a> + AsPatternContext<'a, PatternCtx<'a> = Self::PatternResult>;
-    type PatternResult: AsPatternTraceContext<'a>;
+    type PatternResult: AsPatternTraceContext<'a> + Hash + Eq;
 }
 impl<'a> ModeContext<'a> for Trace {
     type NodeResult = NodeTraceContext<'a>;

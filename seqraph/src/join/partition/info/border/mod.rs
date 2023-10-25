@@ -13,10 +13,10 @@ pub mod visit;
 pub use visit::*;
 
 pub struct BorderInfo  {
-    sub_index: usize,
-    inner_offset: Option<NonZeroUsize>,
+    pub sub_index: usize,
+    pub inner_offset: Option<NonZeroUsize>,
     /// start offset of index with border
-    start_offset: Option<NonZeroUsize>,
+    pub start_offset: Option<NonZeroUsize>,
 }
 impl BorderInfo {
     fn new(

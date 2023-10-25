@@ -23,7 +23,7 @@ pub trait PatternSplits: Debug + Clone {
     type Pos;
     type Offsets;
     fn get(&self, pid: &PatternId) -> Option<Self::Pos>;
-    fn ids<'a>(&'a self) -> impl Iterator<Item = &'a PatternId>;
+    fn ids<'a>(&'a self) -> Box<dyn Iterator<Item = &'a PatternId> + 'a>;
     fn offsets(&self) -> Self::Offsets;
 }
 //pub trait PatternSplitsRef<'a>: PatternSplits + Copy + 'a {
@@ -52,8 +52,8 @@ impl PatternSplits for OffsetSplits {
     fn get(&self, pid: &PatternId) -> Option<Self::Pos> {
         self.splits.get(pid).cloned()
     }
-    fn ids<'a>(&'a self) -> impl Iterator<Item = &'a PatternId> {
-        self.splits.keys()
+    fn ids<'a>(&'a self) -> Box<dyn Iterator<Item = &'a PatternId> + 'a> {
+        Box::new(self.splits.keys())
     }
     fn offsets(&self) -> Self::Offsets {
         self.offset.get()
@@ -65,8 +65,8 @@ impl<'b> PatternSplits for &'b OffsetSplits {
     fn get(&self, pid: &PatternId) -> Option<Self::Pos> {
         self.splits.get(pid).cloned()
     }
-    fn ids<'a>(&'a self) -> impl Iterator<Item = &'a PatternId> {
-        self.splits.keys()
+    fn ids<'a>(&'a self) -> Box<dyn Iterator<Item = &'a PatternId> + 'a> {
+        Box::new(self.splits.keys())
     }
     fn offsets(&self) -> Self::Offsets {
         self.offset.get()
@@ -90,7 +90,7 @@ impl<
             (a, b)
         })
     }
-    fn ids<'a>(&'a self) -> impl Iterator<Item = &'a PatternId> {
+    fn ids<'a>(&'a self) -> Box<dyn Iterator<Item = &'a PatternId> + 'a> {
         self.0.ids()
     }
     fn offsets(&self) -> Self::Offsets {

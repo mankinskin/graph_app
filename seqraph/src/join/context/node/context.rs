@@ -55,7 +55,6 @@ impl<'p, SP: HasPosSplits + 'p> AsPatternContext<'p> for NodeJoinContext<'p, SP>
             pattern: self.as_trace_context().patterns.get(pattern_id).unwrap(),
         };
         PatternJoinContext {
-            //graph: self.graph,
             ctx,
             sub_splits: self.borrow().sub_splits,
         }

@@ -202,7 +202,7 @@ fn index_infix2() {
     let graph = graph_ref.graph();
     let abcd_vertex = graph.expect_vertex_data(abcd);
     assert_eq!(abcd.width(), 4, "abcd");
-    assert_eq!(abcd_vertex.parents.len(), 2, "abcd");
+    assert_eq!(abcd_vertex.parents.len(), 1, "abcd");
     assert_eq!(abcd_vertex.children.len(), 1, "abcd");
     assert_eq!(
         abcd_vertex.get_child_pattern_set().into_iter().collect::<HashSet<_>>(),

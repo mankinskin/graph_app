@@ -10,7 +10,7 @@
 #![feature(pin_macro)]
 #![feature(exact_size_is_empty)]
 #![feature(associated_type_defaults)]
-#![feature(return_position_impl_trait_in_trait)]
+//#![feature(return_position_impl_trait_in_trait)]
 
 extern crate test;
 
@@ -100,13 +100,6 @@ pub use {
             Extend,
         },
     },
-    //tracing_mutex::{
-    //    stdsync::{
-    //        TracingRwLock as RwLock,
-    //        TracingReadGuard as RwLockReadGuard,
-    //        TracingWriteGuard as RwLockWriteGuard,
-    //    },
-    //},
     lazy_static::lazy_static,
     function_name::named,
     tap::{
@@ -116,10 +109,6 @@ pub use {
     valuable::*,
     async_trait::async_trait,
     async_recursion::async_recursion,
-    async_std::stream::{
-        //Stream,
-        //StreamExt,
-    },
     futures::{
         task::Poll,
         stream::{
@@ -133,6 +122,7 @@ pub use {
         },
     },
     derive_more::*,
+    derivative::*,
 };
 pub use {
     search::*,

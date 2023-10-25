@@ -49,6 +49,7 @@ auto_impl = "1.1.0"
 nrfind = "1"
 ngram = "0.1"
 csv = "1"
+derivative = "^2.2"
 
 [dependencies.tracing-egui]
 path = "../../tracing-egui"
