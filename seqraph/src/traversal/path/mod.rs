@@ -51,7 +51,7 @@ impl<T:
 > BasePath for T {}
 
 
-//impl GraphRootChild for PrefixQuery {
+//impl GraphRootChild for PatternPrefixPath {
 //    fn child_location(&self) -> ChildLocation {
 //    }
 //}
@@ -93,7 +93,7 @@ impl<T:
 //        trav.graph().get_child_at(self.child_location()).ok()
 //    }
 //}
-//impl HasRolePath<Start> for PrefixQuery {
+//impl HasRolePath<Start> for PatternPrefixPath {
 //    fn role_path(&self) -> &[ChildLocation] {
 //        &[]
 //    }
@@ -187,7 +187,7 @@ impl<T:
 //        }
 //    }
 //}
-//impl HasRolePath<End> for PrefixQuery {
+//impl HasRolePath<End> for PatternPrefixPath {
 //    fn role_path_mut(&mut self) -> &mut LocationPath {
 //        &mut self.end
 //    }

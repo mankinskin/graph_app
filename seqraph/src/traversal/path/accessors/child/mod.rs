@@ -112,7 +112,7 @@ impl<R: PathRole> PathChild<R> for SearchPath
 //        self.context.path_child(trav)
 //    }
 //}
-//impl PathChild<End> for PrefixQuery {
+//impl PathChild<End> for PatternPrefixPath {
 //    fn path_child<
 //        'a: 'g,
 //        'g,

@@ -1,6 +1,6 @@
 use super::*;
 
-impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
+impl<'g> ReadContext<'g> {
     #[instrument(skip(self, overlaps, link))]
     pub fn back_context_from_path(
         &mut self,
@@ -26,7 +26,7 @@ impl<T: Tokenize, D: IndexDirection> Reader<T, D> {
             None
         }
         .unwrap_or_default();
-        D::context_then_inner(
+        DefaultDirection::context_then_inner(
             back_ctx,
             inner_back_ctx,
         )

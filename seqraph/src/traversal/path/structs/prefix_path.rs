@@ -1,14 +1,13 @@
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
-pub struct PrefixQuery {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PatternPrefixPath {
     pub pattern: Pattern,
     pub exit: usize,
     pub end: RolePath<End>,
     pub width: usize,
 }
-
-impl PrefixQuery {
+impl PatternPrefixPath {
     pub fn new_directed<
         D: MatchDirection,
         P: IntoPattern,
@@ -22,19 +21,19 @@ impl PrefixQuery {
                     pattern,
                     exit,
                     width: 0,
-                    end: None,
+                    end: RolePath::default(),
                 })
         }
     }
 }
-//impl HasRolePath for PrefixQuery {
+//impl HasRolePath for PatternPrefixPath {
 //    fn role_path(&self) -> &[ChildLocation] {
 //        self.end.borrow()
 //    }
 //}
 
 
-//impl TraversalPath for PrefixQuery {
+//impl TraversalPath for PatternPrefixPath {
 //    fn prev_exit_pos<
 //        'a: 'g,
 //        'g,
@@ -51,12 +50,12 @@ impl PrefixQuery {
 //        }
 //    }
 //}
-impl Wide for PrefixQuery {
+impl Wide for PatternPrefixPath {
     fn width(&self) -> usize {
         self.width
     }
 }
-impl WideMut for PrefixQuery {
+impl WideMut for PatternPrefixPath {
     fn width_mut(&mut self) -> &mut usize {
         &mut self.width
     }
@@ -67,8 +66,8 @@ impl WideMut for PrefixQuery {
 mod tests {
     use std::borrow::Borrow;
 
-    use super::PrefixQuery;
-    use crate::{index::Right, Hypergraph, Token, traversal::Advance};
+    use super::PatternPrefixPath;
+    use crate::{Hypergraph, Token};
     use itertools::Itertools;
     use pretty_assertions::assert_eq;
 
@@ -86,9 +85,9 @@ mod tests {
         ]).into_iter().next_tuple().unwrap();
 
         let pattern = vec![c,d,d,e,f,g,a,c,d,e,f,a,g,f,g,g,e,d,b,d];
-        let mut path = PrefixQuery::new_directed::<Right, _>(pattern.borrow()).unwrap();
+        let mut path = PatternPrefixPath::new_directed(pattern.borrow()).unwrap();
         let mut rec = vec![];
-        while let Some(next) = path.advance::<_, Right, _>(&graph) {
+        while let Some(next) = path.advance::<_, _>(&graph) {
             rec.push(next);
         }
         assert_eq!(rec, pattern);

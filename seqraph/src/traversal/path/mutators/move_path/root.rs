@@ -6,6 +6,20 @@ pub trait MoveRootPos<D: Direction, R: PathRole = End> {
     >(&mut self, trav: &Trav) -> ControlFlow<()>;
 }
 
+impl<Root: PathRoot> MoveRootPos<Right, End> for RootedRolePath<End, Root> {
+    fn move_root_pos<
+        Trav: Traversable,
+    >(&mut self, _trav: &Trav) -> ControlFlow<()> {
+        if let Some(next) = TravDir::<Trav>::index_next(
+            RootChildPos::<End>::root_child_pos(self)
+        ) {
+            *self.root_child_pos_mut() = next;
+            ControlFlow::Continue(())
+        } else {
+            ControlFlow::Break(())
+        }
+    }
+}
 impl MoveRootPos<Right, End> for SearchPath {
     fn move_root_pos<
         Trav: Traversable,
@@ -17,9 +31,9 @@ impl MoveRootPos<Right, End> for SearchPath {
             RootChildPos::<End>::root_child_pos(self),
         ) {
             *self.root_child_pos_mut() = next;
-            ControlFlow::CONTINUE
+            ControlFlow::Continue(())
         } else {
-            ControlFlow::BREAK
+            ControlFlow::Break(())
         }
     }
 }
@@ -34,9 +48,9 @@ impl MoveRootPos<Left, End> for SearchPath {
             RootChildPos::<End>::root_child_pos(self),
         ) {
             *self.root_child_pos_mut() = prev;
-            ControlFlow::CONTINUE
+            ControlFlow::Continue(())
         } else {
-            ControlFlow::BREAK
+            ControlFlow::Break(())
         }
     }
 }
@@ -51,9 +65,9 @@ impl MoveRootPos<Right, End> for QueryStateContext<'_> {
         ) {
             self.advance_key(pattern[self.state.end.root_child_pos()].width());
             *self.state.end.root_child_pos_mut() = next;
-            ControlFlow::CONTINUE
+            ControlFlow::Continue(())
         } else {
-            ControlFlow::BREAK
+            ControlFlow::Break(())
         }
     }
 }
@@ -68,9 +82,9 @@ impl MoveRootPos<Left, End> for QueryStateContext<'_> {
         ) {
             self.retract_key(pattern[self.state.end.root_child_pos()].width());
             *self.state.end.root_child_pos_mut() = prev;
-            ControlFlow::CONTINUE
+            ControlFlow::Continue(())
         } else {
-            ControlFlow::BREAK
+            ControlFlow::Break(())
         }
     }
 }
@@ -80,9 +94,9 @@ impl MoveRootPos<Right, End> for QueryRangePath {
     >(&mut self, _trav: &Trav) -> ControlFlow<()> {
         if let Some(next) = TravDir::<Trav>::index_next(RootChildPos::<End>::root_child_pos(self)) {
             *self.root_child_pos_mut() = next;
-            ControlFlow::CONTINUE
+            ControlFlow::Continue(())
         } else {
-            ControlFlow::BREAK
+            ControlFlow::Break(())
         }
     }
 }

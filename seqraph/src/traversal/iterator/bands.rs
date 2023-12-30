@@ -64,7 +64,7 @@ where
     _ty: std::marker::PhantomData<&'a P>
 }
 pub type PostfixIterator<'a, Trav>
-    = BandExpandingIterator<'a, Trav, PostfixExpandingPolicy<<Trav as GraphKind>::Direction>>;
+    = BandExpandingIterator<'a, Trav, PostfixExpandingPolicy<DirectionOf<Trav>>>;
 
 
 impl<'a, Trav, P> BandIterator<'a, Trav> for BandExpandingIterator<'a, Trav, P>

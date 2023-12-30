@@ -3,30 +3,28 @@ mod reader;
 mod overlap;
 #[cfg(test)]
 mod tests;
+pub mod sequence;
 
 pub use {
     reader::*,
+    overlap::*,
+    sequence::*,
 };
-//mod async_reader;
-//pub use async_reader::*;
 
-impl<T: Tokenize + Send> HypergraphRef<T> {
-    pub fn right_reader(&self) -> Reader<T, Right> {
-        Reader::new(self.clone())
-    }
-    pub fn left_reader(&self) -> Reader<T, Left> {
-        Reader::new(self.clone())
+impl HypergraphRef {
+    pub fn read_context<'g>(&'g self) -> ReadContext<'g> {
+        ReadContext::new(self.graph_mut())
     }
     pub fn read_sequence(
         &mut self,
-        sequence: impl IntoIterator<Item = T> + std::fmt::Debug + Send + Sync,
+        sequence: impl IntoIterator<Item = DefaultToken> + std::fmt::Debug + Send + Sync,
     ) -> Option<Child> {
-        self.right_reader().read_sequence(sequence)
+        self.read_context().read_sequence(sequence)
     }
     pub fn read_pattern(
         &mut self,
         pattern: impl IntoPattern,
     ) -> Option<Child> {
-        self.right_reader().read_pattern(pattern)
+        self.read_context().read_pattern(pattern)
     }
 }

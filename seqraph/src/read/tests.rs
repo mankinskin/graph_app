@@ -1,22 +1,28 @@
 use crate::*;
 //use tokio::sync::mpsc;
 //use tokio_stream::wrappers::*;
-use maplit::{hashset, hashmap};
+use maplit::hashset;
 use std::collections::HashSet;
 use pretty_assertions::assert_eq;
 
-fn assert_child_of_at<T: Tokenize>(graph: &Hypergraph<T>, child: impl AsChild, parent: impl AsChild, pattern_indices: impl IntoIterator<Item=PatternIndex>) {
-    assert_eq!(graph.expect_parents(child).clone().into_iter().collect::<HashMap<_, _>>(), hashmap![
-        parent.index() => Parent {
-            pattern_indices: pattern_indices.into_iter().collect(),
-            width: parent.width(),
-        },
-    ]);
+fn assert_child_of_at(
+    graph: &Hypergraph,
+    child: impl AsChild,
+    parent: impl AsChild,
+    pattern_indices: impl IntoIterator<Item=PatternIndex>,
+) {
+    assert_eq!(graph.expect_parents(child).clone().into_iter().collect::<HashMap<_, _>>(), HashMap::from_iter([
+            (parent.vertex_index(), Parent {
+                pattern_indices: pattern_indices.into_iter().collect(),
+                width: parent.width(),
+            }),
+        ])
+    );
 }
 
 #[test]
 fn sync_read_text1() {
-    let mut graph: HypergraphRef<char> = HypergraphRef::from(Hypergraph::default());
+    let mut graph: HypergraphRef = HypergraphRef::from(Hypergraph::default());
     let result = graph.read_sequence("heldldo world!".chars()).unwrap();
     let g = graph.graph();
     let h = g.expect_token_child('h');

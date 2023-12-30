@@ -83,7 +83,7 @@ impl From<SearchPath> for RootedRolePath<End, IndexRoot> {
         }
     }
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SubPath {
     pub root_entry: usize,
     pub path: Vec<ChildLocation>,

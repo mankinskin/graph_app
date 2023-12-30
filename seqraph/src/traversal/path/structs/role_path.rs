@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct RolePath<R> {
     pub sub_path: SubPath,
     //pub child: Child,

@@ -22,7 +22,7 @@ impl HasPath<Start> for QueryRangePath {
         &mut self.start.sub_path.path
     }
 }
-//impl HasPath<End> for PrefixQuery {
+//impl HasPath<End> for PatternPrefixPath {
 //    fn path(&self) -> &Vec<ChildLocation> {
 //        self.end.map(|p| p.path()).unwrap_or_default()
 //    }

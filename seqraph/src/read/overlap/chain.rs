@@ -20,16 +20,16 @@ impl OverlapChain {
         'g,
         T: Tokenize,
         D: IndexDirection,
-    >(self, reader: &'a mut Reader<T, D>) -> Option<Child> {
+    >(self, reader: &'a mut ReadContext<'a>) -> Option<Child> {
         //println!("closing {:#?}", self);
         let mut path = self.path.into_iter();
         let first_band: Overlap = path.next()?.1;
         let (mut bundle, prev_band, _) = {
-            let reader = &reader.clone();
+            //let reader = &reader.clone();
             path.fold(
                 (vec![], first_band, None),
                 |(mut bundle, prev_band, prev_ctx), (_end_bound, overlap)| {
-                    let mut reader = reader.clone();
+                    //let mut reader = reader.clone();
                     // index context of prefix
                     let ctx = if let Some(node) = overlap.link.as_ref() {
                         reader.contexter::<IndexFront>().try_context_path(
@@ -72,35 +72,5 @@ impl OverlapChain {
         let mut past = self.path.split_off(&end_bound);
         std::mem::swap(&mut self.path, &mut past);
         Self { path: past }
-    }
-}
-#[derive(Clone, Debug)]
-pub struct OverlapLink {
-    pub postfix_path: RolePath<End>, // location of postfix/overlap in first index
-    pub prefix_path: MatchEnd<RolePath<Start>>, // location of prefix/overlap in second index
-}
-#[derive(Clone, Debug)]
-pub struct Overlap {
-    pub link: Option<OverlapLink>,
-    pub band: OverlapBand,
-}
-impl Overlap {
-    pub fn appended<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: IndexDirection,
-    >(mut self, reader: &mut Reader<T, D>, end: BandEnd) -> Self {
-        self.append(reader, end);
-        self
-    }
-    pub fn append<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: IndexDirection,
-    >(&mut self, reader: &mut Reader<T, D>, end: BandEnd) {
-        self.band.append(reader, end);
-        self.link = None;
     }
 }

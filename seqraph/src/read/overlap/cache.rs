@@ -17,14 +17,9 @@ impl OverlapCache {
             chain: OverlapChain::default(),
         }
     }
-    pub fn add_bundle<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: IndexDirection,
-    >(
+    pub fn add_bundle(
         &mut self,
-        reader: &mut Reader<T, D>,
+        reader: &mut ReadContext<'_>,
         bundle: OverlapBundle
     ) {
         self.chain.path.insert(
@@ -35,13 +30,8 @@ impl OverlapCache {
             }
         );
     }
-    pub fn append<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: IndexDirection,
-    >(&mut self,
-        _reader: &mut Reader<T, D>,
+    pub fn append(&mut self,
+        _reader: &mut ReadContext<'_>,
         start_bound: usize,
         overlap: Overlap,
     ) {

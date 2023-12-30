@@ -5,13 +5,8 @@ pub enum BandEnd {
     Index(Child),
     //Chain(OverlapChain),
 }
-impl BandEnd {
-    pub fn into_index<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: IndexDirection,
-    >(self, _reader: &mut Reader<T, D>) -> Child {
+impl<'p> BandEnd {
+    pub fn into_index(self, _reader: &mut ReadContext<'p>) -> Child {
         match self {
             Self::Index(c) => c,
             //Self::Chain(c) => c.close(reader).expect("Empty chain in BandEnd!"),
@@ -29,22 +24,12 @@ pub struct OverlapBand {
     pub end: BandEnd,
     pub back_context: Pattern,
 }
-impl OverlapBand {
-    pub fn append<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: IndexDirection,
-    >(&mut self, reader: &mut Reader<T, D>, end: BandEnd) {
+impl<'p> OverlapBand {
+    pub fn append(&mut self, reader: &mut ReadContext<'p>, end: BandEnd) {
         self.back_context.push(self.end.clone().into_index(reader));
         self.end = end;
     }
-    pub fn into_pattern<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: IndexDirection,
-    >(self, reader: &mut Reader<T, D>) -> Pattern {
+    pub fn into_pattern(self, reader: &mut ReadContext<'p>) -> Pattern {
         self.back_context.into_iter()
             .chain(std::iter::once(self.end.into_index(reader)))
             .collect()
@@ -54,7 +39,7 @@ impl OverlapBand {
     //    'g,
     //    T: Tokenize,
     //    D: IndexDirection,
-    //>(mut self, reader: &mut Reader<T, D>, end: BandEnd) -> Self {
+    //>(mut self, reader: &mut ReadContext<'p><T, D>, end: BandEnd) -> Self {
     //    self.append(reader, end);
     //    self
     //}
@@ -86,21 +71,16 @@ impl From<Child> for OverlapBand {
 pub struct OverlapBundle {
     bundle: Vec<OverlapBand>,
 }
-impl OverlapBundle {
+impl<'p> OverlapBundle {
     pub fn add_band(&mut self, overlap: OverlapBand) {
         self.bundle.push(overlap)
     }
-    pub fn into_band<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: IndexDirection,
-    >(self, reader: &mut Reader<T, D>) -> OverlapBand {
+    pub fn into_band(self, reader: &mut ReadContext<'p>) -> OverlapBand {
         assert!(!self.bundle.is_empty());
 
         let bundle = self.bundle.into_iter().map(|band| band.into_pattern(reader)).collect_vec();
         OverlapBand {
-            end: BandEnd::Index(reader.graph_mut().insert_patterns(bundle)),
+            end: BandEnd::Index(reader.graph.insert_patterns(bundle)),
             back_context: vec![],
         }
     }
@@ -109,7 +89,7 @@ impl OverlapBundle {
     //    'g,
     //    T: Tokenize,
     //    D: IndexDirection,
-    //>(&mut self, reader: &mut Reader<T, D>, end: BandEnd) {
+    //>(&mut self, reader: &mut ReadContext<'p><T, D>, end: BandEnd) {
     //    if self.bundle.len() > 1 {
     //        self.bundle.first_mut()
     //            .expect("Empty bundle in overlap chain!")
@@ -123,7 +103,7 @@ impl OverlapBundle {
     //    'g,
     //    T: Tokenize,
     //    D: IndexDirection,
-    //>(mut self, reader: &mut Reader<T, D>, end: BandEnd) -> OverlapBundle {
+    //>(mut self, reader: &mut ReadContext<'p><T, D>, end: BandEnd) -> OverlapBundle {
     //    self.append(reader, end);
     //    self
     //}

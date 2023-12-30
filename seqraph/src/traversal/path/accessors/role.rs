@@ -1,11 +1,11 @@
 use crate::*;
-#[derive(Hash, Debug, Clone, Eq, PartialEq)]
+#[derive(Hash, Debug, Clone, Eq, PartialEq, Default)]
 pub struct Start;
 
-#[derive(Hash, Debug, Clone, Eq, PartialEq)]
+#[derive(Hash, Debug, Clone, Eq, PartialEq, Default)]
 pub struct End;
 
-pub trait PathRole: 'static + Debug + PathBorder {
+pub trait PathRole: 'static + Debug + PathBorder + Default {
     type TopDownPathIter<I: Borrow<ChildLocation>, T: DoubleEndedIterator<Item=I> + ExactSizeIterator>: DoubleEndedIterator<Item=I> + ExactSizeIterator;
     fn top_down_iter<I: Borrow<ChildLocation>, T: DoubleEndedIterator<Item=I> + ExactSizeIterator>(collection: T) -> Self::TopDownPathIter<I, T>;
     fn bottom_up_iter<I: Borrow<ChildLocation>, T: DoubleEndedIterator<Item=I> + ExactSizeIterator>(collection: T) -> std::iter::Rev<Self::TopDownPathIter<I, T>> {

@@ -128,28 +128,38 @@ impl_traversable_mut! {
     <'a> RwLockWriteGuard<'a, Hypergraph>
 }
 //impl_traversable! {
-//    impl <D: IndexDirection> for Reader<T, D>,
+//    impl <D: IndexDirection> for ReadContext<'p>,
 //    self => self.graph.read().unwrap();
 //    <'a> RwLockReadGuard<'a, Hypergraph<T>>
 //}
 //impl_traversable! {
-//    impl<D: IndexDirection> for &'_ Reader<T, D>,
+//    impl<D: IndexDirection> for &'_ ReadContext<'p>,
 //    self => self.graph.read().unwrap();
 //    <'a> RwLockReadGuard<'a, Hypergraph<T>>
 //}
 //impl_traversable! {
-//    impl<D: IndexDirection> for &'_ mut Reader<T, D>,
+//    impl<D: IndexDirection> for &'_ mut ReadContext<'p>,
 //    self => self.graph.read().unwrap();
 //    <'a> RwLockReadGuard<'a, Hypergraph<T>>
 //}
 
-//impl_traversable_mut! {
-//    impl<D: IndexDirection> for Reader<T, D>,
-//    self => self.graph.write().unwrap();
-//    <'a> RwLockWriteGuard<'a, Hypergraph<T>>
+//impl_traversable! {
+//    impl for ReadContext<'_>,
+//    self => self.graph;
+//    <'a> RwLockWriteGuard<'a, Hypergraph>
+//}
+//impl_traversable! {
+//    impl for &'_ mut ReadContext<'_>,
+//    self => self.graph;
+//    <'a> RwLockWriteGuard<'a, Hypergraph>
 //}
 //impl_traversable_mut! {
-//    impl<D: IndexDirection> for &'_ mut Reader<T, D>,
-//    self => self.graph.write().unwrap();
-//    <'a> RwLockWriteGuard<'a, Hypergraph<T>>
+//    impl for ReadContext<'_>,
+//    self => self.graph;
+//    <'a> RwLockWriteGuard<'a, Hypergraph>
+//}
+//impl_traversable_mut! {
+//    impl for &'_ mut ReadContext<'_>,
+//    self => self.graph;
+//    <'a> RwLockWriteGuard<'a, Hypergraph>
 //}

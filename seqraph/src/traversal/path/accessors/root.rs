@@ -102,7 +102,7 @@ macro_rules! impl_root {
     //}
 }
 impl_root! { PatternRoot for QueryRangePath, self => self.root.borrow() }
-//impl_root! { PatternRoot for PrefixQuery, self => self.pattern.borrow() }
+//impl_root! { PatternRoot for PatternPrefixPath, self => self.pattern.borrow() }
 //impl_root! { PatternRoot for OverlapPrimer, self => PatternRoot::pattern_root_pattern(&self.context) }
 impl<'c> PatternRoot for QueryStateContext<'c> {
     fn pattern_root_pattern(&self) -> &Pattern {
@@ -191,7 +191,7 @@ impl<R: PathRole> GraphRootPattern for RootedRolePath<R, IndexRoot> {
 //}
 
 //impl_root! { RootPattern for OverlapPrimer, self, _trav => PatternRoot::pattern_root_pattern(self) }
-//impl_root! { RootPattern for PrefixQuery, self, _trav => PatternRoot::pattern_root_pattern(self) }
+//impl_root! { RootPattern for PatternPrefixPath, self, _trav => PatternRoot::pattern_root_pattern(self) }
 impl_root! { RootPattern for QueryRangePath, self, _trav => PatternRoot::pattern_root_pattern(self) }
 
 impl_root! { RootPattern for SearchPath, self, trav => GraphRootPattern::graph_root_pattern::<Trav>(self, trav) }

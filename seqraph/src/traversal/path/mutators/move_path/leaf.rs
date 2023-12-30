@@ -61,9 +61,9 @@ impl<K: MoveKey<Right, Delta=usize>> MoveLeaf<Right> for KeyedLeaf<'_, Right, K>
             let prev = &pattern[self.location.sub_index];
             self.path.move_key(prev.width());
             self.location.sub_index = next;
-            ControlFlow::CONTINUE
+            ControlFlow::Continue(())
         } else {
-            ControlFlow::BREAK
+            ControlFlow::Break(())
         }
     }
 }
@@ -78,9 +78,9 @@ impl MoveLeaf<Right> for ChildLocation {
             self.sub_index,
         ) {
             self.sub_index = next;
-            ControlFlow::CONTINUE
+            ControlFlow::Continue(())
         } else {
-            ControlFlow::BREAK
+            ControlFlow::Break(())
         }
     }
 }
@@ -97,9 +97,9 @@ impl<K: MoveKey<Left, Delta=usize>> MoveLeaf<Left> for KeyedLeaf<'_, Left, K> {
             let c = &pattern[self.location.sub_index];
             self.path.move_key(c.width());
             self.location.sub_index = prev;
-            ControlFlow::CONTINUE
+            ControlFlow::Continue(())
         } else {
-            ControlFlow::BREAK
+            ControlFlow::Break(())
         }
     }
 }
@@ -114,9 +114,9 @@ impl MoveLeaf<Left> for ChildLocation {
             self.sub_index,
         ) {
             self.sub_index = prev;
-            ControlFlow::CONTINUE
+            ControlFlow::Continue(())
         } else {
-            ControlFlow::BREAK
+            ControlFlow::Break(())
         }
     }
 }

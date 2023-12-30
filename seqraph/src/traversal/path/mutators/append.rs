@@ -8,12 +8,12 @@ pub trait PathAppend {
     );
 }
 
-impl PathAppend for RootedRolePath<End> {
+impl<Role: PathRole, Root: PathRoot> PathAppend for RootedRolePath<Role, Root> {
     fn path_append(
         &mut self,
         parent_entry: ChildLocation,
     ) {
-        self.role_path.sub_path.path_append(parent_entry)
+        self.role_path.sub_path.path_append(parent_entry);
     }
 }
 impl PathAppend for SubPath {
@@ -64,17 +64,6 @@ impl PathAppend for QueryState {
         self.end.path_append(parent_entry)
     }
 }
-//impl PathAppend for RolePath<End> {
-//    fn path_append<
-//        Trav: Traversable,
-//    >(
-//        &mut self,
-//        trav: &Trav,
-//        parent_entry: ChildLocation,
-//    ) {
-//        self.path.path.push(parent_entry);
-//    }
-//}
 //impl PathAppend for SubPath {
 //    fn path_append<
 //        Trav: Traversable,

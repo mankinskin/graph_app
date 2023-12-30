@@ -10,7 +10,7 @@ impl<R: PathRole> RootChildPos<R> for RolePath<R> {
         self.sub_path.root_entry
     }
 }
-impl<R: PathRole> RootChildPos<R> for RootedRolePath<R> {
+impl<R: PathRole, Root: PathRoot> RootChildPos<R> for RootedRolePath<R, Root> {
     fn root_child_pos(&self) -> usize {
         RootChildPos::<R>::root_child_pos(&self.role_path)
     }
@@ -68,12 +68,18 @@ impl RootChildPos<End> for QueryRangePath {
         self.end.root_entry
     }
 }
+
 pub trait RootChildPosMut<R>: RootChildPos<R> {
     fn root_child_pos_mut(&mut self) -> &mut usize;
 }
-impl RootChildPosMut<End> for RolePath<End> {
+impl<R: PathRole> RootChildPosMut<R> for RolePath<R> {
     fn root_child_pos_mut(&mut self) -> &mut usize {
         &mut self.sub_path.root_entry
+    }
+}
+impl<R: PathRole, Root: PathRoot> RootChildPosMut<R> for RootedRolePath<R, Root> {
+    fn root_child_pos_mut(&mut self) -> &mut usize {
+        self.role_path.root_child_pos_mut()
     }
 }
 impl RootChildPosMut<End> for QueryRangePath {
@@ -96,12 +102,12 @@ impl RootChildPosMut<End> for QueryStateContext<'_> {
 //        self.postfix.root_child_pos()
 //    }
 //}
-//impl RootChildPos<Start> for PrefixQuery {
+//impl RootChildPos<Start> for PatternPrefixPath {
 //    fn root_child_pos(&self) -> usize {
 //        0
 //    }
 //}
-//impl RootChildPos<End> for PrefixQuery {
+//impl RootChildPos<End> for PatternPrefixPath {
 //    fn root_child_pos(&self) -> usize {
 //        self.exit
 //    }
@@ -127,7 +133,7 @@ impl RootChildPosMut<End> for QueryStateContext<'_> {
 //        &mut self.exit
 //    }
 //}
-//impl RootChildPosMut<End> for PrefixQuery {
+//impl RootChildPosMut<End> for PatternPrefixPath {
 //    fn root_child_pos_mut(&mut self) -> &mut usize {
 //        &mut self.exit
 //    }

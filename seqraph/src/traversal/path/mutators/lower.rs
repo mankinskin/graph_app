@@ -38,9 +38,9 @@ impl PathLower for (&mut TokenLocation, &mut SearchPath) {
             end.path.clear();
             root.location = prev.into_pattern_location();
 
-            ControlFlow::CONTINUE
+            ControlFlow::Continue(())
         } else {
-            ControlFlow::BREAK
+            ControlFlow::Break(())
         }
     }
 }

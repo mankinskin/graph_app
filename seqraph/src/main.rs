@@ -2,5 +2,5 @@
 use seqraph::*;
 
 fn main() {
-    tests::ngrams::test_ngrams()
+    tests::grammar::test_grammar()
 }

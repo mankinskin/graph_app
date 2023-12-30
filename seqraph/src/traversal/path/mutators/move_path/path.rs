@@ -29,7 +29,7 @@ pub trait MovePath<D: Direction, R: PathRole = End>:
             location
         ) {
             self.path_append(location);
-            ControlFlow::CONTINUE
+            ControlFlow::Continue(())
         } else {
             self.move_root_pos(trav)
         }
@@ -79,5 +79,16 @@ impl MovePath<Left, End> for SearchPath {
         trav: &Trav::Guard<'_>,
     ) -> ControlFlow<()> {
         location.retract_leaf(trav)
+    }
+}
+impl MovePath<Right, End> for PatternPrefixPath {
+    fn move_leaf<
+        Trav: Traversable,
+    >(
+        &mut self,
+        location: &mut ChildLocation,
+        trav: &Trav::Guard<'_>,
+    ) -> ControlFlow<()> {
+        location.advance_leaf(trav)
     }
 }

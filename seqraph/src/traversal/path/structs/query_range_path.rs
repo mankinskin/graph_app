@@ -9,6 +9,7 @@ use crate::*;
 //    pub pos: TokenLocation,
 //}
 pub type QueryRangePath = RootedRangePath<Pattern>;
+pub type PatternPrefixPath = RootedRolePath<End, Pattern>;
 
 //impl QueryRangePath {
 //    pub fn new_postfix(query: impl IntoPattern, entry: usize) -> Self {

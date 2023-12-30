@@ -1,26 +1,26 @@
 use crate::*;
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OverlapPrimer {
     pub start: Child,
-    pub context: PrefixQuery,
-    pub context_offset: usize,
+    pub context: PatternPrefixPath,
+    //pub context_offset: usize,
     pub width: usize,
     pub exit: usize,
     pub end: RolePath<End>,
 }
 impl OverlapPrimer {
-    pub fn new(start: Child, context: PrefixQuery) -> Self {
+    pub fn new(start: Child, context: PatternPrefixPath) -> Self {
         Self {
             start,
-            context_offset: context.exit,
+            //context_offset: context.root_child_pos(),
             context,
             width: 0,
             exit: 0,
-            end: vec![],
+            end: RolePath::default(),
         }
     }
-    pub fn into_prefix_path(self) -> PrefixQuery {
+    pub fn into_prefix_path(self) -> PatternPrefixPath {
         self.context
     }
 }

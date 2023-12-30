@@ -4,10 +4,10 @@
 #![feature(async_closure)]
 #![feature(assert_matches)]
 #![feature(try_blocks)]
-#![feature(hash_drain_filter)]
+//#![feature(hash_drain_filter)]
 #![feature(slice_pattern)]
 #![feature(control_flow_enum)]
-#![feature(pin_macro)]
+//#![feature(pin_macro)]
 #![feature(exact_size_is_empty)]
 #![feature(associated_type_defaults)]
 //#![feature(return_position_impl_trait_in_trait)]
@@ -26,6 +26,26 @@ pub mod split;
 //pub mod read;
 pub mod tests;
 pub mod join;
+pub use {
+    search::*,
+    vertex::*,
+    traversal::*,
+    logger::*,
+    direction::*,
+    index::*,
+    //read::*,
+    split::*,
+    graph::*,
+    vertex::{
+        Token,
+        VertexKey,
+        VertexData,
+        Tokenize,
+        Child,
+        PatternId,
+    },
+    join::*,
+};
 
 
 
@@ -123,26 +143,6 @@ pub use {
     },
     derive_more::*,
     derivative::*,
-};
-pub use {
-    search::*,
-    vertex::*,
-    traversal::*,
-    logger::*,
-    direction::*,
-    index::*,
-    //read::*,
-    split::*,
-    graph::*,
-    vertex::{
-        Token,
-        VertexKey,
-        VertexData,
-        Tokenize,
-        Child,
-        PatternId,
-    },
-    join::*,
 };
 pub type HashSet<T> =
     std::collections::HashSet<T,

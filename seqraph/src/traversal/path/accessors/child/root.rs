@@ -40,7 +40,7 @@ macro_rules! impl_child {
 //    }
 //}
 impl_child! { RootChild for QueryRangePath, self, _trav => self.root[self.root_child_pos()] }
-//impl_child! { RootChild for PrefixQuery, self, trav => self.root_child(trav) }
+//impl_child! { RootChild for PatternPrefixPath, self, trav => self.root_child(trav) }
 //impl RootChild<End> for OverlapPrimer {
 //    fn root_child<
 //        'a: 'g,
@@ -166,8 +166,8 @@ impl<R> PatternRootChild<R> for QueryStateContext<'_>
     where Self: RootChildPos<R>
 {
 }
-//impl<R> PatternRootChild<R> for PrefixQuery
-//    where PrefixQuery: RootChildPos<R>
+//impl<R> PatternRootChild<R> for PatternPrefixPath
+//    where PatternPrefixPath: RootChildPos<R>
 //{
 //}
 //impl PatternRootChild<End> for OverlapPrimer {
