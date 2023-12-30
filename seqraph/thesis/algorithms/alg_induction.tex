@@ -1,49 +1,54 @@
-\section{Induction}\label{sec:induction}
-Now that we know how to modify the grammar to represent a part of a known string with a dedicated node, we still need to understand how to add representations for entirely new strings into the grammar. A new string can contain unknown tokens and unknown sequences of tokens or even indices for known nodes in a new context. Let $\Sigma$ be the alphabet of input tokens and $I_V$ be the index set of nodes in the grammar. Then a new input sequence is an element $x \in (\Sigma \cup I_V)^*$ with $x = x_1, \ldots, x_n$.
+\section{Read}\label{sec:induction}
+Now that we know how to modify the grammar to represent a part of a known string with a dedicated node, we still need to understand how to add representations for entirely new strings into the grammar. A new string can contain unknown tokens and unknown sequences of known tokens. Let $\Sigma$ be the alphabet of input tokens and $I_V$ be the index set of nodes in the grammar. Then an input sequence is an element $x \in {(\Sigma \cup I_V)}^*$ with $x = x_1, \ldots, x_n$. A token or sequence is new or unknown when there exists no node in $I_V$ representing the token or sequence.
 
-A sequence like this can be parsed by a given grammar $G$ using the search algorithm which returns a trace graph for the largest matching prefix. This trace graph can then be joined using the insert algorithm to ensure there is a designated vertex for the matching prefix of the string. By repeating this operation and continuously updating the grammar to include larger and larger parts of the given input string, we can eventually represent any entire input string as a consistent node in the grammar.
+\noindent
+A sequence like this can be parsed by a given graph $G$ using the search algorithm which returns a trace graph for the largest matching prefix. This trace graph can then be joined using the insert algorithm to ensure there is a designated vertex for the matching prefix of the string. By repeating this operation and continuously updating the grammar to include larger and larger parts of the given input string, we can eventually represent any entire input string as a consistent node in the grammar.
 
-The primary challenges arising for this objective are the handling of overlapping matches and the continuous update of the grammar.
+\noindent
+Unknown tokens are easily processed as they can not be included in any larger nodes and can not yield any results in the parsing step. Such tokens are simply inserted into the grammar directly by which they become known in the consecutive sequence.
+The primary challenges arising for this objective are the handling of overlapping known nodes and the continuous update of the grammar while parsing the input sequence.
 
 \subsection{Recording overlapping Nodes}
 
-When parsing nodes in the input string, we may find matching nodes overlapping with other nodes. An overlap between two nodes occurs when the second substring starts before the first substring has ended.
+When parsing the input string, we may find nodes partially reaching into a later known sequence. This creates an overlap between two nodes which both need to be represented in the final partitions of the input string. An overlap occurs when the second sub-string starts before the first sub-string has ended. 
 
-These matches also need to be recorded to be able to fulfill the path completeness invariant. In principle \textit{every} largest known substring has to be found, starting at any position. Luckily we can use the existing grammar and its invariants to reduce the search space significantly.
+These matches also need to be recorded to be able to fulfill the path completeness invariant for the final node. In principle \textit{every} largest known sub-string has to be found, starting at any position. Conveniently, we can use the existing grammar and its invariants to reduce the search space significantly.
 
-From the path containment invariant we can derive that, in general, every node in the grammar must contain the node for its largest postfix for which a node exists in the grammar. Any postfix that does not have its own node can not occur in any other parent or else these rules would violate the digram uniqueness requirement, as the same sequence would be given in multiple rules. \todo{improve requirements}
+\noindent
+From the path containment invariant we can derive that, in general, every node in the grammar must contain the node for its largest postfix for which a node exists in the grammar. Any postfix that does not have its own node can not occur in any other parent or else these rules would violate the digram uniqueness requirement, as the same sequence would be given in multiple rules.\\
+Therefore, we can find no overlap for any post- or prefixes which do not have a dedicated node. Thus we can find all candidate overlaps by simply traversing all single-node postfixes of the first match we have found.\par
 
-Therefore we can find no overlap for any post- or prefixes which do not have a dedicated node. Thus we can find all candidate overlaps by simply traversing all single-node postfixes of the first match we have found.
-\bigbreak%
-We can modify the search algorithm to start with a postfix node instead of the first token of a search query, as it also works with node indices in its search query. The search query would simply be given by the candidate postfix followed by the input remaining after the inital match. Any parents found this way are essentially \textit{expansions} of the candidate postfix into the remaining input string.
-\bigbreak%
-If the largest postfix does not have a parent matching with the remaining input sequence, we loosen the constraints and choose smaller and smaller postfixes of the current match, starting at later positions in the input string, until we find a parent expanding into the remaining input or reach the postfix with the length of one token without finding an expansion. In this case we can rule out that there is any overlapping nodes present for this node in the grammar and therefore also no overlapping substrings for this match.
-\bigbreak%
+\noindent
+We can modify the search algorithm to start with a postfix node instead of the first token of a search query, as it also works with node indices in its search query. The search query would simply be given by the candidate postfix followed by the input remaining after the initial match. Any parents found this way are essentially \textit{expansions} of the candidate postfix into the remaining input string.\par
+
+\noindent
+If the largest postfix does not have a parent matching with the remaining input sequence, we loosen the constraints and choose smaller and smaller postfixes of the current match, starting at later positions in the input string, until we find a parent expanding into the remaining input or reach the postfix with the length of one token without finding an expansion. In this case we can rule out that there is any overlapping nodes present for this node in the grammar and therefore also no overlapping sub-strings for this match.\par
+
+\noindent
 When overlaps are found, the process will record a chain of overlapping nodes represented in the input string. All the nodes in the chain share a child node as a postfix or prefix respectively, also referred to as the overlap between these nodes. Each overlap must skip at least one token and thus a chain of overlaps can at most be as long as the token width of the first overlapped node $n_1$.
 %\NewColumnType{m}[1][]{Q[l,cmd=\sisetup{#1}\unit]}
-\begin{table}[!ht]
-    \ttfamily
-    \centering
-    $\expanded{\noexpand\begin{tblr}{
-        hline{1}={1-Z}{solid},
-        hline{2}={1-Z}{solid},
-        vline{1}={1}{solid},
-        vline{2-11}={1}{dashed},
-        \newcell{1}{2}{4},
-        \newcell{2}{3}{5},
-        \newcell{4}{4}{4},
-        hspan = even,
-    }}
-    x_1&x_2&x_3&x_4&x_5&x_6&x_7&x_8&x_9&x_{10}&\ldots\\
-    n_1&\\
-    &n_2  \\ 
-    &&&n_3  \\ 
-    &&&&&\ddots  \\ 
-    \end{tblr}$
-\end{table}
-
-As all the nodes in a chain need to be included in the structure of the final result, each element in the chain seeds a new rule to be constructed. To use the rule in a new node, each rule has to constitute a partition of the string to be represented and the gaps appearing before the overlapping nodes need to be filled with the appropriate nodes, which we denote as the \textit{context} of the respective overlap.
-
+%
+%\begin{table}[!ht]
+%    \ttfamily
+%    \centering
+%    $\expanded{\noexpand\begin{tblr}{
+%        hline{1}={1-Z}{solid},
+%        hline{2}={1-Z}{solid},
+%        vline{1}={1}{solid},
+%        vline{2-11}={1}{dashed},
+%        \newcell{1}{2}{4},
+%        \newcell{2}{3}{5},
+%        \newcell{4}{4}{4},
+%        hspan = even,
+%    }}
+%    x_1&x_2&x_3&x_4&x_5&x_6&x_7&x_8&x_9&x_{10}&\ldots\\
+%    n_1&\\
+%    &n_2  \\ 
+%    &&&n_3  \\ 
+%    &&&&&\ddots  \\ 
+%    \end{tblr}$
+%\end{table}
+%
 \begin{table}[!ht]
     \ttfamily
     \centering
@@ -66,11 +71,15 @@ As all the nodes in a chain need to be included in the structure of the final re
     &&&&&\ddots  \\ 
     \end{tblr}$
 \end{table}
+%
+As all the nodes in a chain need to be included in the structure of the final result, each element in the chain seeds a new rule to be constructed. To use the rule in a new node, each rule has to constitute a partition of the string to be represented and the gaps appearing before the overlapping nodes need to be filled with the appropriate nodes, which we denote as the \textit{context} of the respective overlap.
+
 
 This is a notable point as this creates the first \textit{new} digram in the induction process. This new digram has to be available immediately to the subsequent search calls inside the grammar. An example for why this is needed is given by the string \texttt{abababab}:\par
+%
 \begin{multicols}{2}
 {
-    In the first steps we need to add the unknown tokens \texttt{a} and \texttt{b}, and recognize them as a digram \texttt{ab}. There can not be any known overlaps with this digram, as the tokens were unknown. As we read the first known token, the second \texttt{a} in step $2$, we try to match its parents with the remaining input and find that \texttt{ab} expands into the remaining string. This is only possible if the rule \texttt{a,b} has already been inserted into the grammar. Likewise, in step $3$, we need to be able to find the rule \texttt{ab,ab} to be able to find the overlap of the two occurrences of \texttt{abab}. The pattern continues, creating larger and larger nodes.\par
+    \noindent In the first steps we need to add the unknown tokens \texttt{a} and \texttt{b}, and recognize them as a digram \texttt{ab}. There can not be any known overlaps with this digram, as the tokens were unknown. As we read the first known token, the second \texttt{a} in step $2$, we try to match its parents with the remaining input and find that \texttt{ab} expands into the remaining string. This is only possible if that rule \texttt{a,b} has already been inserted into the grammar. Likewise, in step $3$, we need to be able to find the rule \texttt{ab,ab} to be able to find the overlap of the two occurrences of \texttt{abab}. The pattern continues, creating larger and larger nodes.\par
 
     \ttfamily
 }
@@ -141,50 +150,78 @@ This is a notable point as this creates the first \textit{new} digram in the ind
     \end{center}
 }
 \end{multicols}
-\bigbreak%
-Eventually this grammar is induced:\par
-\begin{multicols}{3}
-    \ttfamily
-    \noindent
-    \begin{align*}
-        \text{abababab} ::= &\ \text{ababab,ab}\\
-                            |&\ \text{ab,ababab}
-    \end{align*}
-    \begin{align*}
-        \text{ababab} ::= &\ \text{abab,ab}\\
-                |&\ \text{ab,abab}
-    \end{align*}
-    \begin{align*}
-        \text{abab} ::= &\ \text{ab,ab}\\
-        \text{ab} ::= &\ \text{a,b}\\
-    \end{align*}
-\end{multicols}
-
-To handle repeating patterns appearing during induction, the induced structure has to be inserted into the grammar after each step as a new node.
-\bigbreak%
-
-In the example we have seen how nodes are inserted right behind previous nodes and how they are structured in a chain of overlaps. In the general case there are many different possible configurations when a new node is read from the input string. These configurations essentially differ in the different states of the past nodes that have been read and at what position the new node exists relative to the other nodes. The relevant parameters for these properties are
-\begin{itemize}
-\item Token position span of the new node $(s^*, e^*)$
-\item End positions of previous nodes $F \subseteq \{1, \ldots, e^*-1\}$
-\item Root node $\bar{n}$ representing the string already read
-\end{itemize}
-
-At every step, we need to decide how the new node needs to be placed in relation to the past nodes by considering their positions and avoiding to change any nodes we are using in other parts of the grammar.
+%\bigbreak%
+%Eventually this grammar is induced:\par
+%\begin{multicols}{3}
+%    \ttfamily
+%    \noindent
+%    \begin{align*}
+%        \text{abababab} :\coloneqq &\ \text{ababab,ab}\\
+%                            |&\ \text{ab,ababab}
+%    \end{align*}
+%    \begin{align*}
+%        \text{ababab} :\coloneqq &\ \text{abab,ab}\\
+%                |&\ \text{ab,abab}
+%    \end{align*}
+%    \begin{align*}
+%        \text{abab} :\coloneqq &\ \text{ab,ab}\\
+%        \text{ab} :\coloneqq &\ \text{a,b}\\
+%    \end{align*}
+%\end{multicols}
+%
+%\bigbreak%
+\noindent
+In the example, we see how new nodes constructed from left to right by first recognizing the next node expanding into the right context and then combining it with the previous node. Any next nodes need to interact with the following right context to be of interest, otherwise they would be already represented by the previously read node.
 
 \subsection{Continuously Updating the Grammar}
 
-With this understanding of our objective, we can define how the induction algorithm works. We iteratively walk over a sequence of nodes parsed from the input string and update the grammar with the new information after parsing each next node. The parsed nodes are stored in a chain of bands which exist in parallel. Each band maps the input string to a different partition. These partitions will form the rules of the final new node to be created and thus need to follow the invariants defined in section x\todo{reference introduction/definitions}. As we extract each new node, it may appear as an overlap with other previous partitions, in which case it requires a new band. It may also appear directly behind or after any number of previous bands. Depending on the case, the new overlap is added to the previous representation in the grammar. After each step $i$, a node $y_i$ must exist, containing the representation for all tokens covered until the end of this step. This way, past sequences in the input string are available for parsing.
+The algorithm iteratively parses a new node $n_i$ from the input string $w$ and then updates the grammar at the end of each step $i$, so that after each step, there exists a node $y_i$ representing the prefix of $w$ processed up to step $i$,
+so that even those patterns first encountered in the current input string can be recognized by later processing steps.\par
+\noindent
+The general state at step $i$ of the induction algorithm is given by:
+\begin{itemize}[noitemsep,topsep=0pt]
+    \item \textbf{input string} $w = w_1, \ldots, w_n$
+    \item \textbf{previous node} $p_i$ constituting the prefix parsed so far
+    \item \textbf{next node} $n_i$ starting at token position $x_i \in \{ 1, \ldots, |p_i| \}$ in $w$
+\end{itemize}
+Note that token positions are zero-indexed in this context, which means a starting position of $1$ starts after one token has been skipped to only enumerate true postfixes of the previous node.\\
+\noindent
+The next node $n_i$ is combined with the previous node to form the end result node $y_i$ of the $i$-th step. Depending on the position $x_i$ where $n_i$ has been recognized, the result is constructed in different ways:
+\begin{enumerate}[noitemsep,topsep=0pt]
+    \item $x_i = |p_i|$: the new node starts after the previous node and the result node is created by inserting the pattern 
+        $\begin{bmatrix}
+            p_i,n_i
+        \end{bmatrix}$
+    \item $x_i < |p_i|$: the new node overlaps with the previous node and the result node needs to represent the two nodes in separate partition patterns.
+\end{enumerate}
 
-The general state of the induction algorithm can be defined by an initially empty node $y_i$ in the grammar, a current node $n_i$ starting at token position $x_i$ in the input string $t$ 
+\subsection{Update Step}
+%- trace nodes and find updatable and not updatable
+%- find overlap border
+%- path to overlap exists in both root nodes
+%- define update step for both types of nodes
+%- update bottom up to update parent nodes
+%- 
+In section~\ref{sec:frequency_reduction} we have established the criterion ``Nodes must not have exactly one parent while having no overlapping children''. Therefore, if the previous node is overlapping with the next node while it does not have any other parents, we need to update the previous node to include the expansion from the next node.
 
-%\begin{algorithm}
-%    \caption{READ}\label{alg:read}
-%    \begin{flushleft}
-%        \textbf{Input:} $[\texttt{VertexIndex}]\ query = q_0, \ldots q_n, \texttt{ Hypergraph } H$\\
-%        \textbf{Output:} $\texttt{VertexIndex}$
-%    \end{flushleft}
-%    \begin{algorithmic}
-%        \State $a$
-%    \end{algorithmic}
-%\end{algorithm}
+\noindent
+If $p_i$ and $n_i$ are overlapping, $n_i$ is an extension of a postfix node $o_i < p_i$. This follows from the fact that all postfixes of $p_i$ have been checked in descending order to find $n_i$. Thus, we know that $p_i$ and $n_i$ both have a path to their overlap $o_i$. Also, we know that there is no overlap with $p_i$ that starts before and ends after $n_i$, because these are iteratively processed in order from largest to smallest postfix in the induction loop.
+
+\noindent
+While updating, it is important to not change the string representation of any nodes which are not meant to be changed. Every node's string is represented by reconstruction from its child nodes, and we can not change the string of any nodes which have parents outside the range to be updated.
+
+\noindent
+To recognize how to update which nodes, we can build a trace graph for the partition of the overlap and check for any nodes with parents outside this sub-graph. Nodes which are not reachable from outside this sub-graph can be updated directly in-place, while other nodes have to be replaced with a new node to leave the representations of node they occur in unchanged.\par
+
+\noindent
+Both types of nodes require different updates in a recursive update procedure.
+\begin{itemize}[noitemsep,topsep=0pt]
+        \item \textbf{in-place updates} can be performed by simply updating all the postfix children to represent the additional tokens
+        \item \textbf{re-place updates} are performed by creating a new node containing both the original node and the expansion to represent the expanded range
+\end{itemize}
+
+\noindent In-place updates recursively call the update on their child nodes and link to the results of these updates, resulting in a change in their string representation. Since all child nodes are updated to represent the same final string, the node representation remains consistent.
+While traversing the graph downwards to smaller nodes, eventually encountering re-place nodes becomes more likely. These nodes end the recursion as they can not be changed in place. Instead, the original node and the expansion node are placed into two separate partitions and a new node representing the expanded range is created.
+
+\noindent
+With the update of each individual child node intersected by the update range, the root node of the recursion finally receives a new string representation while the graph structure remains consistent.

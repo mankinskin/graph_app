@@ -2,11 +2,14 @@
 
 
 \input{preamble.tex}
-\input{title.tex}
 
 \begin{document}
 
-\maketitle
+\input{title.tex}
+%\maketitle
+%\begin{frame}
+%  \titlepage
+%\end{frame}
 
 \pagenumbering{gobble}
 \input{pretext.tex}
@@ -24,9 +27,7 @@
 
 \subfile{introduction}
 
-\subfile{related_work}
-
-\subfile{foundations}
+\subfile{related_methods}
 
 \subfile{model}
 
@@ -36,6 +37,12 @@
 
 \subfile{conclusion}
 
+\newpage
+\pagenumbering{gobble}
 \printbibliography
+
+\newpage
+\pagestyle{plain}
+\subfile{declaration}
 
 \end{document}

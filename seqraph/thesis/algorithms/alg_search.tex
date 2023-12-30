@@ -1,11 +1,11 @@
 
 \section{Search}
 
-The search algorithm finds the location of a given string (calld the \emph{query}) in a given model structure. In case not the entire query exists, only the largest matching prefix of the query is located. The algorithm constructs a \emph{trace graph} which contains the nodes and edges which were traversed during search in the complete graph. The \emph{trace graph} is thus an augmented subgraph of the original graph which is rooted at the smallest vertex containing all of the matched string with paths to the location of both the beginning and end of the matched string.
+The search algorithm finds the location of a given input string (called \emph{query}) in a given context graph structure. The entire query may not exist in the graph, therefore only the largest matching prefix is located. The algorithm constructs a \emph{trace graph} containing the nodes and edges that were traversed during search in the complete graph. The trace graph is an augmented sub-graph of the original graph which is rooted at the smallest vertex containing all the matching string with  paths to the locations of the beginning and the end of the matched string in the vertex.
 
 \dfn{Trace Graph}{
-    The trace graph $T_G^w$ of string $w \in \Sigma^*$ in context graph $G$ is a rooted subgraph found in $G$, representing $w$. The edges of $T$ at least one path starting from the first node, passing through the root node and ending in the last node representing substrings of the query.\par
-    The edges can be divided into \emph{upward} and \emph{downward} edges, where upwards edges point to larger nodes and downwards edges point to smaller nodes.
+    The trace graph $T_G$ of string $w \in \Sigma^*$ in context graph $G$ is a rooted sub-graph found in $G$, representing $w$. The edges of\ $T_G$ contain at least one path starting from the first node, passing through the root node and ending in the last node representing sub-strings of the query (mirroring traversal order of the search algorithm).\par
+    The edges can be divided into \emph{upward} and \emph{downward} edges, where upward edges point to larger nodes and downwards edges point to smaller nodes.
     \begin{align*}
         \text{d}(a, b) =
         \begin{cases}
@@ -14,8 +14,9 @@ The search algorithm finds the location of a given string (calld the \emph{query
             \texttt{undefined}, &\text{ if } |a| = |b|\\
         \end{cases}
     \end{align*}
+    \noindent
+    Nodes of the same size can not be in a strict containment relation and thus no edges between exist in the context graph.
 
-    to the last node (mirroring traversal order of the search algorithm).
     Edges are annotated with a distance $\text{dist}(e)$ to the first token, relative to the nodes they connect.
     \begin{align*}
         \text{dist}((a, b)) =
@@ -26,11 +27,38 @@ The search algorithm finds the location of a given string (calld the \emph{query
     \end{align*}
     The distance values are later used to determine the relative positions a node needs to be split at to construct new nodes from partial overlaps with other nodes.
 }
-\noindent To describe the search algorithm, let us assume there is an exising hypergraph structure that is correct according to our invariants. We can use our definition to make assumptions about the structure at every operation of the algorithm. A simple example of such a graph structure is given by the graph containing a single sequence without repetitions.
+\noindent
+To describe the search algorithm, let us assume there is an existing context graph structure that is correct according to our definition~\ref{chp:model}. From our definition, we can derive assumptions about the structure at every operation of the algorithm. For a base example of the graph structure we can give the graph containing a single sequence without repetitions.
 
-\noindent The search query is given as a string of vertex indices $q = (q_i)_{i \in \NN} \in I_V^*$, representing a string of either 1-gram tokens or larger n-gram substrings, meaning we are not limited to raw string search queries. The query is the pattern we are trying to find in the graph.
+\noindent 
+The search query is given as a string of vertex indices $q \in {I_V}^*$, representing a string of either unigram tokens or larger n-gram nodes, meaning we are not limited to raw string search queries. The query is the pattern we are trying to find in the graph.
 
-\noindent The search algorithm maintains a $queue$ of states with which it traverses all parse states in a breadth first manner. The states contain information about the locations in both the $query$ and the graph strucure $H$ to be compared. While traversing the graph, the algorithm populates a \textit{trace graph} with the locations of each end of the matched substring. These locations are later used to split any partially matching vertices for further processing.
+\noindent
+The search algorithm maintains a queue of states with which it traverses all parse states in a breadth-first manner. The states contain information about the locations in both the $query$ and the graph structure $G$ to be compared. While traversing the graph, the algorithm populates the trace graph $T$ with new edges to each matched sub-string. The edges are annotated with relative positions which are later used in the insertion operation~\ref{sec:insert} to split any partially matching vertices for further processing.
+
+\noindent
+The algorithm can be understood as a parsing algorithm, matching the ``rules'' of graph structure on the query. This is a more intuitive description:
+\begin{enumerate}
+    \item Start at the first vertex index in the query $q_0$ and begin upwards traversal in $G$ in a breadth-first manner adding next nodes to a queue
+    \item Stop at each parent where there exists a successor to the previous child edge, i.e.\ the parent describes a context of $q_0$ with consecutive tokens
+    \item Compare the successive vertex $n$ with the following token in the query $q_n$.\ There are three cases for $n$ and $q_n$:
+    \begin{itemize}
+        \item equal: a matching transition has been found
+        \item same length but different nodes: a mismatching transition has been found
+        \item different lengths: continue search by comparing the prefixes of the larger vertex $l$ with the smaller vertex $s$. If $s$ is a prefix of $l$, there must be a path from $l$ to $s$.  
+    \end{itemize}
+    If both nodes have different lengths ($l$ and $s$ exist), the matching algorithm continues to match the prefixes of $l$ with $s$.
+    Once we encounter a prefix $p$ of $l$ that is smaller than $s$, we can assume, based on the correct structure of $l$, that $s$ does not exist completely as a prefix of $l$ (because there is no path from $l$ to $s$ at the beginning). However, it is still possible that the prefix $p$ and $s$ both share a smaller prefix before their strings differ. To find these prefixes, $s$ becomes the new $l$ and $p$ becomes the new $s$ and the algorithm repeats until $s$ and $l$ are the same length, which is bound to happen as all vertices have a smallest prefix of length $1$, when a decision can be made.
+    The result of this matching is therefore always a path from the parent node $n$ to a matching or mismatching prefix for both the query and the search cache.
+\end{enumerate}
+
+\noindent
+This algorithm is repeated on larger and larger root nodes, until a root arrives at a mismatch with the query. During iteration, edges are added to the trace graph if they are guaranteed to be part of the matching sub-graph structure. Such is the case when a parent node has been found to match until its end and when a mismatch has been found. The collected paths and relative positions can then be translated to token locations in parallel partitions in each node, constructing all possible paths from the root node to the respective beginning and end tokens.
+
+The resulting trace graph contains all the possible paths from the start vertex ($q_0$) to the root, aswell as from the root to the last vertex matching with the query. Each edge in the trace graph is an edge from the containment relation, annotated with a distance from the beginning of the query. These annotations are added during parsing and allow us to calculate the relative location of each border (start/end) inside each vertex.
+
+\noindent
+In the next step, this information is used to split each vertex into parts which are then recombined into new vertices.
 
 %\begin{lstlisting}
 %struct State {
@@ -86,20 +114,3 @@ The search algorithm finds the location of a given string (calld the \emph{query
 %
 %\caption{An example graph structure}
 %\end{figure}
-
-The algorithm can be understood as a parsing algorithm, matching the ''rules'' of graph structure on the query. This is a more intuitive description:
-\begin{enumerate}
-    \item Start at the first vertex index in the query $q_0$ and begin upwards traversal in $H$ in a breadth first manner using a queue
-    \item Stop at each parent where there exists a successor to the child edge, i.e. the parent describes a context of $q_0$ with consequtive tokens
-    \item Compare the successive vertex $s$ with the following token in the query $q_1$. there are three cases:
-    \begin{itemize}
-        \item $s$ and $q_1$ are equal: a matching transition has been found
-        \item $s$ and $q_1$ are of same length but different: a mismatching transition has been found
-        \item $s$ and $q_1$ are of different lengths: continue search by comparing the prefixes of the larger vertex $v_s$ with the smaller vertex $v_l$. If $v_s$ is a prefix of $v_l$, there must be a path from $v_l$ to $v_s$.  
-    \end{itemize}
-    If $v_l$ and $v_s$ exist, the matching algorithm continues to match the prefixes of $v_l$ with $v_s$.
-    Once we encounter a prefix $p$ that is smaller than $v_s$, we can assume, based on the correct structure of $v_l$, that $v_s$ does not exist as a prefix of $v_s$. However it is still possible that $p$ and $v_s$ both share a prefix. Thus $v_s$ becomes the new $v_l$ and $p$ becomes the new $small$ and the algorithm repeats until $small$ and large are the same length, which is bound to happen as all vertices have a smallest prefix of length 1.
-    The result of this matching is therefore always a path from the parent edge $s$ to a matching or mismatching prefix for both the query and the search cache.
-\end{enumerate}
-
-The resulting \texttt{TraceGraph} is used to store all the possible paths from the start vertex ($q_0$) to the root, aswell as from the root to the last vertex matching with the query. Each edge in the \texttt{TraceGraph} is an edge from the containment relation, annotated with a distance from the beginning of the query. These annotations are added during parsing and allow us to calculate the relative location of each border (start/end) inside of each vertex. This information is later used to split each vertex into parts which are then be recombined into new vertices.

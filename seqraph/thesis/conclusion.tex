@@ -1,5 +1,6 @@
-\chapter{Conclusion}
+\chapter{Conclusion}\label{chp:conclusion}
 
-- shown model to solve problems of explainability, updatability and controllability
-- described automated induction procedure from raw text
-- discussed possible applications for language modelling and generation
+In this paper, we motivated the need for reliable, interpretable and updatable language models. We have defined a formal structure based on a substring relation graph able to relate all frequent substrings of a text corpus to their contexts and have shown how this structure can be used to predict following tokens of a given input. Further we have shown that the original dataset is completely reconstructable from the derived structure and that the rules are human-readable and interpretable. We then described a theoretical basis for an induction algorithm learning this structure from a data set of example strings, where we have shown that the rules of the model are directly updatable without corrupting previously learned data. Finally, we discussed examples of how to apply the context graph as a language model and explored possible future extensions to the model using its internal structure to make it more robust.
+
+\noindent
+In conclusion, we have presented a novel framework for inducing context relationships between repetitive sequential patterns with high relevance to standing challenges in the field of natural language processing. From this theoretical basis we hope to build an implementation of this model and test it in a real-world setting. We see many possible extensions to this framework to increase the comprehensive abilities of this language model and make it more comparable to neural network based approaches. In a realistic setting, we can see the current model play an auxiliary role for analyzing datasets and deriving hyper-dimensional embeddings from nodes in the graph or inducing more formal relationships between nodes in the graph. We are also interested in applying this model in other contexts, for example in search engines or hierarchical action planning.

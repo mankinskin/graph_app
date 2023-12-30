@@ -1,50 +1,75 @@
+\chapter{Introduction}\label{chp:introduction}
 
-\chapter{Introduction}
+%\begin{itemize}
+%    \item Previous language models were hand crafted using linguistic research
+%    \item deep neural language models learn knowledge representations from a lot of data 
+%    \item current neural language architectures are not designed for human interpretability
+%    \item neural models are inherently difficult to update and control
+%    \item all language models fundamentally learn how words relate to their context
+%    \item this paper presents a novel symbolic approach to language modelling
+%    \item the algorithm automatically induces a structure connecting all tokens in context with paths of lengths
+%    proportional to their similarity
+%    \item there are two kinds of similarity, semantic (context similarity) and orthographic (token similarity).
+%    \item we hypothesise that this structure can be used as a language model on its own, similar to an n-gram model, but can also be used for the extraction of features used in a neural architecture.
+%    \item the structure is easy to interpret and update and can help with tailoring datasets before training of expenive architectures.
+%    \item we hope to be able to increase model efficiency and security using this method in future work.
+%\end{itemize}
 
-Neural models of the latest generation have proved their ability to learn complex conceptual relationships in extremely large corpora of natural language using a mechanism called self-attention. Given the convincing generative results of these models, new interest in applying these models at a larger scale has sparked. Natural language model now make considerable contributions to creative writing, knowledge representation and extraction, language translation and programming. Despite the impressive advancement of the field, neural language models remain fundamentally opaque, even to knowledgable users, and give no guarantees regarding the truthfulness of their responses and often produce inconsistent outputs. Additionally, neural models are inherently difficult to modify in a targeted manner after they have been trained, further increasing the cost of building reliable language models using neural methods.
+Early generative language models, such as the ELIZA system~\cite{weizenbaum1966eliza}, were built using hand-crafted rules derived from linguistic research and domain knowledge.
+Compared to modern language models (LM), these programmatic systems were very expensive to develop and still limited in their comprehensive and generative capabilities. Today, research has increasingly turned towards probabilistic, data-driven systems which are more robust to unseen inputs and can often be trained automatically on massive datasets even without human supervision.
+The most advanced LM architectures are deep neural networks trained on gigantic data sets, such as the content of the World Wide Web. By optimizing increasingly larger real-valued statistical models, and fine-tuning these general models to more specific tasks, we have been able to continuously improve their linguistic capabilities~\cite{brown2020language}.
+\par
+\noindent
+Despite the impressive performances of these models, many challenges remain with the transparency and reliability of these models. Research has pointed out logical inconsistency of generated texts~\cite{ji2023survey}, reliably reproducing factual knowledge from the training datasets~\cite{filippova2020controlled} and with the transparency of the decisions made by large LMs (LLM)~\cite{camburu2019make}.
+Many potential use-cases for LMs such as advisor systems, search engines or command interpreters require reliable solutions to these problems.
+\par
+\noindent
+Additionally, neural LMs are generally found to be difficult to update and adjust to local changes in the training data~\cite{south2023transparency}. LLMs require to be retrained on the updated training data set to reliably perform the update. Because the models are hard to interpret it is difficult to predict how to update the model parameters directly to change or remove specific parts of its original training data set.
+\par
+\noindent
+Rule based systems may address these issues effectively, however so far completely rule-based models are still very expensive to develop as they are largely hand-crafted and unable to capture all the complexity of large natural language data sets.
+\par
+\noindent
+We will focus on three properties of language models: \textbf{interpretability}, \textbf{updatability} and \textbf{reliability}. In the remaining study we define a rule based language model effectively satisfying these properties. We then describe an algorithm to automatically induce the model from an unsupervised dataset of raw sequence data. Finally, we explore applications and additional algorithms for extracting knowledge from the induced structure.
+\par
 
-In this paper we investigate the specific strengths and weaknesses of attention-based neural language models in comparison to classic N-Gram based modelling approaches. We propose the use of explicit relationships between lexical elements to address the problems of neural models and augment a classical N-Gram model with a contextual relationship structure to capture information similar to the attention weights used in neural models. Further we devise a compression scheme on the resulting hierarchical N-Gram graph to increase the capacity to store long-range dependencies.
+\section{Reliability}
+% - factual knowledge from training data misrepresented
+% - fabricated knowledge not supported by training data
+% - logical inconsistency
+Language models should not only produce grammatically correct results, they also have to understand the semantic meaning and respect factual knowledge presented in the training data. Although deep neural LMs produce intuitively convincing texts which are very similar to the texts from its training, they can often make claims inconsistent with factual knowledge or even basic logic, which presents a problem for many applications which rely on the model being truthful and reliable. What makes matters worse is that these models can deliver answers confidently while making false or inconsistent statements.
 
-
-There are however fundamental disadvantages of neural models over count based models.
-
-\dfn{Interpretability}{
-    The interpretability of a language model quantifies the degree a human can understand the model's decisions and parameters.
-}
-\dfn{Updatability}{
-    The updatability of a language model refers to the ability to update a trained language model with new knowledge or modify its behavior.
-}
-\dfn{Controllability}{
-
-}
-\section{Hallucinating Language Models}
-
-\section{Opaque Language Models}
-
-\section{Unpredictable Language Models}
-
-\section{Distributional Semantics}
-
-In the research field of distributional semantics, the similarity between linguistic 
-items is defined as the the similarity of their respective context distributions in a 
-given text corpus. The so-called distributional hypothesis postulates that "items which 
-appear in similar contexts are similar in their semantic meaning" or "words are 
-characterized by the company they keep".
-Previous methods have mainly focussed on embedding tokens from sequences in a 
-high-dimensional vector space in a way that captures the distributional features of each 
-token. These token embeddings can then be used to estimate the most likely context tokens 
-and can be easily compared in similarity of their (distributional) semantic value.
-Models based on vector embeddings have successfully been applied to a variety of 
-problems, i.e. semantic search, language translation, question answering and many others.
-
-\section{Self-Attention}
-The most notable innovation in the recently introduced large language models (LLMs) called transformers is their heavy use of the attention mechanism. Intuitively, these models use a trainable set of parameters to weigh all pairwise connections between all individual tokens within a context window. These weights are then used to estimate the most likely token being observed in a given context of tokens.
-In a process called token embedding, each token is mapped to a high-dimensional vector representation. For each positional slot in the context window a unique constant value is added to these embeddings, disambiguing the different positions a token can occur in.
-Each of these embeddings is a point in a hyperdimensional space, representing each of the tokens at a given position.
-For calculating the attention relationship between two positional token embeddings, these embeddings are mapped to two different spaces using linear transformation matrices, resulting in points representing both the incoming and outgoing roles in the pairwise attention relationship. The attention value from one positioned token to another is then essentially given by the dot product between these two representations.
-Optimizing these linear transformations to maximize the attention weights for all token pairs within the training sequences moves these transformed points closer together for pairs of positioned tokens which appear more frequently.
-
-We have described fundamental problems arising from language models based on neural networks and word embeddings, namely these models struggle with the following qualities:
+\noindent``Hallucinations'' in deep neural language models have been investigated and related to the more desirable ``creativity'' as an expression of the same circumstance, where the model predicts a text with a low probability~\cite{math11102320}, due to the input not being extensively represented in training, as in few or zero-shot learning. This does allow for novel generations, which may be desirable, but there is a need to reliably detect a lack of knowledge in a trained model. For neural models, this is challenging, evident from the inability to reliably \textbf{reconstruct} their training data from the trained model~\cite{haim2022reconstructing}. This means deep neural models are inherently prone to generate text that is not represented in their training dataset, and they will fabricate responses even when not been trained on the inputs, creating a risk of making false claims or misrepresentations of reality.
+%reversal curse
+%For many applications, a knowledge base would provide a better solution than auto-regressive neural models, as they can detect missing knowledge while still being able to infer additional knowledge if needed. However knowledge bases are usually manually populated as they incorporate different data formats
 
 
+\section{Interpretability \& Explainability}
+When we use a language model, we not only expect it to be trustworthy, we also want to understand how model arrives at its answers. A language model is interpretable when a human user can understand how the model's internal structure is derived from its training data. It is explainable when they can follow the model's reasoning from an input prompt to the generated output. 
 
+\noindent
+The internal structure of a deep neural network is not generally interpretable, because the original training data can not be reconstructed. Therefore, it is also extremely difficult to explain the model's responses in terms of its training data. If we want to rely on natural language models for knowledge extraction or decision-making, we need some way to verify the sources the responses are based upon. There have been attempts to expand neural LMs with database retrievals in Retrieval Augmented Generation~\cite{lewis2020retrieval}, however these methods are still subject to inaccuracies in their non-interpretable parametric models.
+
+Although we would often like to use language models as classical knowledge bases, it has been established that neural networks are not knowledge bases, but ``statistical models of knowledge bases''~\cite{petroni2019language}. This is advantageous for creative tasks where errors or fabricated information is not a problem, but it disqualifies these models from automated knowledge extraction tasks where accuracy is critical.
+
+\noindent
+Interpretability and Explainability are also important properties for the tuning of models and for cleaning training data. With a larger dataset, it becomes more difficult to filter harmful examples from the dataset or to find a sample subset of interest. Explainable and interpretable models can be analyzed after training and help improve the training data for future iterations. Explainability is helpful for improving or ``debugging'' unhelpful responses even when the original training dataset is not available. This can help users prevent misunderstandings or inaccuracies in the model and use it more effectively and securely.
+
+% - model can not reconstruct its training dataset, meaning it is lossy
+% - difficult to understand how trained parameters relate to the training corpus
+% - gradient descend is lossy
+% - no a priori interpretation of model parameters
+% - internal model structure difficult to translate to human interpretation
+% - required number of parameters unknown before training
+
+\section{Updatability}
+% - updating the model requires retraining
+% - updating the model might influence unrelated outputs
+% - identifying appropriate modifications is challenging due to lack of interpretability
+Another limitation of modern LLMs is the difficulty of updating a trained model with new data or of removing specific data samples after the model has been trained. Since the parameters of a trained model are practically impossible to decipher perfectly, it is difficult to directly update them for a desired effect without possibly corrupting previously learned data points. Like all neural network based architectures, LLMs are usually trained and updated using gradient descent. It is possible to optimize a neural network further on additional data points and even give negative feedback, for example in RLHF (Reinforcement Learning with Human Feedback)~\cite{christiano2017deep}, which is common practice when fine-tuning models for specific tasks, however there can be no certainty that the update will not overfit, corrupt previously learned knowledge and introduce hallucinations without retraining the model on the complete updated data set.
+
+\begin{center}
+    ---
+\end{center}
+\noindent
+We recognize fundamental shortcomings of neural networks when it comes to interpretability, reliability and updatability, qualities that are critical for a secure and effective application of statistical models for language processing. As a first step to develop a language model able to satisfy these requirements more successfully, we set out to lay theoretical foundations for a rule-based, symbolic language modelling framework where reliability, interpretability and updatability come as natural.

@@ -1,10 +1,20 @@
 
+
+%using a complete substring relation and frequency counts of repeating substrings, derived from an input corpus by a grammar induction procedure.
+
+%Neural models of the latest generation have proved their ability to learn complex conceptual relationships in extremely large corpora of natural language using a mechanism called self-attention. Given the convincing generative results of these models, new interest in applying these models at a larger scale has sparked. Natural language model now make considerable contributions to creative writing, knowledge representation and extraction, language translation and programming. Despite the impressive advancement of the field, neural language models remain fundamentally opaque, even to knowledgable users, and give no guarantees regarding the truthfulness of their responses and often produce inconsistent outputs. Additionally, neural models are inherently difficult to modify in a targeted manner after they have been trained, further increasing the cost of building reliable language models using neural methods.
+%
+%In this paper we investigate the specific strengths and weaknesses of attention-based neural language models in comparison to classic n-gram based modelling approaches. We propose the use of explicit relationships between lexical elements to address the problems of neural models and augment a classical n-gram model with a contextual relationship structure to capture information similar to the attention weights used in neural models. Further we devise a compression scheme on the resulting hierarchical n-gram graph to increase the capacity to store long-range dependencies.
+
+
+%There are however fundamental disadvantages of neural models over count based models.
+
 Plan:
 \begin{itemize}
-\item define target operations on structure as solution to problems
-\item define string containment index with these operations
-\item define compressed index for efficient structure
-\item define how to predict context given tokens
+\item x define target operations on structure as solution to problems
+\item x define string containment index with these operations
+\item x define compressed index for efficient structure
+\item x define how to predict context given tokens
 \end{itemize}
 
 
@@ -23,6 +33,7 @@ Target operations:
     \item NLMs are hard to predict
     \item The need for controllable language models
 \end{itemize}
+
 \section{Solution}
 \begin{itemize}
     \item use a model without hallucinations for reconstrucing a training corpus
@@ -46,7 +57,7 @@ Target operations:
     \item required tradeoff to enable novel creative outputs
 \end{itemize}
 
-\subsection{N-Gram Language models}
+\subsection{n-gram Language models}
 Early research of language models, 
 \begin{itemize}
     \item no hallucinations or creativity, instead issues with sparsity
@@ -97,7 +108,7 @@ Early research of language models,
 \paragraph{GLR-Parser}
 The Generalized Left Right (GLR) Parser is a parsing algorithm that is able to parse 
 ambiguous
-and non-deterministic grammars \cite{lang1974deterministic}. It is able to do so by tracking multiple parse trees in a graph-structured stack.
+and non-deterministic grammars \footcite{lang1974deterministic}. It is able to do so by tracking multiple parse trees in a graph-structured stack.
 
 \paragraph{Shared-Packet Parse Forests}
 
@@ -106,7 +117,7 @@ and non-deterministic grammars \cite{lang1974deterministic}. It is able to do so
 \section{Related Methods}
 
 \paragraph{Sequitur}
-The Sequitur algorithm \cite{nevill1997identifying} is a method of grammar induction 
+The Sequitur algorithm \footcite{nevill1997identifying} is a method of grammar induction 
 usable for data compression and discovery of lexical structure. The algorithm 
 recursively replaces repeated sections in a given input string with new grammar rules, iteratively extending a context-free grammar yielding the original string. The Sequitur algorithm enforces two constraints during its operation:
 \begin{itemize}
@@ -120,7 +131,7 @@ To relieve this issue we introduce a new constraint on the grammar induction, wh
 \paragraph{Top-Trees}
 \paragraph{Byte-Pair Encoding}
 \paragraph{Sequence Alignment}
-\paragraph{Hierarchical N-Grams}
+\paragraph{Hierarchical n-grams}
 \paragraph{Recursive Hypergraph}
 
 \section{Analysis}
