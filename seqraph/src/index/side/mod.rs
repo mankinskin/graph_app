@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 //type OppositeContextRange<D, Ty> =
 //    <<Ty as IndexSide<D>>::Opposite as IndexSide<D>>::ContextRange;

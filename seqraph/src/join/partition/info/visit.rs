@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 pub struct PartitionBorders<K: RangeRole, C: PartitionBorderKey = PatternId> {
     pub borders: HashMap<C, K::Borders>,
     pub perfect: K::Perfect,

@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait RangeOffsets<K: RangeRole>: Debug + Clone + Copy {
     fn as_splits<'a, C: AsNodeTraceContext<'a>>(&'a self, ctx: C) -> K::Splits;

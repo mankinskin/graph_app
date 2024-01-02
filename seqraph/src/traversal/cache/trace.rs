@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait Trace {
     fn trace<Trav: Traversable>(&self, trav: &Trav, cache: &mut TraversalCache);
@@ -48,8 +48,9 @@ impl Trace for EndState {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::*;
+    use crate::shared::*;
     use pretty_assertions::assert_eq;
+    use crate::traversal::cache::labelled_key::lab;
 
     pub fn build_trace1() -> FoldState {
         let Context {

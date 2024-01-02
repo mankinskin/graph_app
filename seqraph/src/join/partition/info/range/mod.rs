@@ -6,7 +6,7 @@ pub mod splits;
 pub use splits::*;
 pub mod mode;
 pub use mode::*;
-use crate::*;
+use crate::shared::*;
 
 #[derive(Debug)]
 pub struct PatternRangeInfo<K: RangeRole> {

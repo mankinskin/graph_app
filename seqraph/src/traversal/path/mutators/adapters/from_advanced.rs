@@ -1,5 +1,4 @@
-use crate::*;
-use crate::traversal::Advanced;
+use crate::shared::*;
 
 pub trait FromAdvanced<A: Advanced> {
     fn from_advanced<

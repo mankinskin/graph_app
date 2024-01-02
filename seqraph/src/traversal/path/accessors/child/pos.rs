@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 /// access to the position of a child
 #[auto_impl(&, &mut)]

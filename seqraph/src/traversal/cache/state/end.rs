@@ -1,5 +1,5 @@
 
-use crate::*;
+use crate::shared::*;
 
 // End types:
 // - top down match-mismatch

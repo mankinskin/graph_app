@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait TraceBorders<K: RangeRole>: VisitBorders<K>
 {

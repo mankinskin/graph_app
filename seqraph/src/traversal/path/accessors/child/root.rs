@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 #[auto_impl(&, &mut)]
 pub trait RootChild<R>: RootChildPos<R> {

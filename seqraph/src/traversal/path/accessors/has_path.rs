@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 /// access to a rooted path pointing to a descendant
 #[auto_impl(&mut)]

@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait BoolPerfect: Default + Debug + Clone {
     type Result: BorderPerfect<Boolean = Self>;

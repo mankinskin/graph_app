@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 //pub trait ResultKind: Eq + Clone + Debug + Send + Sync + Unpin {
 //    type Query: QueryPath;

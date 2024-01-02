@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait GraphRootPattern: GraphRoot + RootPattern {
     fn root_pattern_location(&self) -> PatternLocation;

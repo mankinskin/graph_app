@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 use itertools::{
     EitherOrBoth,
     Itertools,
@@ -21,9 +21,9 @@ pub trait MatchDirection : Clone + Debug + Send + Sync + 'static + Unpin {
     type Opposite: MatchDirection;
     type PostfixRange<T>: PatternRangeIndex<T>;
     /// get the parent where vertex is at the relevant position
-    fn get_match_parent_to(
-        graph: &Hypergraph<impl GraphKind>,
-        vertex: &VertexData,
+    fn get_match_parent_to<G: GraphKind>(
+        graph: &Hypergraph<G>,
+        vertex: &VertexData<G>,
         sup: impl Indexed,
     ) -> Result<PatternIndex, NoMatch>;
     fn skip_equal_indices<'a, I: Indexed, J: Indexed>(
@@ -122,9 +122,9 @@ pub trait MatchDirection : Clone + Debug + Send + Sync + 'static + Unpin {
 impl MatchDirection for Right {
     type Opposite = Left;
     type PostfixRange<T> = RangeFrom<PatternId>;
-    fn get_match_parent_to(
-        _graph: &Hypergraph<impl GraphKind>,
-        vertex: &VertexData,
+    fn get_match_parent_to<G: GraphKind>(
+        _graph: &Hypergraph<G>,
+        vertex: &VertexData<G>,
         sup: impl Indexed,
     ) -> Result<PatternIndex, NoMatch> {
         vertex.get_parent_at_prefix_of(sup)
@@ -186,9 +186,9 @@ impl MatchDirection for Right {
 impl MatchDirection for Left {
     type Opposite = Left;
     type PostfixRange<T> = Range<PatternId>;
-    fn get_match_parent_to(
-        graph: &Hypergraph<impl GraphKind>,
-        vertex: &VertexData,
+    fn get_match_parent_to<G: GraphKind>(
+        graph: &Hypergraph<G>,
+        vertex: &VertexData<G>,
         sup: impl Indexed,
     ) -> Result<PatternIndex, NoMatch> {
         let sup = graph.expect_vertex_data(sup);

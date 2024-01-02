@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChildState {
@@ -251,7 +251,7 @@ impl ChildState {
                 )
             )
             .map(|(&pid, child_pattern)| {
-                let sub_index = DirectionOf::<I::Trav>::head_index(
+                let sub_index = traversable::DirectionOf::<I::Trav>::head_index(
                     child_pattern.borrow() as &[Child]
                 );
                 let mut paths = self.paths.clone();

@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait VisitMode<K: RangeRole<Mode = Self>>:
     Debug + Clone + Copy +

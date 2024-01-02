@@ -3,11 +3,10 @@
 use super::*;
 use crate::{
     graph::tests::context,
-    Child,
+    vertex::child::Child,
+    traversal::cache::labelled_key::lab,
 };
-use pretty_assertions::{
-    assert_eq,
-};
+use pretty_assertions::assert_eq;
 use itertools::*;
 
 

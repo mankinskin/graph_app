@@ -1,5 +1,5 @@
 #![allow(non_snake_case, unused)]
-use crate::*;
+use crate::shared::*;
 
 type BuildKey = RangeInclusive<usize>;
 
@@ -20,7 +20,7 @@ pub fn test_grammar() {
     println!("num_e = {}", 4*g.vertex_count());
     let num_bytes = g.vertex_count() * (
             std::mem::size_of::<VertexData>()
-            + std::mem::size_of::<VertexKey>()
+            + std::mem::size_of::<VertexIndex>()
         )
         + 4*g.vertex_count()
         * (
@@ -75,10 +75,10 @@ impl GraphBuilder {
         node: BuilderNode,
     ) {
         self.graph.insert_vertex(
-            VertexKey::Pattern(node.index.vertex_index()),
             VertexData::new(
                 node.index.vertex_index(),
                 node.range.clone().count(),
+                None,
             )
         );
         self.queue.push_back(node);

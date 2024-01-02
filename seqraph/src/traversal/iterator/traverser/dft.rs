@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 #[allow(unused)]
 pub type Dft<'a, Trav, S> = OrderedTraverser<'a, Trav, S, DftStack>;

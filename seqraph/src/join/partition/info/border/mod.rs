@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub mod perfect;
 pub use perfect::*;

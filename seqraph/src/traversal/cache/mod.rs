@@ -1,14 +1,16 @@
-use crate::*;
+use crate::shared::*;
 
 pub mod key;
-pub use key::*;
 pub mod entry;
-pub use entry::*;
 pub mod state;
-pub use state::*;
 pub mod labelled_key;
-pub use labelled_key::*;
 pub mod trace;
+pub use {
+    key::*,
+    entry::*,
+    state::*,
+    labelled_key::*,
+};
 
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -71,7 +73,7 @@ impl TraversalCache {
             if let Some(_) = ve.get_mut(&key.pos) {
                 (key, false)
             } else {
-                drop(ve);
+                //drop(ve);
 
                 let pe = PositionCache::new(
                     self,

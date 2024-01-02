@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub mod pos;
 pub use pos::*;

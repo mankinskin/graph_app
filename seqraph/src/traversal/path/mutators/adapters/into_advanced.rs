@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait IntoAdvanced: Sized + Clone {
     fn into_advanced<

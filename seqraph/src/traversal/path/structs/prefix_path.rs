@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PatternPrefixPath {

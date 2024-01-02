@@ -5,9 +5,11 @@ pub mod complete;
 pub mod border;
 pub mod role;
 
-pub use has_path::*;
-pub use root::*;
-pub use child::*;
-pub use complete::*;
-pub use border::*;
-pub use role::*;
+pub use {
+    has_path::*,
+    root::*,
+    child::*,
+    complete::*,
+    border::*,
+    role::*,
+};

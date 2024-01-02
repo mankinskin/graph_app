@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 macro_rules! impl_traversable {
     {
         impl $(< $( $par:ident $( : $bhead:tt $( + $btail:tt )*)? ),* >)? for $target:ty, $self_:ident => $func:expr; <$lt:lifetime> $guard:ty
@@ -27,14 +27,14 @@ macro_rules! impl_traversable_mut {
 pub(crate) use impl_traversable;
 pub(crate) use impl_traversable_mut;
 
-pub type GraphKindOf<T> = <T as Traversable>::Kind;
-pub type DirectionOf<T> = <GraphKindOf<T> as GraphKind>::Direction;
-
 pub trait Traversable: Sized + std::fmt::Debug {
     type Kind: GraphKind;
     type Guard<'a>: Traversable<Kind=Self::Kind> + Deref<Target=Hypergraph<Self::Kind>> where Self: 'a;
     fn graph<'a>(&'a self) -> Self::Guard<'a>;
 }
+pub type GraphKindOf<T> = <T as Traversable>::Kind;
+pub(crate) type DirectionOf<T> = <GraphKindOf<T> as GraphKind>::Direction;
+
 pub type TravKind<Trav> = <Trav as Traversable>::Kind;
 pub type TravDir<Trav> = <TravKind<Trav> as GraphKind>::Direction;
 pub type TravToken<Trav> = <TravKind<Trav> as GraphKind>::Token;

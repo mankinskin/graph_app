@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 #[derive(Debug, Deref, DerefMut)]
 pub struct SequenceIter<'it> {
     iter: std::iter::Peekable<std::slice::Iter<'it, NewTokenIndex>>

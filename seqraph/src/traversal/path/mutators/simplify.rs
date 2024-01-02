@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait PathSimplify: Sized {
     fn into_simplified<

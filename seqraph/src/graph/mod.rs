@@ -1,22 +1,18 @@
-use crate::*;
+use crate::shared::*;
 
 
 pub mod child_strings;
-pub use child_strings::*;
-
 pub mod getters;
-pub use getters::*;
-
 pub mod insert;
-pub use insert::*;
-
 pub mod validation;
-
 pub mod kind;
-pub use kind::*;
-
 pub mod direction;
-pub use direction::*;
+
+pub use {
+    child_strings::*,
+    kind::*,
+    direction::*,
+};
 
 #[cfg(test)]
 #[macro_use]
@@ -59,19 +55,18 @@ impl<G: GraphKind> std::convert::AsMut<Self> for Hypergraph<G> {
 
 #[derive(Debug)]
 pub struct Hypergraph<G: GraphKind = BaseGraphKind> {
-    graph: indexmap::IndexMap<VertexKey<G::Token>, VertexData>,
+    graph: indexmap::IndexMap<VertexIndex, VertexData<G>>,
+    tokens: indexmap::IndexMap<Token<G::Token>, VertexIndex>,
     pattern_id_count: AtomicUsize,
     vertex_id_count: AtomicUsize,
     _ty: std::marker::PhantomData<G>,
 }
-lazy_static! {
-    static ref LOGGER: Arc<RwLock<Logger>> = Arc::default();
-}
+pub type VertexEntry<'x, G = BaseGraphKind> = indexmap::map::Entry<'x, VertexIndex, VertexData<G>>;
 impl<G: GraphKind> Default for Hypergraph<G> {
     fn default() -> Self {
-        lazy_static::initialize(&LOGGER);
         Self {
             graph: indexmap::IndexMap::default(),
+            tokens: indexmap::IndexMap::default(),
             pattern_id_count: AtomicUsize::new(0),
             vertex_id_count: AtomicUsize::new(0),
             _ty: Default::default(),
@@ -155,20 +150,18 @@ pub struct Edge {
     pub parent: Parent,
     pub child: Child,
 }
-impl<'t, 'a, G> Hypergraph<G>
+impl<'t, 'a, G: GraphKind> Hypergraph<G>
 where
-    G: GraphKind,
     G::Token: std::fmt::Display + 't,
 {
-    pub fn to_petgraph(&self) -> DiGraph<(VertexKey<G::Token>, VertexData), Edge> {
+    pub fn to_petgraph(&self) -> DiGraph<(VertexIndex, VertexData<G>), Edge> {
         let mut pg = DiGraph::new();
         // id refers to index in Hypergraph
         // idx refers to index in petgraph
-        let nodes: HashMap<_, _> = self
+        let nodes: HashMap<_, (_, &VertexData<G>)> = self
             .vertex_iter()
-            .map(|(key, node)| {
-                let idx = pg.add_node((*key, node.clone()));
-                let id = self.expect_index_by_key(key);
+            .map(|(id, node)| {
+                let idx = pg.add_node((*id, node.clone()));
                 (id, (idx, node))
             })
             .collect();
@@ -188,9 +181,9 @@ where
     }
 
     pub fn to_node_child_strings(&self) -> ChildStrings {
-        let nodes = self.graph.iter().map(|(key, data)| {
+        let nodes = self.graph.iter().map(|(_, data)| {
             (
-                self.key_data_string(key, data),
+                self.vertex_data_string(data),
                 data.to_pattern_strings(self),
             )
         });
@@ -243,37 +236,21 @@ where
             )
             .collect()
     }
-    pub fn key_data_string(
+    pub fn vertex_data_string(
         &self,
-        key: &VertexKey<G::Token>,
-        data: &VertexData,
+        data: &VertexData<G>,
     ) -> String {
-        self.key_data_string_impl(key, data, |t| t.to_string())
-    }
-    pub fn key_data_string_impl(
-        &self,
-        key: &VertexKey<G::Token>,
-        data: &VertexData,
-        f: impl Fn(&Token<G::Token>) -> String,
-    ) -> String {
-        match key {
-            VertexKey::Token(token) => f(token),
-            VertexKey::Pattern(_) => self.pattern_string(data.expect_any_child_pattern().1),
+        if let Some(token) = data.token {
+            token.to_string()
+        } else {
+            self.pattern_string(data.expect_any_child_pattern().1)
         }
     }
     pub fn index_string(
         &self,
         index: impl Indexed,
     ) -> String {
-        let (key, data) = self.expect_vertex(index);
-        self.key_data_string(key, data)
+        let data = self.expect_vertex_data(index);
+        self.vertex_data_string(data)
     }
-    pub fn key_string(
-        &self,
-        key: &VertexKey<G::Token>,
-    ) -> String {
-        let data = self.expect_vertex_data_by_key(key);
-        self.key_data_string(key, data)
-    }
-
 }

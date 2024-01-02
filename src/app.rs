@@ -49,7 +49,7 @@ impl App {
             ui.text_edit_singleline(&mut self.graph.insert_text);
             if ui.button("Go").clicked() {
                 let insert_text = self.graph.insert_text.clone();
-                //self.graph.read_text(insert_text, ui.ctx());
+                self.graph.read_text(insert_text, ui.ctx());
                 self.graph.insert_text = String::new();
                 ui.close_menu();
             }

@@ -1,4 +1,6 @@
-use crate::*;
+use crate::shared::*;
+use crate::shared::*;
+
 pub mod vertex;
 pub use vertex::*;
 pub mod position;
@@ -125,8 +127,9 @@ pub fn cleaned_position_splits<'a>(
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::shared::*;
     use pretty_assertions::assert_eq;
+    use crate::traversal::cache::labelled_key::lab;
     macro_rules! nz {
         ($x:expr) => {
             NonZeroUsize::new($x).unwrap()

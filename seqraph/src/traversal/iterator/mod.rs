@@ -3,7 +3,7 @@ pub use bands::*;
 pub mod traverser;
 pub use traverser::*;
 
-use crate::*;
+use crate::shared::*;
 
 pub type IterTrav<'a, It> = <It as TraversalIterator<'a>>::Trav;
 pub type IterKind<'a, It> = TravKind<IterTrav<'a, It>>;

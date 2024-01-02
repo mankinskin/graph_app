@@ -1,14 +1,5 @@
-use petgraph::graph::EdgeIndex;
-use std::{
-    fmt::{
-        self,
-        Debug,
-        Display,
-    },
-    hash::Hash, borrow::Borrow,
-};
-
-use crate::*;
+use crate::shared::*;
+use std::fmt;
 
 pub fn tokenizing_iter<T: Tokenize, C: AsToken<T>>(
     seq: impl Iterator<Item = C>

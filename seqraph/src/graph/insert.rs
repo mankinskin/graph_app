@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 lazy_static! {
     static ref VERTEX_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 }
@@ -9,14 +9,13 @@ where
     /// insert single token node
     pub fn insert_vertex(
         &mut self,
-        key: VertexKey<G::Token>,
-        mut data: VertexData,
+        data: VertexData<G>,
     ) -> Child {
-        assert!(!self.graph.contains_key(&key));
-        let entry = self.graph.entry(key);
-        data.index = indexmap::map::Entry::index(&entry);
+        //assert!(!self.graph.contains_key(&key));
         let c = Child::new(data.index, data.width);
-        entry.or_insert(data);
+        self.graph.entry(data.index)
+            .or_insert(data);
+        //data.index = indexmap::map::Entry::index(&entry);
         //trace!(event = ?logger::Event::NewIndex);
         c
     }
@@ -25,7 +24,15 @@ where
         &mut self,
         token: Token<G::Token>,
     ) -> Child {
-        self.insert_vertex(VertexKey::Token(token), VertexData::new(0, 1))
+        let data = 
+            VertexData::new(
+                self.next_vertex_id(),
+                1,
+                Some(token),
+            );
+        let c = self.insert_vertex(data);
+        self.tokens.insert(token, c.index);
+        c
     }
     /// insert multiple token nodes
     pub fn insert_tokens(
@@ -34,7 +41,9 @@ where
     ) -> Vec<Child> {
         tokens
             .into_iter()
-            .map(|token| self.insert_vertex(VertexKey::Token(token), VertexData::new(0, 1)))
+            .map(|token|
+                self.insert_token(token)
+            )
             .collect()
     }
     /// utility, builds total width, indices and children for pattern
@@ -126,9 +135,9 @@ where
         let (width, indices, children) = self.to_width_indices_children(indices);
         let pattern_id = self.next_pattern_id();
         let id = self.next_vertex_id();
-        let mut new_data = VertexData::new(id, width);
+        let mut new_data = VertexData::new(id, width, None);
         new_data.add_pattern_no_update(pattern_id, children);
-        let index = self.insert_vertex(VertexKey::Pattern(id), new_data);
+        let index = self.insert_vertex(new_data);
         self.add_parents_to_pattern_nodes(indices, Child::new(index, width), pattern_id);
         (index, pattern_id)
     }
@@ -210,7 +219,7 @@ where
         vertex.get_child_pattern(&location.id)
             .map(|pattern| pattern.to_vec())
             .and_then(|pattern|
-                pattern::get_child_pattern_range(
+                get_child_pattern_range(
                     &location.id,
                     pattern.borrow(),
                     range.clone()

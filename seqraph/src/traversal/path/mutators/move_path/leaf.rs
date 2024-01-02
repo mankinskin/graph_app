@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub struct KeyedLeaf<'k, D: Direction, K: MoveKey<D> + 'k> {
     path: &'k mut K,

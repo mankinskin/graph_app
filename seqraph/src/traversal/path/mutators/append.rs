@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 /// move path leaf position one level deeper
 pub trait PathAppend {

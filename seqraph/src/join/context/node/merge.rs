@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 impl<'p> NodeJoinContext<'p> {
     //pub fn indexed_partition_patterns<'a, K: RangeRole<Mode = Join> + 'p, P: AsPartition<K>>(

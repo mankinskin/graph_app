@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub mod offset;
 pub use offset::*;

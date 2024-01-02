@@ -1,9 +1,11 @@
-use crate::*;
+use crate::shared::*;
 
 pub mod splits;
-pub use splits::*;
 pub mod info;
-pub use info::*;
+pub use {
+    splits::*,
+    info::*,
+};
 
 #[derive(new, Clone, Copy)]
 pub struct Infix<

@@ -1,10 +1,3 @@
-use crate::*;
-use either::Either;
-use std::{
-    fmt::Debug,
-    slice::SliceIndex,
-    borrow::Borrow,
-};
 
 pub mod indexed;
 pub mod vertexed;
@@ -14,6 +7,8 @@ pub mod location;
 pub mod token;
 pub mod wide;
 pub mod pattern;
+
+pub use crate::shared::*;
 pub use {
     indexed::*,
     vertexed::*,
@@ -32,7 +27,7 @@ pub type PatternId = usize;
 pub type TokenPosition = usize;
 pub type IndexPosition = usize;
 pub type IndexPattern = Vec<VertexIndex>;
-pub type VertexPatternView<'a> = Vec<&'a VertexData>;
+pub type VertexPatternView<'a, G> = Vec<&'a VertexData<G>>;
 
 pub fn clone_child_patterns(children: &'_ ChildPatterns) -> impl Iterator<Item=Pattern> + '_ {
     children.iter().map(|(_, p)| p.clone())
@@ -44,20 +39,23 @@ pub enum VertexKey<T: Tokenize = TokenOf<BaseGraphKind>> {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct VertexData {
+pub struct VertexData<G: GraphKind = BaseGraphKind> {
     pub index: VertexIndex,
     pub width: TokenPosition,
+    pub token: Option<Token<G::Token>>,
     pub parents: VertexParents,
     pub children: ChildPatterns,
 }
-impl VertexData {
+impl<G: GraphKind> VertexData<G> {
     pub fn new(
         index: VertexIndex,
         width: TokenPosition,
+        token: Option<Token<G::Token>>,
     ) -> Self {
         Self {
             index,
             width,
+            token,
             parents: VertexParents::default(),
             children: ChildPatterns::default(),
         }
@@ -110,7 +108,7 @@ impl VertexData {
     ) -> Result<&'a <R as SliceIndex<[Child]>>::Output, NoMatch> {
         self.get_child_pattern(id)
             .and_then(|p|
-                pattern::get_child_pattern_range(id, p.borrow(), range.clone())
+                pattern::get_child_pattern_range(id, p, range.clone())
             )
     }
     #[track_caller]
@@ -120,7 +118,7 @@ impl VertexData {
         range: R,
     ) -> &'a <R as SliceIndex<[Child]>>::Output {
         let p = self.expect_child_pattern(id);
-        pattern::get_child_pattern_range(id, p.borrow(), range.clone())
+        pattern::get_child_pattern_range(id, p, range.clone())
             .expect("Range in pattern")
     }
     pub fn get_child_pattern_position(
@@ -342,7 +340,7 @@ impl VertexData {
             Either::Right(parents.iter())
         }
     }
-    pub fn to_pattern_strings<G: GraphKind>(
+    pub fn to_pattern_strings(
         &self,
         g: &Hypergraph<G>,
     ) -> Vec<Vec<String>>
@@ -425,7 +423,7 @@ impl VertexData {
     }
     pub fn get_parent_at_postfix_of(
         &self,
-        vertex: &VertexData,
+        vertex: &VertexData<G>,
     ) -> Result<PatternIndex, NoMatch> {
         self.get_parent(vertex.index)
             .ok()

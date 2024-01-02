@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait IntoPrimer: Sized {
     fn into_primer<

@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait SplitInner: Debug + Clone {}
 impl<T: Debug + Clone> SplitInner for T {}

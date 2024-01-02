@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait QueryPosition {
     fn query_pos(&self) -> &TokenLocation;

@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct QueryState {
     pub start: RolePath<Start>,

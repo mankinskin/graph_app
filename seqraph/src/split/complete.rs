@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub fn position_splits<'a>(
     patterns: impl IntoIterator<Item=(&'a PatternId, &'a Pattern)>,
@@ -39,7 +39,7 @@ impl VertexCache {
     pub fn global_splits<N: NodeType>(
         &self,
         end_pos: TokenLocation,
-        node: &VertexData,
+        node: &VertexData<impl GraphKind>,
     ) -> N::GlobalSplitOutput {
         let mut output = N::GlobalSplitOutput::default();
         let (mut front, mut back) = (false, false);

@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub mod indexer;
 pub use indexer::*;
@@ -11,6 +11,7 @@ pub use side::*;
 
 //pub mod path;
 //pub use path::*;
+
 
 #[cfg(test)]
 #[macro_use]

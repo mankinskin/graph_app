@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait GraphKind: Debug + Clone + Default {
     type Token: Tokenize + Display;

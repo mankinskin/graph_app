@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait VisitBorders<K: RangeRole>: Sized + PartitionBorder<K> {
     type Splits;

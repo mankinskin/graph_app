@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait MoveRootPos<D: Direction, R: PathRole = End> {
     fn move_root_pos<

@@ -8,7 +8,7 @@ pub use leaf::*;
 pub use root::*;
 pub use key::*;
 
-use crate::*;
+use crate::shared::*;
 
 pub trait Retract: MovePath<Left, End> {
     fn retract<

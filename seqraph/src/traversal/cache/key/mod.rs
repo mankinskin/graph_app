@@ -1,3 +1,5 @@
+use crate::shared::*;
+
 pub mod pos;
 pub mod leaf;
 pub mod root;
@@ -6,7 +8,7 @@ pub mod prev;
 
 use std::ops::{AddAssign, Add};
 
-use crate::*;
+use crate::shared::*;
 pub use pos::*; 
 pub use leaf::*;
 pub use root::*;

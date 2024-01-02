@@ -7,7 +7,7 @@ pub use vertex::*;
 pub mod position;
 pub use position::*;
 
-use crate::*;
+use crate::shared::*;
 
 pub type StateDepth = usize;
 pub type Offset = NonZeroUsize;

@@ -29,7 +29,7 @@ impl Indexed for VertexIndex {
         *self
     }
 }
-impl Indexed for VertexData {
+impl<G: GraphKind> Indexed for VertexData<G> {
     fn vertex_index(&self) -> VertexIndex {
         self.index
     }

@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait JoinBorders<K: RangeRole<Mode = Join>>: TraceBorders<K> {
     fn get_child_splits<'a>(

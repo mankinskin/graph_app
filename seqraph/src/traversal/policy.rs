@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait NodePath<R>: RootChild<R> + Send + Clone + Eq + Debug {}
 impl<R, T: RootChild<R> + Send + Clone + Eq + Debug> NodePath<R> for T {}

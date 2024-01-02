@@ -1,4 +1,4 @@
-use crate::*;
+pub use crate::shared::*;
 mod reader;
 mod overlap;
 #[cfg(test)]

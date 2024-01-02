@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub type DirectedPositions = HashMap<TokenLocation, PositionCache>;
 

@@ -74,7 +74,7 @@ impl Parent {
     }
     pub fn get_index_at_postfix_of(
         &self,
-        v: &VertexData,
+        v: &VertexData<impl GraphKind>,
     ) -> Option<PatternIndex> {
         self.pattern_indices.iter()
             .find(|i| v.expect_child_pattern(&i.pattern_id).len() == i.sub_index + 1)

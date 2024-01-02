@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 #[derive(Debug, new)]
 pub struct QueryStateContext<'c> {

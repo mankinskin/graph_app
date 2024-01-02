@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait TargetKey {
     fn target_key(&self) -> DirectedKey;

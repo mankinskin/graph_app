@@ -6,10 +6,6 @@ version = "0.1.0"
 
 [features]
 default = [] #["log_stdout", "log_gui"]
-log_file = []
-log_stdout = []
-log_gui = []
-tracing_off = ["tracing/max_level_off"]
 
 [[bin]]
 name = "seqraph"
@@ -19,15 +15,12 @@ async-std = "1.12"
 async-trait = "^0.1"
 either = "^1.6"
 futures = "^0.3"
-indexmap = "^1.6"
+indexmap = "^2.1"
 lazy_static = "^1.4"
 maplit = "^1"
 num-traits = "^0.2"
 pin-project-lite = "^0.2"
 serde_json = "^1"
-tempfile = "^3.3.0"
-tracing-appender = "^0.2"
-tracing-test = "^0.2"
 rand = "^0.8"
 rand_distr = "^0.4"
 itertools = "^0.12"
@@ -38,34 +31,38 @@ rayon = "^1.5.3"
 tap = "^1"
 replace_with = "0.1.7"
 async-recursion = "1"
-console-subscriber = "0.1"
-tracing-mutex = "0.2"
 derive_more = "0.99"
 linked_hash_set = "0.1.4"
 linked-hash-map = "0.5.6"
-derive-new = "0.5"
+derive-new = "0.6"
 inquire = "0.6"
 auto_impl = "1.1.0"
 nrfind = "1"
 ngram = "0.1"
 csv = "1"
 derivative = "^2.2"
+justlog = { path = "../../justlog" }
 
-[dependencies.tracing-egui]
-path = "../../tracing-egui"
+#console-subscriber = "0.2"
+#tracing-mutex = "0.3"
+
+#[dependencies.tracing]
 #version = "^0.1"
+#features = ["attributes", "valuable"]
+#tracing-appender = "^0.2"
+#tracing-test = "^0.2"
+
+#[dependencies.tracing-egui]
+#path = "../../tracing-egui"
+##version = "^0.1"
+
+#[dependencies.tracing-subscriber]
+#version = "^0.3"
+#features = ["json"]
 
 [dependencies.valuable]
 version = "^0.1"
 features = ["derive"]
-
-[dependencies.tracing]
-version = "^0.1"
-features = ["attributes", "valuable"]
-
-[dependencies.tracing-subscriber]
-version = "^0.3"
-features = ["json"]
 
 [dependencies.nalgebra]
 version = "^0.27"

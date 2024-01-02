@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait RootKey {
     fn root_key(&self) -> UpKey;

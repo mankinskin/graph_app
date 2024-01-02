@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct RolePath<R> {

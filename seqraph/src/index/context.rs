@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 trait ContextLocation {
     fn index<

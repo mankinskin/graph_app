@@ -7,7 +7,7 @@ pub use bft::*;
 pub mod pruning;
 pub use pruning::*;
 
-use crate::*;
+use crate::shared::*;
 
 pub trait TraversalOrder: Wide {
     fn sub_index(&self) -> usize;
@@ -121,7 +121,7 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some((d, s)) = self.collection.next() {
-            let mut e = self.pruning_map.get_mut(&s.root_key()).unwrap();
+            let e = self.pruning_map.get_mut(&s.root_key()).unwrap();
             e.count = e.count - 1;
             let pass = !e.prune;
             if e.count == 0 {

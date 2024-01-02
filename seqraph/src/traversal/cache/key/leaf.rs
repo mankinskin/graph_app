@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait LeafKey {
     fn leaf_location(&self) -> ChildLocation;

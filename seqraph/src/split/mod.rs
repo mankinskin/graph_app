@@ -1,13 +1,13 @@
-use crate::*;
+use crate::shared::*;
 
 pub mod cache;
-pub use cache::*;
-
 pub mod complete;
-pub use complete::*;
-
 pub mod augment;
-pub use augment::*;
+pub use {
+    cache::*,
+    complete::*,
+    augment::*,
+};
 
 
 #[derive(Debug, Clone, Eq, PartialEq)]

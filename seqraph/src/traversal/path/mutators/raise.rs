@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub trait PathRaise {
     fn path_raise<
@@ -17,7 +17,7 @@ impl PathRaise for ParentState {
         trav: &Trav,
         parent_entry: ChildLocation,
     ) {
-        let mut path = &mut self.path.role_path.sub_path;
+        let path = &mut self.path.role_path.sub_path;
         let root = self.path.root.location.to_child_location(path.root_entry);
         path.root_entry = parent_entry.sub_index;
         self.path.root.location = parent_entry.into_pattern_location();

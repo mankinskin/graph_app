@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 pub type Bft<'a, Trav, S> = OrderedTraverser<'a, Trav, S, BftQueue>;
 #[derive(Debug)]

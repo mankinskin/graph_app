@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 #[derive(Debug, Clone)]
 pub struct Splitter<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> {

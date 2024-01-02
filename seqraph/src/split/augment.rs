@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 impl SplitVertexCache {
     pub fn offset_range_partition<'a, K: RangeRole>(&'a self, range: K::Range) -> Partition<K> {

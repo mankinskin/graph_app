@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 
 // pop path segments
 pub trait PathPop {

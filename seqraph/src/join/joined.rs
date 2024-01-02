@@ -1,4 +1,4 @@
-use crate::*;
+use crate::shared::*;
 #[derive(Debug)]
 pub struct JoinedPartition<K: RangeRole> {
     pub index: Child,

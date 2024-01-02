@@ -1,7 +1,4 @@
-use crate::{
-    vertex::*,
-};
-use std::ops::Range;
+use crate::shared::*;
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct PatternRangeLocation {

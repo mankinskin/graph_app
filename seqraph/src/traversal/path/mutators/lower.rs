@@ -1,5 +1,5 @@
 
-use crate::*;
+use crate::shared::*;
 
 pub trait PathLower {
     fn end_path(index: usize) -> RolePath<End> {

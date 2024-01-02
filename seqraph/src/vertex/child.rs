@@ -1,9 +1,4 @@
-use super::*;
-use std::{
-    fmt::Debug,
-    hash::Hasher,
-    borrow::Borrow,
-};
+use crate::shared::*;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, From)]
 pub struct ChildWidth(pub usize);
