@@ -1,12 +1,11 @@
 use crate::shared::*;
 use indexmap::IndexMap;
-
 impl<'t, G: GraphKind> Hypergraph<G> {
     pub fn vertex_entry(
         &mut self,
-        key: VertexIndex,
+        key: impl Indexed,
     ) -> VertexEntry<'_, G> {
-        self.graph.entry(key)
+        self.graph.entry(key.vertex_index())
     }
     pub fn get_vertex(
         &self,

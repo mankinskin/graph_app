@@ -20,6 +20,7 @@ pub use {
     wide::*,
 };
 
+pub type VertexEntry<'x, G = BaseGraphKind> = indexmap::map::Entry<'x, VertexIndex, VertexData<G>>;
 pub type VertexIndex = usize;
 pub type VertexParents = HashMap<VertexIndex, Parent>;
 pub type ChildPatterns = HashMap<PatternId, Pattern>;
@@ -38,12 +39,15 @@ pub enum VertexKey<T: Tokenize = TokenOf<BaseGraphKind>> {
     Pattern(VertexIndex),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Builder)]
 pub struct VertexData<G: GraphKind = BaseGraphKind> {
     pub index: VertexIndex,
     pub width: TokenPosition,
+    #[builder(default)]
     pub token: Option<Token<G::Token>>,
+    #[builder(default)]
     pub parents: VertexParents,
+    #[builder(default)]
     pub children: ChildPatterns,
 }
 impl<G: GraphKind> VertexData<G> {

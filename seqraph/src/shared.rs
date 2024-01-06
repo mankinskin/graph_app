@@ -31,6 +31,7 @@ pub use {
     linked_hash_map::*,
     itertools::*,
     justlog::*,
+    derive_builder::Builder,
     derive_more::{
         Add,
         Sub,

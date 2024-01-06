@@ -61,7 +61,7 @@ pub struct Hypergraph<G: GraphKind = BaseGraphKind> {
     vertex_id_count: AtomicUsize,
     _ty: std::marker::PhantomData<G>,
 }
-pub type VertexEntry<'x, G = BaseGraphKind> = indexmap::map::Entry<'x, VertexIndex, VertexData<G>>;
+
 impl<G: GraphKind> Default for Hypergraph<G> {
     fn default() -> Self {
         Self {
