@@ -80,12 +80,6 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G> {
     pub fn to_ref(self) -> HypergraphRef<G> {
         self.into()
     }
-    pub fn index_width(
-        &self,
-        index: &impl Indexed,
-    ) -> TokenPosition {
-        self.expect_vertex_data(index.vertex_index()).width
-    }
     pub fn vertex_count(&self) -> usize {
         self.graph.len()
     }

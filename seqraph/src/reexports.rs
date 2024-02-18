@@ -7,5 +7,8 @@ pub use crate::{
         VertexData,
         VertexEntry,
         VertexDataBuilder,
+        AsChild,
+        Child,
+        Wide,
     },
 };

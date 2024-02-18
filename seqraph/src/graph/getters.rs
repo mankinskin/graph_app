@@ -371,17 +371,23 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         self.expect_vertex_data(location.vertex_index())
             .expect_pattern_len(&location.pattern_id) == location.sub_index + 1
     }
-    pub fn get_child(
+    pub fn expect_child(
         &self,
         index: impl Indexed,
     ) -> Child {
         self.to_child(index)
     }
+    pub fn expect_index_width(
+        &self,
+        index: &impl Indexed,
+    ) -> TokenPosition {
+        self.expect_vertex_data(index.vertex_index()).width
+    }
     pub fn to_child(
         &self,
         index: impl Indexed,
     ) -> Child {
-        Child::new(index.vertex_index(), self.index_width(&index))
+        Child::new(index.vertex_index(), self.expect_index_width(&index))
     }
     pub fn to_children(
         &self,

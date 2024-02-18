@@ -65,14 +65,14 @@ where
     }
     /// adds a parent to all nodes in a pattern
     #[track_caller]
-    fn add_parents_to_pattern_nodes(
+    pub fn add_parents_to_pattern_nodes<I: Indexed, P: AsChild>(
         &mut self,
-        pattern: Vec<VertexIndex>,
-        parent: impl AsChild,
+        pattern: Vec<I>,
+        parent: P,
         pattern_id: PatternId,
     ) {
-        for (i, child_index) in pattern.into_iter().enumerate() {
-            let node = self.expect_vertex_data_mut(child_index);
+        for (i, child) in pattern.into_iter().enumerate() {
+            let node = self.expect_vertex_data_mut(child.vertex_index());
             node.add_parent(ChildLocation::new(parent.as_child(), pattern_id, i));
         }
     }
