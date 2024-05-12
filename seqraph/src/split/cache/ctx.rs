@@ -25,7 +25,7 @@ impl CacheContext {
                 let next = self.leaves.filter_trace_states(
                     trav,
                     &index,
-                    HashMap::from_iter([(offset, subs.clone())]),
+                    Vec::from_iter([(offset, subs.clone())]),
                 );
                 self.states.extend(next);
                 SplitPositionCache::new(prev, subs)

@@ -1,25 +1,14 @@
 
-pub use crate::{
-    traversal::*,
-    vertex::*,
-    graph::*,
-    search::*,
-    vertex::*,
-    traversal::*,
-    //logger::*,
-    direction::*,
-    index::*,
-    //read::*,
-    split::*,
-    graph::*,
-    join::*,
-};
-
 #[cfg(test)]
 pub(crate) use crate::graph::tests::*;
 
 #[allow(unused)]
 pub use {
+    crate::{
+        traversal::{
+            Traversable,
+        },
+    },
     petgraph::{
         graph::{
             DiGraph,
@@ -115,9 +104,18 @@ pub use {
     derive_more::*,
     derivative::*,
 };
+#[cfg(not(any(test, feature = "test-hashing")))]
+pub use std::collections::{
+    HashSet,
+    HashMap,
+};
+
+#[cfg(any(test, feature = "test-hashing"))]
 pub type HashSet<T> =
-    std::collections::HashSet<T,
+    std::collections::HashSet<
+        T,
         BuildHasherDefault<DefaultHasher>
     >;
+#[cfg(any(test, feature = "test-hashing"))]
 pub type HashMap<K, V> =
     std::collections::HashMap<K, V, BuildHasherDefault<DefaultHasher>>;

@@ -12,6 +12,7 @@ pub struct TextLocation {
     pub x: usize,
 }
 
+/// build a graph with all containment relation ships between n and n-1 length pairs
 pub fn containment_graph(texts: &Vec<String>) -> Vocabulary {
     let mut vocab: Vocabulary = Default::default();
     let N: usize = texts.iter().map(|t| t.len()).max().unwrap();
@@ -74,10 +75,8 @@ impl<'a> NGramFrequencyCtx<'a> {
 
         if self.n == 1 || !children.is_empty() {
             let entry = VocabEntry {
-                //id,
                 occurrences: FromIterator::from_iter([self.occurrence]),
                 ngram: self.ngram.clone(),
-                //children,
             };
             if self.n == 1 {
                 vocab.leaves.insert(id.vertex_index());

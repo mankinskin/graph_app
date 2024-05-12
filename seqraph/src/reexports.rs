@@ -10,5 +10,6 @@ pub use crate::{
         AsChild,
         Child,
         Wide,
+        Parent,
     },
 };

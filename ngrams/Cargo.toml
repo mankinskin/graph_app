@@ -2,8 +2,10 @@
 name = "ngrams"
 version = "0.1.0"
 edition = "2021"
+resolver = "2"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+test-hashing = []
 
 [dependencies]
 
@@ -15,10 +17,18 @@ itertools = "^0.12"
 plotters = "^0.3"
 derive_more = "^0.99"
 derive-new = "^0.6"
-derive_builder = "^0.12"
+derive_builder = "^0.20"
 range-ext = "0.3.0"
 pretty_assertions = "1.4.0"
 
 
 [dependencies.seqraph]
-path = "../graph_app/seqraph"
+path = "../seqraph"
+
+[dev-dependencies.seqraph]
+path = "../seqraph"
+features = ["test-hashing"]
+
+[dev-dependencies.ngrams]
+path = "."
+features = ["test-hashing"]

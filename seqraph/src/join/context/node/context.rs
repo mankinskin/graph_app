@@ -36,7 +36,7 @@ pub struct NodeJoinContext<'p, S: HasPosSplits + 'p = SplitVertexCache> {
 impl<'p, S: HasPosSplits + 'p> AsNodeTraceContext<'p> for NodeJoinContext<'p, S> {
     fn as_trace_context<'t>(&'t self) -> NodeTraceContext<'t> where Self: 't, 'p: 't {
         NodeTraceContext {
-            patterns: self.borrow().patterns(),
+            patterns: self.patterns(),
             index: self.borrow().index,
         }
     }

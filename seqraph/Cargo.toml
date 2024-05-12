@@ -3,9 +3,11 @@ authors = ["Linus Behrbohm <linusbehrbohm@web.de>"]
 edition = "2018"
 name = "seqraph"
 version = "0.1.0"
+resolver = "2"
 
 [features]
 default = [] #["log_stdout", "log_gui"]
+test-hashing = []
 
 [[bin]]
 name = "seqraph"
@@ -35,14 +37,14 @@ derive_more = "0.99"
 linked_hash_set = "0.1.4"
 linked-hash-map = "0.5.6"
 derive-new = "0.6"
-inquire = "0.6"
+inquire = "0.7"
 auto_impl = "1.1.0"
 nrfind = "1"
 ngram = "0.1"
 csv = "1"
 derivative = "^2.2"
 justlog = { path = "../../justlog" }
-derive_builder = "^0.12"
+derive_builder = "^0.20"
 
 #console-subscriber = "0.2"
 #tracing-mutex = "0.3"
@@ -66,7 +68,7 @@ version = "^0.1"
 features = ["derive"]
 
 [dependencies.nalgebra]
-version = "^0.27"
+version = "^0.32"
 
 [dependencies.petgraph]
 git = "https://github.com/mankinskin/petgraph"

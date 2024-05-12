@@ -4,6 +4,7 @@ use crate::{
     *,
     shared::*,
 };
+use super::traversal::*;
 
 #[derive(Debug, Deref, From, DerefMut)]
 pub struct FrequencyCtx<'a, 'b: 'a> {
@@ -17,19 +18,16 @@ impl<'a, 'b: 'a> FrequencyCtx<'a, 'b> {
         next.into_iter().map(|(_, c)| c.index).collect()
     }
     fn next_nodes(vocab: &Vocabulary, entry: &VertexCtx<'_>) -> Vec<(usize, VertexIndex)> {
-        entry.data.parents.iter()
-            .filter_map(|(&id, p)|
-                (p.width == entry.entry.ngram.len() + 1)
-                    .then(move ||
-                        p.pattern_indices.iter().map(move |ploc|
-                            (
-                                vocab.graph.expect_child_offset(&ChildLocation::new(
-                                    Child::new(id, p.width), ploc.pattern_id, ploc.sub_index,
-                                )),
-                                id,
-                            )
-                        )
+        entry.direct_parents().iter()
+            .map(|(&id, p)|
+                p.pattern_indices.iter().map(move |ploc|
+                    (
+                        vocab.graph.expect_child_offset(&ChildLocation::new(
+                            Child::new(id, p.width), ploc.pattern_id, ploc.sub_index,
+                        )),
+                        id,
                     )
+                )
             )
             .flatten()
             .collect_vec()

@@ -28,7 +28,7 @@ pub fn test_ngrams() {
     //println!("Finished reading {}", file_path);
     //
     let corpus = crate::OTTOS_MOPS_CORPUS;
-    let mut total_counts: HashMap<String, usize> = hashmap![];
+    let mut total_counts: HashMap<String, usize> = HashMap::default();
     for s in corpus {
         for (n, counts) in ngram_set(s.to_string()).into_iter().enumerate() {
             for (gr, c) in counts {

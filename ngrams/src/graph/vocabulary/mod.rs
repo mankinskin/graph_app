@@ -58,6 +58,11 @@ pub struct VertexCtx<'a> {
     #[deref]
     pub entry: &'a VocabEntry,
 }
+impl<'a> VertexCtx<'a> {
+    pub fn direct_parents(&self) -> &HashMap<VertexIndex, Parent> {
+        &self.data.parents
+    }
+}
 #[derive(Debug, Deref)]
 pub struct VertexCtxMut<'a> {
     pub data: &'a mut VertexData,
