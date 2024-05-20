@@ -1,6 +1,14 @@
-use super::*;
-use crate::shared::*;
+use crate::{
+    graph::kind::GraphKind,
+    vertex::pattern::Pattern,
+    HashMap,
+    HashSet,
+};
 
+use crate::vertex::{
+    PatternId,
+    TokenPosition,
+};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct PatternIndex {
@@ -8,7 +16,10 @@ pub struct PatternIndex {
     pub sub_index: usize,
 }
 impl PatternIndex {
-    pub fn new(pattern_id: PatternId, sub_index: usize) -> Self {
+    pub fn new(
+        pattern_id: PatternId,
+        sub_index: usize,
+    ) -> Self {
         Self {
             pattern_id,
             sub_index,
@@ -41,14 +52,20 @@ impl Parent {
         pattern_id: PatternId,
         sub_index: usize,
     ) {
-        self.pattern_indices.insert(PatternIndex { pattern_id, sub_index });
+        self.pattern_indices.insert(PatternIndex {
+            pattern_id,
+            sub_index,
+        });
     }
     pub fn remove_pattern_index(
         &mut self,
         pattern_id: PatternId,
         sub_index: usize,
     ) {
-        self.pattern_indices.remove(&PatternIndex { pattern_id, sub_index });
+        self.pattern_indices.remove(&PatternIndex {
+            pattern_id,
+            sub_index,
+        });
     }
     pub fn exists_at_pos(
         &self,
@@ -61,20 +78,26 @@ impl Parent {
         pattern_id: PatternId,
         sub_index: usize,
     ) -> bool {
-        self.pattern_indices.contains(&PatternIndex { pattern_id, sub_index })
+        self.pattern_indices.contains(&PatternIndex {
+            pattern_id,
+            sub_index,
+        })
     }
     pub fn get_index_at_pos(
         &self,
         p: usize,
     ) -> Option<PatternIndex> {
-        self.pattern_indices.iter().find(|i| i.sub_index == p)
+        self.pattern_indices
+            .iter()
+            .find(|i| i.sub_index == p)
             .map(Clone::clone)
     }
     pub fn get_index_at_postfix_of(
         &self,
-        v: &VertexData<impl GraphKind>,
+        v: &crate::vertex::VertexData<impl GraphKind>,
     ) -> Option<PatternIndex> {
-        self.pattern_indices.iter()
+        self.pattern_indices
+            .iter()
             .find(|i| v.expect_child_pattern(&i.pattern_id).len() == i.sub_index + 1)
             .map(Clone::clone)
     }
@@ -89,15 +112,13 @@ impl Parent {
         &'a self,
         patterns: &'a HashMap<PatternId, Pattern>,
     ) -> impl Iterator<Item = &'a PatternIndex> {
-        self.pattern_indices
-            .iter()
-            .filter(move |pattern_index| {
-                pattern_index.sub_index + 1
-                    == patterns
-                        .get(&pattern_index.pattern_id)
-                        .expect("Pattern index not in patterns!")
-                        .len()
-            })
+        self.pattern_indices.iter().filter(move |pattern_index| {
+            pattern_index.sub_index + 1
+                == patterns
+                    .get(&pattern_index.pattern_id)
+                    .expect("Pattern index not in patterns!")
+                    .len()
+        })
     }
     // filter for pattern indices which occur in given patterns
     //pub fn filter_pattern_indices_in_patterns<'a>(

@@ -1,15 +1,15 @@
 use crate::shared::*;
 
-pub mod vocabulary;
 pub mod containment;
 pub mod labelling;
+pub mod vocabulary;
 
-pub use {
-    vocabulary::*,
-    labelling::*,
-    containment::*,
-};
 use pretty_assertions::assert_eq;
+pub use {
+    containment::*,
+    labelling::*,
+    vocabulary::*,
+};
 
 //pub type HashSet<T> = std::collections::HashSet<T,
 //    std::hash::BuildHasherDefault<std::hash::DefaultHasher>,
@@ -34,15 +34,19 @@ fn test_containment(ctx: &TestCtx<'_>) {
         ..
     } = ctx;
     assert_eq!(
-        vocab.leaves.iter().map(|vi|
-            vocab.get(vi).unwrap().ngram.clone()
-        ).collect::<HashSet<_>>(),
+        vocab
+            .leaves
+            .iter()
+            .map(|vi| vocab.get(vi).unwrap().ngram.clone())
+            .collect::<HashSet<_>>(),
         *leaves_test,
     );
     assert_eq!(
-        vocab.roots.iter().map(|vi|
-            vocab.get(vi).unwrap().ngram.clone()
-        ).collect::<HashSet<_>>(),
+        vocab
+            .roots
+            .iter()
+            .map(|vi| vocab.get(vi).unwrap().ngram.clone())
+            .collect::<HashSet<_>>(),
         *roots_test,
     );
 }
@@ -55,18 +59,17 @@ fn test_labels(ctx: &TestCtx<'_>) {
         leaves_test,
         roots_test,
     } = ctx;
-    let (
-        labels,
-     ) = (
-        labels.unwrap(),
-     );
-    let label_strings: HashSet<_> = labels.iter().map(|vi|
-        vocab.get(vi).unwrap().ngram.clone()
-    )
-    .collect();
+    let (labels,) = (labels.unwrap(),);
+    let label_strings: HashSet<_> = labels
+        .iter()
+        .map(|vi| vocab.get(vi).unwrap().ngram.clone())
+        .collect();
     println!(
         "{:#?}",
-        label_strings.iter().sorted_by_key(|s| s.len()).collect_vec()
+        label_strings
+            .iter()
+            .sorted_by_key(|s| s.len())
+            .collect_vec()
     );
     for x in &vocab.roots {
         assert!(labels.contains(x));
@@ -77,8 +80,9 @@ fn test_labels(ctx: &TestCtx<'_>) {
     // frequent nodes:
     // - occur in two different contexts
     // i.e. there exist two reachable parent nodes
-    let frequency_test: HashSet<_> =
-        leaves_test.iter().cloned()
+    let frequency_test: HashSet<_> = leaves_test
+        .iter()
+        .cloned()
         .chain(roots_test.into_iter().cloned())
         .chain(
             [
@@ -95,7 +99,7 @@ fn test_labels(ctx: &TestCtx<'_>) {
                 "ottos mops ",
             ]
             .into_iter()
-            .map(ToString::to_string)
+            .map(ToString::to_string),
         )
         .collect();
 
@@ -107,15 +111,14 @@ fn test_labels(ctx: &TestCtx<'_>) {
 pub fn test_graph() {
     let corpus = crate::OTTOS_MOPS_CORPUS;
     let texts = corpus.into_iter().map(ToString::to_string).collect_vec();
-    
+
     // graph of all containment edges between n and n+1
     let vocab = containment_graph(&texts);
 
     let roots_test: HashSet<_> = corpus.iter().map(ToString::to_string).collect();
-    let leaves_test: HashSet<_> = 
-        texts.iter().flat_map(|s|
-            s.chars().ngrams(1).map(String::from_iter).collect_vec()
-        )
+    let leaves_test: HashSet<_> = texts
+        .iter()
+        .flat_map(|s| s.chars().ngrams(1).map(String::from_iter).collect_vec())
         .collect();
     let mut ctx = TestCtx::new(vocab, texts, &corpus, leaves_test, roots_test, None);
     test_containment(&ctx);
@@ -123,5 +126,4 @@ pub fn test_graph() {
     let labels = label_vocab(&ctx.vocab);
     ctx.labels = Some(&labels);
     test_labels(&ctx);
-
 }

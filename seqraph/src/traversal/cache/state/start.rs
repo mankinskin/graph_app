@@ -1,4 +1,37 @@
-use crate::shared::*;
+use crate::{
+    traversal::{
+        cache::{
+            key::{
+                ToPrev,
+                UpKey,
+            },
+            state::{
+                end::{
+                    EndKind,
+                    EndReason,
+                    EndState,
+                },
+                query::QueryState,
+                NextStates,
+                StateNext,
+            },
+        },
+        context::TraversalContext,
+        iterator::TraversalIterator,
+        path::mutators::{
+            adapters::IntoPrimer,
+            move_path::{
+                Advance,
+                RetractKey,
+            },
+        },
+        policy::DirectedTraversalPolicy,
+    },
+    vertex::{
+        child::Child,
+        wide::Wide,
+    },
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StartState {
@@ -11,7 +44,8 @@ impl StartState {
         &mut self,
         ctx: &mut TraversalContext<'a, 'b, I>,
     ) -> NextStates
-        where Self: 'a
+    where
+        Self: 'a,
     {
         let mut query = self.query.to_ctx(ctx);
         let delta = self.index.width();
@@ -22,13 +56,9 @@ impl StartState {
             NextStates::Parents(StateNext {
                 prev: self.key.to_prev(delta),
                 new: vec![],
-                inner: I::Policy::gen_parent_states(
-                    ctx.trav(),
-                    self.index,
-                    |trav, p|
-                        (self.index, self.query.clone())
-                            .into_primer(trav, p)
-                ),
+                inner: I::Policy::gen_parent_states(ctx.trav(), self.index, |trav, p| {
+                    (self.index, self.query.clone()).into_primer(trav, p)
+                }),
             })
         } else {
             NextStates::End(StateNext {
@@ -39,7 +69,7 @@ impl StartState {
                     root_pos: self.index.width().into(),
                     kind: EndKind::Complete(self.index),
                     query: query.state.clone(),
-                }
+                },
             })
         }
     }

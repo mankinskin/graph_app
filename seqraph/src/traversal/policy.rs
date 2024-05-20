@@ -1,11 +1,30 @@
-use crate::shared::*;
+use itertools::Itertools;
+use std::fmt::Debug;
+
+use crate::{
+    traversal::{
+        cache::state::parent::ParentState,
+        folder::TraversalFolder,
+        iterator::traverser::TraversalOrder,
+        path::{
+            accessors::{
+                child::RootChild,
+                root::GraphRoot,
+            },
+            mutators::raise::PathRaise,
+        },
+        traversable::Traversable,
+    },
+    vertex::{
+        child::Child,
+        location::ChildLocation,
+    },
+};
 
 pub trait NodePath<R>: RootChild<R> + Send + Clone + Eq + Debug {}
 impl<R, T: RootChild<R> + Send + Clone + Eq + Debug> NodePath<R> for T {}
 
-
 pub trait DirectedTraversalPolicy: Sized + Debug {
-
     type Trav: TraversalFolder;
 
     /// nodes generated when an index ended
@@ -14,20 +33,14 @@ pub trait DirectedTraversalPolicy: Sized + Debug {
         trav: &Self::Trav,
         parent: &ParentState,
     ) -> Vec<ParentState> {
-        Self::gen_parent_states(
-            trav,
-            parent.path.root_parent(),
-            |trav, p| {
-                let mut parent = parent.clone();
-                parent.path_raise(trav, p);
-                parent
-            }
-        )
+        Self::gen_parent_states(trav, parent.path.root_parent(), |trav, p| {
+            let mut parent = parent.clone();
+            parent.path_raise(trav, p);
+            parent
+        })
     }
     /// generates parent nodes
-    fn gen_parent_states<
-        B: (Fn(&Self::Trav, ChildLocation) -> ParentState) + Copy,
-    >(
+    fn gen_parent_states<B: (Fn(&Self::Trav, ChildLocation) -> ParentState) + Copy>(
         trav: &Self::Trav,
         index: Child,
         build_parent: B,
@@ -38,21 +51,14 @@ pub trait DirectedTraversalPolicy: Sized + Debug {
             .iter()
             .flat_map(|(i, parent)| {
                 let p = Child::new(i, parent.width);
-                parent.pattern_indices
+                parent
+                    .pattern_indices
                     .iter()
                     .cloned()
-                    .map(move |pi| {
-                        ChildLocation::new(p, pi.pattern_id, pi.sub_index)
-                    })
+                    .map(move |pi| ChildLocation::new(p, pi.pattern_id, pi.sub_index))
             })
             .sorted_by(|a, b| TraversalOrder::cmp(b, a))
-            .map(|p| {
-                build_parent(
-                    trav,
-                    p,
-                )
-            })
+            .map(|p| build_parent(trav, p))
             .collect()
-        
     }
 }

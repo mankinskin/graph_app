@@ -1,10 +1,32 @@
-use crate::shared::*;
+use crate::{
+    traversal::{
+        cache::state::query::QueryState,
+        context::QueryStateContext,
+        path::{
+            accessors::role::{
+                End,
+                PathRole,
+            },
+            structs::{
+                query_range_path::QueryRangePath,
+                role_path::RolePath,
+                rooted_path::{
+                    PathRoot,
+                    RootedRolePath,
+                    SearchPath,
+                    SubPath,
+                },
+            },
+        },
+    },
+    vertex::location::ChildLocation,
+};
 
 /// move path leaf position one level deeper
 pub trait PathAppend {
     fn path_append(
         &mut self,
-        parent_entry: ChildLocation
+        parent_entry: ChildLocation,
     );
 }
 
@@ -153,7 +175,7 @@ impl PathAppend for QueryState {
 //        let entry = self.child_location();
 //        let graph = trav.graph();
 //        let pattern = self.graph_root_pattern::<_, Trav>(&graph);
-//        // start paths only at a non-head index position 
+//        // start paths only at a non-head index position
 //        if entry.sub_index != D::head_index(pattern.borrow()) {
 //            self.path.push(parent_entry);
 //        } else {

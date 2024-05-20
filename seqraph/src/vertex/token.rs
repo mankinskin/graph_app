@@ -1,5 +1,15 @@
-use crate::shared::*;
-use std::fmt;
+use petgraph::graph::EdgeIndex;
+use std::{
+    borrow::Borrow,
+    fmt::{
+        self,
+        Debug,
+        Display,
+    },
+    hash::Hash,
+};
+
+use crate::vertex::wide::Wide;
 
 pub fn tokenizing_iter<T: Tokenize, C: AsToken<T>>(
     seq: impl Iterator<Item = C>
@@ -7,7 +17,9 @@ pub fn tokenizing_iter<T: Tokenize, C: AsToken<T>>(
     seq.map(|c| c.as_token())
 }
 /// Trait for token that can be mapped in a sequence
-pub trait Tokenize: TokenData + Wide + Hash + Eq + Copy + Debug + Send + Sync + 'static + Unpin {
+pub trait Tokenize:
+    TokenData + Wide + Hash + Eq + Copy + Debug + Send + Sync + 'static + Unpin
+{
     fn tokenize<T: AsToken<Self>, I: Iterator<Item = T>>(seq: I) -> Vec<Token<Self>> {
         let mut v = vec![];
         v.extend(tokenizing_iter(seq));
@@ -18,7 +30,10 @@ pub trait Tokenize: TokenData + Wide + Hash + Eq + Copy + Debug + Send + Sync + 
         Token::Element(self)
     }
 }
-impl<T: TokenData + Wide + Hash + Eq + Copy + Debug + Send + Sync + 'static + Unpin> Tokenize for T {}
+impl<T: TokenData + Wide + Hash + Eq + Copy + Debug + Send + Sync + 'static + Unpin> Tokenize
+    for T
+{
+}
 
 pub trait TokenData: Debug + PartialEq + Clone + Wide {}
 impl<T: Debug + PartialEq + Clone + Wide> TokenData for T {}
@@ -34,8 +49,8 @@ impl Wide for NoToken {
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq)]
 pub enum NewTokenIndex {
-    New(VertexIndex),
-    Known(VertexIndex),
+    New(crate::vertex::VertexIndex),
+    Known(crate::vertex::VertexIndex),
 }
 impl NewTokenIndex {
     pub fn is_known(&self) -> bool {
@@ -50,24 +65,24 @@ impl Wide for NewTokenIndex {
         1
     }
 }
-impl Indexed for NewTokenIndex {
-    fn vertex_index(&self) -> VertexIndex {
+impl crate::vertex::indexed::Indexed for NewTokenIndex {
+    fn vertex_index(&self) -> crate::vertex::VertexIndex {
         match self {
             Self::New(i) => *i,
             Self::Known(i) => *i,
         }
     }
 }
-impl Borrow<VertexIndex> for &'_ NewTokenIndex {
-    fn borrow(&self) -> &VertexIndex {
+impl Borrow<crate::vertex::VertexIndex> for &'_ NewTokenIndex {
+    fn borrow(&self) -> &crate::vertex::VertexIndex {
         match self {
             NewTokenIndex::New(i) => i,
             NewTokenIndex::Known(i) => i,
         }
     }
 }
-impl Borrow<VertexIndex> for &'_ mut NewTokenIndex {
-    fn borrow(&self) -> &VertexIndex {
+impl Borrow<crate::vertex::VertexIndex> for &'_ mut NewTokenIndex {
+    fn borrow(&self) -> &crate::vertex::VertexIndex {
         match self {
             NewTokenIndex::New(i) => i,
             NewTokenIndex::Known(i) => i,

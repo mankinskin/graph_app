@@ -1,20 +1,58 @@
-use crate::shared::*;
+use crate::{
+    join::{
+        context::node::AsNodeTraceContext,
+        partition::{
+            info::range::role::{
+                In,
+                InVisitMode,
+                Post,
+                PostVisitMode,
+                Pre,
+                PreVisitMode,
+                RangeRole,
+            },
+            splits::offset::OffsetSplits,
+        },
+    },
+    split::{
+        position_splits,
+        range_splits,
+        PatternSplitPos,
+    },
+    vertex::PatternId,
+};
+use std::{
+    fmt::Debug,
+    num::NonZeroUsize,
+};
 
 pub trait RangeOffsets<K: RangeRole>: Debug + Clone + Copy {
-    fn as_splits<'a, C: AsNodeTraceContext<'a>>(&'a self, ctx: C) -> K::Splits;
+    fn as_splits<'a, C: AsNodeTraceContext<'a>>(
+        &'a self,
+        ctx: C,
+    ) -> K::Splits;
 }
 impl<M: InVisitMode> RangeOffsets<In<M>> for (NonZeroUsize, NonZeroUsize) {
-    fn as_splits<'a, C: AsNodeTraceContext<'a>>(&'a self, ctx: C) -> <In<M> as RangeRole>::Splits {
+    fn as_splits<'a, C: AsNodeTraceContext<'a>>(
+        &'a self,
+        ctx: C,
+    ) -> <In<M> as RangeRole>::Splits {
         range_splits(ctx.as_trace_context().patterns.iter(), *self)
     }
 }
 impl<M: PreVisitMode> RangeOffsets<Pre<M>> for NonZeroUsize {
-    fn as_splits<'a, C: AsNodeTraceContext<'a>>(&'a self, ctx: C) -> <Pre<M> as RangeRole>::Splits {
+    fn as_splits<'a, C: AsNodeTraceContext<'a>>(
+        &'a self,
+        ctx: C,
+    ) -> <Pre<M> as RangeRole>::Splits {
         position_splits(ctx.as_trace_context().patterns.iter(), *self)
     }
 }
 impl<M: PostVisitMode> RangeOffsets<Post<M>> for NonZeroUsize {
-    fn as_splits<'a, C: AsNodeTraceContext<'a>>(&'a self, ctx: C) -> <Post<M> as RangeRole>::Splits {
+    fn as_splits<'a, C: AsNodeTraceContext<'a>>(
+        &'a self,
+        ctx: C,
+    ) -> <Post<M> as RangeRole>::Splits {
         position_splits(ctx.as_trace_context().patterns.iter(), *self)
     }
 }
@@ -22,7 +60,10 @@ impl<M: PostVisitMode> RangeOffsets<Post<M>> for NonZeroUsize {
 pub trait PatternSplits: Debug + Clone {
     type Pos;
     type Offsets;
-    fn get(&self, pid: &PatternId) -> Option<Self::Pos>;
+    fn get(
+        &self,
+        pid: &PatternId,
+    ) -> Option<Self::Pos>;
     fn ids<'a>(&'a self) -> Box<dyn Iterator<Item = &'a PatternId> + 'a>;
     fn offsets(&self) -> Self::Offsets;
 }
@@ -49,7 +90,10 @@ pub trait PatternSplits: Debug + Clone {
 impl PatternSplits for OffsetSplits {
     type Pos = PatternSplitPos;
     type Offsets = usize;
-    fn get(&self, pid: &PatternId) -> Option<Self::Pos> {
+    fn get(
+        &self,
+        pid: &PatternId,
+    ) -> Option<Self::Pos> {
         self.splits.get(pid).cloned()
     }
     fn ids<'a>(&'a self) -> Box<dyn Iterator<Item = &'a PatternId> + 'a> {
@@ -62,7 +106,10 @@ impl PatternSplits for OffsetSplits {
 impl<'b> PatternSplits for &'b OffsetSplits {
     type Pos = PatternSplitPos;
     type Offsets = usize;
-    fn get(&self, pid: &PatternId) -> Option<Self::Pos> {
+    fn get(
+        &self,
+        pid: &PatternId,
+    ) -> Option<Self::Pos> {
         self.splits.get(pid).cloned()
     }
     fn ids<'a>(&'a self) -> Box<dyn Iterator<Item = &'a PatternId> + 'a> {
@@ -78,13 +125,13 @@ impl<'b> PatternSplits for &'b OffsetSplits {
 //        *self
 //    }
 //}
-impl<
-    A: PatternSplits,
-    B: PatternSplits,
-> PatternSplits for (A, B) {
+impl<A: PatternSplits, B: PatternSplits> PatternSplits for (A, B) {
     type Pos = (A::Pos, B::Pos);
     type Offsets = (A::Offsets, B::Offsets);
-    fn get(&self, pid: &PatternId) -> Option<Self::Pos> {
+    fn get(
+        &self,
+        pid: &PatternId,
+    ) -> Option<Self::Pos> {
         self.0.get(pid).map(|a| {
             let b = self.1.get(pid).unwrap();
             (a, b)
@@ -94,10 +141,7 @@ impl<
         self.0.ids()
     }
     fn offsets(&self) -> Self::Offsets {
-        (
-            self.0.offsets(),
-            self.1.offsets(),
-        )
+        (self.0.offsets(), self.1.offsets())
     }
 }
 //impl<

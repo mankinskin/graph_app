@@ -79,22 +79,20 @@ macro_rules! impl_index_vocab {
                 self.graph.vertex_entry(key)
             }
             fn get(&self, key: &$t) -> Option<VertexCtx> {
-                self.graph.get_vertex_data(key).ok()
-                    .map(|data|
-                        VertexCtx {
-                            data,
-                            entry: self.labels.get(key).unwrap(),
-                        }
-                    )
+                self.graph.get_vertex_data(key).ok().map(|data| {
+                    VertexCtx {
+                        data,
+                        entry: self.labels.get(key).unwrap(),
+                    }
+                })
             }
             fn get_mut(&mut self, key: &$t) -> Option<VertexCtxMut> {
-                self.graph.get_vertex_data_mut(key).ok()
-                    .map(|data|
-                        VertexCtxMut {
-                            data,
-                            entry: self.labels.get_mut(key).unwrap(),
-                        }
-                    )
+                self.graph.get_vertex_data_mut(key).ok().map(|data| {
+                    VertexCtxMut {
+                        data,
+                        entry: self.labels.get_mut(key).unwrap(),
+                    }
+                })
             }
         }
     };
@@ -104,8 +102,7 @@ impl_index_vocab!(NGramId);
 
 macro_rules! impl_index_vocab_str {
     ($t:ty) => {
-        impl IndexVocab<$t> for Vocabulary
-        {
+        impl IndexVocab<$t> for Vocabulary {
             fn entry(&mut self, key: $t) -> VertexEntry {
                 self.entry(*self.ids.get(key.borrow() as &'_ str).unwrap())
             }

@@ -1,4 +1,30 @@
-use crate::shared::*;
+use crate::traversal::{
+    context::QueryStateContext,
+    path::{
+        accessors::role::{
+            End,
+            PathRole,
+            Start,
+        },
+        structs::{
+            match_end::{
+                MatchEnd,
+                MatchEndPath,
+            },
+            query_range_path::QueryRangePath,
+            role_path::RolePath,
+            rooted_path::{
+                PathRoot,
+                RootedRolePath,
+                RootedSplitPath,
+                RootedSplitPathRef,
+                SearchPath,
+                SubPath,
+            },
+        },
+    },
+};
+use auto_impl::auto_impl;
 
 /// access to the position of a child
 #[auto_impl(&, &mut)]

@@ -45,6 +45,7 @@ csv = "1"
 derivative = "^2.2"
 justlog = { path = "../../justlog" }
 derive_builder = "^0.20"
+tracing = { version = "^0.1", features = ["attributes", "valuable"] }
 
 #console-subscriber = "0.2"
 #tracing-mutex = "0.3"

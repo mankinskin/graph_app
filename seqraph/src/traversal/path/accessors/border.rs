@@ -1,4 +1,13 @@
-use crate::shared::*;
+use crate::{
+    graph::{
+        direction::r#match::MatchDirection,
+        kind::GraphKind,
+    },
+    traversal::traversable::Traversable,
+    vertex::location::ChildLocation,
+};
+use std::borrow::Borrow;
+use crate::traversal::path::accessors::role::{End, Start};
 
 pub trait RelativeDirection<D: MatchDirection> {
     type Direction: MatchDirection;
@@ -14,7 +23,7 @@ impl<D: MatchDirection> RelativeDirection<D> for Back {
     type Direction = <D as MatchDirection>::Opposite;
 }
 
-pub trait PathBorder: {
+pub trait PathBorder {
     type BorderDirection<D: MatchDirection>: RelativeDirection<D>;
 
     //fn pattern_entry_outer_pos<P: IntoPattern>(pattern: P, entry: usize) -> Option<usize> {
@@ -29,8 +38,8 @@ pub trait PathBorder: {
     ) -> bool {
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(&location);
-        <Self::BorderDirection::<<Trav::Kind as GraphKind>::Direction> as RelativeDirection<_>>::Direction::pattern_index_next(
-            pattern.borrow() as &[Child],
+        <Self::BorderDirection<<Trav::Kind as GraphKind>::Direction> as RelativeDirection<_>>::Direction::pattern_index_next(
+            pattern.borrow(),
             location.sub_index,
         ).is_none()
     }

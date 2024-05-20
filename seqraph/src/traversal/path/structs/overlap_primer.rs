@@ -1,4 +1,13 @@
-use crate::shared::*;
+use crate::{
+    traversal::path::{
+        accessors::role::End,
+        structs::{
+            query_range_path::PatternPrefixPath,
+            role_path::RolePath,
+        },
+    },
+    vertex::child::Child,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OverlapPrimer {
@@ -10,7 +19,10 @@ pub struct OverlapPrimer {
     pub end: RolePath<End>,
 }
 impl OverlapPrimer {
-    pub fn new(start: Child, context: PatternPrefixPath) -> Self {
+    pub fn new(
+        start: Child,
+        context: PatternPrefixPath,
+    ) -> Self {
         Self {
             start,
             //context_offset: context.root_child_pos(),

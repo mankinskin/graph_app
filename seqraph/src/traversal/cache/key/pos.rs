@@ -1,4 +1,18 @@
-use crate::shared::*;
+use crate::traversal::{
+    cache::state::{
+        child::ChildState,
+        end::EndState,
+        parent::ParentState,
+        query::QueryState,
+        start::StartState,
+        InnerKind,
+        TraversalState,
+    },
+    path::{
+        mutators::move_path::key::TokenLocation,
+        structs::pair::PathPair,
+    },
+};
 
 pub trait QueryPosition {
     fn query_pos(&self) -> &TokenLocation;
@@ -18,7 +32,7 @@ macro_rules! impl_query_pos {
         }
     };
 }
-impl_query_pos!{
+impl_query_pos! {
     QueryPosition for QueryState, self => self.pos
 }
 impl_query_pos! {
@@ -50,20 +64,16 @@ impl_query_pos! {
 impl QueryPosition for TraversalState {
     fn query_pos(&self) -> &TokenLocation {
         match &self.kind {
-            InnerKind::Parent(state)
-                => &state.query.pos,
-            InnerKind::Child(state)
-                => &state.paths.query.pos,
+            InnerKind::Parent(state) => &state.query.pos,
+            InnerKind::Child(state) => &state.paths.query.pos,
             //InnerKind::End(state)
             //    => &state.query.pos,
         }
     }
     fn query_pos_mut(&mut self) -> &mut TokenLocation {
         match &mut self.kind {
-            InnerKind::Parent(state)
-                => &mut state.query.pos,
-            InnerKind::Child(state)
-                => &mut state.paths.query.pos,
+            InnerKind::Parent(state) => &mut state.query.pos,
+            InnerKind::Child(state) => &mut state.paths.query.pos,
             //InnerKind::End(state)
             //    => &mut state.query.pos,
         }

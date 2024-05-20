@@ -1,12 +1,43 @@
-use crate::shared::*;
+use crate::{
+    traversal::{
+        cache::state::end::{
+            EndKind,
+            EndState,
+        },
+        context::QueryStateContext,
+        path::{
+            accessors::role::PathRole,
+            structs::{
+                match_end::{
+                    MatchEnd,
+                    MatchEndPath,
+                },
+                query_range_path::QueryRangePath,
+                rooted_path::{
+                    IndexRoot,
+                    RootedRolePath,
+                    RootedSplitPath,
+                    RootedSplitPathRef,
+                    SearchPath,
+                },
+            },
+        },
+        traversable::Traversable,
+    },
+    vertex::{
+        child::Child,
+        location::pattern::PatternLocation,
+        pattern::Pattern,
+    },
+};
+use std::borrow::Borrow;
 
 pub trait GraphRootPattern: GraphRoot + RootPattern {
     fn root_pattern_location(&self) -> PatternLocation;
-    fn graph_root_pattern<
-        'a: 'g,
-        'g,
-        Trav: Traversable + 'a,
-    >(&self, trav: &'g Trav::Guard<'a>) -> &'g Pattern {
+    fn graph_root_pattern<'a: 'g, 'g, Trav: Traversable + 'a>(
+        &self,
+        trav: &'g Trav::Guard<'a>,
+    ) -> &'g Pattern {
         trav.expect_pattern_at(self.root_pattern_location())
     }
 }
@@ -37,12 +68,10 @@ pub trait PatternRoot {
     fn pattern_root_pattern(&self) -> &Pattern;
 }
 pub trait RootPattern {
-    fn root_pattern<
-        'a: 'g,
-        'b: 'g,
-        'g,
-        Trav: Traversable + 'a
-    >(&'b self, trav: &'g Trav::Guard<'a>) -> &'g Pattern;
+    fn root_pattern<'a: 'g, 'b: 'g, 'g, Trav: Traversable + 'a>(
+        &'b self,
+        trav: &'g Trav::Guard<'a>,
+    ) -> &'g Pattern;
 }
 //impl<T: GraphRoot> RootChild for T {
 //    fn root_child(&self) -> Child {
@@ -109,7 +138,7 @@ impl<'c> PatternRoot for QueryStateContext<'c> {
         &self.ctx.query_root
     }
 }
-//impl_root! { RootChild for FoundPath, self => 
+//impl_root! { RootChild for FoundPath, self =>
 //    match self {
 //        Self::Path(path) => path.root_child(),
 //        Self::Postfix(path) => path.root_child(),
@@ -117,10 +146,10 @@ impl<'c> PatternRoot for QueryStateContext<'c> {
 //        Self::Complete(c) => *c,
 //    }
 //}
-//impl_root! { <P: RootChild> RootChild for OriginPath<P>, self => 
+//impl_root! { <P: RootChild> RootChild for OriginPath<P>, self =>
 //    self.postfix.root_child()
 //}
-//impl_root! { <P: MatchEndPath> RootChild for MatchEnd<P>, self => 
+//impl_root! { <P: MatchEndPath> RootChild for MatchEnd<P>, self =>
 //    match self {
 //        MatchEnd::Path(start) => start.root_child(),
 //        MatchEnd::Complete(c) => *c,
@@ -200,12 +229,10 @@ impl_root! { RootPattern for RootedSplitPathRef<'_, IndexRoot>, self, trav => Gr
 //impl_root! { RootPattern for RolePath, self, trav => GraphRoot::graph_root_pattern(self, trav).borrow() }
 //impl_root! { RootPattern for PathLeaf, self, trav => GraphRoot::graph_root_pattern(self, trav).borrow() }
 impl<R: PathRole> RootPattern for RootedRolePath<R> {
-    fn root_pattern<
-        'a: 'g,
-        'b: 'g,
-        'g,
-        Trav: Traversable + 'a
-    >(&'b self, trav: &'g Trav::Guard<'a>) -> &'g Pattern {
+    fn root_pattern<'a: 'g, 'b: 'g, 'g, Trav: Traversable + 'a>(
+        &'b self,
+        trav: &'g Trav::Guard<'a>,
+    ) -> &'g Pattern {
         GraphRootPattern::graph_root_pattern::<Trav>(self, trav)
     }
 }

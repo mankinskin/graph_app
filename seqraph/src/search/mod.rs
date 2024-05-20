@@ -1,12 +1,28 @@
-use crate::shared::*;
-use crate::shared::*;
-
 mod searcher;
 
 #[macro_use]
 #[cfg(test)]
 pub mod tests;
 
+use crate::{
+    graph::{
+        kind::TokenOf,
+        HypergraphRef,
+    },
+    traversal::traversable::{
+        GraphKindOf,
+        Traversable,
+    },
+    vertex::{
+        child::Child,
+        pattern::Pattern,
+        token::{
+            tokenizing_iter,
+            AsToken,
+        },
+        PatternId,
+    },
+};
 pub use searcher::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -15,7 +31,7 @@ pub enum NoMatch {
     NoParents,
     NoChildPatterns,
     NotFound,
-    NoMatchingParent(VertexIndex),
+    NoMatchingParent(crate::vertex::VertexIndex),
     InvalidPattern(PatternId),
     InvalidChild(usize),
     InvalidPatternRange(PatternId, Pattern, String),
@@ -37,14 +53,14 @@ pub trait Searchable: Traversable {
     //}
     fn find_ancestor(
         &self,
-        pattern: impl IntoIterator<Item = impl Indexed>,
+        pattern: impl IntoIterator<Item = impl crate::vertex::indexed::Indexed>,
     ) -> SearchResult {
         let pattern = self.graph().to_children(pattern);
         self.searcher().find_pattern_ancestor(pattern)
     }
     fn find_parent(
         &self,
-        pattern: impl IntoIterator<Item = impl Indexed>,
+        pattern: impl IntoIterator<Item = impl crate::vertex::indexed::Indexed>,
     ) -> SearchResult {
         let pattern = self.graph().to_children(pattern);
         self.searcher().find_pattern_parent(pattern)
@@ -58,7 +74,7 @@ pub trait Searchable: Traversable {
         self.find_ancestor(pattern)
     }
 }
-impl<'g> Searchable for &'g Hypergraph {
+impl<'g> Searchable for &'g crate::graph::Hypergraph {
     fn searcher(&self) -> Searcher<Self> {
         Searcher::new(self)
     }

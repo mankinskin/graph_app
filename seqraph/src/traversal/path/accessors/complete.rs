@@ -1,5 +1,15 @@
-use crate::shared::*;
-
+use crate::{
+    traversal::{
+        cache::state::end::EndKind,
+        folder::state::FoldResult,
+        path::structs::match_end::{
+            MatchEnd,
+            MatchEndPath,
+        },
+    },
+    vertex::child::Child,
+};
+use std::fmt::Debug;
 
 pub trait PathComplete: Sized + Debug {
     fn into_complete(&self) -> Option<Child>;
@@ -13,7 +23,10 @@ pub trait PathComplete: Sized + Debug {
             .expect(&format!("Unable to unwrap {:?} as complete.", self))
     }
     #[track_caller]
-    fn expect_complete(self, msg: &str) -> Child {
+    fn expect_complete(
+        self,
+        msg: &str,
+    ) -> Child {
         self.into_complete()
             .expect(&format!("Unable to unwrap {:?} as complete: {}", self, msg))
     }

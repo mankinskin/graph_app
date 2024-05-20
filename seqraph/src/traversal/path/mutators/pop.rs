@@ -1,4 +1,21 @@
-use crate::shared::*;
+use crate::{
+    traversal::{
+        context::QueryStateContext,
+        path::{
+            accessors::role::PathRole,
+            structs::{
+                query_range_path::QueryRangePath,
+                role_path::RolePath,
+                rooted_path::{
+                    PathRoot,
+                    RootedRolePath,
+                    SearchPath,
+                },
+            },
+        },
+    },
+    vertex::location::ChildLocation,
+};
 
 // pop path segments
 pub trait PathPop {

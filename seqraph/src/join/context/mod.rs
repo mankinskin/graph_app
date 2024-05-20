@@ -1,19 +1,29 @@
-use crate::shared::*;
-
 pub mod node;
-pub use node::*;
+
+use node::*;
+use std::sync::RwLockWriteGuard;
 
 pub mod pattern;
-pub use pattern::*;
+use crate::{
+    join::partition::splits::{
+        HasSubSplits,
+        SubSplits,
+    },
+    split::SplitCache,
+    vertex::{
+        child::Child,
+        indexed::Indexed,
+    },
+};
 
 #[derive(Debug)]
 pub struct JoinContext<'p> {
-    pub graph: RwLockWriteGuard<'p, Hypergraph>,
+    pub graph: RwLockWriteGuard<'p, crate::graph::Hypergraph>,
     pub sub_splits: &'p SubSplits,
 }
 impl<'p> JoinContext<'p> {
     pub fn new<SS: HasSubSplits>(
-        graph: RwLockWriteGuard<'p, Hypergraph>,
+        graph: RwLockWriteGuard<'p, crate::graph::Hypergraph>,
         sub_splits: &'p SS,
     ) -> Self {
         Self {
@@ -35,10 +45,17 @@ impl<'p> JoinContext<'p> {
 }
 // , PatternCtx<'p> = PatternJoinContext<'p>
 pub trait AsNodeJoinContext<'p> {
-    fn as_node_join_context<'t>(self) -> NodeJoinContext<'t> where Self: 't, 'p: 't;
+    fn as_node_join_context<'t>(self) -> NodeJoinContext<'t>
+    where
+        Self: 't,
+        'p: 't;
 }
 impl<'p> AsNodeJoinContext<'p> for NodeJoinContext<'p> {
-    fn as_node_join_context<'t>(self) -> NodeJoinContext<'t> where Self: 't, 'p: 't {
+    fn as_node_join_context<'t>(self) -> NodeJoinContext<'t>
+    where
+        Self: 't,
+        'p: 't,
+    {
         self
     }
 }

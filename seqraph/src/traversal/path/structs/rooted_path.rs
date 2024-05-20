@@ -1,4 +1,27 @@
-use crate::shared::*;
+use std::ops::Deref;
+
+use crate::{
+    traversal::{
+        path::{
+            accessors::role::{
+                End,
+                PathRole,
+                Start,
+            },
+            structs::{
+                query_range_path::QueryRangePath,
+                role_path::RolePath,
+            },
+        },
+    },
+    vertex::{
+        location::{
+            pattern::PatternLocation,
+            ChildLocation,
+        },
+        pattern::Pattern,
+    },
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RootedRangePath<Root: PathRoot> {
@@ -10,7 +33,7 @@ impl<R: PathRoot> RootedRangePath<R> {
     pub fn end_path(&self) -> RootedSplitPathRef<'_, R> {
         RootedSplitPathRef {
             root: &self.root,
-            sub_path: &self.end.sub_path
+            sub_path: &self.end.sub_path,
         }
     }
 }
@@ -39,7 +62,9 @@ impl<'a, R: PathRoot> From<&'a RootedSplitPath<R>> for RootedSplitPathRef<'a, R>
         }
     }
 }
-impl<'a, R: PathRole, Root: PathRoot> From<&'a RootedRolePath<R, Root>> for RootedSplitPathRef<'a, Root> {
+impl<'a, R: PathRole, Root: PathRoot> From<&'a RootedRolePath<R, Root>>
+    for RootedSplitPathRef<'a, Root>
+{
     fn from(value: &'a RootedRolePath<R, Root>) -> Self {
         Self {
             root: &value.root,
@@ -50,10 +75,13 @@ impl<'a, R: PathRole, Root: PathRoot> From<&'a RootedRolePath<R, Root>> for Root
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RootedRolePath<R: PathRole, Root: PathRoot = IndexRoot> {
     pub root: Root,
-    pub role_path: RolePath<R>
+    pub role_path: RolePath<R>,
 }
 impl<R: PathRoot> RootedRolePath<Start, R> {
-    pub fn into_range(self, exit: usize) -> RootedRangePath<R> {
+    pub fn into_range(
+        self,
+        exit: usize,
+    ) -> RootedRangePath<R> {
         RootedRangePath {
             root: self.root,
             start: self.role_path,
@@ -61,7 +89,8 @@ impl<R: PathRoot> RootedRolePath<Start, R> {
                 sub_path: SubPath {
                     root_entry: exit,
                     path: vec![],
-                }.into(),
+                }
+                .into(),
                 _ty: Default::default(),
             },
         }
@@ -102,12 +131,9 @@ impl SubPath {
         }
     }
 }
-pub trait PathRoot {
-}
-impl PathRoot for Pattern {
-}
-impl PathRoot for IndexRoot {
-}
+pub trait PathRoot {}
+impl PathRoot for Pattern {}
+impl PathRoot for IndexRoot {}
 
 pub trait RootedPath {
     type Root: PathRoot;

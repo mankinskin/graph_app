@@ -1,4 +1,19 @@
-use crate::shared::*;
+use crate::{
+    traversal::cache::{
+        entry::VertexCache,
+        key::{
+            DirectedKey,
+            TargetKey,
+        },
+        state::end::EndState,
+        TraversalCache,
+    },
+    vertex::{
+        child::Child,
+        indexed::Indexed,
+        wide::Wide,
+    },
+};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum RootMode {
@@ -8,7 +23,7 @@ pub enum RootMode {
 }
 impl Default for RootMode {
     fn default() -> Self {
-        Self::Infix        
+        Self::Infix
     }
 }
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -64,10 +79,10 @@ impl FoldState {
     }
     pub fn leaf(&self) -> DirectedKey {
         self.end_state.target_key()
-            //.iter()
-            //.filter(|s| s.root_key().index == *root)
-            //.map(|s| s.target_key())
-            //.collect()
+        //.iter()
+        //.filter(|s| s.root_key().index == *root)
+        //.map(|s| s.target_key())
+        //.collect()
     }
 }
 
@@ -91,6 +106,5 @@ impl FoldState {
 
 // - continue walk up to parents, write split pieces to table for each position
 //    - use table to pass finished splits upwards
-
 
 // - at root, there are at least 2 splits for each child pattern and only one position

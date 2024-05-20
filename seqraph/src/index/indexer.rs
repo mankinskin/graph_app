@@ -1,4 +1,20 @@
-use super::*;
+use crate::{
+    graph::HypergraphRef,
+    search::NoMatch,
+    traversal::{
+        folder::{
+            state::FoldResult,
+            TraversalFolder,
+        },
+        iterator::traverser::Bft,
+        path::structs::query_range_path::QueryRangePath,
+        policy::DirectedTraversalPolicy,
+    },
+    vertex::{
+        child::Child,
+        pattern::IntoPattern,
+    },
+};
 
 #[derive(Debug, Clone)]
 pub struct Indexer {
@@ -6,13 +22,8 @@ pub struct Indexer {
 }
 
 #[derive(Debug)]
-pub struct IndexingPolicy {
-}
-impl<
-    'a: 'g,
-    'g,
-> DirectedTraversalPolicy for IndexingPolicy
-{
+pub struct IndexingPolicy {}
+impl<'a: 'g, 'g> DirectedTraversalPolicy for IndexingPolicy {
     type Trav = Indexer;
 
     //#[instrument(skip(trav, primer))]
@@ -52,18 +63,8 @@ impl<
     //}
 }
 
-pub trait IndexerTraversalPolicy
-:
-    DirectedTraversalPolicy<
-        Trav=Indexer,
-    >
-{
-}
-impl<
-    'a: 'g,
-    'g,
-> IndexerTraversalPolicy for IndexingPolicy
-{}
+pub trait IndexerTraversalPolicy: DirectedTraversalPolicy<Trav = Indexer> {}
+impl<'a: 'g, 'g> IndexerTraversalPolicy for IndexingPolicy {}
 
 impl TraversalFolder for Indexer {
     //type Break = TraversalResult<R, Q>;
@@ -127,9 +128,7 @@ impl TraversalFolder for Indexer {
 
 impl Indexer {
     pub fn new(graph: HypergraphRef) -> Self {
-        Self {
-            graph,
-        }
+        Self { graph }
     }
     //pub fn contexter<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>>(&self) -> Contexter<Side> {
     //    Contexter::new(self.clone())
@@ -146,10 +145,8 @@ impl Indexer {
     ) -> Result<(Child, QueryRangePath), NoMatch> {
         match <Self as TraversalFolder>::fold_query(self, query) {
             Ok(result) => match result.result {
-                FoldResult::Complete(c) =>
-                    Ok((c, result.query)),
-                FoldResult::Incomplete(s) =>
-                    Ok((self.join_subgraph(s), result.query)),
+                FoldResult::Complete(c) => Ok((c, result.query)),
+                FoldResult::Incomplete(s) => Ok((self.join_subgraph(s), result.query)),
             },
             Err((NoMatch::SingleIndex(c), path)) => Ok((c, path)),
             Err((err, _)) => Err(err),

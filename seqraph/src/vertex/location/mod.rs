@@ -1,5 +1,8 @@
-use crate::shared::*;
-
+use super::PatternId;
+use std::{
+    cmp::PartialEq,
+    fmt::Debug,
+};
 pub mod child;
 pub mod pattern;
 
@@ -12,7 +15,10 @@ pub struct SubLocation {
     pub sub_index: usize,
 }
 impl SubLocation {
-    pub fn new(pattern_id: PatternId, sub_index: usize) -> Self {
+    pub fn new(
+        pattern_id: PatternId,
+        sub_index: usize,
+    ) -> Self {
         Self {
             pattern_id,
             sub_index,
@@ -51,14 +57,13 @@ impl IntoPatternLocation for &ChildLocation {
         (*self).into_pattern_location()
     }
 }
-impl Indexed for ChildLocation {
-    fn vertex_index(&self) -> VertexIndex {
+impl crate::vertex::indexed::Indexed for ChildLocation {
+    fn vertex_index(&self) -> crate::vertex::VertexIndex {
         self.parent.index
     }
 }
-impl Wide for ChildLocation {
+impl crate::vertex::wide::Wide for ChildLocation {
     fn width(&self) -> usize {
         self.parent.width()
     }
 }
-

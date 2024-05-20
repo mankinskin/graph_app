@@ -1,4 +1,28 @@
-use crate::shared::*;
+use crate::{
+    join::{
+        context::pattern::PatternJoinContext,
+        partition::info::{
+            border::{
+                trace::TraceBorders,
+                BorderInfo,
+            },
+            range::{
+                children::InfixChildren,
+                role::{
+                    ChildrenOf,
+                    In,
+                    Join,
+                    ModeChildrenOf,
+                    ModePatternCtxOf,
+                    Post,
+                    Pre,
+                    RangeRole,
+                },
+            },
+        },
+    },
+    traversal::cache::key::SplitKey,
+};
 
 pub trait JoinBorders<K: RangeRole<Mode = Join>>: TraceBorders<K> {
     fn get_child_splits<'a>(
@@ -11,9 +35,12 @@ impl JoinBorders<Post<Join>> for BorderInfo {
         &self,
         ctx: &PatternJoinContext<'a>,
     ) -> Option<ChildrenOf<Post<Join>>> {
-        self.inner_offset.map(|o|
-            ctx.sub_splits.get(&SplitKey::new(ctx.pattern[self.sub_index], o)).unwrap().right
-        )
+        self.inner_offset.map(|o| {
+            ctx.sub_splits
+                .get(&SplitKey::new(ctx.pattern[self.sub_index], o))
+                .unwrap()
+                .right
+        })
     }
 }
 
@@ -22,9 +49,12 @@ impl JoinBorders<Pre<Join>> for BorderInfo {
         &self,
         ctx: &PatternJoinContext<'a>,
     ) -> Option<ChildrenOf<Pre<Join>>> {
-        self.inner_offset.map(|o|
-            ctx.sub_splits.get(&SplitKey::new(ctx.pattern[self.sub_index], o)).unwrap().left
-        )
+        self.inner_offset.map(|o| {
+            ctx.sub_splits
+                .get(&SplitKey::new(ctx.pattern[self.sub_index], o))
+                .unwrap()
+                .left
+        })
     }
 }
 impl JoinBorders<In<Join>> for (BorderInfo, BorderInfo) {

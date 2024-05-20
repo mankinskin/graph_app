@@ -1,15 +1,34 @@
-use crate::shared::*;
+use crate::traversal::path::mutators::move_path::key::TokenLocation;
+use itertools::Itertools;
+use std::cmp::Ordering;
 
 pub mod end;
-pub use end::*;
+use end::*;
 pub mod query;
-pub use query::*;
 pub mod child;
-pub use child::*;
+use child::*;
 pub mod parent;
-pub use parent::*;
+use parent::*;
 pub mod start;
-pub use start::*;
+use crate::{
+    traversal::{
+        cache::{
+            entry::NewEntry,
+            key::{
+                PrevKey,
+                TargetKey,
+            },
+        },
+        context::TraversalContext,
+        iterator::TraversalIterator,
+        path::accessors::{
+            child::GraphRootChild,
+            role::End,
+        },
+        result_kind::RoleChildPath,
+    },
+    vertex::location::ChildLocation,
+};
 
 #[derive(Clone, Debug)]
 pub struct StateNext<T> {
@@ -28,30 +47,29 @@ pub enum NextStates {
 impl NextStates {
     pub fn into_states(self) -> Vec<TraversalState> {
         match self {
-            Self::Parents(state) =>
-                state.inner.iter()
-                    .map(|s| TraversalState {
-                        prev: state.prev.clone(),
-                        new: state.new.clone(),
-                        kind: InnerKind::Parent(s.clone())
-                    })
-                    .collect_vec(),
-            Self::Prefixes(state) =>
-                state.inner.iter()
-                    .map(|s|
-                        TraversalState {
-                            prev: state.prev.clone(),
-                            new: state.new.clone(),
-                            kind: InnerKind::Child(s.clone()),
-                        }
-                    )
-                    .collect_vec(),
-            Self::Child(state) =>
-                vec![TraversalState {
-                    prev: state.prev,
-                    new: state.new,
-                    kind: InnerKind::Child(state.inner),
-                }],
+            Self::Parents(state) => state
+                .inner
+                .iter()
+                .map(|s| TraversalState {
+                    prev: state.prev.clone(),
+                    new: state.new.clone(),
+                    kind: InnerKind::Parent(s.clone()),
+                })
+                .collect_vec(),
+            Self::Prefixes(state) => state
+                .inner
+                .iter()
+                .map(|s| TraversalState {
+                    prev: state.prev.clone(),
+                    new: state.new.clone(),
+                    kind: InnerKind::Child(s.clone()),
+                })
+                .collect_vec(),
+            Self::Child(state) => vec![TraversalState {
+                prev: state.prev,
+                new: state.new,
+                kind: InnerKind::Child(state.inner),
+            }],
             Self::End(_) => vec![],
             Self::Empty => vec![],
         }
@@ -76,7 +94,10 @@ pub enum InnerKind {
     Child(ChildState),
 }
 impl Ord for InnerKind {
-    fn cmp(&self, other: &Self) -> Ordering {
+    fn cmp(
+        &self,
+        other: &Self,
+    ) -> Ordering {
         match (self, other) {
             (InnerKind::Child(a), InnerKind::Child(b)) => a.cmp(b),
             (InnerKind::Parent(a), InnerKind::Parent(b)) => a.cmp(b),
@@ -86,7 +107,10 @@ impl Ord for InnerKind {
     }
 }
 impl PartialOrd for InnerKind {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    fn partial_cmp(
+        &self,
+        other: &Self,
+    ) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
@@ -106,12 +130,18 @@ impl From<WaitingState> for TraversalState {
     }
 }
 impl Ord for TraversalState {
-    fn cmp(&self, other: &Self) -> Ordering {
+    fn cmp(
+        &self,
+        other: &Self,
+    ) -> Ordering {
         self.kind.cmp(&other.kind)
     }
 }
 impl PartialOrd for TraversalState {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    fn partial_cmp(
+        &self,
+        other: &Self,
+    ) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
@@ -127,20 +157,15 @@ impl TraversalState {
     }
     pub fn root_pos(&self) -> TokenLocation {
         match &self.kind {
-            InnerKind::Parent(state)
-                => state.root_pos,
-            InnerKind::Child(state)
-                => state.root_pos,
-
+            InnerKind::Parent(state) => state.root_pos,
+            InnerKind::Child(state) => state.root_pos,
         }
     }
 
     pub fn state_direction(&self) -> StateDirection {
         match &self.kind {
-            InnerKind::Parent(_)
-                => StateDirection::BottomUp,
-            InnerKind::Child(_)
-                => StateDirection::TopDown,
+            InnerKind::Parent(_) => StateDirection::BottomUp,
+            InnerKind::Child(_) => StateDirection::TopDown,
         }
     }
     /// Retrieves next unvisited states and adds edges to cache
@@ -162,10 +187,7 @@ impl TraversalState {
             InnerKind::Parent(state) => {
                 //debug!("Parent({}, {})", key.index.index(), key.index.width());
                 if !exists {
-                    state.next_states(
-                        ctx,
-                        self.new,
-                    )
+                    state.next_states(ctx, self.new)
                 } else {
                     // add other edges leading to this parent
                     for entry in self.new {
@@ -173,13 +195,10 @@ impl TraversalState {
                     }
                     NextStates::Empty
                 }
-            },
+            }
             InnerKind::Child(state) => {
                 if !exists {
-                    state.next_states(
-                        ctx,
-                        self.new,
-                    )
+                    state.next_states(ctx, self.new)
                 } else {
                     // add bottom up path
                     //state.trace(ctx.trav(), ctx.cache);

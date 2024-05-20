@@ -1,17 +1,38 @@
 pub mod dft;
+
 pub use dft::*;
+use itertools::Itertools;
+use std::{
+    cmp::Ordering,
+    fmt::Debug,
+};
 
 pub mod bft;
 pub use bft::*;
 
 pub mod pruning;
+use crate::{
+    traversal::{
+        cache::{
+            key::RootKey,
+            state::TraversalState,
+        },
+        context::TraversalContext,
+        folder::TraversalFolder,
+        iterator::TraversalIterator,
+        policy::DirectedTraversalPolicy,
+        traversable::Traversable,
+    },
+    vertex::location::ChildLocation,
+};
 pub use pruning::*;
 
-use crate::shared::*;
-
-pub trait TraversalOrder: Wide {
+pub trait TraversalOrder: crate::vertex::wide::Wide {
     fn sub_index(&self) -> usize;
-    fn cmp(&self, other: impl TraversalOrder) -> Ordering {
+    fn cmp(
+        &self,
+        other: impl TraversalOrder,
+    ) -> Ordering {
         match other.width().cmp(&self.width()) {
             Ordering::Equal => self.sub_index().cmp(&other.sub_index()),
             r => r,
@@ -29,31 +50,28 @@ impl TraversalOrder for ChildLocation {
     }
 }
 pub trait NodeVisitor:
-    ExtendStates
-    + Iterator<Item=(usize, TraversalState)>
-    + Default
-    + Debug
+    ExtendStates + Iterator<Item = (usize, TraversalState)> + Default + Debug
 {
     fn clear(&mut self);
 }
 #[derive(Debug)]
 pub struct OrderedTraverser<'a, Trav, S, O>
-    where
-        Trav: Traversable,
-        S: DirectedTraversalPolicy<Trav=Trav>,
-        O: NodeVisitor,
+where
+    Trav: Traversable,
+    S: DirectedTraversalPolicy<Trav = Trav>,
+    O: NodeVisitor,
 {
     pub collection: O,
     pub pruning_map: PruningMap,
     pub trav: &'a Trav,
-    pub _ty: std::marker::PhantomData<(&'a S, Trav)>
+    pub _ty: std::marker::PhantomData<(&'a S, Trav)>,
 }
 
 impl<'a, Trav, S, O> From<&'a Trav> for OrderedTraverser<'a, Trav, S, O>
-    where
-        Trav: Traversable,
-        S: DirectedTraversalPolicy<Trav=Trav>,
-        O: NodeVisitor,
+where
+    Trav: Traversable,
+    S: DirectedTraversalPolicy<Trav = Trav>,
+    O: NodeVisitor,
 {
     fn from(trav: &'a Trav) -> Self {
         Self {
@@ -65,31 +83,40 @@ impl<'a, Trav, S, O> From<&'a Trav> for OrderedTraverser<'a, Trav, S, O>
     }
 }
 impl<'a, Trav, S, O> Unpin for OrderedTraverser<'a, Trav, S, O>
-    where
-        Trav: Traversable,
-        S: DirectedTraversalPolicy<Trav=Trav>,
-        O: NodeVisitor,
+where
+    Trav: Traversable,
+    S: DirectedTraversalPolicy<Trav = Trav>,
+    O: NodeVisitor,
 {
 }
 pub trait ExtendStates {
     fn extend<
         It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
-        T: IntoIterator<Item = (usize, TraversalState), IntoIter=It>
-    >(&mut self, iter: T);
+        T: IntoIterator<Item = (usize, TraversalState), IntoIter = It>,
+    >(
+        &mut self,
+        iter: T,
+    );
 }
 impl<'a, Trav, S, O> ExtendStates for OrderedTraverser<'a, Trav, S, O>
-    where
-        Trav: Traversable,
-        S: DirectedTraversalPolicy<Trav=Trav>,
-        O: NodeVisitor,
+where
+    Trav: Traversable,
+    S: DirectedTraversalPolicy<Trav = Trav>,
+    O: NodeVisitor,
 {
     fn extend<
         It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
-        In: IntoIterator<Item = (usize, TraversalState), IntoIter=It>
-    >(&mut self, iter: In) {
-        let states = iter.into_iter().map(|(d, s)| {
+        In: IntoIterator<Item = (usize, TraversalState), IntoIter = It>,
+    >(
+        &mut self,
+        iter: In,
+    ) {
+        let states = iter
+            .into_iter()
+            .map(|(d, s)| {
                 // count states per root
-                self.pruning_map.entry(s.root_key())
+                self.pruning_map
+                    .entry(s.root_key())
                     .and_modify(|ps| ps.count = ps.count + 1)
                     .or_insert(PruningState {
                         count: 1,
@@ -98,23 +125,24 @@ impl<'a, Trav, S, O> ExtendStates for OrderedTraverser<'a, Trav, S, O>
                 (d, s)
             })
             .collect_vec();
-        self.collection.extend(
-            states
-        )
+        self.collection.extend(states)
     }
 }
 impl<'a, 'b: 'a, I: TraversalIterator<'b>> ExtendStates for TraversalContext<'a, 'b, I> {
     fn extend<
         It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
-        In: IntoIterator<Item = (usize, TraversalState), IntoIter=It>
-    >(&mut self, iter: In) {
+        In: IntoIterator<Item = (usize, TraversalState), IntoIter = It>,
+    >(
+        &mut self,
+        iter: In,
+    ) {
         self.iter.extend(iter)
     }
 }
 impl<'a, Trav, S, O> Iterator for OrderedTraverser<'a, Trav, S, O>
 where
     Trav: Traversable + TraversalFolder,
-    S: DirectedTraversalPolicy<Trav=Trav>,
+    S: DirectedTraversalPolicy<Trav = Trav>,
     O: NodeVisitor,
 {
     type Item = (usize, TraversalState);
@@ -128,7 +156,7 @@ where
                 self.pruning_map.remove(&s.root_key());
             }
             if pass {
-                return Some((d, s))
+                return Some((d, s));
             }
         }
         None

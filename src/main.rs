@@ -3,12 +3,10 @@
 
 mod app;
 use app::App;
-mod graph;
 mod examples;
+mod graph;
 
-pub use {
-    tracing::*,
-};
+pub use tracing::*;
 pub use {
     graph::*,
     seqraph::*,

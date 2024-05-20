@@ -1,30 +1,86 @@
-use crate::shared::*;
+use derive_more::{
+    Deref,
+    DerefMut,
+};
+use itertools::Itertools;
+use linked_hash_map::LinkedHashMap;
+use linked_hash_set::LinkedHashSet;
+use std::{
+    iter::FromIterator,
+    num::NonZeroUsize,
+};
 
-pub mod joined;
-pub mod delta;
 pub mod context;
+pub mod delta;
+pub mod joined;
 pub mod partition;
 
-pub use {
-    joined::*,
-    delta::*,
-    context::*,
-    partition::*,
+use crate::{
+    index::indexer::Indexer,
+    join::{
+        context::node::NodeJoinContext,
+        partition::{
+            info::{
+                range::role::{
+                    In,
+                    Join,
+                    Post,
+                    Pre,
+                },
+                visit::{
+                    PartitionBorders,
+                    VisitPartition,
+                },
+                JoinPartition,
+            },
+            splits::{
+                offset::OffsetSplits,
+                HasPosSplits,
+                PosSplitRef,
+            },
+        },
+    },
+    split::{
+        position_splits,
+        Split,
+        SplitCache,
+    },
+    traversal::{
+        cache::key::SplitKey,
+        folder::state::{
+            FoldState,
+            RootMode,
+        },
+        traversable::TraversableMut,
+    },
+    vertex::{
+        child::Child,
+        location::SubLocation,
+        wide::Wide,
+    },
+    HashMap,
 };
+use context::*;
+use joined::*;
+use partition::*;
+use std::borrow::Borrow;
 
 #[derive(Debug, Default, Deref, DerefMut)]
 pub struct SplitFrontier {
     pub queue: LinkedHashSet<SplitKey>,
 }
 impl SplitFrontier {
-    pub fn new(keys: impl IntoIterator<Item=SplitKey>) -> Self {
+    pub fn new(keys: impl IntoIterator<Item = SplitKey>) -> Self {
         Self {
             queue: LinkedHashSet::from_iter(keys),
         }
     }
 }
 impl Extend<SplitKey> for SplitFrontier {
-    fn extend<T: IntoIterator<Item = SplitKey>>(&mut self, iter: T) {
+    fn extend<T: IntoIterator<Item = SplitKey>>(
+        &mut self,
+        iter: T,
+    ) {
         self.queue.extend(iter)
     }
 }
@@ -36,22 +92,16 @@ impl Indexer {
         let root = fold_state.root;
         let split_cache = SplitCache::new(self, fold_state);
 
-        let mut frontier = SplitFrontier::new(
-            split_cache.leaves.iter().cloned().rev()
-        );
+        let mut frontier = SplitFrontier::new(split_cache.leaves.iter().cloned().rev());
         let mut final_splits = HashMap::default();
         while let Some(key) = {
-            frontier.pop_front()
-                .and_then(|key|
-                    (key.index != root).then(|| key)
-                )
+            frontier
+                .pop_front()
+                .and_then(|key| (key.index != root).then(|| key))
         } {
             if final_splits.get(&key).is_none() {
                 let finals = {
-                    let mut ctx = JoinContext::new(
-                            self.graph_mut(),
-                            &final_splits,
-                        )
+                    let mut ctx = JoinContext::new(self.graph_mut(), &final_splits)
                         .node(key.index, &split_cache);
                     Self::join_node_partitions(&mut ctx)
                 };
@@ -60,79 +110,56 @@ impl Indexer {
                     final_splits.insert(key, split);
                 }
             }
-            let top = 
-                split_cache.expect(&key).top.iter()
-                    .sorted_by(|a, b| a.index.width().cmp(&b.index.width()))
-                    .cloned();
+            let top = split_cache
+                .expect(&key)
+                .top
+                .iter()
+                .sorted_by(|a, b| a.index.width().cmp(&b.index.width()))
+                .cloned();
             frontier.extend(top);
         }
         let root_mode = split_cache.root_mode;
-        let mut ctx = 
-            JoinContext::new(
-                    self.graph_mut(),
-                    &final_splits,
-                )
-                .node(root, &split_cache);
-        Self::join_root_partitions(
-            &mut ctx,
-            root_mode,
-        )
+        let mut ctx = JoinContext::new(self.graph_mut(), &final_splits).node(root, &split_cache);
+        Self::join_root_partitions(&mut ctx, root_mode)
     }
     pub fn index_partitions<'p, 't, S: HasPosSplits + 'p>(
         ctx: &mut NodeJoinContext<'p>,
         pos_splits: S,
     ) -> Vec<Child>
-        where 'p: 't
+    where
+        'p: 't,
     {
         let offset_splits = pos_splits.pos_splits();
         let len = offset_splits.len();
         assert!(len > 0);
-        let mut iter = offset_splits.iter()
-            .map(|(&offset, splits)|
-                OffsetSplits {
-                    offset,
-                    splits: splits.borrow().clone(),
-                }
-            );
+        let mut iter = offset_splits.iter().map(|(&offset, splits)| OffsetSplits {
+            offset,
+            splits: splits.borrow().clone(),
+        });
         let mut prev = iter.next().unwrap();
         let mut parts = Vec::with_capacity(1 + len);
-        parts.push(
-            Prefix::new(&prev).join_partition(ctx).into()
-        );
+        parts.push(Prefix::new(&prev).join_partition(ctx).into());
         for offset in iter {
-            parts.push(
-                Infix::new(&prev, &offset).join_partition(ctx).into()
-            );
+            parts.push(Infix::new(&prev, &offset).join_partition(ctx).into());
             prev = offset;
         }
-        parts.push(
-            Postfix::new(prev).join_partition(ctx).into()
-        );
+        parts.push(Postfix::new(prev).join_partition(ctx).into());
         println!("{:#?}", parts);
         parts
     }
-    pub fn join_node_partitions<'p>(
-        ctx: &mut NodeJoinContext<'p>,
+    pub fn join_node_partitions(
+        ctx: &mut NodeJoinContext
     ) -> LinkedHashMap<SplitKey, Split> {
-        let partitions = Self::index_partitions(
-            ctx,
-            ctx.pos_splits,
-        );
+        let partitions = Self::index_partitions(ctx, ctx.pos_splits);
         assert_eq!(
             ctx.index.width(),
             partitions.iter().map(Child::width).sum::<usize>()
         );
-        assert_eq!(
-            partitions.len(),
-            ctx.pos_splits.len() + 1,
-        );
-        ctx.merge_node(
-            ctx.pos_splits,
-            &partitions,
-        )
+        assert_eq!(partitions.len(), ctx.pos_splits.len() + 1,);
+        ctx.merge_node(ctx.pos_splits, &partitions)
     }
-    pub fn join_root_partitions<'p>(
-        ctx: &mut NodeJoinContext<'p>,
+    pub fn join_root_partitions(
+        ctx: &mut NodeJoinContext,
         root_mode: RootMode,
     ) -> Child {
         let index = ctx.index;
@@ -144,31 +171,18 @@ impl Indexer {
         match root_mode {
             RootMode::Prefix => {
                 assert_eq!(num_offsets, 1);
-                Self::join_prefix_root(
-                    ctx,
-                    offset,
-                    index,
-                )
-            },
+                Self::join_prefix_root(ctx, offset, index)
+            }
             RootMode::Postfix => {
                 assert_eq!(num_offsets, 1);
-                Self::join_postfix_root(
-                    ctx,
-                    offset,
-                    index,
-                )
-            },
+                Self::join_postfix_root(ctx, offset, index)
+            }
             RootMode::Infix => {
                 assert_eq!(num_offsets, 2);
                 let prev_offset = offset;
                 let offset = offset_iter.next().unwrap();
 
-                Self::join_infix_root(
-                    ctx,
-                    prev_offset,
-                    offset,
-                    index,
-                )
+                Self::join_infix_root(ctx, prev_offset, offset, index)
             }
         }
     }
@@ -181,13 +195,11 @@ impl Indexer {
             Ok(part) => {
                 if part.perfect.is_none() {
                     let post = Postfix::new(offset).join_partition(ctx).unwrap();
-                    ctx.graph.add_pattern_with_update(
-                        index,
-                        [part.index, post.index],
-                    );
+                    ctx.graph
+                        .add_pattern_with_update(index, [part.index, post.index]);
                 }
                 part.index
-            },
+            }
             Err(c) => c,
         }
     }
@@ -204,16 +216,13 @@ impl Indexer {
                         Ok(pre) => {
                             println!("{:#?}", pre);
                             pre.index
-                        },
+                        }
                         Err(c) => c,
                     };
-                    ctx.graph.add_pattern_with_update(
-                        index,
-                        [pre, part.index],
-                    );
+                    ctx.graph.add_pattern_with_update(index, [pre, part.index]);
                 }
                 part.index
-            },
+            }
             Err(c) => c,
         }
     }
@@ -232,23 +241,12 @@ impl Indexer {
             //        [               ]
             // |     |      |      |     |   |
             let (offset, pre) = match Prefix::new(loffset).join_partition(ctx) {
-                Ok(part) => 
-                    (
-                        (roffset.0, (roffset.1.clone() - part.delta)),
-                        part.index,
-                    ),
-                Err(ch) =>
-                    (
-                        roffset,
-                        ch,
-                    ),
+                Ok(part) => ((roffset.0, roffset.1.clone() - part.delta), part.index),
+                Err(ch) => (roffset, ch),
             };
             let post: Child = Postfix::new(offset).join_partition(ctx).into();
-            ctx.graph.add_pattern_with_update(
-                index,
-                [pre, part.index, post],
-            );
-
+            ctx.graph
+                .add_pattern_with_update(index, [pre, part.index, post]);
         } else if part.perfect.0 == part.perfect.1 {
             // perfect borders in same pattern
             //       [               ]
@@ -256,11 +254,8 @@ impl Indexer {
             let (ll, rl) = (part.perfect.0.unwrap(), part.perfect.1.unwrap());
             let lpos = loffset.1.pattern_splits[&ll].sub_index;
             let rpos = roffset.1.pattern_splits[&rl].sub_index;
-            ctx.graph.replace_in_pattern(
-                index.to_pattern_location(ll),
-                lpos..rpos,
-                [part.index],
-            )
+            ctx.graph
+                .replace_in_pattern(index.to_pattern_location(ll), lpos..rpos, [part.index])
         } else {
             // one or both are perfect in different patterns
             let loffset = (loffset.0, &loffset.1);
@@ -270,18 +265,15 @@ impl Indexer {
                 // |     |       |     |    |     |
 
                 let (wrap_offset, li) = {
-                    let pre_brds: PartitionBorders<Pre<Join>> = Prefix::new(
-                        loffset,
-                    )
-                    .partition_borders(ctx);
+                    let pre_brds: PartitionBorders<Pre<Join>> =
+                        Prefix::new(loffset).partition_borders(ctx);
                     let rp_brd = &pre_brds.borders[&rp];
                     let li = rp_brd.sub_index;
-                    let lc = ctx.graph.expect_child_at(
-                        ctx.index.to_child_location(SubLocation::new(rp, li)
-                    ));
-                    let outer_offset = NonZeroUsize::new(
-                        rp_brd.start_offset.unwrap().get() + lc.width(),
-                    ).unwrap();
+                    let lc = ctx
+                        .graph
+                        .expect_child_at(ctx.index.to_child_location(SubLocation::new(rp, li)));
+                    let outer_offset =
+                        NonZeroUsize::new(rp_brd.start_offset.unwrap().get() + lc.width()).unwrap();
                     (position_splits(ctx.patterns(), outer_offset), li)
                 };
                 let ri = roffset.1.pattern_splits[&rp].sub_index;
@@ -289,23 +281,18 @@ impl Indexer {
                 //prev_offset.1 = prev_offset.1 - pre.delta;
 
                 let wrap_patterns = Infix::new(&wrap_offset, roffset)
-                    .info_partition(ctx).unwrap()
+                    .info_partition(ctx)
+                    .unwrap()
                     .to_joined_patterns(ctx);
-                let wrap_pre = match Infix::new(wrap_offset, loffset)
-                    .join_partition(ctx) {
+                let wrap_pre = match Infix::new(wrap_offset, loffset).join_partition(ctx) {
                     Ok(p) => p.index,
                     Err(c) => c,
                 };
                 let wrapper = ctx.graph.insert_patterns(
-                    std::iter::once(vec![wrap_pre, part.index])
-                        .chain(wrap_patterns.patterns),
+                    std::iter::once(vec![wrap_pre, part.index]).chain(wrap_patterns.patterns),
                 );
                 let loc = index.to_pattern_location(rp);
-                ctx.graph.replace_in_pattern(
-                    loc,
-                    li..ri,
-                    [wrapper],
-                );
+                ctx.graph.replace_in_pattern(loc, li..ri, [wrapper]);
 
                 //let patterns = wrap_patterns.patterns.clone();
                 //offset.1 = offset.1 - wrap_patterns.delta;
@@ -325,21 +312,18 @@ impl Indexer {
             if let Some(lp) = part.perfect.0 {
                 //       [                 ]
                 // |     |       |      |      |   |
-                
+
                 // find wrapping offsets
                 let (wrap_offset, ri) = {
-                    let post_brds: PartitionBorders<Post<Join>> = Postfix::new(
-                        roffset,
-                    )
-                    .partition_borders(ctx);
+                    let post_brds: PartitionBorders<Post<Join>> =
+                        Postfix::new(roffset).partition_borders(ctx);
                     let lp_brd = &post_brds.borders[&lp];
                     let ri = lp_brd.sub_index;
-                    let rc = ctx.graph.expect_child_at(
-                        ctx.index.to_child_location(SubLocation::new(lp, ri)
-                    ));
-                    let outer_offset = NonZeroUsize::new(
-                        lp_brd.start_offset.unwrap().get() + rc.width(),
-                    ).unwrap();
+                    let rc = ctx
+                        .graph
+                        .expect_child_at(ctx.index.to_child_location(SubLocation::new(lp, ri)));
+                    let outer_offset =
+                        NonZeroUsize::new(lp_brd.start_offset.unwrap().get() + rc.width()).unwrap();
                     (position_splits(ctx.patterns(), outer_offset), ri)
                 };
 
@@ -349,22 +333,16 @@ impl Indexer {
                     .info_partition(ctx)
                     .unwrap()
                     .to_joined_patterns(ctx);
-                let wrap_post = match Infix::new(roffset, wrap_offset)
-                    .join_partition(ctx) {
+                let wrap_post = match Infix::new(roffset, wrap_offset).join_partition(ctx) {
                     Ok(p) => p.index,
                     Err(c) => c,
                 };
 
                 let wrapper = ctx.graph.insert_patterns(
-                    std::iter::once(vec![part.index, wrap_post])
-                        .chain(wrap_patterns.patterns),
+                    std::iter::once(vec![part.index, wrap_post]).chain(wrap_patterns.patterns),
                 );
                 let loc = index.to_pattern_location(lp);
-                ctx.graph.replace_in_pattern(
-                    loc,
-                    li..ri+1,
-                    [wrapper],
-                );
+                ctx.graph.replace_in_pattern(loc, li..ri + 1, [wrapper]);
             }
         }
         part.index
@@ -376,13 +354,7 @@ impl Indexer {
         index: Child,
     ) -> Child {
         match Infix::new(loffset, roffset).join_partition(ctx) {
-            Ok(part) => Self::join_incomplete_infix(
-                ctx,
-                part,
-                loffset,
-                roffset,
-                index,
-            ),
+            Ok(part) => Self::join_incomplete_infix(ctx, part, loffset, roffset, index),
             Err(c) => c,
         }
     }

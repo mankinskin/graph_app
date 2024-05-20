@@ -1,18 +1,38 @@
-use crate::shared::*;
+use crate::{
+    traversal::{
+        cache::state::{
+            parent::ParentState,
+            query::QueryState,
+        },
+        path::structs::{
+            role_path::RolePath,
+            rooted_path::{
+                IndexRoot,
+                RootedRolePath,
+                SubPath,
+            },
+        },
+        traversable::Traversable,
+    },
+    vertex::{
+        child::Child,
+        location::{
+            ChildLocation,
+            IntoPatternLocation,
+        },
+        wide::Wide,
+    },
+};
 
 pub trait IntoPrimer: Sized {
-    fn into_primer<
-        Trav: Traversable,
-    >(
+    fn into_primer<Trav: Traversable>(
         self,
         trav: &Trav,
         parent_entry: ChildLocation,
     ) -> ParentState;
 }
 impl IntoPrimer for (Child, QueryState) {
-    fn into_primer<
-        Trav: Traversable,
-    >(
+    fn into_primer<Trav: Traversable>(
         self,
         _trav: &Trav,
         parent_entry: ChildLocation,

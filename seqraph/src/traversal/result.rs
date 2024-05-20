@@ -1,4 +1,19 @@
-use crate::shared::*;
+use crate::{
+    traversal::{
+        folder::state::FoldResult,
+        path::{
+            accessors::complete::PathComplete,
+            structs::query_range_path::{
+                QueryPath,
+                QueryRangePath,
+            },
+        },
+    },
+    vertex::{
+        child::Child,
+        pattern::IntoPattern,
+    },
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TraversalResult {
@@ -22,13 +37,19 @@ impl TraversalResult {
     }
     #[allow(unused)]
     #[track_caller]
-    pub fn expect_complete(self, msg: &str) -> Child {
+    pub fn expect_complete(
+        self,
+        msg: &str,
+    ) -> Child {
         self.result.expect_complete(msg)
     }
 }
 impl TraversalResult {
     #[allow(unused)]
-    pub fn new_complete(query: impl IntoPattern, index: impl AsChild) -> Self {
+    pub fn new_complete(
+        query: impl IntoPattern,
+        index: impl crate::vertex::indexed::AsChild,
+    ) -> Self {
         Self {
             result: FoldResult::Complete(index.as_child()),
             query: QueryRangePath::complete(query),

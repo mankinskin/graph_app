@@ -1,4 +1,3 @@
-
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Left;
 #[derive(Debug, PartialEq, Eq, Clone)]

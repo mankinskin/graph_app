@@ -1,4 +1,10 @@
 use super::*;
+use crate::vertex::PatternId;
+use itertools::Itertools;
+use std::sync::{
+    RwLockReadGuard,
+    RwLockWriteGuard,
+};
 pub struct Context {
     pub graph: HypergraphRef,
     pub a: Child,
@@ -192,12 +198,16 @@ pub fn context_mut() -> RwLockWriteGuard<'static, Context> {
 #[test]
 fn test_to_petgraph() {
     let mut graph = Hypergraph::<BaseGraphKind>::default();
-    let (a, b, c, d) = graph.insert_tokens([
-        Token::Element('a'),
-        Token::Element('b'),
-        Token::Element('c'),
-        Token::Element('d'),
-    ]).into_iter().next_tuple().unwrap();
+    let (a, b, c, d) = graph
+        .insert_tokens([
+            Token::Element('a'),
+            Token::Element('b'),
+            Token::Element('c'),
+            Token::Element('d'),
+        ])
+        .into_iter()
+        .next_tuple()
+        .unwrap();
     // ab cd
     // abc d
     // a bcd

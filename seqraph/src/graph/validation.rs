@@ -1,4 +1,12 @@
-use crate::shared::*;
+use crate::{
+    graph::kind::GraphKind,
+    vertex::{
+        location::{
+            pattern::PatternLocation,
+            IntoPatternLocation,
+        },
+    },
+};
 
 #[derive(Debug, Clone)]
 pub enum ValidationError {
@@ -6,7 +14,7 @@ pub enum ValidationError {
     InvalidPattern(PatternLocation),
 }
 
-impl<'t, 'a, G> Hypergraph<G>
+impl<'t, 'a, G> crate::graph::Hypergraph<G>
 where
     G: GraphKind,
 {
@@ -17,11 +25,7 @@ where
         end: usize,
     ) -> Result<(), ValidationError> {
         if end - start > 0 {
-            self.validate_pattern_range_at(
-                location,
-                start,
-                end,
-            )
+            self.validate_pattern_range_at(location, start, end)
         } else {
             Err(ValidationError::InvalidPatternRange(
                 "No more than a single index in range path".into(),
@@ -38,12 +42,9 @@ where
         end: usize,
     ) -> Result<(), ValidationError> {
         let location = location.into_pattern_location();
-        let pattern = self.get_pattern_at(&location)
-            .map_err(|_|
-                ValidationError::InvalidPattern(
-                    location,
-                )
-            )?;
+        let pattern = self
+            .get_pattern_at(&location)
+            .map_err(|_| ValidationError::InvalidPattern(location))?;
         if end >= pattern.len() {
             Err(ValidationError::InvalidPatternRange(
                 format!("End index {} out of pattern range {}", end, pattern.len()),

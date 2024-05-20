@@ -1,21 +1,64 @@
-use crate::shared::*;
+use crate::{
+    graph::kind::GraphKind,
+    index::side::{
+        IndexBack,
+        IndexSide,
+    },
+    join::partition::splits::offset::OffsetSplits,
+    split::{
+        PatternSplitPos,
+        SplitCacheBuilder,
+    },
+    traversal::{
+        cache::entry::{
+            NodeSplitOutput,
+            NodeType,
+            Offset,
+            SubSplitLocation,
+            VertexCache,
+        },
+        folder::state::{
+            FoldState,
+            RootMode,
+        },
+        path::mutators::move_path::key::TokenLocation,
+        traversable::Traversable,
+    },
+    vertex::{
+        child::Child,
+        indexed::Indexed,
+        location::SubLocation,
+        pattern::Pattern,
+        wide::Wide,
+        PatternId,
+        VertexData,
+    },
+    HashSet,
+};
+use itertools::Itertools;
+use std::{
+    borrow::Borrow,
+    num::NonZeroUsize,
+};
 
 pub fn position_splits<'a>(
-    patterns: impl IntoIterator<Item=(&'a PatternId, &'a Pattern)>,
+    patterns: impl IntoIterator<Item = (&'a PatternId, &'a Pattern)>,
     offset: NonZeroUsize,
 ) -> OffsetSplits {
     OffsetSplits {
         offset,
-        splits: patterns.into_iter()
-            .map(|(pid, pat)| { 
-                let (sub_index, inner_offset) = IndexBack::token_offset_split(
-                    pat.borrow() as &[Child],
-                    offset,
-                ).unwrap();
-                (*pid, PatternSplitPos {
-                    sub_index,
-                    inner_offset,
-                })
+        splits: patterns
+            .into_iter()
+            .map(|(pid, pat)| {
+                let (sub_index, inner_offset) =
+                    IndexBack::token_offset_split(pat.borrow(), offset).unwrap();
+                (
+                    *pid,
+                    PatternSplitPos {
+                        sub_index,
+                        inner_offset,
+                    },
+                )
             })
             .collect(),
     }
@@ -26,13 +69,12 @@ impl SplitCacheBuilder {
         fold_state: &FoldState,
         index: &Child,
     ) -> N::CompleteSplitOutput {
-        fold_state.cache.entries.get(&index.vertex_index()).map(|e|
-            e.complete_splits::<_, N>(
-                trav,
-                fold_state.end_state.width().into(),
-            )
-        )
-        .unwrap_or_default()
+        fold_state
+            .cache
+            .entries
+            .get(&index.vertex_index())
+            .map(|e| e.complete_splits::<_, N>(trav, fold_state.end_state.width().into()))
+            .unwrap_or_default()
     }
 }
 impl VertexCache {
@@ -56,14 +98,11 @@ impl VertexCache {
                     .and_then(|o| o.checked_add(offset))
                     .or(NonZeroUsize::new(offset))
                 {
-                    output.splits_mut()
+                    output
+                        .splits_mut()
                         .entry(parent_offset)
-                        .and_modify(|e: &mut Vec<_>|
-                            e.push(bottom.clone())
-                        )
-                        .or_insert_with(||
-                            vec![bottom]
-                        );
+                        .and_modify(|e: &mut Vec<_>| e.push(bottom.clone()))
+                        .or_insert_with(|| vec![bottom]);
                     front = true;
                 } else {
                     break;
@@ -84,16 +123,14 @@ impl VertexCache {
                     inner_offset,
                 };
                 let offset = node.expect_child_offset(&location);
-                let parent_offset = inner_offset.map(|o| o.checked_add(offset).unwrap())
+                let parent_offset = inner_offset
+                    .map(|o| o.checked_add(offset).unwrap())
                     .unwrap_or_else(|| NonZeroUsize::new(offset).unwrap());
                 if parent_offset.get() < node.width {
                     if let Some(e) = output.splits_mut().get_mut(&parent_offset) {
                         e.push(bottom)
                     } else {
-                        output.splits_mut().insert(
-                            parent_offset,
-                            vec![bottom]
-                        );
+                        output.splits_mut().insert(parent_offset, vec![bottom]);
                     }
                     back = true;
                 }
@@ -118,50 +155,41 @@ impl VertexCache {
 
         let output = self.global_splits::<N>(end_pos, node);
 
-        N::map(output, |global_splits|
-            global_splits.into_iter()
+        N::map(output, |global_splits| {
+            global_splits
+                .into_iter()
                 .map(|(parent_offset, mut locs)| {
                     if locs.len() < node.children.len() {
-                        let pids: HashSet<_> = locs.iter()
-                            .map(|l| l.location.pattern_id)
-                            .collect();
-                        let missing = node.children.iter()
-                            .filter(|(pid, _)|
-                                !pids.contains(pid)
-                            )
+                        let pids: HashSet<_> = locs.iter().map(|l| l.location.pattern_id).collect();
+                        let missing = node
+                            .children
+                            .iter()
+                            .filter(|(pid, _)| !pids.contains(pid))
                             .collect_vec();
-                        let new_splits = 
-                            position_splits(
-                                missing,
-                                parent_offset,
-                            )
-                            .splits;
-                        locs.extend(
-                            new_splits.into_iter()
-                            .map(|(pid, loc)|
-                                SubSplitLocation {
-                                    location: SubLocation::new(
-                                        pid,
-                                        loc.sub_index,
-                                    ),
-                                    inner_offset: loc.inner_offset,
-                                }
-                            )
-                        )
+                        let new_splits = position_splits(missing, parent_offset).splits;
+                        locs.extend(new_splits.into_iter().map(|(pid, loc)| SubSplitLocation {
+                            location: SubLocation::new(pid, loc.sub_index),
+                            inner_offset: loc.inner_offset,
+                        }))
                     }
                     (
                         parent_offset,
-                        locs.into_iter().map(|sub|
-                            if sub.inner_offset.is_some() || node.children[&sub.location.pattern_id].len() > 2 {
-                                // can't be clean
-                                Ok(sub)
-                            } else {
-                                // must be clean
-                                Err(sub.location)
-                            }
-                        ).collect()
+                        locs.into_iter()
+                            .map(|sub| {
+                                if sub.inner_offset.is_some()
+                                    || node.children[&sub.location.pattern_id].len() > 2
+                                {
+                                    // can't be clean
+                                    Ok(sub)
+                                } else {
+                                    // must be clean
+                                    Err(sub.location)
+                                }
+                            })
+                            .collect(),
                     )
-            }).collect()
-        )
+                })
+                .collect()
+        })
     }
 }

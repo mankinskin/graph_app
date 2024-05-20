@@ -1,5 +1,4 @@
 #![deny(clippy::disallowed_methods)]
-
 #![feature(test)]
 #![feature(async_closure)]
 #![feature(assert_matches)]
@@ -14,19 +13,35 @@
 
 extern crate test;
 
+#[cfg(not(any(test, feature = "test-hashing")))]
+pub use std::collections::{
+    HashMap,
+    HashSet,
+};
+
+#[cfg(any(test, feature = "test-hashing"))]
+use std::hash::{
+    BuildHasherDefault,
+    DefaultHasher,
+};
+
+//pub use reexports::*;
+
 pub mod direction;
 pub mod graph;
-pub mod search;
-pub mod vertex;
-pub mod traversal;
 pub mod index;
+pub mod search;
+pub mod traversal;
+pub mod vertex;
 //pub mod logger;
 pub mod mock;
 pub mod split;
 //pub mod read;
-pub mod tests;
 pub mod join;
-pub mod reexports;
-pub mod shared;
+pub mod tests;
+//pub mod reexports;
 
-pub use reexports::*;
+#[cfg(any(test, feature = "test-hashing"))]
+pub type HashSet<T> = std::collections::HashSet<T, BuildHasherDefault<DefaultHasher>>;
+#[cfg(any(test, feature = "test-hashing"))]
+pub type HashMap<K, V> = std::collections::HashMap<K, V, BuildHasherDefault<DefaultHasher>>;

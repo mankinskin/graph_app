@@ -1,4 +1,24 @@
-use crate::shared::*;
+use crate::{
+    split::{
+        cleaned_position_splits,
+        Leaves,
+        SplitPositionCache,
+        TraceState,
+    },
+    traversal::{
+        cache::{
+            entry::SubSplitLocation,
+            key::SplitKey,
+        },
+        traversable::Traversable,
+    },
+    vertex::child::Child,
+};
+use std::{
+    collections::VecDeque,
+    iter::FromIterator,
+    num::NonZeroUsize,
+};
 
 #[derive(Debug)]
 pub struct CacheContext {
@@ -17,10 +37,7 @@ impl CacheContext {
         let (_, node) = graph.expect_vertex(index);
 
         // handle clean splits
-        match cleaned_position_splits(
-            node.children.iter(),
-            offset,
-        ) {
+        match cleaned_position_splits(node.children.iter(), offset) {
             Ok(subs) => {
                 let next = self.leaves.filter_trace_states(
                     trav,
@@ -29,15 +46,16 @@ impl CacheContext {
                 );
                 self.states.extend(next);
                 SplitPositionCache::new(prev, subs)
-            },
+            }
             Err(location) => {
                 self.leaves.push(SplitKey::new(index, offset));
-                SplitPositionCache::new(prev, vec![
-                    SubSplitLocation {
+                SplitPositionCache::new(
+                    prev,
+                    vec![SubSplitLocation {
                         location,
                         inner_offset: None,
-                    }
-                ])
+                    }],
+                )
             }
         }
     }

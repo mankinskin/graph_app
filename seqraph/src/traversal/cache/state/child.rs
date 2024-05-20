@@ -1,4 +1,74 @@
-use crate::shared::*;
+use crate::{
+    graph::direction::r#match::MatchDirection,
+    traversal::{
+        cache::{
+            entry::NewEntry,
+            key::{
+                DirectedKey,
+                QueryPosition,
+                TargetKey,
+                ToPrev,
+            },
+            state::{
+                end::{
+                    EndKind,
+                    EndReason,
+                    EndState,
+                    RangeEnd,
+                },
+                parent::ParentState,
+                NextStates,
+                StateNext,
+            },
+        },
+        context::TraversalContext,
+        iterator::{
+            traverser::PruneStates,
+            TraversalIterator,
+        },
+        path::{
+            accessors::{
+                role::{
+                    End,
+                    Start,
+                },
+                root::GraphRoot,
+            },
+            mutators::{
+                lower::PathLower,
+                move_path::{
+                    key::TokenLocation,
+                    Advance,
+                    AdvanceKey,
+                    Retract,
+                },
+            },
+            structs::pair::{
+                PathPair,
+                PathPairMode,
+            },
+        },
+        result_kind::{
+            Primer,
+            RoleChildPath,
+        },
+        traversable::{
+            DirectionOf,
+            Traversable,
+        },
+    },
+    vertex::{
+        child::Child,
+        location::ChildLocation,
+        wide::Wide,
+    },
+};
+use itertools::Itertools;
+use std::{
+    borrow::Borrow,
+    cmp::Ordering,
+};
+use tap::Tap;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChildState {
@@ -8,19 +78,29 @@ pub struct ChildState {
     pub paths: PathPair,
 }
 impl Ord for Child {
-    fn cmp(&self, other: &Self) -> Ordering {
+    fn cmp(
+        &self,
+        other: &Self,
+    ) -> Ordering {
         self.width().cmp(&other.width())
     }
 }
 impl Ord for ChildState {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.paths.path.root_parent().cmp(
-            &other.paths.path.root_parent()
-        )
+    fn cmp(
+        &self,
+        other: &Self,
+    ) -> Ordering {
+        self.paths
+            .path
+            .root_parent()
+            .cmp(&other.paths.path.root_parent())
     }
 }
 impl PartialOrd for ChildState {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    fn partial_cmp(
+        &self,
+        other: &Self,
+    ) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
@@ -37,63 +117,47 @@ impl ChildState {
 
         // compare next child
         match path_leaf.width.cmp(&query_leaf.width) {
-            Ordering::Equal =>
+            Ordering::Equal => {
                 if path_leaf == query_leaf {
-                    self.on_match(
-                        ctx,
-                        new,
-                    )
+                    self.on_match(ctx, new)
                 } else if path_leaf.width() == 1 {
-                    self.on_mismatch(
-                        ctx,
-                        new,
-                    )
+                    self.on_mismatch(ctx, new)
                 } else {
                     // expand states to find matching prefix
                     NextStates::Prefixes(StateNext {
                         prev: key.to_prev(0),
                         new,
-                        inner: self.clone().tap_mut(|s|
-                            s.paths.mode = PathPairMode::GraphMajor
-                        ).prefix_states(
-                            ctx,
-                            path_leaf,
-                        )
-                        .into_iter()
-                        .chain(
-                            self.tap_mut(|s|
-                                s.paths.mode = PathPairMode::QueryMajor
-                            ).prefix_states(
-                                ctx,
-                                query_leaf,
+                        inner: self
+                            .clone()
+                            .tap_mut(|s| s.paths.mode = PathPairMode::GraphMajor)
+                            .prefix_states(ctx, path_leaf)
+                            .into_iter()
+                            .chain(
+                                self.tap_mut(|s| s.paths.mode = PathPairMode::QueryMajor)
+                                    .prefix_states(ctx, query_leaf),
                             )
-                        )
-                        .collect_vec()
+                            .collect_vec(),
                     })
                 }
+            }
             Ordering::Greater =>
-                // continue in prefix of child
+            // continue in prefix of child
+            {
                 NextStates::Prefixes(StateNext {
                     prev: key.to_prev(0),
                     new,
-                    inner: self.tap_mut(|s|
-                        s.paths.mode = PathPairMode::GraphMajor
-                    ).prefix_states(
-                        ctx,
-                        path_leaf,
-                    )
-                }),
-            Ordering::Less =>
-                NextStates::Prefixes(StateNext {
-                    prev: key.to_prev(0),
-                    new,
-                    inner: self.tap_mut(|s|
-                        s.paths.mode = PathPairMode::QueryMajor
-                    ).prefix_states(
-                        ctx,
-                        query_leaf,
-                    )
-                }),
+                    inner: self
+                        .tap_mut(|s| s.paths.mode = PathPairMode::GraphMajor)
+                        .prefix_states(ctx, path_leaf),
+                })
+            }
+            Ordering::Less => NextStates::Prefixes(StateNext {
+                prev: key.to_prev(0),
+                new,
+                inner: self
+                    .tap_mut(|s| s.paths.mode = PathPairMode::QueryMajor)
+                    .prefix_states(ctx, query_leaf),
+            }),
         }
     }
     fn on_match<'a, 'b: 'a, I: TraversalIterator<'b>>(
@@ -126,10 +190,10 @@ impl ChildState {
                         root_pos: self.root_pos,
                         target: DirectedKey::down(
                             path.role_leaf_child::<End, _>(ctx.trav()),
-                            *self.paths.query.query_pos()
+                            *self.paths.query.query_pos(),
                         ),
                         paths: self.paths,
-                    }
+                    },
                 })
             } else {
                 ParentState {
@@ -137,16 +201,11 @@ impl ChildState {
                     root_pos: self.root_pos,
                     path: Primer::from(self.paths.path),
                     query: self.paths.query,
-                }.next_parents(
-                    ctx,
-                    vec![],
-                )
+                }
+                .next_parents(ctx, vec![])
             }
         } else {
-            self.on_query_end(
-                ctx,
-                vec![],
-            )
+            self.on_query_end(ctx, vec![])
         }
     }
     fn on_mismatch<'a, 'b: 'a, I: TraversalIterator<'b>>(
@@ -165,7 +224,10 @@ impl ChildState {
         path.retract(ctx.trav());
         if let Some(index) = loop {
             if path.role_root_child_pos::<Start>() == path.role_root_child_pos::<End>() {
-                if (&mut self.root_pos, &mut path).path_lower(ctx.trav()).is_break() {
+                if (&mut self.root_pos, &mut path)
+                    .path_lower(ctx.trav())
+                    .is_break()
+                {
                     let graph = ctx.trav().graph();
                     let pattern = graph.expect_pattern_at(&path.root.location);
                     let entry = path.start.sub_path.root_entry;
@@ -184,7 +246,7 @@ impl ChildState {
                     query: query.state.clone(),
                     reason: EndReason::Mismatch,
                     kind: EndKind::Complete(index),
-                }
+                },
             })
         } else {
             NextStates::End(StateNext {
@@ -199,7 +261,8 @@ impl ChildState {
                             query.state.pos,
                         ),
                         path,
-                    }.simplify(ctx.trav()),
+                    }
+                    .simplify(ctx.trav()),
                     query: query.state.clone(),
                 },
             })
@@ -212,9 +275,7 @@ impl ChildState {
     ) -> NextStates {
         let key = self.target_key();
         let PathPair {
-            mut query,
-            path,
-            ..
+            mut query, path, ..
         } = self.paths;
         let target_index = path.role_leaf_child::<End, _>(ctx.trav());
         let pos = query.pos;
@@ -228,12 +289,10 @@ impl ChildState {
                 reason: EndReason::QueryEnd,
                 kind: RangeEnd {
                     path,
-                    target: DirectedKey::down(
-                        target_index,
-                        pos,
-                    ),
-                }.simplify(ctx.trav()),
-            }
+                    target: DirectedKey::down(target_index, pos),
+                }
+                .simplify(ctx.trav()),
+            },
         })
     }
     /// generate child states for index prefixes
@@ -242,18 +301,17 @@ impl ChildState {
         ctx: &mut I,
         index: Child,
     ) -> Vec<ChildState> {
-        ctx.trav().graph()
+        ctx.trav()
+            .graph()
             .expect_vertex_data(index)
-            .get_child_patterns().iter()
-            .sorted_unstable_by(|(_, a), (_, b)|
-                b.first().unwrap().width.cmp(
-                    &a.first().unwrap().width
-                )
-            )
+            .get_child_patterns()
+            .iter()
+            .sorted_unstable_by(|(_, a), (_, b)| {
+                b.first().unwrap().width.cmp(&a.first().unwrap().width)
+            })
             .map(|(&pid, child_pattern)| {
-                let sub_index = traversable::DirectionOf::<I::Trav>::head_index(
-                    child_pattern.borrow() as &[Child]
-                );
+                let sub_index =
+                    DirectionOf::<I::Trav>::head_index(child_pattern.borrow());
                 let mut paths = self.paths.clone();
                 paths.push_major(ChildLocation::new(index, pid, sub_index));
                 ChildState {

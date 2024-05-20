@@ -1,4 +1,37 @@
-use crate::shared::*;
+use crate::{
+    traversal::{
+        cache::{
+            key::{
+                DirectedKey,
+                PrevKey,
+                RootKey,
+                TargetKey,
+                UpKey,
+            },
+            state::{
+                child::ChildState,
+                end::{
+                    EndKind,
+                    EndState,
+                    RangeEnd,
+                },
+                parent::ParentState,
+                InnerKind,
+                StateDirection,
+                TraversalState,
+            },
+        },
+        path::accessors::{
+            child::GraphRootChild,
+            role::{
+                End,
+                Start,
+            },
+        },
+        result_kind::RoleChildPath,
+    },
+    vertex::location::ChildLocation,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NewEntry {
@@ -17,10 +50,8 @@ impl NewEntry {
     }
     pub fn state_direction(&self) -> StateDirection {
         match &self.kind {
-            NewKind::Parent(_)
-                => StateDirection::BottomUp,
-            NewKind::Child(_)
-                => StateDirection::TopDown,
+            NewKind::Parent(_) => StateDirection::BottomUp,
+            NewKind::Child(_) => StateDirection::TopDown,
         }
     }
 }
@@ -36,10 +67,8 @@ impl From<&TraversalState> for NewEntry {
 impl From<&InnerKind> for NewKind {
     fn from(state: &InnerKind) -> Self {
         match state {
-            InnerKind::Parent(state)
-                => Self::Parent(state.into()),
-            InnerKind::Child(state)
-                => Self::Child(state.into()),
+            InnerKind::Parent(state) => Self::Parent(state.into()),
+            InnerKind::Child(state) => Self::Child(state.into()),
         }
     }
 }
@@ -51,7 +80,7 @@ pub enum NewKind {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NewParent {
     pub root: UpKey,
-    pub entry: ChildLocation
+    pub entry: ChildLocation,
 }
 impl From<&ParentState> for NewParent {
     fn from(state: &ParentState) -> Self {
@@ -65,7 +94,7 @@ impl From<&ParentState> for NewParent {
 pub struct NewChild {
     pub root: UpKey,
     pub target: DirectedKey,
-    pub end_leaf: Option<ChildLocation>
+    pub end_leaf: Option<ChildLocation>,
 }
 impl From<&ChildState> for NewChild {
     fn from(state: &ChildState) -> Self {
@@ -102,7 +131,7 @@ impl From<&RangeEnd> for NewRangeEnd {
     fn from(state: &RangeEnd) -> Self {
         Self {
             target: state.target,
-            entry: GraphRootChild::<Start>::root_child_location(&state.path)
+            entry: GraphRootChild::<Start>::root_child_location(&state.path),
         }
     }
 }

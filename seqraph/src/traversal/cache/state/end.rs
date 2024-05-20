@@ -1,5 +1,39 @@
-
-use crate::shared::*;
+use crate::{
+    traversal::{
+        cache::{
+            key::{
+                DirectedKey,
+                RootKey,
+                UpKey,
+            },
+            state::{
+                query::QueryState,
+                StateDirection,
+            },
+        },
+        path::{
+            accessors::{
+                child::GraphRootChild,
+                role::{
+                    End,
+                    Start,
+                },
+            },
+            mutators::move_path::key::TokenLocation,
+            structs::rooted_path::{
+                RootedRolePath,
+                RootedSplitPathRef,
+                SearchPath,
+            },
+        },
+        result_kind::Primer,
+    },
+    vertex::{
+        child::Child,
+        location::ChildLocation,
+        wide::Wide,
+    },
+};
 
 // End types:
 // - top down match-mismatch
@@ -31,7 +65,9 @@ pub struct EndState {
 impl EndState {
     pub fn entry_location(&self) -> Option<ChildLocation> {
         match &self.kind {
-            EndKind::Range(state) => Some(GraphRootChild::<Start>::root_child_location(&state.path)),
+            EndKind::Range(state) => {
+                Some(GraphRootChild::<Start>::root_child_location(&state.path))
+            }
             EndKind::Postfix(_) => None,
             EndKind::Prefix(_) => None,
             EndKind::Complete(_) => None,

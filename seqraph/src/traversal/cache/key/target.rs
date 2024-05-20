@@ -1,4 +1,25 @@
-use crate::shared::*;
+use crate::traversal::cache::{
+    entry::{
+        NewEnd,
+        NewEntry,
+        NewKind,
+    },
+    key::{
+        DirectedKey,
+        QueryPosition,
+        RootKey,
+    },
+    state::{
+        child::ChildState,
+        end::{
+            EndKind,
+            EndState,
+        },
+        parent::ParentState,
+        InnerKind,
+        TraversalState,
+    },
+};
 
 pub trait TargetKey {
     fn target_key(&self) -> DirectedKey;
@@ -44,8 +65,7 @@ impl TargetKey for NewEnd {
         match &self {
             Self::Range(state) => state.target,
             Self::Postfix(root) => (*root).into(),
-            Self::Prefix(target) |
-            Self::Complete(target) => *target,
+            Self::Prefix(target) | Self::Complete(target) => *target,
         }
     }
 }

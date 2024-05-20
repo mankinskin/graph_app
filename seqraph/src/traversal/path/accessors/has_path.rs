@@ -1,4 +1,27 @@
-use crate::shared::*;
+use crate::{
+    traversal::{
+        context::QueryStateContext,
+        path::{
+            accessors::role::{
+                End,
+                PathRole,
+                Start,
+            },
+            structs::{
+                query_range_path::QueryRangePath,
+                role_path::RolePath,
+                rooted_path::{
+                    PathRoot,
+                    RootedRolePath,
+                    SearchPath,
+                },
+            },
+        },
+    },
+    vertex::location::ChildLocation,
+};
+use auto_impl::auto_impl;
+use std::borrow::Borrow;
 
 /// access to a rooted path pointing to a descendant
 #[auto_impl(&mut)]
@@ -47,7 +70,8 @@ impl HasPath<Start> for QueryRangePath {
 //    }
 //}
 impl<R: 'static> HasPath<R> for SearchPath
-    where Self: HasRolePath<R>
+where
+    Self: HasRolePath<R>,
 {
     fn path(&self) -> &Vec<ChildLocation> {
         HasRolePath::<R>::role_path(self).path()
@@ -57,7 +81,8 @@ impl<R: 'static> HasPath<R> for SearchPath
     }
 }
 impl<R: 'static> HasPath<R> for QueryStateContext<'_>
-    where Self: HasRolePath<R>
+where
+    Self: HasRolePath<R>,
 {
     fn path(&self) -> &Vec<ChildLocation> {
         HasRolePath::<R>::role_path(self).path()
@@ -167,12 +192,13 @@ impl HasRolePath<End> for QueryStateContext<'_> {
 pub trait HasMatchPaths: HasRolePath<Start> + HasRolePath<End> {
     fn into_paths(self) -> (RolePath<Start>, RolePath<End>);
     fn num_path_segments(&self) -> usize {
-        HasRolePath::<Start>::role_path(self).num_path_segments() + HasRolePath::<End>::role_path(self).num_path_segments()
+        HasRolePath::<Start>::role_path(self).num_path_segments()
+            + HasRolePath::<End>::role_path(self).num_path_segments()
     }
     fn min_path_segments(&self) -> usize {
-        HasRolePath::<Start>::role_path(self).num_path_segments().min(
-            HasRolePath::<End>::role_path(self).num_path_segments()
-        )
+        HasRolePath::<Start>::role_path(self)
+            .num_path_segments()
+            .min(HasRolePath::<End>::role_path(self).num_path_segments())
     }
     //fn root(&self) -> Child {
     //    self.role_path().root()

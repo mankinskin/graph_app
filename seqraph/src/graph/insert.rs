@@ -1,20 +1,56 @@
-use crate::shared::*;
+use itertools::Itertools;
+use std::sync::atomic::AtomicUsize;
+
+use crate::{
+    graph::kind::GraphKind,
+    search::NoMatch,
+    vertex::{
+        child::Child,
+        indexed::{
+            Indexed,
+            ToChild,
+        },
+        location::{
+            ChildLocation,
+            IntoPatternLocation,
+        },
+        parent::PatternIndex,
+        pattern::{
+            get_child_pattern_range,
+            pattern_width,
+            replace_in_pattern,
+            IntoPattern,
+            Pattern,
+            PatternRangeIndex,
+        },
+        token::{
+            NewTokenIndex,
+            NewTokenIndices,
+            Token,
+        },
+        PatternId,
+        TokenPosition,
+    },
+    HashSet,
+};
+use lazy_static::lazy_static;
+use std::borrow::Borrow;
+
 lazy_static! {
     static ref VERTEX_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 }
-impl<'t, 'g, G> Hypergraph<G>
+impl<'t, 'g, G> crate::graph::Hypergraph<G>
 where
     G: GraphKind,
 {
     /// insert single token node
     pub fn insert_vertex(
         &mut self,
-        data: VertexData<G>,
+        data: crate::vertex::VertexData<G>,
     ) -> Child {
         //assert!(!self.graph.contains_key(&key));
         let c = Child::new(data.index, data.width);
-        self.graph.entry(data.index)
-            .or_insert(data);
+        self.graph.entry(data.index).or_insert(data);
         //data.index = indexmap::map::Entry::index(&entry);
         //trace!(event = ?logger::Event::NewIndex);
         c
@@ -24,12 +60,7 @@ where
         &mut self,
         token: Token<G::Token>,
     ) -> Child {
-        let data = 
-            VertexData::new(
-                self.next_vertex_id(),
-                1,
-                Some(token),
-            );
+        let data = crate::vertex::VertexData::new(self.next_vertex_id(), 1, Some(token));
         let c = self.insert_vertex(data);
         self.tokens.insert(token, c.index);
         c
@@ -41,16 +72,14 @@ where
     ) -> Vec<Child> {
         tokens
             .into_iter()
-            .map(|token|
-                self.insert_token(token)
-            )
+            .map(|token| self.insert_token(token))
             .collect()
     }
     /// utility, builds total width, indices and children for pattern
     fn to_width_indices_children(
         &self,
         indices: impl IntoIterator<Item = impl Indexed>,
-    ) -> (TokenPosition, Vec<VertexIndex>, Vec<Child>) {
+    ) -> (TokenPosition, Vec<crate::vertex::VertexIndex>, Vec<Child>) {
         let mut width = 0;
         let (a, b) = indices
             .into_iter()
@@ -65,7 +94,10 @@ where
     }
     /// adds a parent to all nodes in a pattern
     #[track_caller]
-    pub fn add_parents_to_pattern_nodes<I: Indexed, P: AsChild>(
+    pub fn add_parents_to_pattern_nodes<
+        I: Indexed,
+        P: crate::vertex::indexed::AsChild,
+    >(
         &mut self,
         pattern: Vec<I>,
         parent: P,
@@ -118,7 +150,10 @@ where
         let indices = indices.into_pattern();
         let (c, id) = match indices.len() {
             0 => (None, None),
-            1 => (Some(self.to_child(indices.first().unwrap().vertex_index())), None),
+            1 => (
+                Some(self.to_child(indices.first().unwrap().vertex_index())),
+                None,
+            ),
             _ => {
                 let (c, id) = self.force_insert_pattern_with_id(indices);
                 (Some(c), Some(id))
@@ -135,7 +170,7 @@ where
         let (width, indices, children) = self.to_width_indices_children(indices);
         let pattern_id = self.next_pattern_id();
         let id = self.next_vertex_id();
-        let mut new_data = VertexData::new(id, width, None);
+        let mut new_data = crate::vertex::VertexData::new(id, width, None);
         new_data.add_pattern_no_update(pattern_id, children);
         let index = self.insert_vertex(new_data);
         self.add_parents_to_pattern_nodes(indices, Child::new(index, width), pattern_id);
@@ -177,10 +212,13 @@ where
         &mut self,
         patterns: impl IntoIterator<Item = impl IntoPattern>,
     ) -> Child {
-        let patterns = patterns.into_iter()
+        let patterns = patterns
+            .into_iter()
             .map(IntoPattern::into_pattern)
             .collect_vec();
-        patterns.iter().find(|p| p.len() == 1)
+        patterns
+            .iter()
+            .find(|p| p.len() == 1)
             .map(|p| p.first().unwrap().clone())
             .unwrap_or_else(|| {
                 // todo handle token nodes
@@ -192,14 +230,14 @@ where
                 }
                 node
             })
-
     }
     #[track_caller]
     pub fn try_insert_patterns(
         &mut self,
         patterns: impl IntoIterator<Item = impl IntoPattern>,
     ) -> Option<Child> {
-        let patterns = patterns.into_iter()
+        let patterns = patterns
+            .into_iter()
             .map(IntoPattern::into_pattern)
             .collect_vec();
         if patterns.is_empty() {
@@ -216,28 +254,26 @@ where
     ) -> Result<Result<Child, Child>, NoMatch> {
         let location = location.into_pattern_location();
         let vertex = self.expect_vertex_data(location.parent);
-        vertex.get_child_pattern(&location.id)
+        vertex
+            .get_child_pattern(&location.id)
             .map(|pattern| pattern.to_vec())
-            .and_then(|pattern|
-                get_child_pattern_range(
-                    &location.id,
-                    pattern.borrow(),
-                    range.clone()
+            .and_then(|pattern| {
+                get_child_pattern_range(&location.id, pattern.borrow(), range.clone()).and_then(
+                    |inner| {
+                        if inner.is_empty() {
+                            Err(NoMatch::EmptyRange)
+                        } else if inner.len() == 1 {
+                            Ok(Ok(*inner.first().unwrap()))
+                        } else if pattern.len() > inner.len() {
+                            let c = self.insert_pattern(inner);
+                            self.replace_in_pattern(location, range, c);
+                            Ok(Ok(c))
+                        } else {
+                            Ok(Err(location.parent))
+                        }
+                    },
                 )
-                .and_then(|inner|
-                    if inner.is_empty() {
-                        Err(NoMatch::EmptyRange)
-                    } else if inner.len() == 1 {
-                        Ok(Ok(*inner.first().unwrap()))
-                    } else if pattern.len() > inner.len() {
-                        let c = self.insert_pattern(inner);
-                        self.replace_in_pattern(location, range, c);
-                        Ok(Ok(c))
-                    } else {
-                        Ok(Err(location.parent))
-                    }
-                )
-            )
+            })
     }
     #[track_caller]
     pub fn insert_range_in(
@@ -245,11 +281,8 @@ where
         location: impl IntoPatternLocation,
         range: impl PatternRangeIndex,
     ) -> Result<Child, NoMatch> {
-        self.try_insert_range_in(
-            location,
-            range,
-        )
-        .and_then(|c| c.or(Err(NoMatch::Unnecessary)))
+        self.try_insert_range_in(location, range)
+            .and_then(|c| c.or(Err(NoMatch::Unnecessary)))
     }
     #[track_caller]
     pub fn insert_range_in_or_default(
@@ -257,11 +290,7 @@ where
         location: impl IntoPatternLocation,
         range: impl PatternRangeIndex,
     ) -> Result<Child, NoMatch> {
-        self.try_insert_range_in(
-            location,
-            range,
-        )
-        .map(|c| match c {
+        self.try_insert_range_in(location, range).map(|c| match c {
             Ok(c) => c,
             Err(c) => c,
         })
@@ -288,31 +317,29 @@ where
             let replaced = replace_in_pattern(&mut *pattern, range.clone(), replace.clone());
             let rem = pattern.iter().skip(new_end).cloned().collect::<Pattern>();
             vertex.validate();
-            (
-                replaced,
-                width,
-                start,
-                new_end,
-                rem,
-            )
+            (replaced, width, start, new_end, rem)
         };
         let old_end = start + replaced.len();
-        range.clone().zip(replaced.into_iter()).for_each(|(pos, c)| {
-            let c = self.expect_vertex_data_mut(c);
-            c.remove_parent_index(parent_index, pat, pos);
-        });
+        range
+            .clone()
+            .zip(replaced.into_iter())
+            .for_each(|(pos, c)| {
+                let c = self.expect_vertex_data_mut(c);
+                c.remove_parent_index(parent_index, pat, pos);
+            });
         for c in rem.into_iter().unique() {
             let c = self.expect_vertex_data_mut(c);
             let indices = &mut c.expect_parent_mut(parent_index).pattern_indices;
-            *indices = indices.drain()
+            *indices = indices
+                .drain()
                 .filter(|i| i.pattern_id != pat || !range.clone().contains(&i.sub_index))
-                .map(|i|
+                .map(|i| {
                     if i.pattern_id == pat && i.sub_index >= old_end {
                         PatternIndex::new(i.pattern_id, i.sub_index - old_end + new_end)
                     } else {
                         i
                     }
-                )
+                })
                 .collect();
             if indices.is_empty() {
                 c.remove_parent(parent_index);
@@ -323,7 +350,7 @@ where
     }
     pub fn add_pattern_parent(
         &mut self,
-        parent: impl AsChild,
+        parent: impl crate::vertex::indexed::AsChild,
         pattern: impl IntoPattern,
         pattern_id: PatternId,
         start: usize,
@@ -336,9 +363,9 @@ where
     }
     pub fn append_to_pattern(
         &mut self,
-        parent: impl AsChild,
+        parent: impl crate::vertex::indexed::AsChild,
         pattern_id: PatternId,
-        new: impl IntoIterator<Item = impl AsChild>,
+        new: impl IntoIterator<Item = impl crate::vertex::indexed::AsChild>,
     ) -> Child {
         let new: Vec<_> = new.into_iter().map(|c| c.to_child()).collect();
         if new.is_empty() {
@@ -372,9 +399,7 @@ where
         sequence
             .into_iter()
             .map(|t| Token::Element(t))
-            .map(|t| match {
-                self.get_token_index(t)
-            } {
+            .map(|t| match { self.get_token_index(t) } {
                 Ok(i) => NewTokenIndex::Known(i),
                 Err(_) => {
                     let i = self.insert_token(t);

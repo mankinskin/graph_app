@@ -1,4 +1,32 @@
-use crate::shared::*;
+use crate::{
+    traversal::cache::key::{
+        DownKey,
+        DownPosition,
+        UpKey,
+        UpPosition,
+    },
+    vertex::{
+        indexed::Indexed,
+        location::{
+            pattern::PatternLocation,
+            ChildLocation,
+            SubLocation,
+        },
+        token::NewTokenIndex,
+        wide::{
+            Wide,
+            WideMut,
+        },
+        PatternId,
+        TokenPosition,
+        VertexIndex,
+    },
+};
+use derive_more::From;
+use std::{
+    borrow::Borrow,
+    fmt::Debug,
+};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, From)]
 pub struct ChildWidth(pub usize);
@@ -10,8 +38,8 @@ impl Borrow<ChildWidth> for Child {
 }
 #[derive(Debug, Eq, Clone, Copy)]
 pub struct Child {
-    pub index: VertexIndex,   // the child index
-    pub width: ChildWidth, // the token width
+    pub index: VertexIndex, // the child index
+    pub width: ChildWidth,  // the token width
 }
 impl Child {
     pub fn new(
@@ -29,20 +57,32 @@ impl Child {
     pub fn get_index(&self) -> VertexIndex {
         self.index
     }
-    pub fn to_pattern_location(self, pattern_id: PatternId) -> PatternLocation {
+    pub fn to_pattern_location(
+        self,
+        pattern_id: PatternId,
+    ) -> PatternLocation {
         PatternLocation::new(self, pattern_id)
     }
-    pub fn to_child_location(self, sub: SubLocation) -> ChildLocation {
+    pub fn to_child_location(
+        self,
+        sub: SubLocation,
+    ) -> ChildLocation {
         ChildLocation::new(self, sub.pattern_id, sub.sub_index)
     }
-    pub fn down_key(self, pos: impl Into<DownPosition>) -> DownKey {
+    pub fn down_key(
+        self,
+        pos: impl Into<DownPosition>,
+    ) -> DownKey {
         DownKey::new(self, pos.into())
     }
-    pub fn up_key(self, pos: impl Into<UpPosition>) -> UpKey {
+    pub fn up_key(
+        self,
+        pos: impl Into<UpPosition>,
+    ) -> UpKey {
         UpKey::new(self, pos.into())
     }
 }
-impl std::cmp::PartialOrd for Child {
+impl PartialOrd for Child {
     fn partial_cmp(
         &self,
         other: &Self,
@@ -59,7 +99,7 @@ impl<A: Borrow<Child>, B: Borrow<Child>> From<Result<A, B>> for Child {
     }
 }
 impl std::hash::Hash for Child {
-    fn hash<H: Hasher>(
+    fn hash<H: std::hash::Hasher>(
         &self,
         h: &mut H,
     ) {

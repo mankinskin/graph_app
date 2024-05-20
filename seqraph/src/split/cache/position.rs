@@ -1,4 +1,27 @@
-use crate::shared::*;
+use crate::{
+    join::delta::PatternSubDeltas,
+    split::{
+        PatternSplitPos,
+        ToVertexSplitPos,
+        VertexSplitPos,
+    },
+    traversal::cache::{
+        entry::SubSplitLocation,
+        key::SplitKey,
+    },
+    vertex::{
+        location::SubLocation,
+        PatternId,
+    },
+    HashSet,
+};
+use std::{
+    borrow::{
+        Borrow,
+        BorrowMut,
+    },
+    iter::FromIterator,
+};
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct SplitPositionCache {
@@ -8,11 +31,13 @@ pub struct SplitPositionCache {
 
 impl std::ops::Sub<PatternSubDeltas> for SplitPositionCache {
     type Output = Self;
-    fn sub(mut self, rhs: PatternSubDeltas) -> Self::Output {
-        self.pattern_splits.iter_mut()
-            .for_each(|(pid, pos)|
-                pos.sub_index -= rhs[pid]
-            );
+    fn sub(
+        mut self,
+        rhs: PatternSubDeltas,
+    ) -> Self::Output {
+        self.pattern_splits
+            .iter_mut()
+            .for_each(|(pid, pos)| pos.sub_index -= rhs[pid]);
         self
     }
 }
@@ -38,7 +63,7 @@ impl From<SubSplitLocation> for (PatternId, PatternSplitPos) {
             PatternSplitPos {
                 inner_offset: sub.inner_offset,
                 sub_index: sub.location.sub_index,
-            }
+            },
         )
     }
 }
@@ -50,7 +75,10 @@ impl SplitPositionCache {
             //final_split: None,
         }
     }
-    pub fn new(prev: SplitKey, subs: Vec<SubSplitLocation>) -> Self {
+    pub fn new(
+        prev: SplitKey,
+        subs: Vec<SubSplitLocation>,
+    ) -> Self {
         Self {
             top: HashSet::from_iter(Some(prev)),
             pattern_splits: subs.into_iter().map(Into::into).collect(),
@@ -58,14 +86,12 @@ impl SplitPositionCache {
         }
     }
     pub fn find_clean_split(&self) -> Option<SubLocation> {
-        self.pattern_splits.iter().find_map(|(pid, s)|
-            s.inner_offset.is_none().then_some(
-                SubLocation {
-                    pattern_id: *pid,
-                    sub_index: s.sub_index,
-                }
-            )
-        )
+        self.pattern_splits.iter().find_map(|(pid, s)| {
+            s.inner_offset.is_none().then_some(SubLocation {
+                pattern_id: *pid,
+                sub_index: s.sub_index,
+            })
+        })
     }
     //pub fn add_location_split(&mut self, location: SubLocation, split: Split) {
     //    self.pattern_splits.insert(location, split);

@@ -1,18 +1,31 @@
-use crate::shared::*;
-
 pub mod perfect;
-pub use perfect::*;
+
+use perfect::*;
+use std::num::NonZeroUsize;
 
 pub mod join;
-pub use join::*;
 
 pub mod trace;
-pub use trace::*;
 
 pub mod visit;
-pub use visit::*;
+use crate::{
+    join::partition::info::range::role::{
+        BooleanPerfectOf,
+        In,
+        InVisitMode,
+        OffsetsOf,
+        Post,
+        Pre,
+        RangeRole,
+    },
+    split::PatternSplitPos,
+    vertex::pattern::{
+        pattern_pre_ctx_width,
+        Pattern,
+    },
+};
 
-pub struct BorderInfo  {
+pub struct BorderInfo {
     pub sub_index: usize,
     pub inner_offset: Option<NonZeroUsize>,
     /// start offset of index with border
@@ -36,34 +49,33 @@ pub trait PartitionBorder<K: RangeRole>: Sized {
     fn perfect(&self) -> BooleanPerfectOf<K>;
     fn offsets(&self) -> OffsetsOf<K>;
 }
-impl<
-    P: BorderPerfect<Boolean = bool>,
-    K: RangeRole<Perfect = P, Offsets = NonZeroUsize>,
-> PartitionBorder<K> for BorderInfo
+impl<P: BorderPerfect<Boolean = bool>, K: RangeRole<Perfect = P, Offsets = NonZeroUsize>>
+    PartitionBorder<K> for BorderInfo
 {
     fn perfect(&self) -> BooleanPerfectOf<K> {
         self.inner_offset.is_none()
     }
     fn offsets(&self) -> OffsetsOf<K> {
-        self.start_offset.map(|o|
-            self.inner_offset.map(|io|
-                o.checked_add(io.get()).unwrap()
-            ).unwrap_or(o)
-        )
-        .unwrap_or_else(|| self.inner_offset.unwrap())
+        self.start_offset
+            .map(|o| {
+                self.inner_offset
+                    .map(|io| o.checked_add(io.get()).unwrap())
+                    .unwrap_or(o)
+            })
+            .unwrap_or_else(|| self.inner_offset.unwrap())
     }
 }
 impl<M: InVisitMode> PartitionBorder<In<M>> for (BorderInfo, BorderInfo) {
     fn perfect(&self) -> BooleanPerfectOf<In<M>> {
         (
-            <_ as PartitionBorder::<Pre<M>>>::perfect(&self.0),
-            <_ as PartitionBorder::<Post<M>>>::perfect(&self.1),
+            <_ as PartitionBorder<Pre<M>>>::perfect(&self.0),
+            <_ as PartitionBorder<Post<M>>>::perfect(&self.1),
         )
     }
     fn offsets(&self) -> OffsetsOf<In<M>> {
         (
-            <_ as PartitionBorder::<Pre<M>>>::offsets(&self.0),
-            <_ as PartitionBorder::<Post<M>>>::offsets(&self.1),
+            <_ as PartitionBorder<Pre<M>>>::offsets(&self.0),
+            <_ as PartitionBorder<Post<M>>>::offsets(&self.1),
         )
     }
 }
@@ -87,7 +99,7 @@ impl<M: InVisitMode> PartitionBorder<In<M>> for (BorderInfo, BorderInfo) {
 
 //pub trait PartitionBorders<'a, K: RangeRole, Ctx: AsPatternTraceContext<'a>>: VisitBorders<'a, K, Ctx> {
 //}
-//impl<'a, K: RangeRole<Borders<'a, Ctx>=Self>, Ctx: AsPatternTraceContext<'a>> PartitionBorders<'a, K, Ctx> for BorderInfo 
+//impl<'a, K: RangeRole<Borders<'a, Ctx>=Self>, Ctx: AsPatternTraceContext<'a>> PartitionBorders<'a, K, Ctx> for BorderInfo
 //    where BorderInfo: VisitBorders<'a, K, Ctx>,
 //{
 //}

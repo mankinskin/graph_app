@@ -1,5 +1,18 @@
-use crate::shared::*;
-use super::*;
+use crate::{
+    traversal::{
+        path::{
+            accessors::{
+                child::GraphRootChild,
+                has_path::HasSinglePath,
+                role::Start,
+            },
+            structs::rooted_path::RootedRolePath,
+            BasePath,
+        },
+        policy::NodePath,
+    },
+    vertex::child::Child,
+};
 
 //pub trait NotStartPath {}
 //impl NotStartPath for PathLeaf {}
@@ -18,19 +31,21 @@ pub trait MatchEndPath:
     + BasePath
     {}
 
-impl<T:
-    NodePath<Start>
-    //+ PathComplete
-    //+ PathAppend
-    + Into<RootedRolePath<Start>>
-    + From<RootedRolePath<Start>>
-    + HasSinglePath
-    + GraphRootChild<Start>
-    //+ From<PathLeaf>
-    //+ Into<FoundPath>
-    //+ GetCacheKey
-    + BasePath
-> MatchEndPath for T {}
+impl<
+        T: NodePath<Start>
+            //+ PathComplete
+            //+ PathAppend
+            + Into<RootedRolePath<Start>>
+            + From<RootedRolePath<Start>>
+            + HasSinglePath
+            + GraphRootChild<Start>
+            //+ From<PathLeaf>
+            //+ Into<FoundPath>
+            //+ GetCacheKey
+            + BasePath,
+    > MatchEndPath for T
+{
+}
 
 /// Used to represent results after traversal with only a start path
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -45,7 +60,7 @@ impl<P: MatchEndPath> IntoMatchEndStartPath for MatchEnd<P> {
     fn into_mesp(self) -> MatchEnd<RootedRolePath<Start>> {
         match self {
             MatchEnd::Path(p) => MatchEnd::Path(p.into()),
-            MatchEnd::Complete(c) => MatchEnd::Complete(c)
+            MatchEnd::Complete(c) => MatchEnd::Complete(c),
         }
     }
 }
@@ -71,7 +86,8 @@ impl<P: MatchEndPath> MatchEnd<P> {
         match self {
             Self::Path(path) => Some(path),
             _ => None,
-        }.unwrap()
+        }
+        .unwrap()
     }
     pub fn get_path(&self) -> Option<&P> {
         match self {

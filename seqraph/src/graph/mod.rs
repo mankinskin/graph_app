@@ -1,18 +1,46 @@
-use crate::shared::*;
+use std::{
+    borrow::Borrow,
+    sync::atomic::{
+        self,
+        AtomicUsize,
+    },
+};
 
+use itertools::Itertools;
+use petgraph::graph::DiGraph;
+
+use crate::vertex::PatternId;
+use std::sync::{
+    Arc,
+    RwLock,
+};
+
+use crate::{
+    graph::{
+        child_strings::ChildStrings,
+        kind::{
+            BaseGraphKind,
+            GraphKind,
+        },
+    },
+    vertex::{
+        child::Child,
+        indexed::{
+            AsChild,
+            Indexed,
+        },
+        pattern::IntoPattern,
+        token::Token,
+    },
+    HashMap,
+};
 
 pub mod child_strings;
+pub mod direction;
 pub mod getters;
 pub mod insert;
-pub mod validation;
 pub mod kind;
-pub mod direction;
-
-pub use {
-    child_strings::*,
-    kind::*,
-    direction::*,
-};
+pub mod validation;
 
 #[cfg(test)]
 #[macro_use]
@@ -42,12 +70,12 @@ impl<G: GraphKind> std::ops::DerefMut for HypergraphRef<G> {
         &mut self.0
     }
 }
-impl<G: GraphKind> std::convert::AsRef<Self> for Hypergraph<G> {
+impl<G: GraphKind> AsRef<Self> for Hypergraph<G> {
     fn as_ref(&self) -> &Self {
         self
     }
 }
-impl<G: GraphKind> std::convert::AsMut<Self> for Hypergraph<G> {
+impl<G: GraphKind> AsMut<Self> for Hypergraph<G> {
     fn as_mut(&mut self) -> &mut Self {
         self
     }
@@ -55,8 +83,8 @@ impl<G: GraphKind> std::convert::AsMut<Self> for Hypergraph<G> {
 
 #[derive(Debug)]
 pub struct Hypergraph<G: GraphKind = BaseGraphKind> {
-    graph: indexmap::IndexMap<VertexIndex, VertexData<G>>,
-    tokens: indexmap::IndexMap<Token<G::Token>, VertexIndex>,
+    graph: indexmap::IndexMap<crate::vertex::VertexIndex, crate::vertex::VertexData<G>>,
+    tokens: indexmap::IndexMap<Token<G::Token>, crate::vertex::VertexIndex>,
     pattern_id_count: AtomicUsize,
     vertex_id_count: AtomicUsize,
     _ty: std::marker::PhantomData<G>,
@@ -83,7 +111,7 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G> {
     pub fn vertex_count(&self) -> usize {
         self.graph.len()
     }
-    pub fn next_vertex_id(&mut self) -> VertexIndex {
+    pub fn next_vertex_id(&mut self) -> crate::vertex::VertexIndex {
         self.vertex_id_count.fetch_add(1, atomic::Ordering::SeqCst)
     }
     pub fn next_pattern_id(&mut self) -> PatternId {
@@ -98,61 +126,72 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G> {
     pub fn insert_token_indices(
         &self,
         index: impl AsChild,
-    ) -> Vec<VertexIndex> {
+    ) -> Vec<crate::vertex::VertexIndex> {
         if index.width() == 1 {
             vec![index.vertex_index()]
         } else {
             let data = self.expect_vertex_data(index);
             assert!(!data.children.is_empty());
-            data.children.values().fold(None, |acc, p| {
-                let exp = self.pattern_token_indices(p.borrow() as &[Child]);
-                acc.map(|acc| {
-                    assert_eq!(acc, exp);
-                    acc
-                }).or(Some(exp.clone()))
-            }).unwrap()
+            data.children
+                .values()
+                .fold(None, |acc, p| {
+                    let exp = self.pattern_token_indices(p.borrow());
+                    acc.map(|acc| {
+                        assert_eq!(acc, exp);
+                        acc
+                    })
+                    .or(Some(exp.clone()))
+                })
+                .unwrap()
         }
     }
     pub fn pattern_token_indices(
         &self,
         pattern: impl IntoPattern,
-    ) -> Vec<VertexIndex> {
-        pattern.into_iter().flat_map(|c|
-            self.insert_token_indices(c)
-        ).collect_vec()
+    ) -> Vec<crate::vertex::VertexIndex> {
+        pattern
+            .into_iter()
+            .flat_map(|c| self.insert_token_indices(c))
+            .collect_vec()
     }
-    pub fn validate_expansion(&self, index: impl Indexed) {
+    pub fn validate_expansion(
+        &self,
+        index: impl Indexed,
+    ) {
         //let root = index.index();
         let data = self.expect_vertex_data(index);
-        data.children
-            .iter()
-            .fold(Vec::new(), |mut acc: Vec<VertexIndex>, (_pid, p)| {
+        data.children.iter().fold(
+            Vec::new(),
+            |mut acc: Vec<crate::vertex::VertexIndex>, (_pid, p)| {
                 assert!(!p.is_empty());
-                let exp = self.pattern_token_indices(p.borrow() as &[Child]);
+                let exp = self.pattern_token_indices(p.borrow());
                 if acc.is_empty() {
                     acc = exp;
                 } else {
                     assert_eq!(acc, exp);
                 }
                 acc
-            });
+            },
+        );
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct Edge {
-    pub parent: Parent,
+    pub parent: crate::vertex::parent::Parent,
     pub child: Child,
 }
 impl<'t, 'a, G: GraphKind> Hypergraph<G>
 where
     G::Token: std::fmt::Display + 't,
 {
-    pub fn to_petgraph(&self) -> DiGraph<(VertexIndex, VertexData<G>), Edge> {
+    pub fn to_petgraph(
+        &self
+    ) -> DiGraph<(crate::vertex::VertexIndex, crate::vertex::VertexData<G>), Edge> {
         let mut pg = DiGraph::new();
         // id refers to index in Hypergraph
         // idx refers to index in petgraph
-        let nodes: HashMap<_, (_, &VertexData<G>)> = self
+        let nodes: HashMap<_, (_, &crate::vertex::VertexData<G>)> = self
             .vertex_iter()
             .map(|(id, node)| {
                 let idx = pg.add_node((*id, node.clone()));
@@ -165,22 +204,24 @@ where
                 let (p_idx, _p_data) = nodes
                     .get(p_id)
                     .expect("Parent not mapped to node in petgraph!");
-                pg.add_edge(*p_idx, *idx, Edge {
-                    parent: parent.clone(),
-                    child: node.as_child(),
-                });
+                pg.add_edge(
+                    *p_idx,
+                    *idx,
+                    Edge {
+                        parent: parent.clone(),
+                        child: node.as_child(),
+                    },
+                );
             }
         });
         pg
     }
 
     pub fn to_node_child_strings(&self) -> ChildStrings {
-        let nodes = self.graph.iter().map(|(_, data)| {
-            (
-                self.vertex_data_string(data),
-                data.to_pattern_strings(self),
-            )
-        });
+        let nodes = self
+            .graph
+            .iter()
+            .map(|(_, data)| (self.vertex_data_string(data), data.to_pattern_strings(self)));
         ChildStrings::from_nodes(nodes)
     }
     pub fn pattern_child_strings(
@@ -221,18 +262,18 @@ where
     }
     pub fn pattern_strings(
         &'a self,
-        patterns: impl IntoIterator<Item = impl IntoIterator<Item = impl Indexed>>,
+        patterns: impl IntoIterator<
+            Item = impl IntoIterator<Item = impl Indexed>,
+        >,
     ) -> Vec<String> {
         patterns
             .into_iter()
-            .map(|pattern|
-                self.pattern_string_with_separator(pattern, "")
-            )
+            .map(|pattern| self.pattern_string_with_separator(pattern, ""))
             .collect()
     }
     pub fn vertex_data_string(
         &self,
-        data: &VertexData<G>,
+        data: &crate::vertex::VertexData<G>,
     ) -> String {
         if let Some(token) = data.token {
             token.to_string()

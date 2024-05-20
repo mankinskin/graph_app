@@ -1,11 +1,9 @@
-use crate::*;
-use eframe::{
-    egui::{
-        self,
-        Ui,
-    },
-};
 use crate::examples::*;
+use crate::*;
+use eframe::egui::{
+    self,
+    Ui,
+};
 use seqraph::HypergraphRef;
 #[cfg(feature = "persistence")]
 use serde::*;
@@ -111,9 +109,7 @@ impl App {
     fn top_panel(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.menu_button("Actions...", |ui| {
-                    self.context_menu(ui)
-                });
+                ui.menu_button("Actions...", |ui| self.context_menu(ui));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui.button("Quit").clicked() {
                         frame.close()
@@ -130,9 +126,7 @@ impl App {
                 egui::warn_if_debug_build(ui);
             })
             .response
-            .context_menu(|ui| {
-                self.context_menu(ui)
-            });
+            .context_menu(|ui| self.context_menu(ui));
     }
 }
 impl eframe::App for App {
@@ -148,15 +142,14 @@ impl eframe::App for App {
         self.top_panel(ctx, frame);
         self.central_panel(ctx);
         if self.inserter {
-            egui::Window::new("Inserter")
-                .show(ctx, |ui| {
-                    ui.text_edit_multiline(&mut self.graph.insert_text);
-                    if ui.button("Insert").clicked() {
-                        let insert_text = self.graph.insert_text.clone();
-                        //self.read_task = Some(self.graph.read_text(insert_text, ctx));
-                        self.graph.insert_text = String::new();
-                    }
-                });
+            egui::Window::new("Inserter").show(ctx, |ui| {
+                ui.text_edit_multiline(&mut self.graph.insert_text);
+                if ui.button("Insert").clicked() {
+                    let insert_text = self.graph.insert_text.clone();
+                    //self.read_task = Some(self.graph.read_text(insert_text, ctx));
+                    self.graph.insert_text = String::new();
+                }
+            });
         }
     }
     fn on_close_event(&mut self) -> bool {

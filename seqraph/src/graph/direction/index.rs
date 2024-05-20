@@ -1,13 +1,28 @@
-use std::ops::{Range, RangeInclusive};
+use std::ops::{
+    Range,
+    RangeInclusive,
+};
 
-use crate::shared::*;
+use crate::{
+    direction::{
+        Left,
+        Right,
+    },
+    graph::direction::MatchDirection,
+    vertex::{
+        child::Child,
+        pattern::{
+            IntoPattern,
+            Pattern,
+        },
+    },
+};
 
 pub trait IndexDirection: MatchDirection + Clone {
     type Opposite: IndexDirection;
     fn split_context_head(context: impl Merge) -> Option<(Child, Pattern)>;
     fn split_last(context: impl Merge) -> Option<(Pattern, Child)> {
-        <Self as IndexDirection>::Opposite::split_context_head(context)
-            .map(|(c, rem)| (rem, c))
+        <Self as IndexDirection>::Opposite::split_context_head(context).map(|(c, rem)| (rem, c))
     }
     fn split_inner_head(context: impl Merge) -> (Child, Pattern) {
         <Self as IndexDirection>::Opposite::split_context_head(context)
@@ -23,10 +38,7 @@ pub trait IndexDirection: MatchDirection + Clone {
         context: impl IntoPattern,
         inner: Child,
     ) -> Pattern {
-        <Self as IndexDirection>::Opposite::inner_then_context(
-            inner,
-            context
-        )
+        <Self as IndexDirection>::Opposite::inner_then_context(inner, context)
     }
     fn merge_order(
         inner: Child,
@@ -84,7 +96,12 @@ impl IndexDirection for Left {
         inner: Child,
         context: impl IntoPattern,
     ) -> Pattern {
-        context.borrow().to_owned().into_iter().chain(inner).collect()
+        context
+            .borrow()
+            .to_owned()
+            .into_iter()
+            .chain(inner)
+            .collect()
     }
     fn inner_context_range(
         back: usize,
@@ -124,7 +141,9 @@ impl IndexDirection for Right {
         inner: Child,
         context: impl IntoPattern,
     ) -> Pattern {
-        std::iter::once(inner).chain(context.borrow().to_owned()).collect()
+        std::iter::once(inner)
+            .chain(context.borrow().to_owned())
+            .collect()
     }
     fn concat_context_inner_context(
         head_context: Child,

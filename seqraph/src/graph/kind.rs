@@ -1,4 +1,13 @@
-use crate::shared::*;
+use std::fmt::{
+    Debug,
+    Display,
+};
+
+use crate::{
+    direction::Right,
+    graph::direction::index::IndexDirection,
+    vertex::token::Tokenize,
+};
 
 pub trait GraphKind: Debug + Clone + Default {
     type Token: Tokenize + Display;

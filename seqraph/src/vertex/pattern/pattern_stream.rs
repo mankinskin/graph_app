@@ -1,6 +1,20 @@
-use crate::shared::*;
-use std::fmt::Debug;
+use crate::vertex::{
+    child::Child,
+    token::Token,
+};
+use std::{
+    fmt::Debug,
+    result::Result,
+};
 use tokio_stream::Stream;
+
+use super::super::{
+    indexed::Indexed,
+    token::{
+        NoToken,
+        Tokenize,
+    },
+};
 
 /// trait for types which can used to read a pattern, with unknown size
 pub trait PatternStream<I: Indexed, T: Tokenize = NoToken>:

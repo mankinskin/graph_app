@@ -1,4 +1,14 @@
-use crate::shared::*;
+use crate::{
+    traversal::{
+        cache::{
+            entry::PositionCache,
+            key::DirectedPosition,
+        },
+        path::mutators::move_path::key::TokenLocation,
+    },
+    vertex::child::Child,
+    HashMap,
+};
 
 pub type DirectedPositions = HashMap<TokenLocation, PositionCache>;
 
@@ -30,28 +40,41 @@ impl VertexCache {
             top_down: Default::default(),
         }
     }
-    pub fn dir(&self, pos: &DirectedPosition) -> &DirectedPositions {
+    pub fn dir(
+        &self,
+        pos: &DirectedPosition,
+    ) -> &DirectedPositions {
         match pos {
             DirectedPosition::BottomUp(_) => &self.bottom_up,
             DirectedPosition::TopDown(_) => &self.top_down,
         }
     }
-    pub fn dir_mut(&mut self, pos: &DirectedPosition) -> &mut DirectedPositions {
+    pub fn dir_mut(
+        &mut self,
+        pos: &DirectedPosition,
+    ) -> &mut DirectedPositions {
         match pos {
             DirectedPosition::BottomUp(_) => &mut self.bottom_up,
             DirectedPosition::TopDown(_) => &mut self.top_down,
         }
     }
-    pub fn get(&self, pos: &DirectedPosition) -> Option<&PositionCache> {
+    pub fn get(
+        &self,
+        pos: &DirectedPosition,
+    ) -> Option<&PositionCache> {
         self.dir(pos).get(pos.pos())
     }
-    pub fn get_mut(&mut self, pos: &DirectedPosition) -> Option<&mut PositionCache> {
+    pub fn get_mut(
+        &mut self,
+        pos: &DirectedPosition,
+    ) -> Option<&mut PositionCache> {
         self.dir_mut(pos).get_mut(pos.pos())
     }
-    pub fn insert(&mut self, pos: &DirectedPosition, cache: PositionCache) {
-        self.dir_mut(pos).insert(
-            *pos.pos(),
-            cache,
-        );
+    pub fn insert(
+        &mut self,
+        pos: &DirectedPosition,
+        cache: PositionCache,
+    ) {
+        self.dir_mut(pos).insert(*pos.pos(), cache);
     }
 }

@@ -1,5 +1,6 @@
 use crate::shared::*;
 use std::iter::Peekable;
+use crate::search::NoMatch;
 
 #[derive(Debug)]
 pub struct ReadContext<'g> {

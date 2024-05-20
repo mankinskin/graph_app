@@ -1,23 +1,68 @@
-use crate::shared::*;
+use crate::{
+    graph::{
+        direction::r#match::MatchDirection,
+        kind::GraphKind,
+    },
+    traversal::{
+        cache::state::end::{
+            EndKind,
+            PostfixEnd,
+            PrefixEnd,
+            RangeEnd,
+        },
+        path::{
+            accessors::{
+                border::PathBorder,
+                role::{
+                    End,
+                    PathRole,
+                    Start,
+                },
+                root::GraphRoot,
+            },
+            structs::{
+                match_end::{
+                    MatchEnd,
+                    MatchEndPath,
+                },
+                role_path::RolePath,
+                rooted_path::{
+                    IndexRoot,
+                    RootedRolePath,
+                },
+            },
+        },
+        result_kind::{
+            Primer,
+            RoleChildPath,
+        },
+        traversable::Traversable,
+    },
+    vertex::pattern::pattern_width,
+};
+use std::borrow::Borrow;
 
 pub trait PathSimplify: Sized {
-    fn into_simplified<
-        Trav: Traversable,
-    >(self, trav: &Trav) -> Self;
-    fn simplify<
-        Trav: Traversable,
-    >(&mut self, trav: &Trav) {
-	    unsafe {
-	    	let old = std::ptr::read(self);
-	    	let new = old.into_simplified(trav);
-	    	std::ptr::write(self, new);
-	    }
+    fn into_simplified<Trav: Traversable>(
+        self,
+        trav: &Trav,
+    ) -> Self;
+    fn simplify<Trav: Traversable>(
+        &mut self,
+        trav: &Trav,
+    ) {
+        unsafe {
+            let old = std::ptr::read(self);
+            let new = old.into_simplified(trav);
+            std::ptr::write(self, new);
+        }
     }
 }
 impl<R: PathRole> PathSimplify for RolePath<R> {
-    fn into_simplified<
-        Trav: Traversable,
-    >(mut self, trav: &Trav) -> Self {
+    fn into_simplified<Trav: Traversable>(
+        mut self,
+        trav: &Trav,
+    ) -> Self {
         let graph = trav.graph();
         while let Some(loc) = self.path_mut().pop() {
             if !<R as PathBorder>::is_at_border(graph.graph(), loc) {
@@ -25,27 +70,31 @@ impl<R: PathRole> PathSimplify for RolePath<R> {
                 break;
             }
         }
-        self    
+        self
     }
 }
 impl<P: MatchEndPath> PathSimplify for MatchEnd<P> {
-    fn into_simplified<
-        Trav: Traversable,
-    >(self, trav: &Trav) -> Self {
+    fn into_simplified<Trav: Traversable>(
+        self,
+        trav: &Trav,
+    ) -> Self {
         if let Some(c) = match self.get_path() {
-            Some(p) => if p.single_path().is_empty() && {
-                let location = p.root_child_location();
-                let graph = trav.graph();
-                let pattern = graph.expect_pattern_at(&location);
-                <Trav::Kind as GraphKind>::Direction::pattern_index_prev(
-                    pattern.borrow() as &[Child],
-                    location.sub_index
-                ).is_none()
-            } {
-                Some(p.root_parent())
-            } else {
-                None
-            },
+            Some(p) => {
+                if p.single_path().is_empty() && {
+                    let location = p.root_child_location();
+                    let graph = trav.graph();
+                    let pattern = graph.expect_pattern_at(&location);
+                    <Trav::Kind as GraphKind>::Direction::pattern_index_prev(
+                        pattern.borrow(),
+                        location.sub_index,
+                    )
+                    .is_none()
+                } {
+                    Some(p.root_parent())
+                } else {
+                    None
+                }
+            }
             None => None,
         } {
             MatchEnd::Complete(c)
@@ -55,34 +104,33 @@ impl<P: MatchEndPath> PathSimplify for MatchEnd<P> {
     }
 }
 impl RootedRolePath<Start, IndexRoot> {
-    pub fn simplify<
-        Trav: Traversable,
-    >(mut self, trav: &Trav) -> EndKind {
+    pub fn simplify<Trav: Traversable>(
+        mut self,
+        trav: &Trav,
+    ) -> EndKind {
         self.role_path.simplify(trav);
         match (
             Start::is_at_border(trav.graph(), self.role_root_child_location::<Start>()),
             self.role_path.raw_child_path::<Start>().is_empty(),
-        ) 
-        {
-            (true, true) => {
-                EndKind::Complete(self.root_parent())
-            },
+        ) {
+            (true, true) => EndKind::Complete(self.root_parent()),
             _ => {
                 let graph = trav.graph();
                 let root = self.role_root_child_location();
                 let pattern = graph.expect_pattern_at(root);
                 EndKind::Postfix(PostfixEnd {
                     path: self,
-                    inner_width: pattern_width(&pattern[root.sub_index+1..])
+                    inner_width: pattern_width(&pattern[root.sub_index + 1..]),
                 })
-            },
+            }
         }
     }
 }
 impl RangeEnd {
-    pub fn simplify<
-        Trav: Traversable,
-    >(mut self, trav: &Trav) -> EndKind {
+    pub fn simplify<Trav: Traversable>(
+        mut self,
+        trav: &Trav,
+    ) -> EndKind {
         self.path.child_path_mut::<Start>().simplify(trav);
         self.path.child_path_mut::<End>().simplify(trav);
 
@@ -91,28 +139,22 @@ impl RangeEnd {
             self.path.raw_child_path::<Start>().is_empty(),
             End::is_at_border(trav.graph(), self.path.role_root_child_location::<End>()),
             self.path.raw_child_path::<End>().is_empty(),
-        ) 
-        {
-            (true, true, true, true) => {
-                EndKind::Complete(self.path.root_parent())
-            },
-            (true, true, false, _) |
-            (true, true, true, false) =>
-                EndKind::Prefix(PrefixEnd {
-                    path: self.path.into(),
-                    target: self.target,
-                }),
-            (false, _, true, true) |
-            (true, false, true, true) => {
+        ) {
+            (true, true, true, true) => EndKind::Complete(self.path.root_parent()),
+            (true, true, false, _) | (true, true, true, false) => EndKind::Prefix(PrefixEnd {
+                path: self.path.into(),
+                target: self.target,
+            }),
+            (false, _, true, true) | (true, false, true, true) => {
                 let graph = trav.graph();
-                let path: Primer = self.path.into(); 
+                let path: Primer = self.path.into();
                 let root = path.role_root_child_location();
                 let pattern = graph.expect_pattern_at(root);
                 EndKind::Postfix(PostfixEnd {
                     path,
-                    inner_width: pattern_width(&pattern[root.sub_index+1..])
+                    inner_width: pattern_width(&pattern[root.sub_index + 1..]),
                 })
-            },
+            }
             _ => EndKind::Range(self),
         }
     }

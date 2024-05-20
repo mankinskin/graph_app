@@ -1,4 +1,16 @@
-use crate::shared::*;
+use crate::{
+    join::partition::splits::SubSplits,
+    vertex::{
+        location::pattern::PatternLocation,
+        pattern::Pattern,
+        PatternId,
+    },
+};
+use derivative::Derivative;
+use derive_more::{
+    Deref,
+    DerefMut,
+};
 
 #[derive(Debug, Deref, DerefMut, Derivative)]
 #[derivative(Hash, PartialEq, Eq)]
@@ -7,11 +19,15 @@ pub struct PatternJoinContext<'p> {
     #[deref_mut]
     pub ctx: PatternTraceContext<'p>,
     //pub graph: RwLockWriteGuard<'p, Hypergraph>,
-    #[derivative(Hash="ignore", PartialEq="ignore")]
+    #[derivative(Hash = "ignore", PartialEq = "ignore")]
     pub sub_splits: &'p SubSplits,
 }
 impl<'p> AsPatternTraceContext<'p> for PatternJoinContext<'p> {
-    fn as_pattern_trace_context<'t>(&'t self) -> PatternTraceContext<'t> where Self: 't, 'p: 't {
+    fn as_pattern_trace_context<'t>(&'t self) -> PatternTraceContext<'t>
+    where
+        Self: 't,
+        'p: 't,
+    {
         self.ctx
     }
 }
@@ -34,7 +50,7 @@ impl<'p> From<PatternJoinContext<'p>> for PatternId {
 #[derivative(Hash, PartialEq, Eq)]
 pub struct PatternTraceContext<'p> {
     pub loc: PatternLocation,
-    #[derivative(Hash="ignore", PartialEq="ignore")]
+    #[derivative(Hash = "ignore", PartialEq = "ignore")]
     pub pattern: &'p Pattern,
 }
 impl<'p> From<PatternTraceContext<'p>> for PatternId {
@@ -44,10 +60,17 @@ impl<'p> From<PatternTraceContext<'p>> for PatternId {
 }
 
 pub trait AsPatternTraceContext<'p>: 'p {
-    fn as_pattern_trace_context<'t>(&'t self) -> PatternTraceContext<'t> where Self: 't, 'p: 't;
+    fn as_pattern_trace_context<'t>(&'t self) -> PatternTraceContext<'t>
+    where
+        Self: 't,
+        'p: 't;
 }
 impl<'p> AsPatternTraceContext<'p> for PatternTraceContext<'p> {
-    fn as_pattern_trace_context<'t>(&'t self) -> PatternTraceContext<'t> where Self: 't, 'p: 't {
+    fn as_pattern_trace_context<'t>(&'t self) -> PatternTraceContext<'t>
+    where
+        Self: 't,
+        'p: 't,
+    {
         *self
     }
 }

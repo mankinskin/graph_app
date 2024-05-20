@@ -1,30 +1,43 @@
-use crate::shared::*;
+use crate::{
+    traversal::{
+        cache::{
+            key::UpKey,
+            state::{
+                child::ChildState,
+                end::{
+                    EndKind,
+                    EndState,
+                },
+                parent::ParentState,
+                start::StartState,
+                InnerKind,
+                TraversalState,
+            },
+        },
+        path::{
+            accessors::root::GraphRoot,
+            mutators::move_path::key::TokenLocation,
+        },
+    },
+    vertex::wide::Wide,
+};
 
 pub trait RootKey {
     fn root_key(&self) -> UpKey;
 }
 impl RootKey for ParentState {
     fn root_key(&self) -> UpKey {
-        UpKey::new(
-            self.path.root_parent(),
-            self.root_pos.into(),
-        )
+        UpKey::new(self.path.root_parent(), self.root_pos.into())
     }
 }
 impl RootKey for StartState {
     fn root_key(&self) -> UpKey {
-        UpKey::new(
-            self.index,
-            TokenLocation(self.index.width()).into(),
-        )
+        UpKey::new(self.index, TokenLocation(self.index.width()).into())
     }
 }
 impl RootKey for ChildState {
     fn root_key(&self) -> UpKey {
-        UpKey::new(
-            self.paths.path.root_parent(),
-            self.root_pos.into(),
-        )
+        UpKey::new(self.paths.path.root_parent(), self.root_pos.into())
     }
 }
 impl RootKey for TraversalState {

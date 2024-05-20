@@ -1,4 +1,8 @@
-use crate::shared::*;
+use crate::{
+    join::partition::splits::SplitKind,
+    split::VertexSplitPos,
+};
+use std::num::NonZeroUsize;
 
 #[derive(Debug, Clone)]
 pub struct OffsetSplits {

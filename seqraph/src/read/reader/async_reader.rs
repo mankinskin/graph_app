@@ -9,6 +9,7 @@ use crate::{
 use futures::Stream;
 use tokio_stream::{StreamExt, wrappers::UnboundedReceiverStream};
 use std::pin::Pin;
+use crate::search::NoMatch;
 
 #[derive(Debug)]
 struct BufferedPatternStream<T: Tokenize> {

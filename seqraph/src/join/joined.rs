@@ -1,29 +1,50 @@
-use crate::shared::*;
+use crate::{
+    join::{
+        context::node::NodeJoinContext,
+        delta::PatternSubDeltas,
+        partition::info::{
+            border::{
+                join::JoinBorders,
+                perfect::{
+                    BorderPerfect,
+                    SinglePerfect,
+                },
+            },
+            range::role::{
+                Join,
+                RangeRole,
+            },
+            PartitionInfo,
+        },
+    },
+    vertex::{
+        child::Child,
+        pattern::Pattern,
+    },
+};
+use std::borrow::Borrow;
+
 #[derive(Debug)]
 pub struct JoinedPartition<K: RangeRole> {
     pub index: Child,
     pub perfect: K::Perfect,
     pub delta: PatternSubDeltas,
 }
-impl<'a, K: RangeRole<Mode=Join>> JoinedPartition<K>
-    where K::Borders: JoinBorders<K>
+impl<'a, K: RangeRole<Mode = Join>> JoinedPartition<K>
+where
+    K::Borders: JoinBorders<K>,
 {
     pub fn from_joined_patterns(
         pats: JoinedPatterns<K>,
         ctx: &mut NodeJoinContext<'a>,
     ) -> Self {
         // collect infos about partition in each pattern
-        let index = ctx.graph.insert_patterns(
-            pats.patterns
-        );
+        let index = ctx.graph.insert_patterns(pats.patterns);
         // todo: replace if perfect
         if let SinglePerfect(Some(pid)) = pats.perfect.complete() {
             let loc = ctx.index.to_pattern_location(pid);
-            ctx.graph.replace_in_pattern(
-                loc,
-                pats.range.unwrap(),
-                index,
-            );
+            ctx.graph
+                .replace_in_pattern(loc, pats.range.unwrap(), index);
         }
         Self {
             index,
@@ -34,8 +55,7 @@ impl<'a, K: RangeRole<Mode=Join>> JoinedPartition<K>
     pub fn from_partition_info(
         info: PartitionInfo<K>,
         ctx: &mut NodeJoinContext<'a>,
-    ) -> Self
-    {
+    ) -> Self {
         // collect infos about partition in each pattern
         let pats = JoinedPatterns::from_partition_info(info, ctx);
         Self::from_joined_patterns(pats, ctx)
@@ -59,14 +79,14 @@ pub struct JoinedPatterns<K: RangeRole> {
     pub delta: PatternSubDeltas,
 }
 
-impl<'a, K: RangeRole<Mode=Join>> JoinedPatterns<K>
-    where K::Borders: JoinBorders<K>
+impl<'a, K: RangeRole<Mode = Join>> JoinedPatterns<K>
+where
+    K::Borders: JoinBorders<K>,
 {
     pub fn from_partition_info(
         info: PartitionInfo<K>,
         ctx: &mut NodeJoinContext<'a>,
-    ) -> Self
-    {
+    ) -> Self {
         // assert: no complete perfect child
         // todo: index inner ranges and get child splits
         //
@@ -82,13 +102,10 @@ impl<'a, K: RangeRole<Mode=Join>> JoinedPatterns<K>
         } else {
             None
         };
-        let (delta, patterns) = info.patterns.into_iter()
-            .map(|(pid, pinfo)|
-                (
-                    (pid, pinfo.delta),
-                    pinfo.joined_pattern(ctx, &pid),
-                )
-            )
+        let (delta, patterns) = info
+            .patterns
+            .into_iter()
+            .map(|(pid, pinfo)| ((pid, pinfo.delta), pinfo.joined_pattern(ctx, &pid)))
             .unzip();
         Self {
             patterns,
@@ -112,13 +129,13 @@ impl<'a, K: RangeRole<Mode=Join>> JoinedPatterns<K>
 //impl From<BorderChildren<JoinedRangeInfoKind>> for JoinedPattern {
 //    fn from(borders: BorderChildren<JoinedRangeInfoKind>) -> Self {
 //        match borders {
-//            BorderChildren::Infix(left, right, None) => 
+//            BorderChildren::Infix(left, right, None) =>
 //                JoinedPattern::Bigram([left, right]),
-//            BorderChildren::Infix(left, right, Some(inner)) => 
+//            BorderChildren::Infix(left, right, Some(inner)) =>
 //                JoinedPattern::Trigram([left, inner, right]),
-//            BorderChildren::Prefix(inner, right) => 
+//            BorderChildren::Prefix(inner, right) =>
 //                JoinedPattern::Bigram([inner, right]),
-//            BorderChildren::Postfix(left, inner) => 
+//            BorderChildren::Postfix(left, inner) =>
 //                JoinedPattern::Bigram([left, inner]),
 //        }
 //    }

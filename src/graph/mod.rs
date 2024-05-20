@@ -13,9 +13,9 @@ use petgraph::{
 };
 use seqraph::*;
 pub mod vis;
+use tokio::task::JoinHandle;
 use vis::GraphVis;
 pub use vis::Layout;
-use tokio::task::JoinHandle;
 
 #[derive(Clone)]
 pub struct Graph {
@@ -76,9 +76,7 @@ impl Graph {
     //}
     pub fn poll_events(&self) -> Vec<tracing_egui::LogEvent> {
         //println!("polling..");
-        tracing_egui::poll_events()
-            .drain(..)
-            .collect()
+        tracing_egui::poll_events().drain(..).collect()
     }
     pub fn show(&self, ui: &mut Ui) {
         //println!("got events");

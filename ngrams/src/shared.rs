@@ -1,29 +1,29 @@
 pub use {
-    ngram::*,
-    maplit::hashmap,
-    tap::prelude::*,
-    itertools::*,
-    plotters::*,
-    seqraph::*,
     derive_more::*,
     derive_new::*,
+    itertools::*,
+    maplit::hashmap,
+    ngram::*,
+    plotters::*,
+    range_ext::intersect::Intersect,
+    seqraph::*,
     seqraph::*,
     std::{
-        default::Default,
         borrow::Borrow,
-        fmt::Debug,
-        ops::Range,
         collections::VecDeque,
-        path::Path,
+        default::Default,
+        fmt::Debug,
         hash::Hash,
+        ops::Range,
+        path::Path,
     },
-    range_ext::intersect::Intersect,
+    tap::prelude::*,
 };
 
 #[cfg(not(any(test, feature = "test-hashing")))]
 pub use std::collections::{
-    HashSet,
     HashMap,
+    HashSet,
 };
 #[cfg(any(test, feature = "test-hashing"))]
 use std::hash::{
@@ -31,11 +31,6 @@ use std::hash::{
     DefaultHasher,
 };
 #[cfg(any(test, feature = "test-hashing"))]
-pub type HashSet<T> =
-    std::collections::HashSet<
-        T,
-        BuildHasherDefault<DefaultHasher>
-    >;
+pub type HashSet<T> = std::collections::HashSet<T, BuildHasherDefault<DefaultHasher>>;
 #[cfg(any(test, feature = "test-hashing"))]
-pub type HashMap<K, V> =
-    std::collections::HashMap<K, V, BuildHasherDefault<DefaultHasher>>;
+pub type HashMap<K, V> = std::collections::HashMap<K, V, BuildHasherDefault<DefaultHasher>>;

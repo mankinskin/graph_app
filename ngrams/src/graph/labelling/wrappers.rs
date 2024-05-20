@@ -1,8 +1,8 @@
-use crate::{
-    *,
-    shared::*,
-};
 use super::traversal::*;
+use crate::{
+    shared::*,
+    *,
+};
 
 #[derive(Debug, Deref, From, DerefMut)]
 pub struct WrapperCtx<'a, 'b: 'a> {
@@ -21,7 +21,6 @@ impl<'a, 'b: 'a> WrapperCtx<'a, 'b> {
         let mut queue: VecDeque<_> = TopDown::next_nodes(&entry).into_iter().collect();
         let mut ranges: HashSet<_> = HashSet::default();
 
-
         while !queue.is_empty() {
             let mut visited: HashSet<_> = Default::default();
             let mut next_layer: Vec<_> = Default::default();
@@ -32,27 +31,27 @@ impl<'a, 'b: 'a> WrapperCtx<'a, 'b> {
                 } else {
                     let ne = vocab.get(&node.index).unwrap();
                     next_layer.extend(
-                        TopDown::next_nodes(&ne).into_iter().filter_map(|(o, c)|
-                            (!visited.contains(&c.index)).then(||
-                                (o + off, c)
-                            )
-                        )
+                        TopDown::next_nodes(&ne).into_iter().filter_map(|(o, c)| {
+                            (!visited.contains(&c.index)).then(|| (o + off, c))
+                        }),
                     );
                 }
             }
             queue.extend(next_layer)
         }
         //println!("ranges finished");
-        if ranges.iter().cartesian_product(&ranges).find(|(l, r)|
-            l.does_intersect(*r)
-        ).is_some() {
+        if ranges
+            .iter()
+            .cartesian_product(&ranges)
+            .find(|(l, r)| l.does_intersect(*r))
+            .is_some()
+        {
             println!("wrapper");
             self.labels.insert(node);
         }
         BottomUp::next_nodes(&entry)
     }
     pub fn wrapping_pass(&mut self, vocab: &Vocabulary) {
-
         let mut queue: VecDeque<VertexIndex> = BottomUp::starting_nodes(&vocab);
         let mut n = 0;
         while !queue.is_empty() {
@@ -70,5 +69,4 @@ impl<'a, 'b: 'a> WrapperCtx<'a, 'b> {
             queue.extend(next_layer)
         }
     }
-
 }

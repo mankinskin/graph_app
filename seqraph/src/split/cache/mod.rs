@@ -1,7 +1,9 @@
-use crate::shared::*;
-use crate::shared::*;
-
 pub mod vertex;
+
+use std::{
+    num::NonZeroUsize,
+    sync::RwLockWriteGuard,
+};
 pub use vertex::*;
 pub mod position;
 pub use position::*;
@@ -12,7 +14,9 @@ pub use leaves::*;
 pub mod ctx;
 pub use ctx::*;
 pub mod builder;
+use crate::vertex::child::Child;
 pub use builder::*;
+use std::borrow::Borrow;
 
 #[derive(Debug, Clone)]
 pub struct TraceState {
@@ -20,6 +24,37 @@ pub struct TraceState {
     pub offset: NonZeroUsize,
     pub prev: SplitKey,
 }
+use crate::{
+    index::side::{
+        IndexBack,
+        IndexSide,
+    },
+    join::partition::splits::offset::OffsetSplits,
+    split::PatternSplitPos,
+    traversal::{
+        cache::{
+            entry::SubSplitLocation,
+            key::SplitKey,
+            labelled_key::VertexCacheKey,
+        },
+        folder::state::{
+            FoldState,
+            RootMode,
+        },
+        traversable::TraversableMut,
+    },
+    vertex::{
+        indexed::Indexed,
+        location::SubLocation,
+        pattern::Pattern,
+        PatternId,
+    },
+    HashMap,
+};
+use derive_more::{
+    Deref,
+    DerefMut,
+};
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct SplitCache {
@@ -30,60 +65,68 @@ pub struct SplitCache {
     pub root_mode: RootMode,
 }
 impl SplitCache {
-
-    pub fn new<'a, Trav: TraversableMut<GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph>> + 'a>(
+    pub fn new<
+        'a,
+        Trav: TraversableMut<GuardMut<'a> = RwLockWriteGuard<'a, crate::graph::Hypergraph>> + 'a,
+    >(
         trav: &'a mut Trav,
         fold_state: FoldState,
     ) -> Self {
         SplitCacheBuilder::new(trav, fold_state).build()
     }
-    pub fn get(&self, key: &SplitKey) -> Option<&SplitPositionCache> {
-        self.entries.get(&key.index.vertex_index())
-            .and_then(|ve|
-                ve.positions.get(&key.pos)
-            )
+    pub fn get(
+        &self,
+        key: &SplitKey,
+    ) -> Option<&SplitPositionCache> {
+        self.entries
+            .get(&key.index.vertex_index())
+            .and_then(|ve| ve.positions.get(&key.pos))
     }
-    pub fn get_mut(&mut self, key: &SplitKey) -> Option<&mut SplitPositionCache> {
-        self.entries.get_mut(&key.index.vertex_index())
-            .and_then(|ve|
-                ve.positions.get_mut(&key.pos)
-            )
+    pub fn get_mut(
+        &mut self,
+        key: &SplitKey,
+    ) -> Option<&mut SplitPositionCache> {
+        self.entries
+            .get_mut(&key.index.vertex_index())
+            .and_then(|ve| ve.positions.get_mut(&key.pos))
     }
-    pub fn expect(&self, key: &SplitKey) -> &SplitPositionCache {
+    pub fn expect(
+        &self,
+        key: &SplitKey,
+    ) -> &SplitPositionCache {
         self.get(key).unwrap()
     }
-    pub fn expect_mut(&mut self, key: &SplitKey) -> &mut SplitPositionCache {
+    pub fn expect_mut(
+        &mut self,
+        key: &SplitKey,
+    ) -> &mut SplitPositionCache {
         self.get_mut(key).unwrap()
     }
 }
 pub fn range_splits<'a>(
-    patterns: impl Iterator<Item=(&'a PatternId, &'a Pattern)>,
+    patterns: impl Iterator<Item = (&'a PatternId, &'a Pattern)>,
     parent_range: (NonZeroUsize, NonZeroUsize),
 ) -> (OffsetSplits, OffsetSplits) {
     let (ls, rs) = patterns
         .map(|(pid, pat)| {
-            let (li, lo) = IndexBack::token_offset_split(
-                pat.borrow() as &[Child],
-                parent_range.0,
-            ).unwrap();
-            let (ri, ro) = IndexBack::token_offset_split(
-                pat.borrow() as &[Child],
-                parent_range.1,
-            ).unwrap();
+            let (li, lo) =
+                IndexBack::token_offset_split(pat.borrow(), parent_range.0).unwrap();
+            let (ri, ro) =
+                IndexBack::token_offset_split(pat.borrow(), parent_range.1).unwrap();
             (
                 (
                     *pid,
                     PatternSplitPos {
                         sub_index: li,
                         inner_offset: lo,
-                    }
+                    },
                 ),
                 (
                     *pid,
                     PatternSplitPos {
                         sub_index: ri,
                         inner_offset: ro,
-                    }
+                    },
                 ),
             )
         })
@@ -101,21 +144,19 @@ pub fn range_splits<'a>(
 }
 
 pub fn cleaned_position_splits<'a>(
-    patterns: impl Iterator<Item=(&'a PatternId, &'a Pattern)>,
+    patterns: impl Iterator<Item = (&'a PatternId, &'a Pattern)>,
     parent_offset: NonZeroUsize,
 ) -> Result<Vec<SubSplitLocation>, SubLocation> {
     patterns
-        .map(|(pid, pat)| { 
-            let (sub_index, inner_offset) = IndexBack::token_offset_split(
-                pat.borrow() as &[Child],
-                parent_offset,
-            ).unwrap();
+        .map(|(pid, pat)| {
+            let (sub_index, inner_offset) =
+                IndexBack::token_offset_split(pat.borrow(), parent_offset).unwrap();
             let location = SubLocation::new(*pid, sub_index);
             if inner_offset.is_some() || pat.len() > 2 {
                 // can't be clean
                 Ok(SubSplitLocation {
                     location,
-                    inner_offset
+                    inner_offset,
                 })
             } else {
                 // must be clean
@@ -127,9 +168,30 @@ pub fn cleaned_position_splits<'a>(
 
 #[cfg(test)]
 mod tests {
-    use crate::shared::*;
+    use crate::{
+        graph::tests::{
+            context_mut,
+            Context,
+        },
+        split::{
+            PatternSplitPos,
+            SplitCache,
+            SplitPositionCache,
+            SplitVertexCache,
+        },
+        traversal::cache::{
+            key::SplitKey,
+            labelled_key::vkey::lab,
+            trace,
+        },
+        HashMap,
+        HashSet,
+    };
     use pretty_assertions::assert_eq;
-    use crate::traversal::cache::labelled_key::lab;
+    use std::{
+        collections::BTreeMap,
+        iter::FromIterator,
+    };
     macro_rules! nz {
         ($x:expr) => {
             NonZeroUsize::new($x).unwrap()
@@ -137,7 +199,6 @@ mod tests {
     }
     #[test]
     fn split_graph1() {
-
         let res = trace::tests::build_trace1();
         let Context {
             graph,
@@ -153,15 +214,13 @@ mod tests {
             e_f_id,
             ..
         } = &mut *context_mut();
-        let splits = SplitCache::new(
-            &mut *graph,
-            res,
-        );
+        let splits = SplitCache::new(&mut *graph, res);
         assert_eq!(
             splits.entries[&lab!(ef)],
             SplitVertexCache {
-                positions: BTreeMap::from_iter([
-                    (nz!(1), SplitPositionCache {
+                positions: BTreeMap::from_iter([(
+                    nz!(1),
+                    SplitPositionCache {
                         top: HashSet::from_iter([
                             SplitKey {
                                 index: *abcdef,
@@ -172,21 +231,23 @@ mod tests {
                                 pos: nz!(2),
                             },
                         ]),
-                        pattern_splits: HashMap::from_iter([
-                            (*e_f_id, PatternSplitPos {
+                        pattern_splits: HashMap::from_iter([(
+                            *e_f_id,
+                            PatternSplitPos {
                                 inner_offset: None,
                                 sub_index: 1,
-                            })
-                        ])
-                    })
-                ]),
+                            }
+                        )])
+                    }
+                )]),
             },
         );
         assert_eq!(
             splits.entries[&lab!(def)],
             SplitVertexCache {
-                positions: BTreeMap::from_iter([
-                    (nz!(2), SplitPositionCache {
+                positions: BTreeMap::from_iter([(
+                    nz!(2),
+                    SplitPositionCache {
                         top: HashSet::from_iter([
                             SplitKey {
                                 index: *abcdef,
@@ -197,60 +258,70 @@ mod tests {
                                 pos: nz!(3),
                             },
                         ]),
-                        pattern_splits: HashMap::from_iter([
-                            (*d_ef_id, PatternSplitPos {
+                        pattern_splits: HashMap::from_iter([(
+                            *d_ef_id,
+                            PatternSplitPos {
                                 inner_offset: Some(nz!(1)),
                                 sub_index: 1,
-                            })
-                        ])
-                    })
-                ]),
+                            }
+                        )])
+                    }
+                )]),
             },
         );
         assert_eq!(
             splits.entries[&lab!(cdef)],
             SplitVertexCache {
-                positions: BTreeMap::from_iter([
-                    (nz!(3), SplitPositionCache {
-                        top: HashSet::from_iter([
-                            SplitKey {
-                                index: *abcdef,
-                                pos: nz!(5),
-                            },
-                        ]),
-                        pattern_splits: HashMap::from_iter([
-                            (*c_def_id, PatternSplitPos {
+                positions: BTreeMap::from_iter([(
+                    nz!(3),
+                    SplitPositionCache {
+                        top: HashSet::from_iter([SplitKey {
+                            index: *abcdef,
+                            pos: nz!(5),
+                        },]),
+                        pattern_splits: HashMap::from_iter([(
+                            *c_def_id,
+                            PatternSplitPos {
                                 inner_offset: Some(nz!(2)),
                                 sub_index: 1,
-                            })
-                        ])
-                    })
-                ]),
+                            }
+                        )])
+                    }
+                )]),
             },
         );
         assert_eq!(
             splits.entries[&lab!(abcdef)],
             SplitVertexCache {
-                positions: BTreeMap::from_iter([
-                    (nz!(5), SplitPositionCache {
-                        top: HashSet::from_iter([
-                        ]),
+                positions: BTreeMap::from_iter([(
+                    nz!(5),
+                    SplitPositionCache {
+                        top: HashSet::from_iter([]),
                         pattern_splits: HashMap::from_iter([
-                            (*abcd_ef_id, PatternSplitPos {
-                                inner_offset: Some(nz!(1)),
-                                sub_index: 1,
-                            }),
-                            (*abc_def_id, PatternSplitPos {
-                                inner_offset: Some(nz!(2)),
-                                sub_index: 1,
-                            }),
-                            (*ab_cdef_id, PatternSplitPos {
-                                inner_offset: Some(nz!(3)),
-                                sub_index: 1,
-                            }),
+                            (
+                                *abcd_ef_id,
+                                PatternSplitPos {
+                                    inner_offset: Some(nz!(1)),
+                                    sub_index: 1,
+                                }
+                            ),
+                            (
+                                *abc_def_id,
+                                PatternSplitPos {
+                                    inner_offset: Some(nz!(2)),
+                                    sub_index: 1,
+                                }
+                            ),
+                            (
+                                *ab_cdef_id,
+                                PatternSplitPos {
+                                    inner_offset: Some(nz!(3)),
+                                    sub_index: 1,
+                                }
+                            ),
                         ])
-                    })
-                ]),
+                    }
+                )]),
             },
         );
         assert_eq!(splits.entries.len(), 4);

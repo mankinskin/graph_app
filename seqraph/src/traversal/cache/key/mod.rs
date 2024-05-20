@@ -1,19 +1,35 @@
-use crate::shared::*;
+use crate::traversal::path::mutators::move_path::key::TokenLocation;
 
-pub mod pos;
 pub mod leaf;
+pub mod pos;
+pub mod prev;
 pub mod root;
 pub mod target;
-pub mod prev;
 
-use std::ops::{AddAssign, Add};
+use derive_more::From;
+use derive_new::new;
+use std::{
+    convert::TryInto,
+    fmt::Debug,
+    num::NonZeroUsize,
+    ops::{
+        Add,
+        AddAssign,
+    },
+};
 
-use crate::shared::*;
-pub use pos::*; 
+use crate::{
+    traversal::cache::state::child::ChildState,
+    vertex::{
+        child::Child,
+        wide::Wide,
+    },
+};
 pub use leaf::*;
+pub use pos::*;
+pub use prev::*;
 pub use root::*;
 pub use target::*;
-pub use prev::*;
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, From)]
 pub struct UpPosition(pub TokenLocation);
@@ -29,13 +45,19 @@ impl From<usize> for UpPosition {
     }
 }
 impl AddAssign<usize> for UpPosition {
-    fn add_assign(&mut self, rhs: usize) {
+    fn add_assign(
+        &mut self,
+        rhs: usize,
+    ) {
         self.0 += rhs;
     }
 }
 impl Add<usize> for UpPosition {
     type Output = Self;
-    fn add(self, rhs: usize) -> Self::Output {
+    fn add(
+        self,
+        rhs: usize,
+    ) -> Self::Output {
         Self(self.0 + rhs)
     }
 }
@@ -52,13 +74,19 @@ impl From<usize> for DownPosition {
     }
 }
 impl AddAssign<usize> for DownPosition {
-    fn add_assign(&mut self, rhs: usize) {
+    fn add_assign(
+        &mut self,
+        rhs: usize,
+    ) {
         self.0 += rhs;
     }
 }
 impl Add<usize> for DownPosition {
     type Output = Self;
-    fn add(self, rhs: usize) -> Self::Output {
+    fn add(
+        self,
+        rhs: usize,
+    ) -> Self::Output {
         Self(self.0 + rhs)
     }
 }
@@ -100,18 +128,24 @@ impl From<usize> for DirectedPosition {
 }
 impl Add<usize> for DirectedPosition {
     type Output = Self;
-    fn add(self, rhs: usize) -> Self::Output {
+    fn add(
+        self,
+        rhs: usize,
+    ) -> Self::Output {
         match self {
             Self::BottomUp(p) => Self::BottomUp(p + rhs),
-            Self::TopDown(p) => Self::TopDown(p + rhs)
+            Self::TopDown(p) => Self::TopDown(p + rhs),
         }
     }
 }
 impl AddAssign<usize> for DirectedPosition {
-    fn add_assign(&mut self, rhs: usize) {
+    fn add_assign(
+        &mut self,
+        rhs: usize,
+    ) {
         match self {
             Self::BottomUp(p) => *p += rhs,
-            Self::TopDown(p) => *p += rhs
+            Self::TopDown(p) => *p += rhs,
         }
     }
 }
@@ -121,19 +155,28 @@ pub struct DirectedKey {
     pub pos: DirectedPosition,
 }
 impl DirectedKey {
-    pub fn new(index: Child, pos: impl Into<DirectedPosition>) -> Self {
+    pub fn new(
+        index: Child,
+        pos: impl Into<DirectedPosition>,
+    ) -> Self {
         Self {
             index,
             pos: pos.into(),
         }
     }
-    pub fn up(index: Child, pos: impl Into<UpPosition>) -> Self {
+    pub fn up(
+        index: Child,
+        pos: impl Into<UpPosition>,
+    ) -> Self {
         Self {
             index,
             pos: DirectedPosition::BottomUp(pos.into()),
         }
     }
-    pub fn down(index: Child, pos: impl Into<DownPosition>) -> Self {
+    pub fn down(
+        index: Child,
+        pos: impl Into<DownPosition>,
+    ) -> Self {
         Self {
             index,
             pos: DirectedPosition::TopDown(pos.into()),
@@ -187,8 +230,12 @@ pub struct SplitKey {
     pub pos: NonZeroUsize,
 }
 impl SplitKey {
-    pub fn new<P: TryInto<NonZeroUsize>>(index: Child, pos: P) -> Self 
-        where P::Error: Debug
+    pub fn new<P: TryInto<NonZeroUsize>>(
+        index: Child,
+        pos: P,
+    ) -> Self
+    where
+        P::Error: Debug,
     {
         Self {
             index,

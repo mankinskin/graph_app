@@ -1,9 +1,9 @@
-use crate::*;
 use crate::shared::*;
+use crate::*;
 
 use seqraph::vertex::{
-    VertexIndex,
     Indexed,
+    VertexIndex,
 };
 
 #[derive(Debug, Clone, Copy, From, new, Default, Hash, Eq, PartialEq)]
@@ -16,14 +16,10 @@ pub struct TextLocation {
 pub fn containment_graph(texts: &Vec<String>) -> Vocabulary {
     let mut vocab: Vocabulary = Default::default();
     let N: usize = texts.iter().map(|t| t.len()).max().unwrap();
-    for n in 1 ..= N {
+    for n in 1..=N {
         let c = vocab.graph.vertex_count();
         for (i, text) in texts.iter().enumerate() {
-            TextLevelCtx::new(
-                i,
-                text,
-                n,
-            ).on_nlevel(&mut vocab);
+            TextLevelCtx::new(i, text, n).on_nlevel(&mut vocab);
         }
         //vocab.clean();
         //println!("Finished counting  n={}: (+{}) {}", n, vocab.len()-c, vocab.len())
@@ -35,7 +31,7 @@ pub fn containment_graph(texts: &Vec<String>) -> Vocabulary {
 pub struct TextLevelCtx<'a> {
     texti: usize,
     text: &'a String,
-    n: usize
+    n: usize,
 }
 
 impl<'a> TextLevelCtx<'a> {
@@ -45,11 +41,8 @@ impl<'a> TextLevelCtx<'a> {
         ngrams.enumerate().for_each(|(xi, ni)| {
             let ngram = String::from_iter(ni);
 
-            NGramFrequencyCtx::new(
-                *self,
-                &ngram,
-                TextLocation::new(self.texti, xi)
-            ).on_ngram(vocab);
+            NGramFrequencyCtx::new(*self, &ngram, TextLocation::new(self.texti, xi))
+                .on_ngram(vocab);
         });
     }
 }
@@ -94,7 +87,9 @@ impl<'a> NGramFrequencyCtx<'a> {
                 .unwrap();
             vocab.graph.insert_vertex(data);
             for (pid, pat) in children {
-                vocab.graph.add_parents_to_pattern_nodes(pat, id.as_child(), pid);
+                vocab
+                    .graph
+                    .add_parents_to_pattern_nodes(pat, id.as_child(), pid);
             }
         }
     }
@@ -103,27 +98,34 @@ impl<'a> NGramFrequencyCtx<'a> {
         let n = self.ngram.len() - 1;
         let ngram = self.ngram.clone();
 
-        ngram.chars().ngrams(n)
+        ngram
+            .chars()
+            .ngrams(n)
             .enumerate()
             .map(|(i, ni)| {
                 let f = ngram.get(0..i).filter(|s| !s.is_empty());
                 let x = String::from_iter(ni);
-                let b = ngram.get((i+n)..ngram.len()).filter(|s| !s.is_empty());
+                let b = ngram.get((i + n)..ngram.len()).filter(|s| !s.is_empty());
                 let pid = vocab.graph.next_pattern_id();
 
-                (pid, [f, Some(&x), b].into_iter()
-                    .flatten()
-                    .map(|s| {
-                        let id = vocab.ids.get(s).unwrap();
-                        let ctx = vocab.get(id).unwrap();
-                        id.as_child()
-                    })
-                    .collect())
+                (
+                    pid,
+                    [f, Some(&x), b]
+                        .into_iter()
+                        .flatten()
+                        .map(|s| {
+                            let id = vocab.ids.get(s).unwrap();
+                            let ctx = vocab.get(id).unwrap();
+                            id.as_child()
+                        })
+                        .collect(),
+                )
                 //if entry.needs_node() {
-                    //if !children.covers_range(i..i+n, vocab) {
-                    //}
+                //if !children.covers_range(i..i+n, vocab) {
                 //}
-            }).collect()
+                //}
+            })
+            .collect()
         //(1..topn).rev()
         //    .flat_map(|n|
         //).collect()

@@ -1,4 +1,15 @@
-use crate::shared::*;
+use crate::traversal::{
+    cache::state::TraversalState,
+    iterator::traverser::{
+        ExtendStates,
+        NodeVisitor,
+        OrderedTraverser,
+    },
+};
+use std::{
+    cmp::Ordering,
+    collections::BinaryHeap,
+};
 
 pub type Bft<'a, Trav, S> = OrderedTraverser<'a, Trav, S, BftQueue>;
 #[derive(Debug)]
@@ -16,17 +27,19 @@ impl Iterator for BftQueue {
         self.queue.pop().map(|QueueEntry(d, s)| (d, s))
     }
 }
-impl ExtendStates for BftQueue
-{
+impl ExtendStates for BftQueue {
     fn extend<
         It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
-        T: IntoIterator<Item = (usize, TraversalState), IntoIter=It>
-    >(&mut self, iter: T) {
-        self.queue.extend(iter.into_iter().map(|(d, s)| QueueEntry(d, s)))
+        T: IntoIterator<Item = (usize, TraversalState), IntoIter = It>,
+    >(
+        &mut self,
+        iter: T,
+    ) {
+        self.queue
+            .extend(iter.into_iter().map(|(d, s)| QueueEntry(d, s)))
     }
 }
-impl Default for BftQueue
-{
+impl Default for BftQueue {
     fn default() -> Self {
         Self {
             queue: Default::default(),
@@ -37,14 +50,18 @@ impl Default for BftQueue
 struct QueueEntry(usize, TraversalState);
 
 impl Ord for QueueEntry {
-    fn cmp(&self, other: &Self) -> Ordering {
-        other.0.cmp(&self.0).then_with(||
-            self.1.cmp(&other.1)
-        )
+    fn cmp(
+        &self,
+        other: &Self,
+    ) -> Ordering {
+        other.0.cmp(&self.0).then_with(|| self.1.cmp(&other.1))
     }
 }
 impl PartialOrd for QueueEntry {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    fn partial_cmp(
+        &self,
+        other: &Self,
+    ) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }

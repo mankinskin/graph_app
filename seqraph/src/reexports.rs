@@ -2,14 +2,16 @@ pub use crate::{
     graph::Hypergraph,
     vertex::{
         ChildPatterns,
-        Indexed,
+        indexed::{
+            Indexed,
+            AsChild,
+        },
         VertexIndex,
         VertexData,
         VertexEntry,
         VertexDataBuilder,
-        AsChild,
-        Child,
-        Wide,
-        Parent,
+        child::Child,
+        wide::Wide,
+        parent::Parent,
     },
 };

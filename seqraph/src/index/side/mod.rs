@@ -1,8 +1,15 @@
-use crate::shared::*;
-
 //type OppositeContextRange<D, Ty> =
 //    <<Ty as IndexSide<D>>::Opposite as IndexSide<D>>::ContextRange;
 
+use std::{
+    cmp::Ordering,
+    num::NonZeroUsize,
+};
+
+use crate::vertex::{
+    pattern::IntoPattern,
+    wide::Wide,
+};
 
 /// Side refers to border (front is indexing before front border, back is indexing after back border)
 pub trait IndexSide: std::fmt::Debug + Sync + Send + Unpin + Clone + 'static {
@@ -139,9 +146,7 @@ impl IndexSide for IndexBack {
         offset: NonZeroUsize,
     ) -> Option<(usize, Option<NonZeroUsize>)> {
         let mut offset = offset.get();
-        pattern.into_iter()
-            .enumerate()
-            .find_map(|(i, c)|
+        pattern.into_iter().enumerate().find_map(|(i, c)|
                 // returns current index when remaining offset is smaller than current child
                 match c.width().cmp(&offset) {
                     Ordering::Less => {
@@ -153,8 +158,7 @@ impl IndexSide for IndexBack {
                         None
                     },
                     Ordering::Greater => Some((i, NonZeroUsize::new(offset))),
-                }
-            )
+                })
     }
 }
 #[derive(Debug, Clone)]
@@ -229,9 +233,7 @@ impl IndexSide for IndexFront {
         offset: NonZeroUsize,
     ) -> Option<(usize, Option<NonZeroUsize>)> {
         let mut offset = offset.get();
-        pattern.into_iter()
-            .enumerate()
-            .find_map(|(i, c)|
+        pattern.into_iter().enumerate().find_map(|(i, c)|
                 // returns current index when remaining offset does not exceed current child
                 match c.width().cmp(&offset) {
                     Ordering::Less => {
@@ -243,27 +245,21 @@ impl IndexSide for IndexFront {
                         Some((i, NonZeroUsize::new(offset)))
                     },
                     Ordering::Greater => Some((i, NonZeroUsize::new(offset))),
-                }
-            )
+                })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::num::NonZeroUsize;
-    use crate::{
-        *,
-        index::*,
+    use crate::vertex::pattern::pattern_width;
+    use std::{
+        borrow::Borrow,
+        num::NonZeroUsize,
     };
+
     #[test]
     fn token_offset_split() {
-        let pattern = mock::pattern_from_widths([
-            1,
-            1,
-            3,
-            1,
-            1,
-        ]);
+        let pattern = mock::pattern_from_widths([1, 1, 3, 1, 1]);
         let width = pattern_width(&pattern);
         assert_eq!(
             IndexBack::token_offset_split(
@@ -275,14 +271,14 @@ mod tests {
         assert_eq!(
             IndexFront::token_offset_split(
                 pattern.borrow() as &[Child],
-                NonZeroUsize::new(width-2).unwrap(),
+                NonZeroUsize::new(width - 2).unwrap(),
             ),
             Some((2, None)),
         );
         assert_eq!(
             IndexFront::token_offset_split(
                 pattern.borrow() as &[Child],
-                NonZeroUsize::new(width-4).unwrap(),
+                NonZeroUsize::new(width - 4).unwrap(),
             ),
             Some((2, NonZeroUsize::new(1))),
         );

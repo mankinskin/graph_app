@@ -1,4 +1,33 @@
-use crate::shared::*;
+use std::{
+    ops::{
+        Deref,
+        DerefMut,
+    },
+    sync::{
+        RwLockReadGuard,
+        RwLockWriteGuard,
+    },
+};
+
+use crate::{
+    graph::{
+        kind::{
+            BaseGraphKind,
+            GraphKind,
+        },
+        HypergraphRef,
+    },
+    search::Searcher,
+    traversal::{
+        context::TraversalContext,
+        iterator::{
+            IterKind,
+            IterTrav,
+            TraversalIterator,
+        },
+    },
+};
+
 macro_rules! impl_traversable {
     {
         impl $(< $( $par:ident $( : $bhead:tt $( + $btail:tt )*)? ),* >)? for $target:ty, $self_:ident => $func:expr; <$lt:lifetime> $guard:ty
@@ -24,13 +53,19 @@ macro_rules! impl_traversable_mut {
         }
     }
 }
+use crate::{
+    graph::Hypergraph,
+    index::indexer::Indexer,
+};
 pub(crate) use impl_traversable;
 pub(crate) use impl_traversable_mut;
 
 pub trait Traversable: Sized + std::fmt::Debug {
     type Kind: GraphKind;
-    type Guard<'a>: Traversable<Kind=Self::Kind> + Deref<Target=Hypergraph<Self::Kind>> where Self: 'a;
-    fn graph<'a>(&'a self) -> Self::Guard<'a>;
+    type Guard<'a>: Traversable<Kind = Self::Kind> + Deref<Target = Hypergraph<Self::Kind>>
+    where
+        Self: 'a;
+    fn graph(&self) -> Self::Guard<'_>;
 }
 pub type GraphKindOf<T> = <T as Traversable>::Kind;
 pub(crate) type DirectionOf<T> = <GraphKindOf<T> as GraphKind>::Direction;
@@ -57,28 +92,28 @@ impl_traversable! {
 impl<T: Traversable> Traversable for Searcher<T> {
     type Kind = T::Kind;
     type Guard<'a> = T::Guard<'a> where T: 'a;
-    fn graph<'a>(&'a self) -> Self::Guard<'a> {
+    fn graph(&self) -> Self::Guard<'_> {
         self.graph.graph()
     }
 }
 impl<'g, T: Traversable> Traversable for &'g Searcher<T> {
     type Kind = T::Kind;
     type Guard<'a> = T::Guard<'a> where T: 'a, 'g: 'a;
-    fn graph<'a>(&'a self) -> Self::Guard<'a> {
+    fn graph(&self) -> Self::Guard<'_> {
         self.graph.graph()
     }
 }
 impl<'c, 'g, 'b: 'g, I: TraversalIterator<'b>> Traversable for &'c TraversalContext<'g, 'b, I> {
     type Kind = IterKind<'b, I>;
     type Guard<'a> = <IterTrav<'b, I> as Traversable>::Guard<'a> where I: 'a, 'c: 'a;
-    fn graph<'a>(&'a self) -> Self::Guard<'a> {
+    fn graph(&self) -> Self::Guard<'_> {
         self.trav().graph()
     }
 }
 impl<'c, 'g, 'b: 'g, I: TraversalIterator<'b>> Traversable for &'c mut TraversalContext<'g, 'b, I> {
     type Kind = IterKind<'b, I>;
     type Guard<'a> = <IterTrav<'b, I> as Traversable>::Guard<'a> where I: 'a, 'c: 'a;
-    fn graph<'a>(&'a self) -> Self::Guard<'a> {
+    fn graph(&self) -> Self::Guard<'_> {
         self.trav().graph()
     }
 }
@@ -87,11 +122,12 @@ impl_traversable! {
     impl for Hypergraph, self => self; <'a> &'a Self
 }
 pub trait TraversableMut: Traversable {
-    type GuardMut<'a>:
-        TraversableMut<Kind=Self::Kind>
-        + Deref<Target=Hypergraph<Self::Kind>>
-        + DerefMut where Self: 'a;
-    fn graph_mut<'a>(&'a mut self) -> Self::GuardMut<'a>;
+    type GuardMut<'a>: TraversableMut<Kind = Self::Kind>
+        + Deref<Target = Hypergraph<Self::Kind>>
+        + DerefMut
+    where
+        Self: 'a;
+    fn graph_mut(&mut self) -> Self::GuardMut<'_>;
 }
 
 impl_traversable_mut! {

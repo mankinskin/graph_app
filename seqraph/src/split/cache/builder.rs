@@ -1,5 +1,55 @@
-use crate::shared::*;
-use crate::shared::*;
+use crate::{
+    graph::Hypergraph,
+    join::context::node::NodeTraceContext,
+    split::{
+        cleaned_position_splits,
+        CacheContext,
+        Leaves,
+        SplitCache,
+        SplitPositionCache,
+        SplitVertexCache,
+        TraceState,
+    },
+    traversal::{
+        cache::{
+            entry::{
+                InnerNode,
+                RootNode,
+                SubSplitLocation,
+            },
+            key::SplitKey,
+            labelled_key::labelled_key,
+        },
+        folder::state::{
+            FoldState,
+            RootMode,
+        },
+        traversable::{
+            Traversable,
+            TraversableMut,
+        },
+    },
+    vertex::child::ChildWidth,
+    HashMap,
+};
+use derive_more::{
+    Deref,
+    DerefMut,
+};
+use std::{
+    collections::{
+        BTreeSet,
+        VecDeque,
+    },
+    num::NonZeroUsize,
+    sync::RwLockWriteGuard,
+};
+
+use crate::vertex::{
+    child::Child,
+    indexed::Indexed,
+    wide::Wide,
+};
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct SplitCacheBuilder(pub SplitCache);
@@ -11,30 +61,15 @@ impl SplitCacheBuilder {
     ) -> Self {
         let mut entries = HashMap::default();
 
-        let (root_vertex, root_mode, states, leaves) = Self::new_root_vertex(
-            trav,
-            &fold_state,
-        );
-        entries.insert(
-            labelled_key(trav, fold_state.root),
-            root_vertex,
-        );
+        let (root_vertex, root_mode, states, leaves) = Self::new_root_vertex(trav, &fold_state);
+        entries.insert(labelled_key(trav, fold_state.root), root_vertex);
         let mut cache = Self(SplitCache {
             entries,
             root_mode,
-            context: CacheContext {
-                leaves,
-                states,
-            }
+            context: CacheContext { leaves, states },
         });
         let graph = trav.graph_mut();
-        cache.augment_root(
-            NodeTraceContext::new(
-                &graph,
-                fold_state.root,
-            ),
-            root_mode,
-        );
+        cache.augment_root(NodeTraceContext::new(&graph, fold_state.root), root_mode);
         // stores past states
         let mut incomplete = BTreeSet::<Child>::default();
         // traverse top down by width
@@ -44,22 +79,12 @@ impl SplitCacheBuilder {
             // trace offset splits top down by width
             // complete past states larger than current state
             // store offsets and filter leaves
-            cache.trace(
-                &graph,
-                &mut fold_state,
-                &state,
-            );
+            cache.trace(&graph, &mut fold_state, &state);
             incomplete.insert(state.index);
             let complete = incomplete.split_off(&ChildWidth(state.index.width() + 1));
-            cache.augment_nodes(
-                &graph,
-                complete,
-            );
-        };
-        cache.augment_nodes(
-            &graph,
-            incomplete,
-        );
+            cache.augment_nodes(&graph, complete);
+        }
+        cache.augment_nodes(&graph, incomplete);
         cache
     }
     pub fn new_root_vertex<Trav: Traversable>(
@@ -68,35 +93,30 @@ impl SplitCacheBuilder {
     ) -> (SplitVertexCache, RootMode, VecDeque<TraceState>, Leaves) {
         let mut states = VecDeque::default();
         let mut leaves = Leaves::default();
-        let (offsets, root_mode) = Self::completed_splits::<_, RootNode>(
-            trav,
-            fold_state,
-            &fold_state.root,
-        );
+        let (offsets, root_mode) =
+            Self::completed_splits::<_, RootNode>(trav, fold_state, &fold_state.root);
         let pos_splits = leaves.filter_leaves(&fold_state.root, offsets.clone());
-        states.extend(leaves.filter_trace_states(
-            trav,
-            &fold_state.root,
-            pos_splits
-        ));
+        states.extend(leaves.filter_trace_states(trav, &fold_state.root, pos_splits));
         (
             SplitVertexCache {
-                positions: offsets.into_iter().map(|(offset, res)|
-                    (offset, SplitPositionCache::root(
-                        res.unwrap_or_else(|location|
-                            vec![
-                                SubSplitLocation {
+                positions: offsets
+                    .into_iter()
+                    .map(|(offset, res)| {
+                        (
+                            offset,
+                            SplitPositionCache::root(res.unwrap_or_else(|location| {
+                                vec![SubSplitLocation {
                                     location,
                                     inner_offset: None,
-                                }
-                            ]
+                                }]
+                            })),
                         )
-                    ))
-                ).collect()
+                    })
+                    .collect(),
             },
             root_mode,
             states,
-            leaves
+            leaves,
         )
     }
     pub fn new_split_vertex<Trav: Traversable>(
@@ -107,43 +127,37 @@ impl SplitCacheBuilder {
         offset: NonZeroUsize,
         prev: SplitKey,
     ) -> SplitVertexCache {
-        let mut subs = Self::completed_splits::<_, InnerNode>(
-            trav,
-            fold_state,
-            &index,
-        );
+        let mut subs = Self::completed_splits::<_, InnerNode>(trav, fold_state, &index);
         if subs.get(&offset).is_none() {
             let graph = trav.graph();
             let (_, node) = graph.expect_vertex(index);
             //let entry = self.cache.entries.get(&index.index).unwrap();
-            subs.insert(offset,
-                cleaned_position_splits(
-                    node.children.iter(),
-                    offset,
-                )
+            subs.insert(
+                offset,
+                cleaned_position_splits(node.children.iter(), offset),
             );
         }
         let pos_splits = self.leaves.filter_leaves(&index, subs.clone());
-        let next = self.leaves.filter_trace_states(
-            trav,
-            &index,
-            pos_splits,
-        );
+        let next = self.leaves.filter_trace_states(trav, &index, pos_splits);
         self.states.extend(next);
         SplitVertexCache {
-            positions: subs.into_iter().map(|(offset, res)|
-                (offset, SplitPositionCache::new(
-                    prev,
-                    res.unwrap_or_else(|location|
-                        vec![
-                            SubSplitLocation {
-                                location,
-                                inner_offset: None,
-                            }
-                        ]
+            positions: subs
+                .into_iter()
+                .map(|(offset, res)| {
+                    (
+                        offset,
+                        SplitPositionCache::new(
+                            prev,
+                            res.unwrap_or_else(|location| {
+                                vec![SubSplitLocation {
+                                    location,
+                                    inner_offset: None,
+                                }]
+                            }),
+                        ),
                     )
-                ))
-            ).collect()
+                })
+                .collect(),
         }
     }
     /// complete offsets across all children
@@ -153,33 +167,22 @@ impl SplitCacheBuilder {
         fold_state: &mut FoldState,
         state: &TraceState,
     ) {
-        let &TraceState { index, offset, prev } = state;
+        let &TraceState {
+            index,
+            offset,
+            prev,
+        } = state;
         if let Some(ve) = self.0.entries.get_mut(&index.vertex_index()) {
             let ctx = &mut self.0.context;
-            ve.positions.entry(offset)
+            ve.positions
+                .entry(offset)
                 .and_modify(|pe| {
                     pe.top.insert(prev);
                 })
-                .or_insert_with(||
-                    ctx.new_split_position(
-                        trav,
-                        index,
-                        offset,
-                        prev,
-                    )
-                );
+                .or_insert_with(|| ctx.new_split_position(trav, index, offset, prev));
         } else {
-            let vertex = self.new_split_vertex(
-                trav,
-                fold_state,
-                index,
-                offset,
-                prev,
-            );
-            self.entries.insert(
-                labelled_key(trav, index),
-                vertex,
-            );
+            let vertex = self.new_split_vertex(trav, fold_state, index, offset, prev);
+            self.entries.insert(labelled_key(trav, index), vertex);
         }
     }
     pub fn child_trace_states<Trav: Traversable>(
@@ -188,23 +191,10 @@ impl SplitCacheBuilder {
         fold_state: &FoldState,
         index: &Child,
     ) -> Vec<TraceState> {
-        let subs =
-            Self::completed_splits::<_, InnerNode>(
-                trav,
-                fold_state,
-                index,
-            )
+        let subs = Self::completed_splits::<_, InnerNode>(trav, fold_state, index)
             .into_iter()
-            .filter_map(|(parent_offset, res)|
-                res.ok().map(|locs|
-                    (parent_offset, locs)
-                )
-            );
-        self.leaves.filter_trace_states(
-            trav,
-            index,
-            subs,
-        )
+            .filter_map(|(parent_offset, res)| res.ok().map(|locs| (parent_offset, locs)));
+        self.leaves.filter_trace_states(trav, index, subs)
     }
     pub fn build(self) -> SplitCache {
         self.0

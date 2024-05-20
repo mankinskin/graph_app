@@ -1,23 +1,27 @@
-use crate::shared::*;
+use std::fmt::Debug;
 
 pub trait SplitInner: Debug + Clone {}
 impl<T: Debug + Clone> SplitInner for T {}
 
+use crate::vertex::child::Child;
 #[derive(Debug, Clone)]
 pub struct Split<T: SplitInner = Child> {
     pub left: T,
     pub right: T,
 }
 impl<T: SplitInner> Split<T> {
-    pub fn new(left: T, right: T) -> Self {
-        Self {
-            left,
-            right,
-        }
+    pub fn new(
+        left: T,
+        right: T,
+    ) -> Self {
+        Self { left, right }
     }
 }
-impl<I, T: SplitInner + Extend<I> + IntoIterator<Item=I>> Split<T> {
-    pub fn infix(&mut self, mut inner: Split<T>) {
+impl<I, T: SplitInner + Extend<I> + IntoIterator<Item = I>> Split<T> {
+    pub fn infix(
+        &mut self,
+        mut inner: Split<T>,
+    ) {
         self.left.extend(inner.left);
         inner.right.extend(self.right.clone());
         self.right = inner.right;

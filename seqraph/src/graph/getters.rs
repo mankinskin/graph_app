@@ -1,5 +1,48 @@
-use crate::shared::*;
+use std::slice::SliceIndex;
+
 use indexmap::IndexMap;
+
+use crate::{
+    graph::{
+        kind::GraphKind,
+        Hypergraph,
+    },
+    search::NoMatch,
+    vertex::{
+        child::Child,
+        indexed::Indexed,
+        location::{
+            ChildLocation,
+            IntoChildLocation,
+            IntoPatternLocation,
+        },
+        parent::{
+            Parent,
+            PatternIndex,
+        },
+        pattern::{
+            pattern_width,
+            IntoPattern,
+            Pattern,
+            PatternRangeIndex,
+        },
+        token::{
+            AsToken,
+            Token,
+        },
+        ChildPatterns,
+        IndexPattern,
+        PatternId,
+        TokenPosition,
+        VertexData,
+        VertexEntry,
+        VertexIndex,
+        VertexKey,
+        VertexParents,
+        VertexPatternView,
+    },
+};
+
 impl<'t, G: GraphKind> Hypergraph<G> {
     pub fn vertex_entry(
         &mut self,
@@ -39,7 +82,8 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         let location = location.into_pattern_location();
         let vertex = self.get_vertex_data(location.parent)?;
         let child_patterns = vertex.get_child_patterns();
-        child_patterns.get(&location.id)
+        child_patterns
+            .get(&location.id)
             .ok_or(NoMatch::NoChildPatterns) // todo: better error
     }
     #[track_caller]
@@ -49,9 +93,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     ) -> &Pattern {
         let location = location.into_pattern_location();
         self.get_pattern_at(location)
-            .unwrap_or_else(|_|
-                panic!("Pattern not found at location {:#?}", location)
-            )
+            .unwrap_or_else(|_| panic!("Pattern not found at location {:#?}", location))
     }
     pub fn get_child_at(
         &self,
@@ -59,7 +101,8 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     ) -> Result<Child, NoMatch> {
         let location = location.into_child_location();
         let pattern = self.get_pattern_at(&location)?;
-        pattern.get(location.sub_index)
+        pattern
+            .get(location.sub_index)
             .cloned()
             .ok_or(NoMatch::NoChildPatterns) // todo: better error
     }
@@ -82,7 +125,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     pub fn get_pattern_of(
         &self,
         index: impl Indexed,
-        pid: PatternId
+        pid: PatternId,
     ) -> Result<&Pattern, NoMatch> {
         self.get_vertex_data(index)
             .and_then(|vertex| vertex.get_child_pattern(&pid))
@@ -91,10 +134,9 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     pub fn expect_child_pattern(
         &self,
         index: impl Indexed,
-        pid: PatternId
+        pid: PatternId,
     ) -> &Pattern {
-        self.expect_vertex_data(index)
-            .expect_child_pattern(&pid)
+        self.expect_vertex_data(index).expect_child_pattern(&pid)
     }
     #[track_caller]
     pub fn expect_child_patterns(
@@ -105,14 +147,18 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     }
 
     #[track_caller]
-    pub fn expect_any_child_pattern(&self, index: impl Indexed) -> (&PatternId, &Pattern) {
+    pub fn expect_any_child_pattern(
+        &self,
+        index: impl Indexed,
+    ) -> (&PatternId, &Pattern) {
         self.expect_vertex_data(index).expect_any_child_pattern()
     }
     pub fn expect_child_offset(
         &self,
         loc: &ChildLocation,
     ) -> usize {
-        self.expect_vertex_data(&loc.vertex_index()).expect_child_offset(&loc.to_sub_location())
+        self.expect_vertex_data(&loc.vertex_index())
+            .expect_child_offset(&loc.to_sub_location())
     }
     #[track_caller]
     pub fn expect_vertex_mut(
@@ -166,7 +212,9 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         &self,
         key: &VertexKey<G::Token>,
     ) -> Result<&VertexData<G>, NoMatch> {
-        self.graph.get(&self.get_index_by_key(key)?).ok_or(NoMatch::UnknownKey)
+        self.graph
+            .get(&self.get_index_by_key(key)?)
+            .ok_or(NoMatch::UnknownKey)
     }
     pub fn get_vertex_data_by_key_mut(
         &mut self,
@@ -180,14 +228,18 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         &self,
         key: &VertexKey<G::Token>,
     ) -> &VertexData<G> {
-        self.graph.get(&self.expect_index_by_key(key)).expect("Key does not exist")
+        self.graph
+            .get(&self.expect_index_by_key(key))
+            .expect("Key does not exist")
     }
     #[track_caller]
     pub fn expect_vertex_data_by_key_mut(
         &mut self,
         key: &VertexKey<G::Token>,
     ) -> &mut VertexData<G> {
-        self.graph.get_mut(&self.expect_index_by_key(key)).expect("Key does not exist")
+        self.graph
+            .get_mut(&self.expect_index_by_key(key))
+            .expect("Key does not exist")
     }
     pub fn vertex_iter(&self) -> impl Iterator<Item = (&VertexIndex, &VertexData<G>)> {
         self.graph.iter()
@@ -274,7 +326,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     pub fn expect_pattern_range_width(
         &self,
         location: impl IntoPatternLocation,
-        range: impl PatternRangeIndex
+        range: impl PatternRangeIndex,
     ) -> usize {
         pattern_width(self.expect_pattern_range(location, range))
     }
@@ -289,7 +341,9 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         &'a self,
         tokens: impl IntoIterator<Item = impl AsToken<G::Token>> + 'a,
     ) -> impl Iterator<Item = Result<VertexIndex, NoMatch>> + 'a {
-        tokens.into_iter().map(move |token| self.get_token_index(token))
+        tokens
+            .into_iter()
+            .map(move |token| self.get_token_index(token))
     }
     pub fn to_token_indices(
         &self,
@@ -366,10 +420,11 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     }
     pub fn expect_is_at_end(
         &self,
-        location: &ChildLocation
+        location: &ChildLocation,
     ) -> bool {
         self.expect_vertex_data(location.vertex_index())
-            .expect_pattern_len(&location.pattern_id) == location.sub_index + 1
+            .expect_pattern_len(&location.pattern_id)
+            == location.sub_index + 1
     }
     pub fn expect_child(
         &self,
@@ -424,7 +479,9 @@ impl<'t, G: GraphKind> Hypergraph<G> {
                     .pattern_indices
                     .iter()
                     .find(|pix| {
-                        parents.all(|(i, post)| post.exists_at_pos_in_pattern(pix.pattern_id, pix.sub_index + i))
+                        parents.all(|(i, post)| {
+                            post.exists_at_pos_in_pattern(pix.pattern_id, pix.sub_index + i)
+                        })
                     })
                     .cloned()
             })
@@ -439,32 +496,24 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         self.get_common_pattern_in_parent(pattern, parent)
             .expect("No common pattern in parent for children.")
     }
-    pub fn get_pattern_range<'a, R: PatternRangeIndex>(
-        &'a self,
+    pub fn get_pattern_range<R: PatternRangeIndex>(
+        &self,
         id: impl IntoPatternLocation,
         range: R,
-    ) -> Result<&'a <R as SliceIndex<[Child]>>::Output, NoMatch> {
+    ) -> Result<&<R as SliceIndex<[Child]>>::Output, NoMatch> {
         let loc = id.into_pattern_location();
-        self
-            .get_vertex_data(loc.parent)?
-            .get_child_pattern_range(
-                &loc.id,
-                range,
-            )
+        self.get_vertex_data(loc.parent)?
+            .get_child_pattern_range(&loc.id, range)
     }
     #[track_caller]
-    pub fn expect_pattern_range<'a, R: PatternRangeIndex>(
-        &'a self,
+    pub fn expect_pattern_range<R: PatternRangeIndex>(
+        &self,
         id: impl IntoPatternLocation,
         range: R,
-    ) -> &'a <R as SliceIndex<[Child]>>::Output {
+    ) -> &<R as SliceIndex<[Child]>>::Output {
         let loc = id.into_pattern_location();
-        self
-            .expect_vertex_data(loc.parent)
-            .expect_child_pattern_range(
-                &loc.id,
-                range,
-            )
+        self.expect_vertex_data(loc.parent)
+            .expect_child_pattern_range(&loc.id, range)
     }
 }
 impl<'t, 'a, G: GraphKind> Hypergraph<G> {
@@ -485,7 +534,7 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G> {
     //    tokens: impl TokenStream<T> + 't,
     //) -> impl PatternStream<Child, Token<T>> + 't {
     //    Self::async_to_token_indices_stream(arc, tokens)
-    //        
+    //
     //        .map(move |index| index.into_inner().map(|index| Child::new(index, 1)))
     //}
     //pub fn to_token_indices_stream(

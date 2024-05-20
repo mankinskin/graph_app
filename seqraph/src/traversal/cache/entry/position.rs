@@ -1,4 +1,27 @@
-use crate::shared::*;
+use crate::{
+    traversal::{
+        cache::{
+            entry::{
+                NewEntry,
+                Offset,
+                StateDepth,
+            },
+            key::DirectedKey,
+            state::{
+                StateDirection,
+                WaitingState,
+            },
+            TraversalCache,
+        },
+        traversable::Traversable,
+    },
+    vertex::{
+        child::Child,
+        location::SubLocation,
+    },
+    HashMap,
+    HashSet,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BottomUp;
@@ -15,7 +38,7 @@ impl TraversalDirection for TopDown {
     type Opposite = BottomUp;
 }
 /// optional offset inside of pattern sub location
-/// 
+///
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SubSplitLocation {
     pub location: SubLocation,
@@ -50,19 +73,15 @@ impl PositionCache {
         let mut edges = Edges::default();
         match (add_edges, state.state_direction(), state.entry_location()) {
             (true, StateDirection::BottomUp, Some(entry)) => {
-                edges.bottom.insert(
-                    state.prev_key().prev_target,
-                    entry.to_sub_location(),
-                );
-            },
+                edges
+                    .bottom
+                    .insert(state.prev_key().prev_target, entry.to_sub_location());
+            }
             (true, StateDirection::TopDown, Some(entry)) => {
-                let prev = cache.force_mut(
-                    trav,
-                    &state.prev_key().prev_target
-                );
+                let prev = cache.force_mut(trav, &state.prev_key().prev_target);
                 prev.edges.bottom.insert(key, entry.to_sub_location());
-            },
-            _ => {},
+            }
+            _ => {}
         }
         Self {
             index: key.index,
@@ -70,7 +89,11 @@ impl PositionCache {
             waiting: Default::default(),
         }
     }
-    pub fn add_waiting(&mut self, depth: StateDepth, state: WaitingState) {
+    pub fn add_waiting(
+        &mut self,
+        depth: StateDepth,
+        state: WaitingState,
+    ) {
         self.waiting.push((depth, state));
     }
     pub fn num_parents(&self) -> usize {

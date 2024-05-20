@@ -1,4 +1,13 @@
-use crate::shared::*;
+use crate::{
+    traversal::{
+        cache::state::query::QueryState,
+        path::{
+            mutators::append::PathAppend,
+            structs::rooted_path::SearchPath,
+        },
+    },
+    vertex::location::ChildLocation,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PathPair {
@@ -11,25 +20,21 @@ pub enum PathPairMode {
     GraphMajor,
     QueryMajor,
 }
-impl<
-> PathPair {
-    pub fn new(path: SearchPath, query: QueryState, mode: PathPairMode) -> Self {
-            Self {
-                path,
-                query,
-                mode,
-            }
+impl PathPair {
+    pub fn new(
+        path: SearchPath,
+        query: QueryState,
+        mode: PathPairMode,
+    ) -> Self {
+        Self { path, query, mode }
     }
-    pub fn push_major
-    (
+    pub fn push_major(
         &mut self,
         location: ChildLocation,
     ) {
         match self.mode {
-            PathPairMode::GraphMajor =>
-                self.path.path_append(location),
-            PathPairMode::QueryMajor =>
-                self.query.path_append(location),
+            PathPairMode::GraphMajor => self.path.path_append(location),
+            PathPairMode::QueryMajor => self.query.path_append(location),
         }
     }
 }

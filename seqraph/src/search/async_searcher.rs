@@ -4,11 +4,13 @@ use crate::{
     vertex::*,
     *,
 };
+use crate::vertex::PatternId;
 use tokio_stream::{
     Stream,
     StreamExt,
 };
 use itertools::Itertools;
+use crate::search::NoMatch;
 
 pub struct AsyncSearcher<T: Tokenize + Send, D: AsyncMatchDirection<T>> {
     graph: HypergraphHandle<T>,

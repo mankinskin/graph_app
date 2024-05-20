@@ -1,16 +1,28 @@
-use crate::traversal::traversable::Traversable;
-use super::*;
+use crate::{
+    graph::kind::GraphKind,
+    traversal::traversable::Traversable,
+    vertex::{
+        child::Child,
+        pattern::Pattern,
+        token::Tokenize,
+        PatternId,
+        VertexIndex,
+    },
+};
 
 pub trait Indexed: Sized {
     fn vertex_index(&self) -> VertexIndex;
-    fn expect_child_patterns<
-        Trav: Traversable,
-    >(&self, trav: &Trav) -> ChildPatterns {
+    fn expect_child_patterns<Trav: Traversable>(
+        &self,
+        trav: &Trav,
+    ) -> crate::vertex::ChildPatterns {
         trav.graph().expect_child_patterns(self).clone()
     }
-    fn expect_child_pattern<
-        Trav: Traversable,
-    >(&self, trav: &Trav, pid: PatternId) -> Pattern {
+    fn expect_child_pattern<Trav: Traversable>(
+        &self,
+        trav: &Trav,
+        pid: PatternId,
+    ) -> Pattern {
         trav.graph().expect_child_pattern(self, pid).clone()
     }
 }
@@ -29,18 +41,18 @@ impl Indexed for VertexIndex {
         *self
     }
 }
-impl<G: GraphKind> Indexed for VertexData<G> {
+impl<G: GraphKind> Indexed for crate::vertex::VertexData<G> {
     fn vertex_index(&self) -> VertexIndex {
         self.index
     }
 }
 
-pub trait AsChild: Indexed + Wide + std::fmt::Debug {
+pub trait AsChild: Indexed + crate::vertex::wide::Wide + std::fmt::Debug {
     fn as_child(&self) -> Child {
         Child::new(self.vertex_index(), self.width())
     }
 }
-impl<T: Indexed + Wide + std::fmt::Debug> AsChild for T {}
+impl<T: Indexed + crate::vertex::wide::Wide + std::fmt::Debug> AsChild for T {}
 
 pub trait ToChild: AsChild + Sized + std::fmt::Debug {
     fn to_child(self) -> Child {

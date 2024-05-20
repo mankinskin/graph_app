@@ -1,4 +1,37 @@
-use crate::shared::*;
+use crate::{
+    graph::{
+        direction::r#match::MatchDirection,
+        kind::GraphKind,
+    },
+    search::NoMatch,
+    traversal::{
+        context::{
+            QueryStateContext,
+            TraversalContext,
+        },
+        iterator::TraversalIterator,
+        path::{
+            accessors::role::{
+                End,
+                Start,
+            },
+            mutators::move_path::key::TokenLocation,
+            structs::{
+                query_range_path::QueryRangePath,
+                role_path::RolePath,
+                rooted_path::SubPath,
+            },
+        },
+    },
+    vertex::{
+        pattern::{
+            IntoPattern,
+            Pattern,
+        },
+        wide::Wide,
+    },
+};
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct QueryState {
     pub start: RolePath<Start>,
@@ -12,17 +45,17 @@ impl QueryState {
     ) -> QueryStateContext<'a> {
         ctx.query_state(self)
     }
-    pub fn to_rooted(self, root: Pattern) -> QueryRangePath {
+    pub fn to_rooted(
+        self,
+        root: Pattern,
+    ) -> QueryRangePath {
         QueryRangePath {
             root,
             start: self.start,
             end: self.end,
         }
     }
-    pub fn new<
-        G: GraphKind,
-        P: IntoPattern,
-    >(query: P) -> Result<Self, (NoMatch, Self)> {
+    pub fn new<G: GraphKind, P: IntoPattern>(query: P) -> Result<Self, (NoMatch, Self)> {
         let entry = G::Direction::head_index(query.borrow());
         let query = query.into_pattern();
         let first = *query.first().unwrap();
@@ -31,10 +64,14 @@ impl QueryState {
         match len {
             0 => Err((NoMatch::EmptyPatterns, query)),
             1 => Err((NoMatch::SingleIndex(first), query)),
-            _ => Ok(query)
+            _ => Ok(query),
         }
     }
-    fn new_range(entry: usize, exit: usize, pos: TokenLocation) -> Self {
+    fn new_range(
+        entry: usize,
+        exit: usize,
+        pos: TokenLocation,
+    ) -> Self {
         Self {
             start: SubPath::new(entry).into(),
             end: SubPath::new(exit).into(),

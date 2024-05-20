@@ -1,9 +1,22 @@
-use crate::shared::*;
+use crate::{
+    traversal::{
+        path::{
+            accessors::role::Start,
+            structs::{
+                role_path::RolePath,
+                rooted_path::SearchPath,
+            },
+        },
+        result_kind::Advanced,
+        traversable::Traversable,
+    },
+};
 
 pub trait FromAdvanced<A: Advanced> {
-    fn from_advanced<
-        Trav: Traversable,
-    >(path: A, trav: &Trav) -> Self;
+    fn from_advanced<Trav: Traversable>(
+        path: A,
+        trav: &Trav,
+    ) -> Self;
 }
 //impl FromAdvanced<SearchPath> for FoundPath {
 //    fn from_advanced<
@@ -16,13 +29,14 @@ pub trait FromAdvanced<A: Advanced> {
 //        } else {
 //            Self::Path(path)
 //        }
-//        
+//
 //    }
 //}
 impl FromAdvanced<SearchPath> for RolePath<Start> {
-    fn from_advanced<
-        Trav: Traversable,
-    >(path: SearchPath, _trav: &Trav) -> Self {
+    fn from_advanced<Trav: Traversable>(
+        path: SearchPath,
+        _trav: &Trav,
+    ) -> Self {
         path.start
     }
 }

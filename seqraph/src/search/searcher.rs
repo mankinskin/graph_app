@@ -1,38 +1,47 @@
-use crate::shared::*;
 //use rayon::iter::{
 //    ParallelBridge,
 //    ParallelIterator,
 //};
+use crate::{
+    search::NoMatch,
+    traversal::{
+        cache::state::parent::ParentState,
+        folder::TraversalFolder,
+        iterator::{
+            traverser::Bft,
+            TraversalIterator,
+        },
+        policy::DirectedTraversalPolicy,
+        result::TraversalResult,
+        traversable::Traversable,
+    },
+    vertex::pattern::IntoPattern,
+};
 
 #[derive(Clone, Debug)]
 pub struct Searcher<T: Traversable> {
     pub graph: T,
 }
 pub trait SearchTraversalPolicy<T: Traversable>:
-    DirectedTraversalPolicy<
-        Trav=Searcher<T>,
-    >
+    DirectedTraversalPolicy<Trav = Searcher<T>>
 {
 }
-impl<T: Traversable> SearchTraversalPolicy<T> for (T, AncestorSearch)
-{}
-impl<T: Traversable> SearchTraversalPolicy<T> for (T, ParentSearch)
-{}
-
+impl<T: Traversable> SearchTraversalPolicy<T> for (T, AncestorSearch) {}
+impl<T: Traversable> SearchTraversalPolicy<T> for (T, ParentSearch) {}
 
 impl<T: Traversable> TraversalFolder for Searcher<T> {
     type Iterator<'a> = Bft<'a, Self, (T, AncestorSearch)> where T: 'a;
 }
 
 #[derive(Debug)]
-pub struct AncestorSearch { }
+pub struct AncestorSearch {}
 
 impl<T: Traversable> DirectedTraversalPolicy for (T, AncestorSearch) {
     type Trav = Searcher<T>;
 }
 
 #[derive(Debug)]
-pub struct ParentSearch { }
+pub struct ParentSearch {}
 
 impl<T: Traversable> DirectedTraversalPolicy for (T, ParentSearch) {
     type Trav = Searcher<T>;
@@ -43,55 +52,36 @@ impl<T: Traversable> DirectedTraversalPolicy for (T, ParentSearch) {
         vec![]
     }
 }
-pub type SearchResult = Result<
-    TraversalResult,
-    NoMatch
->;
+pub type SearchResult = Result<TraversalResult, NoMatch>;
 impl<T: Traversable> Searcher<T> {
     pub fn new(graph: T) -> Self {
-        Self {
-            graph,
-        }
+        Self { graph }
     }
     // find largest matching direct parent
     pub fn find_pattern_parent(
         &self,
         pattern: impl IntoPattern,
     ) -> SearchResult {
-        self.bft_search::<(T, AncestorSearch), _>(
-            pattern,
-        )
+        self.bft_search::<(T, AncestorSearch), _>(pattern)
     }
     /// find largest matching ancestor for pattern
     pub fn find_pattern_ancestor(
         &self,
         pattern: impl IntoPattern,
     ) -> SearchResult {
-        self.bft_search::<(T, AncestorSearch), _>(
-            pattern,
-        )
+        self.bft_search::<(T, AncestorSearch), _>(pattern)
     }
-    fn bft_search<
-        S: SearchTraversalPolicy<T>,
-        P: IntoPattern,
-    >(
+    fn bft_search<S: SearchTraversalPolicy<T>, P: IntoPattern>(
         &self,
         query: P,
     ) -> SearchResult {
-        self.search::<Bft<Self, S>, _>(
-            query,
-        )
+        self.search::<Bft<Self, S>, _>(query)
     }
-    fn search<
-        'a,
-        Ti: TraversalIterator<'a, Trav=Self>,
-        P: IntoPattern,
-    >(
+    fn search<'a, Ti: TraversalIterator<'a, Trav = Self>, P: IntoPattern>(
         &'a self,
         query: P,
     ) -> SearchResult {
-        <Self as TraversalFolder>::fold_query(self, query)
-            .map_err(|(nm, _)| nm)
+        <Self as TraversalFolder>::fold_query(self, query).map_err(|(nm, _)| nm)
     }
     //#[allow(unused)]
     //fn par_search<

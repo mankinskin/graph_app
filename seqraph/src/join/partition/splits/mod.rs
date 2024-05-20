@@ -1,14 +1,28 @@
-use crate::shared::*;
-
 pub mod offset;
-pub use offset::*;
+use std::{
+    borrow::Borrow,
+    collections::BTreeMap,
+    fmt::Debug,
+    num::NonZeroUsize,
+};
 
-pub type PosSplits<S=SplitVertexCache> = BTreeMap<NonZeroUsize, <S as HasPosSplits>::Split>;
-pub type PosSplitRef<'p, S=SplitVertexCache> = (&'p NonZeroUsize, &'p <S as HasPosSplits>::Split);
+use crate::HashMap;
+
+use crate::{
+    split::{
+        Split,
+        SplitPositionCache,
+        SplitVertexCache,
+        VertexSplitPos,
+    },
+    traversal::cache::key::SplitKey,
+};
+
+pub type PosSplits<S = SplitVertexCache> = BTreeMap<NonZeroUsize, <S as HasPosSplits>::Split>;
+pub type PosSplitRef<'p, S = SplitVertexCache> = (&'p NonZeroUsize, &'p <S as HasPosSplits>::Split);
 
 pub trait SplitKind: Borrow<VertexSplitPos> + Debug + Sized + Clone {}
-impl<'a, S: Borrow<VertexSplitPos> + Debug + Sized + 'a + Clone> SplitKind for S
-{}
+impl<'a, S: Borrow<VertexSplitPos> + Debug + Sized + 'a + Clone> SplitKind for S {}
 
 pub trait HasPosSplits {
     type Split: SplitKind;

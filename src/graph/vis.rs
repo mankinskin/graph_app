@@ -78,7 +78,8 @@ impl GraphVis {
             },
             |_idx, e| (e.child.width() > 1).then(|| ()),
         );
-        let node_indices: HashMap<_, _> = filtered.nodes()
+        let node_indices: HashMap<_, _> = filtered
+            .nodes()
             .map(|(idx, (key, _node))| (*key, idx))
             .collect();
 
@@ -365,11 +366,7 @@ impl std::ops::Deref for ChildVis {
     }
 }
 impl ChildVis {
-    fn new(
-        graph: &Hypergraph,
-        node_indices: &HashMap<VertexKey, NodeIndex>,
-        child: Child,
-    ) -> Self {
+    fn new(graph: &Hypergraph, node_indices: &HashMap<VertexKey, NodeIndex>, child: Child) -> Self {
         let key = graph.expect_vertex_key(child.index);
         let name = graph.index_string(child.get_index());
         let idx = node_indices.get(key).cloned();

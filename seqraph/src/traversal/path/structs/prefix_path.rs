@@ -1,4 +1,5 @@
 use crate::shared::*;
+use crate::search::NoMatch;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PatternPrefixPath {

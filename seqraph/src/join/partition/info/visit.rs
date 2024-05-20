@@ -1,4 +1,40 @@
-use crate::shared::*;
+use crate::{
+    join::{
+        context::{
+            node::AsPatternContext,
+            pattern::{
+                AsPatternTraceContext,
+                PatternTraceContext,
+            },
+        },
+        partition::{
+            info::{
+                border::{
+                    perfect::BoolPerfect,
+                    visit::VisitBorders,
+                    PartitionBorder,
+                },
+                range::{
+                    role::{
+                        ModeNodeCtxOf,
+                        ModePatternCtxOf,
+                        RangeRole,
+                    },
+                    splits::PatternSplits,
+                },
+                PartitionInfo,
+            },
+            AsPartition,
+        },
+    },
+    vertex::{
+        child::Child,
+        PatternId,
+    },
+    HashMap,
+};
+use std::hash::Hash;
+
 pub struct PartitionBorders<K: RangeRole, C: PartitionBorderKey = PatternId> {
     pub borders: HashMap<C, K::Borders>,
     pub perfect: K::Perfect,
@@ -6,7 +42,6 @@ pub struct PartitionBorders<K: RangeRole, C: PartitionBorderKey = PatternId> {
 pub type PatternCtxs<'t, K> = HashMap<PatternId, ModePatternCtxOf<'t, K>>;
 pub trait PartitionBorderKey: Hash + Eq {}
 impl<T: Hash + Eq> PartitionBorderKey for T {}
-
 
 pub trait VisitPartition<K: RangeRole>: Sized + Clone + AsPartition<K> {
     fn info_borders<'t>(
@@ -26,17 +61,15 @@ pub trait VisitPartition<K: RangeRole>: Sized + Clone + AsPartition<K> {
         ctx: &'t ModeNodeCtxOf<'t, K>,
     ) -> PatternCtxs<'t, K> {
         let part = self.clone().as_partition();
-        part.offsets.ids().map(|id|
-            (*id, ctx.as_pattern_context(id))
-        ).collect()
+        part.offsets
+            .ids()
+            .map(|id| (*id, ctx.as_pattern_context(id)))
+            .collect()
     }
 
     /// bundle pattern range infos of each pattern
     /// or extract complete child for range
-    fn partition_borders<
-        't,
-        C: PartitionBorderKey + From<ModePatternCtxOf<'t, K>>,
-    >(
+    fn partition_borders<'t, C: PartitionBorderKey + From<ModePatternCtxOf<'t, K>>>(
         self,
         ctx: &'t ModeNodeCtxOf<'t, K>,
     ) -> PartitionBorders<K, C> {
@@ -46,33 +79,20 @@ pub trait VisitPartition<K: RangeRole>: Sized + Clone + AsPartition<K> {
             .map(|(_, pctx)| {
                 let (perfect, borders) = {
                     let pctx = pctx.as_pattern_trace_context();
-                    let borders = self.info_borders(
-                        &pctx
-                    );
-                    (
-                        borders.perfect().then_some(pctx.loc.id),
-                        borders,
-                    )
+                    let borders = self.info_borders(&pctx);
+                    (borders.perfect().then_some(pctx.loc.id), borders)
                 };
                 ((C::from(pctx), borders), perfect)
             })
             .unzip();
-        PartitionBorders {
-            borders,
-            perfect,
-        }
+        PartitionBorders { borders, perfect }
     }
     fn info_partition<'t>(
         self,
         ctx: &'t ModeNodeCtxOf<'t, K>,
     ) -> Result<PartitionInfo<K>, Child> {
-        let borders = self.partition_borders(
-            ctx,
-        );
-        PartitionInfo::from_partition_borders(
-            borders,
-        )
+        let borders = self.partition_borders(ctx);
+        PartitionInfo::from_partition_borders(borders)
     }
 }
-impl<K: RangeRole, P: AsPartition<K>> VisitPartition<K> for P {
-}
+impl<K: RangeRole, P: AsPartition<K>> VisitPartition<K> for P {}

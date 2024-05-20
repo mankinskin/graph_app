@@ -1,14 +1,16 @@
-use crate::shared::*;
-
+pub mod augment;
 pub mod cache;
 pub mod complete;
-pub mod augment;
-pub use {
-    cache::*,
-    complete::*,
-    augment::*,
-};
 
+use crate::{
+    join::partition::splits::offset::OffsetSplits,
+    traversal::cache::entry::SubSplitLocation,
+    vertex::PatternId,
+    HashMap,
+};
+pub use cache::*;
+pub use complete::*;
+use std::num::NonZeroUsize;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct PatternSplitPos {
@@ -26,16 +28,17 @@ impl ToVertexSplitPos for VertexSplitPos {
 }
 impl ToVertexSplitPos for Vec<SubSplitLocation> {
     fn to_vertex_split_pos(self) -> VertexSplitPos {
-        self.into_iter().map(|loc|
-            (
-                loc.location.pattern_id,
-                PatternSplitPos {
-                    inner_offset: loc.inner_offset,
-                    sub_index: loc.location.sub_index,
-                },
-            )
-        )
-        .collect()
+        self.into_iter()
+            .map(|loc| {
+                (
+                    loc.location.pattern_id,
+                    PatternSplitPos {
+                        inner_offset: loc.inner_offset,
+                        sub_index: loc.location.sub_index,
+                    },
+                )
+            })
+            .collect()
     }
 }
 impl ToVertexSplitPos for OffsetSplits {

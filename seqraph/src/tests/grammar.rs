@@ -1,38 +1,53 @@
 #![allow(non_snake_case, unused)]
-use crate::shared::*;
 
 type BuildKey = RangeInclusive<usize>;
+
+use crate::{
+    vertex::{
+        child::Child,
+        indexed::Indexed,
+        location::ChildLocation,
+        pattern::Pattern,
+        wide::Wide,
+    },
+    HashMap,
+};
+use derive_more::{
+    Deref,
+    DerefMut,
+    From,
+};
+use derive_new::new;
+use std::{
+    collections::VecDeque,
+    ops::RangeInclusive,
+};
 
 //#[test]
 pub fn test_grammar() {
     let N: usize = 100; // total length
     let k: usize = 20; // alphabet size
-    //let mut graph = HypergraphRef::<BaseGraphKind>::default();
+                       //let mut graph = HypergraphRef::<BaseGraphKind>::default();
     println!("N = {}\nk = {}", N, k);
     let num_v = count_max_nodes(N, k);
     println!("num_v = {}", num_v);
-    println!("1/2N^2 + 1/2 = {}", N.pow(2) as f32/2.0 + 1.5);
-    println!("diff = {}", (num_v as f32 - (N.pow(2) as f32/2.0 + 1.5)).abs());
+    println!("1/2N^2 + 1/2 = {}", N.pow(2) as f32 / 2.0 + 1.5);
+    println!(
+        "diff = {}",
+        (num_v as f32 - (N.pow(2) as f32 / 2.0 + 1.5)).abs()
+    );
 
     println!("Generating saturated grammar (N = {}) ...", N);
     let g = worst_case_grammar(N, k);
     println!("num_v = {}", g.vertex_count());
-    println!("num_e = {}", 4*g.vertex_count());
-    let num_bytes = g.vertex_count() * (
-            std::mem::size_of::<VertexData>()
-            + std::mem::size_of::<VertexIndex>()
-        )
-        + 4*g.vertex_count()
-        * (
-            std::mem::size_of::<Child>()
-            + std::mem::size_of::<Parent>()
-        );
-    println!("total MB = {}",
-        num_bytes as u32 / 10_u32.pow(6),
-    );
-    println!("mul = {}",
-        num_bytes / N,
-    );
+    println!("num_e = {}", 4 * g.vertex_count());
+    let num_bytes = g.vertex_count()
+        * (std::mem::size_of::<crate::vertex::VertexData>()
+            + std::mem::size_of::<crate::vertex::VertexIndex>())
+        + 4 * g.vertex_count()
+            * (std::mem::size_of::<Child>() + std::mem::size_of::<crate::vertex::parent::Parent>());
+    println!("total MB = {}", num_bytes as u32 / 10_u32.pow(6),);
+    println!("mul = {}", num_bytes / N,);
 }
 
 #[derive(new, Deref)]
@@ -43,22 +58,19 @@ struct BuilderNode {
 }
 impl BuilderNode {
     pub fn prefix_rule(&self) -> [BuildKey; 2] {
-        [
-            *self.start()..=self.end()-1,
-            *self.end()..=*self.end(),
-        ]
+        [*self.start()..=self.end() - 1, *self.end()..=*self.end()]
     }
     pub fn postfix_rule(&self) -> [BuildKey; 2] {
         [
             *self.start()..=*self.start(),
-            *self.start()+1..=*self.end(),
+            *self.start() + 1..=*self.end(),
         ]
     }
 }
 struct GraphBuilder {
     range_map: HashMap<BuildKey, usize>,
     queue: VecDeque<BuilderNode>,
-    graph: Hypergraph,
+    graph: crate::graph::Hypergraph,
     N: usize,
 }
 impl GraphBuilder {
@@ -74,13 +86,11 @@ impl GraphBuilder {
         &mut self,
         node: BuilderNode,
     ) {
-        self.graph.insert_vertex(
-            VertexData::new(
-                node.index.vertex_index(),
-                node.range.clone().count(),
-                None,
-            )
-        );
+        self.graph.insert_vertex(crate::vertex::VertexData::new(
+            node.index.vertex_index(),
+            node.range.clone().count(),
+            None,
+        ));
         self.queue.push_back(node);
     }
 
@@ -90,35 +100,35 @@ impl GraphBuilder {
     ) {
         for rule in match node.index.width() {
             1 => vec![],
-            2 => vec![
-                node.prefix_rule(),
-            ],
-            _ => vec![
-                node.prefix_rule(),
-                node.postfix_rule(),
-            ]
+            2 => vec![node.prefix_rule()],
+            _ => vec![node.prefix_rule(), node.postfix_rule()],
         } {
             let pid = self.graph.next_pattern_id();
-            let pattern: Pattern = rule.iter().enumerate().map(|(sub_index, key)| {
-                let loc = ChildLocation::new(node.index, pid, sub_index);
-                if let Some(v) = self.range_map.get(&key) {
-                    self.graph.expect_vertex_data_mut(v).add_parent(loc);
-                    Child::new(*v, key.clone().count())
-                } else {
-                    self.range_map.insert(key.clone(), self.range_map.len());
-                    let vid = self.graph.next_vertex_id();
-                    let c = Child::new(vid, key.clone().count());
-                    self.queue_node(BuilderNode::new(c, key.clone()));
-                    c
-                }
-            }).collect();
-            self.graph.expect_vertex_data_mut(node.index)
+            let pattern: Pattern = rule
+                .iter()
+                .enumerate()
+                .map(|(sub_index, key)| {
+                    let loc = ChildLocation::new(node.index, pid, sub_index);
+                    if let Some(v) = self.range_map.get(&key) {
+                        self.graph.expect_vertex_data_mut(v).add_parent(loc);
+                        Child::new(*v, key.clone().count())
+                    } else {
+                        self.range_map.insert(key.clone(), self.range_map.len());
+                        let vid = self.graph.next_vertex_id();
+                        let c = Child::new(vid, key.clone().count());
+                        self.queue_node(BuilderNode::new(c, key.clone()));
+                        c
+                    }
+                })
+                .collect();
+            self.graph
+                .expect_vertex_data_mut(node.index)
                 .add_pattern_no_update(pid, pattern);
         }
     }
     pub fn fill_grammar(&mut self) {
         let vid = self.graph.next_vertex_id();
-        self.queue_node(BuilderNode::new(Child::new(vid, self.N), 0..=self.N-1));
+        self.queue_node(BuilderNode::new(Child::new(vid, self.N), 0..=self.N - 1));
         while let Some(node) = self.queue.pop_front() {
             self.add_rules(node);
         }
@@ -133,7 +143,10 @@ impl GraphBuilder {
     //        .get_parents_with_index_at(0)
     //        .len()
     //}
-    pub fn saturated_grammar(mut self, k: usize) -> Hypergraph {
+    pub fn saturated_grammar(
+        mut self,
+        k: usize,
+    ) -> crate::graph::Hypergraph {
         self.fill_grammar();
         let mut ctx = RewireContext::new(k, self);
         ctx.rewire_grammar();
@@ -142,7 +155,7 @@ impl GraphBuilder {
 }
 // ._._._._._._._._. n
 // |0|             | 1
-                             
+
 // |0:1|           | 2
 
 // |0 1:1|         | 3
@@ -180,14 +193,17 @@ impl GraphBuilder {
 // |             |0| 1
 
 // |0|1|1|0|0|0|1|0| N = 8
-// 
+//
 struct RewireContext {
     builder: GraphBuilder,
-    prefix_counts: HashMap<VertexIndex, usize>,
+    prefix_counts: HashMap<crate::vertex::VertexIndex, usize>,
     k: usize,
 }
 impl RewireContext {
-    pub fn new(k: usize, builder: GraphBuilder) -> Self {
+    pub fn new(
+        k: usize,
+        builder: GraphBuilder,
+    ) -> Self {
         Self {
             builder,
             prefix_counts: Default::default(),
@@ -213,38 +229,47 @@ impl RewireContext {
     //}
     pub fn rewire_grammar(&mut self) {
         // - fix first token
-        // - store number of prefix uses for each index   
+        // - store number of prefix uses for each index
         // - implement function selecting the next token given the previous n-grams
         // - call next token with previous n grams until counts reach k
         // - implement rewire function to point index edges to previous index
-        // - 
-        let first = *self.builder.range_map.get(&(0..=0)).expect("Must include range 0..=0 in range_map");
+        // -
+        let first = *self
+            .builder
+            .range_map
+            .get(&(0..=0))
+            .expect("Must include range 0..=0 in range_map");
         let mut prefixes = vec![first];
     }
 }
-fn worst_case_grammar(N: usize, k: usize) -> Hypergraph {
+fn worst_case_grammar(
+    N: usize,
+    k: usize,
+) -> crate::graph::Hypergraph {
     GraphBuilder::new(N).saturated_grammar(k)
 }
-fn count_max_nodes(N: usize, k: usize) -> usize {
+fn count_max_nodes(
+    N: usize,
+    k: usize,
+) -> usize {
     // idea: approximate root of k^n = N + 1 - n
     // decide which maximum number of variants to count
     let root = ((N + 1) as f32).log(k as f32);
     println!("n0: {}", root);
     let root: f32 = nrfind::find_root(
-        &|x| (k as f32).powf(x) as f32 - N as f32 + x - 1.0,
-        &|x| (k as f32).powf(x) as f32 * (k as f32).ln() + 1.0,
+        &|x| (k as f32).powf(x) - N as f32 + x - 1.0,
+        &|x| (k as f32).powf(x) * (k as f32).ln() + 1.0,
         root,
         0.0001,
         50,
-    ).unwrap();
+    )
+    .unwrap();
     let root: u32 = root.floor() as u32;
     println!("root: {}", root);
 
-    (2..=root).into_iter().map(|n|
-        k.pow(n)
-    ).chain(
-        ((root as usize + 1)..=N).into_iter().map(|n|
-            N + 1 - n
-        )
-    ).sum()
+    (2..=root)
+        .into_iter()
+        .map(|n| k.pow(n))
+        .chain(((root as usize + 1)..=N).into_iter().map(|n| N + 1 - n))
+        .sum()
 }

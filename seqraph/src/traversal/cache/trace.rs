@@ -1,7 +1,24 @@
-use crate::shared::*;
+use crate::{
+    traversal::{
+        cache::{
+            state::end::{
+                EndKind,
+                EndState,
+            },
+            TraversalCache,
+        },
+        path::accessors::role::Start,
+        result_kind::RoleChildPath,
+        traversable::Traversable,
+    },
+};
 
 pub trait Trace {
-    fn trace<Trav: Traversable>(&self, trav: &Trav, cache: &mut TraversalCache);
+    fn trace<Trav: Traversable>(
+        &self,
+        trav: &Trav,
+        cache: &mut TraversalCache,
+    );
 }
 impl Trace for EndState {
     fn trace<Trav: Traversable>(
@@ -11,25 +28,10 @@ impl Trace for EndState {
     ) {
         match &self.kind {
             EndKind::Range(p) => {
-                let root_entry = p.path
-                    .role_root_child_location::<Start>()
-                    .sub_index;
-                cache.trace_path(
-                    trav,
-                    root_entry,
-                    &p.path,
-                    self.root_pos,
-                    true,
-                )
-            },
-            EndKind::Prefix(p) =>
-                cache.trace_path(
-                    trav,
-                    0,
-                    &p.path,
-                    self.root_pos,
-                    true,
-                ),
+                let root_entry = p.path.role_root_child_location::<Start>().sub_index;
+                cache.trace_path(trav, root_entry, &p.path, self.root_pos, true)
+            }
+            EndKind::Prefix(p) => cache.trace_path(trav, 0, &p.path, self.root_pos, true),
             _ => {}
         }
     }
@@ -48,22 +50,44 @@ impl Trace for EndState {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::shared::*;
+    use crate::{
+        graph::tests::{
+            context_mut,
+            Context,
+        },
+        search::Searchable,
+        traversal::{
+            cache::{
+                entry::{
+                    Edges,
+                    PositionCache,
+                    VertexCache,
+                },
+                key::DirectedKey,
+                labelled_key::vkey::lab,
+            },
+            folder::state::FoldState,
+        },
+        vertex::{
+            location::SubLocation,
+            wide::Wide,
+        },
+        HashMap,
+        HashSet,
+    };
     use pretty_assertions::assert_eq;
-    use crate::traversal::cache::labelled_key::lab;
+    use std::iter::FromIterator;
 
     pub fn build_trace1() -> FoldState {
         let Context {
-            graph,
-            a,
-            d,
-            e,
-            bc,
-            ..
+            graph, a, d, e, bc, ..
         } = &*context_mut();
         let query = vec![*a, *bc, *d, *e];
-        graph.searcher().find_pattern_ancestor(query)
-            .unwrap().result
+        graph
+            .searcher()
+            .find_pattern_ancestor(query)
+            .unwrap()
+            .result
             .unwrap_incomplete()
     }
     #[test]
@@ -88,7 +112,7 @@ pub(crate) mod tests {
         assert_eq!(res.end_state.width(), 5);
 
         assert_eq!(
-            res.cache.entries[&lab!(a)], 
+            res.cache.entries[&lab!(a)],
             VertexCache {
                 index: *a,
                 bottom_up: HashMap::from_iter([]),
@@ -96,122 +120,117 @@ pub(crate) mod tests {
             },
         );
         assert_eq!(
-            res.cache.entries[&lab!(abcd)], 
+            res.cache.entries[&lab!(abcd)],
             VertexCache {
                 index: *abcd,
-                bottom_up: HashMap::from_iter([
-                    (3.into(), PositionCache {
+                bottom_up: HashMap::from_iter([(
+                    3.into(),
+                    PositionCache {
                         edges: Edges {
                             top: Default::default(),
-                            bottom: HashMap::from_iter([
-                                (
-                                    DirectedKey::up(*abc, 1),
-                                    SubLocation::new(*abc_d_id, 0),
-                                )
-                            ]),
+                            bottom: HashMap::from_iter([(
+                                DirectedKey::up(*abc, 1),
+                                SubLocation::new(*abc_d_id, 0),
+                            )]),
                         },
                         index: *abcd,
                         waiting: Default::default(),
-                    })
-                ]),
+                    }
+                )]),
                 top_down: HashMap::from_iter([]),
             }
         );
         assert_eq!(
-            res.cache.entries[&lab!(ef)], 
+            res.cache.entries[&lab!(ef)],
             VertexCache {
                 index: *ef,
                 bottom_up: HashMap::from_iter([]),
-                top_down: HashMap::from_iter([
-                    (4.into(), PositionCache {
+                top_down: HashMap::from_iter([(
+                    4.into(),
+                    PositionCache {
                         edges: Edges {
                             top: HashSet::from_iter([]),
-                            bottom: HashMap::from_iter([
-                                (
-                                    DirectedKey::down(*e, 4),
-                                    SubLocation::new(*e_f_id, 0),
-                                )
-                            ]),
+                            bottom: HashMap::from_iter([(
+                                DirectedKey::down(*e, 4),
+                                SubLocation::new(*e_f_id, 0),
+                            )]),
                         },
                         index: *ef,
                         waiting: Default::default(),
-                    })
-                ]),
+                    }
+                )]),
             }
         );
         assert_eq!(
-            res.cache.entries[&lab!(e)], 
+            res.cache.entries[&lab!(e)],
             VertexCache {
                 index: *e,
-                top_down: HashMap::from_iter([
-                    (4.into(), PositionCache {
+                top_down: HashMap::from_iter([(
+                    4.into(),
+                    PositionCache {
                         edges: Default::default(),
                         index: *e,
                         waiting: Default::default(),
-                    })
-                ]),
+                    }
+                )]),
                 bottom_up: HashMap::from_iter([]),
             },
         );
         assert_eq!(
-            res.cache.entries[&lab!(abc)], 
+            res.cache.entries[&lab!(abc)],
             VertexCache {
                 index: *abc,
-                bottom_up: HashMap::from_iter([
-                    (1.into(), PositionCache {
+                bottom_up: HashMap::from_iter([(
+                    1.into(),
+                    PositionCache {
                         edges: Edges {
                             top: Default::default(),
-                            bottom: HashMap::from_iter([
-                                (
-                                    DirectedKey::up(*a, 0),
-                                    SubLocation::new(3, 0),
-                                )
-                            ]),
+                            bottom: HashMap::from_iter([(
+                                DirectedKey::up(*a, 0),
+                                SubLocation::new(3, 0),
+                            )]),
                         },
                         index: *abc,
                         waiting: Default::default(),
-                    })
-                ]),
+                    }
+                )]),
                 top_down: HashMap::from_iter([]),
             }
         );
         assert_eq!(
-            res.cache.entries[&lab!(abcdef)], 
+            res.cache.entries[&lab!(abcdef)],
             VertexCache {
                 index: *abcdef,
-                bottom_up: HashMap::from_iter([
-                    (4.into(), PositionCache {
+                bottom_up: HashMap::from_iter([(
+                    4.into(),
+                    PositionCache {
                         edges: Edges {
                             top: HashSet::from_iter([]),
-                            bottom: HashMap::from_iter([
-                                (
-                                    DirectedKey::up(*abcd, 3),
-                                    SubLocation::new(*abcd_ef_id, 0),
-                                ),
-                            ]),
+                            bottom: HashMap::from_iter([(
+                                DirectedKey::up(*abcd, 3),
+                                SubLocation::new(*abcd_ef_id, 0),
+                            ),]),
                         },
                         index: *abcdef,
                         waiting: Default::default(),
-                    })
-                ]),
-                top_down: HashMap::from_iter([
-                    (4.into(), PositionCache {
+                    }
+                )]),
+                top_down: HashMap::from_iter([(
+                    4.into(),
+                    PositionCache {
                         edges: Edges {
                             top: HashSet::from_iter([]),
-                            bottom: HashMap::from_iter([
-                                (
-                                    DirectedKey::down(*ef, 4),
-                                    SubLocation::new(*abcd_ef_id, 1),
-                                )
-                            ]),
+                            bottom: HashMap::from_iter([(
+                                DirectedKey::down(*ef, 4),
+                                SubLocation::new(*abcd_ef_id, 1),
+                            )]),
                         },
                         index: *abcdef,
                         waiting: Default::default(),
-                    })
-                ]),
+                    }
+                )]),
             },
         );
         assert_eq!(res.cache.entries.len(), 6);
     }
-
 }

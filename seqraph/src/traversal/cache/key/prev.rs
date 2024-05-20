@@ -1,4 +1,4 @@
-use crate::shared::*;
+use crate::traversal::cache::key::DirectedKey;
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq)]
 pub struct PrevKey {
@@ -13,10 +13,16 @@ impl PrevKey {
     }
 }
 pub trait ToPrev {
-    fn to_prev(self, delta: usize) -> PrevKey;
+    fn to_prev(
+        self,
+        delta: usize,
+    ) -> PrevKey;
 }
 impl<T: Into<DirectedKey>> ToPrev for T {
-    fn to_prev(self, delta: usize) -> PrevKey {
+    fn to_prev(
+        self,
+        delta: usize,
+    ) -> PrevKey {
         PrevKey {
             prev_target: self.into(),
             delta,

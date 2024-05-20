@@ -1,4 +1,21 @@
-use crate::shared::*;
+use crate::{
+    graph::kind::GraphKind,
+    traversal::cache::key::{
+        DirectedKey,
+        DownKey,
+        UpKey,
+    },
+};
+
+use super::{
+    child::Child,
+    pattern::{
+        pattern_width,
+        Pattern,
+    },
+    TokenPosition,
+    VertexData,
+};
 
 pub trait Wide {
     fn width(&self) -> usize;
@@ -45,11 +62,7 @@ impl<G: GraphKind> Wide for VertexData<G> {
         self.width
     }
 }
-use crate::traversal::cache::{
-    DirectedKey,
-    UpKey,
-    DownKey,
-};
+
 impl Wide for DirectedKey {
     fn width(&self) -> usize {
         self.index.width()

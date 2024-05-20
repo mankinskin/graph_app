@@ -3,8 +3,8 @@
 
 mod app;
 pub use app::App;
-mod graph;
 mod examples;
+mod graph;
 // ----------------------------------------------------------------------------
 // When compiling for web:
 
@@ -14,9 +14,7 @@ use eframe::wasm_bindgen::{
     prelude::*,
 };
 use seqraph::HypergraphRef;
-pub use {
-    tracing::*,
-};
+pub use tracing::*;
 pub use {
     graph::*,
     seqraph::*,

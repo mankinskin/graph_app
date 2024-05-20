@@ -1,4 +1,21 @@
-use crate::shared::*;
+use std::ops::Deref;
+
+use crate::{
+    traversal::path::{
+        accessors::role::{
+            End,
+            PathRole,
+            Start,
+        },
+        structs::rooted_path::{
+            PathRoot,
+            RootedRolePath,
+            SearchPath,
+            SubPath,
+        },
+    },
+    vertex::location::ChildLocation,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct RolePath<R> {
@@ -30,7 +47,10 @@ impl<R: PathRole> RolePath<R> {
     //pub fn child_location_mut(&mut self) -> &mut ChildLocation {
     //    <Self as GraphRootChild<R>>::root_child_location_mut(self)
     //}
-    pub fn into_rooted<Root: PathRoot>(self, root: Root) -> RootedRolePath<R, Root> {
+    pub fn into_rooted<Root: PathRoot>(
+        self,
+        root: Root,
+    ) -> RootedRolePath<R, Root> {
         RootedRolePath {
             root,
             role_path: self,

@@ -1,25 +1,37 @@
-mod pattern_stream;
 mod pattern_range;
+mod pattern_stream;
 
 use super::{
-    *,
+    child::Child,
+    indexed::AsChild,
+    PatternId,
+    TokenPosition,
 };
-pub use {
-    pattern_range::*,
-    pattern_stream::*,
+use crate::vertex::wide::Wide;
+pub use pattern_range::*;
+pub use pattern_stream::*;
+use std::{
+    borrow::{
+        Borrow,
+        BorrowMut,
+    },
+    fmt::Debug,
+    iter::{
+        DoubleEndedIterator,
+        ExactSizeIterator,
+        IntoIterator,
+    },
 };
+
 pub type Pattern = Vec<Child>;
 pub type PatternView<'a> = &'a [Child];
 pub type Patterns = Vec<Pattern>;
 
 /// trait for types which can be converted to a pattern with a known size
 pub trait IntoPattern:
-    IntoIterator<Item = Self::Elem, IntoIter = Self::Iter>
-    + Sized
-    + Borrow<[Child]>
-    + Debug
+    IntoIterator<Item = Self::Elem, IntoIter = Self::Iter> + Sized + Borrow<[Child]> + Debug
 {
-    type Iter: ExactSizeIterator + DoubleEndedIterator<Item=Self::Elem>;
+    type Iter: ExactSizeIterator + DoubleEndedIterator<Item = Self::Elem>;
     type Elem: AsChild;
 
     fn into_pattern(self) -> Pattern {
@@ -30,30 +42,30 @@ pub trait IntoPattern:
     }
 }
 impl<C, It, T> IntoPattern for T
-    where
-        C: AsChild,
-        It: DoubleEndedIterator<Item=C> + ExactSizeIterator,
-        T: IntoIterator<Item=C, IntoIter=It> + Borrow<[Child]> + Debug,
+where
+    C: AsChild,
+    It: DoubleEndedIterator<Item = C> + ExactSizeIterator,
+    T: IntoIterator<Item = C, IntoIter = It> + Borrow<[Child]> + Debug,
 {
     type Iter = It;
     type Elem = C;
 }
 /// trait for types which can be converted to a pattern with a known size
-pub trait AsPatternMut: BorrowMut<Vec<Child>> + Debug {
-}
-impl<T> AsPatternMut for T
-    where
-        T: BorrowMut<Vec<Child>>
-            + Debug
-{
-}
+pub trait AsPatternMut: BorrowMut<Vec<Child>> + Debug {}
+impl<T> AsPatternMut for T where T: BorrowMut<Vec<Child>> + Debug {}
 pub fn pattern_width<T: Borrow<Child>>(pat: impl IntoIterator<Item = T>) -> TokenPosition {
     pat.into_iter().map(|c| c.borrow().width()).sum()
 }
-pub fn pattern_pre_ctx_width<T: Borrow<Child>>(pat: impl IntoIterator<Item = T>, sub_index: usize) -> TokenPosition {
+pub fn pattern_pre_ctx_width<T: Borrow<Child>>(
+    pat: impl IntoIterator<Item = T>,
+    sub_index: usize,
+) -> TokenPosition {
     pattern_width(pat.into_iter().take(sub_index))
 }
-pub fn pattern_post_ctx_width<T: Borrow<Child>>(pat: impl IntoIterator<Item = T>, sub_index: usize) -> TokenPosition {
+pub fn pattern_post_ctx_width<T: Borrow<Child>>(
+    pat: impl IntoIterator<Item = T>,
+    sub_index: usize,
+) -> TokenPosition {
     pattern_width(pat.into_iter().skip(sub_index + 1))
 }
 pub fn prefix<T: AsChild + Clone>(
@@ -76,13 +88,16 @@ pub fn postfix<T: AsChild + Clone>(
     pattern.get(index..).unwrap_or(&[]).to_vec()
 }
 #[track_caller]
-#[justlog::tracing::instrument(skip(pattern, range, replace))]
+#[tracing::instrument(skip(pattern, range, replace))]
 pub fn replace_in_pattern(
     mut pattern: impl AsPatternMut,
     range: impl PatternRangeIndex,
     replace: impl IntoPattern,
 ) -> Pattern {
-    pattern.borrow_mut().splice(range, replace.into_pattern()).collect()
+    pattern
+        .borrow_mut()
+        .splice(range, replace.into_pattern())
+        .collect()
 }
 pub fn single_child_patterns(halves: Vec<Pattern>) -> Result<Child, Vec<Pattern>> {
     match (halves.len(), halves.first()) {

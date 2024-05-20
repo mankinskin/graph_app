@@ -1,4 +1,15 @@
-use crate::shared::*;
+use crate::{
+    vertex::PatternId,
+    HashMap,
+};
+use derive_more::{
+    DerefMut,
+    IntoIterator,
+};
+use std::{
+    iter::FromIterator,
+    ops::Deref,
+};
 
 #[derive(Debug, Default, IntoIterator, DerefMut)]
 pub struct PatternSubDeltas {
@@ -19,17 +30,21 @@ impl FromIterator<(PatternId, usize)> for PatternSubDeltas {
     }
 }
 impl Extend<(PatternId, usize)> for PatternSubDeltas {
-    fn extend<T: IntoIterator<Item = (PatternId, usize)>>(&mut self, iter: T) {
+    fn extend<T: IntoIterator<Item = (PatternId, usize)>>(
+        &mut self,
+        iter: T,
+    ) {
         self.inner.extend(iter)
     }
 }
 impl std::ops::Add for PatternSubDeltas {
     type Output = Self;
-    fn add(self, rhs: Self) -> Self::Output {
+    fn add(
+        self,
+        rhs: Self,
+    ) -> Self::Output {
         self.into_iter()
-            .map(|(pid, a)|
-                (pid, a + rhs[&pid])
-            )
+            .map(|(pid, a)| (pid, a + rhs[&pid]))
             .collect()
     }
 }

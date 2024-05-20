@@ -1,10 +1,54 @@
-use crate::shared::*;
+use crate::{
+    traversal::{
+        context::QueryStateContext,
+        path::{
+            accessors::{
+                child::RootChildPos,
+                role::{
+                    End,
+                    PathRole,
+                    Start,
+                },
+                root::{
+                    GraphRootPattern,
+                    PatternRoot,
+                },
+            },
+            structs::{
+                match_end::{
+                    MatchEnd,
+                    MatchEndPath,
+                },
+                query_range_path::QueryRangePath,
+                rooted_path::{
+                    IndexRoot,
+                    RootedPath,
+                    RootedRolePath,
+                    RootedSplitPath,
+                    RootedSplitPathRef,
+                    SearchPath,
+                },
+            },
+        },
+        traversable::Traversable,
+    },
+    vertex::{
+        child::Child,
+        location::ChildLocation,
+        pattern::{
+            pattern_post_ctx_width,
+            pattern_pre_ctx_width,
+        },
+    },
+};
+use auto_impl::auto_impl;
 
 #[auto_impl(&, &mut)]
 pub trait RootChild<R>: RootChildPos<R> {
-    fn root_child<
-        Trav: Traversable,
-    >(&self, trav: &Trav) -> Child;
+    fn root_child<Trav: Traversable>(
+        &self,
+        trav: &Trav,
+    ) -> Child;
 }
 macro_rules! impl_child {
     {
@@ -52,17 +96,27 @@ impl_child! { RootChild for QueryRangePath, self, _trav => self.root[self.root_c
 //    }
 //}
 impl RootChild<Start> for SearchPath {
-    fn root_child<
-        Trav: Traversable,
-    >(&self, trav: &Trav) -> Child {
-        trav.graph().expect_child_at(self.path_root().location.to_child_location(self.start.sub_path.root_entry))
+    fn root_child<Trav: Traversable>(
+        &self,
+        trav: &Trav,
+    ) -> Child {
+        trav.graph().expect_child_at(
+            self.path_root()
+                .location
+                .to_child_location(self.start.sub_path.root_entry),
+        )
     }
 }
 impl RootChild<End> for SearchPath {
-    fn root_child<
-        Trav: Traversable,
-    >(&self, trav: &Trav) -> Child {
-        trav.graph().expect_child_at(self.path_root().location.to_child_location(self.end.sub_path.root_entry))
+    fn root_child<Trav: Traversable>(
+        &self,
+        trav: &Trav,
+    ) -> Child {
+        trav.graph().expect_child_at(
+            self.path_root()
+                .location
+                .to_child_location(self.end.sub_path.root_entry),
+        )
     }
 }
 //impl_child! { RootChild for PathLeaf, self, trav => self.root_child(trav) }
@@ -71,18 +125,21 @@ impl_child! { RootChild for RootedRolePath<R>, self, trav =>
 }
 
 impl<'c, R: PathRole> RootChild<R> for QueryStateContext<'c>
-    where Self: RootChildPos<R>
+where
+    Self: RootChildPos<R>,
 {
-    fn root_child<
-        Trav: Traversable,
-    >(&self, _trav: &Trav) -> Child {
+    fn root_child<Trav: Traversable>(
+        &self,
+        _trav: &Trav,
+    ) -> Child {
         self.pattern_root_child()
     }
 }
 impl<P: MatchEndPath> RootChild<Start> for MatchEnd<P> {
-    fn root_child<
-        Trav: Traversable,
-    >(&self, trav: &Trav) -> Child {
+    fn root_child<Trav: Traversable>(
+        &self,
+        trav: &Trav,
+    ) -> Child {
         match self {
             Self::Complete(c) => *c,
             Self::Path(path) => path.root_child(trav),
@@ -93,22 +150,26 @@ impl<P: MatchEndPath> RootChild<Start> for MatchEnd<P> {
 /// used to get a direct child in a Graph
 pub trait GraphRootChild<R>: GraphRootPattern + RootChildPos<R> {
     fn root_child_location(&self) -> ChildLocation;
-    fn graph_root_child<
-        Trav: Traversable,
-    >(&self, trav: &Trav) -> Child {
-        trav.graph().expect_child_at(<_ as GraphRootChild<R>>::root_child_location(self))
+    fn graph_root_child<Trav: Traversable>(
+        &self,
+        trav: &Trav,
+    ) -> Child {
+        trav.graph()
+            .expect_child_at(<_ as GraphRootChild<R>>::root_child_location(self))
     }
-    fn root_post_ctx_width<
-        Trav: Traversable,
-    >(&self, trav: &Trav) -> usize {
+    fn root_post_ctx_width<Trav: Traversable>(
+        &self,
+        trav: &Trav,
+    ) -> usize {
         let i = self.root_child_location().sub_index;
         let g = trav.graph();
         let p = self.graph_root_pattern::<Trav>(&g);
         pattern_post_ctx_width(p, i)
     }
-    fn root_pre_ctx_width<
-        Trav: Traversable,
-    >(&self, trav: &Trav) -> usize {
+    fn root_pre_ctx_width<Trav: Traversable>(
+        &self,
+        trav: &Trav,
+    ) -> usize {
         let i = self.root_child_location().sub_index;
         let g = trav.graph();
         let p = self.graph_root_pattern::<Trav>(&g);
@@ -133,17 +194,23 @@ impl GraphRootChild<End> for SearchPath {
 }
 impl<R: PathRole> GraphRootChild<R> for RootedRolePath<R, IndexRoot> {
     fn root_child_location(&self) -> ChildLocation {
-        self.path_root().location.to_child_location(self.role_path.sub_path.root_entry)
+        self.path_root()
+            .location
+            .to_child_location(self.role_path.sub_path.root_entry)
     }
 }
 impl<R: PathRole> GraphRootChild<R> for RootedSplitPath<IndexRoot> {
     fn root_child_location(&self) -> ChildLocation {
-        self.path_root().location.to_child_location(self.sub_path.root_entry)
+        self.path_root()
+            .location
+            .to_child_location(self.sub_path.root_entry)
     }
 }
 impl<R: PathRole> GraphRootChild<R> for RootedSplitPathRef<'_, IndexRoot> {
     fn root_child_location(&self) -> ChildLocation {
-        self.path_root().location.to_child_location(self.sub_path.root_entry)
+        self.path_root()
+            .location
+            .to_child_location(self.sub_path.root_entry)
     }
 }
 //impl<R> GraphRootChild<R> for PathLeaf {
@@ -158,14 +225,8 @@ pub trait PatternRootChild<R>: RootChildPos<R> + PatternRoot {
         PatternRoot::pattern_root_pattern(self)[self.root_child_pos()]
     }
 }
-impl<R> PatternRootChild<R> for QueryRangePath
-    where Self: RootChildPos<R>
-{
-}
-impl<R> PatternRootChild<R> for QueryStateContext<'_>
-    where Self: RootChildPos<R>
-{
-}
+impl<R> PatternRootChild<R> for QueryRangePath where Self: RootChildPos<R> {}
+impl<R> PatternRootChild<R> for QueryStateContext<'_> where Self: RootChildPos<R> {}
 //impl<R> PatternRootChild<R> for PatternPrefixPath
 //    where PatternPrefixPath: RootChildPos<R>
 //{

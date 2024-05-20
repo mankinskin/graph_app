@@ -1,9 +1,33 @@
-use crate::shared::*;
+use crate::{
+    graph::direction::r#match::MatchDirection,
+    traversal::{
+        cache::{
+            key::DirectedKey,
+            state::{
+                child::ChildState,
+                parent::ParentState,
+            },
+        },
+        path::{
+            accessors::{
+                child::GraphRootChild,
+                root::RootPattern,
+            },
+            structs::pair::{
+                PathPair,
+                PathPairMode,
+            },
+        },
+        traversable::{
+            TravDir,
+            Traversable,
+        },
+    },
+};
+use std::borrow::Borrow;
 
 pub trait IntoAdvanced: Sized + Clone {
-    fn into_advanced<
-        Trav: Traversable,
-    >(
+    fn into_advanced<Trav: Traversable>(
         self,
         trav: &Trav,
     ) -> Result<ChildState, Self>;
@@ -44,35 +68,27 @@ pub trait IntoAdvanced: Sized + Clone {
 //    }
 //}
 impl IntoAdvanced for ParentState {
-    fn into_advanced<
-        Trav: Traversable,
-    >(
+    fn into_advanced<Trav: Traversable>(
         self,
         trav: &Trav,
     ) -> Result<ChildState, Self> {
         let entry = self.path.root_child_location();
         let graph = trav.graph();
         let pattern = self.path.root_pattern::<Trav>(&graph).clone();
-        if let Some(next) = TravDir::<Trav>::pattern_index_next(
-            pattern.borrow() as &[Child],
-            entry.sub_index,
-        ) {
+        if let Some(next) =
+            TravDir::<Trav>::pattern_index_next(pattern.borrow(), entry.sub_index)
+        {
             let index = pattern[next];
-            Ok(
-                ChildState {
-                    prev_pos: self.prev_pos,
-                    root_pos: self.root_pos,
-                    paths: PathPair::new(
-                        self.path.into_range(next),
-                        self.query,
-                        PathPairMode::GraphMajor,
-                    ),
-                    target: DirectedKey::down(
-                        index,
-                        self.root_pos,
-                    )
-                }
-            )
+            Ok(ChildState {
+                prev_pos: self.prev_pos,
+                root_pos: self.root_pos,
+                paths: PathPair::new(
+                    self.path.into_range(next),
+                    self.query,
+                    PathPairMode::GraphMajor,
+                ),
+                target: DirectedKey::down(index, self.root_pos),
+            })
         } else {
             Err(self)
         }

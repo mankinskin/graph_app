@@ -1,12 +1,39 @@
-use crate::shared::*;
+use std::{
+    borrow::Borrow,
+    ops::ControlFlow,
+};
+
+use crate::{
+    direction::{
+        Direction,
+        Left,
+        Right,
+    },
+    graph::direction::r#match::MatchDirection,
+    traversal::{
+        path::mutators::move_path::MoveKey,
+        traversable::{
+            TravDir,
+            Traversable,
+        },
+    },
+    vertex::{
+        location::ChildLocation,
+        wide::Wide,
+    },
+};
 
 pub struct KeyedLeaf<'k, D: Direction, K: MoveKey<D> + 'k> {
     path: &'k mut K,
     location: &'k mut ChildLocation,
     _ty: std::marker::PhantomData<D>,
 }
+
 impl<'k, D: Direction, K: MoveKey<D>> KeyedLeaf<'k, D, K> {
-    pub fn new(path: &'k mut K, location: &'k mut ChildLocation) -> Self {
+    pub fn new(
+        path: &'k mut K,
+        location: &'k mut ChildLocation,
+    ) -> Self {
         Self {
             path,
             location,
@@ -16,46 +43,43 @@ impl<'k, D: Direction, K: MoveKey<D>> KeyedLeaf<'k, D, K> {
 }
 
 pub trait MoveLeaf<D: Direction> {
-    fn move_leaf<
-        Trav: Traversable,
-    >(
+    fn move_leaf<Trav: Traversable>(
         &mut self,
         trav: &Trav,
     ) -> ControlFlow<()>;
 }
+
 pub trait AdvanceLeaf: MoveLeaf<Right> {
-    fn advance_leaf<
-        Trav: Traversable,
-    >(
+    fn advance_leaf<Trav: Traversable>(
         &mut self,
         trav: &Trav,
     ) -> ControlFlow<()> {
         self.move_leaf(trav)
     }
-}
-impl<T: MoveLeaf<Right>> AdvanceLeaf for T {
-}
-pub trait RetractLeaf: MoveLeaf<Left> {
-    fn retract_leaf<
-        Trav: Traversable,
-    >(
-        &mut self,
-        trav: &Trav,
-    ) -> ControlFlow<()> {
-        self.move_leaf(trav)
-    }
-}
-impl<T: MoveLeaf<Left>> RetractLeaf for T {
 }
 
-impl<K: MoveKey<Right, Delta=usize>> MoveLeaf<Right> for KeyedLeaf<'_, Right, K> {
-    fn move_leaf<
-        Trav: Traversable,
-    >(&mut self, trav: &Trav) -> ControlFlow<()> {
+impl<T: MoveLeaf<Right>> AdvanceLeaf for T {}
+
+pub trait RetractLeaf: MoveLeaf<Left> {
+    fn retract_leaf<Trav: Traversable>(
+        &mut self,
+        trav: &Trav,
+    ) -> ControlFlow<()> {
+        self.move_leaf(trav)
+    }
+}
+
+impl<T: MoveLeaf<Left>> RetractLeaf for T {}
+
+impl<K: MoveKey<Right, Delta = usize>> MoveLeaf<Right> for KeyedLeaf<'_, Right, K> {
+    fn move_leaf<Trav: Traversable>(
+        &mut self,
+        trav: &Trav,
+    ) -> ControlFlow<()> {
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(&*self.location);
         if let Some(next) = TravDir::<Trav>::pattern_index_next(
-            pattern.borrow() as &[Child],
+            pattern.borrow(),
             self.location.sub_index,
         ) {
             let prev = &pattern[self.location.sub_index];
@@ -67,16 +91,17 @@ impl<K: MoveKey<Right, Delta=usize>> MoveLeaf<Right> for KeyedLeaf<'_, Right, K>
         }
     }
 }
+
 impl MoveLeaf<Right> for ChildLocation {
-    fn move_leaf<
-        Trav: Traversable,
-    >(&mut self, trav: &Trav) -> ControlFlow<()> {
+    fn move_leaf<Trav: Traversable>(
+        &mut self,
+        trav: &Trav,
+    ) -> ControlFlow<()> {
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(&*self);
-        if let Some(next) = TravDir::<Trav>::pattern_index_next(
-            pattern.borrow() as &[Child],
-            self.sub_index,
-        ) {
+        if let Some(next) =
+            TravDir::<Trav>::pattern_index_next(pattern.borrow(), self.sub_index)
+        {
             self.sub_index = next;
             ControlFlow::Continue(())
         } else {
@@ -84,14 +109,16 @@ impl MoveLeaf<Right> for ChildLocation {
         }
     }
 }
-impl<K: MoveKey<Left, Delta=usize>> MoveLeaf<Left> for KeyedLeaf<'_, Left, K> {
-    fn move_leaf<
-        Trav: Traversable,
-    >(&mut self, trav: &Trav) -> ControlFlow<()> {
+
+impl<K: MoveKey<Left, Delta = usize>> MoveLeaf<Left> for KeyedLeaf<'_, Left, K> {
+    fn move_leaf<Trav: Traversable>(
+        &mut self,
+        trav: &Trav,
+    ) -> ControlFlow<()> {
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(&*self.location);
         if let Some(prev) = TravDir::<Trav>::pattern_index_prev(
-            pattern.borrow() as &[Child],
+            pattern.borrow(),
             self.location.sub_index,
         ) {
             let c = &pattern[self.location.sub_index];
@@ -103,16 +130,17 @@ impl<K: MoveKey<Left, Delta=usize>> MoveLeaf<Left> for KeyedLeaf<'_, Left, K> {
         }
     }
 }
+
 impl MoveLeaf<Left> for ChildLocation {
-    fn move_leaf<
-        Trav: Traversable,
-    >(&mut self, trav: &Trav) -> ControlFlow<()> {
+    fn move_leaf<Trav: Traversable>(
+        &mut self,
+        trav: &Trav,
+    ) -> ControlFlow<()> {
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(&*self);
-        if let Some(prev) = TravDir::<Trav>::pattern_index_prev(
-            pattern.borrow() as &[Child],
-            self.sub_index,
-        ) {
+        if let Some(prev) =
+            TravDir::<Trav>::pattern_index_prev(pattern.borrow(), self.sub_index)
+        {
             self.sub_index = prev;
             ControlFlow::Continue(())
         } else {

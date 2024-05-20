@@ -1,10 +1,17 @@
-use crate::shared::*;
-
 pub mod indexer;
-pub use indexer::*;
+use indexer::*;
 
 pub mod side;
-pub use side::*;
+use crate::{
+    graph::HypergraphRef,
+    search::NoMatch,
+    traversal::path::structs::query_range_path::QueryRangePath,
+    vertex::{
+        child::Child,
+        location::ChildLocation,
+        pattern::IntoPattern,
+    },
+};
 
 //pub mod context;
 //pub use context::*;
@@ -12,12 +19,9 @@ pub use side::*;
 //pub mod path;
 //pub use path::*;
 
-
 #[cfg(test)]
 #[macro_use]
 pub mod tests;
-
-
 
 impl<'t, 'g> HypergraphRef {
     pub fn indexer(&self) -> Indexer {

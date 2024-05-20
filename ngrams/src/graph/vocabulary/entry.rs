@@ -1,5 +1,7 @@
-use crate::{shared::*, TextLocation};
-
+use crate::{
+    shared::*,
+    TextLocation,
+};
 
 #[derive(Debug, Deref)]
 pub struct VocabEntry {
@@ -9,7 +11,7 @@ pub struct VocabEntry {
     //pub children: NodeChildren,
     #[deref]
     pub ngram: String,
-} 
+}
 
 impl VocabEntry {
     pub fn count(&self) -> usize {
