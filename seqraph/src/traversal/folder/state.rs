@@ -1,9 +1,9 @@
 use crate::{
     traversal::cache::{
-        entry::VertexCache,
+        entry::vertex::VertexCache,
         key::{
+            target::TargetKey,
             DirectedKey,
-            TargetKey,
         },
         state::end::EndState,
         TraversalCache,
@@ -21,16 +21,19 @@ pub enum RootMode {
     Postfix,
     Infix,
 }
+
 impl Default for RootMode {
     fn default() -> Self {
         Self::Infix
     }
 }
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FoldResult {
     Complete(Child),
     Incomplete(FoldState),
 }
+
 impl FoldResult {
     pub fn unwrap_complete(self) -> Child {
         match self {
@@ -53,6 +56,7 @@ pub struct FoldState {
     pub(crate) start: Child,
     pub(crate) root: Child,
 }
+
 impl FoldState {
     pub fn root_entry(&self) -> &VertexCache {
         self.cache.entries.get(&self.root().vertex_index()).unwrap()

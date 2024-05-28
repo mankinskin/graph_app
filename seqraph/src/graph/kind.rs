@@ -13,6 +13,7 @@ pub trait GraphKind: Debug + Clone + Default {
     type Token: Tokenize + Display;
     type Direction: IndexDirection;
 }
+
 pub type TokenOf<K> = <K as GraphKind>::Token;
 pub type DefaultToken = TokenOf<BaseGraphKind>;
 pub type DirectionOf<K> = <K as GraphKind>::Direction;

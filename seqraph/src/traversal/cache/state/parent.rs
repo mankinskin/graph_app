@@ -1,9 +1,9 @@
 use crate::traversal::{
     cache::{
-        entry::NewEntry,
+        entry::new::NewEntry,
         key::{
-            TargetKey,
-            ToPrev,
+            prev::ToPrev,
+            target::TargetKey,
         },
         state::{
             end::{
@@ -19,12 +19,12 @@ use crate::traversal::{
     iterator::TraversalIterator,
     path::{
         accessors::{
-            child::GraphRootChild,
+            child::root::GraphRootChild,
             role::Start,
             root::GraphRoot,
         },
         mutators::{
-            adapters::IntoAdvanced,
+            adapters::into_advanced::IntoAdvanced,
             move_path::key::TokenLocation,
         },
     },
@@ -49,6 +49,7 @@ impl Ord for ParentState {
         self.path.root_parent().cmp(&other.path.root_parent())
     }
 }
+
 impl PartialOrd for ParentState {
     fn partial_cmp(
         &self,
@@ -57,6 +58,7 @@ impl PartialOrd for ParentState {
         Some(self.cmp(other))
     }
 }
+
 impl ParentState {
     pub fn next_states<'a, 'b: 'a, I: TraversalIterator<'b>>(
         self,

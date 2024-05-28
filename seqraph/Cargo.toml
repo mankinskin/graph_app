@@ -85,18 +85,18 @@ version = "^1"
 [dependencies.tokio]
 version = "^1"
 features = [
-  "sync",
-  "rt",
-  "rt-multi-thread",
-  "macros",
+    "sync",
+    "rt",
+    "rt-multi-thread",
+    "macros",
 ]
 
 [dependencies.tokio-stream]
 version = "^0.1"
 features = [
-  "sync",
-  "time",
-  "io-util",
+    "sync",
+    "time",
+    "io-util",
 ]
 
 #[dev-dependencies.graph_app]

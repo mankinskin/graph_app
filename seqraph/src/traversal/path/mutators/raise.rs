@@ -1,8 +1,10 @@
+use std::borrow::Borrow;
+
 use crate::{
     graph::direction::r#match::MatchDirection,
     traversal::{
         cache::state::parent::ParentState,
-        path::mutators::move_path::AdvanceKey,
+        path::mutators::move_path::key::AdvanceKey,
         traversable::{
             TravDir,
             Traversable,
@@ -10,14 +12,13 @@ use crate::{
     },
     vertex::{
         location::{
-            ChildLocation,
-            IntoPatternLocation,
+            child::ChildLocation,
+            pattern::IntoPatternLocation,
         },
         pattern::pattern_width,
     },
 };
 
-use std::borrow::Borrow;
 pub trait PathRaise {
     fn path_raise<Trav: Traversable>(
         &mut self,
@@ -25,6 +26,7 @@ pub trait PathRaise {
         parent_entry: ChildLocation,
     );
 }
+
 impl PathRaise for ParentState {
     fn path_raise<Trav: Traversable>(
         &mut self,
@@ -41,8 +43,7 @@ impl PathRaise for ParentState {
         self.root_pos
             .advance_key(pattern_width(&pattern[root.sub_index + 1..]));
         if !path.is_empty()
-            || TravDir::<Trav>::pattern_index_prev(pattern.borrow(), root.sub_index)
-                .is_some()
+            || TravDir::<Trav>::pattern_index_prev(pattern.borrow(), root.sub_index).is_some()
         {
             path.path.push(root);
         }

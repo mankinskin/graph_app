@@ -1,26 +1,33 @@
-use crate::{
-    r#match::*,
-    search::*,
-    vertex::*,
-    *,
-};
-use crate::vertex::PatternId;
+use itertools::Itertools;
 use tokio_stream::{
     Stream,
     StreamExt,
 };
-use itertools::Itertools;
-use crate::search::NoMatch;
+
+use crate::{
+    *,
+    r#match::*,
+    search::{
+        *,
+        NoMatch,
+    },
+    vertex::{
+        *,
+        PatternId,
+    },
+};
 
 pub struct AsyncSearcher<T: Tokenize + Send, D: AsyncMatchDirection<T>> {
     graph: HypergraphHandle<T>,
     _ty: std::marker::PhantomData<D>,
 }
+
 impl<T: Tokenize + Send + 'static> AsyncSearcher<T, Right> {
     pub fn search_right(graph: HypergraphHandle<T>) -> Self {
         Self::new(graph)
     }
 }
+
 impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<T, D> {
     pub fn new(graph: HypergraphHandle<T>) -> Self {
         Self {
@@ -31,7 +38,10 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
     pub fn matcher(&self) -> AsyncMatcher<T, D> {
         AsyncMatcher::new(self.graph)
     }
-    pub fn find_sequence(&self, pattern: impl IntoIterator<Item = impl Into<T>>) -> SearchResult {
+    pub fn find_sequence(
+        &self,
+        pattern: impl IntoIterator<Item=impl Into<T>>,
+    ) -> SearchResult {
         let iter = tokenizing_iter(pattern.into_iter());
         let pattern = self.graph.graph().to_token_children(iter)?;
         self.find_ancestor(pattern)
@@ -40,7 +50,10 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
         &self,
         pattern: impl IntoIterator<Item=Result<impl AsChild, NoMatch>>,
     ) -> SearchResult {
-        let pattern: Pattern = pattern.into_iter().map(|r| r.map(Into::into)).collect::<Result<Pattern, NoMatch>>()?;
+        let pattern: Pattern = pattern
+            .into_iter()
+            .map(|r| r.map(Into::into))
+            .collect::<Result<Pattern, NoMatch>>()?;
         Right::split_head_tail(&pattern)
             .ok_or(NoMatch::EmptyPatterns)
             .and_then(|(head, tail)| {
@@ -49,7 +62,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
                     Err(NoMatch::SingleIndex)
                 } else {
                     async_std::task::block_on(
-                        self.find_largest_matching_parent(head, tokio_stream::iter(tail.to_vec()))
+                        self.find_largest_matching_parent(head, tokio_stream::iter(tail.to_vec())),
                     )
                 }
             })
@@ -67,7 +80,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
                     Err(NoMatch::SingleIndex)
                 } else {
                     async_std::task::block_on(
-                        self.find_largest_matching_parent(head, tokio_stream::iter(tail.to_vec()))
+                        self.find_largest_matching_parent(head, tokio_stream::iter(tail.to_vec())),
                     )
                 }
             })
@@ -88,16 +101,11 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
         let vertex = self.graph.graph().expect_vertex_data(index);
         let parents = vertex.get_parents_below_width(width_ceiling);
         let matching_parent = self.find_parent_with_matching_children(parents.clone(), context);
-        let search_found = if let Some((
-                &index,
-                child_patterns,
-                parent,
-                pattern_id,
-                sub_index
-            )) = matching_parent {
+        let search_found = if let Some((&index, child_patterns, parent, pattern_id, sub_index)) =
+            matching_parent
+        {
             self.matcher()
                 .compare_child_pattern_at_offset(child_patterns, context, pattern_id, sub_index)
-                
                 .map(|parent_match| SearchFound {
                     index: Child::new(index, parent.width),
                     pattern_id,
@@ -113,7 +121,6 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
                     async_std::task::block_on(async {
                         self.matcher()
                             .compare_with_parent_children(context, index, parent)
-                            
                             .map(|(parent_match, pattern_id, sub_index)| SearchFound {
                                 index: Child::new(index, parent.width),
                                 pattern_id,
@@ -126,9 +133,10 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
                 .ok_or(NoMatch::NoMatchingParent)
         }?;
         match search_found.parent_match.remainder {
-            Some(post) => {
-                self.find_largest_matching_parent(search_found.index, tokio_stream::iter(post[..].to_vec()))
-            },
+            Some(post) => self.find_largest_matching_parent(
+                search_found.index,
+                tokio_stream::iter(post[..].to_vec()),
+            ),
             // todo: match prefixes
             _ => Ok(search_found),
         }
@@ -136,7 +144,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
     /// find parent with a child pattern matching context
     pub fn find_parent_with_matching_children(
         &'a self,
-        mut parents: impl Iterator<Item = (&'a VertexIndex, &'a Parent)>,
+        mut parents: impl Iterator<Item=(&'a VertexIndex, &'a Parent)>,
         context: impl PatternStream<Child, Token<T>>,
     ) -> Option<(
         &'a VertexIndex,
@@ -155,14 +163,12 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
                     .into_iter()
                     .find(|(pattern_index, sub_index)| {
                         // find pattern with same next index
-                        async_std::task::block_on(
-                            Self::compare_next_index_in_child_pattern(
-                                child_patterns,
-                                context,
-                                pattern_index,
-                                *sub_index,
-                            )
-                        )
+                        async_std::task::block_on(Self::compare_next_index_in_child_pattern(
+                            child_patterns,
+                            context,
+                            pattern_index,
+                            *sub_index,
+                        ))
                     })
                     .map(|(pattern_index, sub_index)| {
                         (index, child_patterns, parent, pattern_index, sub_index)
@@ -191,19 +197,17 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
     /// try to find child pattern with context matching sub_context
     pub fn find_best_child_pattern(
         child_patterns: &'a ChildPatterns,
-        candidates: impl Iterator<Item = (usize, PatternId)>,
+        candidates: impl Iterator<Item=(usize, PatternId)>,
         sub_context: impl PatternStream<Child, Token<T>>,
     ) -> Result<(PatternId, usize), NoMatch> {
         candidates
             .find_or_first(|(pattern_index, sub_index)| {
-                async_std::task::block_on(
-                    Self::compare_next_index_in_child_pattern(
-                        child_patterns,
-                        sub_context,
-                        pattern_index,
-                        *sub_index,
-                    )
-                )
+                async_std::task::block_on(Self::compare_next_index_in_child_pattern(
+                    child_patterns,
+                    sub_context,
+                    pattern_index,
+                    *sub_index,
+                ))
             })
             .ok_or(NoMatch::NoChildPatterns)
     }

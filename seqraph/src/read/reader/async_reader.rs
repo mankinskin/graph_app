@@ -1,21 +1,27 @@
 use std::collections::VecDeque;
 
-use crate::{
-    r#match::*,
-    search::*,
-    vertex::*,
-    *,
-};
 use futures::Stream;
-use tokio_stream::{StreamExt, wrappers::UnboundedReceiverStream};
-use std::pin::Pin;
-use crate::search::NoMatch;
+use tokio_stream::{
+    StreamExt,
+    wrappers::UnboundedReceiverStream,
+};
+
+use crate::{
+    *,
+    r#match::*,
+    search::{
+        *,
+        NoMatch,
+    },
+    vertex::*,
+};
 
 #[derive(Debug)]
 struct BufferedPatternStream<T: Tokenize> {
     buffer: VecDeque<Child>,
     stream: UnboundedReceiverStream<T>,
 }
+
 #[derive(Clone, Debug)]
 struct BufferedPatternReceiver<T: Tokenize> {
     offset: usize,
@@ -35,15 +41,17 @@ pub struct AsyncReader<T: Tokenize + Send + Sync, D: AsyncMatchDirection<T> + Cl
     graph: HypergraphHandle<T>,
     _ty: std::marker::PhantomData<D>,
 }
+
 impl<T: Tokenize + Send + Sync + 'static, D: AsyncMatchDirection<T> + Clone> AsyncReader<T, D> {
     pub fn right_searcher(&self) -> AsyncSearcher<T, Right> {
         AsyncSearcher::new(self.graph)
     }
-    pub fn read_sequence_stream(&mut self, stream: impl TokenStream<T>) -> SearchResult {
-        let stream = Hypergraph::<T>::async_to_token_children_stream(
-            self.graph.clone(),
-            stream,
-        ).await;
+    pub fn read_sequence_stream(
+        &mut self,
+        stream: impl TokenStream<T>,
+    ) -> SearchResult {
+        let stream =
+            Hypergraph::<T>::async_to_token_children_stream(self.graph.clone(), stream).await;
         self.async_read_pattern(stream).await
     }
     /// read until first known token and create any unknown token indices
@@ -58,7 +66,7 @@ impl<T: Tokenize + Send + Sync + 'static, D: AsyncMatchDirection<T> + Clone> Asy
                     async_std::task::block_on(async {
                         self.graph.write().await.insert_token(token);
                     });
-                },
+                }
                 Ok(c) => break, // stop skipping
             }
         }
@@ -70,9 +78,13 @@ impl<T: Tokenize + Send + Sync + 'static, D: AsyncMatchDirection<T> + Clone> Asy
     ) -> SearchResult {
         let mut pattern = self.async_read_unknown_tokens(pattern).await;
         // take first known token
-        let head = pattern.next().await
+        let head = pattern
+            .next()
+            .await
             .map(|r| r.into_inner().unwrap())
             .ok_or(NoMatch::EmptyPatterns)?;
-        self.right_searcher().find_largest_matching_parent(head, pattern).await
+        self.right_searcher()
+            .find_largest_matching_parent(head, pattern)
+            .await
     }
 }

@@ -1,8 +1,7 @@
-use derive_new::new;
 use std::num::NonZeroUsize;
 
-pub mod info;
-pub mod splits;
+use derive_new::new;
+
 use crate::join::partition::{
     info::range::role::{
         In,
@@ -19,15 +18,20 @@ use crate::join::partition::{
     },
 };
 
+pub mod info;
+pub mod splits;
+
 #[derive(new, Clone, Copy)]
 pub struct Infix<A: AsOffsetSplits, B: AsOffsetSplits> {
     pub left: A,
     pub right: B,
 }
+
 #[derive(new, Clone)]
 pub struct Prefix<O: AsOffsetSplits> {
     pub split: O,
 }
+
 #[derive(new, Clone)]
 pub struct Postfix<O: AsOffsetSplits> {
     pub split: O,
@@ -41,11 +45,13 @@ pub struct Partition<K: RangeRole> {
 pub trait AsPartition<K: RangeRole>: Clone {
     fn as_partition(self) -> Partition<K>;
 }
+
 impl<K: RangeRole> AsPartition<K> for Partition<K> {
     fn as_partition(self) -> Partition<K> {
         self
     }
 }
+
 impl<'a, M: InVisitMode, A: AsOffsetSplits, B: AsOffsetSplits> AsPartition<In<M>> for Infix<A, B> {
     fn as_partition(self) -> Partition<In<M>> {
         Partition {
@@ -53,6 +59,7 @@ impl<'a, M: InVisitMode, A: AsOffsetSplits, B: AsOffsetSplits> AsPartition<In<M>
         }
     }
 }
+
 impl<'a, M: InVisitMode> AsPartition<In<M>> for (OffsetSplits, OffsetSplits) {
     fn as_partition(self) -> Partition<In<M>> {
         Partition {
@@ -60,6 +67,7 @@ impl<'a, M: InVisitMode> AsPartition<In<M>> for (OffsetSplits, OffsetSplits) {
         }
     }
 }
+
 impl<'a, M: InVisitMode> AsPartition<In<M>> for &'a (OffsetSplits, OffsetSplits) {
     fn as_partition(self) -> Partition<In<M>> {
         Partition {
@@ -67,6 +75,7 @@ impl<'a, M: InVisitMode> AsPartition<In<M>> for &'a (OffsetSplits, OffsetSplits)
         }
     }
 }
+
 impl<'a, M: PreVisitMode, A: AsOffsetSplits> AsPartition<Pre<M>> for A {
     fn as_partition(self) -> Partition<Pre<M>> {
         Partition {
@@ -74,6 +83,7 @@ impl<'a, M: PreVisitMode, A: AsOffsetSplits> AsPartition<Pre<M>> for A {
         }
     }
 }
+
 impl<'a, M: PostVisitMode, A: AsOffsetSplits> AsPartition<Post<M>> for A {
     fn as_partition(self) -> Partition<Post<M>> {
         Partition {
@@ -81,6 +91,7 @@ impl<'a, M: PostVisitMode, A: AsOffsetSplits> AsPartition<Post<M>> for A {
         }
     }
 }
+
 impl<'a, M: PreVisitMode, B: AsOffsetSplits> AsPartition<Pre<M>> for Prefix<B> {
     fn as_partition(self) -> Partition<Pre<M>> {
         Partition {
@@ -88,6 +99,7 @@ impl<'a, M: PreVisitMode, B: AsOffsetSplits> AsPartition<Pre<M>> for Prefix<B> {
         }
     }
 }
+
 impl<'a, M: PostVisitMode, A: AsOffsetSplits> AsPartition<Post<M>> for Postfix<A> {
     fn as_partition(self) -> Partition<Post<M>> {
         Partition {
@@ -105,11 +117,8 @@ pub fn to_non_zero_range(
 
 #[cfg(test)]
 mod tests {
-    use crate::HashMap;
-    use crate::join::partition::to_non_zero_range;
-    use crate::split::{range_splits, SplitCache};
-
     fn first_partition() {}
+
     fn inner_partition() {
         //let cache = SplitCache {
         //    entries: HashMap::from([]),
@@ -121,5 +130,6 @@ mod tests {
         //let (l, r) = ((&lo, ls), (&ro, rs));
         //let bundle = (l, r).info_bundle();
     }
+
     fn last_partition() {}
 }

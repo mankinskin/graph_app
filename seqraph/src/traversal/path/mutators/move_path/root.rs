@@ -9,10 +9,6 @@ use crate::{
         context::QueryStateContext,
         path::{
             accessors::{
-                child::{
-                    RootChildPos,
-                    RootChildPosMut,
-                },
                 role::{
                     End,
                     PathRole,
@@ -37,9 +33,15 @@ use crate::{
 use std::ops::ControlFlow;
 
 use crate::{
-    traversal::traversable::{
-        TravDir,
-        Traversable,
+    traversal::{
+        path::accessors::child::pos::{
+            RootChildPos,
+            RootChildPosMut,
+        },
+        traversable::{
+            TravDir,
+            Traversable,
+        },
     },
     vertex::wide::Wide,
 };
@@ -65,6 +67,7 @@ impl<Root: PathRoot> MoveRootPos<Right, End> for RootedRolePath<End, Root> {
         }
     }
 }
+
 impl MoveRootPos<Right, End> for SearchPath {
     fn move_root_pos<Trav: Traversable>(
         &mut self,
@@ -83,6 +86,7 @@ impl MoveRootPos<Right, End> for SearchPath {
         }
     }
 }
+
 impl MoveRootPos<Left, End> for SearchPath {
     fn move_root_pos<Trav: Traversable>(
         &mut self,
@@ -101,16 +105,16 @@ impl MoveRootPos<Left, End> for SearchPath {
         }
     }
 }
+
 impl MoveRootPos<Right, End> for QueryStateContext<'_> {
     fn move_root_pos<Trav: Traversable>(
         &mut self,
         _trav: &Trav,
     ) -> ControlFlow<()> {
         let pattern = &self.ctx.query_root;
-        if let Some(next) = TravDir::<Trav>::pattern_index_next(
-            pattern.borrow(),
-            self.state.end.root_child_pos(),
-        ) {
+        if let Some(next) =
+            TravDir::<Trav>::pattern_index_next(pattern.borrow(), self.state.end.root_child_pos())
+        {
             self.advance_key(pattern[self.state.end.root_child_pos()].width());
             *self.state.end.root_child_pos_mut() = next;
             ControlFlow::Continue(())
@@ -119,16 +123,16 @@ impl MoveRootPos<Right, End> for QueryStateContext<'_> {
         }
     }
 }
+
 impl MoveRootPos<Left, End> for QueryStateContext<'_> {
     fn move_root_pos<Trav: Traversable>(
         &mut self,
         _trav: &Trav,
     ) -> ControlFlow<()> {
         let pattern = &self.ctx.query_root;
-        if let Some(prev) = TravDir::<Trav>::pattern_index_prev(
-            pattern.borrow(),
-            self.state.end.root_child_pos(),
-        ) {
+        if let Some(prev) =
+            TravDir::<Trav>::pattern_index_prev(pattern.borrow(), self.state.end.root_child_pos())
+        {
             self.retract_key(pattern[self.state.end.root_child_pos()].width());
             *self.state.end.root_child_pos_mut() = prev;
             ControlFlow::Continue(())
@@ -137,6 +141,7 @@ impl MoveRootPos<Left, End> for QueryStateContext<'_> {
         }
     }
 }
+
 impl MoveRootPos<Right, End> for QueryRangePath {
     fn move_root_pos<Trav: Traversable>(
         &mut self,

@@ -1,22 +1,25 @@
-use crate::vertex::PatternId;
-use derive_more::{
-    Deref,
-    From,
-    Into,
-};
 use std::{
     fmt::Debug,
     iter::FromIterator,
 };
 
+use derive_more::{
+    Deref,
+    From,
+    Into,
+};
+
+use crate::vertex::PatternId;
+
 pub trait BoolPerfect: Default + Debug + Clone {
-    type Result: BorderPerfect<Boolean = Self>;
+    type Result: BorderPerfect<Boolean=Self>;
     fn then_some(
         self,
         pid: PatternId,
     ) -> Self::Result;
     fn all_perfect(&self) -> bool;
 }
+
 impl BoolPerfect for bool {
     type Result = SinglePerfect;
     fn then_some(
@@ -29,6 +32,7 @@ impl BoolPerfect for bool {
         *self
     }
 }
+
 impl BoolPerfect for (bool, bool) {
     type Result = DoublePerfect;
     fn then_some(
@@ -41,8 +45,9 @@ impl BoolPerfect for (bool, bool) {
         self.0 && self.1
     }
 }
+
 pub trait BorderPerfect: Default + Debug + Clone + Extend<Self> {
-    type Boolean: BoolPerfect<Result = Self>;
+    type Boolean: BoolPerfect<Result=Self>;
     fn new(
         boolean: Self::Boolean,
         pid: PatternId,
@@ -50,6 +55,7 @@ pub trait BorderPerfect: Default + Debug + Clone + Extend<Self> {
     fn complete(&self) -> SinglePerfect;
     fn as_bool(self) -> Self::Boolean;
 }
+
 #[derive(Debug, Default, Clone, Copy, From, Into, Deref)]
 pub struct SinglePerfect(pub Option<PatternId>);
 
@@ -69,6 +75,7 @@ impl std::ops::Add for SinglePerfect {
         self.0.or(x.0).into()
     }
 }
+
 impl std::ops::Add for DoublePerfect {
     type Output = Self;
     fn add(
@@ -82,6 +89,7 @@ impl std::ops::Add for DoublePerfect {
             .into()
     }
 }
+
 impl std::ops::AddAssign for SinglePerfect {
     fn add_assign(
         &mut self,
@@ -90,6 +98,7 @@ impl std::ops::AddAssign for SinglePerfect {
         *self = *self + rhs;
     }
 }
+
 impl std::ops::AddAssign for DoublePerfect {
     fn add_assign(
         &mut self,
@@ -100,31 +109,35 @@ impl std::ops::AddAssign for DoublePerfect {
 }
 
 impl FromIterator<Self> for SinglePerfect {
-    fn from_iter<T: IntoIterator<Item = Self>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item=Self>>(iter: T) -> Self {
         iter.into_iter().fold(Self::default(), |acc, x| acc + x)
     }
 }
+
 impl FromIterator<Self> for DoublePerfect {
-    fn from_iter<T: IntoIterator<Item = Self>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item=Self>>(iter: T) -> Self {
         iter.into_iter().fold(Self::default(), |acc, x| acc + x)
     }
 }
+
 impl Extend<Self> for SinglePerfect {
-    fn extend<T: IntoIterator<Item = Self>>(
+    fn extend<T: IntoIterator<Item=Self>>(
         &mut self,
         iter: T,
     ) {
         *self += Self::from_iter(iter);
     }
 }
+
 impl Extend<Self> for DoublePerfect {
-    fn extend<T: IntoIterator<Item = Self>>(
+    fn extend<T: IntoIterator<Item=Self>>(
         &mut self,
         iter: T,
     ) {
         *self += Self::from_iter(iter);
     }
 }
+
 impl BorderPerfect for SinglePerfect {
     type Boolean = bool;
     fn new(
@@ -143,6 +156,7 @@ impl BorderPerfect for SinglePerfect {
         self.0.is_some()
     }
 }
+
 impl BorderPerfect for DoublePerfect {
     type Boolean = (bool, bool);
     fn new(

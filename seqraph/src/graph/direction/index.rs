@@ -58,10 +58,12 @@ pub trait IndexDirection: MatchDirection + Clone {
         last_context: Child,
     ) -> Pattern;
 }
+
 pub trait Merge {
     fn split_front(self) -> Option<(Child, Pattern)>;
     fn split_back(self) -> Option<(Child, Pattern)>;
 }
+
 impl Merge for Child {
     fn split_front(self) -> Option<(Child, Pattern)> {
         Some((self, vec![]))
@@ -70,6 +72,7 @@ impl Merge for Child {
         Some((self, vec![]))
     }
 }
+
 impl Merge for Pattern {
     fn split_front(self) -> Option<(Child, Pattern)> {
         let mut p = self.into_iter();
@@ -81,6 +84,7 @@ impl Merge for Pattern {
         last.map(|last| (last, self))
     }
 }
+
 impl IndexDirection for Left {
     type Opposite = Right;
     fn split_context_head(context: impl Merge) -> Option<(Child, Pattern)> {
@@ -126,6 +130,7 @@ impl IndexDirection for Left {
             .collect()
     }
 }
+
 impl IndexDirection for Right {
     type Opposite = Left;
     fn split_context_head(context: impl Merge) -> Option<(Child, Pattern)> {

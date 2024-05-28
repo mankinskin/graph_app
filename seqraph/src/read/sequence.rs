@@ -1,22 +1,30 @@
 use crate::shared::*;
+
 #[derive(Debug, Deref, DerefMut)]
 pub struct SequenceIter<'it> {
-    iter: std::iter::Peekable<std::slice::Iter<'it, NewTokenIndex>>
+    iter: std::iter::Peekable<std::slice::Iter<'it, NewTokenIndex>>,
 }
+
 impl<'it> Iterator for SequenceIter<'it> {
     type Item = &'it NewTokenIndex;
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next()
     }
 }
+
 impl<'it> PeekingNext for SequenceIter<'it> {
-    fn peeking_next<F>(&mut self, accept: F) -> Option<Self::Item>
+    fn peeking_next<F>(
+        &mut self,
+        accept: F,
+    ) -> Option<Self::Item>
         where
             Self: Sized,
-            F: FnOnce(&Self::Item) -> bool {
+            F: FnOnce(&Self::Item) -> bool,
+    {
         self.iter.peeking_next(accept)
     }
 }
+
 impl<'it> SequenceIter<'it> {
     pub fn new<N, S: ToNewTokenIndices<N>>(
         ctx: &mut ReadContext<'it>,
@@ -50,19 +58,17 @@ impl<'it> SequenceIter<'it> {
 }
 
 pub trait ToNewTokenIndices<N>: Debug {
-    fn to_new_token_indices<
-        'a: 'g,
-        'g,
-        Trav: TraversableMut<Kind=BaseGraphKind>,
-        >(self, graph: &'a mut Trav) -> NewTokenIndices;
+    fn to_new_token_indices<'a: 'g, 'g, Trav: TraversableMut<Kind=BaseGraphKind>>(
+        self,
+        graph: &'a mut Trav,
+    ) -> NewTokenIndices;
 }
 
 impl ToNewTokenIndices<NewTokenIndex> for NewTokenIndices {
-    fn to_new_token_indices<
-        'a: 'g,
-        'g,
-        Trav: TraversableMut<Kind=BaseGraphKind>,
-    >(self, _graph: &'a mut Trav) -> NewTokenIndices {
+    fn to_new_token_indices<'a: 'g, 'g, Trav: TraversableMut<Kind=BaseGraphKind>>(
+        self,
+        _graph: &'a mut Trav,
+    ) -> NewTokenIndices {
         self
     }
 }
@@ -76,12 +82,13 @@ impl ToNewTokenIndices<NewTokenIndex> for NewTokenIndices {
 //    }
 //}
 
-impl<Iter: IntoIterator<Item=DefaultToken> + Debug + Send + Sync> ToNewTokenIndices<DefaultToken> for Iter {
-    fn to_new_token_indices<
-        'a: 'g,
-        'g,
-        Trav: TraversableMut<Kind=BaseGraphKind>,
-    >(self, graph: &'a mut Trav) -> NewTokenIndices {
+impl<Iter: IntoIterator<Item=DefaultToken> + Debug + Send + Sync> ToNewTokenIndices<DefaultToken>
+for Iter
+{
+    fn to_new_token_indices<'a: 'g, 'g, Trav: TraversableMut<Kind=BaseGraphKind>>(
+        self,
+        graph: &'a mut Trav,
+    ) -> NewTokenIndices {
         graph.graph_mut().new_token_indices(self)
     }
 }

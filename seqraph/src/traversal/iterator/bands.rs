@@ -7,8 +7,8 @@ use crate::{
     vertex::{
         child::Child,
         location::{
+            child::ChildLocation,
             pattern::PatternLocation,
-            ChildLocation,
         },
         pattern::IntoPattern,
         wide::Wide,
@@ -26,17 +26,18 @@ pub trait BandExpandingPolicy<Trav: Traversable> {
         pattern: impl IntoPattern,
     ) -> (ChildLocation, Child);
     fn map_batch(
-        batch: impl IntoIterator<Item = (ChildLocation, Child)>
+        batch: impl IntoIterator<Item=(ChildLocation, Child)>
     ) -> Vec<(ChildLocation, Child)> {
         batch.into_iter().collect_vec()
     }
 }
+
 pub struct PostfixExpandingPolicy<D: MatchDirection> {
     _ty: std::marker::PhantomData<D>,
 }
 
 pub trait BandIterator<'a, Trav: Traversable + 'a>:
-    Iterator<Item = (ChildLocation, Child)>
+Iterator<Item=(ChildLocation, Child)>
 {
     type Policy: BandExpandingPolicy<Trav>;
     fn new(
@@ -51,14 +52,12 @@ pub trait BandIterator<'a, Trav: Traversable + 'a>:
     ) -> Vec<(ChildLocation, Child)> {
         Self::Policy::map_batch(self.trav().graph().expect_child_patterns(index).iter().map(
             |(pid, pattern)| {
-                Self::Policy::map_band(
-                    PatternLocation::new(index, *pid),
-                    pattern.borrow(),
-                )
+                Self::Policy::map_band(PatternLocation::new(index, *pid), pattern.borrow())
             },
         ))
     }
 }
+
 impl<Trav: Traversable, D: MatchDirection> BandExpandingPolicy<Trav> for PostfixExpandingPolicy<D> {
     //
     fn map_band(
@@ -69,7 +68,7 @@ impl<Trav: Traversable, D: MatchDirection> BandExpandingPolicy<Trav> for Postfix
         (location.to_child_location(last), pattern.borrow()[last])
     }
     fn map_batch(
-        batch: impl IntoIterator<Item = (ChildLocation, Child)>
+        batch: impl IntoIterator<Item=(ChildLocation, Child)>
     ) -> Vec<(ChildLocation, Child)> {
         batch
             .into_iter()
@@ -77,23 +76,25 @@ impl<Trav: Traversable, D: MatchDirection> BandExpandingPolicy<Trav> for Postfix
             .collect_vec()
     }
 }
+
 pub struct BandExpandingIterator<'a, Trav, P>
-where
-    Trav: Traversable,
-    P: BandExpandingPolicy<Trav>,
+    where
+        Trav: Traversable,
+        P: BandExpandingPolicy<Trav>,
 {
     trav: &'a Trav,
     queue: VecDeque<(ChildLocation, Child)>,
     last: (Option<ChildLocation>, Child),
     _ty: std::marker::PhantomData<&'a P>,
 }
+
 pub type PostfixIterator<'a, Trav> =
-    BandExpandingIterator<'a, Trav, PostfixExpandingPolicy<DirectionOf<Trav>>>;
+BandExpandingIterator<'a, Trav, PostfixExpandingPolicy<DirectionOf<Trav>>>;
 
 impl<'a, Trav, P> BandIterator<'a, Trav> for BandExpandingIterator<'a, Trav, P>
-where
-    Trav: Traversable,
-    P: BandExpandingPolicy<Trav>,
+    where
+        Trav: Traversable,
+        P: BandExpandingPolicy<Trav>,
 {
     type Policy = P;
     fn new(
@@ -111,10 +112,11 @@ where
         self.trav
     }
 }
+
 impl<'a, Trav, P> Iterator for BandExpandingIterator<'a, Trav, P>
-where
-    Trav: Traversable,
-    P: BandExpandingPolicy<Trav>,
+    where
+        Trav: Traversable,
+        P: BandExpandingPolicy<Trav>,
 {
     type Item = (ChildLocation, Child);
 

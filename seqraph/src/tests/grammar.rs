@@ -1,33 +1,31 @@
 #![allow(non_snake_case, unused)]
 
-type BuildKey = RangeInclusive<usize>;
-
-use crate::{
-    vertex::{
-        child::Child,
-        indexed::Indexed,
-        location::ChildLocation,
-        pattern::Pattern,
-        wide::Wide,
-    },
-    HashMap,
-};
-use derive_more::{
-    Deref,
-    DerefMut,
-    From,
-};
-use derive_new::new;
 use std::{
     collections::VecDeque,
     ops::RangeInclusive,
 };
 
+use derive_more::Deref;
+use derive_new::new;
+
+use crate::{
+    HashMap,
+    vertex::{
+        child::Child,
+        indexed::Indexed,
+        location::child::ChildLocation,
+        pattern::Pattern,
+        wide::Wide,
+    },
+};
+
+type BuildKey = RangeInclusive<usize>;
+
 //#[test]
 pub fn test_grammar() {
     let N: usize = 100; // total length
     let k: usize = 20; // alphabet size
-                       //let mut graph = HypergraphRef::<BaseGraphKind>::default();
+    //let mut graph = HypergraphRef::<BaseGraphKind>::default();
     println!("N = {}\nk = {}", N, k);
     let num_v = count_max_nodes(N, k);
     println!("num_v = {}", num_v);
@@ -43,11 +41,11 @@ pub fn test_grammar() {
     println!("num_e = {}", 4 * g.vertex_count());
     let num_bytes = g.vertex_count()
         * (std::mem::size_of::<crate::vertex::VertexData>()
-            + std::mem::size_of::<crate::vertex::VertexIndex>())
+        + std::mem::size_of::<crate::vertex::VertexIndex>())
         + 4 * g.vertex_count()
-            * (std::mem::size_of::<Child>() + std::mem::size_of::<crate::vertex::parent::Parent>());
-    println!("total MB = {}", num_bytes as u32 / 10_u32.pow(6),);
-    println!("mul = {}", num_bytes / N,);
+        * (std::mem::size_of::<Child>() + std::mem::size_of::<crate::vertex::parent::Parent>());
+    println!("total MB = {}", num_bytes as u32 / 10_u32.pow(6), );
+    println!("mul = {}", num_bytes / N, );
 }
 
 #[derive(new, Deref)]
@@ -56,6 +54,7 @@ struct BuilderNode {
     #[deref]
     range: BuildKey,
 }
+
 impl BuilderNode {
     pub fn prefix_rule(&self) -> [BuildKey; 2] {
         [*self.start()..=self.end() - 1, *self.end()..=*self.end()]
@@ -67,12 +66,14 @@ impl BuilderNode {
         ]
     }
 }
+
 struct GraphBuilder {
     range_map: HashMap<BuildKey, usize>,
     queue: VecDeque<BuilderNode>,
     graph: crate::graph::Hypergraph,
     N: usize,
 }
+
 impl GraphBuilder {
     pub fn new(N: usize) -> Self {
         Self {
@@ -199,6 +200,7 @@ struct RewireContext {
     prefix_counts: HashMap<crate::vertex::VertexIndex, usize>,
     k: usize,
 }
+
 impl RewireContext {
     pub fn new(
         k: usize,
@@ -242,12 +244,14 @@ impl RewireContext {
         let mut prefixes = vec![first];
     }
 }
+
 fn worst_case_grammar(
     N: usize,
     k: usize,
 ) -> crate::graph::Hypergraph {
     GraphBuilder::new(N).saturated_grammar(k)
 }
+
 fn count_max_nodes(
     N: usize,
     k: usize,
@@ -263,7 +267,7 @@ fn count_max_nodes(
         0.0001,
         50,
     )
-    .unwrap();
+        .unwrap();
     let root: u32 = root.floor() as u32;
     println!("root: {}", root);
 

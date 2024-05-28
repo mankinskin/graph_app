@@ -1,40 +1,42 @@
-use crate::{
-    join::{
-        context::node::NodeJoinContext,
-        partition::{
-            info::{
-                range::role::{
-                    In,
-                    Join,
-                },
-                visit::VisitPartition,
-                PartitionInfo,
-            },
-            splits::{
-                HasPosSplits,
-                PosSplits,
-                SplitKind,
-            },
-            Infix,
-        },
-    },
-    split::Split,
-    traversal::cache::key::SplitKey,
-    vertex::{
-        child::Child,
-        pattern::Pattern,
-    },
-    HashMap,
+use std::{
+    borrow::Borrow,
+    ops::Range,
 };
+
 use derive_more::{
     Deref,
     DerefMut,
 };
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
-use std::{
-    borrow::Borrow,
-    ops::Range,
+
+use crate::{
+    HashMap,
+    join::{
+        context::node::context::NodeJoinContext,
+        partition::{
+            Infix,
+            info::{
+                PartitionInfo,
+                range::role::{
+                    In,
+                    Join,
+                },
+                visit::VisitPartition,
+            },
+            splits::{
+                HasPosSplits,
+                PosSplits,
+                SplitKind,
+            },
+        },
+    },
+    split::cache::split::Split,
+    traversal::cache::key::SplitKey,
+    vertex::{
+        child::Child,
+        pattern::Pattern,
+    },
 };
 
 impl<'p> NodeJoinContext<'p> {
@@ -53,12 +55,12 @@ impl<'p> NodeJoinContext<'p> {
         splits: S,
         partitions: &Vec<Child>,
     ) -> LinkedHashMap<SplitKey, Split>
-    where
-        for<'t> &'t S::Split: SplitKind,
-        PosSplits<S>: HasPosSplits<Split = S::Split>,
+        where
+                for<'t> &'t S::Split: SplitKind,
+                PosSplits<S>: HasPosSplits<Split=S::Split>,
     {
         let offsets = splits.pos_splits();
-        assert!(partitions.len() == offsets.len() + 1);
+        assert_eq!(partitions.len(), offsets.len() + 1);
 
         let merges = self.merge_partitions(offsets, &partitions);
 
@@ -90,9 +92,9 @@ impl<'p> NodeJoinContext<'p> {
         splits: S,
         partitions: &Vec<Child>,
     ) -> RangeMap
-    where
-        for<'t> &'t S::Split: SplitKind,
-        PosSplits<S>: HasPosSplits<Split = S::Split>,
+        where
+                for<'t> &'t S::Split: SplitKind,
+                PosSplits<S>: HasPosSplits<Split=S::Split>,
     {
         let offsets = splits.pos_splits();
         let num_offsets = offsets.len();
@@ -131,12 +133,14 @@ impl<'p> NodeJoinContext<'p> {
         range_map
     }
 }
+
 #[derive(Debug, Deref, DerefMut, Default)]
 pub struct RangeMap<R = Range<usize>> {
     #[deref]
     map: HashMap<R, Child>,
 }
-impl<C: Borrow<Child>, I: IntoIterator<Item = C>> From<I> for RangeMap<Range<usize>> {
+
+impl<C: Borrow<Child>, I: IntoIterator<Item=C>> From<I> for RangeMap<Range<usize>> {
     fn from(iter: I) -> Self {
         let mut map = HashMap::default();
         for (i, part) in iter.into_iter().enumerate() {
@@ -145,11 +149,12 @@ impl<C: Borrow<Child>, I: IntoIterator<Item = C>> From<I> for RangeMap<Range<usi
         Self { map }
     }
 }
+
 impl RangeMap<Range<usize>> {
     pub fn range_sub_merges(
         &self,
         range: Range<usize>,
-    ) -> impl IntoIterator<Item = Pattern> + '_ {
+    ) -> impl IntoIterator<Item=Pattern> + '_ {
         let (start, end) = (range.start, range.end);
         range.into_iter().map(move |ri| {
             let &left = self.map.get(&(start..ri)).unwrap();

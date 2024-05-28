@@ -1,22 +1,26 @@
+use std::{
+    collections::HashMap,
+    hash::{
+        Hash,
+        Hasher,
+    },
+    panic::catch_unwind,
+    time::Duration,
+};
+
 use itertools::Itertools;
 use rand::{
+    RngCore,
     rngs::StdRng,
-    seq::IteratorRandom, SeedableRng, RngCore,
+    SeedableRng,
+    seq::IteratorRandom,
 };
 use rand_distr::{
     Distribution,
     Normal,
 };
+
 use crate::HypergraphRef;
-use std::{
-    panic::{
-        catch_unwind,
-    },
-    collections::HashMap, hash::{Hash, Hasher},
-};
-use std::time::{
-    Duration,
-};
 
 lazy_static::lazy_static! {
     static ref PANIC_INFO: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
@@ -74,38 +78,38 @@ pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
                 length = len_distr.sample(&mut rng) as usize;
             }
             len_histo.add(length as u64);
-            let input = (0..length).map(|_| *input_distr.iter().choose(&mut rng).unwrap()).collect::<String>();
+            let input = (0..length)
+                .map(|_| *input_distr.iter().choose(&mut rng).unwrap())
+                .collect::<String>();
             let mut hasher = std::collections::hash_map::DefaultHasher::new();
             input.hash(&mut hasher);
             let _h = hasher.finish();
             let now = std::time::Instant::now();
             match catch_unwind(|| {
-                tokio::runtime::Handle::current().block_on(
-                    graph.clone().unwrap().read_sequence(input.chars())
-                );
+                tokio::runtime::Handle::current()
+                    .block_on(graph.clone().unwrap().read_sequence(input.chars()));
             }) {
                 Ok(_) => {
                     batch_time += now.elapsed();
                     successful += 1;
-                },
+                }
                 Err(_) => {
                     let inner = graph.take().unwrap();
                     graph = Some(HypergraphRef::from(
-                        Arc::try_unwrap(inner.0).unwrap()
-                        .into_inner()
+                        Arc::try_unwrap(inner.0).unwrap().into_inner(),
                     ));
                     let msg = PANIC_INFO.lock().take().unwrap();
                     let new = (i, input, seed);
-                    panics.entry(msg).and_modify(|instances: &mut Vec<_>|
-                        instances.push(new.clone())
-                    )
-                    .or_insert_with(|| vec![new]);
-                },
+                    panics
+                        .entry(msg)
+                        .and_modify(|instances: &mut Vec<_>| instances.push(new.clone()))
+                        .or_insert_with(|| vec![new]);
+                }
             }
         }
         panic_count += batch_size - successful;
         if successful > 0 {
-            time_histo.add(batch_time.as_millis() as u64/successful);
+            time_histo.add(batch_time.as_millis() as u64 / successful);
             total_time += batch_time;
         }
     }
@@ -116,19 +120,28 @@ pub fn gen_graph() -> Result<HypergraphRef<char>, HypergraphRef<char>> {
     } else {
         println!("\nPanic locations:");
         for (err, instances) in panics.iter() {
-            let percent = ((instances.len() as f32/panic_count as f32) * 100.0) as u32;
+            let percent = ((instances.len() as f32 / panic_count as f32) * 100.0) as u32;
             println!("\nPanic at {}: {}%", err, percent);
         }
         println!("Panics: {}/{}", panic_count, fuzz_len);
-        println!("Seeds: {:?}", panics.into_values().flat_map(|inst| inst.into_iter().map(|inst| inst.2)).collect_vec());
+        println!(
+            "Seeds: {:?}",
+            panics
+                .into_values()
+                .flat_map(|inst| inst.into_iter().map(|inst| inst.2))
+                .collect_vec()
+        );
         println!("lengths:\n{}", len_histo);
         println!("times:\n{}", time_histo);
         println!("Total time:\n{} ms", total_time.as_millis());
-        println!("Average character rate:\n{} chars/sec", if total_time.as_millis() > 0 {
-            (1000 * mean_length * batch_count)/total_time.as_millis() as u64
-        } else {
-            0
-        });
+        println!(
+            "Average character rate:\n{} chars/sec",
+            if total_time.as_millis() > 0 {
+                (1000 * mean_length * batch_count) / total_time.as_millis() as u64
+            } else {
+                0
+            }
+        );
         Err(graph.unwrap())
     }
 }

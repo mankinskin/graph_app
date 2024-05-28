@@ -1,14 +1,16 @@
+use std::num::NonZeroUsize;
+
 use crate::{
     join::partition::splits::SplitKind,
     split::VertexSplitPos,
 };
-use std::num::NonZeroUsize;
 
 #[derive(Debug, Clone)]
 pub struct OffsetSplits {
     pub offset: NonZeroUsize,
     pub splits: VertexSplitPos,
 }
+
 //#[derive(Debug, Clone, Copy)]
 //pub struct OffsetSplitsRef<'a> {
 //    pub offset: NonZeroUsize,
@@ -17,16 +19,19 @@ pub struct OffsetSplits {
 pub trait AsOffsetSplits: Clone {
     fn as_offset_splits(self) -> OffsetSplits;
 }
+
 impl AsOffsetSplits for OffsetSplits {
     fn as_offset_splits(self) -> OffsetSplits {
         self
     }
 }
+
 impl<'a> AsOffsetSplits for &'a OffsetSplits {
     fn as_offset_splits(self) -> OffsetSplits {
         self.clone()
     }
 }
+
 impl<'a, S: SplitKind> AsOffsetSplits for (&'a NonZeroUsize, S) {
     fn as_offset_splits(self) -> OffsetSplits {
         OffsetSplits {

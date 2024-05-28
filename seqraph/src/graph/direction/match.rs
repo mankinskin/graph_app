@@ -1,7 +1,3 @@
-use itertools::{
-    EitherOrBoth,
-    Itertools,
-};
 use std::{
     fmt::Debug,
     ops::{
@@ -10,12 +6,19 @@ use std::{
     },
 };
 
+use itertools::{
+    EitherOrBoth,
+    Itertools,
+};
+
 use crate::{
     direction::{
         Left,
         Right,
     },
     graph::GraphKind,
+    HashMap,
+    HashSet,
     search::NoMatch,
     vertex::{
         child::Child,
@@ -24,13 +27,11 @@ use crate::{
         pattern::{
             IntoPattern,
             Pattern,
-            PatternRangeIndex,
+            pattern_range::PatternRangeIndex,
         },
         PatternId,
         TokenPosition,
     },
-    HashMap,
-    HashSet,
 };
 
 fn to_matching_iterator<
@@ -38,9 +39,9 @@ fn to_matching_iterator<
     I: crate::vertex::indexed::Indexed + 'a,
     J: crate::vertex::indexed::Indexed + 'a,
 >(
-    a: impl Iterator<Item = &'a I>,
-    b: impl Iterator<Item = &'a J>,
-) -> impl Iterator<Item = (usize, EitherOrBoth<&'a I, &'a J>)> {
+    a: impl Iterator<Item=&'a I>,
+    b: impl Iterator<Item=&'a J>,
+) -> impl Iterator<Item=(usize, EitherOrBoth<&'a I, &'a J>)> {
     a.zip_longest(b)
         .enumerate()
         .skip_while(|(_, eob)| match eob {
@@ -63,8 +64,8 @@ pub trait MatchDirection: Clone + Debug + Send + Sync + 'static + Unpin {
         I: crate::vertex::indexed::Indexed,
         J: crate::vertex::indexed::Indexed,
     >(
-        a: impl DoubleEndedIterator<Item = &'a I>,
-        b: impl DoubleEndedIterator<Item = &'a J>,
+        a: impl DoubleEndedIterator<Item=&'a I>,
+        b: impl DoubleEndedIterator<Item=&'a J>,
     ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)>;
     /// get remaining pattern in matching direction including index
     fn pattern_tail<T: crate::vertex::indexed::AsChild>(pattern: &'_ [T]) -> &'_ [T];
@@ -152,6 +153,7 @@ pub trait MatchDirection: Clone + Debug + Send + Sync + 'static + Unpin {
             .unwrap_or(false)
     }
 }
+
 impl MatchDirection for Right {
     type Opposite = Left;
     type PostfixRange<T> = RangeFrom<PatternId>;
@@ -167,8 +169,8 @@ impl MatchDirection for Right {
         I: crate::vertex::indexed::Indexed,
         J: crate::vertex::indexed::Indexed,
     >(
-        a: impl DoubleEndedIterator<Item = &'a I>,
-        b: impl DoubleEndedIterator<Item = &'a J>,
+        a: impl DoubleEndedIterator<Item=&'a I>,
+        b: impl DoubleEndedIterator<Item=&'a J>,
     ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)> {
         to_matching_iterator(a, b).next()
     }
@@ -227,8 +229,8 @@ impl MatchDirection for Left {
         I: crate::vertex::indexed::Indexed,
         J: crate::vertex::indexed::Indexed,
     >(
-        a: impl DoubleEndedIterator<Item = &'a I>,
-        b: impl DoubleEndedIterator<Item = &'a J>,
+        a: impl DoubleEndedIterator<Item=&'a I>,
+        b: impl DoubleEndedIterator<Item=&'a J>,
     ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)> {
         to_matching_iterator(a.rev(), b.rev()).next()
     }

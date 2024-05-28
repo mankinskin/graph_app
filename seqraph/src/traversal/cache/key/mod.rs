@@ -25,11 +25,9 @@ use crate::{
         wide::Wide,
     },
 };
-pub use leaf::*;
-pub use pos::*;
-pub use prev::*;
-pub use root::*;
-pub use target::*;
+use leaf::*;
+use pos::*;
+use root::*;
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, From)]
 pub struct UpPosition(pub TokenLocation);
@@ -39,11 +37,13 @@ impl UpPosition {
         DownPosition(self.0)
     }
 }
+
 impl From<usize> for UpPosition {
     fn from(value: usize) -> Self {
         Self(value.into())
     }
 }
+
 impl AddAssign<usize> for UpPosition {
     fn add_assign(
         &mut self,
@@ -52,6 +52,7 @@ impl AddAssign<usize> for UpPosition {
         self.0 += rhs;
     }
 }
+
 impl Add<usize> for UpPosition {
     type Output = Self;
     fn add(
@@ -61,18 +62,22 @@ impl Add<usize> for UpPosition {
         Self(self.0 + rhs)
     }
 }
+
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, From)]
 pub struct DownPosition(pub TokenLocation);
+
 impl DownPosition {
     pub fn flipped(self) -> UpPosition {
         UpPosition(self.0)
     }
 }
+
 impl From<usize> for DownPosition {
     fn from(value: usize) -> Self {
         Self(value.into())
     }
 }
+
 impl AddAssign<usize> for DownPosition {
     fn add_assign(
         &mut self,
@@ -81,6 +86,7 @@ impl AddAssign<usize> for DownPosition {
         self.0 += rhs;
     }
 }
+
 impl Add<usize> for DownPosition {
     type Output = Self;
     fn add(
@@ -96,6 +102,7 @@ pub struct UpKey {
     pub index: Child,
     pub pos: UpPosition,
 }
+
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, new)]
 pub struct DownKey {
     pub index: Child,
@@ -107,6 +114,7 @@ pub enum DirectedPosition {
     BottomUp(UpPosition),
     TopDown(DownPosition),
 }
+
 impl DirectedPosition {
     pub fn pos(&self) -> &TokenLocation {
         match self {
@@ -121,11 +129,13 @@ impl DirectedPosition {
         }
     }
 }
+
 impl From<usize> for DirectedPosition {
     fn from(value: usize) -> Self {
         Self::BottomUp(value.into())
     }
 }
+
 impl Add<usize> for DirectedPosition {
     type Output = Self;
     fn add(
@@ -138,6 +148,7 @@ impl Add<usize> for DirectedPosition {
         }
     }
 }
+
 impl AddAssign<usize> for DirectedPosition {
     fn add_assign(
         &mut self,
@@ -149,11 +160,13 @@ impl AddAssign<usize> for DirectedPosition {
         }
     }
 }
+
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq)]
 pub struct DirectedKey {
     pub index: Child,
     pub pos: DirectedPosition,
 }
+
 impl DirectedKey {
     pub fn new(
         index: Child,
@@ -189,6 +202,7 @@ impl DirectedKey {
         }
     }
 }
+
 impl From<Child> for DirectedKey {
     fn from(index: Child) -> Self {
         Self {
@@ -197,6 +211,7 @@ impl From<Child> for DirectedKey {
         }
     }
 }
+
 impl From<UpKey> for DirectedKey {
     fn from(key: UpKey) -> Self {
         Self {
@@ -205,6 +220,7 @@ impl From<UpKey> for DirectedKey {
         }
     }
 }
+
 impl From<DownKey> for DirectedKey {
     fn from(key: DownKey) -> Self {
         Self {
@@ -229,13 +245,14 @@ pub struct SplitKey {
     pub index: Child,
     pub pos: NonZeroUsize,
 }
+
 impl SplitKey {
     pub fn new<P: TryInto<NonZeroUsize>>(
         index: Child,
         pos: P,
     ) -> Self
-    where
-        P::Error: Debug,
+        where
+            P::Error: Debug,
     {
         Self {
             index,
@@ -243,6 +260,7 @@ impl SplitKey {
         }
     }
 }
+
 impl From<Child> for SplitKey {
     fn from(index: Child) -> Self {
         Self {

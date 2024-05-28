@@ -1,19 +1,17 @@
 use std::{
     borrow::Borrow,
-    sync::atomic::{
-        self,
-        AtomicUsize,
+    sync::{
+        Arc,
+        atomic::{
+            self,
+            AtomicUsize,
+        },
+        RwLock,
     },
 };
 
 use itertools::Itertools;
 use petgraph::graph::DiGraph;
-
-use crate::vertex::PatternId;
-use std::sync::{
-    Arc,
-    RwLock,
-};
 
 use crate::{
     graph::{
@@ -23,6 +21,7 @@ use crate::{
             GraphKind,
         },
     },
+    HashMap,
     vertex::{
         child::Child,
         indexed::{
@@ -30,9 +29,9 @@ use crate::{
             Indexed,
         },
         pattern::IntoPattern,
+        PatternId,
         token::Token,
     },
-    HashMap,
 };
 
 pub mod child_strings;
@@ -54,27 +53,32 @@ impl<G: GraphKind> HypergraphRef<G> {
         Self::from(g)
     }
 }
+
 impl<G: GraphKind> From<Hypergraph<G>> for HypergraphRef<G> {
     fn from(g: Hypergraph<G>) -> Self {
         Self(Arc::new(RwLock::new(g)))
     }
 }
+
 impl<G: GraphKind> std::ops::Deref for HypergraphRef<G> {
     type Target = Arc<RwLock<Hypergraph<G>>>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
+
 impl<G: GraphKind> std::ops::DerefMut for HypergraphRef<G> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
+
 impl<G: GraphKind> AsRef<Self> for Hypergraph<G> {
     fn as_ref(&self) -> &Self {
         self
     }
 }
+
 impl<G: GraphKind> AsMut<Self> for Hypergraph<G> {
     fn as_mut(&mut self) -> &mut Self {
         self
@@ -101,6 +105,7 @@ impl<G: GraphKind> Default for Hypergraph<G> {
         }
     }
 }
+
 impl<'t, 'a, G: GraphKind> Hypergraph<G> {
     pub fn new() -> Self {
         Self::default()
@@ -140,7 +145,7 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G> {
                         assert_eq!(acc, exp);
                         acc
                     })
-                    .or(Some(exp.clone()))
+                        .or(Some(exp.clone()))
                 })
                 .unwrap()
         }
@@ -181,9 +186,10 @@ pub struct Edge {
     pub parent: crate::vertex::parent::Parent,
     pub child: Child,
 }
+
 impl<'t, 'a, G: GraphKind> Hypergraph<G>
-where
-    G::Token: std::fmt::Display + 't,
+    where
+        G::Token: std::fmt::Display + 't,
 {
     pub fn to_petgraph(
         &self
@@ -240,7 +246,7 @@ where
 
     pub fn pattern_string_with_separator(
         &'a self,
-        pattern: impl IntoIterator<Item = impl Indexed>,
+        pattern: impl IntoIterator<Item=impl Indexed>,
         separator: &'static str,
     ) -> String {
         pattern
@@ -250,21 +256,19 @@ where
     }
     pub fn separated_pattern_string(
         &'a self,
-        pattern: impl IntoIterator<Item = impl Indexed>,
+        pattern: impl IntoIterator<Item=impl Indexed>,
     ) -> String {
         self.pattern_string_with_separator(pattern, "_")
     }
     pub fn pattern_string(
         &'a self,
-        pattern: impl IntoIterator<Item = impl Indexed>,
+        pattern: impl IntoIterator<Item=impl Indexed>,
     ) -> String {
         self.pattern_string_with_separator(pattern, "")
     }
     pub fn pattern_strings(
         &'a self,
-        patterns: impl IntoIterator<
-            Item = impl IntoIterator<Item = impl Indexed>,
-        >,
+        patterns: impl IntoIterator<Item=impl IntoIterator<Item=impl Indexed>>,
     ) -> Vec<String> {
         patterns
             .into_iter()

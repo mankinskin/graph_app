@@ -34,7 +34,7 @@ use crate::{
     },
     vertex::{
         child::Child,
-        location::ChildLocation,
+        location::child::ChildLocation,
         pattern::{
             pattern_post_ctx_width,
             pattern_pre_ctx_width,
@@ -43,7 +43,7 @@ use crate::{
 };
 use auto_impl::auto_impl;
 
-#[auto_impl(&, &mut)]
+#[auto_impl(&, & mut)]
 pub trait RootChild<R>: RootChildPos<R> {
     fn root_child<Trav: Traversable>(
         &self,
@@ -107,6 +107,7 @@ impl RootChild<Start> for SearchPath {
         )
     }
 }
+
 impl RootChild<End> for SearchPath {
     fn root_child<Trav: Traversable>(
         &self,
@@ -125,8 +126,8 @@ impl_child! { RootChild for RootedRolePath<R>, self, trav =>
 }
 
 impl<'c, R: PathRole> RootChild<R> for QueryStateContext<'c>
-where
-    Self: RootChildPos<R>,
+    where
+        Self: RootChildPos<R>,
 {
     fn root_child<Trav: Traversable>(
         &self,
@@ -135,6 +136,7 @@ where
         self.pattern_root_child()
     }
 }
+
 impl<P: MatchEndPath> RootChild<Start> for MatchEnd<P> {
     fn root_child<Trav: Traversable>(
         &self,
@@ -187,11 +189,13 @@ impl GraphRootChild<Start> for SearchPath {
         self.root.location.to_child_location(self.start.root_entry)
     }
 }
+
 impl GraphRootChild<End> for SearchPath {
     fn root_child_location(&self) -> ChildLocation {
         self.root.location.to_child_location(self.end.root_entry)
     }
 }
+
 impl<R: PathRole> GraphRootChild<R> for RootedRolePath<R, IndexRoot> {
     fn root_child_location(&self) -> ChildLocation {
         self.path_root()
@@ -199,6 +203,7 @@ impl<R: PathRole> GraphRootChild<R> for RootedRolePath<R, IndexRoot> {
             .to_child_location(self.role_path.sub_path.root_entry)
     }
 }
+
 impl<R: PathRole> GraphRootChild<R> for RootedSplitPath<IndexRoot> {
     fn root_child_location(&self) -> ChildLocation {
         self.path_root()
@@ -206,6 +211,7 @@ impl<R: PathRole> GraphRootChild<R> for RootedSplitPath<IndexRoot> {
             .to_child_location(self.sub_path.root_entry)
     }
 }
+
 impl<R: PathRole> GraphRootChild<R> for RootedSplitPathRef<'_, IndexRoot> {
     fn root_child_location(&self) -> ChildLocation {
         self.path_root()
@@ -225,7 +231,9 @@ pub trait PatternRootChild<R>: RootChildPos<R> + PatternRoot {
         PatternRoot::pattern_root_pattern(self)[self.root_child_pos()]
     }
 }
+
 impl<R> PatternRootChild<R> for QueryRangePath where Self: RootChildPos<R> {}
+
 impl<R> PatternRootChild<R> for QueryStateContext<'_> where Self: RootChildPos<R> {}
 //impl<R> PatternRootChild<R> for PatternPrefixPath
 //    where PatternPrefixPath: RootChildPos<R>

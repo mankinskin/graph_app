@@ -14,6 +14,7 @@ pub type Dft<'a, Trav, S> = OrderedTraverser<'a, Trav, S, DftStack>;
 pub struct DftStack {
     stack: Vec<(usize, TraversalState)>,
 }
+
 //impl From<StartState> for DftStack {
 //    fn from(start: StartState) -> Self {
 //        Self {
@@ -27,16 +28,18 @@ impl NodeVisitor for DftStack {
         self.stack.clear()
     }
 }
+
 impl Iterator for DftStack {
     type Item = (usize, TraversalState);
     fn next(&mut self) -> Option<Self::Item> {
         self.stack.pop()
     }
 }
+
 impl ExtendStates for DftStack {
     fn extend<
-        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
-        T: IntoIterator<Item = (usize, TraversalState), IntoIter = It>,
+        It: DoubleEndedIterator + Iterator<Item=(usize, TraversalState)>,
+        T: IntoIterator<Item=(usize, TraversalState), IntoIter=It>,
     >(
         &mut self,
         iter: T,
@@ -44,6 +47,7 @@ impl ExtendStates for DftStack {
         self.stack.extend(iter.into_iter().rev())
     }
 }
+
 impl Default for DftStack {
     fn default() -> Self {
         Self {

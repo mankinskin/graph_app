@@ -38,6 +38,7 @@ pub struct QueryState {
     pub end: RolePath<End>,
     pub pos: TokenLocation,
 }
+
 impl QueryState {
     pub fn to_ctx<'a, 'b: 'a, I: TraversalIterator<'b>>(
         &'a mut self,

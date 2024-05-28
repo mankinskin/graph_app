@@ -1,13 +1,7 @@
-pub mod perfect;
-
-use perfect::*;
 use std::num::NonZeroUsize;
 
-pub mod join;
+use perfect::*;
 
-pub mod trace;
-
-pub mod visit;
 use crate::{
     join::partition::info::range::role::{
         BooleanPerfectOf,
@@ -20,10 +14,18 @@ use crate::{
     },
     split::PatternSplitPos,
     vertex::pattern::{
-        pattern_pre_ctx_width,
         Pattern,
+        pattern_pre_ctx_width,
     },
 };
+
+pub mod perfect;
+
+pub mod join;
+
+pub mod trace;
+
+pub mod visit;
 
 pub struct BorderInfo {
     pub sub_index: usize,
@@ -31,6 +33,7 @@ pub struct BorderInfo {
     /// start offset of index with border
     pub start_offset: Option<NonZeroUsize>,
 }
+
 impl BorderInfo {
     fn new(
         pattern: &Pattern,
@@ -49,8 +52,9 @@ pub trait PartitionBorder<K: RangeRole>: Sized {
     fn perfect(&self) -> BooleanPerfectOf<K>;
     fn offsets(&self) -> OffsetsOf<K>;
 }
-impl<P: BorderPerfect<Boolean = bool>, K: RangeRole<Perfect = P, Offsets = NonZeroUsize>>
-    PartitionBorder<K> for BorderInfo
+
+impl<P: BorderPerfect<Boolean=bool>, K: RangeRole<Perfect=P, Offsets=NonZeroUsize>>
+PartitionBorder<K> for BorderInfo
 {
     fn perfect(&self) -> BooleanPerfectOf<K> {
         self.inner_offset.is_none()
@@ -65,6 +69,7 @@ impl<P: BorderPerfect<Boolean = bool>, K: RangeRole<Perfect = P, Offsets = NonZe
             .unwrap_or_else(|| self.inner_offset.unwrap())
     }
 }
+
 impl<M: InVisitMode> PartitionBorder<In<M>> for (BorderInfo, BorderInfo) {
     fn perfect(&self) -> BooleanPerfectOf<In<M>> {
         (

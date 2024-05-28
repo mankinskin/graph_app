@@ -1,14 +1,16 @@
-use crate::split::SplitPositionCache;
 use std::{
     collections::BTreeMap,
     iter::FromIterator,
     num::NonZeroUsize,
 };
 
+use crate::split::cache::position::SplitPositionCache;
+
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct SplitVertexCache {
     pub positions: BTreeMap<NonZeroUsize, SplitPositionCache>,
 }
+
 impl SplitVertexCache {
     pub fn new(
         pos: NonZeroUsize,

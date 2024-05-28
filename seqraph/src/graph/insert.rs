@@ -1,8 +1,14 @@
+use std::{
+    borrow::Borrow,
+    sync::atomic::AtomicUsize,
+};
+
 use itertools::Itertools;
-use std::sync::atomic::AtomicUsize;
+use lazy_static::lazy_static;
 
 use crate::{
     graph::kind::GraphKind,
+    HashSet,
     search::NoMatch,
     vertex::{
         child::Child,
@@ -11,37 +17,36 @@ use crate::{
             ToChild,
         },
         location::{
-            ChildLocation,
-            IntoPatternLocation,
+            child::ChildLocation,
+            pattern::IntoPatternLocation,
         },
         parent::PatternIndex,
         pattern::{
-            get_child_pattern_range,
-            pattern_width,
-            replace_in_pattern,
             IntoPattern,
             Pattern,
-            PatternRangeIndex,
+            pattern_range::{
+                get_child_pattern_range,
+                PatternRangeIndex,
+            },
+            pattern_width,
+            replace_in_pattern,
         },
+        PatternId,
         token::{
             NewTokenIndex,
             NewTokenIndices,
             Token,
         },
-        PatternId,
         TokenPosition,
     },
-    HashSet,
 };
-use lazy_static::lazy_static;
-use std::borrow::Borrow;
 
 lazy_static! {
     static ref VERTEX_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 }
 impl<'t, 'g, G> crate::graph::Hypergraph<G>
-where
-    G: GraphKind,
+    where
+        G: GraphKind,
 {
     /// insert single token node
     pub fn insert_vertex(
@@ -68,7 +73,7 @@ where
     /// insert multiple token nodes
     pub fn insert_tokens(
         &mut self,
-        tokens: impl IntoIterator<Item = Token<G::Token>>,
+        tokens: impl IntoIterator<Item=Token<G::Token>>,
     ) -> Vec<Child> {
         tokens
             .into_iter()
@@ -78,7 +83,7 @@ where
     /// utility, builds total width, indices and children for pattern
     fn to_width_indices_children(
         &self,
-        indices: impl IntoIterator<Item = impl Indexed>,
+        indices: impl IntoIterator<Item=impl Indexed>,
     ) -> (TokenPosition, Vec<crate::vertex::VertexIndex>, Vec<Child>) {
         let mut width = 0;
         let (a, b) = indices
@@ -94,10 +99,7 @@ where
     }
     /// adds a parent to all nodes in a pattern
     #[track_caller]
-    pub fn add_parents_to_pattern_nodes<
-        I: Indexed,
-        P: crate::vertex::indexed::AsChild,
-    >(
+    pub fn add_parents_to_pattern_nodes<I: Indexed, P: crate::vertex::indexed::AsChild>(
         &mut self,
         pattern: Vec<I>,
         parent: P,
@@ -133,7 +135,7 @@ where
     pub fn add_patterns_with_update(
         &mut self,
         index: impl Indexed,
-        patterns: impl IntoIterator<Item = impl IntoPattern>,
+        patterns: impl IntoIterator<Item=impl IntoPattern>,
     ) -> Vec<PatternId> {
         let index = index.vertex_index();
         patterns
@@ -192,7 +194,7 @@ where
     }
     pub fn insert_patterns_with_ids(
         &mut self,
-        patterns: impl IntoIterator<Item = impl IntoPattern>,
+        patterns: impl IntoIterator<Item=impl IntoPattern>,
     ) -> (Child, Vec<PatternId>) {
         // todo handle token nodes
         let patterns = patterns.into_iter().collect_vec();
@@ -210,7 +212,7 @@ where
     //#[track_caller]
     pub fn insert_patterns(
         &mut self,
-        patterns: impl IntoIterator<Item = impl IntoPattern>,
+        patterns: impl IntoIterator<Item=impl IntoPattern>,
     ) -> Child {
         let patterns = patterns
             .into_iter()
@@ -234,7 +236,7 @@ where
     #[track_caller]
     pub fn try_insert_patterns(
         &mut self,
-        patterns: impl IntoIterator<Item = impl IntoPattern>,
+        patterns: impl IntoIterator<Item=impl IntoPattern>,
     ) -> Option<Child> {
         let patterns = patterns
             .into_iter()
@@ -365,7 +367,7 @@ where
         &mut self,
         parent: impl crate::vertex::indexed::AsChild,
         pattern_id: PatternId,
-        new: impl IntoIterator<Item = impl crate::vertex::indexed::AsChild>,
+        new: impl IntoIterator<Item=impl crate::vertex::indexed::AsChild>,
     ) -> Child {
         let new: Vec<_> = new.into_iter().map(|c| c.to_child()).collect();
         if new.is_empty() {
@@ -394,7 +396,7 @@ where
     }
     pub fn new_token_indices(
         &mut self,
-        sequence: impl IntoIterator<Item = G::Token>,
+        sequence: impl IntoIterator<Item=G::Token>,
     ) -> NewTokenIndices {
         sequence
             .into_iter()

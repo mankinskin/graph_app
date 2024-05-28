@@ -2,10 +2,10 @@ use crate::{
     traversal::{
         cache::{
             key::{
+                prev::PrevKey,
+                root::RootKey,
+                target::TargetKey,
                 DirectedKey,
-                PrevKey,
-                RootKey,
-                TargetKey,
                 UpKey,
             },
             state::{
@@ -22,7 +22,7 @@ use crate::{
             },
         },
         path::accessors::{
-            child::GraphRootChild,
+            child::root::GraphRootChild,
             role::{
                 End,
                 Start,
@@ -30,7 +30,7 @@ use crate::{
         },
         result_kind::RoleChildPath,
     },
-    vertex::location::ChildLocation,
+    vertex::location::child::ChildLocation,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -38,6 +38,7 @@ pub struct NewEntry {
     pub prev: PrevKey,
     pub kind: NewKind,
 }
+
 impl NewEntry {
     pub fn entry_location(&self) -> Option<ChildLocation> {
         match &self.kind {
@@ -55,6 +56,7 @@ impl NewEntry {
         }
     }
 }
+
 impl From<&TraversalState> for NewEntry {
     fn from(state: &TraversalState) -> Self {
         Self {
@@ -64,6 +66,7 @@ impl From<&TraversalState> for NewEntry {
         }
     }
 }
+
 impl From<&InnerKind> for NewKind {
     fn from(state: &InnerKind) -> Self {
         match state {
@@ -72,16 +75,19 @@ impl From<&InnerKind> for NewKind {
         }
     }
 }
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum NewKind {
     Parent(NewParent),
     Child(NewChild),
 }
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NewParent {
     pub root: UpKey,
     pub entry: ChildLocation,
 }
+
 impl From<&ParentState> for NewParent {
     fn from(state: &ParentState) -> Self {
         Self {
@@ -90,12 +96,14 @@ impl From<&ParentState> for NewParent {
         }
     }
 }
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NewChild {
     pub root: UpKey,
     pub target: DirectedKey,
     pub end_leaf: Option<ChildLocation>,
 }
+
 impl From<&ChildState> for NewChild {
     fn from(state: &ChildState) -> Self {
         Self {
@@ -105,11 +113,13 @@ impl From<&ChildState> for NewChild {
         }
     }
 }
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NewRangeEnd {
     pub target: DirectedKey,
     pub entry: ChildLocation,
 }
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum NewEnd {
     Range(NewRangeEnd),
@@ -117,6 +127,7 @@ pub enum NewEnd {
     Prefix(DirectedKey),
     Complete(DirectedKey),
 }
+
 impl From<&EndState> for NewEnd {
     fn from(state: &EndState) -> Self {
         match &state.kind {
@@ -127,6 +138,7 @@ impl From<&EndState> for NewEnd {
         }
     }
 }
+
 impl From<&RangeEnd> for NewRangeEnd {
     fn from(state: &RangeEnd) -> Self {
         Self {
@@ -135,6 +147,7 @@ impl From<&RangeEnd> for NewRangeEnd {
         }
     }
 }
+
 impl NewEnd {
     pub fn entry_location(&self) -> Option<ChildLocation> {
         match self {

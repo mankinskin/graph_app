@@ -1,21 +1,29 @@
+use std::{
+    borrow::Borrow,
+    num::NonZeroUsize,
+};
+
+use itertools::Itertools;
+
 use crate::{
     graph::kind::GraphKind,
+    HashSet,
     index::side::{
         IndexBack,
         IndexSide,
     },
     join::partition::splits::offset::OffsetSplits,
     split::{
+        cache::builder::SplitCacheBuilder,
         PatternSplitPos,
-        SplitCacheBuilder,
     },
     traversal::{
         cache::entry::{
             NodeSplitOutput,
             NodeType,
             Offset,
-            SubSplitLocation,
-            VertexCache,
+            position::SubSplitLocation,
+            vertex::VertexCache,
         },
         folder::state::{
             FoldState,
@@ -29,20 +37,14 @@ use crate::{
         indexed::Indexed,
         location::SubLocation,
         pattern::Pattern,
-        wide::Wide,
         PatternId,
         VertexData,
+        wide::Wide,
     },
-    HashSet,
-};
-use itertools::Itertools;
-use std::{
-    borrow::Borrow,
-    num::NonZeroUsize,
 };
 
 pub fn position_splits<'a>(
-    patterns: impl IntoIterator<Item = (&'a PatternId, &'a Pattern)>,
+    patterns: impl IntoIterator<Item=(&'a PatternId, &'a Pattern)>,
     offset: NonZeroUsize,
 ) -> OffsetSplits {
     OffsetSplits {
@@ -63,6 +65,7 @@ pub fn position_splits<'a>(
             .collect(),
     }
 }
+
 impl SplitCacheBuilder {
     pub fn completed_splits<Trav: Traversable, N: NodeType>(
         trav: &Trav,
@@ -77,6 +80,7 @@ impl SplitCacheBuilder {
             .unwrap_or_default()
     }
 }
+
 impl VertexCache {
     pub fn global_splits<N: NodeType>(
         &self,

@@ -1,24 +1,38 @@
+use std::{
+    collections::{
+        BTreeSet,
+        VecDeque,
+    },
+    num::NonZeroUsize,
+    sync::RwLockWriteGuard,
+};
+
+use derive_more::{
+    Deref,
+    DerefMut,
+};
+
 use crate::{
     graph::Hypergraph,
-    join::context::node::NodeTraceContext,
-    split::{
-        cleaned_position_splits,
+    HashMap,
+    join::context::node::context::NodeTraceContext,
+    split::cache::{
         CacheContext,
-        Leaves,
+        cleaned_position_splits,
+        leaves::Leaves,
         SplitCache,
         SplitPositionCache,
-        SplitVertexCache,
         TraceState,
     },
     traversal::{
         cache::{
             entry::{
                 InnerNode,
+                position::SubSplitLocation,
                 RootNode,
-                SubSplitLocation,
             },
             key::SplitKey,
-            labelled_key::labelled_key,
+            labelled_key::vkey::labelled_key,
         },
         folder::state::{
             FoldState,
@@ -29,33 +43,22 @@ use crate::{
             TraversableMut,
         },
     },
-    vertex::child::ChildWidth,
-    HashMap,
-};
-use derive_more::{
-    Deref,
-    DerefMut,
-};
-use std::{
-    collections::{
-        BTreeSet,
-        VecDeque,
+    vertex::{
+        child::{
+            Child,
+            ChildWidth,
+        },
+        indexed::Indexed,
+        wide::Wide,
     },
-    num::NonZeroUsize,
-    sync::RwLockWriteGuard,
 };
-
-use crate::vertex::{
-    child::Child,
-    indexed::Indexed,
-    wide::Wide,
-};
+use crate::split::cache::vertex::SplitVertexCache;
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct SplitCacheBuilder(pub SplitCache);
 
 impl SplitCacheBuilder {
-    pub fn new<'a, Trav: TraversableMut<GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph>> + 'a>(
+    pub fn new<'a, Trav: TraversableMut<GuardMut<'a>=RwLockWriteGuard<'a, Hypergraph>> + 'a>(
         trav: &'a mut Trav,
         mut fold_state: FoldState,
     ) -> Self {

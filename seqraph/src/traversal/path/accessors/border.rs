@@ -3,22 +3,31 @@ use crate::{
         direction::r#match::MatchDirection,
         kind::GraphKind,
     },
-    traversal::traversable::Traversable,
-    vertex::location::ChildLocation,
+    traversal::{
+        path::accessors::role::{
+            End,
+            Start,
+        },
+        traversable::Traversable,
+    },
+    vertex::location::child::ChildLocation,
 };
 use std::borrow::Borrow;
-use crate::traversal::path::accessors::role::{End, Start};
 
 pub trait RelativeDirection<D: MatchDirection> {
     type Direction: MatchDirection;
 }
+
 #[derive(Default)]
 pub struct Front;
+
 impl<D: MatchDirection> RelativeDirection<D> for Front {
     type Direction = D;
 }
+
 #[derive(Default)]
 pub struct Back;
+
 impl<D: MatchDirection> RelativeDirection<D> for Back {
     type Direction = <D as MatchDirection>::Opposite;
 }
@@ -51,6 +60,7 @@ pub trait PathBorder {
 impl PathBorder for Start {
     type BorderDirection<D: MatchDirection> = Back;
 }
+
 impl PathBorder for End {
     type BorderDirection<D: MatchDirection> = Front;
 }

@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use crate::{
     join::partition::info::range::role::{
         In,
@@ -16,7 +18,6 @@ use crate::{
         },
     },
 };
-use std::fmt::Debug;
 
 #[derive(Debug, Clone)]
 pub enum InfixChildren {
@@ -24,6 +25,7 @@ pub enum InfixChildren {
     Left(Child),
     Right(Child),
 }
+
 impl InfixChildren {
     pub fn to_joined_pattern(self) -> Result<Pattern, Child> {
         match self {
@@ -32,6 +34,7 @@ impl InfixChildren {
         }
     }
 }
+
 pub trait RangeChildren<K: RangeRole>: Debug + Clone {
     fn insert_inner(
         self,
@@ -39,6 +42,7 @@ pub trait RangeChildren<K: RangeRole>: Debug + Clone {
     ) -> Result<Pattern, Child>;
     fn to_child(self) -> Option<Child>;
 }
+
 impl<M: PreVisitMode> RangeChildren<Pre<M>> for Child {
     fn insert_inner(
         self,
@@ -54,6 +58,7 @@ impl<M: PreVisitMode> RangeChildren<Pre<M>> for Child {
         Some(self)
     }
 }
+
 impl<M: PostVisitMode> RangeChildren<Post<M>> for Child {
     fn insert_inner(
         self,
@@ -69,6 +74,7 @@ impl<M: PostVisitMode> RangeChildren<Post<M>> for Child {
         Some(self)
     }
 }
+
 impl<M: InVisitMode> RangeChildren<In<M>> for InfixChildren {
     fn insert_inner(
         self,

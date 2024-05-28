@@ -6,6 +6,7 @@ pub struct OverlapCache {
     pub end_bound: usize,
     pub last: Option<Overlap>,
 }
+
 impl OverlapCache {
     pub fn new(first: Child) -> Self {
         Self {
@@ -13,24 +14,26 @@ impl OverlapCache {
             last: Overlap {
                 link: None,
                 band: OverlapBand::from(first),
-            }.into(),
+            }
+                .into(),
             chain: OverlapChain::default(),
         }
     }
     pub fn add_bundle(
         &mut self,
         reader: &mut ReadContext<'_>,
-        bundle: OverlapBundle
+        bundle: OverlapBundle,
     ) {
         self.chain.path.insert(
             self.end_bound,
             Overlap {
                 link: None,
                 band: bundle.into_band(reader),
-            }
+            },
         );
     }
-    pub fn append(&mut self,
+    pub fn append(
+        &mut self,
         _reader: &mut ReadContext<'_>,
         start_bound: usize,
         overlap: Overlap,

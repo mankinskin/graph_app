@@ -25,21 +25,25 @@ use crate::{
 pub trait RootKey {
     fn root_key(&self) -> UpKey;
 }
+
 impl RootKey for ParentState {
     fn root_key(&self) -> UpKey {
         UpKey::new(self.path.root_parent(), self.root_pos.into())
     }
 }
+
 impl RootKey for StartState {
     fn root_key(&self) -> UpKey {
         UpKey::new(self.index, TokenLocation(self.index.width()).into())
     }
 }
+
 impl RootKey for ChildState {
     fn root_key(&self) -> UpKey {
         UpKey::new(self.paths.path.root_parent(), self.root_pos.into())
     }
 }
+
 impl RootKey for TraversalState {
     fn root_key(&self) -> UpKey {
         match &self.kind {
@@ -48,6 +52,7 @@ impl RootKey for TraversalState {
         }
     }
 }
+
 impl RootKey for EndState {
     fn root_key(&self) -> UpKey {
         UpKey::new(

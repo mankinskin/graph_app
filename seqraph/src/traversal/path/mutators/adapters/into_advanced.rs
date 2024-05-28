@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use crate::{
     graph::direction::r#match::MatchDirection,
     traversal::{
@@ -10,7 +12,7 @@ use crate::{
         },
         path::{
             accessors::{
-                child::GraphRootChild,
+                child::root::GraphRootChild,
                 root::RootPattern,
             },
             structs::pair::{
@@ -24,7 +26,6 @@ use crate::{
         },
     },
 };
-use std::borrow::Borrow;
 
 pub trait IntoAdvanced: Sized + Clone {
     fn into_advanced<Trav: Traversable>(
@@ -39,6 +40,7 @@ pub trait IntoAdvanced: Sized + Clone {
     //    }
     //}
 }
+
 //impl<
 //    R: ResultKind,
 //    T: Sized + Clone + Into<SearchPath>
@@ -75,9 +77,7 @@ impl IntoAdvanced for ParentState {
         let entry = self.path.root_child_location();
         let graph = trav.graph();
         let pattern = self.path.root_pattern::<Trav>(&graph).clone();
-        if let Some(next) =
-            TravDir::<Trav>::pattern_index_next(pattern.borrow(), entry.sub_index)
-        {
+        if let Some(next) = TravDir::<Trav>::pattern_index_next(pattern.borrow(), entry.sub_index) {
             let index = pattern[next];
             Ok(ChildState {
                 prev_pos: self.prev_pos,

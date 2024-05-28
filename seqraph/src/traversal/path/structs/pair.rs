@@ -6,7 +6,7 @@ use crate::{
             structs::rooted_path::SearchPath,
         },
     },
-    vertex::location::ChildLocation,
+    vertex::location::child::ChildLocation,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -15,11 +15,13 @@ pub struct PathPair {
     pub query: QueryState,
     pub mode: PathPairMode,
 }
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PathPairMode {
     GraphMajor,
     QueryMajor,
 }
+
 impl PathPair {
     pub fn new(
         path: SearchPath,

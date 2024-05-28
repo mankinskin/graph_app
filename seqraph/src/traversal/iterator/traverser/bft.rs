@@ -12,25 +12,29 @@ use std::{
 };
 
 pub type Bft<'a, Trav, S> = OrderedTraverser<'a, Trav, S, BftQueue>;
+
 #[derive(Debug)]
 pub struct BftQueue {
     queue: BinaryHeap<QueueEntry>,
 }
+
 impl NodeVisitor for BftQueue {
     fn clear(&mut self) {
         self.queue.clear()
     }
 }
+
 impl Iterator for BftQueue {
     type Item = (usize, TraversalState);
     fn next(&mut self) -> Option<Self::Item> {
         self.queue.pop().map(|QueueEntry(d, s)| (d, s))
     }
 }
+
 impl ExtendStates for BftQueue {
     fn extend<
-        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
-        T: IntoIterator<Item = (usize, TraversalState), IntoIter = It>,
+        It: DoubleEndedIterator + Iterator<Item=(usize, TraversalState)>,
+        T: IntoIterator<Item=(usize, TraversalState), IntoIter=It>,
     >(
         &mut self,
         iter: T,
@@ -39,6 +43,7 @@ impl ExtendStates for BftQueue {
             .extend(iter.into_iter().map(|(d, s)| QueueEntry(d, s)))
     }
 }
+
 impl Default for BftQueue {
     fn default() -> Self {
         Self {
@@ -46,6 +51,7 @@ impl Default for BftQueue {
         }
     }
 }
+
 #[derive(Debug, PartialEq, Eq)]
 struct QueueEntry(usize, TraversalState);
 
@@ -57,6 +63,7 @@ impl Ord for QueueEntry {
         other.0.cmp(&self.0).then_with(|| self.1.cmp(&other.1))
     }
 }
+
 impl PartialOrd for QueueEntry {
     fn partial_cmp(
         &self,

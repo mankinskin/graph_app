@@ -41,9 +41,11 @@ pub trait GraphRootPattern: GraphRoot + RootPattern {
         trav.expect_pattern_at(self.root_pattern_location())
     }
 }
+
 pub trait GraphRoot {
     fn root_parent(&self) -> Child;
 }
+
 //impl GraphRoot for FoundPath {
 //    fn root_parent(&self) -> Child {
 //        match self {
@@ -67,6 +69,7 @@ pub trait GraphRoot {
 pub trait PatternRoot {
     fn pattern_root_pattern(&self) -> &Pattern;
 }
+
 pub trait RootPattern {
     fn root_pattern<'a: 'g, 'b: 'g, 'g, Trav: Traversable + 'a>(
         &'b self,
@@ -203,11 +206,13 @@ impl<P: MatchEndPath + GraphRoot> GraphRoot for MatchEnd<P> {
         }
     }
 }
+
 impl<R: PathRole> GraphRoot for RootedRolePath<R, IndexRoot> {
     fn root_parent(&self) -> Child {
         self.root.location.parent
     }
 }
+
 impl<R: PathRole> GraphRootPattern for RootedRolePath<R, IndexRoot> {
     fn root_pattern_location(&self) -> PatternLocation {
         self.root.location

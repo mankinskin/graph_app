@@ -1,15 +1,13 @@
-use crate::{
-    traversal::{
-        path::{
-            accessors::role::Start,
-            structs::{
-                role_path::RolePath,
-                rooted_path::SearchPath,
-            },
+use crate::traversal::{
+    path::{
+        accessors::role::Start,
+        structs::{
+            role_path::RolePath,
+            rooted_path::SearchPath,
         },
-        result_kind::Advanced,
-        traversable::Traversable,
     },
+    result_kind::Advanced,
+    traversable::Traversable,
 };
 
 pub trait FromAdvanced<A: Advanced> {
@@ -18,6 +16,7 @@ pub trait FromAdvanced<A: Advanced> {
         trav: &Trav,
     ) -> Self;
 }
+
 //impl FromAdvanced<SearchPath> for FoundPath {
 //    fn from_advanced<
 //        T: Tokenize,

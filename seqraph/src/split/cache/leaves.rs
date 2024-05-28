@@ -1,27 +1,29 @@
-use crate::{
-    split::TraceState,
-    traversal::{
-        cache::{
-            entry::{
-                CompleteLocations,
-                Offset,
-                SubSplitLocation,
-            },
-            key::SplitKey,
-        },
-        traversable::Traversable,
-    },
-    HashMap,
-};
 use derive_more::{
     Deref,
     DerefMut,
     From,
 };
 
-use crate::vertex::child::Child;
+use crate::{
+    HashMap,
+    split::TraceState,
+    traversal::{
+        cache::{
+            entry::{
+                CompleteLocations,
+                Offset,
+                position::SubSplitLocation,
+            },
+            key::SplitKey,
+        },
+        traversable::Traversable,
+    },
+    vertex::child::Child,
+};
+
 #[derive(Default, Debug, Deref, DerefMut, From)]
 pub struct Leaves(Vec<SplitKey>);
+
 impl Leaves {
     pub fn filter_leaves(
         &mut self,
@@ -44,7 +46,7 @@ impl Leaves {
         &mut self,
         trav: &Trav,
         index: &Child,
-        pos_splits: impl IntoIterator<Item = (Offset, Vec<SubSplitLocation>)>,
+        pos_splits: impl IntoIterator<Item=(Offset, Vec<SubSplitLocation>)>,
     ) -> Vec<TraceState> {
         let graph = trav.graph();
         let (_, node) = graph.expect_vertex(index);
@@ -53,21 +55,21 @@ impl Leaves {
             .flat_map(|(parent_offset, locs)| {
                 let len = locs.len();
                 locs.into_iter().map(move |sub|
-                        // filter sub locations without offset (perfect splits)
-                        sub.inner_offset.map(|offset|
-                            TraceState {
-                                index: *node.expect_child_at(&sub.location),
-                                offset,
-                                prev: SplitKey {
-                                    index: *index,
-                                    pos: parent_offset,
-                                }
-                            }
-                        ).ok_or_else(||
-                            (len == 1).then(||
-                                SplitKey::new(*index, parent_offset)
-                            )
-                        ))
+                    // filter sub locations without offset (perfect splits)
+                    sub.inner_offset.map(|offset|
+                        TraceState {
+                            index: *node.expect_child_at(&sub.location),
+                            offset,
+                            prev: SplitKey {
+                                index: *index,
+                                pos: parent_offset,
+                            },
+                        }
+                    ).ok_or_else(||
+                        (len == 1).then(||
+                            SplitKey::new(*index, parent_offset)
+                        )
+                    ))
             })
             .fold((Vec::new(), Vec::new()), |(mut p, mut n), res| {
                 match res {

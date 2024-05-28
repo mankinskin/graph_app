@@ -1,14 +1,16 @@
 use crate::{
     direction::Right,
     traversal::{
-        cache::key::RootKey,
+        cache::key::root::RootKey,
         path::{
             accessors::{
                 child::{
-                    GraphRootChild,
+                    pos::{
+                        RootChildPos,
+                        RootChildPosMut,
+                    },
+                    root::GraphRootChild,
                     LeafChild,
-                    RootChildPos,
-                    RootChildPosMut,
                 },
                 complete::PathComplete,
                 has_path::{
@@ -23,9 +25,9 @@ use crate::{
                 root::GraphRoot,
             },
             mutators::{
-                adapters::IntoAdvanced,
+                adapters::into_advanced::IntoAdvanced,
                 append::PathAppend,
-                move_path::MoveRootPos,
+                move_path::root::MoveRootPos,
             },
             structs::{
                 match_end::{
@@ -45,7 +47,7 @@ use crate::{
     },
     vertex::{
         child::Child,
-        location::ChildLocation,
+        location::child::ChildLocation,
     },
 };
 use std::hash::Hash;
@@ -70,79 +72,78 @@ pub trait Found: BasePath + PathComplete
 //+ GetCacheKey
 //+ GraphRoot
 //+ Ord
-{
-}
+{}
+
 impl<
-        T: BasePath + PathComplete, //+ RoleChildPath
-                                    //+ FromAdvanced<<R as ResultKind>::Advanced>
-                                    //+ From<<R as ResultKind>::Postfix>
-                                    //+ Wide
-                                    //+ GetCacheKey
-                                    //+ GraphRoot
-                                    //+ Ord
-    > Found for T
-{
-}
+    T: BasePath + PathComplete, //+ RoleChildPath
+    //+ FromAdvanced<<R as ResultKind>::Advanced>
+    //+ From<<R as ResultKind>::Postfix>
+    //+ Wide
+    //+ GetCacheKey
+    //+ GraphRoot
+    //+ Ord
+> Found for T
+{}
+
 pub trait PathPrimer:
-    RoleChildPath
-    + NodePath<Start>
+RoleChildPath
++ NodePath<Start>
+//+ HasRolePath<Start>
++ GraphRootChild<Start>
++ From<RootedRolePath<Start>>
++ From<SearchPath>
++ Into<Postfix>
++ IntoAdvanced
+//+ Wide
++ RootKey
++ Send
++ Sync
++ Unpin
++ Hash
++ HasSinglePath
++ MatchEndPath
+{}
+
+impl<
+    T: NodePath<Start>
+    + RoleChildPath
     //+ HasRolePath<Start>
     + GraphRootChild<Start>
     + From<RootedRolePath<Start>>
     + From<SearchPath>
-    + Into<Postfix>
     + IntoAdvanced
+    + Into<Postfix>
     //+ Wide
     + RootKey
-    + Send
-    + Sync
-    + Unpin
+    + BasePath
     + Hash
     + HasSinglePath
-    + MatchEndPath
-{
-}
-impl<
-        T: NodePath<Start>
-            + RoleChildPath
-            //+ HasRolePath<Start>
-            + GraphRootChild<Start>
-            + From<RootedRolePath<Start>>
-            + From<SearchPath>
-            + IntoAdvanced
-            + Into<Postfix>
-            //+ Wide
-            + RootKey
-            + BasePath
-            + Hash
-            + HasSinglePath
-            + MatchEndPath,
-    > PathPrimer for T
-{
-}
+    + MatchEndPath,
+> PathPrimer for T
+{}
 
 pub trait RoleChildPath {
     fn role_leaf_child_location<R: PathRole>(&self) -> Option<ChildLocation>
-    where
-        Self: LeafChild<R>,
+        where
+            Self: LeafChild<R>,
     {
         LeafChild::<R>::leaf_child_location(self)
     }
     fn role_root_child_pos<R: PathRole>(&self) -> usize
-    where
-        Self: GraphRootChild<R>,
+        where
+            Self: GraphRootChild<R>,
     {
         GraphRootChild::<R>::root_child_location(self).sub_index
     }
     fn role_root_child_location<R: PathRole>(&self) -> ChildLocation
-    where
-        Self: GraphRootChild<R>,
+        where
+            Self: GraphRootChild<R>,
     {
         GraphRootChild::<R>::root_child_location(self)
     }
     fn child_path_mut<R: PathRole>(&mut self) -> &mut RolePath<R>
-    where
-        Self: HasRolePath<R>,
+        where
+            Self: HasRolePath<R>,
     {
         HasRolePath::<R>::role_path_mut(self)
     }
@@ -150,31 +151,33 @@ pub trait RoleChildPath {
         &self,
         trav: &Trav,
     ) -> Child
-    where
-        Self: LeafChild<R>,
+        where
+            Self: LeafChild<R>,
     {
         LeafChild::<R>::leaf_child(self, trav)
     }
     fn child_pos<R: PathRole>(&self) -> usize
-    where
-        Self: HasRolePath<R>,
+        where
+            Self: HasRolePath<R>,
     {
         HasRolePath::<R>::role_path(self).root_child_pos()
     }
     fn raw_child_path<R: PathRole>(&self) -> &Vec<ChildLocation>
-    where
-        Self: HasRolePath<R>,
+        where
+            Self: HasRolePath<R>,
     {
         HasRolePath::<R>::role_path(self).path()
     }
     fn raw_child_path_mut<R: PathRole>(&mut self) -> &mut Vec<ChildLocation>
-    where
-        Self: HasRolePath<R>,
+        where
+            Self: HasRolePath<R>,
     {
         HasRolePath::<R>::role_path_mut(self).path_mut()
     }
 }
+
 impl<T> RoleChildPath for T {}
+
 //pub trait Postfix:
 //    NodePath<Start>
 //    + PathSimplify
@@ -219,7 +222,23 @@ impl<T> RoleChildPath for T {}
 //    }
 //}
 pub trait Advanced:
-    RoleChildPath
+RoleChildPath
++ NodePath<Start>
++ BasePath
++ HasRolePath<Start>
++ HasRolePath<End>
++ GraphRootChild<Start>
++ GraphRootChild<End>
++ LeafChild<Start>
++ LeafChild<End>
++ MoveRootPos<Right, End>
++ RootChildPosMut<End>
++ GraphRoot
++ PathAppend
+{}
+
+impl<
+    T: RoleChildPath
     + NodePath<Start>
     + BasePath
     + HasRolePath<Start>
@@ -230,26 +249,9 @@ pub trait Advanced:
     + LeafChild<End>
     + MoveRootPos<Right, End>
     + RootChildPosMut<End>
-    + GraphRoot
-    + PathAppend
-{
-}
-impl<
-        T: RoleChildPath
-            + NodePath<Start>
-            + BasePath
-            + HasRolePath<Start>
-            + HasRolePath<End>
-            + GraphRootChild<Start>
-            + GraphRootChild<End>
-            + LeafChild<Start>
-            + LeafChild<End>
-            + MoveRootPos<Right, End>
-            + RootChildPosMut<End>
-            + PathAppend,
-    > Advanced for T
-{
-}
+    + PathAppend,
+> Advanced for T
+{}
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct BaseResult;

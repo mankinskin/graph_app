@@ -14,18 +14,17 @@
 extern crate test;
 
 #[cfg(not(any(test, feature = "test-hashing")))]
-pub use std::collections::{
+use std::collections::{
     HashMap,
     HashSet,
 };
-
 #[cfg(any(test, feature = "test-hashing"))]
 use std::hash::{
     BuildHasherDefault,
     DefaultHasher,
 };
 
-//pub use reexports::*;
+//use reexports::*;
 
 pub mod direction;
 pub mod graph;

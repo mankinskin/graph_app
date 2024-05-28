@@ -1,14 +1,19 @@
-#[allow(clippy::many_single_char_names)]
-use super::*;
+use std::iter::FromIterator;
+
+use itertools::*;
+use pretty_assertions::assert_eq;
+
 use crate::{
     graph::{
+        HypergraphRef,
         kind::BaseGraphKind,
         tests::{
             context,
             Context,
         },
-        HypergraphRef,
     },
+    HashMap,
+    HashSet,
     search::NoMatch,
     traversal::{
         cache::{
@@ -58,12 +63,10 @@ use crate::{
         },
         token::Token,
     },
-    HashMap,
-    HashSet,
 };
-use itertools::*;
-use pretty_assertions::assert_eq;
-use std::iter::FromIterator;
+
+#[allow(clippy::many_single_char_names)]
+use super::*;
 
 //#[test]
 #[allow(dead_code)]
@@ -213,6 +216,7 @@ fn find_ancestor1() {
         "a_b_c_c"
     );
 }
+
 #[test]
 fn find_ancestor2() {
     let mut graph = crate::graph::Hypergraph::<BaseGraphKind>::default();
@@ -276,13 +280,13 @@ fn find_ancestor2() {
                                             bottom: HashMap::from_iter([(
                                                 DirectedKey::up(xaby, 2),
                                                 SubLocation::new(8, 0),
-                                            ),]),
+                                            ), ]),
                                             top: Default::default(),
                                         },
                                         index: xabyz,
                                         waiting: Default::default(),
                                     }
-                                )])
+                                )]),
                             }
                         ),
                         (
@@ -308,7 +312,7 @@ fn find_ancestor2() {
                                         index: xaby,
                                         waiting: Default::default(),
                                     }
-                                )])
+                                )]),
                             }
                         ),
                         (
@@ -330,7 +334,7 @@ fn find_ancestor2() {
                                     //    index: by,
                                     //    waiting: vec![],
                                     //})
-                                ])
+                                ]),
                             }
                         ),
                         //(z.index, VertexCache {
@@ -374,7 +378,7 @@ fn find_ancestor2() {
                                         parent: xaby,
                                         pattern_id: 7,
                                         sub_index: 1,
-                                    },],
+                                    }, ],
                                 },
                                 _ty: Default::default(),
                             },
@@ -506,7 +510,7 @@ fn find_ancestor3() {
                                             bottom: HashMap::from_iter([(
                                                 DirectedKey::up(xab, 2),
                                                 SubLocation::new(6, 0),
-                                            ),]),
+                                            ), ]),
                                             top: Default::default(),
                                         },
                                         index: xaby,
@@ -542,7 +546,7 @@ fn find_ancestor3() {
                                         index: xab,
                                         waiting: vec![],
                                     }
-                                )])
+                                )]),
                             }
                         ),
                         (
@@ -564,7 +568,7 @@ fn find_ancestor3() {
                                     //    index: ab,
                                     //    waiting: Default::default(),
                                     //})
-                                ])
+                                ]),
                             }
                         ),
                         //(yz.index, VertexCache {
@@ -639,7 +643,7 @@ fn find_ancestor3() {
                                         parent: xab,
                                         pattern_id: 4,
                                         sub_index: 1,
-                                    },],
+                                    }, ],
                                 },
                                 _ty: Default::default(),
                             },

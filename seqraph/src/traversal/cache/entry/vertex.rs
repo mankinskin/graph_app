@@ -18,6 +18,7 @@ pub struct VertexCache {
     pub(crate) top_down: DirectedPositions,
     pub(crate) index: Child,
 }
+
 impl From<Child> for VertexCache {
     fn from(index: Child) -> Self {
         Self {
@@ -27,6 +28,7 @@ impl From<Child> for VertexCache {
         }
     }
 }
+
 impl VertexCache {
     pub fn start(index: Child) -> Self {
         let bottom_up = HashMap::default();

@@ -18,17 +18,18 @@ use crate::{
             },
         },
     },
-    vertex::location::ChildLocation,
+    vertex::location::child::ChildLocation,
 };
 use auto_impl::auto_impl;
 use std::borrow::Borrow;
 
 /// access to a rooted path pointing to a descendant
-#[auto_impl(&mut)]
+#[auto_impl(& mut)]
 pub trait HasPath<R> {
     fn path(&self) -> &Vec<ChildLocation>;
     fn path_mut(&mut self) -> &mut Vec<ChildLocation>;
 }
+
 impl HasPath<End> for QueryRangePath {
     fn path(&self) -> &Vec<ChildLocation> {
         &self.end.path
@@ -37,6 +38,7 @@ impl HasPath<End> for QueryRangePath {
         &mut self.end.sub_path.path
     }
 }
+
 impl HasPath<Start> for QueryRangePath {
     fn path(&self) -> &Vec<ChildLocation> {
         &self.start.path
@@ -45,6 +47,7 @@ impl HasPath<Start> for QueryRangePath {
         &mut self.start.sub_path.path
     }
 }
+
 //impl HasPath<End> for PatternPrefixPath {
 //    fn path(&self) -> &Vec<ChildLocation> {
 //        self.end.map(|p| p.path()).unwrap_or_default()
@@ -70,8 +73,8 @@ impl HasPath<Start> for QueryRangePath {
 //    }
 //}
 impl<R: 'static> HasPath<R> for SearchPath
-where
-    Self: HasRolePath<R>,
+    where
+        Self: HasRolePath<R>,
 {
     fn path(&self) -> &Vec<ChildLocation> {
         HasRolePath::<R>::role_path(self).path()
@@ -80,9 +83,10 @@ where
         HasRolePath::<R>::role_path_mut(self).path_mut()
     }
 }
+
 impl<R: 'static> HasPath<R> for QueryStateContext<'_>
-where
-    Self: HasRolePath<R>,
+    where
+        Self: HasRolePath<R>,
 {
     fn path(&self) -> &Vec<ChildLocation> {
         HasRolePath::<R>::role_path(self).path()
@@ -91,6 +95,7 @@ where
         HasRolePath::<R>::role_path_mut(self).path_mut()
     }
 }
+
 impl<R> HasPath<R> for RolePath<R> {
     fn path(&self) -> &Vec<ChildLocation> {
         &self.path
@@ -133,6 +138,7 @@ pub trait HasRolePath<R> {
         self.role_path().num_path_segments()
     }
 }
+
 impl<R> HasRolePath<R> for RolePath<R> {
     fn role_path(&self) -> &RolePath<R> {
         self
@@ -141,6 +147,7 @@ impl<R> HasRolePath<R> for RolePath<R> {
         self
     }
 }
+
 impl HasRolePath<Start> for SearchPath {
     fn role_path(&self) -> &RolePath<Start> {
         &self.start
@@ -149,6 +156,7 @@ impl HasRolePath<Start> for SearchPath {
         &mut self.start
     }
 }
+
 impl HasRolePath<End> for SearchPath {
     fn role_path(&self) -> &RolePath<End> {
         &self.end
@@ -157,6 +165,7 @@ impl HasRolePath<End> for SearchPath {
         &mut self.end
     }
 }
+
 impl<R: PathRole, Root: PathRoot> HasRolePath<R> for RootedRolePath<R, Root> {
     fn role_path(&self) -> &RolePath<R> {
         &self.role_path
@@ -165,6 +174,7 @@ impl<R: PathRole, Root: PathRoot> HasRolePath<R> for RootedRolePath<R, Root> {
         &mut self.role_path
     }
 }
+
 impl HasRolePath<Start> for QueryStateContext<'_> {
     fn role_path(&self) -> &RolePath<Start> {
         &self.state.start
@@ -173,6 +183,7 @@ impl HasRolePath<Start> for QueryStateContext<'_> {
         &mut self.state.start
     }
 }
+
 impl HasRolePath<End> for QueryStateContext<'_> {
     fn role_path(&self) -> &RolePath<End> {
         &self.state.end
@@ -181,6 +192,7 @@ impl HasRolePath<End> for QueryStateContext<'_> {
         &mut self.state.end
     }
 }
+
 //impl<R, P: HasRolePath<R>> HasRolePath<R> for OriginPath<P> {
 //    fn role_path(&self) -> &RolePath<R> {
 //        self.postfix.role_path()
@@ -204,6 +216,7 @@ pub trait HasMatchPaths: HasRolePath<Start> + HasRolePath<End> {
     //    self.role_path().root()
     //}
 }
+
 impl HasMatchPaths for SearchPath {
     fn into_paths(self) -> (RolePath<Start>, RolePath<End>) {
         (self.start, self.end)
@@ -213,11 +226,13 @@ impl HasMatchPaths for SearchPath {
 pub trait HasSinglePath {
     fn single_path(&self) -> &[ChildLocation];
 }
+
 impl<R> HasSinglePath for RolePath<R> {
     fn single_path(&self) -> &[ChildLocation] {
         self.path().borrow()
     }
 }
+
 impl<R: PathRole, Root: PathRoot> HasSinglePath for RootedRolePath<R, Root> {
     fn single_path(&self) -> &[ChildLocation] {
         &self.role_path.sub_path.path.borrow()

@@ -3,8 +3,8 @@ use crate::{
         context::pattern::PatternJoinContext,
         partition::info::{
             border::{
-                trace::TraceBorders,
                 BorderInfo,
+                trace::TraceBorders,
             },
             range::{
                 children::InfixChildren,
@@ -24,12 +24,13 @@ use crate::{
     traversal::cache::key::SplitKey,
 };
 
-pub trait JoinBorders<K: RangeRole<Mode = Join>>: TraceBorders<K> {
+pub trait JoinBorders<K: RangeRole<Mode=Join>>: TraceBorders<K> {
     fn get_child_splits<'a>(
         &self,
         ctx: &ModePatternCtxOf<'a, K>,
     ) -> Option<ModeChildrenOf<K>>;
 }
+
 impl JoinBorders<Post<Join>> for BorderInfo {
     fn get_child_splits<'a>(
         &self,
@@ -57,6 +58,7 @@ impl JoinBorders<Pre<Join>> for BorderInfo {
         })
     }
 }
+
 impl JoinBorders<In<Join>> for (BorderInfo, BorderInfo) {
     fn get_child_splits<'a>(
         &self,

@@ -1,16 +1,14 @@
-use crate::{
-    traversal::{
-        cache::{
-            state::end::{
-                EndKind,
-                EndState,
-            },
-            TraversalCache,
+use crate::traversal::{
+    cache::{
+        state::end::{
+            EndKind,
+            EndState,
         },
-        path::accessors::role::Start,
-        result_kind::RoleChildPath,
-        traversable::Traversable,
+        TraversalCache,
     },
+    path::accessors::role::Start,
+    result_kind::RoleChildPath,
+    traversable::Traversable,
 };
 
 pub trait Trace {
@@ -20,6 +18,7 @@ pub trait Trace {
         cache: &mut TraversalCache,
     );
 }
+
 impl Trace for EndState {
     fn trace<Trav: Traversable>(
         &self,
@@ -90,6 +89,7 @@ pub(crate) mod tests {
             .result
             .unwrap_incomplete()
     }
+
     #[test]
     fn trace_graph1() {
         let res = build_trace1();

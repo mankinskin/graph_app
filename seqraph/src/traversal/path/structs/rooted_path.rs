@@ -1,23 +1,21 @@
 use std::ops::Deref;
 
 use crate::{
-    traversal::{
-        path::{
-            accessors::role::{
-                End,
-                PathRole,
-                Start,
-            },
-            structs::{
-                query_range_path::QueryRangePath,
-                role_path::RolePath,
-            },
+    traversal::path::{
+        accessors::role::{
+            End,
+            PathRole,
+            Start,
+        },
+        structs::{
+            query_range_path::QueryRangePath,
+            role_path::RolePath,
         },
     },
     vertex::{
         location::{
+            child::ChildLocation,
             pattern::PatternLocation,
-            ChildLocation,
         },
         pattern::Pattern,
     },
@@ -29,6 +27,7 @@ pub struct RootedRangePath<Root: PathRoot> {
     pub start: RolePath<Start>,
     pub end: RolePath<End>,
 }
+
 impl<R: PathRoot> RootedRangePath<R> {
     pub fn end_path(&self) -> RootedSplitPathRef<'_, R> {
         RootedSplitPathRef {
@@ -37,6 +36,7 @@ impl<R: PathRoot> RootedRangePath<R> {
         }
     }
 }
+
 pub type SearchPath = RootedRangePath<IndexRoot>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -49,11 +49,13 @@ pub struct RootedSplitPath<Root: PathRoot = IndexRoot> {
     pub root: Root,
     pub sub_path: SubPath,
 }
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RootedSplitPathRef<'a, Root: PathRoot = IndexRoot> {
     pub root: &'a Root,
     pub sub_path: &'a SubPath,
 }
+
 impl<'a, R: PathRoot> From<&'a RootedSplitPath<R>> for RootedSplitPathRef<'a, R> {
     fn from(value: &'a RootedSplitPath<R>) -> Self {
         Self {
@@ -62,8 +64,9 @@ impl<'a, R: PathRoot> From<&'a RootedSplitPath<R>> for RootedSplitPathRef<'a, R>
         }
     }
 }
+
 impl<'a, R: PathRole, Root: PathRoot> From<&'a RootedRolePath<R, Root>>
-    for RootedSplitPathRef<'a, Root>
+for RootedSplitPathRef<'a, Root>
 {
     fn from(value: &'a RootedRolePath<R, Root>) -> Self {
         Self {
@@ -72,11 +75,13 @@ impl<'a, R: PathRole, Root: PathRoot> From<&'a RootedRolePath<R, Root>>
         }
     }
 }
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RootedRolePath<R: PathRole, Root: PathRoot = IndexRoot> {
     pub root: Root,
     pub role_path: RolePath<R>,
 }
+
 impl<R: PathRoot> RootedRolePath<Start, R> {
     pub fn into_range(
         self,
@@ -90,12 +95,13 @@ impl<R: PathRoot> RootedRolePath<Start, R> {
                     root_entry: exit,
                     path: vec![],
                 }
-                .into(),
+                    .into(),
                 _ty: Default::default(),
             },
         }
     }
 }
+
 impl From<SearchPath> for RootedRolePath<Start, IndexRoot> {
     fn from(path: SearchPath) -> Self {
         Self {
@@ -104,6 +110,7 @@ impl From<SearchPath> for RootedRolePath<Start, IndexRoot> {
         }
     }
 }
+
 impl From<SearchPath> for RootedRolePath<End, IndexRoot> {
     fn from(path: SearchPath) -> Self {
         Self {
@@ -112,17 +119,20 @@ impl From<SearchPath> for RootedRolePath<End, IndexRoot> {
         }
     }
 }
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SubPath {
     pub root_entry: usize,
     pub path: Vec<ChildLocation>,
 }
+
 impl Deref for SubPath {
     type Target = Vec<ChildLocation>;
     fn deref(&self) -> &Self::Target {
         &self.path
     }
 }
+
 impl SubPath {
     pub fn new(root_entry: usize) -> Self {
         Self {
@@ -131,38 +141,46 @@ impl SubPath {
         }
     }
 }
+
 pub trait PathRoot {}
+
 impl PathRoot for Pattern {}
+
 impl PathRoot for IndexRoot {}
 
 pub trait RootedPath {
     type Root: PathRoot;
     fn path_root(&self) -> &Self::Root;
 }
+
 impl RootedPath for QueryRangePath {
     type Root = Pattern;
     fn path_root(&self) -> &Self::Root {
         &self.root
     }
 }
+
 impl RootedPath for SearchPath {
     type Root = IndexRoot;
     fn path_root(&self) -> &Self::Root {
         &self.root
     }
 }
+
 impl<R: PathRoot> RootedPath for RootedSplitPath<R> {
     type Root = R;
     fn path_root(&self) -> &Self::Root {
         &self.root
     }
 }
+
 impl<R: PathRoot> RootedPath for RootedSplitPathRef<'_, R> {
     type Root = R;
     fn path_root(&self) -> &Self::Root {
         self.root
     }
 }
+
 impl<R: PathRole, Root: PathRoot> RootedPath for RootedRolePath<R, Root> {
     type Root = Root;
     fn path_root(&self) -> &Self::Root {

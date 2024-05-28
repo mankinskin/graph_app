@@ -4,9 +4,10 @@ use crate::{
     search::NoMatch,
     traversal::path::{
         accessors::role::End,
+        BaseQuery,
         mutators::{
             append::PathAppend,
-            move_path::MoveRootPos,
+            move_path::root::MoveRootPos,
             pop::PathPop,
         },
         structs::rooted_path::{
@@ -16,13 +17,10 @@ use crate::{
             SearchPath,
             SubPath,
         },
-        BaseQuery,
     },
-    vertex::{
-        pattern::{
-            IntoPattern,
-            Pattern,
-        },
+    vertex::pattern::{
+        IntoPattern,
+        Pattern,
     },
 };
 
@@ -45,11 +43,11 @@ pub type PatternPrefixPath = RootedRolePath<End, Pattern>;
 //}
 
 pub trait QueryPath:
-    BaseQuery
-    //+ LeafChildPosMut<End>
-    + PathAppend
-    + PathPop
-    + MoveRootPos<Right, End>
+BaseQuery
+//+ LeafChildPosMut<End>
++ PathAppend
++ PathPop
++ MoveRootPos<Right, End>
 {
     fn complete(pattern: impl IntoPattern) -> Self;
     fn new_directed<
@@ -77,6 +75,7 @@ impl QueryPath for QueryRangePath {
         }
     }
 }
+
 pub trait RangePath: RootedPath {
     fn new_range(
         root: Self::Root,
@@ -84,6 +83,7 @@ pub trait RangePath: RootedPath {
         exit: usize,
     ) -> Self;
 }
+
 impl RangePath for QueryRangePath {
     fn new_range(
         root: Self::Root,
@@ -97,6 +97,7 @@ impl RangePath for QueryRangePath {
         }
     }
 }
+
 impl RangePath for SearchPath {
     fn new_range(
         root: Self::Root,

@@ -25,18 +25,22 @@ use crate::{
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BottomUp;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TopDown;
 
 pub trait TraversalDirection {
     type Opposite: TraversalDirection;
 }
+
 impl TraversalDirection for BottomUp {
     type Opposite = TopDown;
 }
+
 impl TraversalDirection for TopDown {
     type Opposite = BottomUp;
 }
+
 /// optional offset inside of pattern sub location
 ///
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -44,17 +48,20 @@ pub struct SubSplitLocation {
     pub location: SubLocation,
     pub inner_offset: Option<Offset>,
 }
+
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Edges {
     pub top: HashSet<DirectedKey>,
     pub bottom: HashMap<DirectedKey, SubLocation>,
 }
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PositionCache {
     pub edges: Edges,
     pub index: Child,
     pub waiting: Vec<(StateDepth, WaitingState)>,
 }
+
 impl PositionCache {
     pub fn start(index: Child) -> Self {
         Self {

@@ -18,6 +18,7 @@ pub struct OverlapPrimer {
     pub exit: usize,
     pub end: RolePath<End>,
 }
+
 impl OverlapPrimer {
     pub fn new(
         start: Child,

@@ -8,10 +8,7 @@ impl<'p> ReadContext<'p> {
         context: &mut PatternPrefixPath,
     ) -> Option<Child> {
         if first.width() > 1 {
-            self.read_next_overlap(
-                OverlapCache::new(first),
-                context,
-            )
+            self.read_next_overlap(OverlapCache::new(first), context)
         } else {
             None
         }
@@ -25,54 +22,44 @@ impl<'p> ReadContext<'p> {
     ) -> Option<Child> {
         // find expandable postfix, may append postfixes in overlap chain
         //println!("read next overlap with {:#?}", cache.last);
-        match self.find_next_overlap(
-                cache,
-                context,
-            ) {
+        match self.find_next_overlap(cache, context) {
             Ok((start_bound, next_link, expansion, mut cache)) => {
-                    //println!("found overlap at {}: {:?}", start_bound, expansion);
-                    if let Some(ctx) =
-                        if let Some((past_end_bound, past_ctx)) = self.take_past_context_pattern(
-                            start_bound,
-                            &mut cache.chain,
-                        ) {
-                            println!("reusing back context {past_end_bound}: {:#?}", past_ctx);
-                            if past_end_bound == start_bound {
-                                Some(past_ctx)
-                            } else {
-                                assert!(past_end_bound < start_bound);
-                                let next = self.odd_overlap_next(
-                                    &mut cache,
-                                    past_end_bound,
-                                    &next_link,
-                                    expansion,
-                                    past_ctx,
-                                );
-                                cache.append(
-                                    self,
-                                    start_bound,
-                                    next,
-                                );
-
-                                //OverlapBand {
-                                //    end: BandEnd::Chain(expansion),
-                                //    back_context: vec![inner_back_ctx],
-                                //}
-                                // use postfix_path of next to index inner context in previous
-                                // index overlap between previous and new coming index
-                                // create new bundle to start with
-
-                                // - remember to bundle latest bands 
-                                // - until after band where odd overlap ocurred
-                                // - add extra band with postfix of previous band
-                                // - if overlap after previous band 
-                                None
-                            }
-                        } else {
-                            //println!("building back context from path");
-                            Some(self.back_context_from_path(&mut cache.chain, &next_link))
-                        }
+                //println!("found overlap at {}: {:?}", start_bound, expansion);
+                if let Some(ctx) = if let Some((past_end_bound, past_ctx)) =
+                    self.take_past_context_pattern(start_bound, &mut cache.chain)
                 {
+                    println!("reusing back context {past_end_bound}: {:#?}", past_ctx);
+                    if past_end_bound == start_bound {
+                        Some(past_ctx)
+                    } else {
+                        assert!(past_end_bound < start_bound);
+                        let next = self.odd_overlap_next(
+                            &mut cache,
+                            past_end_bound,
+                            &next_link,
+                            expansion,
+                            past_ctx,
+                        );
+                        cache.append(self, start_bound, next);
+
+                        //OverlapBand {
+                        //    end: BandEnd::Chain(expansion),
+                        //    back_context: vec![inner_back_ctx],
+                        //}
+                        // use postfix_path of next to index inner context in previous
+                        // index overlap between previous and new coming index
+                        // create new bundle to start with
+
+                        // - remember to bundle latest bands
+                        // - until after band where odd overlap ocurred
+                        // - add extra band with postfix of previous band
+                        // - if overlap after previous band
+                        None
+                    }
+                } else {
+                    //println!("building back context from path");
+                    Some(self.back_context_from_path(&mut cache.chain, &next_link))
+                } {
                     cache.append(
                         self,
                         start_bound,
@@ -82,15 +69,12 @@ impl<'p> ReadContext<'p> {
                                 back_context: ctx,
                             },
                             link: Some(next_link), // todo
-                        }
+                        },
                     );
                 }
 
-                    self.read_next_overlap(
-                        cache,
-                        context,
-                    )
-                },
+                self.read_next_overlap(cache, context)
+            }
             Err(cache) => {
                 //println!("No overlap found");
                 cache.chain.close(self)
@@ -106,7 +90,10 @@ impl<'p> ReadContext<'p> {
     ) -> Result<(usize, OverlapLink, Child, OverlapCache), OverlapCache> {
         let last = cache.last.take().expect("No last overlap to take!");
         let last_end = *last.band.end.index().unwrap();
-        let mut acc = ControlFlow::Continue((None as Option<RolePath<End>>, OverlapBundle::from(last.band)));
+        let mut acc = ControlFlow::Continue((
+            None as Option<RolePath<End>>,
+            OverlapBundle::from(last.band),
+        ));
         let mut indexer = self.indexer();
         let mut iter = PostfixIterator::new(&mut indexer, last_end);
         while let Some((postfix_location, postfix)) = iter.next() {
@@ -119,16 +106,17 @@ impl<'p> ReadContext<'p> {
                 RolePath::new(postfix, postfix_location)
             };
             // try expand
-            match self.graph.index_query(
-                OverlapPrimer::new(postfix, prefix_query.clone())
-            ) {
+            match self
+                .graph
+                .index_query(OverlapPrimer::new(postfix, prefix_query.clone()))
+            {
                 Ok((
-                    //OriginPath {
-                    //    postfix: expansion,
-                    //    origin: prefix_path,
-                    //},
-                    advanced,
-                )) => {
+                       //OriginPath {
+                       //    postfix: expansion,
+                       //    origin: prefix_path,
+                       //},
+                       advanced,
+                   )) => {
                     *prefix_query = advanced.into_prefix_path();
 
                     acc = ControlFlow::Break((
@@ -141,7 +129,7 @@ impl<'p> ReadContext<'p> {
                         bundle,
                     ));
                     break;
-                },
+                }
                 Err(_) => {
                     // if not expandable, at band boundary -> add to bundle
                     // postfixes should always be first in the chain
@@ -152,14 +140,14 @@ impl<'p> ReadContext<'p> {
                         bundle.add_band(overlap.band)
                     }
                     acc = ControlFlow::Continue((Some(postfix_path), bundle));
-                },
+                }
             }
         }
         match acc {
             ControlFlow::Break((start_bound, next, expansion, bundle)) => {
                 cache.add_bundle(self, bundle);
                 Ok((start_bound, next, expansion, cache))
-            },
+            }
             ControlFlow::Continue((_, bundle)) => {
                 cache.add_bundle(self, bundle);
                 Err(cache)
@@ -190,7 +178,7 @@ impl<'p> ReadContext<'p> {
             NonZeroUsize::new(cache.end_bound - past_end_bound).unwrap(),
         );
         assert!(path.is_empty());
-    
+
         // build new context path (to overlap)
         let context_path = {
             // entry in last band (could be handled by IndexSplit
@@ -211,18 +199,27 @@ impl<'p> ReadContext<'p> {
             })
         };
         // get index between past and next overlap
-        let (inner_back_ctx, _loc) = self.contexter::<IndexBack>().try_context_path(
-            context_path,
-            //next_link.overlap,
-        ).unwrap();
-    
+        let (inner_back_ctx, _loc) = self
+            .contexter::<IndexBack>()
+            .try_context_path(
+                context_path,
+                //next_link.overlap,
+            )
+            .unwrap();
+
         let past = self.graph.graph_mut().insert_pattern(past_ctx);
-        let past_inner = self.graph.graph_mut().insert_pattern([past, inner_back_ctx]);
-        let inner_expansion = self.graph.graph_mut().insert_pattern([inner_back_ctx, expansion]);
-        let index = self.graph.graph_mut().insert_patterns([
-            [past_inner, expansion],
-            [past, inner_expansion],
-        ]);
+        let past_inner = self
+            .graph
+            .graph_mut()
+            .insert_pattern([past, inner_back_ctx]);
+        let inner_expansion = self
+            .graph
+            .graph_mut()
+            .insert_pattern([inner_back_ctx, expansion]);
+        let index = self
+            .graph
+            .graph_mut()
+            .insert_patterns([[past_inner, expansion], [past, inner_expansion]]);
         Overlap {
             band: OverlapBand {
                 end: BandEnd::Index(index),

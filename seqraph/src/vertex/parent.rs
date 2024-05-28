@@ -1,13 +1,12 @@
 use crate::{
     graph::kind::GraphKind,
-    vertex::pattern::Pattern,
     HashMap,
     HashSet,
-};
-
-use crate::vertex::{
-    PatternId,
-    TokenPosition,
+    vertex::{
+        pattern::Pattern,
+        PatternId,
+        TokenPosition,
+    },
 };
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
@@ -15,6 +14,7 @@ pub struct PatternIndex {
     pub pattern_id: PatternId,
     pub sub_index: usize,
 }
+
 impl PatternIndex {
     pub fn new(
         pattern_id: PatternId,
@@ -26,6 +26,7 @@ impl PatternIndex {
         }
     }
 }
+
 /// Storage for parent relationship of a child to a parent
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Parent {
@@ -34,6 +35,7 @@ pub struct Parent {
     /// positions of child in parent patterns
     pub pattern_indices: HashSet<PatternIndex>,
 }
+
 impl Parent {
     pub fn new(width: TokenPosition) -> Self {
         Self {
@@ -102,7 +104,7 @@ impl Parent {
             .map(Clone::clone)
     }
     /// filter for pattern indices which occur at start of their patterns
-    pub fn filter_pattern_indices_at_prefix(&self) -> impl Iterator<Item = &PatternIndex> {
+    pub fn filter_pattern_indices_at_prefix(&self) -> impl Iterator<Item=&PatternIndex> {
         self.pattern_indices
             .iter()
             .filter(move |pattern_index| pattern_index.sub_index == 0)
@@ -111,13 +113,13 @@ impl Parent {
     pub fn filter_pattern_indices_at_end_in_patterns<'a>(
         &'a self,
         patterns: &'a HashMap<PatternId, Pattern>,
-    ) -> impl Iterator<Item = &'a PatternIndex> {
+    ) -> impl Iterator<Item=&'a PatternIndex> {
         self.pattern_indices.iter().filter(move |pattern_index| {
             pattern_index.sub_index + 1
                 == patterns
-                    .get(&pattern_index.pattern_id)
-                    .expect("Pattern index not in patterns!")
-                    .len()
+                .get(&pattern_index.pattern_id)
+                .expect("Pattern index not in patterns!")
+                .len()
         })
     }
     // filter for pattern indices which occur in given patterns

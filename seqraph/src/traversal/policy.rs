@@ -8,7 +8,7 @@ use crate::{
         iterator::traverser::TraversalOrder,
         path::{
             accessors::{
-                child::RootChild,
+                child::root::RootChild,
                 root::GraphRoot,
             },
             mutators::raise::PathRaise,
@@ -17,11 +17,12 @@ use crate::{
     },
     vertex::{
         child::Child,
-        location::ChildLocation,
+        location::child::ChildLocation,
     },
 };
 
 pub trait NodePath<R>: RootChild<R> + Send + Clone + Eq + Debug {}
+
 impl<R, T: RootChild<R> + Send + Clone + Eq + Debug> NodePath<R> for T {}
 
 pub trait DirectedTraversalPolicy: Sized + Debug {

@@ -1,3 +1,9 @@
+use std::{
+    borrow::Borrow,
+    iter::FromIterator,
+    num::NonZeroUsize,
+};
+
 use derive_more::{
     Deref,
     DerefMut,
@@ -5,22 +11,19 @@ use derive_more::{
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 use linked_hash_set::LinkedHashSet;
-use std::{
-    iter::FromIterator,
-    num::NonZeroUsize,
-};
 
-pub mod context;
-pub mod delta;
-pub mod joined;
-pub mod partition;
+use context::*;
+use joined::*;
+use partition::*;
 
 use crate::{
+    HashMap,
     index::indexer::Indexer,
     join::{
-        context::node::NodeJoinContext,
+        context::node::context::NodeJoinContext,
         partition::{
             info::{
+                JoinPartition,
                 range::role::{
                     In,
                     Join,
@@ -31,19 +34,20 @@ use crate::{
                     PartitionBorders,
                     VisitPartition,
                 },
-                JoinPartition,
             },
             splits::{
-                offset::OffsetSplits,
                 HasPosSplits,
+                offset::OffsetSplits,
                 PosSplitRef,
             },
         },
     },
     split::{
-        position_splits,
-        Split,
-        SplitCache,
+        cache::{
+            split::Split,
+            SplitCache,
+        },
+        complete::position_splits,
     },
     traversal::{
         cache::key::SplitKey,
@@ -58,32 +62,35 @@ use crate::{
         location::SubLocation,
         wide::Wide,
     },
-    HashMap,
 };
-use context::*;
-use joined::*;
-use partition::*;
-use std::borrow::Borrow;
+
+pub mod context;
+pub mod delta;
+pub mod joined;
+pub mod partition;
 
 #[derive(Debug, Default, Deref, DerefMut)]
 pub struct SplitFrontier {
     pub queue: LinkedHashSet<SplitKey>,
 }
+
 impl SplitFrontier {
-    pub fn new(keys: impl IntoIterator<Item = SplitKey>) -> Self {
+    pub fn new(keys: impl IntoIterator<Item=SplitKey>) -> Self {
         Self {
             queue: LinkedHashSet::from_iter(keys),
         }
     }
 }
+
 impl Extend<SplitKey> for SplitFrontier {
-    fn extend<T: IntoIterator<Item = SplitKey>>(
+    fn extend<T: IntoIterator<Item=SplitKey>>(
         &mut self,
         iter: T,
     ) {
         self.queue.extend(iter)
     }
 }
+
 impl Indexer {
     pub fn join_subgraph(
         &mut self,
@@ -126,8 +133,8 @@ impl Indexer {
         ctx: &mut NodeJoinContext<'p>,
         pos_splits: S,
     ) -> Vec<Child>
-    where
-        'p: 't,
+        where
+            'p: 't,
     {
         let offset_splits = pos_splits.pos_splits();
         let len = offset_splits.len();
@@ -147,9 +154,7 @@ impl Indexer {
         println!("{:#?}", parts);
         parts
     }
-    pub fn join_node_partitions(
-        ctx: &mut NodeJoinContext
-    ) -> LinkedHashMap<SplitKey, Split> {
+    pub fn join_node_partitions(ctx: &mut NodeJoinContext) -> LinkedHashMap<SplitKey, Split> {
         let partitions = Self::index_partitions(ctx, ctx.pos_splits);
         assert_eq!(
             ctx.index.width(),

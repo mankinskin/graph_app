@@ -1,23 +1,23 @@
-pub mod indexer;
 use indexer::*;
 
-pub mod side;
 use crate::{
     graph::HypergraphRef,
     search::NoMatch,
     traversal::path::structs::query_range_path::QueryRangePath,
     vertex::{
         child::Child,
-        location::ChildLocation,
+        location::child::ChildLocation,
         pattern::IntoPattern,
     },
 };
 
+pub mod indexer;
+pub mod side;
 //pub mod context;
-//pub use context::*;
+//use context::*;
 
 //pub mod path;
-//pub use path::*;
+//use path::*;
 
 #[cfg(test)]
 #[macro_use]

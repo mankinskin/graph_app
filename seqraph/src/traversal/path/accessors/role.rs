@@ -1,7 +1,7 @@
 use crate::{
     traversal::path::accessors::border::PathBorder,
     vertex::{
-        location::ChildLocation,
+        location::child::ChildLocation,
         pattern::{
             postfix,
             prefix,
@@ -24,13 +24,13 @@ pub trait PathRole: 'static + Debug + PathBorder + Default {
     type TopDownPathIter<I: Borrow<ChildLocation>, T: DoubleEndedIterator<Item=I> + ExactSizeIterator>: DoubleEndedIterator<Item=I> + ExactSizeIterator;
     fn top_down_iter<
         I: Borrow<ChildLocation>,
-        T: DoubleEndedIterator<Item = I> + ExactSizeIterator,
+        T: DoubleEndedIterator<Item=I> + ExactSizeIterator,
     >(
         collection: T
     ) -> Self::TopDownPathIter<I, T>;
     fn bottom_up_iter<
         I: Borrow<ChildLocation>,
-        T: DoubleEndedIterator<Item = I> + ExactSizeIterator,
+        T: DoubleEndedIterator<Item=I> + ExactSizeIterator,
     >(
         collection: T
     ) -> std::iter::Rev<Self::TopDownPathIter<I, T>> {
@@ -69,11 +69,11 @@ pub trait PathRole: 'static + Debug + PathBorder + Default {
 impl PathRole for Start {
     type TopDownPathIter<
         I: Borrow<ChildLocation>,
-        T: DoubleEndedIterator<Item = I> + ExactSizeIterator,
+        T: DoubleEndedIterator<Item=I> + ExactSizeIterator,
     > = std::iter::Rev<T>;
     fn top_down_iter<
         I: Borrow<ChildLocation>,
-        T: DoubleEndedIterator<Item = I> + ExactSizeIterator,
+        T: DoubleEndedIterator<Item=I> + ExactSizeIterator,
     >(
         collection: T
     ) -> Self::TopDownPathIter<I, T> {
@@ -98,14 +98,15 @@ impl PathRole for Start {
         postfix(pattern, index)
     }
 }
+
 impl PathRole for End {
     type TopDownPathIter<
         I: Borrow<ChildLocation>,
-        T: DoubleEndedIterator<Item = I> + ExactSizeIterator,
+        T: DoubleEndedIterator<Item=I> + ExactSizeIterator,
     > = T;
     fn top_down_iter<
         I: Borrow<ChildLocation>,
-        T: DoubleEndedIterator<Item = I> + ExactSizeIterator,
+        T: DoubleEndedIterator<Item=I> + ExactSizeIterator,
     >(
         collection: T
     ) -> Self::TopDownPathIter<I, T> {

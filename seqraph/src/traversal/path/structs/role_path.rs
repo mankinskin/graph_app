@@ -14,7 +14,7 @@ use crate::{
             SubPath,
         },
     },
-    vertex::location::ChildLocation,
+    vertex::location::child::ChildLocation,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
@@ -25,6 +25,7 @@ pub struct RolePath<R> {
     //pub token_pos: usize,
     pub _ty: std::marker::PhantomData<R>,
 }
+
 impl<R: PathRole> RolePath<R> {
     //pub fn get_child(&self) -> Child {
     //    self.child
@@ -57,17 +58,20 @@ impl<R: PathRole> RolePath<R> {
         }
     }
 }
+
 impl<R> Deref for RolePath<R> {
     type Target = SubPath;
     fn deref(&self) -> &Self::Target {
         &self.sub_path
     }
 }
+
 impl From<SearchPath> for RolePath<Start> {
     fn from(p: SearchPath) -> Self {
         p.start
     }
 }
+
 impl<R: PathRole> From<SubPath> for RolePath<R> {
     fn from(sub_path: SubPath) -> Self {
         Self {
@@ -76,6 +80,7 @@ impl<R: PathRole> From<SubPath> for RolePath<R> {
         }
     }
 }
+
 impl From<SearchPath> for RolePath<End> {
     fn from(p: SearchPath) -> Self {
         p.end

@@ -1,7 +1,9 @@
-pub mod key;
-pub mod leaf;
-pub mod path;
-pub mod root;
+use std::ops::ControlFlow;
+
+use key::*;
+use leaf::*;
+use path::*;
+use root::*;
 
 use crate::{
     direction::{
@@ -13,11 +15,11 @@ use crate::{
         traversable::Traversable,
     },
 };
-pub use key::*;
-pub use leaf::*;
-pub use path::*;
-pub use root::*;
-use std::ops::ControlFlow;
+
+pub mod key;
+pub mod leaf;
+pub mod path;
+pub mod root;
 
 pub trait Retract: MovePath<Left, End> {
     fn retract<Trav: Traversable>(
@@ -27,6 +29,7 @@ pub trait Retract: MovePath<Left, End> {
         self.move_path(trav)
     }
 }
+
 impl<T: MovePath<Left, End>> Retract for T {}
 
 pub trait Advance: MovePath<Right, End> {
@@ -37,4 +40,5 @@ pub trait Advance: MovePath<Right, End> {
         self.move_path(trav)
     }
 }
+
 impl<T: MovePath<Right, End>> Advance for T {}

@@ -1,18 +1,18 @@
 pub mod new;
 
-pub use new::*;
+use new::*;
 use std::num::NonZeroUsize;
 
 pub mod vertex;
-pub use vertex::*;
 
 pub mod position;
+
 use crate::{
     traversal::folder::state::RootMode,
     vertex::location::SubLocation,
     HashMap,
 };
-pub use position::*;
+use position::*;
 
 pub type StateDepth = usize;
 pub type Offset = NonZeroUsize;
@@ -23,15 +23,16 @@ pub trait NodeSplitOutput<S>: Default {
     fn set_root_mode(
         &mut self,
         _root_mode: RootMode,
-    ) {
-    }
+    ) {}
     fn splits_mut(&mut self) -> &mut S;
 }
+
 impl NodeSplitOutput<Self> for OffsetLocations {
     fn splits_mut(&mut self) -> &mut OffsetLocations {
         self
     }
 }
+
 impl NodeSplitOutput<OffsetLocations> for (OffsetLocations, RootMode) {
     fn set_root_mode(
         &mut self,
@@ -43,6 +44,7 @@ impl NodeSplitOutput<OffsetLocations> for (OffsetLocations, RootMode) {
         &mut self.0
     }
 }
+
 pub trait NodeType {
     type GlobalSplitOutput: NodeSplitOutput<OffsetLocations>;
     type CompleteSplitOutput: Default;
@@ -51,7 +53,9 @@ pub trait NodeType {
         f: impl Fn(OffsetLocations) -> CompleteLocations,
     ) -> Self::CompleteSplitOutput;
 }
+
 pub struct RootNode;
+
 impl NodeType for RootNode {
     type GlobalSplitOutput = (OffsetLocations, RootMode);
     type CompleteSplitOutput = (CompleteLocations, RootMode);
@@ -64,6 +68,7 @@ impl NodeType for RootNode {
 }
 
 pub struct InnerNode;
+
 impl NodeType for InnerNode {
     type GlobalSplitOutput = OffsetLocations;
     type CompleteSplitOutput = CompleteLocations;

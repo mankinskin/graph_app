@@ -27,16 +27,19 @@ use crate::{
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, Add, Sub, Deref, DerefMut)]
 pub struct TokenLocation(pub usize);
+
 impl Default for TokenLocation {
     fn default() -> Self {
         Self(0)
     }
 }
+
 impl From<usize> for TokenLocation {
     fn from(pos: usize) -> Self {
         Self(pos)
     }
 }
+
 impl std::ops::Add<usize> for TokenLocation {
     type Output = Self;
     fn add(
@@ -47,6 +50,7 @@ impl std::ops::Add<usize> for TokenLocation {
         self
     }
 }
+
 impl std::ops::Sub<usize> for TokenLocation {
     type Output = Self;
     fn sub(
@@ -57,6 +61,7 @@ impl std::ops::Sub<usize> for TokenLocation {
         self
     }
 }
+
 impl std::ops::AddAssign<usize> for TokenLocation {
     fn add_assign(
         &mut self,
@@ -65,6 +70,7 @@ impl std::ops::AddAssign<usize> for TokenLocation {
         self.0 += delta;
     }
 }
+
 impl std::ops::SubAssign<usize> for TokenLocation {
     fn sub_assign(
         &mut self,
@@ -81,6 +87,7 @@ pub trait MoveKey<D: Direction> {
         delta: Self::Delta,
     );
 }
+
 pub trait AdvanceKey: MoveKey<Right> {
     fn advance_key(
         &mut self,
@@ -89,7 +96,9 @@ pub trait AdvanceKey: MoveKey<Right> {
         self.move_key(delta)
     }
 }
+
 impl<T: MoveKey<Right>> AdvanceKey for T {}
+
 pub trait RetractKey: MoveKey<Left> {
     fn retract_key(
         &mut self,
@@ -98,6 +107,7 @@ pub trait RetractKey: MoveKey<Left> {
         self.move_key(delta)
     }
 }
+
 impl<T: MoveKey<Left>> RetractKey for T {}
 
 impl MoveKey<Right> for DirectedPosition {
@@ -116,6 +126,7 @@ impl MoveKey<Right> for DirectedPosition {
         }
     }
 }
+
 impl MoveKey<Right> for DirectedKey {
     type Delta = usize;
     fn move_key(
@@ -125,6 +136,7 @@ impl MoveKey<Right> for DirectedKey {
         self.pos.move_key(delta)
     }
 }
+
 impl MoveKey<Right> for TokenLocation {
     type Delta = usize;
     fn move_key(
@@ -134,6 +146,7 @@ impl MoveKey<Right> for TokenLocation {
         *self += delta;
     }
 }
+
 impl MoveKey<Right> for QueryStateContext<'_> {
     type Delta = usize;
     fn move_key(
@@ -143,6 +156,7 @@ impl MoveKey<Right> for QueryStateContext<'_> {
         self.state.advance_key(delta)
     }
 }
+
 impl MoveKey<Right> for QueryState {
     type Delta = usize;
     fn move_key(
@@ -162,6 +176,7 @@ impl MoveKey<Left> for TokenLocation {
         *self -= delta;
     }
 }
+
 impl MoveKey<Left> for QueryStateContext<'_> {
     type Delta = usize;
     fn move_key(
@@ -171,6 +186,7 @@ impl MoveKey<Left> for QueryStateContext<'_> {
         self.state.retract_key(delta)
     }
 }
+
 impl MoveKey<Left> for QueryState {
     type Delta = usize;
     fn move_key(

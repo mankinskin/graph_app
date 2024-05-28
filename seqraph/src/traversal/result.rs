@@ -44,6 +44,7 @@ impl TraversalResult {
         self.result.expect_complete(msg)
     }
 }
+
 impl TraversalResult {
     #[allow(unused)]
     pub fn new_complete(

@@ -29,6 +29,7 @@ pub struct TraversalContext<'a, 'b: 'a, I: TraversalIterator<'b>> {
     pub iter: &'a mut I,
     _ty: std::marker::PhantomData<&'b ()>,
 }
+
 impl<'a, 'b: 'a, I: TraversalIterator<'b>> TraversalContext<'a, 'b, I> {
     pub fn new(
         query: &'a QueryContext,
@@ -43,6 +44,7 @@ impl<'a, 'b: 'a, I: TraversalIterator<'b>> TraversalContext<'a, 'b, I> {
         }
     }
 }
+
 impl<'a, 'b: 'a, I: TraversalIterator<'b>> TraversalContext<'a, 'b, I> {
     pub fn query_state(
         &self,

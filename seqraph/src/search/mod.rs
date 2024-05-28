@@ -1,13 +1,9 @@
-mod searcher;
-
-#[macro_use]
-#[cfg(test)]
-pub mod tests;
+use searcher::*;
 
 use crate::{
     graph::{
-        kind::TokenOf,
         HypergraphRef,
+        kind::TokenOf,
     },
     traversal::traversable::{
         GraphKindOf,
@@ -16,14 +12,19 @@ use crate::{
     vertex::{
         child::Child,
         pattern::Pattern,
-        token::{
-            tokenizing_iter,
-            AsToken,
-        },
         PatternId,
+        token::{
+            AsToken,
+            tokenizing_iter,
+        },
     },
 };
-pub use searcher::*;
+
+pub mod searcher;
+
+#[macro_use]
+#[cfg(test)]
+pub mod tests;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum NoMatch {
@@ -53,32 +54,34 @@ pub trait Searchable: Traversable {
     //}
     fn find_ancestor(
         &self,
-        pattern: impl IntoIterator<Item = impl crate::vertex::indexed::Indexed>,
+        pattern: impl IntoIterator<Item=impl crate::vertex::indexed::Indexed>,
     ) -> SearchResult {
         let pattern = self.graph().to_children(pattern);
         self.searcher().find_pattern_ancestor(pattern)
     }
     fn find_parent(
         &self,
-        pattern: impl IntoIterator<Item = impl crate::vertex::indexed::Indexed>,
+        pattern: impl IntoIterator<Item=impl crate::vertex::indexed::Indexed>,
     ) -> SearchResult {
         let pattern = self.graph().to_children(pattern);
         self.searcher().find_pattern_parent(pattern)
     }
     fn find_sequence(
         &self,
-        pattern: impl IntoIterator<Item = impl AsToken<TokenOf<GraphKindOf<Self>>>>,
+        pattern: impl IntoIterator<Item=impl AsToken<TokenOf<GraphKindOf<Self>>>>,
     ) -> SearchResult {
         let iter = tokenizing_iter(pattern.into_iter());
         let pattern = self.graph().to_token_children(iter)?;
         self.find_ancestor(pattern)
     }
 }
+
 impl<'g> Searchable for &'g crate::graph::Hypergraph {
     fn searcher(&self) -> Searcher<Self> {
         Searcher::new(self)
     }
 }
+
 impl Searchable for HypergraphRef {
     fn searcher(&self) -> Searcher<Self> {
         Searcher::new(self.clone())

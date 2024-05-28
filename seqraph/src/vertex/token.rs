@@ -1,4 +1,3 @@
-use petgraph::graph::EdgeIndex;
 use std::{
     borrow::Borrow,
     fmt::{
@@ -9,18 +8,21 @@ use std::{
     hash::Hash,
 };
 
+use petgraph::graph::EdgeIndex;
+
 use crate::vertex::wide::Wide;
 
 pub fn tokenizing_iter<T: Tokenize, C: AsToken<T>>(
-    seq: impl Iterator<Item = C>
-) -> impl Iterator<Item = Token<T>> {
+    seq: impl Iterator<Item=C>
+) -> impl Iterator<Item=Token<T>> {
     seq.map(|c| c.as_token())
 }
+
 /// Trait for token that can be mapped in a sequence
 pub trait Tokenize:
-    TokenData + Wide + Hash + Eq + Copy + Debug + Send + Sync + 'static + Unpin
+TokenData + Wide + Hash + Eq + Copy + Debug + Send + Sync + 'static + Unpin
 {
-    fn tokenize<T: AsToken<Self>, I: Iterator<Item = T>>(seq: I) -> Vec<Token<Self>> {
+    fn tokenize<T: AsToken<Self>, I: Iterator<Item=T>>(seq: I) -> Vec<Token<Self>> {
         let mut v = vec![];
         v.extend(tokenizing_iter(seq));
         //v.push(Token::End);
@@ -30,12 +32,13 @@ pub trait Tokenize:
         Token::Element(self)
     }
 }
+
 impl<T: TokenData + Wide + Hash + Eq + Copy + Debug + Send + Sync + 'static + Unpin> Tokenize
-    for T
-{
-}
+for T
+{}
 
 pub trait TokenData: Debug + PartialEq + Clone + Wide {}
+
 impl<T: Debug + PartialEq + Clone + Wide> TokenData for T {}
 
 #[derive(Hash, Debug, Clone, PartialEq, Eq, Copy)]
@@ -52,6 +55,7 @@ pub enum NewTokenIndex {
     New(crate::vertex::VertexIndex),
     Known(crate::vertex::VertexIndex),
 }
+
 impl NewTokenIndex {
     pub fn is_known(&self) -> bool {
         matches!(self, Self::Known(_))
@@ -60,11 +64,13 @@ impl NewTokenIndex {
         matches!(self, Self::New(_))
     }
 }
+
 impl Wide for NewTokenIndex {
     fn width(&self) -> usize {
         1
     }
 }
+
 impl crate::vertex::indexed::Indexed for NewTokenIndex {
     fn vertex_index(&self) -> crate::vertex::VertexIndex {
         match self {
@@ -73,6 +79,7 @@ impl crate::vertex::indexed::Indexed for NewTokenIndex {
         }
     }
 }
+
 impl Borrow<crate::vertex::VertexIndex> for &'_ NewTokenIndex {
     fn borrow(&self) -> &crate::vertex::VertexIndex {
         match self {
@@ -81,6 +88,7 @@ impl Borrow<crate::vertex::VertexIndex> for &'_ NewTokenIndex {
         }
     }
 }
+
 impl Borrow<crate::vertex::VertexIndex> for &'_ mut NewTokenIndex {
     fn borrow(&self) -> &crate::vertex::VertexIndex {
         match self {
@@ -89,16 +97,19 @@ impl Borrow<crate::vertex::VertexIndex> for &'_ mut NewTokenIndex {
         }
     }
 }
+
 pub type NewTokenIndices = Vec<NewTokenIndex>;
 
 pub trait AsToken<T: Tokenize> {
     fn as_token(&self) -> Token<T>;
 }
+
 impl<T: Tokenize> AsToken<T> for Token<T> {
     fn as_token(&self) -> Token<T> {
         *self
     }
 }
+
 impl<T: Tokenize> AsToken<T> for T {
     fn as_token(&self) -> Token<T> {
         Token::Element(*self)
@@ -111,17 +122,20 @@ pub struct ContextInfo<T: Tokenize> {
     pub incoming_groups: Vec<Vec<Token<T>>>,
     pub outgoing_groups: Vec<Vec<Token<T>>>,
 }
+
 pub trait ContextLink: Sized + Clone {
     fn index(&self) -> &EdgeIndex;
     fn into_index(self) -> EdgeIndex {
         *self.index()
     }
 }
+
 impl ContextLink for EdgeIndex {
     fn index(&self) -> &EdgeIndex {
         self
     }
 }
+
 pub trait ContextMapping<E: ContextLink> {
     /// Get distance groups for incoming edges
     fn incoming(&self) -> &Vec<E>;
@@ -166,6 +180,7 @@ pub trait TokenContext<T: Tokenize, E: ContextLink>: Sized {
     //    }
     //}
 }
+
 pub fn groups_to_string<T: Tokenize, E: ContextLink, C: TokenContext<T, E> + Display>(
     groups: Vec<Vec<C>>
 ) -> String {
@@ -196,6 +211,7 @@ pub enum Token<T: Tokenize> {
     Start,
     End,
 }
+
 impl<T: Tokenize + Display> Display for Token<T> {
     fn fmt(
         &self,
@@ -212,6 +228,7 @@ impl<T: Tokenize + Display> Display for Token<T> {
         )
     }
 }
+
 impl<T: Tokenize> Wide for Token<T> {
     fn width(&self) -> usize {
         match self {
@@ -221,11 +238,13 @@ impl<T: Tokenize> Wide for Token<T> {
         }
     }
 }
+
 impl<T: Tokenize> From<T> for Token<T> {
     fn from(e: T) -> Self {
         Token::Element(e)
     }
 }
+
 impl<T: Tokenize> PartialEq<T> for Token<T> {
     fn eq(
         &self,

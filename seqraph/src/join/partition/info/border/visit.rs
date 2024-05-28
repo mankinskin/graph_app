@@ -1,3 +1,5 @@
+use std::num::NonZeroUsize;
+
 use crate::{
     join::partition::info::{
         border::{
@@ -22,7 +24,6 @@ use crate::{
         wide::Wide,
     },
 };
-use std::num::NonZeroUsize;
 
 pub trait VisitBorders<K: RangeRole>: Sized + PartitionBorder<K> {
     type Splits;
@@ -37,6 +38,7 @@ pub trait VisitBorders<K: RangeRole>: Sized + PartitionBorder<K> {
     fn inner_range(&self) -> RangeOf<K>;
     fn outer_range(&self) -> RangeOf<K>;
 }
+
 impl<M: PostVisitMode> VisitBorders<Post<M>> for BorderInfo {
     type Splits = PatternSplitPos;
     fn info_border(
@@ -63,6 +65,7 @@ impl<M: PostVisitMode> VisitBorders<Post<M>> for BorderInfo {
         self.sub_index..
     }
 }
+
 impl<M: PreVisitMode> VisitBorders<Pre<M>> for BorderInfo {
     type Splits = PatternSplitPos;
     fn info_border(
@@ -86,6 +89,7 @@ impl<M: PreVisitMode> VisitBorders<Pre<M>> for BorderInfo {
         0..self.sub_index + self.inner_offset.is_some() as usize
     }
 }
+
 impl<M: InVisitMode> VisitBorders<In<M>> for (BorderInfo, BorderInfo) {
     type Splits = (
         <BorderInfo as VisitBorders<Post<M>>>::Splits,

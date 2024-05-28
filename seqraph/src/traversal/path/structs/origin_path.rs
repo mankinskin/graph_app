@@ -1,4 +1,3 @@
-
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct OriginPath<P> {
     pub postfix: P,
@@ -14,6 +13,7 @@ impl<P: Into<RolePath<Start>>> From<P> for OriginPath<RolePath<Start>> {
         }
     }
 }
+
 //impl<Q: Into<RolePath>> From<OriginPath<Q>> for RolePath {
 //    fn from(start: OriginPath<Q>) -> Self {
 //        start.postfix.into()
@@ -27,6 +27,7 @@ impl From<OriginPath<SearchPath>> for OriginPath<RolePath<Start>> {
         }
     }
 }
+
 impl From<OriginPath<RolePath<Start>>> for OriginPath<MatchEnd<RolePath<Start>>> {
     fn from(other: OriginPath<RolePath<Start>>) -> Self {
         OriginPath {
@@ -35,6 +36,7 @@ impl From<OriginPath<RolePath<Start>>> for OriginPath<MatchEnd<RolePath<Start>>>
         }
     }
 }
+
 //impl From<OriginPath<MatchEnd<RolePath<Start>>>> for OriginPath<FoundPath> {
 //    fn from(other: OriginPath<MatchEnd<RolePath<Start>>>) -> Self {
 //        OriginPath {
@@ -62,6 +64,7 @@ impl From<OriginPath<RolePath<Start>>> for OriginPath<MatchEnd<RolePath<Start>>>
 pub trait Origin {
     fn into_origin(self) -> MatchEnd<RolePath<Start>>;
 }
+
 impl<P> Origin for OriginPath<P> {
     fn into_origin(self) -> MatchEnd<RolePath<Start>> {
         self.origin
@@ -69,15 +72,23 @@ impl<P> Origin for OriginPath<P> {
 }
 
 impl<P: Ord> PartialOrd for OriginPath<P> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    fn partial_cmp(
+        &self,
+        other: &Self,
+    ) -> Option<Ordering> {
         self.postfix.partial_cmp(&other.postfix)
     }
 }
+
 impl<P: Ord> Ord for OriginPath<P> {
-    fn cmp(&self, other: &Self) -> Ordering {
+    fn cmp(
+        &self,
+        other: &Self,
+    ) -> Ordering {
         self.postfix.cmp(&other.postfix)
     }
 }
+
 impl<P: Wide> Wide for OriginPath<P> {
     fn width(&self) -> usize {
         self.postfix.width()

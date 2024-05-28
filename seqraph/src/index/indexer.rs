@@ -6,7 +6,7 @@ use crate::{
             state::FoldResult,
             TraversalFolder,
         },
-        iterator::traverser::Bft,
+        iterator::traverser::bft::Bft,
         path::structs::query_range_path::QueryRangePath,
         policy::DirectedTraversalPolicy,
     },
@@ -23,6 +23,7 @@ pub struct Indexer {
 
 #[derive(Debug)]
 pub struct IndexingPolicy {}
+
 impl<'a: 'g, 'g> DirectedTraversalPolicy for IndexingPolicy {
     type Trav = Indexer;
 
@@ -63,7 +64,8 @@ impl<'a: 'g, 'g> DirectedTraversalPolicy for IndexingPolicy {
     //}
 }
 
-pub trait IndexerTraversalPolicy: DirectedTraversalPolicy<Trav = Indexer> {}
+pub trait IndexerTraversalPolicy: DirectedTraversalPolicy<Trav=Indexer> {}
+
 impl<'a: 'g, 'g> IndexerTraversalPolicy for IndexingPolicy {}
 
 impl TraversalFolder for Indexer {

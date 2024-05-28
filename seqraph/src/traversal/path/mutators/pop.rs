@@ -14,7 +14,7 @@ use crate::{
             },
         },
     },
-    vertex::location::ChildLocation,
+    vertex::location::child::ChildLocation,
 };
 
 // pop path segments
@@ -27,21 +27,25 @@ impl<Role: PathRole, Root: PathRoot> PathPop for RootedRolePath<Role, Root> {
         self.role_path.path_pop()
     }
 }
+
 impl<R: PathRole> PathPop for RolePath<R> {
     fn path_pop(&mut self) -> Option<ChildLocation> {
         self.sub_path.path.pop()
     }
 }
+
 impl PathPop for SearchPath {
     fn path_pop(&mut self) -> Option<ChildLocation> {
         self.end.path_pop()
     }
 }
+
 impl PathPop for QueryRangePath {
     fn path_pop(&mut self) -> Option<ChildLocation> {
         self.end.path_pop()
     }
 }
+
 impl PathPop for QueryStateContext<'_> {
     fn path_pop(&mut self) -> Option<ChildLocation> {
         self.state.end.path_pop()

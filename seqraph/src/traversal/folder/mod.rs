@@ -3,8 +3,8 @@ use crate::{
     traversal::{
         cache::{
             key::{
+                root::RootKey,
                 DirectedKey,
-                RootKey,
             },
             state::{
                 end::{
@@ -28,8 +28,8 @@ use crate::{
         },
         iterator::{
             traverser::{
+                pruning::PruneStates,
                 ExtendStates,
-                PruneStates,
             },
             TraversalIterator,
         },
@@ -56,9 +56,9 @@ pub mod state;
 use super::cache::trace::Trace;
 
 pub trait TraversalFolder: Sized + Traversable {
-    type Iterator<'a>: TraversalIterator<'a, Trav = Self> + From<&'a Self>
-    where
-        Self: 'a;
+    type Iterator<'a>: TraversalIterator<'a, Trav=Self> + From<&'a Self>
+        where
+            Self: 'a;
 
     //#[instrument(skip(self))]
     fn fold_query<P: IntoPattern>(
@@ -177,11 +177,13 @@ pub trait TraversalFolder: Sized + Traversable {
         })
     }
 }
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct FinalState<'a> {
     pub num_parents: usize,
     pub state: &'a EndState,
 }
+
 impl PartialOrd for FinalState<'_> {
     fn partial_cmp(
         &self,
@@ -190,6 +192,7 @@ impl PartialOrd for FinalState<'_> {
         Some(self.cmp(other))
     }
 }
+
 impl Ord for FinalState<'_> {
     fn cmp(
         &self,

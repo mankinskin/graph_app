@@ -8,8 +8,8 @@ use crate::{
         cache::state::parent::ParentState,
         folder::TraversalFolder,
         iterator::{
-            traverser::Bft,
             TraversalIterator,
+            traverser::bft::Bft,
         },
         policy::DirectedTraversalPolicy,
         result::TraversalResult,
@@ -22,11 +22,13 @@ use crate::{
 pub struct Searcher<T: Traversable> {
     pub graph: T,
 }
+
 pub trait SearchTraversalPolicy<T: Traversable>:
-    DirectedTraversalPolicy<Trav = Searcher<T>>
-{
-}
+DirectedTraversalPolicy<Trav=Searcher<T>>
+{}
+
 impl<T: Traversable> SearchTraversalPolicy<T> for (T, AncestorSearch) {}
+
 impl<T: Traversable> SearchTraversalPolicy<T> for (T, ParentSearch) {}
 
 impl<T: Traversable> TraversalFolder for Searcher<T> {
@@ -52,7 +54,9 @@ impl<T: Traversable> DirectedTraversalPolicy for (T, ParentSearch) {
         vec![]
     }
 }
+
 pub type SearchResult = Result<TraversalResult, NoMatch>;
+
 impl<T: Traversable> Searcher<T> {
     pub fn new(graph: T) -> Self {
         Self { graph }
@@ -77,7 +81,7 @@ impl<T: Traversable> Searcher<T> {
     ) -> SearchResult {
         self.search::<Bft<Self, S>, _>(query)
     }
-    fn search<'a, Ti: TraversalIterator<'a, Trav = Self>, P: IntoPattern>(
+    fn search<'a, Ti: TraversalIterator<'a, Trav=Self>, P: IntoPattern>(
         &'a self,
         query: P,
     ) -> SearchResult {

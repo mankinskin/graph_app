@@ -1,13 +1,18 @@
-use super::*;
-
 use std::collections::BTreeMap;
+
+use super::*;
 
 #[derive(Default, Clone, Debug)]
 pub struct OverlapChain {
     pub path: BTreeMap<usize, Overlap>,
 }
+
 impl OverlapChain {
-    pub fn add_overlap(&mut self, end_bound: usize, overlap: Overlap) -> Result<(), Overlap> {
+    pub fn add_overlap(
+        &mut self,
+        end_bound: usize,
+        overlap: Overlap,
+    ) -> Result<(), Overlap> {
         // postfixes should always start at first end bounds in the chain
         match self.path.insert(end_bound, overlap) {
             Some(other) => Err(other),
@@ -15,12 +20,10 @@ impl OverlapChain {
         }
     }
     #[instrument(skip(self, reader))]
-    pub fn close<
-        'a: 'g,
-        'g,
-        T: Tokenize,
-        D: IndexDirection,
-    >(self, reader: &'a mut ReadContext<'a>) -> Option<Child> {
+    pub fn close<'a: 'g, 'g, T: Tokenize, D: IndexDirection>(
+        self,
+        reader: &'a mut ReadContext<'a>,
+    ) -> Option<Child> {
         //println!("closing {:#?}", self);
         let mut path = self.path.into_iter();
         let first_band: Overlap = path.next()?.1;
@@ -32,12 +35,17 @@ impl OverlapChain {
                     //let mut reader = reader.clone();
                     // index context of prefix
                     let ctx = if let Some(node) = overlap.link.as_ref() {
-                        reader.contexter::<IndexFront>().try_context_path(
-                            node.prefix_path.get_path().unwrap().clone().into_context_path(),
-                            //node.overlap,
-                        )
-                        
-                        .map(|(ctx, _)| ctx)
+                        reader
+                            .contexter::<IndexFront>()
+                            .try_context_path(
+                                node.prefix_path
+                                    .get_path()
+                                    .unwrap()
+                                    .clone()
+                                    .into_context_path(),
+                                //node.overlap,
+                            )
+                            .map(|(ctx, _)| ctx)
                     } else {
                         None
                     };
@@ -45,7 +53,7 @@ impl OverlapChain {
                     (
                         bundle,
                         overlap,
-                        // join previous and current context into 
+                        // join previous and current context into
                         if let Some(prev) = prev_ctx {
                             Some(if let Some(ctx) = ctx {
                                 reader.read_pattern(vec![prev, ctx]).unwrap()
@@ -54,13 +62,14 @@ impl OverlapChain {
                             })
                         } else {
                             ctx
-                        }
+                        },
                     )
-                }
+                },
             )
         };
         bundle.push(prev_band);
-        let bundle = bundle.into_iter()
+        let bundle = bundle
+            .into_iter()
             .map(|overlap| overlap.band.into_pattern(reader))
             .collect_vec();
         let index = reader.graph_mut().insert_patterns(bundle);
@@ -68,7 +77,10 @@ impl OverlapChain {
         Some(index)
     }
     #[instrument(skip(self, end_bound))]
-    pub fn take_past(&mut self, end_bound: usize) -> OverlapChain {
+    pub fn take_past(
+        &mut self,
+        end_bound: usize,
+    ) -> OverlapChain {
         let mut past = self.path.split_off(&end_bound);
         std::mem::swap(&mut self.path, &mut past);
         Self { path: past }

@@ -2,7 +2,7 @@ use crate::{
     traversal::{
         cache::{
             key::{
-                ToPrev,
+                prev::ToPrev,
                 UpKey,
             },
             state::{
@@ -19,10 +19,10 @@ use crate::{
         context::TraversalContext,
         iterator::TraversalIterator,
         path::mutators::{
-            adapters::IntoPrimer,
+            adapters::into_primer::IntoPrimer,
             move_path::{
+                key::RetractKey,
                 Advance,
-                RetractKey,
             },
         },
         policy::DirectedTraversalPolicy,
@@ -39,13 +39,14 @@ pub struct StartState {
     pub key: UpKey,
     pub query: QueryState,
 }
+
 impl StartState {
     pub fn next_states<'a, 'b: 'a, I: TraversalIterator<'b>>(
         &mut self,
         ctx: &mut TraversalContext<'a, 'b, I>,
     ) -> NextStates
-    where
-        Self: 'a,
+        where
+            Self: 'a,
     {
         let mut query = self.query.to_ctx(ctx);
         let delta = self.index.width();

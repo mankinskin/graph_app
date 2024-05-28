@@ -58,6 +58,7 @@ pub trait PathSimplify: Sized {
         }
     }
 }
+
 impl<R: PathRole> PathSimplify for RolePath<R> {
     fn into_simplified<Trav: Traversable>(
         mut self,
@@ -73,6 +74,7 @@ impl<R: PathRole> PathSimplify for RolePath<R> {
         self
     }
 }
+
 impl<P: MatchEndPath> PathSimplify for MatchEnd<P> {
     fn into_simplified<Trav: Traversable>(
         self,
@@ -88,7 +90,7 @@ impl<P: MatchEndPath> PathSimplify for MatchEnd<P> {
                         pattern.borrow(),
                         location.sub_index,
                     )
-                    .is_none()
+                        .is_none()
                 } {
                     Some(p.root_parent())
                 } else {
@@ -103,6 +105,7 @@ impl<P: MatchEndPath> PathSimplify for MatchEnd<P> {
         }
     }
 }
+
 impl RootedRolePath<Start, IndexRoot> {
     pub fn simplify<Trav: Traversable>(
         mut self,
@@ -126,6 +129,7 @@ impl RootedRolePath<Start, IndexRoot> {
         }
     }
 }
+
 impl RangeEnd {
     pub fn simplify<Trav: Traversable>(
         mut self,

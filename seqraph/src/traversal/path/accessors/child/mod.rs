@@ -1,8 +1,10 @@
 pub mod pos;
+
 use auto_impl::auto_impl;
-pub use pos::*;
+use pos::*;
 
 pub mod root;
+
 use crate::{
     traversal::{
         context::QueryStateContext,
@@ -27,10 +29,10 @@ use crate::{
     },
     vertex::{
         child::Child,
-        location::ChildLocation,
+        location::child::ChildLocation,
     },
 };
-pub use root::*;
+use root::*;
 
 pub trait LeafChild<R>: RootChildPos<R> {
     fn leaf_child_location(&self) -> Option<ChildLocation>;
@@ -39,6 +41,7 @@ pub trait LeafChild<R>: RootChildPos<R> {
         trav: &Trav,
     ) -> Child;
 }
+
 impl<R: PathRole, P: RootChild<R> + PathChild<R>> LeafChild<R> for P {
     fn leaf_child_location(&self) -> Option<ChildLocation> {
         self.path_child_location()
@@ -51,9 +54,11 @@ impl<R: PathRole, P: RootChild<R> + PathChild<R>> LeafChild<R> for P {
             .unwrap_or_else(|| self.root_child(trav))
     }
 }
+
 pub trait LeafChildPosMut<R>: RootChildPosMut<R> {
     fn leaf_child_pos_mut(&mut self) -> &mut usize;
 }
+
 //impl<R: PathRole, P: PathChild<R> + RootChildPosMut<R>> LeafChildPosMut<R> for P {
 //    fn leaf_child_pos_mut(&mut self) -> &mut usize {
 //        if let Some(loc) = self.path_child_location_mut() {
@@ -68,6 +73,7 @@ impl LeafChildPosMut<End> for QueryStateContext<'_> {
         self.state.end.leaf_child_pos_mut()
     }
 }
+
 impl LeafChildPosMut<End> for RolePath<End> {
     fn leaf_child_pos_mut(&mut self) -> &mut usize {
         if !self.path().is_empty() {
@@ -79,7 +85,7 @@ impl LeafChildPosMut<End> for RolePath<End> {
 }
 
 /// used to get a descendant in a Graph, pointed to by a child path
-#[auto_impl(&mut)]
+#[auto_impl(& mut)]
 pub trait PathChild<R: PathRole>: HasPath<R> {
     fn path_child_location(&self) -> Option<ChildLocation> {
         R::bottom_up_iter(self.path().iter()).next().cloned() as Option<_>
@@ -95,6 +101,7 @@ pub trait PathChild<R: PathRole>: HasPath<R> {
             .map(|loc| trav.graph().expect_child_at(loc))
     }
 }
+
 //impl<R: PathRole, P: PathChild<R>> PathChild<R> for &'_ P
 //    where Self: HasPath<R> + PatternRootChild<R>
 //{
@@ -104,12 +111,15 @@ pub trait PathChild<R: PathRole>: HasPath<R> {
 //{
 //}
 impl<R: PathRole> PathChild<R> for QueryRangePath where Self: HasPath<R> + PatternRootChild<R> {}
+
 impl<R: PathRole> PathChild<R> for QueryStateContext<'_> where Self: HasPath<R> + PatternRootChild<R>
 {}
+
 impl<R: PathRole> PathChild<R> for RolePath<R> {}
+
 impl<R: PathRole> PathChild<R> for SearchPath
-where
-    SearchPath: HasRolePath<R>,
+    where
+        SearchPath: HasRolePath<R>,
 {
     fn path_child_location(&self) -> Option<ChildLocation> {
         Some(

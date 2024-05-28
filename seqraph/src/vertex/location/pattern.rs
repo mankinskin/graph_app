@@ -1,14 +1,16 @@
-use super::super::child::Child;
-use crate::vertex::{
-    location::ChildLocation,
-    pattern::Pattern,
-    PatternId,
-};
 use std::{
     cmp::PartialEq,
     fmt::Debug,
     ops::Range,
 };
+
+use crate::vertex::{
+    location::ChildLocation,
+    pattern::Pattern,
+    PatternId,
+};
+
+use super::super::child::Child;
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct PatternRangeLocation {
@@ -16,11 +18,13 @@ pub struct PatternRangeLocation {
     pub id: PatternId,
     pub range: Range<usize>,
 }
+
 #[derive(Debug, PartialEq, Eq, Clone, Hash, Copy)]
 pub struct PatternLocation {
     pub parent: Child,
     pub id: PatternId,
 }
+
 impl PatternLocation {
     pub fn new(
         parent: impl crate::vertex::indexed::AsChild,
@@ -87,11 +91,13 @@ impl PatternLocation {
 pub trait IntoPatternLocation {
     fn into_pattern_location(self) -> PatternLocation;
 }
+
 impl IntoPatternLocation for PatternLocation {
     fn into_pattern_location(self) -> PatternLocation {
         self
     }
 }
+
 impl IntoPatternLocation for &PatternLocation {
     fn into_pattern_location(self) -> PatternLocation {
         *self

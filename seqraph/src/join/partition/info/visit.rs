@@ -1,19 +1,24 @@
+use std::hash::Hash;
+
 use crate::{
+    HashMap,
     join::{
         context::{
-            node::AsPatternContext,
+            node::context::AsPatternContext,
             pattern::{
                 AsPatternTraceContext,
                 PatternTraceContext,
             },
         },
         partition::{
+            AsPartition,
             info::{
                 border::{
+                    PartitionBorder,
                     perfect::BoolPerfect,
                     visit::VisitBorders,
-                    PartitionBorder,
                 },
+                PartitionInfo,
                 range::{
                     role::{
                         ModeNodeCtxOf,
@@ -22,25 +27,24 @@ use crate::{
                     },
                     splits::PatternSplits,
                 },
-                PartitionInfo,
             },
-            AsPartition,
         },
     },
     vertex::{
         child::Child,
         PatternId,
     },
-    HashMap,
 };
-use std::hash::Hash;
 
 pub struct PartitionBorders<K: RangeRole, C: PartitionBorderKey = PatternId> {
     pub borders: HashMap<C, K::Borders>,
     pub perfect: K::Perfect,
 }
+
 pub type PatternCtxs<'t, K> = HashMap<PatternId, ModePatternCtxOf<'t, K>>;
+
 pub trait PartitionBorderKey: Hash + Eq {}
+
 impl<T: Hash + Eq> PartitionBorderKey for T {}
 
 pub trait VisitPartition<K: RangeRole>: Sized + Clone + AsPartition<K> {
@@ -95,4 +99,5 @@ pub trait VisitPartition<K: RangeRole>: Sized + Clone + AsPartition<K> {
         PartitionInfo::from_partition_borders(borders)
     }
 }
+
 impl<K: RangeRole, P: AsPartition<K>> VisitPartition<K> for P {}

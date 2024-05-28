@@ -5,8 +5,12 @@ pub enum BandEnd {
     Index(Child),
     //Chain(OverlapChain),
 }
+
 impl<'p> BandEnd {
-    pub fn into_index(self, _reader: &mut ReadContext<'p>) -> Child {
+    pub fn into_index(
+        self,
+        _reader: &mut ReadContext<'p>,
+    ) -> Child {
         match self {
             Self::Index(c) => c,
             //Self::Chain(c) => c.close(reader).expect("Empty chain in BandEnd!"),
@@ -19,18 +23,28 @@ impl<'p> BandEnd {
         }
     }
 }
+
 #[derive(Clone, Debug)]
 pub struct OverlapBand {
     pub end: BandEnd,
     pub back_context: Pattern,
 }
+
 impl<'p> OverlapBand {
-    pub fn append(&mut self, reader: &mut ReadContext<'p>, end: BandEnd) {
+    pub fn append(
+        &mut self,
+        reader: &mut ReadContext<'p>,
+        end: BandEnd,
+    ) {
         self.back_context.push(self.end.clone().into_index(reader));
         self.end = end;
     }
-    pub fn into_pattern(self, reader: &mut ReadContext<'p>) -> Pattern {
-        self.back_context.into_iter()
+    pub fn into_pattern(
+        self,
+        reader: &mut ReadContext<'p>,
+    ) -> Pattern {
+        self.back_context
+            .into_iter()
             .chain(std::iter::once(self.end.into_index(reader)))
             .collect()
     }
@@ -44,6 +58,7 @@ impl<'p> OverlapBand {
     //    self
     //}
 }
+
 impl From<Child> for OverlapBand {
     fn from(next: Child) -> Self {
         OverlapBand {
@@ -71,14 +86,25 @@ impl From<Child> for OverlapBand {
 pub struct OverlapBundle {
     bundle: Vec<OverlapBand>,
 }
+
 impl<'p> OverlapBundle {
-    pub fn add_band(&mut self, overlap: OverlapBand) {
+    pub fn add_band(
+        &mut self,
+        overlap: OverlapBand,
+    ) {
         self.bundle.push(overlap)
     }
-    pub fn into_band(self, reader: &mut ReadContext<'p>) -> OverlapBand {
+    pub fn into_band(
+        self,
+        reader: &mut ReadContext<'p>,
+    ) -> OverlapBand {
         assert!(!self.bundle.is_empty());
 
-        let bundle = self.bundle.into_iter().map(|band| band.into_pattern(reader)).collect_vec();
+        let bundle = self
+            .bundle
+            .into_iter()
+            .map(|band| band.into_pattern(reader))
+            .collect_vec();
         OverlapBand {
             end: BandEnd::Index(reader.graph.insert_patterns(bundle)),
             back_context: vec![],
@@ -108,6 +134,7 @@ impl<'p> OverlapBundle {
     //    self
     //}
 }
+
 impl From<OverlapBand> for OverlapBundle {
     fn from(overlap: OverlapBand) -> Self {
         Self {
@@ -115,10 +142,9 @@ impl From<OverlapBand> for OverlapBundle {
         }
     }
 }
+
 impl From<Vec<OverlapBand>> for OverlapBundle {
     fn from(bundle: Vec<OverlapBand>) -> Self {
-        Self {
-            bundle,
-        }
+        Self { bundle }
     }
 }

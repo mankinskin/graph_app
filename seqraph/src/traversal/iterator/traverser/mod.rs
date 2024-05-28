@@ -1,6 +1,5 @@
 pub mod dft;
 
-pub use dft::*;
 use itertools::Itertools;
 use std::{
     cmp::Ordering,
@@ -8,13 +7,12 @@ use std::{
 };
 
 pub mod bft;
-pub use bft::*;
-
 pub mod pruning;
+
 use crate::{
     traversal::{
         cache::{
-            key::RootKey,
+            key::root::RootKey,
             state::TraversalState,
         },
         context::TraversalContext,
@@ -23,9 +21,9 @@ use crate::{
         policy::DirectedTraversalPolicy,
         traversable::Traversable,
     },
-    vertex::location::ChildLocation,
+    vertex::location::child::ChildLocation,
 };
-pub use pruning::*;
+use pruning::*;
 
 pub trait TraversalOrder: crate::vertex::wide::Wide {
     fn sub_index(&self) -> usize;
@@ -39,27 +37,31 @@ pub trait TraversalOrder: crate::vertex::wide::Wide {
         }
     }
 }
+
 impl<T: TraversalOrder> TraversalOrder for &T {
     fn sub_index(&self) -> usize {
         TraversalOrder::sub_index(*self)
     }
 }
+
 impl TraversalOrder for ChildLocation {
     fn sub_index(&self) -> usize {
         self.sub_index
     }
 }
+
 pub trait NodeVisitor:
-    ExtendStates + Iterator<Item = (usize, TraversalState)> + Default + Debug
+ExtendStates + Iterator<Item=(usize, TraversalState)> + Default + Debug
 {
     fn clear(&mut self);
 }
+
 #[derive(Debug)]
 pub struct OrderedTraverser<'a, Trav, S, O>
-where
-    Trav: Traversable,
-    S: DirectedTraversalPolicy<Trav = Trav>,
-    O: NodeVisitor,
+    where
+        Trav: Traversable,
+        S: DirectedTraversalPolicy<Trav=Trav>,
+        O: NodeVisitor,
 {
     pub collection: O,
     pub pruning_map: PruningMap,
@@ -68,10 +70,10 @@ where
 }
 
 impl<'a, Trav, S, O> From<&'a Trav> for OrderedTraverser<'a, Trav, S, O>
-where
-    Trav: Traversable,
-    S: DirectedTraversalPolicy<Trav = Trav>,
-    O: NodeVisitor,
+    where
+        Trav: Traversable,
+        S: DirectedTraversalPolicy<Trav=Trav>,
+        O: NodeVisitor,
 {
     fn from(trav: &'a Trav) -> Self {
         Self {
@@ -82,31 +84,33 @@ where
         }
     }
 }
+
 impl<'a, Trav, S, O> Unpin for OrderedTraverser<'a, Trav, S, O>
-where
-    Trav: Traversable,
-    S: DirectedTraversalPolicy<Trav = Trav>,
-    O: NodeVisitor,
-{
-}
+    where
+        Trav: Traversable,
+        S: DirectedTraversalPolicy<Trav=Trav>,
+        O: NodeVisitor,
+{}
+
 pub trait ExtendStates {
     fn extend<
-        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
-        T: IntoIterator<Item = (usize, TraversalState), IntoIter = It>,
+        It: DoubleEndedIterator + Iterator<Item=(usize, TraversalState)>,
+        T: IntoIterator<Item=(usize, TraversalState), IntoIter=It>,
     >(
         &mut self,
         iter: T,
     );
 }
+
 impl<'a, Trav, S, O> ExtendStates for OrderedTraverser<'a, Trav, S, O>
-where
-    Trav: Traversable,
-    S: DirectedTraversalPolicy<Trav = Trav>,
-    O: NodeVisitor,
+    where
+        Trav: Traversable,
+        S: DirectedTraversalPolicy<Trav=Trav>,
+        O: NodeVisitor,
 {
     fn extend<
-        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
-        In: IntoIterator<Item = (usize, TraversalState), IntoIter = It>,
+        It: DoubleEndedIterator + Iterator<Item=(usize, TraversalState)>,
+        In: IntoIterator<Item=(usize, TraversalState), IntoIter=It>,
     >(
         &mut self,
         iter: In,
@@ -128,10 +132,11 @@ where
         self.collection.extend(states)
     }
 }
+
 impl<'a, 'b: 'a, I: TraversalIterator<'b>> ExtendStates for TraversalContext<'a, 'b, I> {
     fn extend<
-        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
-        In: IntoIterator<Item = (usize, TraversalState), IntoIter = It>,
+        It: DoubleEndedIterator + Iterator<Item=(usize, TraversalState)>,
+        In: IntoIterator<Item=(usize, TraversalState), IntoIter=It>,
     >(
         &mut self,
         iter: In,
@@ -139,11 +144,12 @@ impl<'a, 'b: 'a, I: TraversalIterator<'b>> ExtendStates for TraversalContext<'a,
         self.iter.extend(iter)
     }
 }
+
 impl<'a, Trav, S, O> Iterator for OrderedTraverser<'a, Trav, S, O>
-where
-    Trav: Traversable + TraversalFolder,
-    S: DirectedTraversalPolicy<Trav = Trav>,
-    O: NodeVisitor,
+    where
+        Trav: Traversable + TraversalFolder,
+        S: DirectedTraversalPolicy<Trav=Trav>,
+        O: NodeVisitor,
 {
     type Item = (usize, TraversalState);
 
@@ -162,6 +168,7 @@ where
         None
     }
 }
+
 impl<'a, 'b: 'a, I: TraversalIterator<'b>> Iterator for TraversalContext<'a, 'b, I> {
     type Item = <I as Iterator>::Item;
 

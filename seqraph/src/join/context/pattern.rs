@@ -1,3 +1,9 @@
+use derivative::Derivative;
+use derive_more::{
+    Deref,
+    DerefMut,
+};
+
 use crate::{
     join::partition::splits::SubSplits,
     vertex::{
@@ -5,11 +11,6 @@ use crate::{
         pattern::Pattern,
         PatternId,
     },
-};
-use derivative::Derivative;
-use derive_more::{
-    Deref,
-    DerefMut,
 };
 
 #[derive(Debug, Deref, DerefMut, Derivative)]
@@ -22,15 +23,17 @@ pub struct PatternJoinContext<'p> {
     #[derivative(Hash = "ignore", PartialEq = "ignore")]
     pub sub_splits: &'p SubSplits,
 }
+
 impl<'p> AsPatternTraceContext<'p> for PatternJoinContext<'p> {
     fn as_pattern_trace_context<'t>(&'t self) -> PatternTraceContext<'t>
-    where
-        Self: 't,
-        'p: 't,
+        where
+            Self: 't,
+            'p: 't,
     {
         self.ctx
     }
 }
+
 impl<'p> From<PatternJoinContext<'p>> for PatternId {
     fn from(value: PatternJoinContext<'p>) -> Self {
         Self::from(value.ctx)
@@ -53,6 +56,7 @@ pub struct PatternTraceContext<'p> {
     #[derivative(Hash = "ignore", PartialEq = "ignore")]
     pub pattern: &'p Pattern,
 }
+
 impl<'p> From<PatternTraceContext<'p>> for PatternId {
     fn from(value: PatternTraceContext<'p>) -> Self {
         value.loc.id
@@ -61,15 +65,16 @@ impl<'p> From<PatternTraceContext<'p>> for PatternId {
 
 pub trait AsPatternTraceContext<'p>: 'p {
     fn as_pattern_trace_context<'t>(&'t self) -> PatternTraceContext<'t>
-    where
-        Self: 't,
-        'p: 't;
+        where
+            Self: 't,
+            'p: 't;
 }
+
 impl<'p> AsPatternTraceContext<'p> for PatternTraceContext<'p> {
     fn as_pattern_trace_context<'t>(&'t self) -> PatternTraceContext<'t>
-    where
-        Self: 't,
-        'p: 't,
+        where
+            Self: 't,
+            'p: 't,
     {
         *self
     }

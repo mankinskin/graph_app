@@ -1,10 +1,14 @@
-use super::*;
-use crate::vertex::PatternId;
-use itertools::Itertools;
 use std::sync::{
     RwLockReadGuard,
     RwLockWriteGuard,
 };
+
+use itertools::Itertools;
+
+use crate::vertex::PatternId;
+
+use super::*;
+
 pub struct Context {
     pub graph: HypergraphRef,
     pub a: Child,
@@ -191,6 +195,7 @@ lazy_static::lazy_static! {
 pub fn context() -> RwLockReadGuard<'static, Context> {
     CONTEXT.read().unwrap()
 }
+
 pub fn context_mut() -> RwLockWriteGuard<'static, Context> {
     CONTEXT.write().unwrap()
 }

@@ -1,23 +1,26 @@
+use std::{
+    collections::VecDeque,
+    iter::FromIterator,
+    num::NonZeroUsize,
+};
+
 use crate::{
     split::{
+        cache::{
+            leaves::Leaves,
+            position::SplitPositionCache,
+        },
         cleaned_position_splits,
-        Leaves,
-        SplitPositionCache,
         TraceState,
     },
     traversal::{
         cache::{
-            entry::SubSplitLocation,
+            entry::position::SubSplitLocation,
             key::SplitKey,
         },
         traversable::Traversable,
     },
     vertex::child::Child,
-};
-use std::{
-    collections::VecDeque,
-    iter::FromIterator,
-    num::NonZeroUsize,
 };
 
 #[derive(Debug)]
@@ -25,6 +28,7 @@ pub struct CacheContext {
     pub leaves: Leaves,
     pub states: VecDeque<TraceState>,
 }
+
 impl CacheContext {
     pub fn new_split_position<Trav: Traversable>(
         &mut self,

@@ -17,8 +17,8 @@ use crate::{
     vertex::{
         child::Child,
         location::{
-            ChildLocation,
-            IntoPatternLocation,
+            child::ChildLocation,
+            pattern::IntoPatternLocation,
         },
         wide::Wide,
     },
@@ -31,6 +31,7 @@ pub trait IntoPrimer: Sized {
         parent_entry: ChildLocation,
     ) -> ParentState;
 }
+
 impl IntoPrimer for (Child, QueryState) {
     fn into_primer<Trav: Traversable>(
         self,

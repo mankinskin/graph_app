@@ -1,6 +1,7 @@
-use crate::shared::*;
-use std::iter::Peekable;
-use crate::search::NoMatch;
+use crate::{
+    search::NoMatch,
+    shared::*,
+};
 
 #[derive(Debug)]
 pub struct ReadContext<'g> {
@@ -10,10 +11,7 @@ pub struct ReadContext<'g> {
 
 impl<'g> ReadContext<'g> {
     pub fn new(graph: RwLockWriteGuard<'g, Hypergraph>) -> Self {
-        Self {
-            graph,
-            root: None,
-        }
+        Self { graph, root: None }
     }
     #[instrument(skip(self))]
     pub fn read_sequence<N, S: ToNewTokenIndices<N>>(
@@ -30,49 +28,54 @@ impl<'g> ReadContext<'g> {
         //println!("reading result: {:?}", index);
         self.root
     }
-    pub fn read_pattern(&mut self, known: impl IntoPattern) -> Option<Child> {
+    pub fn read_pattern(
+        &mut self,
+        known: impl IntoPattern,
+    ) -> Option<Child> {
         self.read_known(known.into_pattern());
         self.root
     }
     #[instrument(skip(self, known))]
-    pub fn read_known(&mut self, known: Pattern) {
+    pub fn read_known(
+        &mut self,
+        known: Pattern,
+    ) {
         match PatternPrefixPath::new_directed(known.borrow()) {
             Ok(path) => self.read_bands(path),
-            Err(err) =>
-                match err {
-                    NoMatch::SingleIndex(c) => {
-                        self.append_index(c);
-                        Ok(())
-                    },
-                    NoMatch::EmptyPatterns => Ok(()),
-                    err => Err(err)
-                }.unwrap(),
+            Err(err) => match err {
+                NoMatch::SingleIndex(c) => {
+                    self.append_index(c);
+                    Ok(())
+                }
+                NoMatch::EmptyPatterns => Ok(()),
+                err => Err(err),
+            }
+                .unwrap(),
         }
     }
     #[instrument(skip(self, sequence))]
-    fn read_bands(&mut self, mut sequence: PatternPrefixPath) {
+    fn read_bands(
+        &mut self,
+        mut sequence: PatternPrefixPath,
+    ) {
         //println!("reading known bands");
         while let Some(next) = self.get_next(&mut sequence) {
             //println!("found next {:?}", next);
-            let next = self.read_overlaps(
-                    next,
-                    &mut sequence,
-                )
-                
-                .unwrap_or(next);
+            let next = self.read_overlaps(next, &mut sequence).unwrap_or(next);
             self.append_index(next);
         }
     }
     #[instrument(skip(self, context))]
-    fn get_next(&mut self, context: &mut PatternPrefixPath) -> Option<Child> {
+    fn get_next(
+        &mut self,
+        context: &mut PatternPrefixPath,
+    ) -> Option<Child> {
         match self.indexer().index_query(context.clone()) {
             Ok((index, advanced)) => {
                 *context = advanced;
                 Some(index)
-            },
-            Err(_) => {
-                context.advance::<_, _>(self)
             }
+            Err(_) => context.advance::<_, _>(self),
         }
     }
     //pub fn indexer(&self) -> Indexer {
@@ -97,10 +100,9 @@ impl<'g> ReadContext<'g> {
         if let Some(root) = &mut self.root {
             let mut graph = self.graph.graph_mut();
             let vertex = (*root).vertex_mut(&mut graph);
-            *root = if
-                index.vertex_index() != root.vertex_index() &&
-                vertex.children.len() == 1 &&
-                vertex.parents.is_empty()
+            *root = if index.vertex_index() != root.vertex_index()
+                && vertex.children.len() == 1
+                && vertex.parents.is_empty()
             {
                 let (&pid, _) = vertex.expect_any_child_pattern();
                 graph.append_to_pattern(*root, pid, index)
@@ -118,12 +120,13 @@ impl<'g> ReadContext<'g> {
         new: impl IntoPattern,
     ) {
         match new.borrow().len() {
-            0 => {},
+            0 => {}
             1 => {
                 let new = new.borrow().iter().next().unwrap();
                 self.append_index(new)
-            },
-            _ => if let Some(root) = &mut self.root {
+            }
+            _ => {
+                if let Some(root) = &mut self.root {
                     let mut graph = self.graph.graph_mut();
                     let vertex = (*root).vertex_mut(&mut graph);
                     *root = if vertex.children.len() == 1 && vertex.parents.is_empty() {
@@ -138,6 +141,7 @@ impl<'g> ReadContext<'g> {
                     let c = self.graph.insert_pattern(new);
                     self.root = Some(c);
                 }
+            }
         }
     }
 }

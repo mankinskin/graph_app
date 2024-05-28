@@ -2,12 +2,12 @@ use crate::{
     traversal::{
         path::{
             accessors::{
-                child::GraphRootChild,
+                child::root::GraphRootChild,
                 has_path::HasSinglePath,
                 role::Start,
             },
-            structs::rooted_path::RootedRolePath,
             BasePath,
+            structs::rooted_path::RootedRolePath,
         },
         policy::NodePath,
     },
@@ -18,7 +18,21 @@ use crate::{
 //impl NotStartPath for PathLeaf {}
 
 pub trait MatchEndPath:
-    NodePath<Start>
+NodePath<Start>
+//+ PathComplete
+//+ PathAppend
++ Into<RootedRolePath<Start>>
++ From<RootedRolePath<Start>>
++ HasSinglePath
++ GraphRootChild<Start>
+//+ From<PathLeaf>
+//+ Into<FoundPath>
+//+ GetCacheKey
++ BasePath
+{}
+
+impl<
+    T: NodePath<Start>
     //+ PathComplete
     //+ PathAppend
     + Into<RootedRolePath<Start>>
@@ -28,24 +42,9 @@ pub trait MatchEndPath:
     //+ From<PathLeaf>
     //+ Into<FoundPath>
     //+ GetCacheKey
-    + BasePath
-    {}
-
-impl<
-        T: NodePath<Start>
-            //+ PathComplete
-            //+ PathAppend
-            + Into<RootedRolePath<Start>>
-            + From<RootedRolePath<Start>>
-            + HasSinglePath
-            + GraphRootChild<Start>
-            //+ From<PathLeaf>
-            //+ Into<FoundPath>
-            //+ GetCacheKey
-            + BasePath,
-    > MatchEndPath for T
-{
-}
+    + BasePath,
+> MatchEndPath for T
+{}
 
 /// Used to represent results after traversal with only a start path
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -53,9 +52,11 @@ pub enum MatchEnd<P: MatchEndPath> {
     Path(P),
     Complete(Child),
 }
+
 pub trait IntoMatchEndStartPath {
     fn into_mesp(self) -> MatchEnd<RootedRolePath<Start>>;
 }
+
 impl<P: MatchEndPath> IntoMatchEndStartPath for MatchEnd<P> {
     fn into_mesp(self) -> MatchEnd<RootedRolePath<Start>> {
         match self {
@@ -64,6 +65,7 @@ impl<P: MatchEndPath> IntoMatchEndStartPath for MatchEnd<P> {
         }
     }
 }
+
 //impl<P: MatchEndPath> IntoMatchEndStartPath for OriginPath<MatchEnd<P>> {
 //    fn into_mesp(self) -> MatchEnd<RolePath<Start>> {
 //        self.postfix.into_mesp()
@@ -80,6 +82,7 @@ impl<P: MatchEndPath + From<Q>, Q: Into<RootedRolePath<Start>>> From<Q> for Matc
         MatchEnd::Path(P::from(start))
     }
 }
+
 impl<P: MatchEndPath> MatchEnd<P> {
     #[allow(unused)]
     pub fn unwrap_path(self) -> P {
@@ -87,7 +90,7 @@ impl<P: MatchEndPath> MatchEnd<P> {
             Self::Path(path) => Some(path),
             _ => None,
         }
-        .unwrap()
+            .unwrap()
     }
     pub fn get_path(&self) -> Option<&P> {
         match self {

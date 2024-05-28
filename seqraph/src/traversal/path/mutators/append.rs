@@ -19,7 +19,7 @@ use crate::{
             },
         },
     },
-    vertex::location::ChildLocation,
+    vertex::location::child::ChildLocation,
 };
 
 /// move path leaf position one level deeper
@@ -38,6 +38,7 @@ impl<Role: PathRole, Root: PathRoot> PathAppend for RootedRolePath<Role, Root> {
         self.role_path.sub_path.path_append(parent_entry);
     }
 }
+
 impl PathAppend for SubPath {
     fn path_append(
         &mut self,
@@ -46,6 +47,7 @@ impl PathAppend for SubPath {
         self.path.push(parent_entry)
     }
 }
+
 impl PathAppend for RolePath<End> {
     fn path_append(
         &mut self,
@@ -54,6 +56,7 @@ impl PathAppend for RolePath<End> {
         self.sub_path.path.push(parent_entry)
     }
 }
+
 impl PathAppend for SearchPath {
     fn path_append(
         &mut self,
@@ -62,6 +65,7 @@ impl PathAppend for SearchPath {
         self.end.sub_path.path.push(parent_entry);
     }
 }
+
 impl PathAppend for QueryRangePath {
     fn path_append(
         &mut self,
@@ -70,6 +74,7 @@ impl PathAppend for QueryRangePath {
         self.end.sub_path.path.push(parent_entry);
     }
 }
+
 impl PathAppend for QueryStateContext<'_> {
     fn path_append(
         &mut self,
@@ -78,6 +83,7 @@ impl PathAppend for QueryStateContext<'_> {
         self.state.path_append(parent_entry)
     }
 }
+
 impl PathAppend for QueryState {
     fn path_append(
         &mut self,

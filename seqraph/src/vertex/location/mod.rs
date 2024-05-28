@@ -1,19 +1,22 @@
-use super::PatternId;
 use std::{
     cmp::PartialEq,
     fmt::Debug,
 };
+
+use child::*;
+use pattern::*;
+
+use super::PatternId;
+
 pub mod child;
 pub mod pattern;
-
-pub use child::*;
-pub use pattern::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy, Hash)]
 pub struct SubLocation {
     pub pattern_id: usize,
     pub sub_index: usize,
 }
+
 impl SubLocation {
     pub fn new(
         pattern_id: PatternId,
@@ -25,6 +28,7 @@ impl SubLocation {
         }
     }
 }
+
 impl From<ChildLocation> for SubLocation {
     fn from(value: ChildLocation) -> Self {
         value.to_sub_location()
@@ -34,16 +38,19 @@ impl From<ChildLocation> for SubLocation {
 pub trait IntoChildLocation {
     fn into_child_location(self) -> ChildLocation;
 }
+
 impl IntoChildLocation for ChildLocation {
     fn into_child_location(self) -> ChildLocation {
         self
     }
 }
+
 impl IntoChildLocation for &ChildLocation {
     fn into_child_location(self) -> ChildLocation {
         *self
     }
 }
+
 impl IntoPatternLocation for ChildLocation {
     fn into_pattern_location(self) -> PatternLocation {
         PatternLocation {
@@ -52,16 +59,19 @@ impl IntoPatternLocation for ChildLocation {
         }
     }
 }
+
 impl IntoPatternLocation for &ChildLocation {
     fn into_pattern_location(self) -> PatternLocation {
         (*self).into_pattern_location()
     }
 }
+
 impl crate::vertex::indexed::Indexed for ChildLocation {
     fn vertex_index(&self) -> crate::vertex::VertexIndex {
         self.parent.index
     }
 }
+
 impl crate::vertex::wide::Wide for ChildLocation {
     fn width(&self) -> usize {
         self.parent.width()

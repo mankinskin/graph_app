@@ -1,42 +1,49 @@
-use crate::{
-    vertex::PatternId,
-    HashMap,
+use std::{
+    iter::FromIterator,
+    ops::Deref,
 };
+
 use derive_more::{
     DerefMut,
     IntoIterator,
 };
-use std::{
-    iter::FromIterator,
-    ops::Deref,
+
+use crate::{
+    HashMap,
+    vertex::PatternId,
 };
 
 #[derive(Debug, Default, IntoIterator, DerefMut)]
 pub struct PatternSubDeltas {
     pub inner: PatternSubDeltasInner,
 }
+
 type PatternSubDeltasInner = HashMap<PatternId, usize>;
+
 impl Deref for PatternSubDeltas {
     type Target = PatternSubDeltasInner;
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }
+
 impl FromIterator<(PatternId, usize)> for PatternSubDeltas {
-    fn from_iter<T: IntoIterator<Item = (PatternId, usize)>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item=(PatternId, usize)>>(iter: T) -> Self {
         Self {
             inner: FromIterator::from_iter(iter),
         }
     }
 }
+
 impl Extend<(PatternId, usize)> for PatternSubDeltas {
-    fn extend<T: IntoIterator<Item = (PatternId, usize)>>(
+    fn extend<T: IntoIterator<Item=(PatternId, usize)>>(
         &mut self,
         iter: T,
     ) {
         self.inner.extend(iter)
     }
 }
+
 impl std::ops::Add for PatternSubDeltas {
     type Output = Self;
     fn add(

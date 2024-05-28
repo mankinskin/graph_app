@@ -28,12 +28,12 @@ use crate::{
         },
         traversable::Traversable,
     },
-    vertex::location::ChildLocation,
+    vertex::location::child::ChildLocation,
 };
 use std::ops::ControlFlow;
 
 pub trait MovePath<D: Direction, R: PathRole = End>:
-    PathPop + PathAppend + MoveRootPos<D, R>
+PathPop + PathAppend + MoveRootPos<D, R>
 {
     fn move_leaf<Trav: Traversable>(
         &mut self,
@@ -53,7 +53,7 @@ pub trait MovePath<D: Direction, R: PathRole = End>:
                     .then(|| location)
             })
         })
-        .find_map(|location| location)
+            .find_map(|location| location)
         {
             self.path_append(location);
             ControlFlow::Continue(())
@@ -62,6 +62,7 @@ pub trait MovePath<D: Direction, R: PathRole = End>:
         }
     }
 }
+
 impl MovePath<Right, End> for QueryStateContext<'_> {
     fn move_leaf<Trav: Traversable>(
         &mut self,
@@ -71,6 +72,7 @@ impl MovePath<Right, End> for QueryStateContext<'_> {
         KeyedLeaf::new(self, location).advance_leaf(trav)
     }
 }
+
 impl MovePath<Left, End> for QueryStateContext<'_> {
     fn move_leaf<Trav: Traversable>(
         &mut self,
@@ -80,6 +82,7 @@ impl MovePath<Left, End> for QueryStateContext<'_> {
         KeyedLeaf::new(self, location).retract_leaf(trav)
     }
 }
+
 impl MovePath<Right, End> for SearchPath {
     fn move_leaf<Trav: Traversable>(
         &mut self,
@@ -89,6 +92,7 @@ impl MovePath<Right, End> for SearchPath {
         location.advance_leaf(trav)
     }
 }
+
 impl MovePath<Left, End> for SearchPath {
     fn move_leaf<Trav: Traversable>(
         &mut self,
@@ -98,6 +102,7 @@ impl MovePath<Left, End> for SearchPath {
         location.retract_leaf(trav)
     }
 }
+
 impl MovePath<Right, End> for PatternPrefixPath {
     fn move_leaf<Trav: Traversable>(
         &mut self,

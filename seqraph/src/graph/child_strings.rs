@@ -2,15 +2,16 @@
 pub struct ChildStrings {
     patterns: indexmap::IndexMap<String, Vec<Vec<String>>>,
 }
+
 impl ChildStrings {
     pub fn new() -> Self {
         Default::default()
     }
     pub fn from_nodes(
         nodes: impl IntoIterator<
-            Item = (
+            Item=(
                 impl ToString,
-                impl IntoIterator<Item = impl IntoIterator<Item = impl ToString>>,
+                impl IntoIterator<Item=impl IntoIterator<Item=impl ToString>>,
             ),
         >
     ) -> Self {
@@ -21,9 +22,9 @@ impl ChildStrings {
     pub fn add_nodes(
         &mut self,
         node_patterns: impl IntoIterator<
-            Item = (
+            Item=(
                 impl ToString,
-                impl IntoIterator<Item = impl IntoIterator<Item = impl ToString>>,
+                impl IntoIterator<Item=impl IntoIterator<Item=impl ToString>>,
             ),
         >,
     ) {
@@ -39,7 +40,7 @@ impl ChildStrings {
     }
     pub fn from_node(
         name: impl ToString,
-        node: impl IntoIterator<Item = impl IntoIterator<Item = impl ToString>>,
+        node: impl IntoIterator<Item=impl IntoIterator<Item=impl ToString>>,
     ) -> Self {
         let mut g = Self::new();
         g.add_node(name, node);
@@ -48,7 +49,7 @@ impl ChildStrings {
     pub fn add_node(
         &mut self,
         name: impl ToString,
-        patterns: impl IntoIterator<Item = impl IntoIterator<Item = impl ToString>>,
+        patterns: impl IntoIterator<Item=impl IntoIterator<Item=impl ToString>>,
     ) {
         let node = patterns
             .into_iter()

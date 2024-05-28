@@ -3,31 +3,38 @@ use itertools::Itertools;
 use std::cmp::Ordering;
 
 pub mod end;
+
 use end::*;
-pub mod query;
+
 pub mod child;
+pub mod query;
+
 use child::*;
+
 pub mod parent;
+
 use parent::*;
+
 pub mod start;
+
 use crate::{
     traversal::{
         cache::{
-            entry::NewEntry,
+            entry::new::NewEntry,
             key::{
-                PrevKey,
-                TargetKey,
+                prev::PrevKey,
+                target::TargetKey,
             },
         },
         context::TraversalContext,
         iterator::TraversalIterator,
         path::accessors::{
-            child::GraphRootChild,
+            child::root::GraphRootChild,
             role::End,
         },
         result_kind::RoleChildPath,
     },
-    vertex::location::ChildLocation,
+    vertex::location::child::ChildLocation,
 };
 
 #[derive(Clone, Debug)]
@@ -36,6 +43,7 @@ pub struct StateNext<T> {
     pub new: Vec<NewEntry>,
     pub inner: T,
 }
+
 #[derive(Clone, Debug)]
 pub enum NextStates {
     Parents(StateNext<Vec<ParentState>>),
@@ -44,6 +52,7 @@ pub enum NextStates {
     Child(StateNext<ChildState>),
     Empty,
 }
+
 impl NextStates {
     pub fn into_states(self) -> Vec<TraversalState> {
         match self {
@@ -93,6 +102,7 @@ pub enum InnerKind {
     Parent(ParentState),
     Child(ChildState),
 }
+
 impl Ord for InnerKind {
     fn cmp(
         &self,
@@ -106,6 +116,7 @@ impl Ord for InnerKind {
         }
     }
 }
+
 impl PartialOrd for InnerKind {
     fn partial_cmp(
         &self,
@@ -114,12 +125,14 @@ impl PartialOrd for InnerKind {
         Some(self.cmp(other))
     }
 }
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TraversalState {
     pub prev: PrevKey,
     pub new: Vec<NewEntry>,
     pub kind: InnerKind,
 }
+
 impl From<WaitingState> for TraversalState {
     fn from(state: WaitingState) -> Self {
         Self {
@@ -129,6 +142,7 @@ impl From<WaitingState> for TraversalState {
         }
     }
 }
+
 impl Ord for TraversalState {
     fn cmp(
         &self,
@@ -137,6 +151,7 @@ impl Ord for TraversalState {
         self.kind.cmp(&other.kind)
     }
 }
+
 impl PartialOrd for TraversalState {
     fn partial_cmp(
         &self,
@@ -145,6 +160,7 @@ impl PartialOrd for TraversalState {
         Some(self.cmp(other))
     }
 }
+
 impl TraversalState {
     pub fn entry_location(&self) -> Option<ChildLocation> {
         match &self.kind {

@@ -17,7 +17,7 @@ use crate::{
         },
         HypergraphRef,
     },
-    search::Searcher,
+    search::searcher::Searcher,
     traversal::{
         context::TraversalContext,
         iterator::{
@@ -62,11 +62,12 @@ pub(crate) use impl_traversable_mut;
 
 pub trait Traversable: Sized + std::fmt::Debug {
     type Kind: GraphKind;
-    type Guard<'a>: Traversable<Kind = Self::Kind> + Deref<Target = Hypergraph<Self::Kind>>
-    where
-        Self: 'a;
+    type Guard<'a>: Traversable<Kind=Self::Kind> + Deref<Target=Hypergraph<Self::Kind>>
+        where
+            Self: 'a;
     fn graph(&self) -> Self::Guard<'_>;
 }
+
 pub type GraphKindOf<T> = <T as Traversable>::Kind;
 pub(crate) type DirectionOf<T> = <GraphKindOf<T> as GraphKind>::Direction;
 
@@ -96,6 +97,7 @@ impl<T: Traversable> Traversable for Searcher<T> {
         self.graph.graph()
     }
 }
+
 impl<'g, T: Traversable> Traversable for &'g Searcher<T> {
     type Kind = T::Kind;
     type Guard<'a> = T::Guard<'a> where T: 'a, 'g: 'a;
@@ -103,6 +105,7 @@ impl<'g, T: Traversable> Traversable for &'g Searcher<T> {
         self.graph.graph()
     }
 }
+
 impl<'c, 'g, 'b: 'g, I: TraversalIterator<'b>> Traversable for &'c TraversalContext<'g, 'b, I> {
     type Kind = IterKind<'b, I>;
     type Guard<'a> = <IterTrav<'b, I> as Traversable>::Guard<'a> where I: 'a, 'c: 'a;
@@ -110,6 +113,7 @@ impl<'c, 'g, 'b: 'g, I: TraversalIterator<'b>> Traversable for &'c TraversalCont
         self.trav().graph()
     }
 }
+
 impl<'c, 'g, 'b: 'g, I: TraversalIterator<'b>> Traversable for &'c mut TraversalContext<'g, 'b, I> {
     type Kind = IterKind<'b, I>;
     type Guard<'a> = <IterTrav<'b, I> as Traversable>::Guard<'a> where I: 'a, 'c: 'a;
@@ -122,11 +126,11 @@ impl_traversable! {
     impl for Hypergraph, self => self; <'a> &'a Self
 }
 pub trait TraversableMut: Traversable {
-    type GuardMut<'a>: TraversableMut<Kind = Self::Kind>
-        + Deref<Target = Hypergraph<Self::Kind>>
-        + DerefMut
-    where
-        Self: 'a;
+    type GuardMut<'a>: TraversableMut<Kind=Self::Kind>
+    + Deref<Target=Hypergraph<Self::Kind>>
+    + DerefMut
+        where
+            Self: 'a;
     fn graph_mut(&mut self) -> Self::GuardMut<'_>;
 }
 

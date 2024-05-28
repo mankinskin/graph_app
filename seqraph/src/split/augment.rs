@@ -1,9 +1,17 @@
-use super::cache::vertex::SplitVertexCache;
+use std::{
+    collections::BTreeMap,
+    num::NonZeroUsize,
+    sync::RwLockWriteGuard,
+};
+
+use itertools::Itertools;
+
 use crate::{
     graph::Hypergraph,
     join::{
-        context::node::NodeTraceContext,
+        context::node::context::NodeTraceContext,
         partition::{
+            AsPartition,
             info::{
                 range::{
                     role::{
@@ -18,15 +26,16 @@ use crate::{
                 },
                 visit::VisitPartition,
             },
-            AsPartition,
             Partition,
         },
     },
     split::{
+        cache::{
+            builder::SplitCacheBuilder,
+            position::SplitPositionCache,
+            TraceState,
+        },
         position_splits,
-        SplitCacheBuilder,
-        SplitPositionCache,
-        TraceState,
     },
     traversal::{
         cache::key::SplitKey,
@@ -37,12 +46,8 @@ use crate::{
         indexed::Indexed,
     },
 };
-use itertools::Itertools;
-use std::{
-    collections::BTreeMap,
-    num::NonZeroUsize,
-    sync::RwLockWriteGuard,
-};
+
+use super::cache::vertex::SplitVertexCache;
 
 impl SplitVertexCache {
     pub fn offset_range_partition<K: RangeRole>(
@@ -51,27 +56,27 @@ impl SplitVertexCache {
     ) -> Partition<K> {
         range.get_splits(self).as_partition()
     }
-    pub fn inner_offsets<'a: 't, 't, K: RangeRole<Mode = Trace>, P: AsPartition<K>>(
+    pub fn inner_offsets<'a: 't, 't, K: RangeRole<Mode=Trace>, P: AsPartition<K>>(
         ctx: NodeTraceContext<'a>,
         part: P,
     ) -> Vec<NonZeroUsize> {
         part.info_partition(&ctx)
             .map(|bundle|
-            //let merges = range_map.range_sub_merges(start..start + len);
-            bundle.patterns.into_iter().flat_map(|(_pid, info)|
-                info.inner_range.map(|range| {
-                    let splits = range.offsets.as_splits(ctx);
-                    Self::inner_offsets(
-                        ctx,
-                        splits,
-                    )
-                })
-            )
-            .flatten()
-            .collect())
+                //let merges = range_map.range_sub_merges(start..start + len);
+                bundle.patterns.into_iter().flat_map(|(_pid, info)|
+                    info.inner_range.map(|range| {
+                        let splits = range.offsets.as_splits(ctx);
+                        Self::inner_offsets(
+                            ctx,
+                            splits,
+                        )
+                    })
+                )
+                    .flatten()
+                    .collect())
             .unwrap_or_default()
     }
-    pub fn add_inner_offsets<'a: 't, 't, K: RangeRole<Mode = Trace>, P: AsPartition<K>>(
+    pub fn add_inner_offsets<'a: 't, 't, K: RangeRole<Mode=Trace>, P: AsPartition<K>>(
         ctx: NodeTraceContext<'a>,
         part: P,
     ) -> (BTreeMap<NonZeroUsize, SplitPositionCache>, Vec<TraceState>)
@@ -171,7 +176,7 @@ impl SplitCacheBuilder {
             .unwrap()
             .augment_root(ctx, root_mode)
     }
-    pub fn augment_nodes<I: IntoIterator<Item = Child>>(
+    pub fn augment_nodes<I: IntoIterator<Item=Child>>(
         &mut self,
         graph: &RwLockWriteGuard<'_, Hypergraph>,
         nodes: I,

@@ -1,30 +1,20 @@
-pub mod vertex;
-
 use std::{
+    borrow::Borrow,
     num::NonZeroUsize,
     sync::RwLockWriteGuard,
 };
-pub use vertex::*;
-pub mod position;
-pub use position::*;
-pub mod split;
-pub use split::*;
-pub mod leaves;
-pub use leaves::*;
-pub mod ctx;
-pub use ctx::*;
-pub mod builder;
-use crate::vertex::child::Child;
-pub use builder::*;
-use std::borrow::Borrow;
 
-#[derive(Debug, Clone)]
-pub struct TraceState {
-    pub index: Child,
-    pub offset: NonZeroUsize,
-    pub prev: SplitKey,
-}
+use derive_more::{
+    Deref,
+    DerefMut,
+};
+
+use builder::*;
+use ctx::*;
+use position::*;
+
 use crate::{
+    HashMap,
     index::side::{
         IndexBack,
         IndexSide,
@@ -33,9 +23,9 @@ use crate::{
     split::PatternSplitPos,
     traversal::{
         cache::{
-            entry::SubSplitLocation,
+            entry::position::SubSplitLocation,
             key::SplitKey,
-            labelled_key::VertexCacheKey,
+            labelled_key::vkey::VertexCacheKey,
         },
         folder::state::{
             FoldState,
@@ -44,17 +34,29 @@ use crate::{
         traversable::TraversableMut,
     },
     vertex::{
+        child::Child,
         indexed::Indexed,
         location::SubLocation,
         pattern::Pattern,
         PatternId,
     },
-    HashMap,
 };
-use derive_more::{
-    Deref,
-    DerefMut,
-};
+use crate::split::cache::vertex::SplitVertexCache;
+
+pub mod vertex;
+
+pub mod builder;
+pub mod ctx;
+pub mod leaves;
+pub mod position;
+pub mod split;
+
+#[derive(Debug, Clone)]
+pub struct TraceState {
+    pub index: Child,
+    pub offset: NonZeroUsize,
+    pub prev: SplitKey,
+}
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct SplitCache {
@@ -64,10 +66,11 @@ pub struct SplitCache {
     pub context: CacheContext,
     pub root_mode: RootMode,
 }
+
 impl SplitCache {
     pub fn new<
         'a,
-        Trav: TraversableMut<GuardMut<'a> = RwLockWriteGuard<'a, crate::graph::Hypergraph>> + 'a,
+        Trav: TraversableMut<GuardMut<'a>=RwLockWriteGuard<'a, crate::graph::Hypergraph>> + 'a,
     >(
         trav: &'a mut Trav,
         fold_state: FoldState,
@@ -103,16 +106,15 @@ impl SplitCache {
         self.get_mut(key).unwrap()
     }
 }
+
 pub fn range_splits<'a>(
-    patterns: impl Iterator<Item = (&'a PatternId, &'a Pattern)>,
+    patterns: impl Iterator<Item=(&'a PatternId, &'a Pattern)>,
     parent_range: (NonZeroUsize, NonZeroUsize),
 ) -> (OffsetSplits, OffsetSplits) {
     let (ls, rs) = patterns
         .map(|(pid, pat)| {
-            let (li, lo) =
-                IndexBack::token_offset_split(pat.borrow(), parent_range.0).unwrap();
-            let (ri, ro) =
-                IndexBack::token_offset_split(pat.borrow(), parent_range.1).unwrap();
+            let (li, lo) = IndexBack::token_offset_split(pat.borrow(), parent_range.0).unwrap();
+            let (ri, ro) = IndexBack::token_offset_split(pat.borrow(), parent_range.1).unwrap();
             (
                 (
                     *pid,
@@ -144,7 +146,7 @@ pub fn range_splits<'a>(
 }
 
 pub fn cleaned_position_splits<'a>(
-    patterns: impl Iterator<Item = (&'a PatternId, &'a Pattern)>,
+    patterns: impl Iterator<Item=(&'a PatternId, &'a Pattern)>,
     parent_offset: NonZeroUsize,
 ) -> Result<Vec<SubSplitLocation>, SubLocation> {
     patterns
@@ -168,30 +170,35 @@ pub fn cleaned_position_splits<'a>(
 
 #[cfg(test)]
 mod tests {
+    use std::{
+        collections::BTreeMap,
+        iter::FromIterator,
+    };
+
+    use pretty_assertions::assert_eq;
+
     use crate::{
         graph::tests::{
-            context_mut,
             Context,
+            context_mut,
         },
+        HashMap,
+        HashSet,
         split::{
+            cache::{
+                position::SplitPositionCache,
+                vertex::SplitVertexCache,
+            },
             PatternSplitPos,
             SplitCache,
-            SplitPositionCache,
-            SplitVertexCache,
         },
         traversal::cache::{
             key::SplitKey,
             labelled_key::vkey::lab,
             trace,
         },
-        HashMap,
-        HashSet,
     };
-    use pretty_assertions::assert_eq;
-    use std::{
-        collections::BTreeMap,
-        iter::FromIterator,
-    };
+
     macro_rules! nz {
         ($x:expr) => {
             NonZeroUsize::new($x).unwrap()

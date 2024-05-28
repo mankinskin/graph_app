@@ -26,12 +26,13 @@ pub mod vkey {
     pub(crate) use lab;
 
     pub type VertexCacheKey = LabelledKey;
+
     pub fn labelled_key<Trav: Traversable>(
         trav: &Trav,
         child: Child,
     ) -> VertexCacheKey
-    where
-        TravToken<Trav>: Display,
+        where
+            TravToken<Trav>: Display,
     {
         LabelledKey::build(trav, child)
     }
@@ -41,6 +42,7 @@ pub mod vkey {
         index: crate::vertex::VertexIndex,
         label: String,
     }
+
     impl LabelledKey {
         pub fn new(
             child: impl Borrow<Child>,
@@ -55,8 +57,8 @@ pub mod vkey {
             trav: &Trav,
             child: Child,
         ) -> Self
-        where
-            TravToken<Trav>: Display,
+            where
+                TravToken<Trav>: Display,
         {
             let index = child.vertex_index();
             Self {
@@ -65,11 +67,13 @@ pub mod vkey {
             }
         }
     }
+
     impl Borrow<crate::vertex::VertexIndex> for LabelledKey {
         fn borrow(&self) -> &crate::vertex::VertexIndex {
             &self.index
         }
     }
+
     impl Hash for LabelledKey {
         fn hash<H: Hasher>(
             &self,
@@ -78,6 +82,7 @@ pub mod vkey {
             self.index.hash(h)
         }
     }
+
     impl Display for LabelledKey {
         fn fmt(
             &self,
@@ -101,15 +106,16 @@ pub mod vkey {
         },
     };
     use std::fmt::Display;
+
     pub type VertexCacheKey = crate::vertex::VertexIndex;
+
     pub fn labelled_key<Trav: Traversable>(
         _trav: &Trav,
         child: Child,
     ) -> VertexCacheKey
-    where
-        TravToken<Trav>: Display,
+        where
+            TravToken<Trav>: Display,
     {
         child.vertex_index()
     }
 }
-pub use vkey::*;

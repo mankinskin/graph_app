@@ -4,9 +4,9 @@ use crate::{
     traversal::{
         path::{
             accessors::role::End,
-            mutators::move_path::{
-                key::TokenLocation,
+            mutators::move_path::key::{
                 RetractKey,
+                TokenLocation,
             },
             structs::{
                 role_path::RolePath,
@@ -19,7 +19,7 @@ use crate::{
         traversable::Traversable,
     },
     vertex::{
-        location::IntoPatternLocation,
+        location::pattern::IntoPatternLocation,
         wide::Wide,
     },
 };
@@ -39,6 +39,7 @@ pub trait PathLower {
         trav: &Trav,
     ) -> ControlFlow<()>;
 }
+
 impl PathLower for (&mut TokenLocation, &mut SearchPath) {
     fn path_lower<Trav: Traversable>(
         &mut self,

@@ -1,6 +1,8 @@
+use std::borrow::Borrow;
+
 use crate::{
     join::{
-        context::node::NodeJoinContext,
+        context::node::context::NodeJoinContext,
         delta::PatternSubDeltas,
         partition::info::{
             border::{
@@ -10,11 +12,11 @@ use crate::{
                     SinglePerfect,
                 },
             },
+            PartitionInfo,
             range::role::{
                 Join,
                 RangeRole,
             },
-            PartitionInfo,
         },
     },
     vertex::{
@@ -22,7 +24,6 @@ use crate::{
         pattern::Pattern,
     },
 };
-use std::borrow::Borrow;
 
 #[derive(Debug)]
 pub struct JoinedPartition<K: RangeRole> {
@@ -30,9 +31,10 @@ pub struct JoinedPartition<K: RangeRole> {
     pub perfect: K::Perfect,
     pub delta: PatternSubDeltas,
 }
-impl<'a, K: RangeRole<Mode = Join>> JoinedPartition<K>
-where
-    K::Borders: JoinBorders<K>,
+
+impl<'a, K: RangeRole<Mode=Join>> JoinedPartition<K>
+    where
+        K::Borders: JoinBorders<K>,
 {
     pub fn from_joined_patterns(
         pats: JoinedPatterns<K>,
@@ -61,16 +63,19 @@ where
         Self::from_joined_patterns(pats, ctx)
     }
 }
+
 impl<K: RangeRole> Borrow<Child> for JoinedPartition<K> {
     fn borrow(&self) -> &Child {
         &self.index
     }
 }
+
 impl<K: RangeRole> Borrow<Child> for &JoinedPartition<K> {
     fn borrow(&self) -> &Child {
         &self.index
     }
 }
+
 #[derive(Debug)]
 pub struct JoinedPatterns<K: RangeRole> {
     pub patterns: Vec<Pattern>,
@@ -79,9 +84,9 @@ pub struct JoinedPatterns<K: RangeRole> {
     pub delta: PatternSubDeltas,
 }
 
-impl<'a, K: RangeRole<Mode = Join>> JoinedPatterns<K>
-where
-    K::Borders: JoinBorders<K>,
+impl<'a, K: RangeRole<Mode=Join>> JoinedPatterns<K>
+    where
+        K::Borders: JoinBorders<K>,
 {
     pub fn from_partition_info(
         info: PartitionInfo<K>,

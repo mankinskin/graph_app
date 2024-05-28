@@ -3,11 +3,11 @@ use crate::join::{
     partition::info::{
         border::visit::VisitBorders,
         range::{
+            InnerRangeInfo,
             role::{
                 ModePatternCtxOf,
                 RangeRole,
             },
-            InnerRangeInfo,
         },
     },
 };
@@ -18,6 +18,7 @@ pub trait TraceBorders<K: RangeRole>: VisitBorders<K> {
         ctx: &ModePatternCtxOf<'a, K>,
     ) -> Option<InnerRangeInfo<K>>;
 }
+
 impl<K: RangeRole> TraceBorders<K> for K::Borders {
     fn inner_info<'a>(
         &self,

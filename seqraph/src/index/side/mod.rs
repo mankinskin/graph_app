@@ -74,6 +74,7 @@ pub trait IndexSide: std::fmt::Debug + Sync + Send + Unpin + Clone + 'static {
 
 #[derive(Debug, Clone)]
 pub struct IndexBack;
+
 impl IndexSide for IndexBack {
     //type Opposite = IndexFront;
     ////type Path = RolePath;
@@ -147,22 +148,24 @@ impl IndexSide for IndexBack {
     ) -> Option<(usize, Option<NonZeroUsize>)> {
         let mut offset = offset.get();
         pattern.into_iter().enumerate().find_map(|(i, c)|
-                // returns current index when remaining offset is smaller than current child
-                match c.width().cmp(&offset) {
-                    Ordering::Less => {
-                        offset -= c.width();
-                        None
-                    },
-                    Ordering::Equal => {
-                        offset = 0;
-                        None
-                    },
-                    Ordering::Greater => Some((i, NonZeroUsize::new(offset))),
-                })
+            // returns current index when remaining offset is smaller than current child
+            match c.width().cmp(&offset) {
+                Ordering::Less => {
+                    offset -= c.width();
+                    None
+                }
+                Ordering::Equal => {
+                    offset = 0;
+                    None
+                }
+                Ordering::Greater => Some((i, NonZeroUsize::new(offset))),
+            })
     }
 }
+
 #[derive(Debug, Clone)]
 pub struct IndexFront;
+
 impl IndexSide for IndexFront {
     //type Opposite = IndexBack;
     ////type Path = RolePath;
@@ -234,27 +237,39 @@ impl IndexSide for IndexFront {
     ) -> Option<(usize, Option<NonZeroUsize>)> {
         let mut offset = offset.get();
         pattern.into_iter().enumerate().find_map(|(i, c)|
-                // returns current index when remaining offset does not exceed current child
-                match c.width().cmp(&offset) {
-                    Ordering::Less => {
-                        offset -= c.width();
-                        None
-                    },
-                    Ordering::Equal => {
-                        offset = 0;
-                        Some((i, NonZeroUsize::new(offset)))
-                    },
-                    Ordering::Greater => Some((i, NonZeroUsize::new(offset))),
-                })
+            // returns current index when remaining offset does not exceed current child
+            match c.width().cmp(&offset) {
+                Ordering::Less => {
+                    offset -= c.width();
+                    None
+                }
+                Ordering::Equal => {
+                    offset = 0;
+                    Some((i, NonZeroUsize::new(offset)))
+                }
+                Ordering::Greater => Some((i, NonZeroUsize::new(offset))),
+            })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::vertex::pattern::pattern_width;
     use std::{
         borrow::Borrow,
         num::NonZeroUsize,
+    };
+
+    use crate::{
+        index::side::{
+            IndexBack,
+            IndexFront,
+            IndexSide,
+        },
+        mock,
+        vertex::{
+            child::Child,
+            pattern::pattern_width,
+        },
     };
 
     #[test]

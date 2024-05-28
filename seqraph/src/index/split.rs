@@ -5,11 +5,12 @@ pub struct Splitter<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> {
     pub(crate) indexer: Indexer,
     _ty: std::marker::PhantomData<Side>,
 }
+
 impl<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> Splitter<Side> {
     pub fn new(indexer: Indexer) -> Self {
         Self {
             indexer,
-            _ty: Default::default()
+            _ty: Default::default(),
         }
     }
 }
@@ -23,9 +24,7 @@ impl<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> Splitter<Side> {
         &mut self,
         path: impl ContextPath,
     ) -> Option<IndexSplitResult> {
-        self.pather().index_primary_path::<InnerSide, _>(
-            path,
-        )
+        self.pather().index_primary_path::<InnerSide, _>(path)
     }
     #[instrument(skip(self, parent, offset))]
     pub fn single_offset_split(
@@ -33,9 +32,7 @@ impl<Side: IndexSide<<BaseGraphKind as GraphKind>::Direction>> Splitter<Side> {
         parent: Child,
         offset: NonZeroUsize,
     ) -> IndexSplitResult {
-        self.pather().single_offset_split::<InnerSide>(
-            parent,
-            offset,
-        )
+        self.pather()
+            .single_offset_split::<InnerSide>(parent, offset)
     }
 }

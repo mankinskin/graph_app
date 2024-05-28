@@ -2,8 +2,8 @@ use crate::{
     traversal::{
         cache::{
             key::{
+                root::RootKey,
                 DirectedKey,
-                RootKey,
                 UpKey,
             },
             state::{
@@ -13,7 +13,7 @@ use crate::{
         },
         path::{
             accessors::{
-                child::GraphRootChild,
+                child::root::GraphRootChild,
                 role::{
                     End,
                     Start,
@@ -30,7 +30,7 @@ use crate::{
     },
     vertex::{
         child::Child,
-        location::ChildLocation,
+        location::child::ChildLocation,
         wide::Wide,
     },
 };
@@ -44,16 +44,19 @@ pub struct RangeEnd {
     pub path: SearchPath,
     pub target: DirectedKey,
 }
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrefixEnd {
     pub path: RootedRolePath<End>,
     pub target: DirectedKey,
 }
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PostfixEnd {
     pub path: Primer,
     pub inner_width: usize,
 }
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EndState {
     pub reason: EndReason,
@@ -101,6 +104,7 @@ impl EndState {
         matches!(self.kind, EndKind::Complete(_))
     }
 }
+
 impl Wide for EndState {
     fn width(&self) -> usize {
         match &self.kind {
@@ -111,6 +115,7 @@ impl Wide for EndState {
         }
     }
 }
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EndKind {
     Range(RangeEnd),
@@ -118,6 +123,7 @@ pub enum EndKind {
     Prefix(PrefixEnd),
     Complete(Child),
 }
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum EndReason {
     QueryEnd,

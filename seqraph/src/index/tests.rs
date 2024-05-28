@@ -1,5 +1,12 @@
-#[allow(clippy::many_single_char_names)]
-use super::*;
+use std::{
+    borrow::Borrow,
+    collections::HashSet,
+};
+
+use itertools::*;
+use maplit::hashset;
+use pretty_assertions::assert_eq;
+
 use crate::{
     graph::kind::BaseGraphKind,
     search::Searchable,
@@ -17,13 +24,9 @@ use crate::{
         wide::Wide,
     },
 };
-use itertools::*;
-use maplit::hashset;
-use pretty_assertions::assert_eq;
-use std::{
-    borrow::Borrow,
-    collections::HashSet,
-};
+
+#[allow(clippy::many_single_char_names)]
+use super::*;
 
 #[test]
 fn index_pattern1() {
@@ -79,6 +82,7 @@ fn index_pattern1() {
         "aby"
     );
 }
+
 #[test]
 fn index_pattern2() {
     let mut graph = crate::graph::Hypergraph::<BaseGraphKind>::default();

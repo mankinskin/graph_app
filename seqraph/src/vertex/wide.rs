@@ -10,8 +10,8 @@ use crate::{
 use super::{
     child::Child,
     pattern::{
-        pattern_width,
         Pattern,
+        pattern_width,
     },
     TokenPosition,
     VertexData,
@@ -20,11 +20,13 @@ use super::{
 pub trait Wide {
     fn width(&self) -> usize;
 }
+
 impl Wide for Pattern {
     fn width(&self) -> TokenPosition {
         pattern_width(self)
     }
 }
+
 impl Wide for [Child] {
     fn width(&self) -> TokenPosition {
         pattern_width(self)
@@ -47,11 +49,13 @@ impl<T: Wide> Wide for &'_ T {
         (**self).width()
     }
 }
+
 impl<T: Wide> Wide for &'_ mut T {
     fn width(&self) -> usize {
         (**self).width()
     }
 }
+
 //impl Wide for OverlapPrimer {
 //    fn width(&self) -> usize {
 //        self.width
@@ -68,11 +72,13 @@ impl Wide for DirectedKey {
         self.index.width()
     }
 }
+
 impl Wide for UpKey {
     fn width(&self) -> usize {
         self.index.width()
     }
 }
+
 impl Wide for DownKey {
     fn width(&self) -> usize {
         self.index.width()

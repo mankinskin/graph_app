@@ -1,4 +1,13 @@
+use std::{
+    borrow::{
+        Borrow,
+        BorrowMut,
+    },
+    iter::FromIterator,
+};
+
 use crate::{
+    HashSet,
     join::delta::PatternSubDeltas,
     split::{
         PatternSplitPos,
@@ -6,21 +15,13 @@ use crate::{
         VertexSplitPos,
     },
     traversal::cache::{
-        entry::SubSplitLocation,
+        entry::position::SubSplitLocation,
         key::SplitKey,
     },
     vertex::{
         location::SubLocation,
         PatternId,
     },
-    HashSet,
-};
-use std::{
-    borrow::{
-        Borrow,
-        BorrowMut,
-    },
-    iter::FromIterator,
 };
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -41,21 +42,25 @@ impl std::ops::Sub<PatternSubDeltas> for SplitPositionCache {
         self
     }
 }
+
 impl Borrow<VertexSplitPos> for SplitPositionCache {
     fn borrow(&self) -> &VertexSplitPos {
         &self.pattern_splits
     }
 }
+
 impl<'a> Borrow<VertexSplitPos> for &'a SplitPositionCache {
     fn borrow(&self) -> &VertexSplitPos {
         &self.pattern_splits
     }
 }
+
 impl BorrowMut<VertexSplitPos> for SplitPositionCache {
     fn borrow_mut(&mut self) -> &mut VertexSplitPos {
         &mut self.pattern_splits
     }
 }
+
 impl From<SubSplitLocation> for (PatternId, PatternSplitPos) {
     fn from(sub: SubSplitLocation) -> Self {
         (
@@ -67,6 +72,7 @@ impl From<SubSplitLocation> for (PatternId, PatternSplitPos) {
         )
     }
 }
+
 impl SplitPositionCache {
     pub fn root(subs: impl ToVertexSplitPos) -> Self {
         Self {

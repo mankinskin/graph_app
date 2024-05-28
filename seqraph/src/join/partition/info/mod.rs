@@ -1,14 +1,13 @@
-use crate::vertex::PatternId;
 use itertools::Itertools;
 
-pub mod range;
-use range::*;
-pub mod border;
 use border::*;
-pub mod visit;
+use range::*;
+use visit::*;
+
 use crate::{
+    HashMap,
     join::{
-        context::node::NodeJoinContext,
+        context::node::context::NodeJoinContext,
         joined::{
             JoinedPartition,
             JoinedPatterns,
@@ -28,10 +27,15 @@ use crate::{
             },
         },
     },
-    vertex::child::Child,
-    HashMap,
+    vertex::{
+        child::Child,
+        PatternId,
+    },
 };
-use visit::*;
+
+pub mod border;
+pub mod range;
+pub mod visit;
 
 #[derive(Debug, Default)]
 pub struct PartitionInfo<K: RangeRole> {
@@ -58,9 +62,10 @@ impl<'a, K: RangeRole> PartitionInfo<K> {
         })
     }
 }
-impl<'a, K: RangeRole<Mode = Join>> PartitionInfo<K>
-where
-    K::Borders: JoinBorders<K>,
+
+impl<'a, K: RangeRole<Mode=Join>> PartitionInfo<K>
+    where
+        K::Borders: JoinBorders<K>,
 {
     pub fn to_joined_patterns(
         self,
@@ -75,14 +80,16 @@ where
         JoinedPartition::from_partition_info(self, ctx)
     }
 }
+
 impl<K: RangeRole> Into<(PatternId, RangeInfoOf<K>)> for PatternRangeInfo<K> {
     fn into(self) -> (PatternId, RangeInfoOf<K>) {
         (self.pattern_id, self.info)
     }
 }
-pub trait JoinPartition<K: RangeRole<Mode = Join>>: VisitPartition<K>
-where
-    K::Borders: JoinBorders<K>,
+
+pub trait JoinPartition<K: RangeRole<Mode=Join>>: VisitPartition<K>
+    where
+        K::Borders: JoinBorders<K>,
 {
     fn join_partition(
         self,
@@ -94,7 +101,7 @@ where
         }
     }
 }
-impl<K: RangeRole<Mode = Join>, P: VisitPartition<K>> JoinPartition<K> for P where
+
+impl<K: RangeRole<Mode=Join>, P: VisitPartition<K>> JoinPartition<K> for P where
     K::Borders: JoinBorders<K>
-{
-}
+{}
