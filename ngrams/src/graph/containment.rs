@@ -1,10 +1,7 @@
 use crate::shared::*;
 use crate::*;
-
-use seqraph::vertex::{
-    Indexed,
-    VertexIndex,
-};
+use seqraph::vertex::{ChildPatterns, VertexDataBuilder};
+use seqraph::vertex::indexed::{AsChild, Indexed};
 
 #[derive(Debug, Clone, Copy, From, new, Default, Hash, Eq, PartialEq)]
 pub struct TextLocation {

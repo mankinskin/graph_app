@@ -1,5 +1,6 @@
-use seqraph::vertex::ChildLocation;
-
+use seqraph::vertex::child::Child;
+use seqraph::vertex::location::child::ChildLocation;
+use seqraph::vertex::VertexIndex;
 use super::traversal::*;
 use crate::{
     shared::*,

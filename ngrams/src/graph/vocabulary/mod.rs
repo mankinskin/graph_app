@@ -1,8 +1,12 @@
 use crate::shared::*;
+use seqraph::vertex::indexed::Indexed;
 
 mod entry;
 pub use entry::*;
-use seqraph::vertex::AsChild;
+use seqraph::graph::Hypergraph;
+use seqraph::vertex::parent::Parent;
+use seqraph::vertex::{VertexData, VertexEntry, VertexIndex};
+use seqraph::vertex::wide::Wide;
 
 #[derive(Debug, Clone, Copy, From, new, Default, Deref, Hash, Eq, PartialEq)]
 pub struct NGramId {

@@ -1,3 +1,6 @@
+use seqraph::vertex::child::Child;
+use seqraph::vertex::VertexIndex;
+use seqraph::vertex::wide::Wide;
 use crate::{
     shared::*,
     *,

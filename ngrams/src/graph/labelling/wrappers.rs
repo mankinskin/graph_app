@@ -1,3 +1,5 @@
+use seqraph::vertex::VertexIndex;
+use seqraph::vertex::wide::Wide;
 use super::traversal::*;
 use crate::{
     shared::*,

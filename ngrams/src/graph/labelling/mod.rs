@@ -10,6 +10,7 @@ use {
     frequency::*,
     wrappers::*,
 };
+use seqraph::vertex::VertexIndex;
 
 #[derive(Debug, Clone)]
 pub struct LabellingCtx<'a> {

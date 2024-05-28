@@ -6,7 +6,6 @@ pub use {
     ngram::*,
     plotters::*,
     range_ext::intersect::Intersect,
-    seqraph::*,
     std::{
         borrow::Borrow,
         collections::VecDeque,
