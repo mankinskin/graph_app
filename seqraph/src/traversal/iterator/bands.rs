@@ -26,7 +26,7 @@ pub trait BandExpandingPolicy<Trav: Traversable> {
         pattern: impl IntoPattern,
     ) -> (ChildLocation, Child);
     fn map_batch(
-        batch: impl IntoIterator<Item=(ChildLocation, Child)>
+        batch: impl IntoIterator<Item = (ChildLocation, Child)>
     ) -> Vec<(ChildLocation, Child)> {
         batch.into_iter().collect_vec()
     }
@@ -37,7 +37,7 @@ pub struct PostfixExpandingPolicy<D: MatchDirection> {
 }
 
 pub trait BandIterator<'a, Trav: Traversable + 'a>:
-Iterator<Item=(ChildLocation, Child)>
+    Iterator<Item = (ChildLocation, Child)>
 {
     type Policy: BandExpandingPolicy<Trav>;
     fn new(
@@ -68,7 +68,7 @@ impl<Trav: Traversable, D: MatchDirection> BandExpandingPolicy<Trav> for Postfix
         (location.to_child_location(last), pattern.borrow()[last])
     }
     fn map_batch(
-        batch: impl IntoIterator<Item=(ChildLocation, Child)>
+        batch: impl IntoIterator<Item = (ChildLocation, Child)>
     ) -> Vec<(ChildLocation, Child)> {
         batch
             .into_iter()
@@ -78,9 +78,9 @@ impl<Trav: Traversable, D: MatchDirection> BandExpandingPolicy<Trav> for Postfix
 }
 
 pub struct BandExpandingIterator<'a, Trav, P>
-    where
-        Trav: Traversable,
-        P: BandExpandingPolicy<Trav>,
+where
+    Trav: Traversable,
+    P: BandExpandingPolicy<Trav>,
 {
     trav: &'a Trav,
     queue: VecDeque<(ChildLocation, Child)>,
@@ -89,12 +89,12 @@ pub struct BandExpandingIterator<'a, Trav, P>
 }
 
 pub type PostfixIterator<'a, Trav> =
-BandExpandingIterator<'a, Trav, PostfixExpandingPolicy<DirectionOf<Trav>>>;
+    BandExpandingIterator<'a, Trav, PostfixExpandingPolicy<DirectionOf<Trav>>>;
 
 impl<'a, Trav, P> BandIterator<'a, Trav> for BandExpandingIterator<'a, Trav, P>
-    where
-        Trav: Traversable,
-        P: BandExpandingPolicy<Trav>,
+where
+    Trav: Traversable,
+    P: BandExpandingPolicy<Trav>,
 {
     type Policy = P;
     fn new(
@@ -114,9 +114,9 @@ impl<'a, Trav, P> BandIterator<'a, Trav> for BandExpandingIterator<'a, Trav, P>
 }
 
 impl<'a, Trav, P> Iterator for BandExpandingIterator<'a, Trav, P>
-    where
-        Trav: Traversable,
-        P: BandExpandingPolicy<Trav>,
+where
+    Trav: Traversable,
+    P: BandExpandingPolicy<Trav>,
 {
     type Item = (ChildLocation, Child);
 

@@ -24,16 +24,15 @@ use crate::{
             },
         },
         partition::{
-            AsPartition,
             info::{
                 border::{
-                    BorderInfo,
                     perfect::{
                         BorderPerfect,
                         DoublePerfect,
                         SinglePerfect,
                     },
                     visit::VisitBorders,
+                    BorderInfo,
                 },
                 range::{
                     children::{
@@ -47,11 +46,12 @@ use crate::{
                     },
                 },
             },
-            Partition,
             splits::offset::{
                 AsOffsetSplits,
                 OffsetSplits,
             },
+            AsPartition,
+            Partition,
         },
     },
     split::cache::vertex::SplitVertexCache,
@@ -87,7 +87,7 @@ pub type ModePatternCtxOf<'a, K> = <<K as RangeRole>::Mode as ModeContext<'a>>::
 
 pub trait ModeContext<'a> {
     type NodeResult: AsNodeTraceContext<'a>
-    + AsPatternContext<'a, PatternCtx<'a>=Self::PatternResult>;
+        + AsPatternContext<'a, PatternCtx<'a> = Self::PatternResult>;
     type PatternResult: AsPatternTraceContext<'a> + Hash + Eq;
 }
 
@@ -105,11 +105,11 @@ pub trait ModeChildren<K: RangeRole> {
     type Result: Clone + Debug;
 }
 
-impl<K: RangeRole<Mode=Trace>> ModeChildren<K> for Trace {
+impl<K: RangeRole<Mode = Trace>> ModeChildren<K> for Trace {
     type Result = ();
 }
 
-impl<K: RangeRole<Mode=Join>> ModeChildren<K> for Join {
+impl<K: RangeRole<Mode = Join>> ModeChildren<K> for Join {
     type Result = K::Children;
 }
 
@@ -127,7 +127,7 @@ pub trait RangeRole: Debug + Clone + Copy {
     type Range: OffsetIndexRange<Self>;
     type PartitionSplits;
     type Children: RangeChildren<Self>;
-    type Borders: VisitBorders<Self, Splits=<Self::Splits as PatternSplits>::Pos>;
+    type Borders: VisitBorders<Self, Splits = <Self::Splits as PatternSplits>::Pos>;
     type Splits: PatternSplits + AsPartition<Self>;
     fn to_partition(splits: Self::Splits) -> Partition<Self>;
 }

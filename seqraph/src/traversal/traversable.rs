@@ -62,9 +62,9 @@ pub(crate) use impl_traversable_mut;
 
 pub trait Traversable: Sized + std::fmt::Debug {
     type Kind: GraphKind;
-    type Guard<'a>: Traversable<Kind=Self::Kind> + Deref<Target=Hypergraph<Self::Kind>>
-        where
-            Self: 'a;
+    type Guard<'a>: Traversable<Kind = Self::Kind> + Deref<Target = Hypergraph<Self::Kind>>
+    where
+        Self: 'a;
     fn graph(&self) -> Self::Guard<'_>;
 }
 
@@ -126,11 +126,11 @@ impl_traversable! {
     impl for Hypergraph, self => self; <'a> &'a Self
 }
 pub trait TraversableMut: Traversable {
-    type GuardMut<'a>: TraversableMut<Kind=Self::Kind>
-    + Deref<Target=Hypergraph<Self::Kind>>
-    + DerefMut
-        where
-            Self: 'a;
+    type GuardMut<'a>: TraversableMut<Kind = Self::Kind>
+        + Deref<Target = Hypergraph<Self::Kind>>
+        + DerefMut
+    where
+        Self: 'a;
     fn graph_mut(&mut self) -> Self::GuardMut<'_>;
 }
 

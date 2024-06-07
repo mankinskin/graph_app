@@ -5,15 +5,13 @@ use pretty_assertions::assert_eq;
 
 use crate::{
     graph::{
-        HypergraphRef,
         kind::BaseGraphKind,
         tests::{
             context,
             Context,
         },
+        HypergraphRef,
     },
-    HashMap,
-    HashSet,
     search::NoMatch,
     traversal::{
         cache::{
@@ -63,6 +61,8 @@ use crate::{
         },
         token::Token,
     },
+    HashMap,
+    HashSet,
 };
 
 #[allow(clippy::many_single_char_names)]
@@ -280,7 +280,7 @@ fn find_ancestor2() {
                                             bottom: HashMap::from_iter([(
                                                 DirectedKey::up(xaby, 2),
                                                 SubLocation::new(8, 0),
-                                            ), ]),
+                                            ),]),
                                             top: Default::default(),
                                         },
                                         index: xabyz,
@@ -378,7 +378,7 @@ fn find_ancestor2() {
                                         parent: xaby,
                                         pattern_id: 7,
                                         sub_index: 1,
-                                    }, ],
+                                    },],
                                 },
                                 _ty: Default::default(),
                             },
@@ -510,7 +510,7 @@ fn find_ancestor3() {
                                             bottom: HashMap::from_iter([(
                                                 DirectedKey::up(xab, 2),
                                                 SubLocation::new(6, 0),
-                                            ), ]),
+                                            ),]),
                                             top: Default::default(),
                                         },
                                         index: xaby,
@@ -643,7 +643,7 @@ fn find_ancestor3() {
                                         parent: xab,
                                         pattern_id: 4,
                                         sub_index: 1,
-                                    }, ],
+                                    },],
                                 },
                                 _ty: Default::default(),
                             },

@@ -16,11 +16,11 @@ use crate::{
             PatternJoinContext,
             PatternTraceContext,
         },
-        JoinContext,
         partition::splits::{
             HasPosSplits,
             PosSplits,
         },
+        JoinContext,
     },
     split::cache::vertex::SplitVertexCache,
     vertex::{
@@ -50,16 +50,16 @@ impl<'p> NodeTraceContext<'p> {
 
 pub trait AsNodeTraceContext<'p>: 'p {
     fn as_trace_context<'t>(&'t self) -> NodeTraceContext<'t>
-        where
-            Self: 't,
-            'p: 't;
+    where
+        Self: 't,
+        'p: 't;
 }
 
 impl<'p> AsNodeTraceContext<'p> for NodeTraceContext<'p> {
     fn as_trace_context<'t>(&'t self) -> NodeTraceContext<'t>
-        where
-            Self: 't,
-            'p: 't,
+    where
+        Self: 't,
+        'p: 't,
     {
         *self
     }
@@ -76,9 +76,9 @@ pub struct NodeJoinContext<'p, S: HasPosSplits + 'p = SplitVertexCache> {
 
 impl<'p, S: HasPosSplits + 'p> AsNodeTraceContext<'p> for NodeJoinContext<'p, S> {
     fn as_trace_context<'t>(&'t self) -> NodeTraceContext<'t>
-        where
-            Self: 't,
-            'p: 't,
+    where
+        Self: 't,
+        'p: 't,
     {
         NodeTraceContext {
             patterns: self.patterns(),
@@ -89,16 +89,16 @@ impl<'p, S: HasPosSplits + 'p> AsNodeTraceContext<'p> for NodeJoinContext<'p, S>
 
 pub trait ToPatternContext<'p> {
     type PatternCtx<'a>: AsPatternTraceContext<'p>
-        where
-            Self: 'a,
-            'a: 'p;
+    where
+        Self: 'a,
+        'a: 'p;
     fn to_pattern_context<'t>(
         self,
         pattern_id: &PatternId,
     ) -> Self::PatternCtx<'t>
-        where
-            Self: 't,
-            't: 'p;
+    where
+        Self: 't,
+        't: 'p;
 }
 
 impl<'p, SP: HasPosSplits + 'p> AsPatternContext<'p> for NodeJoinContext<'p, SP> {
@@ -107,9 +107,9 @@ impl<'p, SP: HasPosSplits + 'p> AsPatternContext<'p> for NodeJoinContext<'p, SP>
         &'t self,
         pattern_id: &PatternId,
     ) -> Self::PatternCtx<'t>
-        where
-            Self: 't,
-            't: 'p,
+    where
+        Self: 't,
+        't: 'p,
     {
         let ctx = PatternTraceContext {
             loc: self.index.to_pattern_location(*pattern_id),
@@ -124,16 +124,16 @@ impl<'p, SP: HasPosSplits + 'p> AsPatternContext<'p> for NodeJoinContext<'p, SP>
 
 pub trait AsPatternContext<'p> {
     type PatternCtx<'a>: AsPatternTraceContext<'p>
-        where
-            Self: 'a,
-            'a: 'p;
+    where
+        Self: 'a,
+        'a: 'p;
     fn as_pattern_context<'t>(
         &'t self,
         pattern_id: &PatternId,
     ) -> Self::PatternCtx<'t>
-        where
-            Self: 't,
-            't: 'p;
+    where
+        Self: 't,
+        't: 'p;
 }
 
 impl<'p> AsPatternContext<'p> for NodeTraceContext<'p> {
@@ -142,9 +142,9 @@ impl<'p> AsPatternContext<'p> for NodeTraceContext<'p> {
         &'t self,
         pattern_id: &PatternId,
     ) -> Self::PatternCtx<'t>
-        where
-            Self: 't,
-            't: 'p,
+    where
+        Self: 't,
+        't: 'p,
     {
         PatternTraceContext {
             loc: self.index.to_pattern_location(*pattern_id),

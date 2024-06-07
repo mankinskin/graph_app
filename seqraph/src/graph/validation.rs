@@ -13,8 +13,8 @@ pub enum ValidationError {
 }
 
 impl<'t, 'a, G> crate::graph::Hypergraph<G>
-    where
-        G: GraphKind,
+where
+    G: GraphKind,
 {
     pub fn validate_pattern_indexing_range_at(
         &self,

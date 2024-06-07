@@ -4,8 +4,8 @@ use crate::{
     vertex::{
         child::Child,
         pattern::Pattern,
-        PatternId,
         token::Tokenize,
+        PatternId,
         VertexIndex,
     },
 };

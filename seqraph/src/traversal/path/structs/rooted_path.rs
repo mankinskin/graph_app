@@ -66,7 +66,7 @@ impl<'a, R: PathRoot> From<&'a RootedSplitPath<R>> for RootedSplitPathRef<'a, R>
 }
 
 impl<'a, R: PathRole, Root: PathRoot> From<&'a RootedRolePath<R, Root>>
-for RootedSplitPathRef<'a, Root>
+    for RootedSplitPathRef<'a, Root>
 {
     fn from(value: &'a RootedRolePath<R, Root>) -> Self {
         Self {
@@ -95,7 +95,7 @@ impl<R: PathRoot> RootedRolePath<Start, R> {
                     root_entry: exit,
                     path: vec![],
                 }
-                    .into(),
+                .into(),
                 _ty: Default::default(),
             },
         }

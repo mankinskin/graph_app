@@ -2,8 +2,8 @@ use searcher::*;
 
 use crate::{
     graph::{
-        HypergraphRef,
         kind::TokenOf,
+        HypergraphRef,
     },
     traversal::traversable::{
         GraphKindOf,
@@ -12,11 +12,11 @@ use crate::{
     vertex::{
         child::Child,
         pattern::Pattern,
-        PatternId,
         token::{
-            AsToken,
             tokenizing_iter,
+            AsToken,
         },
+        PatternId,
     },
 };
 
@@ -54,21 +54,21 @@ pub trait Searchable: Traversable {
     //}
     fn find_ancestor(
         &self,
-        pattern: impl IntoIterator<Item=impl crate::vertex::indexed::Indexed>,
+        pattern: impl IntoIterator<Item = impl crate::vertex::indexed::Indexed>,
     ) -> SearchResult {
         let pattern = self.graph().to_children(pattern);
         self.searcher().find_pattern_ancestor(pattern)
     }
     fn find_parent(
         &self,
-        pattern: impl IntoIterator<Item=impl crate::vertex::indexed::Indexed>,
+        pattern: impl IntoIterator<Item = impl crate::vertex::indexed::Indexed>,
     ) -> SearchResult {
         let pattern = self.graph().to_children(pattern);
         self.searcher().find_pattern_parent(pattern)
     }
     fn find_sequence(
         &self,
-        pattern: impl IntoIterator<Item=impl AsToken<TokenOf<GraphKindOf<Self>>>>,
+        pattern: impl IntoIterator<Item = impl AsToken<TokenOf<GraphKindOf<Self>>>>,
     ) -> SearchResult {
         let iter = tokenizing_iter(pattern.into_iter());
         let pattern = self.graph().to_token_children(iter)?;

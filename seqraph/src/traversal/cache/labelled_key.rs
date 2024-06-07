@@ -31,8 +31,8 @@ pub mod vkey {
         trav: &Trav,
         child: Child,
     ) -> VertexCacheKey
-        where
-            TravToken<Trav>: Display,
+    where
+        TravToken<Trav>: Display,
     {
         LabelledKey::build(trav, child)
     }
@@ -57,8 +57,8 @@ pub mod vkey {
             trav: &Trav,
             child: Child,
         ) -> Self
-            where
-                TravToken<Trav>: Display,
+        where
+            TravToken<Trav>: Display,
         {
             let index = child.vertex_index();
             Self {
@@ -113,8 +113,8 @@ pub mod vkey {
         _trav: &Trav,
         child: Child,
     ) -> VertexCacheKey
-        where
-            TravToken<Trav>: Display,
+    where
+        TravToken<Trav>: Display,
     {
         child.vertex_index()
     }

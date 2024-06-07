@@ -118,8 +118,8 @@ impl<R: PathRole> PathChild<R> for QueryStateContext<'_> where Self: HasPath<R> 
 impl<R: PathRole> PathChild<R> for RolePath<R> {}
 
 impl<R: PathRole> PathChild<R> for SearchPath
-    where
-        SearchPath: HasRolePath<R>,
+where
+    SearchPath: HasRolePath<R>,
 {
     fn path_child_location(&self) -> Option<ChildLocation> {
         Some(

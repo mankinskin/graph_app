@@ -1,13 +1,13 @@
 use super::{
+    super::{
+        child::Child,
+        indexed::AsChild,
+        pattern::Pattern,
+        ChildPatterns,
+    },
     PatternId,
     PatternLocation,
     SubLocation,
-    super::{
-        child::Child,
-        ChildPatterns,
-        indexed::AsChild,
-        pattern::Pattern,
-    },
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy, Hash)]

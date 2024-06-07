@@ -7,7 +7,6 @@ use std::{
 };
 
 use crate::{
-    HashSet,
     join::delta::PatternSubDeltas,
     split::{
         PatternSplitPos,
@@ -22,6 +21,7 @@ use crate::{
         location::SubLocation,
         PatternId,
     },
+    HashSet,
 };
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

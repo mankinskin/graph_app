@@ -4,6 +4,10 @@ use std::{
 };
 
 use derive_more::From;
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 use crate::{
     traversal::cache::key::{
@@ -19,18 +23,18 @@ use crate::{
             pattern::PatternLocation,
             SubLocation,
         },
-        PatternId,
         token::NewTokenIndex,
-        TokenPosition,
-        VertexIndex,
         wide::{
             Wide,
             WideMut,
         },
+        PatternId,
+        TokenPosition,
+        VertexIndex,
     },
 };
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, From)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, From, Serialize, Deserialize)]
 pub struct ChildWidth(pub usize);
 
 impl Borrow<ChildWidth> for Child {
@@ -39,7 +43,7 @@ impl Borrow<ChildWidth> for Child {
     }
 }
 
-#[derive(Debug, Eq, Clone, Copy)]
+#[derive(Debug, Eq, Clone, Copy, Serialize, Deserialize)]
 pub struct Child {
     pub index: VertexIndex, // the child index
     pub width: ChildWidth,  // the token width

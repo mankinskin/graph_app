@@ -71,7 +71,7 @@ pub trait RetractLeaf: MoveLeaf<Left> {
 
 impl<T: MoveLeaf<Left>> RetractLeaf for T {}
 
-impl<K: MoveKey<Right, Delta=usize>> MoveLeaf<Right> for KeyedLeaf<'_, Right, K> {
+impl<K: MoveKey<Right, Delta = usize>> MoveLeaf<Right> for KeyedLeaf<'_, Right, K> {
     fn move_leaf<Trav: Traversable>(
         &mut self,
         trav: &Trav,
@@ -107,7 +107,7 @@ impl MoveLeaf<Right> for ChildLocation {
     }
 }
 
-impl<K: MoveKey<Left, Delta=usize>> MoveLeaf<Left> for KeyedLeaf<'_, Left, K> {
+impl<K: MoveKey<Left, Delta = usize>> MoveLeaf<Left> for KeyedLeaf<'_, Left, K> {
     fn move_leaf<Trav: Traversable>(
         &mut self,
         trav: &Trav,

@@ -11,8 +11,10 @@ use std::{
     },
 };
 
-use crate::vertex::pattern::pattern_range::PatternRangeIndex;
-use crate::vertex::wide::Wide;
+use crate::vertex::{
+    pattern::pattern_range::PatternRangeIndex,
+    wide::Wide,
+};
 
 use super::{
     child::Child,
@@ -30,9 +32,9 @@ pub type Patterns = Vec<Pattern>;
 
 /// trait for types which can be converted to a pattern with a known size
 pub trait IntoPattern:
-IntoIterator<Item=Self::Elem, IntoIter=Self::Iter> + Sized + Borrow<[Child]> + Debug
+    IntoIterator<Item = Self::Elem, IntoIter = Self::Iter> + Sized + Borrow<[Child]> + Debug
 {
-    type Iter: ExactSizeIterator + DoubleEndedIterator<Item=Self::Elem>;
+    type Iter: ExactSizeIterator + DoubleEndedIterator<Item = Self::Elem>;
     type Elem: AsChild;
 
     fn into_pattern(self) -> Pattern {
@@ -44,10 +46,10 @@ IntoIterator<Item=Self::Elem, IntoIter=Self::Iter> + Sized + Borrow<[Child]> + D
 }
 
 impl<C, It, T> IntoPattern for T
-    where
-        C: AsChild,
-        It: DoubleEndedIterator<Item=C> + ExactSizeIterator,
-        T: IntoIterator<Item=C, IntoIter=It> + Borrow<[Child]> + Debug,
+where
+    C: AsChild,
+    It: DoubleEndedIterator<Item = C> + ExactSizeIterator,
+    T: IntoIterator<Item = C, IntoIter = It> + Borrow<[Child]> + Debug,
 {
     type Iter = It;
     type Elem = C;
@@ -58,19 +60,19 @@ pub trait AsPatternMut: BorrowMut<Vec<Child>> + Debug {}
 
 impl<T> AsPatternMut for T where T: BorrowMut<Vec<Child>> + Debug {}
 
-pub fn pattern_width<T: Borrow<Child>>(pat: impl IntoIterator<Item=T>) -> TokenPosition {
+pub fn pattern_width<T: Borrow<Child>>(pat: impl IntoIterator<Item = T>) -> TokenPosition {
     pat.into_iter().map(|c| c.borrow().width()).sum()
 }
 
 pub fn pattern_pre_ctx_width<T: Borrow<Child>>(
-    pat: impl IntoIterator<Item=T>,
+    pat: impl IntoIterator<Item = T>,
     sub_index: usize,
 ) -> TokenPosition {
     pattern_width(pat.into_iter().take(sub_index))
 }
 
 pub fn pattern_post_ctx_width<T: Borrow<Child>>(
-    pat: impl IntoIterator<Item=T>,
+    pat: impl IntoIterator<Item = T>,
     sub_index: usize,
 ) -> TokenPosition {
     pattern_width(pat.into_iter().skip(sub_index + 1))

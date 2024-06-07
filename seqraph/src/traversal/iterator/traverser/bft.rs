@@ -33,8 +33,8 @@ impl Iterator for BftQueue {
 
 impl ExtendStates for BftQueue {
     fn extend<
-        It: DoubleEndedIterator + Iterator<Item=(usize, TraversalState)>,
-        T: IntoIterator<Item=(usize, TraversalState), IntoIter=It>,
+        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
+        T: IntoIterator<Item = (usize, TraversalState), IntoIter = It>,
     >(
         &mut self,
         iter: T,

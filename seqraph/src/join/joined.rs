@@ -12,11 +12,11 @@ use crate::{
                     SinglePerfect,
                 },
             },
-            PartitionInfo,
             range::role::{
                 Join,
                 RangeRole,
             },
+            PartitionInfo,
         },
     },
     vertex::{
@@ -32,9 +32,9 @@ pub struct JoinedPartition<K: RangeRole> {
     pub delta: PatternSubDeltas,
 }
 
-impl<'a, K: RangeRole<Mode=Join>> JoinedPartition<K>
-    where
-        K::Borders: JoinBorders<K>,
+impl<'a, K: RangeRole<Mode = Join>> JoinedPartition<K>
+where
+    K::Borders: JoinBorders<K>,
 {
     pub fn from_joined_patterns(
         pats: JoinedPatterns<K>,
@@ -84,9 +84,9 @@ pub struct JoinedPatterns<K: RangeRole> {
     pub delta: PatternSubDeltas,
 }
 
-impl<'a, K: RangeRole<Mode=Join>> JoinedPatterns<K>
-    where
-        K::Borders: JoinBorders<K>,
+impl<'a, K: RangeRole<Mode = Join>> JoinedPatterns<K>
+where
+    K::Borders: JoinBorders<K>,
 {
     pub fn from_partition_info(
         info: PartitionInfo<K>,

@@ -76,8 +76,8 @@ impl TraversalCache {
         query_root: &QueryContext,
         query_state: QueryState,
     ) -> (Folder::Iterator<'a>, Self)
-        where
-            TravToken<Folder>: Display,
+    where
+        TravToken<Folder>: Display,
     {
         let mut entries = HashMap::default();
         entries.insert(
@@ -113,8 +113,8 @@ impl TraversalCache {
         state: NewEntry,
         add_edges: bool,
     ) -> (DirectedKey, bool)
-        where
-            TravToken<Trav>: Display,
+    where
+        TravToken<Trav>: Display,
     {
         let key = state.target_key();
         if let Some(ve) = self.entries.get_mut(&key.index.vertex_index()) {
@@ -161,9 +161,9 @@ impl TraversalCache {
         // path width
         let root_down_pos = root_up_pos
             + pattern
-            .get(root_entry + 1..root_exit.sub_index)
-            .map(|p| pattern_width(p))
-            .unwrap_or_default();
+                .get(root_entry + 1..root_exit.sub_index)
+                .map(|p| pattern_width(p))
+                .unwrap_or_default();
 
         let root_down_key = DownKey::new(path.root_parent(), root_down_pos.into());
         let exit_down_key = DownKey::new(graph.expect_child_at(&root_exit), root_down_pos.into());
@@ -231,8 +231,8 @@ impl TraversalCache {
         trav: &Trav,
         key: &DirectedKey,
     ) -> &mut PositionCache
-        where
-            TravToken<Trav>: Display,
+    where
+        TravToken<Trav>: Display,
     {
         if !self.exists(&key) {
             let pe = PositionCache::start(key.index);

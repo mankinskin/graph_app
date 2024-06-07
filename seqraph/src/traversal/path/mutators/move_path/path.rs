@@ -33,7 +33,7 @@ use crate::{
 use std::ops::ControlFlow;
 
 pub trait MovePath<D: Direction, R: PathRole = End>:
-PathPop + PathAppend + MoveRootPos<D, R>
+    PathPop + PathAppend + MoveRootPos<D, R>
 {
     fn move_leaf<Trav: Traversable>(
         &mut self,
@@ -53,7 +53,7 @@ PathPop + PathAppend + MoveRootPos<D, R>
                     .then(|| location)
             })
         })
-            .find_map(|location| location)
+        .find_map(|location| location)
         {
             self.path_append(location);
             ControlFlow::Continue(())

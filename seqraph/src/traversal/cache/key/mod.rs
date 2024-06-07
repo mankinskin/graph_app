@@ -251,8 +251,8 @@ impl SplitKey {
         index: Child,
         pos: P,
     ) -> Self
-        where
-            P::Error: Debug,
+    where
+        P::Error: Debug,
     {
         Self {
             index,

@@ -17,13 +17,11 @@ use joined::*;
 use partition::*;
 
 use crate::{
-    HashMap,
     index::indexer::Indexer,
     join::{
         context::node::context::NodeJoinContext,
         partition::{
             info::{
-                JoinPartition,
                 range::role::{
                     In,
                     Join,
@@ -34,10 +32,11 @@ use crate::{
                     PartitionBorders,
                     VisitPartition,
                 },
+                JoinPartition,
             },
             splits::{
-                HasPosSplits,
                 offset::OffsetSplits,
+                HasPosSplits,
                 PosSplitRef,
             },
         },
@@ -62,6 +61,7 @@ use crate::{
         location::SubLocation,
         wide::Wide,
     },
+    HashMap,
 };
 
 pub mod context;
@@ -75,7 +75,7 @@ pub struct SplitFrontier {
 }
 
 impl SplitFrontier {
-    pub fn new(keys: impl IntoIterator<Item=SplitKey>) -> Self {
+    pub fn new(keys: impl IntoIterator<Item = SplitKey>) -> Self {
         Self {
             queue: LinkedHashSet::from_iter(keys),
         }
@@ -83,7 +83,7 @@ impl SplitFrontier {
 }
 
 impl Extend<SplitKey> for SplitFrontier {
-    fn extend<T: IntoIterator<Item=SplitKey>>(
+    fn extend<T: IntoIterator<Item = SplitKey>>(
         &mut self,
         iter: T,
     ) {
@@ -133,8 +133,8 @@ impl Indexer {
         ctx: &mut NodeJoinContext<'p>,
         pos_splits: S,
     ) -> Vec<Child>
-        where
-            'p: 't,
+    where
+        'p: 't,
     {
         let offset_splits = pos_splits.pos_splits();
         let len = offset_splits.len();

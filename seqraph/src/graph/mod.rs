@@ -1,17 +1,22 @@
 use std::{
     borrow::Borrow,
     sync::{
-        Arc,
         atomic::{
             self,
             AtomicUsize,
+            Ordering,
         },
+        Arc,
         RwLock,
     },
 };
 
 use itertools::Itertools;
 use petgraph::graph::DiGraph;
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 use crate::{
     graph::{
@@ -21,7 +26,6 @@ use crate::{
             GraphKind,
         },
     },
-    HashMap,
     vertex::{
         child::Child,
         indexed::{
@@ -29,9 +33,12 @@ use crate::{
             Indexed,
         },
         pattern::IntoPattern,
-        PatternId,
         token::Token,
+        PatternId,
+        VertexData,
+        VertexIndex,
     },
+    HashMap,
 };
 
 pub mod child_strings;
@@ -85,14 +92,33 @@ impl<G: GraphKind> AsMut<Self> for Hypergraph<G> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Hypergraph<G: GraphKind = BaseGraphKind> {
-    graph: indexmap::IndexMap<crate::vertex::VertexIndex, crate::vertex::VertexData<G>>,
-    tokens: indexmap::IndexMap<Token<G::Token>, crate::vertex::VertexIndex>,
+    graph: indexmap::IndexMap<VertexIndex, VertexData<G>>,
+    tokens: indexmap::IndexMap<Token<G::Token>, VertexIndex>,
     pattern_id_count: AtomicUsize,
     vertex_id_count: AtomicUsize,
     _ty: std::marker::PhantomData<G>,
 }
+impl<G: GraphKind> PartialEq for Hypergraph<G> {
+    fn eq(
+        &self,
+        other: &Self,
+    ) -> bool {
+        self.graph.eq(&other.graph)
+            && self.tokens.eq(&other.tokens)
+            && self
+                .pattern_id_count
+                .load(Ordering::SeqCst)
+                .eq(&other.pattern_id_count.load(Ordering::SeqCst))
+            && self
+                .vertex_id_count
+                .load(Ordering::SeqCst)
+                .eq(&other.vertex_id_count.load(Ordering::SeqCst))
+            && self._ty.eq(&other._ty)
+    }
+}
+impl<G: GraphKind> Eq for Hypergraph<G> {}
 
 impl<G: GraphKind> Default for Hypergraph<G> {
     fn default() -> Self {
@@ -145,7 +171,7 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G> {
                         assert_eq!(acc, exp);
                         acc
                     })
-                        .or(Some(exp.clone()))
+                    .or(Some(exp.clone()))
                 })
                 .unwrap()
         }
@@ -188,8 +214,8 @@ pub struct Edge {
 }
 
 impl<'t, 'a, G: GraphKind> Hypergraph<G>
-    where
-        G::Token: std::fmt::Display + 't,
+where
+    G::Token: std::fmt::Display + 't,
 {
     pub fn to_petgraph(
         &self
@@ -246,7 +272,7 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G>
 
     pub fn pattern_string_with_separator(
         &'a self,
-        pattern: impl IntoIterator<Item=impl Indexed>,
+        pattern: impl IntoIterator<Item = impl Indexed>,
         separator: &'static str,
     ) -> String {
         pattern
@@ -256,19 +282,19 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G>
     }
     pub fn separated_pattern_string(
         &'a self,
-        pattern: impl IntoIterator<Item=impl Indexed>,
+        pattern: impl IntoIterator<Item = impl Indexed>,
     ) -> String {
         self.pattern_string_with_separator(pattern, "_")
     }
     pub fn pattern_string(
         &'a self,
-        pattern: impl IntoIterator<Item=impl Indexed>,
+        pattern: impl IntoIterator<Item = impl Indexed>,
     ) -> String {
         self.pattern_string_with_separator(pattern, "")
     }
     pub fn pattern_strings(
         &'a self,
-        patterns: impl IntoIterator<Item=impl IntoIterator<Item=impl Indexed>>,
+        patterns: impl IntoIterator<Item = impl IntoIterator<Item = impl Indexed>>,
     ) -> Vec<String> {
         patterns
             .into_iter()

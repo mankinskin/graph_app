@@ -26,39 +26,53 @@ use std::collections::HashMap;
 use std::f32::consts::PI;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Layout {
+pub enum Layout
+{
     Graph,
     Nested,
 }
-impl Layout {
+impl Layout
+{
     #[allow(unused)]
-    pub fn is_graph(&self) -> bool {
+    pub fn is_graph(&self) -> bool
+    {
         matches!(self, Self::Graph)
     }
-    pub fn is_nested(&self) -> bool {
+    pub fn is_nested(&self) -> bool
+    {
         matches!(self, Self::Nested)
     }
 }
-impl Default for Layout {
-    fn default() -> Self {
+impl Default for Layout
+{
+    fn default() -> Self
+    {
         Self::Graph
     }
 }
 #[derive(Default)]
-pub struct GraphVis {
+pub struct GraphVis
+{
     graph: DiGraph<NodeVis, ()>,
     pub layout: Layout,
     handle: Option<Graph>,
 }
-impl GraphVis {
-    pub fn set_graph(&mut self, graph: Graph) {
+impl GraphVis
+{
+    pub fn set_graph(
+        &mut self,
+        graph: Graph,
+    )
+    {
         self.handle = Some(graph);
         self.update();
     }
-    fn graph(&self) -> Graph {
+    fn graph(&self) -> Graph
+    {
         self.handle.clone().expect("GraphVis not yet initialized!")
     }
-    pub fn update(&mut self) -> Option<()> {
+    pub fn update(&mut self) -> Option<()>
+    {
         // todo reuse names in nodes
         //println!("update...");
         let pg = self.graph().read().to_petgraph();
@@ -70,9 +84,12 @@ impl GraphVis {
             .collect();
         let filtered = pg.filter_map(
             |_idx, (key, node)| {
-                if node.width() <= 1 {
+                if node.width() <= 1
+                {
                     None
-                } else {
+                }
+                else
+                {
                     Some((*key, node))
                 }
             },
@@ -85,10 +102,13 @@ impl GraphVis {
 
         self.graph = filtered.map(
             |idx, (key, node)| {
-                if let Some(oid) = old_node_indices.get(key) {
+                if let Some(oid) = old_node_indices.get(key)
+                {
                     let old = self.graph.node_weight(*oid).unwrap();
                     NodeVis::from_old(old, &node_indices, idx, node)
-                } else {
+                }
+                else
+                {
                     NodeVis::new(self.graph(), &node_indices, idx, key, node)
                 }
             },
@@ -97,7 +117,11 @@ impl GraphVis {
         //println!("done");
         Some(())
     }
-    pub fn show(&mut self, ui: &mut Ui) {
+    pub fn show(
+        &mut self,
+        ui: &mut Ui,
+    )
+    {
         //println!("{}", self.graph.vertex_count());
         let rects: HashMap<_, _> = self
             .graph
@@ -120,7 +144,13 @@ impl GraphVis {
             Self::edge(ui, &a_pos, &p);
         });
     }
-    pub fn edge_tip(ui: &mut Ui, source: &Pos2, target: &Pos2, size: f32) {
+    pub fn edge_tip(
+        ui: &mut Ui,
+        source: &Pos2,
+        target: &Pos2,
+        size: f32,
+    )
+    {
         let angle = (*target - *source).angle();
         let points = IntoIterator::into_iter([
             Vec2::new(0.0, 0.0),
@@ -136,7 +166,12 @@ impl GraphVis {
         ));
     }
     #[allow(unused)]
-    pub fn edge(ui: &mut Ui, source: &Pos2, target: &Pos2) {
+    pub fn edge(
+        ui: &mut Ui,
+        source: &Pos2,
+        target: &Pos2,
+    )
+    {
         ui.painter().add(Shape::line_segment(
             [*source, *target],
             Stroke::new(1.0, egui::Color32::WHITE),
@@ -144,28 +179,41 @@ impl GraphVis {
         Self::edge_tip(ui, source, target, 10.0);
     }
     #[allow(clippy::many_single_char_names)]
-    fn border_intersection_point(rect: &Rect, p: &Pos2) -> Pos2 {
+    fn border_intersection_point(
+        rect: &Rect,
+        p: &Pos2,
+    ) -> Pos2
+    {
         let p = *p;
         let c = rect.center();
         let v = p - c;
         let s = v.y / v.x;
         let h = rect.height();
         let w = rect.width();
-        c + if -h / 2.0 <= s * w / 2.0 && s * w / 2.0 <= h / 2.0 {
+        c + if -h / 2.0 <= s * w / 2.0 && s * w / 2.0 <= h / 2.0
+        {
             // intersects side
-            if p.x > c.x {
+            if p.x > c.x
+            {
                 // right
                 vec2(w / 2.0, w / 2.0 * s)
-            } else {
+            }
+            else
+            {
                 // left
                 vec2(-w / 2.0, -w / 2.0 * s)
             }
-        } else {
+        }
+        else
+        {
             // intersects top or bottom
-            if p.y > c.y {
+            if p.y > c.y
+            {
                 // top
                 vec2(h / (2.0 * s), h / 2.0)
-            } else {
+            }
+            else
+            {
                 // bottom
                 vec2(-h / (2.0 * s), -h / 2.0)
             }
@@ -174,7 +222,8 @@ impl GraphVis {
 }
 #[allow(unused)]
 #[derive(Clone)]
-pub struct NodeVis {
+pub struct NodeVis
+{
     key: VertexKey<char>,
     idx: NodeIndex,
     name: String,
@@ -184,32 +233,39 @@ pub struct NodeVis {
     graph: Graph,
 }
 #[allow(unused)]
-pub struct NodeState {
+pub struct NodeState
+{
     split_lower: usize,
     split_upper: usize,
 }
-impl NodeState {
-    pub fn new() -> Self {
+impl NodeState
+{
+    pub fn new() -> Self
+    {
         Self {
             split_lower: 1,
             split_upper: 7,
         }
     }
 }
-impl std::ops::Deref for NodeVis {
+impl std::ops::Deref for NodeVis
+{
     type Target = VertexData;
-    fn deref(&self) -> &Self::Target {
+    fn deref(&self) -> &Self::Target
+    {
         &self.data
     }
 }
-impl NodeVis {
+impl NodeVis
+{
     pub fn new(
         graph: Graph,
         node_indices: &HashMap<VertexKey<char>, NodeIndex>,
         idx: NodeIndex,
         key: &VertexKey<char>,
         data: &VertexData,
-    ) -> Self {
+    ) -> Self
+    {
         Self::new_impl(
             graph,
             node_indices,
@@ -224,7 +280,8 @@ impl NodeVis {
         node_indices: &HashMap<VertexKey<char>, NodeIndex>,
         idx: NodeIndex,
         data: &VertexData,
-    ) -> Self {
+    ) -> Self
+    {
         Self::new_impl(
             old.graph.clone(),
             node_indices,
@@ -241,11 +298,13 @@ impl NodeVis {
         key: &VertexKey<char>,
         data: &VertexData,
         state: Arc<RwLock<NodeState>>,
-    ) -> Self {
+    ) -> Self
+    {
         let (name, child_patterns) = {
             let graph = &*graph.read();
             let name = graph.key_data_string(key, data);
-            let child_patterns = Self::child_patterns_vis(graph, node_indices, data);
+            let child_patterns =
+                Self::child_patterns_vis(graph, node_indices, data);
             (name, child_patterns)
         };
         Self {
@@ -259,18 +318,21 @@ impl NodeVis {
         }
     }
     #[allow(unused)]
-    fn state(&self) -> RwLockReadGuard<'_, NodeState> {
+    fn state(&self) -> RwLockReadGuard<'_, NodeState>
+    {
         self.state.read().unwrap()
     }
     #[allow(unused)]
-    fn state_mut(&self) -> RwLockWriteGuard<'_, NodeState> {
+    fn state_mut(&self) -> RwLockWriteGuard<'_, NodeState>
+    {
         self.state.write().unwrap()
     }
     fn child_patterns_vis(
         graph: &Hypergraph,
         node_indices: &HashMap<VertexKey, NodeIndex>,
         data: &VertexData,
-    ) -> ChildPatternsVis {
+    ) -> ChildPatternsVis
+    {
         data.get_child_patterns()
             .iter()
             .map(|(&id, pat)| {
@@ -285,7 +347,12 @@ impl NodeVis {
             })
             .collect()
     }
-    pub fn child_patterns(&self, ui: &mut Ui, gvis: &GraphVis) -> Response {
+    pub fn child_patterns(
+        &self,
+        ui: &mut Ui,
+        gvis: &GraphVis,
+    ) -> Response
+    {
         ui.vertical(|ui| {
             ui.spacing_mut().item_spacing = Vec2::splat(0.0);
             self.child_patterns.iter().for_each(|(_pid, cpat)| {
@@ -296,7 +363,13 @@ impl NodeVis {
         })
         .response
     }
-    fn measure_pattern(&self, ui: &mut Ui, pat: &PatternVis, gvis: &GraphVis) -> Response {
+    fn measure_pattern(
+        &self,
+        ui: &mut Ui,
+        pat: &PatternVis,
+        gvis: &GraphVis,
+    ) -> Response
+    {
         let old_clip_rect = ui.clip_rect();
         let old_cursor = ui.cursor();
         ui.set_clip_rect(Rect::NOTHING);
@@ -311,9 +384,11 @@ impl NodeVis {
         pat: &PatternVis,
         height: Option<f32>,
         gvis: &GraphVis,
-    ) -> Response {
+    ) -> Response
+    {
         ui.horizontal(|ui| {
-            if let Some(height) = height {
+            if let Some(height) = height
+            {
                 ui.set_min_height(height);
             }
             pat.pattern.iter().for_each(|child| {
@@ -322,26 +397,40 @@ impl NodeVis {
         })
         .response
     }
-    fn child_index(&self, ui: &mut Ui, child: &ChildVis, gvis: &GraphVis) -> Response {
+    fn child_index(
+        &self,
+        ui: &mut Ui,
+        child: &ChildVis,
+        gvis: &GraphVis,
+    ) -> Response
+    {
         Frame::group(&Style::default())
             .inner_margin(3.0)
             .show(ui, |ui| {
                 ui.spacing_mut().item_spacing = Vec2::splat(0.0);
                 //ui.set_min_width(UNIT_WIDTH * child.width as f32);
-                if gvis.layout.is_nested() && child.idx.is_some() {
+                if gvis.layout.is_nested() && child.idx.is_some()
+                {
                     assert!(child.child.width() > 1);
                     let node = gvis
                         .graph
                         .node_weight(child.idx.unwrap())
                         .expect("Invalid NodeIndex in ChildVis!");
                     node.child_patterns(ui, gvis)
-                } else {
+                }
+                else
+                {
                     ui.monospace(&child.name)
                 }
             })
             .response
     }
-    pub fn show(&self, ui: &mut Ui, gvis: &GraphVis) -> Option<Response> {
+    pub fn show(
+        &self,
+        ui: &mut Ui,
+        gvis: &GraphVis,
+    ) -> Option<Response>
+    {
         Window::new(&format!("{}({})", self.name, self.idx.index()))
             //Window::new(&self.name)
             .vscroll(true)
@@ -354,19 +443,28 @@ impl NodeVis {
     }
 }
 #[derive(Clone)]
-struct ChildVis {
+struct ChildVis
+{
     name: String,
     child: Child,
     idx: Option<NodeIndex>,
 }
-impl std::ops::Deref for ChildVis {
+impl std::ops::Deref for ChildVis
+{
     type Target = Child;
-    fn deref(&self) -> &Self::Target {
+    fn deref(&self) -> &Self::Target
+    {
         &self.child
     }
 }
-impl ChildVis {
-    fn new(graph: &Hypergraph, node_indices: &HashMap<VertexKey, NodeIndex>, child: Child) -> Self {
+impl ChildVis
+{
+    fn new(
+        graph: &Hypergraph,
+        node_indices: &HashMap<VertexKey, NodeIndex>,
+        child: Child,
+    ) -> Self
+    {
         let key = graph.expect_vertex_key(child.index);
         let name = graph.index_string(child.get_index());
         let idx = node_indices.get(key).cloned();
@@ -374,11 +472,14 @@ impl ChildVis {
     }
 }
 #[derive(Clone)]
-struct PatternVis {
+struct PatternVis
+{
     pattern: Vec<ChildVis>,
 }
-impl PatternVis {
-    fn new(pattern: Vec<ChildVis>) -> Self {
+impl PatternVis
+{
+    fn new(pattern: Vec<ChildVis>) -> Self
+    {
         Self { pattern }
     }
 }

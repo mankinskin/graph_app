@@ -21,7 +21,7 @@ impl<T: SplitInner> Split<T> {
     }
 }
 
-impl<I, T: SplitInner + Extend<I> + IntoIterator<Item=I>> Split<T> {
+impl<I, T: SplitInner + Extend<I> + IntoIterator<Item = I>> Split<T> {
     pub fn infix(
         &mut self,
         mut inner: Split<T>,

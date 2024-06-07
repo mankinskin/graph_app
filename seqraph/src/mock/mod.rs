@@ -10,7 +10,7 @@ use crate::vertex::{
 mod tests;
 
 #[allow(unused)]
-pub fn pattern_from_widths(widths: impl IntoIterator<Item=usize>) -> Pattern {
+pub fn pattern_from_widths(widths: impl IntoIterator<Item = usize>) -> Pattern {
     widths
         .into_iter()
         .enumerate()

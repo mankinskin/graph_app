@@ -6,6 +6,10 @@ use std::{
 
 use derive_builder::Builder;
 use either::Either;
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 use parent::Parent;
 use pattern::Pattern;
@@ -16,8 +20,6 @@ use crate::{
         GraphKind,
         TokenOf,
     },
-    HashMap,
-    HashSet,
     search::NoMatch,
     vertex::{
         child::Child,
@@ -28,9 +30,9 @@ use crate::{
         },
         parent::PatternIndex,
         pattern::{
-            IntoPattern,
             pattern_range::PatternRangeIndex,
             pattern_width,
+            IntoPattern,
         },
         token::{
             Token,
@@ -38,6 +40,8 @@ use crate::{
         },
         wide::Wide,
     },
+    HashMap,
+    HashSet,
 };
 
 pub mod child;
@@ -59,7 +63,7 @@ pub type IndexPosition = usize;
 pub type IndexPattern = Vec<VertexIndex>;
 pub type VertexPatternView<'a, G> = Vec<&'a VertexData<G>>;
 
-pub fn clone_child_patterns(children: &'_ ChildPatterns) -> impl Iterator<Item=Pattern> + '_ {
+pub fn clone_child_patterns(children: &'_ ChildPatterns) -> impl Iterator<Item = Pattern> + '_ {
     children.iter().map(|(_, p)| p.clone())
 }
 
@@ -69,7 +73,7 @@ pub enum VertexKey<T: Tokenize = TokenOf<BaseGraphKind>> {
     Pattern(VertexIndex),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Builder)]
+#[derive(Debug, PartialEq, Eq, Clone, Builder, Serialize, Deserialize)]
 pub struct VertexData<G: GraphKind = BaseGraphKind> {
     pub index: VertexIndex,
     pub width: TokenPosition,
@@ -224,7 +228,7 @@ impl<G: GraphKind> VertexData<G> {
         self.children
             .iter()
             .next()
-            .unwrap_or_else(|| panic!("Pattern vertex has no children {:#?}", self, ))
+            .unwrap_or_else(|| panic!("Pattern vertex has no children {:#?}", self,))
     }
     #[track_caller]
     pub fn expect_child_pattern(
@@ -244,12 +248,12 @@ impl<G: GraphKind> VertexData<G> {
         id: &PatternId,
     ) -> &mut Pattern {
         self.get_child_pattern_mut(id)
-            .unwrap_or_else(|_| panic!("Child pattern with id {} does not exist in in vertex", id, ))
+            .unwrap_or_else(|_| panic!("Child pattern with id {} does not exist in in vertex", id,))
     }
     pub fn get_child_patterns(&self) -> &ChildPatterns {
         &self.children
     }
-    pub fn get_child_pattern_iter(&'_ self) -> impl Iterator<Item=Pattern> + '_ {
+    pub fn get_child_pattern_iter(&'_ self) -> impl Iterator<Item = Pattern> + '_ {
         clone_child_patterns(&self.children)
     }
     pub fn get_child_pattern_set(&self) -> HashSet<Pattern> {
@@ -271,7 +275,7 @@ impl<G: GraphKind> VertexData<G> {
     }
     pub fn add_patterns_no_update(
         &mut self,
-        patterns: impl IntoIterator<Item=(PatternId, impl IntoPattern)>,
+        patterns: impl IntoIterator<Item = (PatternId, impl IntoPattern)>,
     ) {
         for (id, pat) in patterns {
             if pat.borrow().len() < 2 {
@@ -356,7 +360,7 @@ impl<G: GraphKind> VertexData<G> {
     pub fn get_parents_below_width(
         &self,
         width_ceiling: Option<TokenPosition>,
-    ) -> impl Iterator<Item=(&VertexIndex, &Parent)> + Clone {
+    ) -> impl Iterator<Item = (&VertexIndex, &Parent)> + Clone {
         let parents = self.get_parents();
         // optionally filter parents by width
         if let Some(ceil) = width_ceiling {
@@ -373,8 +377,8 @@ impl<G: GraphKind> VertexData<G> {
         &self,
         g: &crate::graph::Hypergraph<G>,
     ) -> Vec<Vec<String>>
-        where
-            G::Token: std::fmt::Display,
+    where
+        G::Token: std::fmt::Display,
     {
         self.get_child_pattern_iter()
             .map(|pat| {

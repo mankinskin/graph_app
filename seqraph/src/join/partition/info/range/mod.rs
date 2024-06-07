@@ -17,10 +17,10 @@ use crate::{
         partition::info::{
             border::{
                 join::JoinBorders,
-                PartitionBorder,
                 perfect::BoolPerfect,
                 trace::TraceBorders,
                 visit::VisitBorders,
+                PartitionBorder,
             },
             JoinPartition,
         },
@@ -54,7 +54,7 @@ pub trait ModeRangeInfo<K: RangeRole>: Debug {
     ) -> Result<PatternRangeInfo<K>, Child>;
 }
 
-impl<K: RangeRole<Mode=Trace>> ModeRangeInfo<K> for TraceRangeInfo<K> {
+impl<K: RangeRole<Mode = Trace>> ModeRangeInfo<K> for TraceRangeInfo<K> {
     fn info_pattern_range(
         borders: BordersOf<K>,
         ctx: &ModePatternCtxOf<K>,
@@ -77,9 +77,9 @@ impl<K: RangeRole<Mode=Trace>> ModeRangeInfo<K> for TraceRangeInfo<K> {
     }
 }
 
-impl<K: RangeRole<Mode=Join>> ModeRangeInfo<K> for JoinRangeInfo<K>
-    where
-        K::Borders: JoinBorders<K>,
+impl<K: RangeRole<Mode = Join>> ModeRangeInfo<K> for JoinRangeInfo<K>
+where
+    K::Borders: JoinBorders<K>,
 {
     fn info_pattern_range(
         borders: BordersOf<K>,
@@ -126,9 +126,9 @@ pub struct InnerRangeInfo<K: RangeRole> {
     pub offsets: K::Offsets,
 }
 
-impl<'a, K: RangeRole<Mode=Join>> InnerRangeInfo<K>
-    where
-        K::Borders: JoinBorders<K>,
+impl<'a, K: RangeRole<Mode = Join>> InnerRangeInfo<K>
+where
+    K::Borders: JoinBorders<K>,
 {
     pub fn index_pattern_inner<'t>(
         &self,
@@ -146,12 +146,12 @@ impl<'a, K: RangeRole<Mode=Join>> InnerRangeInfo<K>
 }
 
 #[derive(Debug, Clone)]
-pub struct TraceRangeInfo<K: RangeRole<Mode=Trace>> {
+pub struct TraceRangeInfo<K: RangeRole<Mode = Trace>> {
     pub inner_range: Option<InnerRangeInfo<K>>,
 }
 
 #[derive(Debug, Clone)]
-pub struct JoinRangeInfo<K: RangeRole<Mode=Join>> {
+pub struct JoinRangeInfo<K: RangeRole<Mode = Join>> {
     pub inner_range: Option<InnerRangeInfo<K>>,
     pub range: K::Range,
     pub children: Option<ModeChildrenOf<K>>,
@@ -159,9 +159,9 @@ pub struct JoinRangeInfo<K: RangeRole<Mode=Join>> {
     pub delta: usize,
 }
 
-impl<'a, K: RangeRole<Mode=Join>> JoinRangeInfo<K>
-    where
-        K::Borders: JoinBorders<K>,
+impl<'a, K: RangeRole<Mode = Join>> JoinRangeInfo<K>
+where
+    K::Borders: JoinBorders<K>,
 {
     pub fn joined_pattern<'t>(
         self,

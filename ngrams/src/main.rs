@@ -1,14 +1,21 @@
 #![allow(non_snake_case, unused)]
 #![feature(hash_extract_if)]
 
-pub mod count;
-pub mod graph;
-pub mod shared;
-use shared::*;
+use std::path::Path;
+
+use itertools::Itertools;
+
+#[cfg(not(debug_assertions))]
 pub use {
     count::*,
     graph::*,
+    shared::*,
 };
+
+mod count;
+mod graph;
+#[cfg(not(debug_assertions))]
+mod shared;
 
 const OTTOS_MOPS_CORPUS: [&'static str; 4] = [
     "ottos mops trotzt",
@@ -17,13 +24,13 @@ const OTTOS_MOPS_CORPUS: [&'static str; 4] = [
     "otto: soso",
 ];
 
-fn main() {
-    //test_ngrams()
+fn main()
+{
     graph::test_graph()
 }
 
-pub fn test_ngrams() {}
-fn read_corpus(file_path: impl AsRef<Path>) -> String {
+fn read_corpus(file_path: impl AsRef<Path>) -> String
+{
     //let corpus: String = String::from("fldfjdlsjflskdjflsdfaädüwwrivfokl");
     let mut csv = csv::ReaderBuilder::new()
         .delimiter(b'\t')

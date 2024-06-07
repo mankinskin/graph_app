@@ -90,7 +90,7 @@ impl<P: MatchEndPath> PathSimplify for MatchEnd<P> {
                         pattern.borrow(),
                         location.sub_index,
                     )
-                        .is_none()
+                    .is_none()
                 } {
                     Some(p.root_parent())
                 } else {

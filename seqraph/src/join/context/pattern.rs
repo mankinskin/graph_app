@@ -26,9 +26,9 @@ pub struct PatternJoinContext<'p> {
 
 impl<'p> AsPatternTraceContext<'p> for PatternJoinContext<'p> {
     fn as_pattern_trace_context<'t>(&'t self) -> PatternTraceContext<'t>
-        where
-            Self: 't,
-            'p: 't,
+    where
+        Self: 't,
+        'p: 't,
     {
         self.ctx
     }
@@ -65,16 +65,16 @@ impl<'p> From<PatternTraceContext<'p>> for PatternId {
 
 pub trait AsPatternTraceContext<'p>: 'p {
     fn as_pattern_trace_context<'t>(&'t self) -> PatternTraceContext<'t>
-        where
-            Self: 't,
-            'p: 't;
+    where
+        Self: 't,
+        'p: 't;
 }
 
 impl<'p> AsPatternTraceContext<'p> for PatternTraceContext<'p> {
     fn as_pattern_trace_context<'t>(&'t self) -> PatternTraceContext<'t>
-        where
-            Self: 't,
-            'p: 't,
+    where
+        Self: 't,
+        'p: 't,
     {
         *self
     }

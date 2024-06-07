@@ -3,11 +3,11 @@ use crate::join::{
     partition::info::{
         border::visit::VisitBorders,
         range::{
-            InnerRangeInfo,
             role::{
                 ModePatternCtxOf,
                 RangeRole,
             },
+            InnerRangeInfo,
         },
     },
 };

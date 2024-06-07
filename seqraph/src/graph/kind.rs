@@ -1,3 +1,8 @@
+use serde::{
+    de::DeserializeOwned,
+    Deserialize,
+    Serialize,
+};
 use std::fmt::{
     Debug,
     Display,
@@ -9,8 +14,8 @@ use crate::{
     vertex::token::Tokenize,
 };
 
-pub trait GraphKind: Debug + Clone + Default {
-    type Token: Tokenize + Display;
+pub trait GraphKind: Debug + Clone + Default + PartialEq + Eq {
+    type Token: Tokenize + Display + DeserializeOwned;
     type Direction: IndexDirection;
 }
 
@@ -19,7 +24,7 @@ pub type DefaultToken = TokenOf<BaseGraphKind>;
 pub type DirectionOf<K> = <K as GraphKind>::Direction;
 pub type DefaultDirection = DirectionOf<BaseGraphKind>;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BaseGraphKind;
 
 impl GraphKind for BaseGraphKind {

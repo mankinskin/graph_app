@@ -5,7 +5,6 @@ use range::*;
 use visit::*;
 
 use crate::{
-    HashMap,
     join::{
         context::node::context::NodeJoinContext,
         joined::{
@@ -31,6 +30,7 @@ use crate::{
         child::Child,
         PatternId,
     },
+    HashMap,
 };
 
 pub mod border;
@@ -63,9 +63,9 @@ impl<'a, K: RangeRole> PartitionInfo<K> {
     }
 }
 
-impl<'a, K: RangeRole<Mode=Join>> PartitionInfo<K>
-    where
-        K::Borders: JoinBorders<K>,
+impl<'a, K: RangeRole<Mode = Join>> PartitionInfo<K>
+where
+    K::Borders: JoinBorders<K>,
 {
     pub fn to_joined_patterns(
         self,
@@ -87,9 +87,9 @@ impl<K: RangeRole> Into<(PatternId, RangeInfoOf<K>)> for PatternRangeInfo<K> {
     }
 }
 
-pub trait JoinPartition<K: RangeRole<Mode=Join>>: VisitPartition<K>
-    where
-        K::Borders: JoinBorders<K>,
+pub trait JoinPartition<K: RangeRole<Mode = Join>>: VisitPartition<K>
+where
+    K::Borders: JoinBorders<K>,
 {
     fn join_partition(
         self,
@@ -102,6 +102,7 @@ pub trait JoinPartition<K: RangeRole<Mode=Join>>: VisitPartition<K>
     }
 }
 
-impl<K: RangeRole<Mode=Join>, P: VisitPartition<K>> JoinPartition<K> for P where
+impl<K: RangeRole<Mode = Join>, P: VisitPartition<K>> JoinPartition<K> for P where
     K::Borders: JoinBorders<K>
-{}
+{
+}

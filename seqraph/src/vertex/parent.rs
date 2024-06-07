@@ -1,15 +1,19 @@
 use crate::{
     graph::kind::GraphKind,
-    HashMap,
-    HashSet,
     vertex::{
         pattern::Pattern,
         PatternId,
         TokenPosition,
     },
+    HashMap,
+    HashSet,
+};
+use serde::{
+    Deserialize,
+    Serialize,
 };
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Serialize, Deserialize)]
 pub struct PatternIndex {
     pub pattern_id: PatternId,
     pub sub_index: usize,
@@ -28,7 +32,7 @@ impl PatternIndex {
 }
 
 /// Storage for parent relationship of a child to a parent
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Parent {
     /// width of the parent
     pub width: TokenPosition,
@@ -104,7 +108,7 @@ impl Parent {
             .map(Clone::clone)
     }
     /// filter for pattern indices which occur at start of their patterns
-    pub fn filter_pattern_indices_at_prefix(&self) -> impl Iterator<Item=&PatternIndex> {
+    pub fn filter_pattern_indices_at_prefix(&self) -> impl Iterator<Item = &PatternIndex> {
         self.pattern_indices
             .iter()
             .filter(move |pattern_index| pattern_index.sub_index == 0)
@@ -113,13 +117,13 @@ impl Parent {
     pub fn filter_pattern_indices_at_end_in_patterns<'a>(
         &'a self,
         patterns: &'a HashMap<PatternId, Pattern>,
-    ) -> impl Iterator<Item=&'a PatternIndex> {
+    ) -> impl Iterator<Item = &'a PatternIndex> {
         self.pattern_indices.iter().filter(move |pattern_index| {
             pattern_index.sub_index + 1
                 == patterns
-                .get(&pattern_index.pattern_id)
-                .expect("Pattern index not in patterns!")
-                .len()
+                    .get(&pattern_index.pattern_id)
+                    .expect("Pattern index not in patterns!")
+                    .len()
         })
     }
     // filter for pattern indices which occur in given patterns

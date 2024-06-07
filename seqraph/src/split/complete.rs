@@ -7,7 +7,6 @@ use itertools::Itertools;
 
 use crate::{
     graph::kind::GraphKind,
-    HashSet,
     index::side::{
         IndexBack,
         IndexSide,
@@ -19,11 +18,11 @@ use crate::{
     },
     traversal::{
         cache::entry::{
+            position::SubSplitLocation,
+            vertex::VertexCache,
             NodeSplitOutput,
             NodeType,
             Offset,
-            position::SubSplitLocation,
-            vertex::VertexCache,
         },
         folder::state::{
             FoldState,
@@ -37,14 +36,15 @@ use crate::{
         indexed::Indexed,
         location::SubLocation,
         pattern::Pattern,
+        wide::Wide,
         PatternId,
         VertexData,
-        wide::Wide,
     },
+    HashSet,
 };
 
 pub fn position_splits<'a>(
-    patterns: impl IntoIterator<Item=(&'a PatternId, &'a Pattern)>,
+    patterns: impl IntoIterator<Item = (&'a PatternId, &'a Pattern)>,
     offset: NonZeroUsize,
 ) -> OffsetSplits {
     OffsetSplits {

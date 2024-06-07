@@ -23,7 +23,8 @@ pub trait NodeSplitOutput<S>: Default {
     fn set_root_mode(
         &mut self,
         _root_mode: RootMode,
-    ) {}
+    ) {
+    }
     fn splits_mut(&mut self) -> &mut S;
 }
 

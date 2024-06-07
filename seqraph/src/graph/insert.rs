@@ -8,7 +8,6 @@ use lazy_static::lazy_static;
 
 use crate::{
     graph::kind::GraphKind,
-    HashSet,
     search::NoMatch,
     vertex::{
         child::Child,
@@ -22,31 +21,32 @@ use crate::{
         },
         parent::PatternIndex,
         pattern::{
-            IntoPattern,
-            Pattern,
             pattern_range::{
                 get_child_pattern_range,
                 PatternRangeIndex,
             },
             pattern_width,
             replace_in_pattern,
+            IntoPattern,
+            Pattern,
         },
-        PatternId,
         token::{
             NewTokenIndex,
             NewTokenIndices,
             Token,
         },
+        PatternId,
         TokenPosition,
     },
+    HashSet,
 };
 
 lazy_static! {
     static ref VERTEX_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 }
 impl<'t, 'g, G> crate::graph::Hypergraph<G>
-    where
-        G: GraphKind,
+where
+    G: GraphKind,
 {
     /// insert single token node
     pub fn insert_vertex(
@@ -73,7 +73,7 @@ impl<'t, 'g, G> crate::graph::Hypergraph<G>
     /// insert multiple token nodes
     pub fn insert_tokens(
         &mut self,
-        tokens: impl IntoIterator<Item=Token<G::Token>>,
+        tokens: impl IntoIterator<Item = Token<G::Token>>,
     ) -> Vec<Child> {
         tokens
             .into_iter()
@@ -83,7 +83,7 @@ impl<'t, 'g, G> crate::graph::Hypergraph<G>
     /// utility, builds total width, indices and children for pattern
     fn to_width_indices_children(
         &self,
-        indices: impl IntoIterator<Item=impl Indexed>,
+        indices: impl IntoIterator<Item = impl Indexed>,
     ) -> (TokenPosition, Vec<crate::vertex::VertexIndex>, Vec<Child>) {
         let mut width = 0;
         let (a, b) = indices
@@ -135,7 +135,7 @@ impl<'t, 'g, G> crate::graph::Hypergraph<G>
     pub fn add_patterns_with_update(
         &mut self,
         index: impl Indexed,
-        patterns: impl IntoIterator<Item=impl IntoPattern>,
+        patterns: impl IntoIterator<Item = impl IntoPattern>,
     ) -> Vec<PatternId> {
         let index = index.vertex_index();
         patterns
@@ -194,7 +194,7 @@ impl<'t, 'g, G> crate::graph::Hypergraph<G>
     }
     pub fn insert_patterns_with_ids(
         &mut self,
-        patterns: impl IntoIterator<Item=impl IntoPattern>,
+        patterns: impl IntoIterator<Item = impl IntoPattern>,
     ) -> (Child, Vec<PatternId>) {
         // todo handle token nodes
         let patterns = patterns.into_iter().collect_vec();
@@ -212,7 +212,7 @@ impl<'t, 'g, G> crate::graph::Hypergraph<G>
     //#[track_caller]
     pub fn insert_patterns(
         &mut self,
-        patterns: impl IntoIterator<Item=impl IntoPattern>,
+        patterns: impl IntoIterator<Item = impl IntoPattern>,
     ) -> Child {
         let patterns = patterns
             .into_iter()
@@ -236,7 +236,7 @@ impl<'t, 'g, G> crate::graph::Hypergraph<G>
     #[track_caller]
     pub fn try_insert_patterns(
         &mut self,
-        patterns: impl IntoIterator<Item=impl IntoPattern>,
+        patterns: impl IntoIterator<Item = impl IntoPattern>,
     ) -> Option<Child> {
         let patterns = patterns
             .into_iter()
@@ -367,7 +367,7 @@ impl<'t, 'g, G> crate::graph::Hypergraph<G>
         &mut self,
         parent: impl crate::vertex::indexed::AsChild,
         pattern_id: PatternId,
-        new: impl IntoIterator<Item=impl crate::vertex::indexed::AsChild>,
+        new: impl IntoIterator<Item = impl crate::vertex::indexed::AsChild>,
     ) -> Child {
         let new: Vec<_> = new.into_iter().map(|c| c.to_child()).collect();
         if new.is_empty() {
@@ -396,7 +396,7 @@ impl<'t, 'g, G> crate::graph::Hypergraph<G>
     }
     pub fn new_token_indices(
         &mut self,
-        sequence: impl IntoIterator<Item=G::Token>,
+        sequence: impl IntoIterator<Item = G::Token>,
     ) -> NewTokenIndices {
         sequence
             .into_iter()

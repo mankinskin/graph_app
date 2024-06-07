@@ -9,20 +9,24 @@ use std::{
 };
 
 use petgraph::graph::EdgeIndex;
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 use crate::vertex::wide::Wide;
 
 pub fn tokenizing_iter<T: Tokenize, C: AsToken<T>>(
-    seq: impl Iterator<Item=C>
-) -> impl Iterator<Item=Token<T>> {
+    seq: impl Iterator<Item = C>
+) -> impl Iterator<Item = Token<T>> {
     seq.map(|c| c.as_token())
 }
 
 /// Trait for token that can be mapped in a sequence
 pub trait Tokenize:
-TokenData + Wide + Hash + Eq + Copy + Debug + Send + Sync + 'static + Unpin
+    TokenData + Wide + Hash + Eq + Copy + Debug + Send + Sync + 'static + Unpin + Serialize
 {
-    fn tokenize<T: AsToken<Self>, I: Iterator<Item=T>>(seq: I) -> Vec<Token<Self>> {
+    fn tokenize<T: AsToken<Self>, I: Iterator<Item = T>>(seq: I) -> Vec<Token<Self>> {
         let mut v = vec![];
         v.extend(tokenizing_iter(seq));
         //v.push(Token::End);
@@ -33,9 +37,11 @@ TokenData + Wide + Hash + Eq + Copy + Debug + Send + Sync + 'static + Unpin
     }
 }
 
-impl<T: TokenData + Wide + Hash + Eq + Copy + Debug + Send + Sync + 'static + Unpin> Tokenize
-for T
-{}
+impl<
+        T: TokenData + Wide + Hash + Eq + Copy + Debug + Send + Sync + 'static + Unpin + Serialize,
+    > Tokenize for T
+{
+}
 
 pub trait TokenData: Debug + PartialEq + Clone + Wide {}
 
@@ -205,7 +211,7 @@ pub fn groups_to_string<T: Tokenize, E: ContextLink, C: TokenContext<T, E> + Dis
 }
 
 /// Type for storing elements of a sequence
-#[derive(Copy, Debug, PartialEq, Clone, Eq, Hash)]
+#[derive(Copy, Debug, PartialEq, Clone, Eq, Hash, Serialize, Deserialize)]
 pub enum Token<T: Tokenize> {
     Element(T),
     Start,

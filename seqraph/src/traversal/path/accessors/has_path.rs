@@ -73,8 +73,8 @@ impl HasPath<Start> for QueryRangePath {
 //    }
 //}
 impl<R: 'static> HasPath<R> for SearchPath
-    where
-        Self: HasRolePath<R>,
+where
+    Self: HasRolePath<R>,
 {
     fn path(&self) -> &Vec<ChildLocation> {
         HasRolePath::<R>::role_path(self).path()
@@ -85,8 +85,8 @@ impl<R: 'static> HasPath<R> for SearchPath
 }
 
 impl<R: 'static> HasPath<R> for QueryStateContext<'_>
-    where
-        Self: HasRolePath<R>,
+where
+    Self: HasRolePath<R>,
 {
     fn path(&self) -> &Vec<ChildLocation> {
         HasRolePath::<R>::role_path(self).path()

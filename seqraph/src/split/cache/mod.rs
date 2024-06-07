@@ -14,13 +14,15 @@ use ctx::*;
 use position::*;
 
 use crate::{
-    HashMap,
     index::side::{
         IndexBack,
         IndexSide,
     },
     join::partition::splits::offset::OffsetSplits,
-    split::PatternSplitPos,
+    split::{
+        cache::vertex::SplitVertexCache,
+        PatternSplitPos,
+    },
     traversal::{
         cache::{
             entry::position::SubSplitLocation,
@@ -40,8 +42,8 @@ use crate::{
         pattern::Pattern,
         PatternId,
     },
+    HashMap,
 };
-use crate::split::cache::vertex::SplitVertexCache;
 
 pub mod vertex;
 
@@ -70,7 +72,7 @@ pub struct SplitCache {
 impl SplitCache {
     pub fn new<
         'a,
-        Trav: TraversableMut<GuardMut<'a>=RwLockWriteGuard<'a, crate::graph::Hypergraph>> + 'a,
+        Trav: TraversableMut<GuardMut<'a> = RwLockWriteGuard<'a, crate::graph::Hypergraph>> + 'a,
     >(
         trav: &'a mut Trav,
         fold_state: FoldState,
@@ -108,7 +110,7 @@ impl SplitCache {
 }
 
 pub fn range_splits<'a>(
-    patterns: impl Iterator<Item=(&'a PatternId, &'a Pattern)>,
+    patterns: impl Iterator<Item = (&'a PatternId, &'a Pattern)>,
     parent_range: (NonZeroUsize, NonZeroUsize),
 ) -> (OffsetSplits, OffsetSplits) {
     let (ls, rs) = patterns
@@ -146,7 +148,7 @@ pub fn range_splits<'a>(
 }
 
 pub fn cleaned_position_splits<'a>(
-    patterns: impl Iterator<Item=(&'a PatternId, &'a Pattern)>,
+    patterns: impl Iterator<Item = (&'a PatternId, &'a Pattern)>,
     parent_offset: NonZeroUsize,
 ) -> Result<Vec<SubSplitLocation>, SubLocation> {
     patterns
@@ -179,11 +181,9 @@ mod tests {
 
     use crate::{
         graph::tests::{
-            Context,
             context_mut,
+            Context,
         },
-        HashMap,
-        HashSet,
         split::{
             cache::{
                 position::SplitPositionCache,
@@ -197,6 +197,8 @@ mod tests {
             labelled_key::vkey::lab,
             trace,
         },
+        HashMap,
+        HashSet,
     };
 
     macro_rules! nz {

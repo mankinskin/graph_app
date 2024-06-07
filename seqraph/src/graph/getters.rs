@@ -4,35 +4,35 @@ use indexmap::IndexMap;
 
 use crate::{
     graph::{
-        Hypergraph,
         kind::GraphKind,
+        Hypergraph,
     },
     search::NoMatch,
     vertex::{
         child::Child,
-        ChildPatterns,
         indexed::Indexed,
-        IndexPattern,
         location::{
             child::ChildLocation,
-            IntoChildLocation,
             pattern::IntoPatternLocation,
+            IntoChildLocation,
         },
         parent::{
             Parent,
             PatternIndex,
         },
         pattern::{
-            IntoPattern,
-            Pattern,
             pattern_range::PatternRangeIndex,
             pattern_width,
+            IntoPattern,
+            Pattern,
         },
-        PatternId,
         token::{
             AsToken,
             Token,
         },
+        ChildPatterns,
+        IndexPattern,
+        PatternId,
         TokenPosition,
         VertexData,
         VertexEntry,
@@ -241,26 +241,26 @@ impl<'t, G: GraphKind> Hypergraph<G> {
             .get_mut(&self.expect_index_by_key(key))
             .expect("Key does not exist")
     }
-    pub fn vertex_iter(&self) -> impl Iterator<Item=(&VertexIndex, &VertexData<G>)> {
+    pub fn vertex_iter(&self) -> impl Iterator<Item = (&VertexIndex, &VertexData<G>)> {
         self.graph.iter()
     }
-    pub fn vertex_iter_mut(&mut self) -> impl Iterator<Item=(&VertexIndex, &mut VertexData<G>)> {
+    pub fn vertex_iter_mut(&mut self) -> impl Iterator<Item = (&VertexIndex, &mut VertexData<G>)> {
         self.graph.iter_mut()
     }
     //pub fn vertex_key_iter(&self) -> impl Iterator<Item = &VertexKey<G::Token>> {
     // todo make keys from data and index
     //    self.graph.keys()
     //}
-    pub fn vertex_data_iter(&self) -> impl Iterator<Item=&VertexData<G>> {
+    pub fn vertex_data_iter(&self) -> impl Iterator<Item = &VertexData<G>> {
         self.graph.values()
     }
-    pub fn vertex_data_iter_mut(&mut self) -> impl Iterator<Item=&mut VertexData<G>> {
+    pub fn vertex_data_iter_mut(&mut self) -> impl Iterator<Item = &mut VertexData<G>> {
         self.graph.values_mut()
     }
     #[track_caller]
     pub fn expect_vertices(
         &self,
-        indices: impl Iterator<Item=impl Indexed>,
+        indices: impl Iterator<Item = impl Indexed>,
     ) -> VertexPatternView<'_, G> {
         indices
             .map(move |index| self.expect_vertex_data(index))
@@ -268,7 +268,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     }
     pub fn get_vertices(
         &self,
-        indices: impl Iterator<Item=impl Indexed>,
+        indices: impl Iterator<Item = impl Indexed>,
     ) -> Result<VertexPatternView<'_, G>, NoMatch> {
         indices
             .map(move |index| self.get_vertex_data(index))
@@ -339,15 +339,15 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     }
     pub fn to_token_indices_iter<'a>(
         &'a self,
-        tokens: impl IntoIterator<Item=impl AsToken<G::Token>> + 'a,
-    ) -> impl Iterator<Item=Result<VertexIndex, NoMatch>> + 'a {
+        tokens: impl IntoIterator<Item = impl AsToken<G::Token>> + 'a,
+    ) -> impl Iterator<Item = Result<VertexIndex, NoMatch>> + 'a {
         tokens
             .into_iter()
             .map(move |token| self.get_token_index(token))
     }
     pub fn to_token_indices(
         &self,
-        tokens: impl IntoIterator<Item=impl AsToken<G::Token>>,
+        tokens: impl IntoIterator<Item = impl AsToken<G::Token>>,
     ) -> Result<IndexPattern, NoMatch> {
         tokens
             .into_iter()
@@ -356,14 +356,14 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     }
     pub fn to_token_children_iter<'a>(
         &'a self,
-        tokens: impl IntoIterator<Item=impl AsToken<G::Token>> + 'a,
-    ) -> impl Iterator<Item=Result<Child, NoMatch>> + 'a {
+        tokens: impl IntoIterator<Item = impl AsToken<G::Token>> + 'a,
+    ) -> impl Iterator<Item = Result<Child, NoMatch>> + 'a {
         self.to_token_indices_iter(tokens)
             .map(move |index| index.map(|index| Child::new(index, 1)))
     }
     pub fn to_token_children(
         &self,
-        tokens: impl IntoIterator<Item=impl AsToken<G::Token>>,
+        tokens: impl IntoIterator<Item = impl AsToken<G::Token>>,
     ) -> Result<impl IntoPattern, NoMatch> {
         self.to_token_children_iter(tokens)
             .collect::<Result<Pattern, _>>()
@@ -371,7 +371,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     #[track_caller]
     pub fn expect_token_pattern(
         &self,
-        tokens: impl IntoIterator<Item=impl AsToken<G::Token>>,
+        tokens: impl IntoIterator<Item = impl AsToken<G::Token>>,
     ) -> Pattern {
         self.to_token_children(tokens)
             .expect("Failed to convert tokens to children")
@@ -379,7 +379,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     }
     pub fn get_token_indices(
         &self,
-        tokens: impl Iterator<Item=impl AsToken<G::Token>>,
+        tokens: impl Iterator<Item = impl AsToken<G::Token>>,
     ) -> Result<IndexPattern, NoMatch> {
         let mut v = IndexPattern::with_capacity(tokens.size_hint().0);
         for token in tokens {
@@ -446,13 +446,13 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     }
     pub fn to_children(
         &self,
-        indices: impl IntoIterator<Item=impl Indexed>,
+        indices: impl IntoIterator<Item = impl Indexed>,
     ) -> Pattern {
         indices.into_iter().map(|i| self.to_child(i)).collect()
     }
     pub fn get_pattern_parents(
         &self,
-        pattern: impl IntoIterator<Item=impl Indexed>,
+        pattern: impl IntoIterator<Item = impl Indexed>,
         parent: impl Indexed,
     ) -> Result<Vec<Parent>, NoMatch> {
         pattern
@@ -465,7 +465,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     }
     pub fn get_common_pattern_in_parent(
         &self,
-        pattern: impl IntoIterator<Item=impl Indexed>,
+        pattern: impl IntoIterator<Item = impl Indexed>,
         parent: impl Indexed,
     ) -> Result<PatternIndex, NoMatch> {
         let mut parents = self
@@ -490,7 +490,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     #[track_caller]
     pub fn expect_common_pattern_in_parent(
         &self,
-        pattern: impl IntoIterator<Item=impl Indexed>,
+        pattern: impl IntoIterator<Item = impl Indexed>,
         parent: impl Indexed,
     ) -> PatternIndex {
         self.get_common_pattern_in_parent(pattern, parent)

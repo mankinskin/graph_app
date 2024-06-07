@@ -4,10 +4,10 @@ use cache::*;
 use complete::*;
 
 use crate::{
-    HashMap,
     join::partition::splits::offset::OffsetSplits,
     traversal::cache::entry::position::SubSplitLocation,
     vertex::PatternId,
+    HashMap,
 };
 
 pub mod augment;

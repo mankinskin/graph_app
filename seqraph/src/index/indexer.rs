@@ -64,7 +64,7 @@ impl<'a: 'g, 'g> DirectedTraversalPolicy for IndexingPolicy {
     //}
 }
 
-pub trait IndexerTraversalPolicy: DirectedTraversalPolicy<Trav=Indexer> {}
+pub trait IndexerTraversalPolicy: DirectedTraversalPolicy<Trav = Indexer> {}
 
 impl<'a: 'g, 'g> IndexerTraversalPolicy for IndexingPolicy {}
 

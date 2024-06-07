@@ -56,9 +56,9 @@ pub mod state;
 use super::cache::trace::Trace;
 
 pub trait TraversalFolder: Sized + Traversable {
-    type Iterator<'a>: TraversalIterator<'a, Trav=Self> + From<&'a Self>
-        where
-            Self: 'a;
+    type Iterator<'a>: TraversalIterator<'a, Trav = Self> + From<&'a Self>
+    where
+        Self: 'a;
 
     //#[instrument(skip(self))]
     fn fold_query<P: IntoPattern>(

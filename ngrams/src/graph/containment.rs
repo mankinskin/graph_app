@@ -1,81 +1,128 @@
-use crate::shared::*;
-use crate::*;
-use seqraph::vertex::{ChildPatterns, VertexDataBuilder};
-use seqraph::vertex::indexed::{AsChild, Indexed};
+use derive_more::{
+    Deref,
+    From,
+};
+use derive_new::new;
+use ngram::NGram;
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
-#[derive(Debug, Clone, Copy, From, new, Default, Hash, Eq, PartialEq)]
-pub struct TextLocation {
+use seqraph::vertex::{
+    indexed::{
+        AsChild,
+        Indexed,
+    },
+    ChildPatterns,
+    VertexDataBuilder,
+};
+
+use crate::graph::vocabulary::{
+    entry::VocabEntry,
+    IndexVocab,
+    NGramId,
+    Vocabulary,
+};
+
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    From,
+    new,
+    Default,
+    Hash,
+    Eq,
+    PartialEq,
+    Serialize,
+    Deserialize,
+)]
+pub struct TextLocation
+{
     pub texti: usize,
     pub x: usize,
 }
 
-/// build a graph with all containment relation ships between n and n-1 length pairs
-pub fn containment_graph(texts: &Vec<String>) -> Vocabulary {
-    let mut vocab: Vocabulary = Default::default();
-    let N: usize = texts.iter().map(|t| t.len()).max().unwrap();
-    for n in 1..=N {
-        let c = vocab.graph.vertex_count();
-        for (i, text) in texts.iter().enumerate() {
-            TextLevelCtx::new(i, text, n).on_nlevel(&mut vocab);
-        }
-        //vocab.clean();
-        //println!("Finished counting  n={}: (+{}) {}", n, vocab.len()-c, vocab.len())
-    }
-    vocab
-}
-
 #[derive(Debug, Clone, Copy, From, new, Hash, Eq, PartialEq)]
-pub struct TextLevelCtx<'a> {
+pub struct TextLevelCtx<'a>
+{
     texti: usize,
     text: &'a String,
     n: usize,
 }
 
-impl<'a> TextLevelCtx<'a> {
-    pub fn on_nlevel(&self, vocab: &mut Vocabulary) {
+impl<'a> TextLevelCtx<'a>
+{
+    pub fn on_nlevel(
+        &self,
+        vocab: &mut Vocabulary,
+    )
+    {
         let N: usize = self.text.len();
         let ngrams = self.text.chars().ngrams(self.n);
         ngrams.enumerate().for_each(|(xi, ni)| {
             let ngram = String::from_iter(ni);
 
-            NGramFrequencyCtx::new(*self, &ngram, TextLocation::new(self.texti, xi))
-                .on_ngram(vocab);
+            NGramFrequencyCtx::new(
+                *self,
+                &ngram,
+                TextLocation::new(self.texti, xi),
+            )
+            .on_ngram(vocab);
         });
     }
 }
 
 #[derive(Debug, Clone, Copy, From, new, Hash, Eq, PartialEq, Deref)]
-pub struct NGramFrequencyCtx<'a> {
+pub struct NGramFrequencyCtx<'a>
+{
     #[deref]
     level_ctx: TextLevelCtx<'a>,
     ngram: &'a String,
     occurrence: TextLocation,
 }
-impl<'a> NGramFrequencyCtx<'a> {
-    pub fn on_ngram(&self, vocab: &mut Vocabulary) {
-        if let Some(ctx) = vocab.get_mut(self.ngram) {
+
+impl<'a> NGramFrequencyCtx<'a>
+{
+    pub fn on_ngram(
+        &self,
+        vocab: &mut Vocabulary,
+    )
+    {
+        if let Some(ctx) = vocab.get_mut(self.ngram)
+        {
             ctx.entry.occurrences.insert(self.occurrence);
-        } else {
+        }
+        else
+        {
             self.on_first_ngram(vocab)
         }
     }
-    pub fn on_first_ngram(&self, vocab: &mut Vocabulary) {
+    pub fn on_first_ngram(
+        &self,
+        vocab: &mut Vocabulary,
+    )
+    {
         let id = NGramId::new(vocab.len(), self.n);
         let children = self.find_children(vocab);
 
-        if self.n == 1 || !children.is_empty() {
+        if self.n == 1 || !children.is_empty()
+        {
             let entry = VocabEntry {
                 occurrences: FromIterator::from_iter([self.occurrence]),
                 ngram: self.ngram.clone(),
             };
-            if self.n == 1 {
+            if self.n == 1
+            {
                 vocab.leaves.insert(id.vertex_index());
             }
-            if self.n == self.level_ctx.text.len() {
+            if self.n == self.level_ctx.text.len()
+            {
                 vocab.roots.insert(id.vertex_index());
             }
             vocab.ids.insert(self.ngram.clone(), id);
-            vocab.labels.insert(id.vertex_index(), entry);
+            vocab.entries.insert(id.vertex_index(), entry);
             let data = VertexDataBuilder::default()
                 .index(id.id)
                 .width(self.n.into())
@@ -83,14 +130,21 @@ impl<'a> NGramFrequencyCtx<'a> {
                 .build()
                 .unwrap();
             vocab.graph.insert_vertex(data);
-            for (pid, pat) in children {
-                vocab
-                    .graph
-                    .add_parents_to_pattern_nodes(pat, id.as_child(), pid);
+            for (pid, pat) in children
+            {
+                vocab.graph.add_parents_to_pattern_nodes(
+                    pat,
+                    id.as_child(),
+                    pid,
+                );
             }
         }
     }
-    pub fn find_children(&self, vocab: &mut Vocabulary) -> ChildPatterns {
+    pub fn find_children(
+        &self,
+        vocab: &mut Vocabulary,
+    ) -> ChildPatterns
+    {
         /// find direct children
         let n = self.ngram.len() - 1;
         let ngram = self.ngram.clone();
@@ -102,7 +156,8 @@ impl<'a> NGramFrequencyCtx<'a> {
             .map(|(i, ni)| {
                 let f = ngram.get(0..i).filter(|s| !s.is_empty());
                 let x = String::from_iter(ni);
-                let b = ngram.get((i + n)..ngram.len()).filter(|s| !s.is_empty());
+                let b =
+                    ngram.get((i + n)..ngram.len()).filter(|s| !s.is_empty());
                 let pid = vocab.graph.next_pattern_id();
 
                 (

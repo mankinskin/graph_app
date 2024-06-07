@@ -11,7 +11,6 @@ use crate::{
     join::{
         context::node::context::NodeTraceContext,
         partition::{
-            AsPartition,
             info::{
                 range::{
                     role::{
@@ -26,6 +25,7 @@ use crate::{
                 },
                 visit::VisitPartition,
             },
+            AsPartition,
             Partition,
         },
     },
@@ -56,7 +56,7 @@ impl SplitVertexCache {
     ) -> Partition<K> {
         range.get_splits(self).as_partition()
     }
-    pub fn inner_offsets<'a: 't, 't, K: RangeRole<Mode=Trace>, P: AsPartition<K>>(
+    pub fn inner_offsets<'a: 't, 't, K: RangeRole<Mode = Trace>, P: AsPartition<K>>(
         ctx: NodeTraceContext<'a>,
         part: P,
     ) -> Vec<NonZeroUsize> {
@@ -76,7 +76,7 @@ impl SplitVertexCache {
                     .collect())
             .unwrap_or_default()
     }
-    pub fn add_inner_offsets<'a: 't, 't, K: RangeRole<Mode=Trace>, P: AsPartition<K>>(
+    pub fn add_inner_offsets<'a: 't, 't, K: RangeRole<Mode = Trace>, P: AsPartition<K>>(
         ctx: NodeTraceContext<'a>,
         part: P,
     ) -> (BTreeMap<NonZeroUsize, SplitPositionCache>, Vec<TraceState>)
@@ -176,7 +176,7 @@ impl SplitCacheBuilder {
             .unwrap()
             .augment_root(ctx, root_mode)
     }
-    pub fn augment_nodes<I: IntoIterator<Item=Child>>(
+    pub fn augment_nodes<I: IntoIterator<Item = Child>>(
         &mut self,
         graph: &RwLockWriteGuard<'_, Hypergraph>,
         nodes: I,

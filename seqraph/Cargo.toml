@@ -17,7 +17,7 @@ async-std = "1.12"
 async-trait = "^0.1"
 either = "^1.6"
 futures = "^0.3"
-indexmap = "^2.1"
+indexmap = { version = "^2.2", features = ["serde"]}
 lazy_static = "^1.4"
 maplit = "^1"
 num-traits = "^0.2"

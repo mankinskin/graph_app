@@ -6,7 +6,6 @@ use std::{
 };
 
 use crate::{
-    HashMap,
     split::{
         cache::{
             position::SplitPositionCache,
@@ -16,6 +15,7 @@ use crate::{
         VertexSplitPos,
     },
     traversal::cache::key::SplitKey,
+    HashMap,
 };
 
 pub mod offset;

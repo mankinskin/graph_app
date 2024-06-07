@@ -65,10 +65,10 @@ pub trait PruneStates {
 }
 
 impl<'a, Trav, S, O> PruneStates for OrderedTraverser<'a, Trav, S, O>
-    where
-        Trav: Traversable,
-        S: DirectedTraversalPolicy<Trav=Trav>,
-        O: NodeVisitor,
+where
+    Trav: Traversable,
+    S: DirectedTraversalPolicy<Trav = Trav>,
+    O: NodeVisitor,
 {
     fn clear(&mut self) {
         self.collection.clear();

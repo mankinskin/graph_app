@@ -9,8 +9,8 @@ use derive_more::{
 };
 
 use crate::{
-    HashMap,
     vertex::PatternId,
+    HashMap,
 };
 
 #[derive(Debug, Default, IntoIterator, DerefMut)]
@@ -28,7 +28,7 @@ impl Deref for PatternSubDeltas {
 }
 
 impl FromIterator<(PatternId, usize)> for PatternSubDeltas {
-    fn from_iter<T: IntoIterator<Item=(PatternId, usize)>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = (PatternId, usize)>>(iter: T) -> Self {
         Self {
             inner: FromIterator::from_iter(iter),
         }
@@ -36,7 +36,7 @@ impl FromIterator<(PatternId, usize)> for PatternSubDeltas {
 }
 
 impl Extend<(PatternId, usize)> for PatternSubDeltas {
-    fn extend<T: IntoIterator<Item=(PatternId, usize)>>(
+    fn extend<T: IntoIterator<Item = (PatternId, usize)>>(
         &mut self,
         iter: T,
     ) {

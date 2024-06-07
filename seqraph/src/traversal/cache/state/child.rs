@@ -148,15 +148,15 @@ impl ChildState {
             }
             Ordering::Greater =>
             // continue in prefix of child
-                {
-                    NextStates::Prefixes(StateNext {
-                        prev: key.to_prev(0),
-                        new,
-                        inner: self
-                            .tap_mut(|s| s.paths.mode = PathPairMode::GraphMajor)
-                            .prefix_states(ctx, path_leaf),
-                    })
-                }
+            {
+                NextStates::Prefixes(StateNext {
+                    prev: key.to_prev(0),
+                    new,
+                    inner: self
+                        .tap_mut(|s| s.paths.mode = PathPairMode::GraphMajor)
+                        .prefix_states(ctx, path_leaf),
+                })
+            }
             Ordering::Less => NextStates::Prefixes(StateNext {
                 prev: key.to_prev(0),
                 new,
@@ -208,7 +208,7 @@ impl ChildState {
                     path: Primer::from(self.paths.path),
                     query: self.paths.query,
                 }
-                    .next_parents(ctx, vec![])
+                .next_parents(ctx, vec![])
             }
         } else {
             self.on_query_end(ctx, vec![])
@@ -268,7 +268,7 @@ impl ChildState {
                         ),
                         path,
                     }
-                        .simplify(ctx.trav()),
+                    .simplify(ctx.trav()),
                     query: query.state.clone(),
                 },
             })
@@ -297,7 +297,7 @@ impl ChildState {
                     path,
                     target: DirectedKey::down(target_index, pos),
                 }
-                    .simplify(ctx.trav()),
+                .simplify(ctx.trav()),
             },
         })
     }

@@ -27,7 +27,8 @@ pub use {
 
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main(flavor = "multi_thread", worker_threads = 10)]
-async fn main() {
+async fn main()
+{
     //let graph = seqraph::gen_graph().unwrap_or_else(|g| g);
     //let app = app::App::new(graph);
     let app = App::new();

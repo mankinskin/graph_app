@@ -1,10 +1,16 @@
-use crate::{
-    shared::*,
-    TextLocation,
+use derive_more::Deref;
+use serde::{
+    Deserialize,
+    Serialize,
 };
 
-#[derive(Debug, Deref)]
-pub struct VocabEntry {
+use seqraph::HashSet;
+
+use crate::graph::containment::TextLocation;
+
+#[derive(Debug, Deref, Serialize, Deserialize, PartialEq, Eq)]
+pub struct VocabEntry
+{
     //pub id: NGramId,
     pub occurrences: HashSet<TextLocation>,
     // positions of largest smaller ngrams
@@ -13,8 +19,10 @@ pub struct VocabEntry {
     pub ngram: String,
 }
 
-impl VocabEntry {
-    pub fn count(&self) -> usize {
+impl VocabEntry
+{
+    pub fn count(&self) -> usize
+    {
         self.occurrences.len()
     }
     //pub fn needs_node(&self) -> bool {

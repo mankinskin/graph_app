@@ -14,12 +14,12 @@ use derive_more::{
 
 use crate::{
     graph::Hypergraph,
-    HashMap,
     join::context::node::context::NodeTraceContext,
     split::cache::{
-        CacheContext,
         cleaned_position_splits,
         leaves::Leaves,
+        vertex::SplitVertexCache,
+        CacheContext,
         SplitCache,
         SplitPositionCache,
         TraceState,
@@ -27,8 +27,8 @@ use crate::{
     traversal::{
         cache::{
             entry::{
-                InnerNode,
                 position::SubSplitLocation,
+                InnerNode,
                 RootNode,
             },
             key::SplitKey,
@@ -51,14 +51,14 @@ use crate::{
         indexed::Indexed,
         wide::Wide,
     },
+    HashMap,
 };
-use crate::split::cache::vertex::SplitVertexCache;
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct SplitCacheBuilder(pub SplitCache);
 
 impl SplitCacheBuilder {
-    pub fn new<'a, Trav: TraversableMut<GuardMut<'a>=RwLockWriteGuard<'a, Hypergraph>> + 'a>(
+    pub fn new<'a, Trav: TraversableMut<GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph>> + 'a>(
         trav: &'a mut Trav,
         mut fold_state: FoldState,
     ) -> Self {

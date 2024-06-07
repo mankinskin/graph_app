@@ -13,17 +13,6 @@
 
 extern crate test;
 
-#[cfg(not(any(test, feature = "test-hashing")))]
-use std::collections::{
-    HashMap,
-    HashSet,
-};
-#[cfg(any(test, feature = "test-hashing"))]
-use std::hash::{
-    BuildHasherDefault,
-    DefaultHasher,
-};
-
 //use reexports::*;
 
 pub mod direction;
@@ -40,6 +29,16 @@ pub mod join;
 pub mod tests;
 //pub mod reexports;
 
+#[cfg(not(any(test, feature = "test-hashing")))]
+pub use std::collections::{
+    HashMap,
+    HashSet,
+};
+#[cfg(any(test, feature = "test-hashing"))]
+use std::hash::{
+    BuildHasherDefault,
+    DefaultHasher,
+};
 #[cfg(any(test, feature = "test-hashing"))]
 pub type HashSet<T> = std::collections::HashSet<T, BuildHasherDefault<DefaultHasher>>;
 #[cfg(any(test, feature = "test-hashing"))]

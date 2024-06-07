@@ -51,16 +51,16 @@ impl<'p> JoinContext<'p> {
 // , PatternCtx<'p> = PatternJoinContext<'p>
 pub trait AsNodeJoinContext<'p> {
     fn as_node_join_context<'t>(self) -> NodeJoinContext<'t>
-        where
-            Self: 't,
-            'p: 't;
+    where
+        Self: 't,
+        'p: 't;
 }
 
 impl<'p> AsNodeJoinContext<'p> for NodeJoinContext<'p> {
     fn as_node_join_context<'t>(self) -> NodeJoinContext<'t>
-        where
-            Self: 't,
-            'p: 't,
+    where
+        Self: 't,
+        'p: 't,
     {
         self
     }

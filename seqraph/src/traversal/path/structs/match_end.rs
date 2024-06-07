@@ -6,8 +6,8 @@ use crate::{
                 has_path::HasSinglePath,
                 role::Start,
             },
-            BasePath,
             structs::rooted_path::RootedRolePath,
+            BasePath,
         },
         policy::NodePath,
     },
@@ -32,19 +32,20 @@ NodePath<Start>
 {}
 
 impl<
-    T: NodePath<Start>
-    //+ PathComplete
-    //+ PathAppend
-    + Into<RootedRolePath<Start>>
-    + From<RootedRolePath<Start>>
-    + HasSinglePath
-    + GraphRootChild<Start>
-    //+ From<PathLeaf>
-    //+ Into<FoundPath>
-    //+ GetCacheKey
-    + BasePath,
-> MatchEndPath for T
-{}
+        T: NodePath<Start>
+            //+ PathComplete
+            //+ PathAppend
+            + Into<RootedRolePath<Start>>
+            + From<RootedRolePath<Start>>
+            + HasSinglePath
+            + GraphRootChild<Start>
+            //+ From<PathLeaf>
+            //+ Into<FoundPath>
+            //+ GetCacheKey
+            + BasePath,
+    > MatchEndPath for T
+{
+}
 
 /// Used to represent results after traversal with only a start path
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -90,7 +91,7 @@ impl<P: MatchEndPath> MatchEnd<P> {
             Self::Path(path) => Some(path),
             _ => None,
         }
-            .unwrap()
+        .unwrap()
     }
     pub fn get_path(&self) -> Option<&P> {
         match self {

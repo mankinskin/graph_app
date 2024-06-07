@@ -126,8 +126,8 @@ impl_child! { RootChild for RootedRolePath<R>, self, trav =>
 }
 
 impl<'c, R: PathRole> RootChild<R> for QueryStateContext<'c>
-    where
-        Self: RootChildPos<R>,
+where
+    Self: RootChildPos<R>,
 {
     fn root_child<Trav: Traversable>(
         &self,

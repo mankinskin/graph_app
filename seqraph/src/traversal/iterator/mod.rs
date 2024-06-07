@@ -20,20 +20,20 @@ pub type IterTrav<'a, It> = <It as TraversalIterator<'a>>::Trav;
 pub type IterKind<'a, It> = TravKind<IterTrav<'a, It>>;
 
 pub trait TraversalIterator<'a>:
-Iterator<Item=(usize, TraversalState)> + Sized + ExtendStates + PruneStates + Debug
+    Iterator<Item = (usize, TraversalState)> + Sized + ExtendStates + PruneStates + Debug
 {
     type Trav: TraversalFolder + 'a;
-    type Policy: DirectedTraversalPolicy<Trav=Self::Trav>;
+    type Policy: DirectedTraversalPolicy<Trav = Self::Trav>;
     type NodeVisitor: NodeVisitor;
 
     fn trav(&self) -> &'a Self::Trav;
 }
 
 impl<'a, Trav, S, O> TraversalIterator<'a> for OrderedTraverser<'a, Trav, S, O>
-    where
-        Trav: TraversalFolder + 'a,
-        S: DirectedTraversalPolicy<Trav=Trav>,
-        O: NodeVisitor,
+where
+    Trav: TraversalFolder + 'a,
+    S: DirectedTraversalPolicy<Trav = Trav>,
+    O: NodeVisitor,
 {
     type Trav = Trav;
     type Policy = S;

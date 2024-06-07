@@ -45,8 +45,8 @@ impl StartState {
         &mut self,
         ctx: &mut TraversalContext<'a, 'b, I>,
     ) -> NextStates
-        where
-            Self: 'a,
+    where
+        Self: 'a,
     {
         let mut query = self.query.to_ctx(ctx);
         let delta = self.index.width();

@@ -38,8 +38,8 @@ impl Iterator for DftStack {
 
 impl ExtendStates for DftStack {
     fn extend<
-        It: DoubleEndedIterator + Iterator<Item=(usize, TraversalState)>,
-        T: IntoIterator<Item=(usize, TraversalState), IntoIter=It>,
+        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
+        T: IntoIterator<Item = (usize, TraversalState), IntoIter = It>,
     >(
         &mut self,
         iter: T,

@@ -10,8 +10,8 @@ use crate::{
 use super::{
     child::Child,
     pattern::{
-        Pattern,
         pattern_width,
+        Pattern,
     },
     TokenPosition,
     VertexData,

@@ -14,8 +14,8 @@ use crate::{
     },
     split::PatternSplitPos,
     vertex::pattern::{
-        Pattern,
         pattern_pre_ctx_width,
+        Pattern,
     },
 };
 
@@ -53,8 +53,8 @@ pub trait PartitionBorder<K: RangeRole>: Sized {
     fn offsets(&self) -> OffsetsOf<K>;
 }
 
-impl<P: BorderPerfect<Boolean=bool>, K: RangeRole<Perfect=P, Offsets=NonZeroUsize>>
-PartitionBorder<K> for BorderInfo
+impl<P: BorderPerfect<Boolean = bool>, K: RangeRole<Perfect = P, Offsets = NonZeroUsize>>
+    PartitionBorder<K> for BorderInfo
 {
     fn perfect(&self) -> BooleanPerfectOf<K> {
         self.inner_offset.is_none()

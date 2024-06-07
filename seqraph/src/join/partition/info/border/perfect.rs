@@ -12,7 +12,7 @@ use derive_more::{
 use crate::vertex::PatternId;
 
 pub trait BoolPerfect: Default + Debug + Clone {
-    type Result: BorderPerfect<Boolean=Self>;
+    type Result: BorderPerfect<Boolean = Self>;
     fn then_some(
         self,
         pid: PatternId,
@@ -47,7 +47,7 @@ impl BoolPerfect for (bool, bool) {
 }
 
 pub trait BorderPerfect: Default + Debug + Clone + Extend<Self> {
-    type Boolean: BoolPerfect<Result=Self>;
+    type Boolean: BoolPerfect<Result = Self>;
     fn new(
         boolean: Self::Boolean,
         pid: PatternId,
@@ -109,19 +109,19 @@ impl std::ops::AddAssign for DoublePerfect {
 }
 
 impl FromIterator<Self> for SinglePerfect {
-    fn from_iter<T: IntoIterator<Item=Self>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = Self>>(iter: T) -> Self {
         iter.into_iter().fold(Self::default(), |acc, x| acc + x)
     }
 }
 
 impl FromIterator<Self> for DoublePerfect {
-    fn from_iter<T: IntoIterator<Item=Self>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = Self>>(iter: T) -> Self {
         iter.into_iter().fold(Self::default(), |acc, x| acc + x)
     }
 }
 
 impl Extend<Self> for SinglePerfect {
-    fn extend<T: IntoIterator<Item=Self>>(
+    fn extend<T: IntoIterator<Item = Self>>(
         &mut self,
         iter: T,
     ) {
@@ -130,7 +130,7 @@ impl Extend<Self> for SinglePerfect {
 }
 
 impl Extend<Self> for DoublePerfect {
-    fn extend<T: IntoIterator<Item=Self>>(
+    fn extend<T: IntoIterator<Item = Self>>(
         &mut self,
         iter: T,
     ) {

@@ -10,8 +10,8 @@ use crate::{
 };
 
 use super::{
-    Pattern,
     super::child::Child,
+    Pattern,
 };
 
 pub fn get_child_pattern_range<'a, R: PatternRangeIndex>(
@@ -24,26 +24,28 @@ pub fn get_child_pattern_range<'a, R: PatternRangeIndex>(
 }
 
 pub trait PatternRangeIndex<T = Child>:
-SliceIndex<[T], Output=[T]>
-+ RangeBounds<usize>
-+ Iterator<Item=usize>
-+ Debug
-+ Clone
-+ Send
-+ Sync
-{}
-
-impl<
-    T,
-    R: SliceIndex<[T], Output=[T]>
+    SliceIndex<[T], Output = [T]>
     + RangeBounds<usize>
-    + Iterator<Item=usize>
+    + Iterator<Item = usize>
     + Debug
     + Clone
     + Send
-    + Sync,
-> PatternRangeIndex<T> for R
-{}
+    + Sync
+{
+}
+
+impl<
+        T,
+        R: SliceIndex<[T], Output = [T]>
+            + RangeBounds<usize>
+            + Iterator<Item = usize>
+            + Debug
+            + Clone
+            + Send
+            + Sync,
+    > PatternRangeIndex<T> for R
+{
+}
 //pub trait StartInclusive {
 //    fn start(&self) -> usize;
 //}
