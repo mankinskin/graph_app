@@ -1,3 +1,4 @@
+use derive_new::new;
 use itertools::Itertools;
 use ngram::NGram;
 use pretty_assertions::assert_eq;
@@ -6,12 +7,12 @@ use seqraph::HashSet;
 
 use crate::graph::vocabulary::Corpus;
 use crate::graph::{
-    labelling::label_vocab,
     vocabulary::{
-        IndexVocab,
+        entry::IndexVocab,
         Vocabulary,
     },
 };
+use crate::graph::labelling::{LabellingCtx};
 
 mod containment;
 mod labelling;
@@ -22,18 +23,18 @@ mod vocabulary;
 #[derive(Debug)]
 struct TestCtx<'a>
 {
-    vocab: Vocabulary,
+    vocab: &'a Vocabulary,
     corpus: Corpus,
     roots_test: HashSet<String>,
     leaves_test: HashSet<String>,
-    labels: Option<&'a HashSet<usize>>,
+    //labels: Option<&'a HashSet<usize>>,
 }
 impl<'a> TestCtx<'a>
 {
     pub fn new(
-        vocab: Vocabulary,
+        vocab: &'a Vocabulary,
         corpus: Corpus,
-        labels: Option<&'a HashSet<usize>>,
+        //labels: Option<&'a HashSet<usize>>,
     ) -> Self
     {
         let roots_test: HashSet<_> =
@@ -50,20 +51,18 @@ impl<'a> TestCtx<'a>
             corpus,
             roots_test,
             leaves_test,
-            labels,
         }
     }
-}
-fn test_containment(ctx: &TestCtx<'_>)
-{
-    let TestCtx {
-        vocab,
-        corpus,
-        leaves_test,
-        roots_test,
-        ..
-    } = ctx;
-    assert_eq!(
+    fn test_containment(&self)
+    {
+        let Self {
+            vocab,
+            corpus,
+            leaves_test,
+            roots_test,
+            ..
+        } = self;
+        assert_eq!(
         vocab
             .leaves
             .iter()
@@ -71,7 +70,7 @@ fn test_containment(ctx: &TestCtx<'_>)
             .collect::<HashSet<_>>(),
         *leaves_test,
     );
-    assert_eq!(
+        assert_eq!(
         vocab
             .roots
             .iter()
@@ -79,66 +78,76 @@ fn test_containment(ctx: &TestCtx<'_>)
             .collect::<HashSet<_>>(),
         *roots_test,
     );
+    }
 }
-fn test_labels(ctx: &TestCtx<'_>)
+#[derive(Debug, new)]
+struct LabelTestCtx<'a>
 {
-    let TestCtx {
-        vocab,
-        corpus,
-        labels,
-        leaves_test,
-        roots_test,
-    } = ctx;
-    let labels = labels.unwrap();
-    let label_strings: HashSet<_> = labels
-        .iter()
-        .map(|vi| vocab.get(vi).unwrap().ngram.clone())
-        .collect();
-    println!(
-        "{:#?}",
-        label_strings
+    ctx: TestCtx<'a>,
+    labels: HashSet<usize>,
+}
+impl<'a> LabelTestCtx<'a> {
+    pub fn test_labels(&self)
+    {
+        let Self {
+            ctx: TestCtx {
+                vocab,
+                corpus,
+                leaves_test,
+                roots_test,
+            },
+            labels,
+        } = self;
+        let label_strings: HashSet<_> = labels
             .iter()
-            .sorted_by_key(|s| s.len())
-            .collect_vec()
-    );
-    for x in &vocab.roots
-    {
-        assert!(labels.contains(x));
-    }
-    for x in &vocab.leaves
-    {
-        assert!(labels.contains(x));
-    }
-    // frequent nodes:
-    // - occur in two different contexts
-    // i.e. there exist two reachable parent nodes
-    let frequency_test: HashSet<_> = leaves_test
-        .iter()
-        .cloned()
-        .chain(roots_test.into_iter().cloned())
-        .chain(
-            [
-                "ot",
-                "s ",
-                "so",
-                "os",
-                "t ",
-                "ops",
-                "otto",
-                " mops ",
-                "otto: ",
-                " fort",
-                "ottos mops ",
-            ]
-            .into_iter()
-            .map(ToString::to_string),
-        )
-        .collect();
+            .map(|vi| vocab.get(vi).unwrap().ngram.clone())
+            .collect();
+        println!(
+            "{:#?}",
+            label_strings
+                .iter()
+                .sorted_by_key(|s| s.len())
+                .collect_vec()
+        );
+        for x in &vocab.roots
+        {
+            assert!(labels.contains(x));
+        }
+        for x in &vocab.leaves
+        {
+            assert!(labels.contains(x));
+        }
+        // frequent nodes:
+        // - occur in two different contexts
+        // i.e. there exist two reachable parent nodes
+        let frequency_test: HashSet<_> = leaves_test
+            .iter()
+            .cloned()
+            .chain(roots_test.into_iter().cloned())
+            .chain(
+                [
+                    "ot",
+                    "s ",
+                    "so",
+                    "os",
+                    "t ",
+                    "ops",
+                    "otto",
+                    " mops ",
+                    "otto: ",
+                    " fort",
+                    "ottos mops ",
+                ]
+                    .into_iter()
+                    .map(ToString::to_string),
+            )
+            .collect();
 
-    assert_eq!(
+        assert_eq!(
         label_strings.into_iter().sorted().collect_vec(),
         frequency_test.into_iter().sorted().collect_vec(),
     );
+    }
 }
 pub fn test_graph()
 {
@@ -146,12 +155,13 @@ pub fn test_graph()
     let texts = corpus.into_iter().map(ToString::to_string).collect_vec();
     let corpus = Corpus::new("ottos_mops".to_owned(), texts);
     // graph of all containment edges between n and n+1
-    let vocab = Vocabulary::from_corpus(&corpus);
-    let mut ctx = TestCtx::new(vocab, corpus, None);
+    let mut image = LabellingCtx::from_corpus(&corpus);
 
-    test_containment(&ctx);
-
-    let labels = label_vocab(&mut ctx.vocab);
-    ctx.labels = Some(&labels);
-    test_labels(&ctx);
+    let ctx = TestCtx::new(&image.vocab, corpus);
+    ctx.test_containment();
+    let corpus = ctx.corpus;
+    let labels = image
+        .label_vocab();
+    LabelTestCtx::new(TestCtx::new(&image.vocab, corpus), labels)
+        .test_labels();
 }

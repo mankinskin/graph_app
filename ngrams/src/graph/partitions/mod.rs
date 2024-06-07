@@ -18,10 +18,7 @@ use itertools::Itertools;
 
 use seqraph::vertex::child::Child;
 use seqraph::vertex::wide::Wide;
-use seqraph::{
-    vertex::VertexIndex,
-    HashSet,
-};
+use seqraph::{vertex::VertexIndex, HashSet, HashMap};
 
 use crate::graph::partitions::container::{
     PartitionCell,
@@ -32,10 +29,10 @@ use crate::graph::traversal::{
     TopDown,
     TraversalPolicy,
 };
-use crate::graph::vocabulary::{
+use crate::graph::vocabulary::{entry::{
     IndexVocab,
     VertexCtx,
-};
+}, ProcessStatus};
 use crate::graph::{
     labelling::LabellingCtx,
     vocabulary::Vocabulary,
@@ -50,24 +47,24 @@ use crate::graph::{
 //  - label all gaps
 
 #[derive(Debug, Deref, From, DerefMut)]
-pub struct PartitionsCtx<'a>
+pub struct PartitionsCtx<'b>
 {
     #[deref]
     #[deref_mut]
-    ctx: &'a mut LabellingCtx,
+    ctx: &'b mut LabellingCtx,
 }
 
-impl<'a> PartitionsCtx<'a>
+impl<'b> PartitionsCtx<'b>
 {
     // find largest labelled children
     fn child_tree(
-        &mut self,
+        &self,
         entry: &VertexCtx,
-    ) -> Vec<(usize, Child)>
+    ) -> HashMap<usize, Child>
     {
         let mut queue: VecDeque<_> =
             TopDown::next_nodes(&entry).into_iter().collect();
-        let mut tree: Vec<_> = Default::default();
+        let mut tree: HashMap<_, _> = Default::default();
 
         let mut visited: HashSet<_> = Default::default();
         while let Some((off, node)) = queue.pop_front()
@@ -77,9 +74,10 @@ impl<'a> PartitionsCtx<'a>
                 continue;
             }
             visited.insert((off, node));
-            if self.labels.contains(&node.index)
+            if self.labels.contains(&node.index) && !tree.contains_key(&off)
             {
-                tree.push((off, node));
+                //println!("{}", off);
+                tree.insert(off, node);
             }
             else
             {
@@ -94,23 +92,21 @@ impl<'a> PartitionsCtx<'a>
         tree
     }
     fn partition_container(
-        &mut self,
+        &self,
         entry: &VertexCtx,
     ) -> PartitionContainer
     {
         let children = self.child_tree(entry);
-        children.iter().tuple_windows().for_each(|((prev,_), (pos, _))|
-            assert!(prev < pos, "{} < {}", prev, pos,)
-        );
         PartitionContainer::from_child_list(children)
     }
     fn on_node(
         &mut self,
-        vertex: &VertexCtx,
+        node: &VertexIndex,
     ) -> Vec<VertexIndex>
     {
-        let tree = self.child_tree(vertex);
-        let container = self.partition_container(vertex);
+        let entry = self.vocab.get(node).unwrap();
+        let tree = self.child_tree(&entry);
+        let container = self.partition_container(&entry);
         //println!("{:#?}", container);
         for line in container
         {
@@ -131,10 +127,9 @@ impl<'a> PartitionsCtx<'a>
     }
     pub fn partitions_pass(
         &mut self,
-        vocab: &Vocabulary,
     )
     {
-        let mut queue: VecDeque<VertexIndex> = TopDown::starting_nodes(&vocab);
+        let mut queue: VecDeque<VertexIndex> = TopDown::starting_nodes(&self.vocab);
         let mut n = 0;
         while !queue.is_empty()
         {
@@ -146,11 +141,12 @@ impl<'a> PartitionsCtx<'a>
             {
                 if !visited.contains(&node) && self.labels.contains(&node)
                 {
-                    next_layer.extend(self.on_node(&vocab.get(&node).unwrap()));
+                    next_layer.extend(self.on_node(&node));
                     visited.insert(node);
                 }
             }
             queue.extend(next_layer)
         }
+        self.status = ProcessStatus::Partitions;
     }
 }

@@ -100,6 +100,19 @@ pub struct Hypergraph<G: GraphKind = BaseGraphKind> {
     vertex_id_count: AtomicUsize,
     _ty: std::marker::PhantomData<G>,
 }
+impl<G: GraphKind> Clone for Hypergraph<G> {
+    fn clone(
+        &self,
+    ) -> Self {
+        Self {
+            graph: self.graph.clone(),
+            tokens: self.tokens.clone(),
+            pattern_id_count: self.pattern_id_count.load(Ordering::SeqCst).clone().into(),
+            vertex_id_count: self.vertex_id_count.load(Ordering::SeqCst).clone().into(),
+            _ty: self._ty,
+        }
+    }
+}
 impl<G: GraphKind> PartialEq for Hypergraph<G> {
     fn eq(
         &self,

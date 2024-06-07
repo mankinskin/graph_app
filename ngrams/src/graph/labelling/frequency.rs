@@ -7,14 +7,11 @@ use derive_more::{
 };
 use itertools::Itertools;
 
-use seqraph::{
-    vertex::{
-        child::Child,
-        location::child::ChildLocation,
-        VertexIndex,
-    },
-    HashSet,
-};
+use seqraph::{vertex::{
+    child::Child,
+    location::child::ChildLocation,
+    VertexIndex,
+}, HashSet, HashMap};
 
 use crate::graph::traversal::{
     BottomUp,
@@ -25,23 +22,27 @@ use crate::graph::{
     containment::TextLocation,
     labelling::LabellingCtx,
     vocabulary::{
-        IndexVocab,
-        VertexCtx,
+        entry::{
+            IndexVocab,
+            VertexCtx,
+        },
         Vocabulary,
     },
 };
+use crate::graph::vocabulary::entry::VocabEntry;
+use crate::graph::vocabulary::ProcessStatus;
 
 #[derive(Debug, Deref, From, DerefMut)]
-pub struct FrequencyCtx<'a>
+pub struct FrequencyCtx<'b>
 {
     #[deref]
     #[deref_mut]
-    ctx: &'a mut LabellingCtx,
+    pub ctx: &'b mut LabellingCtx,
 }
-impl<'a> FrequencyCtx<'a>
+impl<'b> FrequencyCtx<'b>
 {
     pub fn entry_next(
-        &mut self,
+        &self,
         entry: &VertexCtx,
     ) -> Vec<VertexIndex>
     {
@@ -71,7 +72,7 @@ impl<'a> FrequencyCtx<'a>
             .collect_vec()
     }
     pub fn entry_is_frequent(
-        &mut self,
+        &self,
         entry: &VertexCtx,
     ) -> bool
     {
@@ -121,39 +122,44 @@ impl<'a> FrequencyCtx<'a>
     }
     pub fn on_node(
         &mut self,
-        entry: &VertexCtx,
+        node: &VertexIndex,
     ) -> Vec<VertexIndex>
     {
-        if self.entry_is_frequent(entry)
+        let entry = self.vocab.get(node).unwrap();
+        let next = self.entry_next(&entry);
+        if self.entry_is_frequent(&entry)
         {
-            self.labels.insert(entry.data.index);
+            let index = entry.data.index;
+            self.labels.insert(index);
+            next
+        } else {
+            next
         }
-
-        self.entry_next(entry)
     }
     pub fn frequency_pass(
         &mut self,
-        vocab: &Vocabulary,
     )
     {
-        let start = TopDown::starting_nodes(vocab);
+        let start = TopDown::starting_nodes(&self.vocab);
         self.labels.extend(start.iter());
-        let mut queue = Queue::new(VecDeque::default(), vocab);
+        let mut queue = Queue::new(VecDeque::default(), &self.vocab);
         for node in start
         {
-            let next = self.on_node(&vocab.get(&node).unwrap());
-            queue.extend_queue(next, &vocab);
+            let next = self.on_node(&node);
+            queue.extend_queue(next, &self.vocab);
         }
         while let Some(node) = queue.pop_front()
         {
             if !self.labels.contains(&node)
             {
-                let next = self.on_node(&vocab.get(&node).unwrap());
+                let next = self.on_node(&node);
                 //layer.extend(next);
-                queue.extend_queue(next, &vocab);
+                queue.extend_queue(next, &self.vocab);
             }
         }
-        self.labels.extend(BottomUp::starting_nodes(vocab));
+        let bottom = BottomUp::starting_nodes(&self.vocab);
+        self.labels.extend(bottom);
+        self.status = ProcessStatus::Frequency;
     }
 }
 #[derive(Debug, Deref, DerefMut)]

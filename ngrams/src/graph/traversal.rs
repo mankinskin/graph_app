@@ -9,7 +9,7 @@ use seqraph::vertex::{
 };
 
 use crate::graph::vocabulary::{
-    VertexCtx,
+    entry::VertexCtx,
     Vocabulary,
 };
 
@@ -78,6 +78,7 @@ impl TraversalPolicy for TopDown
                         .then(|| (off, *c))
                 })
             })
+            .sorted_by_key(|&(off, _)| off)
             .collect_vec()
     }
 }

@@ -210,7 +210,10 @@ impl PartitionBuilder
                 {
                     Ordering::Equal => Some(line_index),
                     Ordering::Less => None,
-                    Ordering::Greater => panic!("should never happen"),
+                    Ordering::Greater => panic!(
+                        "should never happen {} > {}",
+                        pos, end_pos,
+                    ),
                 }
             })
             .map(|line_index| self.append_at_line(line_index, pos, index))
@@ -242,10 +245,16 @@ pub struct PartitionContainer
 }
 impl PartitionContainer
 {
-    pub fn from_child_list(list: Vec<(usize, Child)>) -> Self
+    pub fn from_child_list(list: impl IntoIterator<Item=(usize, Child)>) -> Self
     {
-        let vec = list.into_iter().sorted_by_key(|&(o, _)| o).collect_vec();
-        //println!("{:#?}", vec);
+        let vec = list.into_iter()
+            .sorted_by_key(|&(o, _)| o)
+            .collect_vec();
+        println!("{:#?}", vec.iter().map(|&(p, _)| p).collect_vec());
+
+        vec.iter().tuple_windows().for_each(|((prev,_), (pos, _))|
+            assert!(prev < pos, "{} < {}", prev, pos,)
+        );
         let mut iter = vec.into_iter();
         let first = iter.next().unwrap();
         assert_eq!(first.0, 0);

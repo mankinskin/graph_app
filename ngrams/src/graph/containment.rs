@@ -19,8 +19,10 @@ use seqraph::vertex::{
 };
 
 use crate::graph::vocabulary::{
-    entry::VocabEntry,
-    IndexVocab,
+    entry::{
+        VocabEntry,
+        IndexVocab,
+    },
     NGramId,
     Vocabulary,
 };

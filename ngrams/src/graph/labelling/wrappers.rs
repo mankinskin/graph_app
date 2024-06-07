@@ -19,32 +19,34 @@ use crate::graph::traversal::{
     TopDown,
     TraversalPolicy,
 };
-use crate::graph::vocabulary::VertexCtx;
+use crate::graph::vocabulary::entry::VertexCtx;
 use crate::graph::{
     labelling::LabellingCtx,
     IndexVocab,
     Vocabulary,
 };
+use crate::graph::vocabulary::ProcessStatus;
 
 #[derive(Debug, Deref, From, DerefMut)]
-pub struct WrapperCtx<'a>
+pub struct WrapperCtx<'b>
 {
     #[deref]
     #[deref_mut]
-    ctx: &'a mut LabellingCtx,
+    ctx: &'b mut LabellingCtx,
 }
 // - run bottom up (all smaller nodes need to be fully labelled)
 // - for each node x:
-//  - run top down to find largest frequent children to cover whole range
+//  - run top down to find the largest frequent children to cover whole range
 //  - label node x if there are multiple overlapping labelled child nodes
 
-impl<'a> WrapperCtx<'a>
+impl<'b> WrapperCtx<'b>
 {
     pub fn on_node(
         &mut self,
-        entry: &VertexCtx,
+        node: &VertexIndex,
     ) -> Vec<VertexIndex>
     {
+        let entry = self.vocab.get(node).unwrap();
         let mut queue: VecDeque<_> =
             TopDown::next_nodes(&entry).into_iter().collect();
         let mut ranges: HashSet<_> = HashSet::default();
@@ -76,6 +78,7 @@ impl<'a> WrapperCtx<'a>
             queue.extend(next_layer)
         }
         //println!("ranges finished");
+        let next = BottomUp::next_nodes(&entry);
         if ranges
             .iter()
             .cartesian_product(&ranges)
@@ -83,16 +86,16 @@ impl<'a> WrapperCtx<'a>
             .is_some()
         {
             //println!("wrapper");
-            self.labels.insert(entry.data.index);
+            let index = entry.data.index;
+            self.labels.insert(index);
         }
-        BottomUp::next_nodes(&entry)
+        next
     }
     pub fn wrapping_pass(
         &mut self,
-        vocab: &Vocabulary,
     )
     {
-        let mut queue: VecDeque<VertexIndex> = BottomUp::starting_nodes(&vocab);
+        let mut queue: VecDeque<VertexIndex> = BottomUp::starting_nodes(&self.vocab);
         while !queue.is_empty()
         {
             let mut visited: HashSet<_> = Default::default();
@@ -102,10 +105,11 @@ impl<'a> WrapperCtx<'a>
                 if !visited.contains(&node) && !self.labels.contains(&node)
                 {
                     visited.insert(node);
-                    next_layer.extend(self.on_node(&vocab.get(&node).unwrap()));
+                    next_layer.extend(self.on_node(&node));
                 }
             }
             queue.extend(next_layer)
         }
+        self.status = ProcessStatus::Wrappers;
     }
 }
