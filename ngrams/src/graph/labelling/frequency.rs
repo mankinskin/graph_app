@@ -140,6 +140,7 @@ impl<'b> FrequencyCtx<'b>
         &mut self,
     )
     {
+        println!("Frequency Pass");
         let start = TopDown::starting_nodes(&self.vocab);
         self.labels.extend(start.iter());
         let mut queue = Queue::new(VecDeque::default(), &self.vocab);

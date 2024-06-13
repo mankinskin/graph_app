@@ -40,21 +40,29 @@ struct PartitionLineBuilder
 }
 impl PartitionLineBuilder
 {
+    fn push_cell(
+        &mut self,
+        cell: PartitionCell,
+    )
+    {
+        if let Some(last) = self.line.last() {
+            self.pos += last.width();
+        }
+        self.line.push(cell);
+    }
     pub fn append(
         &mut self,
         index: Child,
     )
     {
-        self.line.push(PartitionCell::ChildIndex(index));
-        self.pos += index.width();
+        self.push_cell(PartitionCell::ChildIndex(index));
     }
     pub fn skip(
         &mut self,
         offset: NonZeroUsize,
     )
     {
-        self.line.push(PartitionCell::GapSize(offset));
-        self.pos += offset.get();
+        self.push_cell(PartitionCell::GapSize(offset));
     }
     pub fn append_after_offset(
         &mut self,
@@ -73,7 +81,7 @@ impl PartitionLineBuilder
         pos: usize,
     ) -> Option<NonZeroUsize>
     {
-        NonZeroUsize::new(pos - self.pos)
+        NonZeroUsize::new(pos - self.end_pos())
     }
     pub fn skip_to(
         &mut self,
@@ -189,6 +197,7 @@ impl PartitionBuilder
         index: Child,
     )
     {
+        println!("Find line to insert {}..{}", pos, pos + index.width());
         let mut sorted_lines = self
             .wall
             .iter()
@@ -205,19 +214,22 @@ impl PartitionBuilder
 
                 let index_width = index.width();
                 let end_pos = line.end_pos();
+                println!("{}", end_pos);
 
-                match pos.cmp(&end_pos)
+                match end_pos.cmp(&pos)
                 {
-                    Ordering::Equal => Some(line_index),
-                    Ordering::Less => None,
-                    Ordering::Greater => panic!(
-                        "should never happen {} > {}",
-                        pos, end_pos,
-                    ),
+                    Ordering::Equal | Ordering::Less => Some(line_index),
+                    Ordering::Greater => None,
                 }
             })
-            .map(|line_index| self.append_at_line(line_index, pos, index))
-            .unwrap_or_else(|| self.create_and_append_line(pos, index))
+            .map(|line_index| {
+                println!("Append {}", pos);
+                self.append_at_line(line_index, pos, index)
+            })
+            .unwrap_or_else(|| {
+                println!("Create new {}", pos);
+                self.create_and_append_line(pos, index)
+            })
     }
     // pick current line, append index or create new line, advance cursor accordingly
     pub fn append_child(
@@ -250,7 +262,7 @@ impl PartitionContainer
         let vec = list.into_iter()
             .sorted_by_key(|&(o, _)| o)
             .collect_vec();
-        println!("{:#?}", vec.iter().map(|&(p, _)| p).collect_vec());
+        println!("{:#?}", vec.iter().map(|&(p, c)| (p, p + c.width())).collect_vec());
 
         vec.iter().tuple_windows().for_each(|((prev,_), (pos, _))|
             assert!(prev < pos, "{} < {}", prev, pos,)

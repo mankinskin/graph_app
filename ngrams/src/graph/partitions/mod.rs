@@ -64,7 +64,7 @@ impl<'b> PartitionsCtx<'b>
     {
         let mut queue: VecDeque<_> =
             TopDown::next_nodes(&entry).into_iter().collect();
-        let mut tree: HashMap<_, _> = Default::default();
+        let mut tree: HashMap<usize, Child> = Default::default();
 
         let mut visited: HashSet<_> = Default::default();
         while let Some((off, node)) = queue.pop_front()
@@ -74,9 +74,17 @@ impl<'b> PartitionsCtx<'b>
                 continue;
             }
             visited.insert((off, node));
-            if self.labels.contains(&node.index) && !tree.contains_key(&off)
+            // check if covered
+            if tree.iter().any(|(&p, &c)| {
+                let node_end = off + node.width();
+                let probe_end = p + c.width();
+                p <= off && node_end <= probe_end
+            })
             {
-                //println!("{}", off);
+                continue;
+            }
+            if self.labels.contains(&node.index)
+            {
                 tree.insert(off, node);
             }
             else
@@ -105,6 +113,7 @@ impl<'b> PartitionsCtx<'b>
     ) -> Vec<VertexIndex>
     {
         let entry = self.vocab.get(node).unwrap();
+        println!("{}", entry.ngram);
         let tree = self.child_tree(&entry);
         let container = self.partition_container(&entry);
         //println!("{:#?}", container);
@@ -129,6 +138,7 @@ impl<'b> PartitionsCtx<'b>
         &mut self,
     )
     {
+        println!("Partition Pass");
         let mut queue: VecDeque<VertexIndex> = TopDown::starting_nodes(&self.vocab);
         let mut n = 0;
         while !queue.is_empty()

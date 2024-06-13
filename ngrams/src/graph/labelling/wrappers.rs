@@ -64,13 +64,12 @@ impl<'b> WrapperCtx<'b>
                 }
                 else
                 {
-                    let ne = entry.vocab.get(&node.index).unwrap();
+                    let node_entry = entry.vocab.get(&node.index).unwrap();
                     next_layer.extend(
-                        TopDown::next_nodes(&ne).into_iter().filter_map(
-                            |(o, c)| {
+                        TopDown::next_nodes(&node_entry).into_iter().filter_map(
+                            |(o, c)|
                                 (!visited.contains(&c.index))
-                                    .then(|| (o + off, c))
-                            },
+                                    .then(|| (o + off, c)),
                         ),
                     );
                 }
@@ -95,6 +94,7 @@ impl<'b> WrapperCtx<'b>
         &mut self,
     )
     {
+        println!("Wrapper Pass");
         let mut queue: VecDeque<VertexIndex> = BottomUp::starting_nodes(&self.vocab);
         while !queue.is_empty()
         {

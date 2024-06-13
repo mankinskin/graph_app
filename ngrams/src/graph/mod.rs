@@ -102,13 +102,13 @@ impl<'a> LabelTestCtx<'a> {
             .iter()
             .map(|vi| vocab.get(vi).unwrap().ngram.clone())
             .collect();
-        println!(
-            "{:#?}",
-            label_strings
-                .iter()
-                .sorted_by_key(|s| s.len())
-                .collect_vec()
-        );
+        //println!(
+        //    "{:#?}",
+        //    label_strings
+        //        .iter()
+        //        .sorted_by_key(|s| s.len())
+        //        .collect_vec()
+        //);
         for x in &vocab.roots
         {
             assert!(labels.contains(x));
@@ -144,9 +144,9 @@ impl<'a> LabelTestCtx<'a> {
             .collect();
 
         assert_eq!(
-        label_strings.into_iter().sorted().collect_vec(),
-        frequency_test.into_iter().sorted().collect_vec(),
-    );
+            label_strings.into_iter().sorted().collect_vec(),
+            frequency_test.into_iter().sorted().collect_vec(),
+        );
     }
 }
 pub fn test_graph()
@@ -160,8 +160,7 @@ pub fn test_graph()
     let ctx = TestCtx::new(&image.vocab, corpus);
     ctx.test_containment();
     let corpus = ctx.corpus;
-    let labels = image
-        .label_vocab();
-    LabelTestCtx::new(TestCtx::new(&image.vocab, corpus), labels)
+    image.label_vocab();
+    LabelTestCtx::new(TestCtx::new(&image.vocab, corpus), image.labels)
         .test_labels();
 }

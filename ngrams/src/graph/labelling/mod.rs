@@ -1,3 +1,4 @@
+use std::cmp::Reverse;
 use std::fs::{File, remove_file};
 use std::io::{BufReader, BufWriter};
 use std::path::{absolute, Path, PathBuf};
@@ -10,6 +11,7 @@ use ciborium::{
     de::Error as DeError,
     ser::Error as SerError,
 };
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tap::Tap;
 
@@ -98,38 +100,42 @@ impl LabellingCtx
                 Self::from(Vocabulary::from_corpus(corpus))
             })
     }
-    pub fn label_vocab(&mut self) -> HashSet<VertexIndex>
+    pub fn label_vocab(&mut self)
     {
         //let roots = texts.iter().map(|s| *vocab.ids.get(s).unwrap()).collect_vec();
         if (self.status < ProcessStatus::Frequency)
         {
-            println!("Frequency Pass");
             FrequencyCtx::from(&mut *self).frequency_pass();
-            //vocab.write_to_file(vocab.target_file_path());
+            self.write_to_target_file();
         } else {
             println!("Frequency Pass already processed.");
         }
         if (self.status < ProcessStatus::Wrappers)
         {
-            println!("Wrapper Pass");
             WrapperCtx::from(&mut *self).wrapping_pass();
-            self.write_to_target_file();
+            //self.write_to_target_file();
         }
         else
         {
             println!("Wrapper Pass already processed.");
         }
+        //println!("{:#?}",
+        //    self.vocab.entries.iter()
+        //        .filter_map(|(i, e)|
+        //            self.labels.contains(i).then(|| e.ngram.clone())
+        //        )
+        //        .sorted_by_key(|s| Reverse(s.len()))
+        //        .collect_vec(),
+        //);
         if (self.status < ProcessStatus::Partitions)
         {
-            println!("Partition Pass");
             PartitionsCtx::from(&mut *self).partitions_pass();
-            //vocab.write_to_file(vocab.target_file_path());
+            //self.write_to_target_file();
         }
         else
         {
             println!("Partition Pass already processed.");
         }
         //println!("{:#?}", vocab.labels);
-        self.labels.clone()
     }
 }
