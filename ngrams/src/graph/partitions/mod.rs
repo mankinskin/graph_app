@@ -113,25 +113,11 @@ impl<'b> PartitionsCtx<'b>
     ) -> Vec<VertexIndex>
     {
         let entry = self.vocab.get(node).unwrap();
-        println!("{}", entry.ngram);
+        //println!("{}", entry.ngram);
         let tree = self.child_tree(&entry);
         let container = self.partition_container(&entry);
         //println!("{:#?}", container);
-        for line in container
-        {
-            for cell in line
-            {
-                let (t, s) = match cell
-                {
-                    PartitionCell::GapSize(s) => ("gp", s.get()),
-                    PartitionCell::ChildIndex(c) => ("ch", c.width()),
-                };
-                print!("{}({})", t, s);
-            }
-            println!();
-            //println!("{:#?}", line)
-            //self.labels.insert(c);
-        }
+        //print!("{}", container);
         vec![]
     }
     pub fn partitions_pass(

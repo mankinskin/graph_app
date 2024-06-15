@@ -11,6 +11,7 @@ use std::cmp::{
     Ordering,
     Reverse,
 };
+use std::fmt::{Display, Formatter};
 use std::num::NonZeroUsize;
 
 #[derive(Debug, Copy, Clone)]
@@ -197,7 +198,7 @@ impl PartitionBuilder
         index: Child,
     )
     {
-        println!("Find line to insert {}..{}", pos, pos + index.width());
+        //println!("Find line to insert {}..{}", pos, pos + index.width());
         let mut sorted_lines = self
             .wall
             .iter()
@@ -223,11 +224,11 @@ impl PartitionBuilder
                 }
             })
             .map(|line_index| {
-                println!("Append {}", pos);
+                //println!("Append {}", pos);
                 self.append_at_line(line_index, pos, index)
             })
             .unwrap_or_else(|| {
-                println!("Create new {}", pos);
+                //println!("Create new {}", pos);
                 self.create_and_append_line(pos, index)
             })
     }
@@ -262,7 +263,7 @@ impl PartitionContainer
         let vec = list.into_iter()
             .sorted_by_key(|&(o, _)| o)
             .collect_vec();
-        println!("{:#?}", vec.iter().map(|&(p, c)| (p, p + c.width())).collect_vec());
+        //println!("{:#?}", vec.iter().map(|&(p, c)| (p, p + c.width())).collect_vec());
 
         vec.iter().tuple_windows().for_each(|((prev,_), (pos, _))|
             assert!(prev < pos, "{} < {}", prev, pos,)
@@ -278,5 +279,25 @@ impl PartitionContainer
         Self {
             wall: builder.close(),
         }
+    }
+}
+impl Display for PartitionContainer {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for line in &self.wall
+        {
+            for cell in line
+            {
+                let (t, s) = match cell
+                {
+                    PartitionCell::GapSize(s) => ("gp", s.get()),
+                    PartitionCell::ChildIndex(c) => ("ch", c.width()),
+                };
+                write!(f, "{}({})", t, s);
+            }
+            writeln!(f);
+            //println!("{:#?}", line)
+            //self.labels.insert(c);
+        }
+        Ok(())
     }
 }

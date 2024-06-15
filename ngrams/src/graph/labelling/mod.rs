@@ -100,7 +100,7 @@ impl LabellingCtx
                 Self::from(Vocabulary::from_corpus(corpus))
             })
     }
-    pub fn label_vocab(&mut self)
+    pub fn label_freq(&mut self)
     {
         //let roots = texts.iter().map(|s| *vocab.ids.get(s).unwrap()).collect_vec();
         if (self.status < ProcessStatus::Frequency)
@@ -110,6 +110,9 @@ impl LabellingCtx
         } else {
             println!("Frequency Pass already processed.");
         }
+    }
+    pub fn label_wrap(&mut self)
+    {
         if (self.status < ProcessStatus::Wrappers)
         {
             WrapperCtx::from(&mut *self).wrapping_pass();
@@ -119,6 +122,9 @@ impl LabellingCtx
         {
             println!("Wrapper Pass already processed.");
         }
+    }
+    pub fn label_part(&mut self)
+    {
         //println!("{:#?}",
         //    self.vocab.entries.iter()
         //        .filter_map(|(i, e)|
