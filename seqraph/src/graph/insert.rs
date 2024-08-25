@@ -8,38 +8,39 @@ use lazy_static::lazy_static;
 
 use crate::{
     graph::kind::GraphKind,
-    search::NoMatch,
-    vertex::{
-        child::Child,
-        indexed::{
-            Indexed,
-            ToChild,
-        },
-        location::{
-            child::ChildLocation,
-            pattern::IntoPatternLocation,
-        },
-        parent::PatternIndex,
-        pattern::{
-            pattern_range::{
-                get_child_pattern_range,
-                PatternRangeIndex,
-            },
-            pattern_width,
-            replace_in_pattern,
-            IntoPattern,
-            Pattern,
-        },
-        token::{
-            NewTokenIndex,
-            NewTokenIndices,
-            Token,
-        },
-        PatternId,
-        TokenPosition,
-    },
     HashSet,
+    search::NoMatch,
 };
+use crate::graph::vertex::{
+    child::Child,
+    has_vertex_index::{
+        HasVertexIndex,
+        ToChild,
+    },
+    location::{
+        child::ChildLocation,
+        pattern::IntoPatternLocation,
+    },
+    parent::PatternIndex,
+    pattern::{
+        IntoPattern,
+        Pattern,
+        pattern_range::{
+            get_child_pattern_range,
+            PatternRangeIndex,
+        },
+        pattern_width,
+        replace_in_pattern,
+    },
+    PatternId,
+    token::{
+        NewTokenIndex,
+        NewTokenIndices,
+        Token,
+    },
+    TokenPosition,
+};
+use crate::graph::vertex::data::VertexData;
 
 lazy_static! {
     static ref VERTEX_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
@@ -51,11 +52,10 @@ where
     /// insert single token node
     pub fn insert_vertex(
         &mut self,
-        data: crate::vertex::VertexData<G>,
+        data: VertexData<G>,
     ) -> Child {
-        //assert!(!self.graph.contains_key(&key));
-        let c = Child::new(data.index, data.width);
-        self.graph.entry(data.index).or_insert(data);
+        let c = Child::new(data.vertex_index(), data.width);
+        self.graph.entry(data.key).or_insert_with_key(|_| data);
         //data.index = indexmap::map::Entry::index(&entry);
         //trace!(event = ?logger::Event::NewIndex);
         c
@@ -65,7 +65,7 @@ where
         &mut self,
         token: Token<G::Token>,
     ) -> Child {
-        let data = crate::vertex::VertexData::new(self.next_vertex_id(), 1, Some(token));
+        let data = VertexData::new(self.next_vertex_id(), 1, Some(token));
         let c = self.insert_vertex(data);
         self.tokens.insert(token, c.index);
         c
@@ -83,8 +83,8 @@ where
     /// utility, builds total width, indices and children for pattern
     fn to_width_indices_children(
         &self,
-        indices: impl IntoIterator<Item = impl Indexed>,
-    ) -> (TokenPosition, Vec<crate::vertex::VertexIndex>, Vec<Child>) {
+        indices: impl IntoIterator<Item = impl HasVertexIndex>,
+    ) -> (TokenPosition, Vec<crate::graph::vertex::VertexIndex>, Vec<Child>) {
         let mut width = 0;
         let (a, b) = indices
             .into_iter()
@@ -99,7 +99,7 @@ where
     }
     /// adds a parent to all nodes in a pattern
     #[track_caller]
-    pub fn add_parents_to_pattern_nodes<I: Indexed, P: crate::vertex::indexed::AsChild>(
+    pub fn add_parents_to_pattern_nodes<I: HasVertexIndex, P: crate::graph::vertex::has_vertex_index::ToChild>(
         &mut self,
         pattern: Vec<I>,
         parent: P,
@@ -107,19 +107,19 @@ where
     ) {
         for (i, child) in pattern.into_iter().enumerate() {
             let node = self.expect_vertex_data_mut(child.vertex_index());
-            node.add_parent(ChildLocation::new(parent.as_child(), pattern_id, i));
+            node.add_parent(ChildLocation::new(parent.to_child(), pattern_id, i));
         }
     }
     pub fn validate_vertex(
         &self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) {
         self.expect_vertex_data(index).validate()
     }
     /// add pattern to existing node
     pub fn add_pattern_with_update(
         &mut self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
         indices: impl IntoPattern,
     ) -> PatternId {
         // todo handle token nodes
@@ -134,7 +134,7 @@ where
     //#[track_caller]
     pub fn add_patterns_with_update(
         &mut self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
         patterns: impl IntoIterator<Item = impl IntoPattern>,
     ) -> Vec<PatternId> {
         let index = index.vertex_index();
@@ -172,7 +172,7 @@ where
         let (width, indices, children) = self.to_width_indices_children(indices);
         let pattern_id = self.next_pattern_id();
         let id = self.next_vertex_id();
-        let mut new_data = crate::vertex::VertexData::new(id, width, None);
+        let mut new_data = VertexData::new(id, width, None);
         new_data.add_pattern_no_update(pattern_id, children);
         let index = self.insert_vertex(new_data);
         self.add_parents_to_pattern_nodes(indices, Child::new(index, width), pattern_id);
@@ -352,7 +352,7 @@ where
     }
     pub fn add_pattern_parent(
         &mut self,
-        parent: impl crate::vertex::indexed::AsChild,
+        parent: impl crate::graph::vertex::has_vertex_index::ToChild,
         pattern: impl IntoPattern,
         pattern_id: PatternId,
         start: usize,
@@ -360,14 +360,14 @@ where
         pattern.into_iter().enumerate().for_each(|(pos, c)| {
             let pos = start + pos;
             let c = self.expect_vertex_data_mut(c);
-            c.add_parent(ChildLocation::new(parent.as_child(), pattern_id, pos));
+            c.add_parent(ChildLocation::new(parent.to_child(), pattern_id, pos));
         });
     }
     pub fn append_to_pattern(
         &mut self,
-        parent: impl crate::vertex::indexed::AsChild,
+        parent: impl crate::graph::vertex::has_vertex_index::ToChild,
         pattern_id: PatternId,
-        new: impl IntoIterator<Item = impl crate::vertex::indexed::AsChild>,
+        new: impl IntoIterator<Item = impl crate::graph::vertex::has_vertex_index::ToChild>,
     ) -> Child {
         let new: Vec<_> = new.into_iter().map(|c| c.to_child()).collect();
         if new.is_empty() {

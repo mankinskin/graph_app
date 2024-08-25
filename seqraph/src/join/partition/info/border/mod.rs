@@ -13,10 +13,10 @@ use crate::{
         RangeRole,
     },
     split::PatternSplitPos,
-    vertex::pattern::{
-        pattern_pre_ctx_width,
-        Pattern,
-    },
+};
+use crate::graph::vertex::pattern::{
+    Pattern,
+    pattern_pre_ctx_width,
 };
 
 pub mod perfect;

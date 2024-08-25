@@ -5,34 +5,32 @@ use pos::*;
 
 pub mod root;
 
-use crate::{
-    traversal::{
-        context::QueryStateContext,
-        path::{
-            accessors::{
-                has_path::{
-                    HasPath,
-                    HasRolePath,
-                },
-                role::{
-                    End,
-                    PathRole,
-                },
+use crate::traversal::{
+    context::QueryStateContext,
+    path::{
+        accessors::{
+            has_path::{
+                HasPath,
+                HasRolePath,
             },
-            structs::{
-                query_range_path::QueryRangePath,
-                role_path::RolePath,
-                rooted_path::SearchPath,
+            role::{
+                End,
+                PathRole,
             },
         },
-        traversable::Traversable,
+        structs::{
+            query_range_path::QueryRangePath,
+            role_path::RolePath,
+            rooted_path::SearchPath,
+        },
     },
-    vertex::{
-        child::Child,
-        location::child::ChildLocation,
-    },
+    traversable::Traversable,
 };
 use root::*;
+use crate::graph::vertex::{
+    child::Child,
+    location::child::ChildLocation,
+};
 
 pub trait LeafChild<R>: RootChildPos<R> {
     fn leaf_child_location(&self) -> Option<ChildLocation>;

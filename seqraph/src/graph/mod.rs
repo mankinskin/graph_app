@@ -1,12 +1,12 @@
 use std::{
     borrow::Borrow,
     sync::{
+        Arc,
         atomic::{
             self,
             AtomicUsize,
             Ordering,
         },
-        Arc,
         RwLock,
     },
 };
@@ -17,7 +17,17 @@ use serde::{
     Deserialize,
     Serialize,
 };
-
+use vertex::{
+    child::Child,
+    has_vertex_index::{
+        HasVertexIndex,
+        ToChild,
+    },
+    pattern::IntoPattern,
+    PatternId,
+    token::Token,
+    VertexIndex,
+};
 use crate::{
     graph::{
         child_strings::ChildStrings,
@@ -26,20 +36,10 @@ use crate::{
             GraphKind,
         },
     },
-    vertex::{
-        child::Child,
-        indexed::{
-            AsChild,
-            Indexed,
-        },
-        pattern::IntoPattern,
-        token::Token,
-        PatternId,
-        VertexData,
-        VertexIndex,
-    },
     HashMap,
 };
+use crate::graph::vertex::data::VertexData;
+use crate::graph::vertex::key::VertexKey;
 
 pub mod child_strings;
 pub mod direction;
@@ -51,6 +51,7 @@ pub mod validation;
 #[cfg(test)]
 #[macro_use]
 pub mod tests;
+pub mod vertex;
 
 #[derive(Debug, Clone, Default)]
 pub struct HypergraphRef<G: GraphKind = BaseGraphKind>(pub Arc<RwLock<Hypergraph<G>>>);
@@ -94,7 +95,7 @@ impl<G: GraphKind> AsMut<Self> for Hypergraph<G> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Hypergraph<G: GraphKind = BaseGraphKind> {
-    graph: indexmap::IndexMap<VertexIndex, VertexData<G>>,
+    graph: indexmap::IndexMap<VertexKey<G::Token>, VertexData<G>>,
     tokens: indexmap::IndexMap<Token<G::Token>, VertexIndex>,
     pattern_id_count: AtomicUsize,
     vertex_id_count: AtomicUsize,
@@ -155,7 +156,7 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G> {
     pub fn vertex_count(&self) -> usize {
         self.graph.len()
     }
-    pub fn next_vertex_id(&mut self) -> crate::vertex::VertexIndex {
+    pub fn next_vertex_id(&mut self) -> vertex::VertexIndex {
         self.vertex_id_count.fetch_add(1, atomic::Ordering::SeqCst)
     }
     pub fn next_pattern_id(&mut self) -> PatternId {
@@ -169,8 +170,8 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G> {
     //}
     pub fn insert_token_indices(
         &self,
-        index: impl AsChild,
-    ) -> Vec<crate::vertex::VertexIndex> {
+        index: impl ToChild,
+    ) -> Vec<vertex::VertexIndex> {
         if index.width() == 1 {
             vec![index.vertex_index()]
         } else {
@@ -192,7 +193,7 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G> {
     pub fn pattern_token_indices(
         &self,
         pattern: impl IntoPattern,
-    ) -> Vec<crate::vertex::VertexIndex> {
+    ) -> Vec<vertex::VertexIndex> {
         pattern
             .into_iter()
             .flat_map(|c| self.insert_token_indices(c))
@@ -200,13 +201,13 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G> {
     }
     pub fn validate_expansion(
         &self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) {
         //let root = index.index();
         let data = self.expect_vertex_data(index);
         data.children.iter().fold(
             Vec::new(),
-            |mut acc: Vec<crate::vertex::VertexIndex>, (_pid, p)| {
+            |mut acc: Vec<vertex::VertexIndex>, (_pid, p)| {
                 assert!(!p.is_empty());
                 let exp = self.pattern_token_indices(p.borrow());
                 if acc.is_empty() {
@@ -222,7 +223,7 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G> {
 
 #[derive(Clone, Debug)]
 pub struct Edge {
-    pub parent: crate::vertex::parent::Parent,
+    pub parent: vertex::parent::Parent,
     pub child: Child,
 }
 
@@ -232,15 +233,15 @@ where
 {
     pub fn to_petgraph(
         &self
-    ) -> DiGraph<(crate::vertex::VertexIndex, crate::vertex::VertexData<G>), Edge> {
+    ) -> DiGraph<(VertexIndex, VertexData<G>), Edge> {
         let mut pg = DiGraph::new();
         // id refers to index in Hypergraph
         // idx refers to index in petgraph
-        let nodes: HashMap<_, (_, &crate::vertex::VertexData<G>)> = self
+        let nodes: HashMap<_, (_, &VertexData<G>)> = self
             .vertex_iter()
             .map(|(id, node)| {
-                let idx = pg.add_node((*id, node.clone()));
-                (id, (idx, node))
+                let idx = pg.add_node((id.vertex_index(), node.clone()));
+                (id.vertex_index(), (idx, node))
             })
             .collect();
         nodes.values().for_each(|(idx, node)| {
@@ -254,7 +255,7 @@ where
                     *idx,
                     Edge {
                         parent: parent.clone(),
-                        child: node.as_child(),
+                        child: node.to_child(),
                     },
                 );
             }
@@ -285,7 +286,7 @@ where
 
     pub fn pattern_string_with_separator(
         &'a self,
-        pattern: impl IntoIterator<Item = impl Indexed>,
+        pattern: impl IntoIterator<Item = impl HasVertexIndex>,
         separator: &'static str,
     ) -> String {
         pattern
@@ -295,19 +296,19 @@ where
     }
     pub fn separated_pattern_string(
         &'a self,
-        pattern: impl IntoIterator<Item = impl Indexed>,
+        pattern: impl IntoIterator<Item = impl HasVertexIndex>,
     ) -> String {
         self.pattern_string_with_separator(pattern, "_")
     }
     pub fn pattern_string(
         &'a self,
-        pattern: impl IntoIterator<Item = impl Indexed>,
+        pattern: impl IntoIterator<Item = impl HasVertexIndex>,
     ) -> String {
         self.pattern_string_with_separator(pattern, "")
     }
     pub fn pattern_strings(
         &'a self,
-        patterns: impl IntoIterator<Item = impl IntoIterator<Item = impl Indexed>>,
+        patterns: impl IntoIterator<Item = impl IntoIterator<Item = impl HasVertexIndex>>,
     ) -> Vec<String> {
         patterns
             .into_iter()
@@ -316,9 +317,9 @@ where
     }
     pub fn vertex_data_string(
         &self,
-        data: &crate::vertex::VertexData<G>,
+        data: &VertexData<G>,
     ) -> String {
-        if let Some(token) = data.token {
+        if let VertexKey::Token(token, _) = data.key {
             token.to_string()
         } else {
             self.pattern_string(data.expect_any_child_pattern().1)
@@ -326,7 +327,7 @@ where
     }
     pub fn index_string(
         &self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) -> String {
         let data = self.expect_vertex_data(index);
         self.vertex_data_string(data)

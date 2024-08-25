@@ -9,10 +9,10 @@ use crate::{
         },
     },
     split::cache::SplitCache,
-    vertex::{
-        child::Child,
-        indexed::Indexed,
-    },
+};
+use crate::graph::vertex::{
+    child::Child,
+    has_vertex_index::HasVertexIndex,
 };
 
 pub mod node;

@@ -16,18 +16,18 @@ use crate::{
             PatternJoinContext,
             PatternTraceContext,
         },
+        JoinContext,
         partition::splits::{
             HasPosSplits,
             PosSplits,
         },
-        JoinContext,
     },
     split::cache::vertex::SplitVertexCache,
-    vertex::{
-        child::Child,
-        ChildPatterns,
-        PatternId,
-    },
+};
+use crate::graph::vertex::{
+    child::Child,
+    ChildPatterns,
+    PatternId,
 };
 
 #[derive(Debug, Clone, Copy)]

@@ -19,10 +19,10 @@ use crate::{
         },
     },
     split::PatternSplitPos,
-    vertex::{
-        pattern::Pattern,
-        wide::Wide,
-    },
+};
+use crate::graph::vertex::{
+    pattern::Pattern,
+    wide::Wide,
 };
 
 pub trait VisitBorders<K: RangeRole>: Sized + PartitionBorder<K> {

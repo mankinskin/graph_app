@@ -17,10 +17,10 @@ use crate::{
             Traversable,
         },
     },
-    vertex::{
-        location::child::ChildLocation,
-        wide::Wide,
-    },
+};
+use crate::graph::vertex::{
+    location::child::ChildLocation,
+    wide::Wide,
 };
 
 pub struct KeyedLeaf<'k, D: Direction, K: MoveKey<D> + 'k> {

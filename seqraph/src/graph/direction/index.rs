@@ -9,12 +9,12 @@ use crate::{
         Right,
     },
     graph::direction::MatchDirection,
-    vertex::{
-        child::Child,
-        pattern::{
-            IntoPattern,
-            Pattern,
-        },
+};
+use crate::graph::vertex::{
+    child::Child,
+    pattern::{
+        IntoPattern,
+        Pattern,
     },
 };
 

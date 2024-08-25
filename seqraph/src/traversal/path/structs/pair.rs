@@ -1,13 +1,11 @@
-use crate::{
-    traversal::{
-        cache::state::query::QueryState,
-        path::{
-            mutators::append::PathAppend,
-            structs::rooted_path::SearchPath,
-        },
+use crate::traversal::{
+    cache::state::query::QueryState,
+    path::{
+        mutators::append::PathAppend,
+        structs::rooted_path::SearchPath,
     },
-    vertex::location::child::ChildLocation,
 };
+use crate::graph::vertex::location::child::ChildLocation;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PathPair {

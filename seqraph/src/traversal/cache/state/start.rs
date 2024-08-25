@@ -1,36 +1,34 @@
-use crate::{
-    traversal::{
-        cache::{
-            key::{
-                prev::ToPrev,
-                UpKey,
-            },
-            state::{
-                end::{
-                    EndKind,
-                    EndReason,
-                    EndState,
-                },
-                query::QueryState,
-                NextStates,
-                StateNext,
-            },
+use crate::traversal::{
+    cache::{
+        key::{
+            prev::ToPrev,
+            UpKey,
         },
-        context::TraversalContext,
-        iterator::TraversalIterator,
-        path::mutators::{
-            adapters::into_primer::IntoPrimer,
-            move_path::{
-                key::RetractKey,
-                Advance,
+        state::{
+            end::{
+                EndKind,
+                EndReason,
+                EndState,
             },
+            NextStates,
+            query::QueryState,
+            StateNext,
         },
-        policy::DirectedTraversalPolicy,
     },
-    vertex::{
-        child::Child,
-        wide::Wide,
+    context::TraversalContext,
+    iterator::TraversalIterator,
+    path::mutators::{
+        adapters::into_primer::IntoPrimer,
+        move_path::{
+            Advance,
+            key::RetractKey,
+        },
     },
+    policy::DirectedTraversalPolicy,
+};
+use crate::graph::vertex::{
+    child::Child,
+    wide::Wide,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -1,37 +1,35 @@
-use crate::{
-    traversal::{
-        cache::{
-            key::{
-                prev::PrevKey,
-                root::RootKey,
-                target::TargetKey,
-                DirectedKey,
-                UpKey,
-            },
-            state::{
-                child::ChildState,
-                end::{
-                    EndKind,
-                    EndState,
-                    RangeEnd,
-                },
-                parent::ParentState,
-                InnerKind,
-                StateDirection,
-                TraversalState,
-            },
+use crate::traversal::{
+    cache::{
+        key::{
+            DirectedKey,
+            prev::PrevKey,
+            root::RootKey,
+            target::TargetKey,
+            UpKey,
         },
-        path::accessors::{
-            child::root::GraphRootChild,
-            role::{
-                End,
-                Start,
+        state::{
+            child::ChildState,
+            end::{
+                EndKind,
+                EndState,
+                RangeEnd,
             },
+            InnerKind,
+            parent::ParentState,
+            StateDirection,
+            TraversalState,
         },
-        result_kind::RoleChildPath,
     },
-    vertex::location::child::ChildLocation,
+    path::accessors::{
+        child::root::GraphRootChild,
+        role::{
+            End,
+            Start,
+        },
+    },
+    result_kind::RoleChildPath,
 };
+use crate::graph::vertex::location::child::ChildLocation;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NewEntry {

@@ -5,9 +5,9 @@ use serde::{
 };
 
 use seqraph::{HashMap, HashSet};
-use seqraph::vertex::{VertexData, VertexEntry, VertexIndex};
-use seqraph::vertex::indexed::Indexed;
-use seqraph::vertex::parent::Parent;
+use seqraph::graph::vertex::{data::VertexData, VertexEntry, IndexedVertexEntry, VertexIndex};
+use seqraph::graph::vertex::has_vertex_index::HasVertexIndex;
+use seqraph::graph::vertex::parent::Parent;
 
 use crate::graph::containment::TextLocation;
 use crate::graph::vocabulary::{NGramId, Vocabulary};
@@ -16,17 +16,17 @@ use std::borrow::Borrow;
 
 // define how to access a graph
 // useful if you store extra labels for nodes by which to query
-pub trait IndexVocab<K: ?Sized>
+pub trait HasVertexEntries<K: ?Sized>
 {
     fn entry(
         &mut self,
         key: K,
-    ) -> VertexEntry;
-    fn get(
+    ) -> Option<IndexedVertexEntry<'_>>;
+    fn get_vertex(
         &self,
         key: &K,
     ) -> Option<VertexCtx>;
-    fn get_mut(
+    fn get_vertex_mut(
         &mut self,
         key: &K,
     ) -> Option<VertexCtxMut>;
@@ -75,42 +75,42 @@ pub struct VertexCtxMut<'a>
     #[deref]
     pub entry: &'a mut VocabEntry,
 }
-pub trait VocabIndex: Indexed {}
+pub trait VocabIndex: HasVertexIndex {}
 //impl VocabIndex for VertexIndex {}
 //impl VocabIndex for NGramId {}
 macro_rules! impl_index_vocab {
     ($t:ty) => {
-        impl IndexVocab<$t> for Vocabulary
+        impl HasVertexEntries<$t> for Vocabulary
         {
             fn entry(
                 &mut self,
                 key: $t,
-            ) -> VertexEntry
+            ) -> Option<IndexedVertexEntry<'_>>
             {
-                self.graph.vertex_entry(key)
+                self.containment.vertex_entry(key)
             }
-            fn get(
+            fn get_vertex(
                 &self,
-                key: &$t,
+                index: &$t,
             ) -> Option<VertexCtx>
             {
-                self.graph.get_vertex_data(key).ok().map(|data| {
+                self.containment.get_vertex_data(index).ok().map(|data| {
                     VertexCtx {
                         data,
-                        entry: self.entries.get(key).unwrap(),
+                        entry: self.entries.get(index).unwrap(),
                         vocab: self,
                     }
                 })
             }
-            fn get_mut(
+            fn get_vertex_mut(
                 &mut self,
-                key: &$t,
+                index: &$t,
             ) -> Option<VertexCtxMut>
             {
-                self.graph.get_vertex_data_mut(key).ok().map(|data| {
+                self.containment.get_vertex_data_mut(index).ok().map(|data| {
                     VertexCtxMut {
                         data,
-                        entry: self.entries.get_mut(key).unwrap(),
+                        entry: self.entries.get_mut(index).unwrap(),
                     }
                 })
             }
@@ -122,29 +122,29 @@ impl_index_vocab!(NGramId);
 
 macro_rules! impl_index_vocab_str {
     ($t:ty) => {
-        impl IndexVocab<$t> for Vocabulary
+        impl HasVertexEntries<$t> for Vocabulary
         {
             fn entry(
                 &mut self,
                 key: $t,
-            ) -> VertexEntry
+            ) -> Option<IndexedVertexEntry<'_>>
             {
                 self.entry(*self.ids.get(key.borrow() as &'_ str).unwrap())
             }
-            fn get(
+            fn get_vertex(
                 &self,
                 key: &$t,
             ) -> Option<VertexCtx>
             {
-                self.get(self.ids.get(key.borrow() as &'_ str)?)
+                self.get_vertex(self.ids.get(key.borrow() as &'_ str)?)
             }
-            fn get_mut(
+            fn get_vertex_mut(
                 &mut self,
                 key: &$t,
             ) -> Option<VertexCtxMut>
             {
                 let id = *self.ids.get(key.borrow() as &'_ str)?;
-                self.get_mut(&id)
+                self.get_vertex_mut(&id)
             }
         }
     };

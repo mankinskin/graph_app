@@ -1,21 +1,25 @@
+use std::fmt::Debug;
 use crate::{
     graph::kind::GraphKind,
     traversal::traversable::Traversable,
-    vertex::{
-        child::Child,
-        pattern::Pattern,
-        token::Tokenize,
-        PatternId,
-        VertexIndex,
-    },
+};
+use crate::graph::vertex::{
+    child::Child,
+    ChildPatterns,
+    data::VertexData,
+    pattern::Pattern,
+    PatternId,
+    token::Tokenize,
+    VertexIndex,
+    wide::Wide,
 };
 
-pub trait Indexed: Sized {
+pub trait HasVertexIndex: Sized {
     fn vertex_index(&self) -> VertexIndex;
     fn expect_child_patterns<Trav: Traversable>(
         &self,
         trav: &Trav,
-    ) -> crate::vertex::ChildPatterns {
+    ) -> ChildPatterns {
         trav.graph().expect_child_patterns(self).clone()
     }
     fn expect_child_pattern<Trav: Traversable>(
@@ -27,52 +31,44 @@ pub trait Indexed: Sized {
     }
 }
 
-impl<I: Indexed> Indexed for &'_ I {
+impl<I: HasVertexIndex> HasVertexIndex for &'_ I {
     fn vertex_index(&self) -> VertexIndex {
         (**self).vertex_index()
     }
 }
 
-impl<I: Indexed> Indexed for &'_ mut I {
+impl<I: HasVertexIndex> HasVertexIndex for &'_ mut I {
     fn vertex_index(&self) -> VertexIndex {
         (**self).vertex_index()
     }
 }
 
-impl Indexed for VertexIndex {
+impl HasVertexIndex for VertexIndex {
     fn vertex_index(&self) -> VertexIndex {
         *self
     }
 }
 
-impl<G: GraphKind> Indexed for crate::vertex::VertexData<G> {
+impl<G: GraphKind> HasVertexIndex for VertexData<G> {
     fn vertex_index(&self) -> VertexIndex {
-        self.index
+        self.key.vertex_index()
     }
 }
 
-pub trait AsChild: Indexed + crate::vertex::wide::Wide + std::fmt::Debug {
-    fn as_child(&self) -> Child {
+pub trait ToChild: HasVertexIndex + Wide + Debug {
+    fn to_child(&self) -> Child {
         Child::new(self.vertex_index(), self.width())
     }
 }
 
-impl<T: Indexed + crate::vertex::wide::Wide + std::fmt::Debug> AsChild for T {}
-
-pub trait ToChild: AsChild + Sized + std::fmt::Debug {
-    fn to_child(self) -> Child {
-        self.as_child()
-    }
-}
-
-impl<T: AsChild> ToChild for T {}
+impl<T: HasVertexIndex + Wide + Debug> ToChild for T {}
 
 pub trait MaybeIndexed<T: Tokenize> {
-    type Inner: Indexed;
+    type Inner: HasVertexIndex;
     fn into_inner(self) -> Result<Self::Inner, T>;
 }
 
-impl<I: Indexed, T: Tokenize> MaybeIndexed<T> for Result<I, T> {
+impl<I: HasVertexIndex, T: Tokenize> MaybeIndexed<T> for Result<I, T> {
     type Inner = I;
     fn into_inner(self) -> Result<Self::Inner, T> {
         self

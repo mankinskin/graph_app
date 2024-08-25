@@ -10,13 +10,13 @@ use crate::{
             Traversable,
         },
     },
-    vertex::{
-        location::{
-            child::ChildLocation,
-            pattern::IntoPatternLocation,
-        },
-        pattern::pattern_width,
+};
+use crate::graph::vertex::{
+    location::{
+        child::ChildLocation,
+        pattern::IntoPatternLocation,
     },
+    pattern::pattern_width,
 };
 
 pub trait PathRaise {

@@ -9,12 +9,10 @@ use derive_more::{
 use itertools::Itertools;
 use range_ext::intersect::Intersect;
 
-use seqraph::{
-    vertex::wide::Wide,
-    vertex::VertexIndex,
-    HashSet,
-};
-
+use seqraph::HashSet;
+use seqraph::graph::vertex::VertexIndex;
+use seqraph::graph::vertex::wide::Wide;
+use seqraph::graph::vertex::has_vertex_index::HasVertexIndex;
 use crate::graph::traversal::{
     BottomUp,
     TopDown,
@@ -22,9 +20,9 @@ use crate::graph::traversal::{
 };
 use crate::graph::vocabulary::entry::VertexCtx;
 use crate::graph::{
-    labelling::LabellingCtx,
-    IndexVocab,
-    Vocabulary,
+    HasVertexEntries,
+    labelling::LabellingCtx
+    ,
 };
 use crate::graph::vocabulary::ProcessStatus;
 
@@ -64,7 +62,7 @@ impl<'b> WrapperCtx<'b>
                     }
                     else
                     {
-                        let node_entry = entry.vocab.get(&node.index).unwrap();
+                        let node_entry = entry.vocab.get_vertex(&node.index).unwrap();
                         next_layer.extend(
                             TopDown::next_nodes(&node_entry).into_iter().map(
                                 |(o, c)| (o + off, c),
@@ -82,7 +80,7 @@ impl<'b> WrapperCtx<'b>
         node: &VertexIndex,
     ) -> Vec<VertexIndex>
     {
-        let entry = self.vocab.get(node).unwrap();
+        let entry = self.vocab.get_vertex(node).unwrap();
         let next = BottomUp::next_nodes(&entry);
         if !self.labels.contains(&node) {
             let ranges = self.labelled_child_ranges(&entry);
@@ -93,7 +91,7 @@ impl<'b> WrapperCtx<'b>
                     l != r && l.does_intersect(r)
                 )
             {
-                let index = entry.data.index;
+                let index = entry.data.vertex_index();
                 self.labels.insert(index);
             }
         }

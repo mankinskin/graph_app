@@ -7,6 +7,7 @@ use std::{
 };
 
 use crate::{
+    HashSet,
     join::delta::PatternSubDeltas,
     split::{
         PatternSplitPos,
@@ -17,11 +18,10 @@ use crate::{
         entry::position::SubSplitLocation,
         key::SplitKey,
     },
-    vertex::{
-        location::SubLocation,
-        PatternId,
-    },
-    HashSet,
+};
+use crate::graph::vertex::{
+    location::SubLocation,
+    PatternId,
 };
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

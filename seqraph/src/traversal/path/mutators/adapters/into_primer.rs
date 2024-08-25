@@ -1,27 +1,25 @@
-use crate::{
-    traversal::{
-        cache::state::{
-            parent::ParentState,
-            query::QueryState,
-        },
-        path::structs::{
-            role_path::RolePath,
-            rooted_path::{
-                IndexRoot,
-                RootedRolePath,
-                SubPath,
-            },
-        },
-        traversable::Traversable,
+use crate::traversal::{
+    cache::state::{
+        parent::ParentState,
+        query::QueryState,
     },
-    vertex::{
-        child::Child,
-        location::{
-            child::ChildLocation,
-            pattern::IntoPatternLocation,
+    path::structs::{
+        role_path::RolePath,
+        rooted_path::{
+            IndexRoot,
+            RootedRolePath,
+            SubPath,
         },
-        wide::Wide,
     },
+    traversable::Traversable,
+};
+use crate::graph::vertex::{
+    child::Child,
+    location::{
+        child::ChildLocation,
+        pattern::IntoPatternLocation,
+    },
+    wide::Wide,
 };
 
 pub trait IntoPrimer: Sized {

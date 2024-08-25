@@ -1,12 +1,7 @@
-use std::cmp::Reverse;
 use std::fs::{File, remove_file};
 use std::io::{BufReader, BufWriter};
-use std::path::{absolute, Path, PathBuf};
-use plotters::style::text_anchor::VPos;
-use seqraph::{
-    vertex::VertexIndex,
-    HashSet,
-};
+use std::path::Path;
+use seqraph::HashSet;
 use ciborium::{
     de::Error as DeError,
     ser::Error as SerError,
@@ -19,11 +14,11 @@ use crate::graph::vocabulary::{Corpus, CORPUS_DIR, ProcessStatus, Vocabulary};
 
 mod frequency;
 use frequency::FrequencyCtx;
+use seqraph::graph::vertex::VertexIndex;
 
 mod wrappers;
 use crate::graph::partitions::PartitionsCtx;
 use wrappers::WrapperCtx;
-use crate::graph::LabelTestCtx;
 
 impl From<Vocabulary> for LabellingCtx {
     fn from(vocab: Vocabulary) -> Self {
@@ -135,7 +130,7 @@ impl LabellingCtx
         //);
         if (self.status < ProcessStatus::Partitions)
         {
-            PartitionsCtx::from(&mut *self).partitions_pass();
+            PartitionsCtx::new(&mut *self).partitions_pass();
             //self.write_to_target_file();
         }
         else

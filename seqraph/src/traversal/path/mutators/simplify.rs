@@ -38,9 +38,9 @@ use crate::{
         },
         traversable::Traversable,
     },
-    vertex::pattern::pattern_width,
 };
 use std::borrow::Borrow;
+use crate::graph::vertex::pattern::pattern_width;
 
 pub trait PathSimplify: Sized {
     fn into_simplified<Trav: Traversable>(

@@ -3,7 +3,7 @@ use std::{
     num::NonZeroUsize,
     slice::SliceIndex,
 };
-
+use std::borrow::Borrow;
 use derive_builder::Builder;
 use either::Either;
 use serde::{
@@ -11,74 +11,45 @@ use serde::{
     Serialize,
 };
 
-use parent::Parent;
-use pattern::Pattern;
-
 use crate::{
     graph::kind::{
         BaseGraphKind,
         GraphKind,
-        TokenOf,
-    },
-    search::NoMatch,
-    vertex::{
-        child::Child,
-        indexed::Indexed,
-        location::{
-            child::ChildLocation,
-            SubLocation,
-        },
-        parent::PatternIndex,
-        pattern::{
-            pattern_range::PatternRangeIndex,
-            pattern_width,
-            IntoPattern,
-        },
-        token::{
-            Token,
-            Tokenize,
-        },
-        wide::Wide,
     },
     HashMap,
     HashSet,
+    search::NoMatch,
 };
-
-pub mod child;
-pub mod indexed;
-pub mod location;
-pub mod parent;
-pub mod pattern;
-pub mod token;
-pub mod vertexed;
-pub mod wide;
-
-pub type VertexEntry<'x, G = BaseGraphKind> = indexmap::map::Entry<'x, VertexIndex, VertexData<G>>;
-pub type VertexIndex = usize;
-pub type VertexParents = HashMap<VertexIndex, Parent>;
-pub type ChildPatterns = HashMap<PatternId, Pattern>;
-pub type PatternId = usize;
-pub type TokenPosition = usize;
-pub type IndexPosition = usize;
-pub type IndexPattern = Vec<VertexIndex>;
-pub type VertexPatternView<'a, G> = Vec<&'a VertexData<G>>;
+use crate::graph::vertex::{
+    child::Child,
+    has_vertex_index::HasVertexIndex,
+    location::{
+        child::ChildLocation,
+        SubLocation,
+    },
+    parent::PatternIndex,
+    pattern::{
+        IntoPattern,
+        pattern_range::PatternRangeIndex,
+        pattern_width,
+    },
+    token::Token,
+    wide::Wide,
+};
+use crate::graph::vertex::key::VertexKey;
+use crate::graph::vertex::{ChildPatterns, IndexPosition, pattern, PatternId, TokenPosition, VertexIndex, VertexParents};
+use crate::graph::vertex::has_vertex_index::ToChild;
+use crate::graph::vertex::parent::Parent;
+use crate::graph::vertex::pattern::Pattern;
 
 pub fn clone_child_patterns(children: &'_ ChildPatterns) -> impl Iterator<Item = Pattern> + '_ {
     children.iter().map(|(_, p)| p.clone())
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
-pub enum VertexKey<T: Tokenize = TokenOf<BaseGraphKind>> {
-    Token(Token<T>),
-    Pattern(VertexIndex),
-}
-
 #[derive(Debug, PartialEq, Eq, Clone, Builder, Serialize, Deserialize)]
 pub struct VertexData<G: GraphKind = BaseGraphKind> {
-    pub index: VertexIndex,
     pub width: TokenPosition,
-    #[builder(default)]
-    pub token: Option<Token<G::Token>>,
+    pub key: VertexKey<G::Token>,
     #[builder(default)]
     pub parents: VertexParents,
     #[builder(default)]
@@ -92,9 +63,9 @@ impl<G: GraphKind> VertexData<G> {
         token: Option<Token<G::Token>>,
     ) -> Self {
         Self {
-            index,
             width,
-            token,
+            key: token.map(|x| VertexKey::Token(x, index))
+                .unwrap_or(VertexKey::Pattern(Child::new(index, width))),
             parents: VertexParents::default(),
             children: ChildPatterns::default(),
         }
@@ -104,7 +75,7 @@ impl<G: GraphKind> VertexData<G> {
     }
     pub fn get_parent(
         &self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) -> Result<&Parent, NoMatch> {
         let index = index.vertex_index();
         self.parents
@@ -113,7 +84,7 @@ impl<G: GraphKind> VertexData<G> {
     }
     pub fn get_parent_mut(
         &mut self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) -> Result<&mut Parent, NoMatch> {
         let index = index.vertex_index();
         self.parents
@@ -123,14 +94,14 @@ impl<G: GraphKind> VertexData<G> {
     #[track_caller]
     pub fn expect_parent(
         &self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) -> &Parent {
         self.get_parent(index).unwrap()
     }
     #[track_caller]
     pub fn expect_parent_mut(
         &mut self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) -> &mut Parent {
         self.get_parent_mut(index).unwrap()
     }
@@ -335,7 +306,7 @@ impl<G: GraphKind> VertexData<G> {
     }
     pub fn remove_parent(
         &mut self,
-        vertex: impl Indexed,
+        vertex: impl HasVertexIndex,
     ) {
         self.parents.remove(&vertex.vertex_index());
         // not while indexing
@@ -343,7 +314,7 @@ impl<G: GraphKind> VertexData<G> {
     }
     pub fn remove_parent_index(
         &mut self,
-        vertex: impl Indexed,
+        vertex: impl HasVertexIndex,
         pattern: usize,
         index: PatternId,
     ) {
@@ -390,7 +361,7 @@ impl<G: GraphKind> VertexData<G> {
     }
     pub fn filter_parent_to(
         &self,
-        parent_index: impl Indexed,
+        parent_index: impl HasVertexIndex,
         cond: impl Fn(&&Parent) -> bool,
     ) -> Result<&'_ Parent, NoMatch> {
         let index = parent_index.vertex_index();
@@ -430,7 +401,7 @@ impl<G: GraphKind> VertexData<G> {
     }
     pub fn get_parent_to_starting_at(
         &self,
-        parent_index: impl Indexed,
+        parent_index: impl HasVertexIndex,
         index_offset: usize,
     ) -> Result<PatternIndex, NoMatch> {
         let index = parent_index.vertex_index();
@@ -441,7 +412,7 @@ impl<G: GraphKind> VertexData<G> {
     }
     pub fn get_parent_to_ending_at(
         &self,
-        parent_index: impl Indexed,
+        parent_index: impl HasVertexIndex,
         offset: PatternId,
     ) -> Result<&'_ Parent, NoMatch> {
         self.filter_parent_to(parent_index, |parent| {
@@ -453,7 +424,7 @@ impl<G: GraphKind> VertexData<G> {
     }
     pub fn get_parent_at_prefix_of(
         &self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) -> Result<PatternIndex, NoMatch> {
         self.get_parent_to_starting_at(index, 0)
     }
@@ -461,10 +432,10 @@ impl<G: GraphKind> VertexData<G> {
         &self,
         vertex: &VertexData<G>,
     ) -> Result<PatternIndex, NoMatch> {
-        self.get_parent(vertex.index)
+        self.get_parent(vertex.vertex_index())
             .ok()
             .and_then(|parent| parent.get_index_at_postfix_of(vertex))
-            .ok_or(NoMatch::NoMatchingParent(vertex.index))
+            .ok_or(NoMatch::NoMatchingParent(vertex.vertex_index()))
     }
     pub fn find_ancestor_with_range(
         &self,
@@ -500,5 +471,19 @@ impl<G: GraphKind> VertexData<G> {
             })
             .unwrap();
         (*id, *c)
+    }
+    pub fn all_children_iter(&self) -> impl IntoIterator<Item=&Child>{
+        self.children.iter().flat_map(|(_, pat)|
+        pat.iter()
+        )
+    }
+    pub fn all_localized_children_iter(&self) -> impl IntoIterator<Item=(ChildLocation, &Child)>{
+        self.children.iter().flat_map(move |(&pid, pat)|
+        pat.iter().enumerate()
+            .map(move |(i, c)| (
+                ChildLocation::new(self.to_child(), pid, i),
+                c,
+            ))
+        )
     }
 }

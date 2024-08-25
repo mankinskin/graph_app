@@ -1,4 +1,6 @@
 use crate::{
+    HashMap,
+    HashSet,
     traversal::{
         cache::{
             entry::{
@@ -15,12 +17,10 @@ use crate::{
         },
         traversable::Traversable,
     },
-    vertex::{
-        child::Child,
-        location::SubLocation,
-    },
-    HashMap,
-    HashSet,
+};
+use crate::graph::vertex::{
+    child::Child,
+    location::SubLocation,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]

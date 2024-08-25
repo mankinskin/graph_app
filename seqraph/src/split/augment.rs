@@ -11,6 +11,7 @@ use crate::{
     join::{
         context::node::context::NodeTraceContext,
         partition::{
+            AsPartition,
             info::{
                 range::{
                     role::{
@@ -25,7 +26,6 @@ use crate::{
                 },
                 visit::VisitPartition,
             },
-            AsPartition,
             Partition,
         },
     },
@@ -41,12 +41,11 @@ use crate::{
         cache::key::SplitKey,
         folder::state::RootMode,
     },
-    vertex::{
-        child::Child,
-        indexed::Indexed,
-    },
 };
-
+use crate::graph::vertex::{
+    child::Child,
+    has_vertex_index::HasVertexIndex,
+};
 use super::cache::vertex::SplitVertexCache;
 
 impl SplitVertexCache {

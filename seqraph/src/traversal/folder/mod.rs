@@ -3,8 +3,8 @@ use crate::{
     traversal::{
         cache::{
             key::{
-                root::RootKey,
                 DirectedKey,
+                root::RootKey,
             },
             state::{
                 end::{
@@ -12,8 +12,8 @@ use crate::{
                     EndReason,
                     EndState,
                 },
-                query::QueryState,
                 NextStates,
+                query::QueryState,
                 StateNext,
             },
             TraversalCache,
@@ -27,11 +27,11 @@ use crate::{
             FoldState,
         },
         iterator::{
-            traverser::{
-                pruning::PruneStates,
-                ExtendStates,
-            },
             TraversalIterator,
+            traverser::{
+                ExtendStates,
+                pruning::PruneStates,
+            },
         },
         path::{
             accessors::role::End,
@@ -41,14 +41,14 @@ use crate::{
         result_kind::RoleChildPath,
         traversable::Traversable,
     },
-    vertex::{
-        pattern::IntoPattern,
-        wide::Wide,
-    },
 };
 use std::{
     borrow::Borrow,
     cmp::Ordering,
+};
+use crate::graph::vertex::{
+    pattern::IntoPattern,
+    wide::Wide,
 };
 
 pub mod state;

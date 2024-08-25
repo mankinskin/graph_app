@@ -1,18 +1,16 @@
-use crate::{
-    traversal::{
-        folder::state::FoldResult,
-        path::{
-            accessors::complete::PathComplete,
-            structs::query_range_path::{
-                QueryPath,
-                QueryRangePath,
-            },
+use crate::traversal::{
+    folder::state::FoldResult,
+    path::{
+        accessors::complete::PathComplete,
+        structs::query_range_path::{
+            QueryPath,
+            QueryRangePath,
         },
     },
-    vertex::{
-        child::Child,
-        pattern::IntoPattern,
-    },
+};
+use crate::graph::vertex::{
+    child::Child,
+    pattern::IntoPattern,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -49,10 +47,10 @@ impl TraversalResult {
     #[allow(unused)]
     pub fn new_complete(
         query: impl IntoPattern,
-        index: impl crate::vertex::indexed::AsChild,
+        index: impl crate::graph::vertex::has_vertex_index::ToChild,
     ) -> Self {
         Self {
-            result: FoldResult::Complete(index.as_child()),
+            result: FoldResult::Complete(index.to_child()),
             query: QueryRangePath::complete(query),
         }
     }

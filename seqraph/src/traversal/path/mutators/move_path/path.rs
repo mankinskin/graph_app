@@ -28,9 +28,9 @@ use crate::{
         },
         traversable::Traversable,
     },
-    vertex::location::child::ChildLocation,
 };
 use std::ops::ControlFlow;
+use crate::graph::vertex::location::child::ChildLocation;
 
 pub trait MovePath<D: Direction, R: PathRole = End>:
     PathPop + PathAppend + MoveRootPos<D, R>

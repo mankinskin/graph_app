@@ -6,7 +6,7 @@ use crate::{
         UpKey,
     },
 };
-
+use crate::graph::vertex::data::VertexData;
 use super::{
     child::Child,
     pattern::{
@@ -14,7 +14,6 @@ use super::{
         Pattern,
     },
     TokenPosition,
-    VertexData,
 };
 
 pub trait Wide {

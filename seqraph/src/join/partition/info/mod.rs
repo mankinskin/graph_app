@@ -5,6 +5,7 @@ use range::*;
 use visit::*;
 
 use crate::{
+    HashMap,
     join::{
         context::node::context::NodeJoinContext,
         joined::{
@@ -26,11 +27,10 @@ use crate::{
             },
         },
     },
-    vertex::{
-        child::Child,
-        PatternId,
-    },
-    HashMap,
+};
+use crate::graph::vertex::{
+    child::Child,
+    PatternId,
 };
 
 pub mod border;

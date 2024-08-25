@@ -5,34 +5,32 @@ use mode::*;
 use role::*;
 use splits::*;
 
-use crate::{
-    join::{
-        context::{
-            node::context::{
-                AsNodeTraceContext,
-                NodeJoinContext,
-            },
-            pattern::AsPatternTraceContext,
+use crate::join::{
+    context::{
+        node::context::{
+            AsNodeTraceContext,
+            NodeJoinContext,
         },
-        partition::info::{
-            border::{
-                join::JoinBorders,
-                perfect::BoolPerfect,
-                trace::TraceBorders,
-                visit::VisitBorders,
-                PartitionBorder,
-            },
-            JoinPartition,
-        },
+        pattern::AsPatternTraceContext,
     },
-    vertex::{
-        child::Child,
-        pattern::{
-            IntoPattern,
-            Pattern,
+    partition::info::{
+        border::{
+            join::JoinBorders,
+            PartitionBorder,
+            perfect::BoolPerfect,
+            trace::TraceBorders,
+            visit::VisitBorders,
         },
-        PatternId,
+        JoinPartition,
     },
+};
+use crate::graph::vertex::{
+    child::Child,
+    pattern::{
+        IntoPattern,
+        Pattern,
+    },
+    PatternId,
 };
 
 pub mod role;

@@ -4,11 +4,11 @@ use crate::{
     graph::HypergraphRef,
     search::NoMatch,
     traversal::path::structs::query_range_path::QueryRangePath,
-    vertex::{
-        child::Child,
-        location::child::ChildLocation,
-        pattern::IntoPattern,
-    },
+};
+use crate::graph::vertex::{
+    child::Child,
+    location::child::ChildLocation,
+    pattern::IntoPattern,
 };
 
 pub mod indexer;

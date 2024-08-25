@@ -1,7 +1,7 @@
 use super::{
     super::{
         child::Child,
-        indexed::AsChild,
+        has_vertex_index::ToChild,
         pattern::Pattern,
         ChildPatterns,
     },
@@ -19,12 +19,12 @@ pub struct ChildLocation {
 
 impl ChildLocation {
     pub fn new(
-        parent: impl AsChild,
+        parent: impl ToChild,
         pattern_id: PatternId,
         sub_index: usize,
     ) -> Self {
         Self {
-            parent: parent.as_child(),
+            parent: parent.to_child(),
             pattern_id,
             sub_index,
         }

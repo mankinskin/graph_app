@@ -1,10 +1,5 @@
 use crate::{
     graph::kind::GraphKind,
-    vertex::{
-        pattern::Pattern,
-        PatternId,
-        TokenPosition,
-    },
     HashMap,
     HashSet,
 };
@@ -12,6 +7,12 @@ use serde::{
     Deserialize,
     Serialize,
 };
+use crate::graph::vertex::{
+    pattern::Pattern,
+    PatternId,
+    TokenPosition,
+};
+use crate::graph::vertex::data::VertexData;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Serialize, Deserialize)]
 pub struct PatternIndex {
@@ -100,7 +101,7 @@ impl Parent {
     }
     pub fn get_index_at_postfix_of(
         &self,
-        v: &crate::vertex::VertexData<impl GraphKind>,
+        v: &VertexData<impl GraphKind>,
     ) -> Option<PatternIndex> {
         self.pattern_indices
             .iter()

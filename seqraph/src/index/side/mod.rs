@@ -6,7 +6,7 @@ use std::{
     num::NonZeroUsize,
 };
 
-use crate::vertex::{
+use crate::graph::vertex::{
     pattern::IntoPattern,
     wide::Wide,
 };
@@ -266,10 +266,10 @@ mod tests {
             IndexSide,
         },
         mock,
-        vertex::{
-            child::Child,
-            pattern::pattern_width,
-        },
+    };
+    use crate::graph::vertex::{
+        child::Child,
+        pattern::pattern_width,
     };
 
     #[test]

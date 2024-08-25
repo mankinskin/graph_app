@@ -3,6 +3,7 @@ use state::*;
 use std::fmt::Display;
 
 use crate::{
+    HashMap,
     traversal::{
         cache::{
             entry::{
@@ -46,16 +47,15 @@ use crate::{
         },
         result_kind::RoleChildPath,
         traversable::{
-            TravToken,
             Traversable,
+            TravToken,
         },
     },
-    vertex::{
-        child::Child,
-        indexed::Indexed,
-        pattern::pattern_width,
-    },
-    HashMap,
+};
+use crate::graph::vertex::{
+    child::Child,
+    has_vertex_index::HasVertexIndex,
+    pattern::pattern_width,
 };
 
 pub mod entry;

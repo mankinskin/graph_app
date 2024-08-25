@@ -1,9 +1,7 @@
-use crate::{
-    graph::kind::GraphKind,
-    vertex::location::pattern::{
-        IntoPatternLocation,
-        PatternLocation,
-    },
+use crate::graph::kind::GraphKind;
+use crate::graph::vertex::location::pattern::{
+    IntoPatternLocation,
+    PatternLocation,
 };
 
 #[derive(Debug, Clone)]

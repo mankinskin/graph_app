@@ -1,8 +1,8 @@
 #[cfg(test)]
 pub mod vkey {
     use crate::traversal::traversable::{
-        TravToken,
         Traversable,
+        TravToken,
     };
     use std::{
         borrow::Borrow,
@@ -13,9 +13,9 @@ pub mod vkey {
         },
     };
 
-    use crate::vertex::{
+    use crate::graph::vertex::{
         child::Child,
-        indexed::Indexed,
+        has_vertex_index::HasVertexIndex,
     };
 
     macro_rules! lab {
@@ -39,7 +39,7 @@ pub mod vkey {
 
     #[derive(Clone, Debug, PartialEq, Eq)]
     pub struct LabelledKey {
-        index: crate::vertex::VertexIndex,
+        index: crate::graph::vertex::VertexIndex,
         label: String,
     }
 
@@ -68,8 +68,8 @@ pub mod vkey {
         }
     }
 
-    impl Borrow<crate::vertex::VertexIndex> for LabelledKey {
-        fn borrow(&self) -> &crate::vertex::VertexIndex {
+    impl Borrow<crate::graph::vertex::VertexIndex> for LabelledKey {
+        fn borrow(&self) -> &crate::graph::vertex::VertexIndex {
             &self.index
         }
     }
@@ -95,19 +95,17 @@ pub mod vkey {
 
 #[cfg(not(test))]
 pub mod vkey {
-    use crate::{
-        traversal::traversable::{
-            TravToken,
-            Traversable,
-        },
-        vertex::{
-            child::Child,
-            indexed::Indexed,
-        },
+    use crate::traversal::traversable::{
+        Traversable,
+        TravToken,
     };
     use std::fmt::Display;
+    use crate::graph::vertex::{
+        child::Child,
+        has_vertex_index::HasVertexIndex,
+    };
 
-    pub type VertexCacheKey = crate::vertex::VertexIndex;
+    pub type VertexCacheKey = crate::graph::vertex::VertexIndex;
 
     pub fn labelled_key<Trav: Traversable>(
         _trav: &Trav,

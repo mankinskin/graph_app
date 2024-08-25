@@ -1,21 +1,19 @@
 use std::ops::Deref;
 
-use crate::{
-    traversal::path::{
-        accessors::role::{
-            End,
-            PathRole,
-            Start,
-        },
-        structs::rooted_path::{
-            PathRoot,
-            RootedRolePath,
-            SearchPath,
-            SubPath,
-        },
+use crate::traversal::path::{
+    accessors::role::{
+        End,
+        PathRole,
+        Start,
     },
-    vertex::location::child::ChildLocation,
+    structs::rooted_path::{
+        PathRoot,
+        RootedRolePath,
+        SearchPath,
+        SubPath,
+    },
 };
+use crate::graph::vertex::location::child::ChildLocation;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct RolePath<R> {

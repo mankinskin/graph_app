@@ -24,15 +24,16 @@ use crate::{
             },
         },
         partition::{
+            AsPartition,
             info::{
                 border::{
+                    BorderInfo,
                     perfect::{
                         BorderPerfect,
                         DoublePerfect,
                         SinglePerfect,
                     },
                     visit::VisitBorders,
-                    BorderInfo,
                 },
                 range::{
                     children::{
@@ -46,19 +47,18 @@ use crate::{
                     },
                 },
             },
+            Partition,
             splits::offset::{
                 AsOffsetSplits,
                 OffsetSplits,
             },
-            AsPartition,
-            Partition,
         },
     },
     split::cache::vertex::SplitVertexCache,
-    vertex::{
-        child::Child,
-        pattern::pattern_range::PatternRangeIndex,
-    },
+};
+use crate::graph::vertex::{
+    child::Child,
+    pattern::pattern_range::PatternRangeIndex,
 };
 
 #[derive(Debug, Clone, Copy)]

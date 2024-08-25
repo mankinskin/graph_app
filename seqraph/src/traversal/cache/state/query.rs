@@ -23,13 +23,13 @@ use crate::{
             },
         },
     },
-    vertex::{
-        pattern::{
-            IntoPattern,
-            Pattern,
-        },
-        wide::Wide,
+};
+use crate::graph::vertex::{
+    pattern::{
+        IntoPattern,
+        Pattern,
     },
+    wide::Wide,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]

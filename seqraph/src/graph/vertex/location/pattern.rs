@@ -4,7 +4,7 @@ use std::{
     ops::Range,
 };
 
-use crate::vertex::{
+use crate::graph::vertex::{
     location::ChildLocation,
     pattern::Pattern,
     PatternId,
@@ -27,11 +27,11 @@ pub struct PatternLocation {
 
 impl PatternLocation {
     pub fn new(
-        parent: impl crate::vertex::indexed::AsChild,
+        parent: impl crate::graph::vertex::has_vertex_index::ToChild,
         id: PatternId,
     ) -> Self {
         Self {
-            parent: parent.as_child(),
+            parent: parent.to_child(),
             id,
         }
     }
@@ -75,13 +75,13 @@ impl PatternLocation {
     //}
     pub fn get_pattern_in<'a>(
         &self,
-        patterns: &'a crate::vertex::ChildPatterns,
+        patterns: &'a crate::graph::vertex::ChildPatterns,
     ) -> Option<&'a Pattern> {
         patterns.get(&self.id)
     }
     pub fn expect_pattern_in<'a>(
         &self,
-        patterns: &'a crate::vertex::ChildPatterns,
+        patterns: &'a crate::graph::vertex::ChildPatterns,
     ) -> &'a Pattern {
         self.get_pattern_in(patterns)
             .expect("Expected Pattern not present in ChildPatterns!")

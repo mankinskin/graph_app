@@ -1,20 +1,20 @@
 use crate::{
+    HashMap,
     traversal::{
         cache::key::UpKey,
         context::TraversalContext,
         iterator::{
+            TraversalIterator,
             traverser::{
                 NodeVisitor,
                 OrderedTraverser,
             },
-            TraversalIterator,
         },
         policy::DirectedTraversalPolicy,
         traversable::Traversable,
     },
-    vertex::child::Child,
-    HashMap,
 };
+use crate::graph::vertex::child::Child;
 
 #[derive(Clone, Debug)]
 pub struct PruningState {

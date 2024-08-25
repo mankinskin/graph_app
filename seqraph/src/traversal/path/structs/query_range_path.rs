@@ -4,6 +4,7 @@ use crate::{
     search::NoMatch,
     traversal::path::{
         accessors::role::End,
+        BaseQuery,
         mutators::{
             append::PathAppend,
             move_path::root::MoveRootPos,
@@ -16,12 +17,11 @@ use crate::{
             SearchPath,
             SubPath,
         },
-        BaseQuery,
     },
-    vertex::pattern::{
-        IntoPattern,
-        Pattern,
-    },
+};
+use crate::graph::vertex::pattern::{
+    IntoPattern,
+    Pattern,
 };
 
 //#[derive(Debug, Clone, PartialEq, Eq, Hash)]

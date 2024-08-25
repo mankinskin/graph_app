@@ -1,13 +1,11 @@
-use crate::{
-    traversal::path::{
-        accessors::role::End,
-        structs::{
-            query_range_path::PatternPrefixPath,
-            role_path::RolePath,
-        },
+use crate::traversal::path::{
+    accessors::role::End,
+    structs::{
+        query_range_path::PatternPrefixPath,
+        role_path::RolePath,
     },
-    vertex::child::Child,
 };
+use crate::graph::vertex::child::Child;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OverlapPrimer {

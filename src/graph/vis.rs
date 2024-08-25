@@ -21,7 +21,7 @@ use petgraph::{
     },
     visit::EdgeRef,
 };
-use seqraph::vertex::Wide;
+use seqraph::graph::vertex::Wide;
 use std::collections::HashMap;
 use std::f32::consts::PI;
 

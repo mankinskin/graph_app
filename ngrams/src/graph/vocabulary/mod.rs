@@ -7,14 +7,6 @@ use derive_new::new;
 use crate::graph::containment::TextLevelCtx;
 use seqraph::{
     graph::Hypergraph,
-    vertex::{
-        indexed::Indexed,
-        parent::Parent,
-        wide::Wide,
-        VertexData,
-        VertexEntry,
-        VertexIndex,
-    },
     HashMap,
     HashSet,
 };
@@ -25,22 +17,27 @@ use serde::{
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::fmt::Display;
-use std::fs::{
-    remove_file,
-    File,
-};
-use std::io::{
-    BufReader,
-    BufWriter,
-};
+use std::ops::Range;
 use std::path::{
     absolute,
     Path,
     PathBuf,
 };
+use itertools::Itertools;
 use tap::Tap;
+use seqraph::graph::vertex::{
+    has_vertex_index::HasVertexIndex
+    ,
+    VertexIndex
 
-use crate::graph::vocabulary::entry::VocabEntry;
+    ,
+    wide::Wide,
+};
+use seqraph::graph::vertex::child::Child;
+use seqraph::graph::vertex::has_vertex_index::ToChild;
+use crate::graph::traversal::{TopDown, TraversalPolicy};
+
+use crate::graph::vocabulary::entry::{HasVertexEntries, VocabEntry};
 
 pub mod entry;
 
@@ -64,7 +61,7 @@ pub struct NGramId
     pub id: usize,
     pub width: usize,
 }
-impl Indexed for NGramId
+impl HasVertexIndex for NGramId
 {
     fn vertex_index(&self) -> VertexIndex
     {
@@ -122,7 +119,7 @@ impl PartialOrd for ProcessStatus
 pub struct Vocabulary
 {
     //#[deref]
-    pub graph: Hypergraph,
+    pub containment: Hypergraph,
     pub name: String,
     pub ids: HashMap<String, NGramId>,
     pub leaves: HashSet<VertexIndex>,
@@ -151,7 +148,7 @@ impl Vocabulary
         let N: usize = corpus.iter().map(|t| t.len()).max().unwrap();
         for n in 1..=N
         {
-            let c = vocab.graph.vertex_count();
+            let c = vocab.containment.vertex_count();
             for (i, text) in corpus.iter().enumerate()
             {
                 TextLevelCtx::new(i, text, n).on_nlevel(&mut vocab);
@@ -160,5 +157,30 @@ impl Vocabulary
             //println!("Finished counting  n={}: (+{}) {}", n, vocab.len()-c, vocab.len())
         }
         vocab
+    }
+    /// get sub-vertex at range relative to index
+    pub fn get_vertex_subrange(&self, index: &VertexIndex, range: Range<usize>) -> Child {
+        let mut entry = self.get_vertex(index).unwrap();
+        let mut wrap = 0..entry.len();
+        assert!(wrap.start <= range.start && wrap.end >= range.end);
+
+        while range != wrap {
+            let next =
+                TopDown::next_nodes(&entry)
+                .into_iter()
+                .map(|(pos, c)|
+                         (c.vertex_index(), pos..pos + c.width())
+                    //pos <= range.start || pos + c.width() >= range.end
+                )
+                .find_or_first(|(_, w)|
+                    w.start == range.start || w.end == range.end
+                )
+                .unwrap();
+
+            entry = self.get_vertex(&next.0).unwrap();
+            wrap = next.1;
+        }
+
+        entry.data.to_child()
     }
 }

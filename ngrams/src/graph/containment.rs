@@ -9,19 +9,20 @@ use serde::{
     Serialize,
 };
 
-use seqraph::vertex::{
-    indexed::{
-        AsChild,
-        Indexed,
+use seqraph::graph::vertex::{
+    has_vertex_index::{
+        ToChild,
+        HasVertexIndex,
     },
     ChildPatterns,
-    VertexDataBuilder,
 };
-
+use seqraph::graph::vertex::child::Child;
+use seqraph::graph::vertex::data::VertexDataBuilder;
+use seqraph::graph::vertex::key::VertexKey;
 use crate::graph::vocabulary::{
     entry::{
         VocabEntry,
-        IndexVocab,
+        HasVertexEntries,
     },
     NGramId,
     Vocabulary,
@@ -92,7 +93,7 @@ impl<'a> NGramFrequencyCtx<'a>
         vocab: &mut Vocabulary,
     )
     {
-        if let Some(ctx) = vocab.get_mut(self.ngram)
+        if let Some(ctx) = vocab.get_vertex_mut(self.ngram)
         {
             ctx.entry.occurrences.insert(self.occurrence);
         }
@@ -126,17 +127,17 @@ impl<'a> NGramFrequencyCtx<'a>
             vocab.ids.insert(self.ngram.clone(), id);
             vocab.entries.insert(id.vertex_index(), entry);
             let data = VertexDataBuilder::default()
-                .index(id.id)
+                .key(VertexKey::Pattern(Child::new(id.id, self.n.into())))
                 .width(self.n.into())
                 .children(children.clone())
                 .build()
                 .unwrap();
-            vocab.graph.insert_vertex(data);
+            vocab.containment.insert_vertex(data);
             for (pid, pat) in children
             {
-                vocab.graph.add_parents_to_pattern_nodes(
+                vocab.containment.add_parents_to_pattern_nodes(
                     pat,
-                    id.as_child(),
+                    id.to_child(),
                     pid,
                 );
             }
@@ -160,7 +161,7 @@ impl<'a> NGramFrequencyCtx<'a>
                 let x = String::from_iter(ni);
                 let b =
                     ngram.get((i + n)..ngram.len()).filter(|s| !s.is_empty());
-                let pid = vocab.graph.next_pattern_id();
+                let pid = vocab.containment.next_pattern_id();
 
                 (
                     pid,
@@ -169,8 +170,8 @@ impl<'a> NGramFrequencyCtx<'a>
                         .flatten()
                         .map(|s| {
                             let id = vocab.ids.get(s).unwrap();
-                            let ctx = vocab.get(id).unwrap();
-                            id.as_child()
+                            let ctx = vocab.get_vertex(id).unwrap();
+                            id.to_child()
                         })
                         .collect(),
                 )

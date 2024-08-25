@@ -4,14 +4,11 @@ use std::{
     slice::SliceIndex,
 };
 
-use crate::{
-    search::NoMatch,
-    vertex::PatternId,
-};
-
+use crate::search::NoMatch;
+use crate::graph::vertex::PatternId;
 use super::{
-    super::child::Child,
     Pattern,
+    super::child::Child,
 };
 
 pub fn get_child_pattern_range<'a, R: PatternRangeIndex>(

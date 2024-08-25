@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::vertex::child::Child;
+use crate::graph::vertex::child::Child;
 
 pub trait SplitInner: Debug + Clone {}
 

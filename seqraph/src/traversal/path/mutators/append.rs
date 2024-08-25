@@ -1,26 +1,24 @@
-use crate::{
-    traversal::{
-        cache::state::query::QueryState,
-        context::QueryStateContext,
-        path::{
-            accessors::role::{
-                End,
-                PathRole,
-            },
-            structs::{
-                query_range_path::QueryRangePath,
-                role_path::RolePath,
-                rooted_path::{
-                    PathRoot,
-                    RootedRolePath,
-                    SearchPath,
-                    SubPath,
-                },
+use crate::traversal::{
+    cache::state::query::QueryState,
+    context::QueryStateContext,
+    path::{
+        accessors::role::{
+            End,
+            PathRole,
+        },
+        structs::{
+            query_range_path::QueryRangePath,
+            role_path::RolePath,
+            rooted_path::{
+                PathRoot,
+                RootedRolePath,
+                SearchPath,
+                SubPath,
             },
         },
     },
-    vertex::location::child::ChildLocation,
 };
+use crate::graph::vertex::location::child::ChildLocation;
 
 /// move path leaf position one level deeper
 pub trait PathAppend {

@@ -1,27 +1,25 @@
 use std::ops::ControlFlow;
 
-use crate::{
-    traversal::{
-        path::{
-            accessors::role::End,
-            mutators::move_path::key::{
-                RetractKey,
-                TokenLocation,
-            },
-            structs::{
-                role_path::RolePath,
-                rooted_path::{
-                    SearchPath,
-                    SubPath,
-                },
+use crate::traversal::{
+    path::{
+        accessors::role::End,
+        mutators::move_path::key::{
+            RetractKey,
+            TokenLocation,
+        },
+        structs::{
+            role_path::RolePath,
+            rooted_path::{
+                SearchPath,
+                SubPath,
             },
         },
-        traversable::Traversable,
     },
-    vertex::{
-        location::pattern::IntoPatternLocation,
-        wide::Wide,
-    },
+    traversable::Traversable,
+};
+use crate::graph::vertex::{
+    location::pattern::IntoPatternLocation,
+    wide::Wide,
 };
 
 pub trait PathLower {

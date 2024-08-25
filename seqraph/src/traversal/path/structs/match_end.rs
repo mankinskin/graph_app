@@ -1,19 +1,16 @@
-use crate::{
-    traversal::{
-        path::{
-            accessors::{
-                child::root::GraphRootChild,
-                has_path::HasSinglePath,
-                role::Start,
-            },
-            structs::rooted_path::RootedRolePath,
-            BasePath,
+use crate::traversal::{
+    path::{
+        accessors::{
+            child::root::GraphRootChild,
+            has_path::HasSinglePath,
+            role::Start,
         },
-        policy::NodePath,
+        BasePath,
+        structs::rooted_path::RootedRolePath,
     },
-    vertex::child::Child,
+    policy::NodePath,
 };
-
+use crate::graph::vertex::child::Child;
 //pub trait NotStartPath {}
 //impl NotStartPath for PathLeaf {}
 

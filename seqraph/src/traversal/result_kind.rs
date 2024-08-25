@@ -5,12 +5,12 @@ use crate::{
         path::{
             accessors::{
                 child::{
+                    LeafChild,
                     pos::{
                         RootChildPos,
                         RootChildPosMut,
                     },
                     root::GraphRootChild,
-                    LeafChild,
                 },
                 complete::PathComplete,
                 has_path::{
@@ -24,6 +24,7 @@ use crate::{
                 },
                 root::GraphRoot,
             },
+            BasePath,
             mutators::{
                 adapters::into_advanced::IntoAdvanced,
                 append::PathAppend,
@@ -40,17 +41,16 @@ use crate::{
                     SearchPath,
                 },
             },
-            BasePath,
         },
         policy::NodePath,
         traversable::Traversable,
     },
-    vertex::{
-        child::Child,
-        location::child::ChildLocation,
-    },
 };
 use std::hash::Hash;
+use crate::graph::vertex::{
+    child::Child,
+    location::child::ChildLocation,
+};
 
 //pub trait ResultKind: Eq + Clone + Debug + Send + Sync + Unpin {
 //    type Query: QueryPath;

@@ -4,13 +4,11 @@ use derive_more::{
     DerefMut,
 };
 
-use crate::{
-    join::partition::splits::SubSplits,
-    vertex::{
-        location::pattern::PatternLocation,
-        pattern::Pattern,
-        PatternId,
-    },
+use crate::join::partition::splits::SubSplits;
+use crate::graph::vertex::{
+    location::pattern::PatternLocation,
+    pattern::Pattern,
+    PatternId,
 };
 
 #[derive(Debug, Deref, DerefMut, Derivative)]

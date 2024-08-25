@@ -24,8 +24,8 @@ use crate::{
         complete::position_splits,
         PatternSplitPos,
     },
-    vertex::PatternId,
 };
+use crate::graph::vertex::PatternId;
 
 pub trait RangeOffsets<K: RangeRole>: Debug + Clone + Copy {
     fn as_splits<'a, C: AsNodeTraceContext<'a>>(

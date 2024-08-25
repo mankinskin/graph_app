@@ -5,21 +5,21 @@ use derive_more::{
 };
 
 use crate::{
+    HashMap,
     split::TraceState,
     traversal::{
         cache::{
             entry::{
-                position::SubSplitLocation,
                 CompleteLocations,
                 Offset,
+                position::SubSplitLocation,
             },
             key::SplitKey,
         },
         traversable::Traversable,
     },
-    vertex::child::Child,
-    HashMap,
 };
+use crate::graph::vertex::child::Child;
 
 #[derive(Default, Debug, Deref, DerefMut, From)]
 pub struct Leaves(Vec<SplitKey>);

@@ -10,10 +10,10 @@ use crate::{
         path::structs::query_range_path::QueryRangePath,
         policy::DirectedTraversalPolicy,
     },
-    vertex::{
-        child::Child,
-        pattern::IntoPattern,
-    },
+};
+use crate::graph::vertex::{
+    child::Child,
+    pattern::IntoPattern,
 };
 
 #[derive(Debug, Clone)]

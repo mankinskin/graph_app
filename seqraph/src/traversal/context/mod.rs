@@ -1,15 +1,13 @@
 use derive_new::new;
 
-use crate::{
-    traversal::{
-        cache::{
-            state::query::QueryState,
-            TraversalCache,
-        },
-        iterator::TraversalIterator,
+use crate::traversal::{
+    cache::{
+        state::query::QueryState,
+        TraversalCache,
     },
-    vertex::pattern::Pattern,
+    iterator::TraversalIterator,
 };
+use crate::graph::vertex::pattern::Pattern;
 
 #[derive(Debug, new)]
 pub struct QueryStateContext<'c> {

@@ -1,7 +1,7 @@
 //pub mod gen_graph;
 //use gen_graph::*;
 
-use crate::vertex::{
+use crate::graph::vertex::{
     child::Child,
     pattern::Pattern,
 };

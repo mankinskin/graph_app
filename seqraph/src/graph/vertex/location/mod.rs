@@ -66,13 +66,13 @@ impl IntoPatternLocation for &ChildLocation {
     }
 }
 
-impl crate::vertex::indexed::Indexed for ChildLocation {
-    fn vertex_index(&self) -> crate::vertex::VertexIndex {
+impl crate::graph::vertex::has_vertex_index::HasVertexIndex for ChildLocation {
+    fn vertex_index(&self) -> crate::graph::vertex::VertexIndex {
         self.parent.index
     }
 }
 
-impl crate::vertex::wide::Wide for ChildLocation {
+impl crate::graph::vertex::wide::Wide for ChildLocation {
     fn width(&self) -> usize {
         self.parent.width()
     }

@@ -1,28 +1,26 @@
 use std::borrow::Borrow;
 
-use crate::{
-    join::{
-        context::node::context::NodeJoinContext,
-        delta::PatternSubDeltas,
-        partition::info::{
-            border::{
-                join::JoinBorders,
-                perfect::{
-                    BorderPerfect,
-                    SinglePerfect,
-                },
+use crate::join::{
+    context::node::context::NodeJoinContext,
+    delta::PatternSubDeltas,
+    partition::info::{
+        border::{
+            join::JoinBorders,
+            perfect::{
+                BorderPerfect,
+                SinglePerfect,
             },
-            range::role::{
-                Join,
-                RangeRole,
-            },
-            PartitionInfo,
+        },
+        PartitionInfo,
+        range::role::{
+            Join,
+            RangeRole,
         },
     },
-    vertex::{
-        child::Child,
-        pattern::Pattern,
-    },
+};
+use crate::graph::vertex::{
+    child::Child,
+    pattern::Pattern,
 };
 
 #[derive(Debug)]

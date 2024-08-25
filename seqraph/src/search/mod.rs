@@ -2,21 +2,21 @@ use searcher::*;
 
 use crate::{
     graph::{
-        kind::TokenOf,
         HypergraphRef,
+        kind::TokenOf,
     },
     traversal::traversable::{
         GraphKindOf,
         Traversable,
     },
-    vertex::{
-        child::Child,
-        pattern::Pattern,
-        token::{
-            tokenizing_iter,
-            AsToken,
-        },
-        PatternId,
+};
+use crate::graph::vertex::{
+    child::Child,
+    pattern::Pattern,
+    PatternId,
+    token::{
+        AsToken,
+        tokenizing_iter,
     },
 };
 
@@ -32,7 +32,7 @@ pub enum NoMatch {
     NoParents,
     NoChildPatterns,
     NotFound,
-    NoMatchingParent(crate::vertex::VertexIndex),
+    NoMatchingParent(crate::graph::vertex::VertexIndex),
     InvalidPattern(PatternId),
     InvalidChild(usize),
     InvalidPatternRange(PatternId, Pattern, String),
@@ -40,6 +40,7 @@ pub enum NoMatch {
     ParentMatchingPartially,
     UnknownKey,
     UnknownIndex,
+    UnknownToken,
     Unnecessary,
     EmptyRange,
 }
@@ -54,14 +55,14 @@ pub trait Searchable: Traversable {
     //}
     fn find_ancestor(
         &self,
-        pattern: impl IntoIterator<Item = impl crate::vertex::indexed::Indexed>,
+        pattern: impl IntoIterator<Item = impl crate::graph::vertex::has_vertex_index::HasVertexIndex>,
     ) -> SearchResult {
         let pattern = self.graph().to_children(pattern);
         self.searcher().find_pattern_ancestor(pattern)
     }
     fn find_parent(
         &self,
-        pattern: impl IntoIterator<Item = impl crate::vertex::indexed::Indexed>,
+        pattern: impl IntoIterator<Item = impl crate::graph::vertex::has_vertex_index::HasVertexIndex>,
     ) -> SearchResult {
         let pattern = self.graph().to_children(pattern);
         self.searcher().find_pattern_parent(pattern)

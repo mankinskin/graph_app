@@ -1,16 +1,14 @@
-use crate::{
-    traversal::{
-        cache::state::{
-            child::ChildState,
-            end::RangeEnd,
-        },
-        path::structs::{
-            pair::PathPair,
-            rooted_path::SearchPath,
-        },
+use crate::traversal::{
+    cache::state::{
+        child::ChildState,
+        end::RangeEnd,
     },
-    vertex::location::child::ChildLocation,
+    path::structs::{
+        pair::PathPair,
+        rooted_path::SearchPath,
+    },
 };
+use crate::graph::vertex::location::child::ChildLocation;
 
 pub trait LeafKey {
     fn leaf_location(&self) -> ChildLocation;

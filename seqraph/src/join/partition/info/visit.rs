@@ -1,6 +1,7 @@
 use std::hash::Hash;
 
 use crate::{
+    HashMap,
     join::{
         context::{
             node::context::AsPatternContext,
@@ -10,12 +11,14 @@ use crate::{
             },
         },
         partition::{
+            AsPartition,
             info::{
                 border::{
+                    PartitionBorder,
                     perfect::BoolPerfect,
                     visit::VisitBorders,
-                    PartitionBorder,
                 },
+                PartitionInfo,
                 range::{
                     role::{
                         ModeNodeCtxOf,
@@ -24,16 +27,13 @@ use crate::{
                     },
                     splits::PatternSplits,
                 },
-                PartitionInfo,
             },
-            AsPartition,
         },
     },
-    vertex::{
-        child::Child,
-        PatternId,
-    },
-    HashMap,
+};
+use crate::graph::vertex::{
+    child::Child,
+    PatternId,
 };
 
 pub struct PartitionBorders<K: RangeRole, C: PartitionBorderKey = PatternId> {

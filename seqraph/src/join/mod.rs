@@ -17,11 +17,13 @@ use joined::*;
 use partition::*;
 
 use crate::{
+    HashMap,
     index::indexer::Indexer,
     join::{
         context::node::context::NodeJoinContext,
         partition::{
             info::{
+                JoinPartition,
                 range::role::{
                     In,
                     Join,
@@ -32,11 +34,10 @@ use crate::{
                     PartitionBorders,
                     VisitPartition,
                 },
-                JoinPartition,
             },
             splits::{
-                offset::OffsetSplits,
                 HasPosSplits,
+                offset::OffsetSplits,
                 PosSplitRef,
             },
         },
@@ -56,12 +57,11 @@ use crate::{
         },
         traversable::TraversableMut,
     },
-    vertex::{
-        child::Child,
-        location::SubLocation,
-        wide::Wide,
-    },
-    HashMap,
+};
+use crate::graph::vertex::{
+    child::Child,
+    location::SubLocation,
+    wide::Wide,
 };
 
 pub mod context;

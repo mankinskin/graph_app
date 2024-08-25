@@ -1,24 +1,22 @@
 use std::ops::Deref;
 
-use crate::{
-    traversal::path::{
-        accessors::role::{
-            End,
-            PathRole,
-            Start,
-        },
-        structs::{
-            query_range_path::QueryRangePath,
-            role_path::RolePath,
-        },
+use crate::traversal::path::{
+    accessors::role::{
+        End,
+        PathRole,
+        Start,
     },
-    vertex::{
-        location::{
-            child::ChildLocation,
-            pattern::PatternLocation,
-        },
-        pattern::Pattern,
+    structs::{
+        query_range_path::QueryRangePath,
+        role_path::RolePath,
     },
+};
+use crate::graph::vertex::{
+    location::{
+        child::ChildLocation,
+        pattern::PatternLocation,
+    },
+    pattern::Pattern,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -10,9 +10,9 @@ use crate::{
         },
         traversable::Traversable,
     },
-    vertex::location::child::ChildLocation,
 };
 use std::borrow::Borrow;
+use crate::graph::vertex::location::child::ChildLocation;
 
 pub trait RelativeDirection<D: MatchDirection> {
     type Direction: MatchDirection;

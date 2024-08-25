@@ -1,36 +1,34 @@
-use crate::{
-    traversal::{
-        cache::state::end::{
-            EndKind,
-            EndState,
-        },
-        context::QueryStateContext,
-        path::{
-            accessors::role::PathRole,
-            structs::{
-                match_end::{
-                    MatchEnd,
-                    MatchEndPath,
-                },
-                query_range_path::QueryRangePath,
-                rooted_path::{
-                    IndexRoot,
-                    RootedRolePath,
-                    RootedSplitPath,
-                    RootedSplitPathRef,
-                    SearchPath,
-                },
+use crate::traversal::{
+    cache::state::end::{
+        EndKind,
+        EndState,
+    },
+    context::QueryStateContext,
+    path::{
+        accessors::role::PathRole,
+        structs::{
+            match_end::{
+                MatchEnd,
+                MatchEndPath,
+            },
+            query_range_path::QueryRangePath,
+            rooted_path::{
+                IndexRoot,
+                RootedRolePath,
+                RootedSplitPath,
+                RootedSplitPathRef,
+                SearchPath,
             },
         },
-        traversable::Traversable,
     },
-    vertex::{
-        child::Child,
-        location::pattern::PatternLocation,
-        pattern::Pattern,
-    },
+    traversable::Traversable,
 };
 use std::borrow::Borrow;
+use crate::graph::vertex::{
+    child::Child,
+    location::pattern::PatternLocation,
+    pattern::Pattern,
+};
 
 pub trait GraphRootPattern: GraphRoot + RootPattern {
     fn root_pattern_location(&self) -> PatternLocation;

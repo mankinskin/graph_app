@@ -1,24 +1,22 @@
 use itertools::Itertools;
 use std::fmt::Debug;
 
-use crate::{
-    traversal::{
-        cache::state::parent::ParentState,
-        folder::TraversalFolder,
-        iterator::traverser::TraversalOrder,
-        path::{
-            accessors::{
-                child::root::RootChild,
-                root::GraphRoot,
-            },
-            mutators::raise::PathRaise,
+use crate::traversal::{
+    cache::state::parent::ParentState,
+    folder::TraversalFolder,
+    iterator::traverser::TraversalOrder,
+    path::{
+        accessors::{
+            child::root::RootChild,
+            root::GraphRoot,
         },
-        traversable::Traversable,
+        mutators::raise::PathRaise,
     },
-    vertex::{
-        child::Child,
-        location::child::ChildLocation,
-    },
+    traversable::Traversable,
+};
+use crate::graph::vertex::{
+    child::Child,
+    location::child::ChildLocation,
 };
 
 pub trait NodePath<R>: RootChild<R> + Send + Clone + Eq + Debug {}

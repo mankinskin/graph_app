@@ -11,32 +11,32 @@ use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 
 use crate::{
+    HashMap,
     join::{
         context::node::context::NodeJoinContext,
         partition::{
+            Infix,
             info::{
+                PartitionInfo,
                 range::role::{
                     In,
                     Join,
                 },
                 visit::VisitPartition,
-                PartitionInfo,
             },
             splits::{
                 HasPosSplits,
                 PosSplits,
                 SplitKind,
             },
-            Infix,
         },
     },
     split::cache::split::Split,
     traversal::cache::key::SplitKey,
-    vertex::{
-        child::Child,
-        pattern::Pattern,
-    },
-    HashMap,
+};
+use crate::graph::vertex::{
+    child::Child,
+    pattern::Pattern,
 };
 
 impl<'p> NodeJoinContext<'p> {

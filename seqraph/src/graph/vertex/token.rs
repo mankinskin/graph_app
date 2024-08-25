@@ -14,7 +14,7 @@ use serde::{
     Serialize,
 };
 
-use crate::vertex::wide::Wide;
+use crate::graph::vertex::wide::Wide;
 
 pub fn tokenizing_iter<T: Tokenize, C: AsToken<T>>(
     seq: impl Iterator<Item = C>
@@ -58,8 +58,8 @@ impl Wide for NoToken {
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq)]
 pub enum NewTokenIndex {
-    New(crate::vertex::VertexIndex),
-    Known(crate::vertex::VertexIndex),
+    New(crate::graph::vertex::VertexIndex),
+    Known(crate::graph::vertex::VertexIndex),
 }
 
 impl NewTokenIndex {
@@ -77,8 +77,8 @@ impl Wide for NewTokenIndex {
     }
 }
 
-impl crate::vertex::indexed::Indexed for NewTokenIndex {
-    fn vertex_index(&self) -> crate::vertex::VertexIndex {
+impl crate::graph::vertex::has_vertex_index::HasVertexIndex for NewTokenIndex {
+    fn vertex_index(&self) -> crate::graph::vertex::VertexIndex {
         match self {
             Self::New(i) => *i,
             Self::Known(i) => *i,
@@ -86,8 +86,8 @@ impl crate::vertex::indexed::Indexed for NewTokenIndex {
     }
 }
 
-impl Borrow<crate::vertex::VertexIndex> for &'_ NewTokenIndex {
-    fn borrow(&self) -> &crate::vertex::VertexIndex {
+impl Borrow<crate::graph::vertex::VertexIndex> for &'_ NewTokenIndex {
+    fn borrow(&self) -> &crate::graph::vertex::VertexIndex {
         match self {
             NewTokenIndex::New(i) => i,
             NewTokenIndex::Known(i) => i,
@@ -95,8 +95,8 @@ impl Borrow<crate::vertex::VertexIndex> for &'_ NewTokenIndex {
     }
 }
 
-impl Borrow<crate::vertex::VertexIndex> for &'_ mut NewTokenIndex {
-    fn borrow(&self) -> &crate::vertex::VertexIndex {
+impl Borrow<crate::graph::vertex::VertexIndex> for &'_ mut NewTokenIndex {
+    fn borrow(&self) -> &crate::graph::vertex::VertexIndex {
         match self {
             NewTokenIndex::New(i) => i,
             NewTokenIndex::Known(i) => i,
@@ -110,6 +110,11 @@ pub trait AsToken<T: Tokenize> {
     fn as_token(&self) -> Token<T>;
 }
 
+impl<T: Tokenize> AsToken<T> for &'_ Token<T> {
+    fn as_token(&self) -> Token<T> {
+        (*self).as_token()
+    }
+}
 impl<T: Tokenize> AsToken<T> for Token<T> {
     fn as_token(&self) -> Token<T> {
         *self

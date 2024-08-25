@@ -1,27 +1,25 @@
-use crate::{
-    traversal::{
-        context::QueryStateContext,
-        path::{
-            accessors::role::{
-                End,
-                PathRole,
-                Start,
-            },
-            structs::{
-                query_range_path::QueryRangePath,
-                role_path::RolePath,
-                rooted_path::{
-                    PathRoot,
-                    RootedRolePath,
-                    SearchPath,
-                },
+use crate::traversal::{
+    context::QueryStateContext,
+    path::{
+        accessors::role::{
+            End,
+            PathRole,
+            Start,
+        },
+        structs::{
+            query_range_path::QueryRangePath,
+            role_path::RolePath,
+            rooted_path::{
+                PathRoot,
+                RootedRolePath,
+                SearchPath,
             },
         },
     },
-    vertex::location::child::ChildLocation,
 };
 use auto_impl::auto_impl;
 use std::borrow::Borrow;
+use crate::graph::vertex::location::child::ChildLocation;
 
 /// access to a rooted path pointing to a descendant
 #[auto_impl(& mut)]

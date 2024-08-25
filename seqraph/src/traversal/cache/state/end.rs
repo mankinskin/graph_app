@@ -1,38 +1,36 @@
-use crate::{
-    traversal::{
-        cache::{
-            key::{
-                root::RootKey,
-                DirectedKey,
-                UpKey,
-            },
-            state::{
-                query::QueryState,
-                StateDirection,
+use crate::traversal::{
+    cache::{
+        key::{
+            DirectedKey,
+            root::RootKey,
+            UpKey,
+        },
+        state::{
+            query::QueryState,
+            StateDirection,
+        },
+    },
+    path::{
+        accessors::{
+            child::root::GraphRootChild,
+            role::{
+                End,
+                Start,
             },
         },
-        path::{
-            accessors::{
-                child::root::GraphRootChild,
-                role::{
-                    End,
-                    Start,
-                },
-            },
-            mutators::move_path::key::TokenLocation,
-            structs::rooted_path::{
-                RootedRolePath,
-                RootedSplitPathRef,
-                SearchPath,
-            },
+        mutators::move_path::key::TokenLocation,
+        structs::rooted_path::{
+            RootedRolePath,
+            RootedSplitPathRef,
+            SearchPath,
         },
-        result_kind::Primer,
     },
-    vertex::{
-        child::Child,
-        location::child::ChildLocation,
-        wide::Wide,
-    },
+    result_kind::Primer,
+};
+use crate::graph::vertex::{
+    child::Child,
+    location::child::ChildLocation,
+    wide::Wide,
 };
 
 // End types:

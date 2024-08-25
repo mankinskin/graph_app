@@ -19,12 +19,11 @@ use crate::{
         result::TraversalResult,
         traversable::Traversable,
     },
-    vertex::{
-        token::Token,
-        wide::Wide,
-    },
 };
-
+use crate::graph::vertex::{
+    token::Token,
+    wide::Wide,
+};
 #[allow(clippy::many_single_char_names)]
 use super::*;
 

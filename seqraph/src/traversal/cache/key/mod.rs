@@ -18,16 +18,14 @@ use std::{
     },
 };
 
-use crate::{
-    traversal::cache::state::child::ChildState,
-    vertex::{
-        child::Child,
-        wide::Wide,
-    },
-};
+use crate::traversal::cache::state::child::ChildState;
 use leaf::*;
 use pos::*;
 use root::*;
+use crate::graph::vertex::{
+    child::Child,
+    wide::Wide,
+};
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, From)]
 pub struct UpPosition(pub TokenLocation);

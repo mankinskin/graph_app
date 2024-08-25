@@ -17,27 +17,31 @@ use crate::{
         Right,
     },
     graph::GraphKind,
-    search::NoMatch,
-    vertex::{
-        child::Child,
-        indexed::ToChild,
-        parent::PatternIndex,
-        pattern::{
-            pattern_range::PatternRangeIndex,
-            IntoPattern,
-            Pattern,
-        },
-        PatternId,
-        TokenPosition,
-    },
     HashMap,
     HashSet,
+    search::NoMatch,
 };
+use crate::graph::Hypergraph;
+use crate::graph::vertex::{
+    child::Child,
+    has_vertex_index::ToChild,
+    parent::PatternIndex,
+    pattern::{
+        IntoPattern,
+        Pattern,
+        pattern_range::PatternRangeIndex,
+    },
+    PatternId,
+    TokenPosition,
+};
+use crate::graph::vertex::data::VertexData;
+use crate::graph::vertex::has_vertex_index::HasVertexIndex;
+use crate::graph::vertex::parent::Parent;
 
 fn to_matching_iterator<
     'a,
-    I: crate::vertex::indexed::Indexed + 'a,
-    J: crate::vertex::indexed::Indexed + 'a,
+    I: HasVertexIndex + 'a,
+    J: HasVertexIndex + 'a,
 >(
     a: impl Iterator<Item = &'a I>,
     b: impl Iterator<Item = &'a J>,
@@ -55,21 +59,21 @@ pub trait MatchDirection: Clone + Debug + Send + Sync + 'static + Unpin {
     type PostfixRange<T>: PatternRangeIndex<T>;
     /// get the parent where vertex is at the relevant position
     fn get_match_parent_to<G: GraphKind>(
-        graph: &crate::graph::Hypergraph<G>,
-        vertex: &crate::vertex::VertexData<G>,
-        sup: impl crate::vertex::indexed::Indexed,
+        graph: &Hypergraph<G>,
+        vertex: &VertexData<G>,
+        sup: impl HasVertexIndex,
     ) -> Result<PatternIndex, NoMatch>;
     fn skip_equal_indices<
         'a,
-        I: crate::vertex::indexed::Indexed,
-        J: crate::vertex::indexed::Indexed,
+        I: HasVertexIndex,
+        J: HasVertexIndex,
     >(
         a: impl DoubleEndedIterator<Item = &'a I>,
         b: impl DoubleEndedIterator<Item = &'a J>,
     ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)>;
     /// get remaining pattern in matching direction including index
-    fn pattern_tail<T: crate::vertex::indexed::AsChild>(pattern: &'_ [T]) -> &'_ [T];
-    fn pattern_head<T: crate::vertex::indexed::AsChild>(pattern: &'_ [T]) -> Option<&'_ T>;
+    fn pattern_tail<T: ToChild>(pattern: &'_ [T]) -> &'_ [T];
+    fn pattern_head<T: ToChild>(pattern: &'_ [T]) -> Option<&'_ T>;
     fn head_index(pattern: impl IntoPattern) -> usize;
     fn last_index(pattern: impl IntoPattern) -> usize {
         Self::Opposite::head_index(pattern)
@@ -80,23 +84,23 @@ pub trait MatchDirection: Clone + Debug + Send + Sync + 'static + Unpin {
     ) -> Pattern;
     fn index_next(index: usize) -> Option<usize>;
     fn index_prev(index: usize) -> Option<usize>;
-    fn tail_index<T: crate::vertex::indexed::AsChild>(
+    fn tail_index<T: ToChild>(
         pattern: &'_ [T],
         tail: &'_ [T],
     ) -> usize;
     /// filter pattern indices of parent relation by child patterns and matching direction
     fn filter_parent_pattern_indices(
-        parent: &crate::vertex::parent::Parent,
+        parent: &Parent,
         child_patterns: &HashMap<PatternId, Pattern>,
     ) -> HashSet<PatternIndex>;
-    fn split_head_tail<T: crate::vertex::indexed::AsChild + Clone>(
+    fn split_head_tail<T: ToChild + Clone>(
         pattern: &'_ [T]
     ) -> Option<(T, &'_ [T])> {
         Self::pattern_head(pattern).map(|head| (head.clone(), Self::pattern_tail(pattern)))
     }
     fn front_context_range<T>(index: PatternId) -> Self::PostfixRange<T>;
     /// get remaining pattern in matching direction excluding index
-    fn front_context<T: crate::vertex::indexed::AsChild + Clone>(
+    fn front_context<T: ToChild + Clone>(
         pattern: &'_ [T],
         index: PatternId,
     ) -> Vec<T> {
@@ -137,7 +141,7 @@ pub trait MatchDirection: Clone + Debug + Send + Sync + 'static + Unpin {
             pattern
                 .borrow()
                 .get(i)
-                .map(crate::vertex::indexed::AsChild::as_child)
+                .map(ToChild::to_child)
         })
     }
     fn compare_next_index_in_child_pattern(
@@ -158,16 +162,16 @@ impl MatchDirection for Right {
     type Opposite = Left;
     type PostfixRange<T> = RangeFrom<PatternId>;
     fn get_match_parent_to<G: GraphKind>(
-        _graph: &crate::graph::Hypergraph<G>,
-        vertex: &crate::vertex::VertexData<G>,
-        sup: impl crate::vertex::indexed::Indexed,
+        _graph: &Hypergraph<G>,
+        vertex: &VertexData<G>,
+        sup: impl HasVertexIndex,
     ) -> Result<PatternIndex, NoMatch> {
         vertex.get_parent_at_prefix_of(sup)
     }
     fn skip_equal_indices<
         'a,
-        I: crate::vertex::indexed::Indexed,
-        J: crate::vertex::indexed::Indexed,
+        I: HasVertexIndex,
+        J: HasVertexIndex,
     >(
         a: impl DoubleEndedIterator<Item = &'a I>,
         b: impl DoubleEndedIterator<Item = &'a J>,
@@ -178,16 +182,16 @@ impl MatchDirection for Right {
     fn front_context_range<T>(index: PatternId) -> Self::PostfixRange<T> {
         (index + 1)..
     }
-    fn pattern_tail<T: crate::vertex::indexed::AsChild>(pattern: &'_ [T]) -> &'_ [T] {
+    fn pattern_tail<T: ToChild>(pattern: &'_ [T]) -> &'_ [T] {
         pattern.get(1..).unwrap_or(&[])
     }
-    fn pattern_head<T: crate::vertex::indexed::AsChild>(pattern: &'_ [T]) -> Option<&'_ T> {
+    fn pattern_head<T: ToChild>(pattern: &'_ [T]) -> Option<&'_ T> {
         pattern.first()
     }
     fn head_index(_pattern: impl IntoPattern) -> usize {
         0
     }
-    fn tail_index<T: crate::vertex::indexed::AsChild>(
+    fn tail_index<T: ToChild>(
         pattern: &'_ [T],
         tail: &'_ [T],
     ) -> usize {
@@ -206,7 +210,7 @@ impl MatchDirection for Right {
         [rem.borrow(), context.borrow()].concat()
     }
     fn filter_parent_pattern_indices(
-        parent: &crate::vertex::parent::Parent,
+        parent: &Parent,
         _patterns: &HashMap<PatternId, Pattern>,
     ) -> HashSet<PatternIndex> {
         parent.filter_pattern_indices_at_prefix().cloned().collect()
@@ -217,17 +221,17 @@ impl MatchDirection for Left {
     type Opposite = Left;
     type PostfixRange<T> = Range<PatternId>;
     fn get_match_parent_to<G: GraphKind>(
-        graph: &crate::graph::Hypergraph<G>,
-        vertex: &crate::vertex::VertexData<G>,
-        sup: impl crate::vertex::indexed::Indexed,
+        graph: &Hypergraph<G>,
+        vertex: &VertexData<G>,
+        sup: impl HasVertexIndex,
     ) -> Result<PatternIndex, NoMatch> {
         let sup = graph.expect_vertex_data(sup);
         vertex.get_parent_at_postfix_of(sup)
     }
     fn skip_equal_indices<
         'a,
-        I: crate::vertex::indexed::Indexed,
-        J: crate::vertex::indexed::Indexed,
+        I: HasVertexIndex,
+        J: HasVertexIndex,
     >(
         a: impl DoubleEndedIterator<Item = &'a I>,
         b: impl DoubleEndedIterator<Item = &'a J>,
@@ -237,16 +241,16 @@ impl MatchDirection for Left {
     fn front_context_range<T>(index: PatternId) -> Self::PostfixRange<T> {
         0..index
     }
-    fn pattern_tail<T: crate::vertex::indexed::AsChild>(pattern: &'_ [T]) -> &'_ [T] {
+    fn pattern_tail<T: ToChild>(pattern: &'_ [T]) -> &'_ [T] {
         pattern.split_last().map(|(_last, pre)| pre).unwrap_or(&[])
     }
-    fn pattern_head<T: crate::vertex::indexed::AsChild>(pattern: &'_ [T]) -> Option<&'_ T> {
+    fn pattern_head<T: ToChild>(pattern: &'_ [T]) -> Option<&'_ T> {
         pattern.last()
     }
     fn head_index(pattern: impl IntoPattern) -> usize {
         pattern.borrow().len() - 1
     }
-    fn tail_index<T: crate::vertex::indexed::AsChild>(
+    fn tail_index<T: ToChild>(
         _pattern: &'_ [T],
         tail: &'_ [T],
     ) -> usize {
@@ -265,7 +269,7 @@ impl MatchDirection for Left {
         [context.borrow(), rem.borrow()].concat()
     }
     fn filter_parent_pattern_indices(
-        parent: &crate::vertex::parent::Parent,
+        parent: &Parent,
         child_patterns: &HashMap<PatternId, Pattern>,
     ) -> HashSet<PatternIndex> {
         parent

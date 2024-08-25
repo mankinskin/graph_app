@@ -14,21 +14,22 @@ use derive_more::{
 
 use crate::{
     graph::Hypergraph,
+    HashMap,
     join::context::node::context::NodeTraceContext,
     split::cache::{
+        CacheContext,
         cleaned_position_splits,
         leaves::Leaves,
-        vertex::SplitVertexCache,
-        CacheContext,
         SplitCache,
         SplitPositionCache,
         TraceState,
+        vertex::SplitVertexCache,
     },
     traversal::{
         cache::{
             entry::{
-                position::SubSplitLocation,
                 InnerNode,
+                position::SubSplitLocation,
                 RootNode,
             },
             key::SplitKey,
@@ -43,15 +44,14 @@ use crate::{
             TraversableMut,
         },
     },
-    vertex::{
-        child::{
-            Child,
-            ChildWidth,
-        },
-        indexed::Indexed,
-        wide::Wide,
+};
+use crate::graph::vertex::{
+    child::{
+        Child,
+        ChildWidth,
     },
-    HashMap,
+    has_vertex_index::HasVertexIndex,
+    wide::Wide,
 };
 
 #[derive(Debug, Deref, DerefMut)]

@@ -8,15 +8,19 @@ use crate::{
         cache::state::parent::ParentState,
         folder::TraversalFolder,
         iterator::{
-            traverser::bft::Bft,
             TraversalIterator,
+            traverser::bft::Bft,
         },
         policy::DirectedTraversalPolicy,
         result::TraversalResult,
         traversable::Traversable,
     },
-    vertex::pattern::IntoPattern,
 };
+//use rayon::iter::{
+//    ParallelBridge,
+//    ParallelIterator,
+//};
+use crate::graph::vertex::pattern::IntoPattern;
 
 #[derive(Clone, Debug)]
 pub struct Searcher<T: Traversable> {

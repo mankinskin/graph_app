@@ -1,15 +1,13 @@
-use crate::{
-    traversal::{
-        cache::state::end::EndKind,
-        folder::state::FoldResult,
-        path::structs::match_end::{
-            MatchEnd,
-            MatchEndPath,
-        },
+use crate::traversal::{
+    cache::state::end::EndKind,
+    folder::state::FoldResult,
+    path::structs::match_end::{
+        MatchEnd,
+        MatchEndPath,
     },
-    vertex::child::Child,
 };
 use std::fmt::Debug;
+use crate::graph::vertex::child::Child;
 
 pub trait PathComplete: Sized + Debug {
     fn into_complete(&self) -> Option<Child>;

@@ -8,16 +8,9 @@ use std::{
 use derive_more::Deref;
 use derive_new::new;
 
-use crate::{
-    vertex::{
-        child::Child,
-        indexed::Indexed,
-        location::child::ChildLocation,
-        pattern::Pattern,
-        wide::Wide,
-    },
-    HashMap,
-};
+use crate::HashMap;
+use crate::graph::vertex::{child::Child, has_vertex_index::HasVertexIndex, location::child::ChildLocation, pattern::Pattern, VertexIndex, wide::Wide};
+use crate::graph::vertex::data::VertexData;
 
 type BuildKey = RangeInclusive<usize>;
 
@@ -40,10 +33,10 @@ pub fn test_grammar() {
     println!("num_v = {}", g.vertex_count());
     println!("num_e = {}", 4 * g.vertex_count());
     let num_bytes = g.vertex_count()
-        * (std::mem::size_of::<crate::vertex::VertexData>()
-            + std::mem::size_of::<crate::vertex::VertexIndex>())
+        * (std::mem::size_of::<VertexData>()
+            + std::mem::size_of::<VertexIndex>())
         + 4 * g.vertex_count()
-            * (std::mem::size_of::<Child>() + std::mem::size_of::<crate::vertex::parent::Parent>());
+            * (std::mem::size_of::<Child>() + std::mem::size_of::<crate::graph::vertex::parent::Parent>());
     println!("total MB = {}", num_bytes as u32 / 10_u32.pow(6),);
     println!("mul = {}", num_bytes / N,);
 }
@@ -87,7 +80,7 @@ impl GraphBuilder {
         &mut self,
         node: BuilderNode,
     ) {
-        self.graph.insert_vertex(crate::vertex::VertexData::new(
+        self.graph.insert_vertex(VertexData::new(
             node.index.vertex_index(),
             node.range.clone().count(),
             None,
@@ -197,7 +190,7 @@ impl GraphBuilder {
 //
 struct RewireContext {
     builder: GraphBuilder,
-    prefix_counts: HashMap<crate::vertex::VertexIndex, usize>,
+    prefix_counts: HashMap<VertexIndex, usize>,
     k: usize,
 }
 

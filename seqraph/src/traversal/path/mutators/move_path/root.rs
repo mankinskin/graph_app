@@ -32,20 +32,18 @@ use crate::{
 };
 use std::ops::ControlFlow;
 
-use crate::{
-    traversal::{
-        path::accessors::child::pos::{
-            RootChildPos,
-            RootChildPosMut,
-        },
-        traversable::{
-            TravDir,
-            Traversable,
-        },
+use crate::traversal::{
+    path::accessors::child::pos::{
+        RootChildPos,
+        RootChildPosMut,
     },
-    vertex::wide::Wide,
+    traversable::{
+        TravDir,
+        Traversable,
+    },
 };
 use std::borrow::Borrow;
+use crate::graph::vertex::wide::Wide;
 
 pub trait MoveRootPos<D: Direction, R: PathRole = End> {
     fn move_root_pos<Trav: Traversable>(

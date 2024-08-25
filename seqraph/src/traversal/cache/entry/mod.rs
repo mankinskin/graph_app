@@ -8,11 +8,11 @@ pub mod vertex;
 pub mod position;
 
 use crate::{
-    traversal::folder::state::RootMode,
-    vertex::location::SubLocation,
     HashMap,
+    traversal::folder::state::RootMode,
 };
 use position::*;
+use crate::graph::vertex::location::SubLocation;
 
 pub type StateDepth = usize;
 pub type Offset = NonZeroUsize;

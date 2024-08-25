@@ -1,4 +1,5 @@
 use crate::{
+    HashMap,
     traversal::{
         cache::{
             entry::PositionCache,
@@ -6,9 +7,8 @@ use crate::{
         },
         path::mutators::move_path::key::TokenLocation,
     },
-    vertex::child::Child,
-    HashMap,
 };
+use crate::graph::vertex::child::Child;
 
 pub type DirectedPositions = HashMap<TokenLocation, PositionCache>;
 

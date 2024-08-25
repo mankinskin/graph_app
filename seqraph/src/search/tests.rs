@@ -5,13 +5,15 @@ use pretty_assertions::assert_eq;
 
 use crate::{
     graph::{
+        HypergraphRef,
         kind::BaseGraphKind,
         tests::{
             context,
             Context,
         },
-        HypergraphRef,
     },
+    HashMap,
+    HashSet,
     search::NoMatch,
     traversal::{
         cache::{
@@ -52,19 +54,16 @@ use crate::{
         },
         result::TraversalResult,
     },
-    vertex::{
-        child::Child,
-        location::{
-            ChildLocation,
-            PatternLocation,
-            SubLocation,
-        },
-        token::Token,
-    },
-    HashMap,
-    HashSet,
 };
-
+use crate::graph::vertex::{
+    child::Child,
+    location::{
+        ChildLocation,
+        PatternLocation,
+        SubLocation,
+    },
+    token::Token,
+};
 #[allow(clippy::many_single_char_names)]
 use super::*;
 

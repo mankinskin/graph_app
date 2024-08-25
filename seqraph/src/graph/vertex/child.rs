@@ -9,28 +9,26 @@ use serde::{
     Serialize,
 };
 
-use crate::{
-    traversal::cache::key::{
-        DownKey,
-        DownPosition,
-        UpKey,
-        UpPosition,
+use crate::traversal::cache::key::{
+    DownKey,
+    DownPosition,
+    UpKey,
+    UpPosition,
+};
+use crate::graph::vertex::{
+    has_vertex_index::HasVertexIndex,
+    location::{
+        child::ChildLocation,
+        pattern::PatternLocation,
+        SubLocation,
     },
-    vertex::{
-        indexed::Indexed,
-        location::{
-            child::ChildLocation,
-            pattern::PatternLocation,
-            SubLocation,
-        },
-        token::NewTokenIndex,
-        wide::{
-            Wide,
-            WideMut,
-        },
-        PatternId,
-        TokenPosition,
-        VertexIndex,
+    PatternId,
+    token::NewTokenIndex,
+    TokenPosition,
+    VertexIndex,
+    wide::{
+        Wide,
+        WideMut,
     },
 };
 
@@ -51,7 +49,7 @@ pub struct Child {
 
 impl Child {
     pub fn new(
-        index: impl Indexed,
+        index: impl HasVertexIndex,
         width: TokenPosition,
     ) -> Self {
         Self {
@@ -182,7 +180,7 @@ impl IntoIterator for Child {
     }
 }
 
-impl Indexed for Child {
+impl HasVertexIndex for Child {
     fn vertex_index(&self) -> VertexIndex {
         self.index
     }

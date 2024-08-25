@@ -4,64 +4,65 @@ use indexmap::IndexMap;
 
 use crate::{
     graph::{
-        kind::GraphKind,
         Hypergraph,
+        kind::GraphKind,
     },
     search::NoMatch,
-    vertex::{
-        child::Child,
-        indexed::Indexed,
-        location::{
-            child::ChildLocation,
-            pattern::IntoPatternLocation,
-            IntoChildLocation,
-        },
-        parent::{
-            Parent,
-            PatternIndex,
-        },
-        pattern::{
-            pattern_range::PatternRangeIndex,
-            pattern_width,
-            IntoPattern,
-            Pattern,
-        },
-        token::{
-            AsToken,
-            Token,
-        },
-        ChildPatterns,
-        IndexPattern,
-        PatternId,
-        TokenPosition,
-        VertexData,
-        VertexEntry,
-        VertexIndex,
-        VertexKey,
-        VertexParents,
-        VertexPatternView,
-    },
 };
+use crate::graph::kind::VertexKeyOf;
+use crate::graph::vertex::{
+    child::Child,
+    ChildPatterns,
+    has_vertex_index::HasVertexIndex,
+    IndexedVertexEntry,
+    IndexPattern,
+    location::{
+        child::ChildLocation,
+        IntoChildLocation,
+        pattern::IntoPatternLocation,
+    },
+    parent::{
+        Parent,
+        PatternIndex,
+    },
+    pattern::{
+        IntoPattern,
+        Pattern,
+        pattern_range::PatternRangeIndex,
+        pattern_width,
+    },
+    PatternId,
+    token::{
+        AsToken,
+        Token,
+    },
+    TokenPosition,
+    VertexIndex,
+    VertexParents,
+    VertexPatternView,
+};
+use crate::graph::vertex::data::VertexData;
+use crate::graph::vertex::key::VertexKey;
 
 impl<'t, G: GraphKind> Hypergraph<G> {
     pub fn vertex_entry(
         &mut self,
-        key: impl Indexed,
-    ) -> VertexEntry<'_, G> {
-        self.graph.entry(key.vertex_index())
+        index: impl HasVertexIndex,
+    ) -> Option<IndexedVertexEntry<'_, G>> {
+        self.graph.get_index_entry(index.vertex_index())
     }
     pub fn get_vertex(
         &self,
-        index: impl Indexed,
-    ) -> Result<(&VertexIndex, &VertexData<G>), NoMatch> {
+        index: impl HasVertexIndex,
+    ) -> Result<(&VertexKeyOf<G>, &VertexData<G>), NoMatch> {
         self.graph
             .get_index(index.vertex_index())
             .ok_or(NoMatch::UnknownIndex)
     }
     pub fn get_vertex_mut(
         &mut self,
-        index: impl Indexed,
-    ) -> Result<(&VertexIndex, &mut VertexData<G>), NoMatch> {
+        index: impl HasVertexIndex,
+    ) -> Result<(&VertexKeyOf<G>, &mut VertexData<G>), NoMatch> {
         self.graph
             .get_index_mut(index.vertex_index())
             .ok_or(NoMatch::UnknownIndex)
@@ -69,11 +70,18 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     #[track_caller]
     pub fn expect_vertex(
         &self,
-        index: impl Indexed,
-    ) -> (&VertexIndex, &VertexData<G>) {
+        index: impl HasVertexIndex,
+    ) -> (&VertexKeyOf<G>, &VertexData<G>) {
         let index = index.vertex_index();
         self.get_vertex(index)
             .unwrap_or_else(|_| panic!("Index {} does not exist!", index))
+    }
+    #[track_caller]
+    pub fn contains_vertex(
+        &self,
+        index: impl HasVertexIndex,
+    ) -> bool {
+        self.graph.get_index(index.vertex_index()).is_some()
     }
     pub fn get_pattern_at(
         &self,
@@ -117,14 +125,14 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     }
     pub fn get_child_patterns_of(
         &self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) -> Result<&ChildPatterns, NoMatch> {
         self.get_vertex_data(index)
             .map(|vertex| vertex.get_child_patterns())
     }
     pub fn get_pattern_of(
         &self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
         pid: PatternId,
     ) -> Result<&Pattern, NoMatch> {
         self.get_vertex_data(index)
@@ -133,7 +141,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     #[track_caller]
     pub fn expect_child_pattern(
         &self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
         pid: PatternId,
     ) -> &Pattern {
         self.expect_vertex_data(index).expect_child_pattern(&pid)
@@ -141,7 +149,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     #[track_caller]
     pub fn expect_child_patterns(
         &self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) -> &ChildPatterns {
         self.expect_vertex_data(index).get_child_patterns()
     }
@@ -149,7 +157,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     #[track_caller]
     pub fn expect_any_child_pattern(
         &self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) -> (&PatternId, &Pattern) {
         self.expect_vertex_data(index).expect_any_child_pattern()
     }
@@ -163,8 +171,8 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     #[track_caller]
     pub fn expect_vertex_mut(
         &mut self,
-        index: impl Indexed,
-    ) -> (&VertexIndex, &mut VertexData<G>) {
+        index: impl HasVertexIndex,
+    ) -> (&VertexKeyOf<G>, &mut VertexData<G>) {
         let index = index.vertex_index();
         self.get_vertex_mut(index)
             .unwrap_or_else(|_| panic!("Index {} does not exist!", index))
@@ -184,27 +192,27 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     //}
     pub fn get_vertex_data(
         &self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) -> Result<&VertexData<G>, NoMatch> {
         self.get_vertex(index).map(|(_, v)| v)
     }
     pub fn get_vertex_data_mut(
         &mut self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) -> Result<&mut VertexData<G>, NoMatch> {
         self.get_vertex_mut(index).map(|(_, v)| v)
     }
     #[track_caller]
     pub fn expect_vertex_data(
         &self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) -> &VertexData<G> {
         self.expect_vertex(index).1
     }
     #[track_caller]
     pub fn expect_vertex_data_mut(
         &mut self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) -> &mut VertexData<G> {
         self.expect_vertex_mut(index).1
     }
@@ -212,24 +220,21 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         &self,
         key: &VertexKey<G::Token>,
     ) -> Result<&VertexData<G>, NoMatch> {
-        self.graph
-            .get(&self.get_index_by_key(key)?)
+        self.graph.get(key)
             .ok_or(NoMatch::UnknownKey)
     }
     pub fn get_vertex_data_by_key_mut(
         &mut self,
         key: &VertexKey<G::Token>,
     ) -> Result<&mut VertexData<G>, NoMatch> {
-        let index = self.get_index_by_key(key)?;
-        IndexMap::get_mut(&mut self.graph, &index).ok_or(NoMatch::UnknownKey)
+        IndexMap::get_mut(&mut self.graph, key).ok_or(NoMatch::UnknownKey)
     }
     #[track_caller]
     pub fn expect_vertex_data_by_key(
         &self,
         key: &VertexKey<G::Token>,
     ) -> &VertexData<G> {
-        self.graph
-            .get(&self.expect_index_by_key(key))
+        self.graph.get(key)
             .expect("Key does not exist")
     }
     #[track_caller]
@@ -237,14 +242,13 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         &mut self,
         key: &VertexKey<G::Token>,
     ) -> &mut VertexData<G> {
-        self.graph
-            .get_mut(&self.expect_index_by_key(key))
+        self.graph.get_mut(key)
             .expect("Key does not exist")
     }
-    pub fn vertex_iter(&self) -> impl Iterator<Item = (&VertexIndex, &VertexData<G>)> {
+    pub fn vertex_iter(&self) -> impl Iterator<Item = (&VertexKey<G::Token>, &VertexData<G>)> {
         self.graph.iter()
     }
-    pub fn vertex_iter_mut(&mut self) -> impl Iterator<Item = (&VertexIndex, &mut VertexData<G>)> {
+    pub fn vertex_iter_mut(&mut self) -> impl Iterator<Item = (&VertexKey<G::Token>, &mut VertexData<G>)> {
         self.graph.iter_mut()
     }
     //pub fn vertex_key_iter(&self) -> impl Iterator<Item = &VertexKey<G::Token>> {
@@ -260,7 +264,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     #[track_caller]
     pub fn expect_vertices(
         &self,
-        indices: impl Iterator<Item = impl Indexed>,
+        indices: impl Iterator<Item = impl HasVertexIndex>,
     ) -> VertexPatternView<'_, G> {
         indices
             .map(move |index| self.expect_vertex_data(index))
@@ -268,7 +272,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     }
     pub fn get_vertices(
         &self,
-        indices: impl Iterator<Item = impl Indexed>,
+        indices: impl Iterator<Item = impl HasVertexIndex>,
     ) -> Result<VertexPatternView<'_, G>, NoMatch> {
         indices
             .map(move |index| self.get_vertex_data(index))
@@ -278,23 +282,24 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         &self,
         token: &Token<G::Token>,
     ) -> Result<&VertexData<G>, NoMatch> {
-        self.get_vertex_data_by_key(&VertexKey::Token(*token))
+        self.get_vertex_data(
+            &self.get_token_index(token)?
+        )
     }
     pub fn get_token_data_mut(
         &mut self,
         token: &Token<G::Token>,
     ) -> Result<&mut VertexData<G>, NoMatch> {
-        self.get_vertex_data_by_key_mut(&VertexKey::Token(*token))
+        self.get_vertex_data_mut(
+            &self.get_token_index(token)?
+        )
     }
     pub fn get_index_by_key(
         &self,
         key: &VertexKey<G::Token>,
     ) -> Result<VertexIndex, NoMatch> {
-        let index = match key {
-            VertexKey::Token(token) => self.tokens.get(token),
-            VertexKey::Pattern(id) => Some(id),
-        };
-        index.copied().ok_or(NoMatch::UnknownKey)
+        self.graph.get_index_of(key)
+            .ok_or(NoMatch::UnknownKey)
     }
     #[track_caller]
     pub fn expect_index_by_key(
@@ -307,7 +312,8 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         &self,
         token: impl AsToken<G::Token>,
     ) -> Result<VertexIndex, NoMatch> {
-        self.get_index_by_key(&VertexKey::Token(token.as_token()))
+        self.tokens.get(&token.as_token())
+            .copied().ok_or(NoMatch::UnknownToken)
     }
     pub fn get_token_child(
         &self,
@@ -320,7 +326,7 @@ impl<'t, G: GraphKind> Hypergraph<G> {
         &self,
         token: impl AsToken<G::Token>,
     ) -> VertexIndex {
-        self.expect_index_by_key(&VertexKey::Token(token.as_token()))
+        self.get_token_index(token).expect("Token does not exist")
     }
     #[track_caller]
     pub fn expect_pattern_range_width(
@@ -391,30 +397,30 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     #[track_caller]
     pub fn expect_parent(
         &self,
-        index: impl Indexed,
-        parent: impl Indexed,
+        index: impl HasVertexIndex,
+        parent: impl HasVertexIndex,
     ) -> &Parent {
         self.expect_vertex_data(index).expect_parent(parent)
     }
     #[track_caller]
     pub fn expect_parent_mut(
         &mut self,
-        index: impl Indexed,
-        parent: impl Indexed,
+        index: impl HasVertexIndex,
+        parent: impl HasVertexIndex,
     ) -> &mut Parent {
         self.expect_vertex_data_mut(index).expect_parent_mut(parent)
     }
     #[track_caller]
     pub fn expect_parents(
         &self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) -> &VertexParents {
         self.expect_vertex_data(index).get_parents()
     }
     #[track_caller]
     pub fn expect_parents_mut(
         &mut self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) -> &mut VertexParents {
         self.expect_vertex_data_mut(index).get_parents_mut()
     }
@@ -428,32 +434,32 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     }
     pub fn expect_child(
         &self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) -> Child {
         self.to_child(index)
     }
     pub fn expect_index_width(
         &self,
-        index: &impl Indexed,
+        index: &impl HasVertexIndex,
     ) -> TokenPosition {
         self.expect_vertex_data(index.vertex_index()).width
     }
     pub fn to_child(
         &self,
-        index: impl Indexed,
+        index: impl HasVertexIndex,
     ) -> Child {
         Child::new(index.vertex_index(), self.expect_index_width(&index))
     }
     pub fn to_children(
         &self,
-        indices: impl IntoIterator<Item = impl Indexed>,
+        indices: impl IntoIterator<Item = impl HasVertexIndex>,
     ) -> Pattern {
         indices.into_iter().map(|i| self.to_child(i)).collect()
     }
     pub fn get_pattern_parents(
         &self,
-        pattern: impl IntoIterator<Item = impl Indexed>,
-        parent: impl Indexed,
+        pattern: impl IntoIterator<Item = impl HasVertexIndex>,
+        parent: impl HasVertexIndex,
     ) -> Result<Vec<Parent>, NoMatch> {
         pattern
             .into_iter()
@@ -465,8 +471,8 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     }
     pub fn get_common_pattern_in_parent(
         &self,
-        pattern: impl IntoIterator<Item = impl Indexed>,
-        parent: impl Indexed,
+        pattern: impl IntoIterator<Item = impl HasVertexIndex>,
+        parent: impl HasVertexIndex,
     ) -> Result<PatternIndex, NoMatch> {
         let mut parents = self
             .get_pattern_parents(pattern, parent)?
@@ -490,8 +496,8 @@ impl<'t, G: GraphKind> Hypergraph<G> {
     #[track_caller]
     pub fn expect_common_pattern_in_parent(
         &self,
-        pattern: impl IntoIterator<Item = impl Indexed>,
-        parent: impl Indexed,
+        pattern: impl IntoIterator<Item = impl HasVertexIndex>,
+        parent: impl HasVertexIndex,
     ) -> PatternIndex {
         self.get_common_pattern_in_parent(pattern, parent)
             .expect("No common pattern in parent for children.")

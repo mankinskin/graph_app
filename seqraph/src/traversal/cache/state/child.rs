@@ -4,10 +4,10 @@ use crate::{
         cache::{
             entry::new::NewEntry,
             key::{
+                DirectedKey,
                 pos::QueryPosition,
                 prev::ToPrev,
                 target::TargetKey,
-                DirectedKey,
             },
             state::{
                 end::{
@@ -16,15 +16,15 @@ use crate::{
                     EndState,
                     RangeEnd,
                 },
-                parent::ParentState,
                 NextStates,
+                parent::ParentState,
                 StateNext,
             },
         },
         context::TraversalContext,
         iterator::{
-            traverser::pruning::PruneStates,
             TraversalIterator,
+            traverser::pruning::PruneStates,
         },
         path::{
             accessors::{
@@ -37,11 +37,11 @@ use crate::{
             mutators::{
                 lower::PathLower,
                 move_path::{
+                    Advance,
                     key::{
                         AdvanceKey,
                         TokenLocation,
                     },
-                    Advance,
                     Retract,
                 },
             },
@@ -59,11 +59,6 @@ use crate::{
             Traversable,
         },
     },
-    vertex::{
-        child::Child,
-        location::child::ChildLocation,
-        wide::Wide,
-    },
 };
 use itertools::Itertools;
 use std::{
@@ -71,6 +66,11 @@ use std::{
     cmp::Ordering,
 };
 use tap::Tap;
+use crate::graph::vertex::{
+    child::Child,
+    location::child::ChildLocation,
+    wide::Wide,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChildState {

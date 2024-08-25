@@ -11,14 +11,14 @@ use std::{
     },
 };
 
-use crate::vertex::{
+use crate::graph::vertex::{
     pattern::pattern_range::PatternRangeIndex,
     wide::Wide,
 };
 
 use super::{
     child::Child,
-    indexed::AsChild,
+    has_vertex_index::ToChild,
     PatternId,
     TokenPosition,
 };
@@ -35,10 +35,10 @@ pub trait IntoPattern:
     IntoIterator<Item = Self::Elem, IntoIter = Self::Iter> + Sized + Borrow<[Child]> + Debug
 {
     type Iter: ExactSizeIterator + DoubleEndedIterator<Item = Self::Elem>;
-    type Elem: AsChild;
+    type Elem: ToChild;
 
     fn into_pattern(self) -> Pattern {
-        self.into_iter().map(|x| x.as_child()).collect()
+        self.into_iter().map(|x| x.to_child()).collect()
     }
     fn is_empty(&self) -> bool {
         self.borrow().is_empty()
@@ -47,7 +47,7 @@ pub trait IntoPattern:
 
 impl<C, It, T> IntoPattern for T
 where
-    C: AsChild,
+    C: ToChild,
     It: DoubleEndedIterator<Item = C> + ExactSizeIterator,
     T: IntoIterator<Item = C, IntoIter = It> + Borrow<[Child]> + Debug,
 {
@@ -78,14 +78,14 @@ pub fn pattern_post_ctx_width<T: Borrow<Child>>(
     pattern_width(pat.into_iter().skip(sub_index + 1))
 }
 
-pub fn prefix<T: AsChild + Clone>(
+pub fn prefix<T: ToChild + Clone>(
     pattern: &'_ [T],
     index: PatternId,
 ) -> Vec<T> {
     pattern.get(0..index).unwrap_or(pattern).to_vec()
 }
 
-pub fn infix<T: AsChild + Clone>(
+pub fn infix<T: ToChild + Clone>(
     pattern: &'_ [T],
     start: PatternId,
     end: PatternId,
@@ -93,7 +93,7 @@ pub fn infix<T: AsChild + Clone>(
     pattern.get(start..end).unwrap_or(&[]).to_vec()
 }
 
-pub fn postfix<T: AsChild + Clone>(
+pub fn postfix<T: ToChild + Clone>(
     pattern: &'_ [T],
     index: PatternId,
 ) -> Vec<T> {
@@ -128,14 +128,14 @@ pub fn single_child_pattern(half: Pattern) -> Result<Child, Pattern> {
 }
 
 /// Split a pattern before the specified index
-pub fn split_pattern_at_index<T: AsChild + Clone>(
+pub fn split_pattern_at_index<T: ToChild + Clone>(
     pattern: &'_ [T],
     index: PatternId,
 ) -> (Vec<T>, Vec<T>) {
     (prefix(pattern, index), postfix(pattern, index))
 }
 
-pub fn split_context<T: AsChild + Clone>(
+pub fn split_context<T: ToChild + Clone>(
     pattern: &'_ [T],
     index: PatternId,
 ) -> (Vec<T>, Vec<T>) {

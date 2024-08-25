@@ -17,25 +17,23 @@ use parent::*;
 
 pub mod start;
 
-use crate::{
-    traversal::{
-        cache::{
-            entry::new::NewEntry,
-            key::{
-                prev::PrevKey,
-                target::TargetKey,
-            },
+use crate::traversal::{
+    cache::{
+        entry::new::NewEntry,
+        key::{
+            prev::PrevKey,
+            target::TargetKey,
         },
-        context::TraversalContext,
-        iterator::TraversalIterator,
-        path::accessors::{
-            child::root::GraphRootChild,
-            role::End,
-        },
-        result_kind::RoleChildPath,
     },
-    vertex::location::child::ChildLocation,
+    context::TraversalContext,
+    iterator::TraversalIterator,
+    path::accessors::{
+        child::root::GraphRootChild,
+        role::End,
+    },
+    result_kind::RoleChildPath,
 };
+use crate::graph::vertex::location::child::ChildLocation;
 
 #[derive(Clone, Debug)]
 pub struct StateNext<T> {

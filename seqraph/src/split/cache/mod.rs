@@ -14,6 +14,7 @@ use ctx::*;
 use position::*;
 
 use crate::{
+    HashMap,
     index::side::{
         IndexBack,
         IndexSide,
@@ -35,14 +36,13 @@ use crate::{
         },
         traversable::TraversableMut,
     },
-    vertex::{
-        child::Child,
-        indexed::Indexed,
-        location::SubLocation,
-        pattern::Pattern,
-        PatternId,
-    },
-    HashMap,
+};
+use crate::graph::vertex::{
+    child::Child,
+    has_vertex_index::HasVertexIndex,
+    location::SubLocation,
+    pattern::Pattern,
+    PatternId,
 };
 
 pub mod vertex;
@@ -181,9 +181,11 @@ mod tests {
 
     use crate::{
         graph::tests::{
-            context_mut,
             Context,
+            context_mut,
         },
+        HashMap,
+        HashSet,
         split::{
             cache::{
                 position::SplitPositionCache,
@@ -197,8 +199,6 @@ mod tests {
             labelled_key::vkey::lab,
             trace,
         },
-        HashMap,
-        HashSet,
     };
 
     macro_rules! nz {

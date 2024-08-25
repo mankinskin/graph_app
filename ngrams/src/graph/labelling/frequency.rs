@@ -7,12 +7,13 @@ use derive_more::{
 };
 use itertools::Itertools;
 
-use seqraph::{vertex::{
+use seqraph::HashSet;
+use seqraph::graph::vertex::{
     child::Child,
     location::child::ChildLocation,
     VertexIndex,
-}, HashSet, HashMap};
-
+};
+use seqraph::graph::vertex::has_vertex_index::HasVertexIndex;
 use crate::graph::traversal::{
     BottomUp,
     TopDown,
@@ -23,13 +24,12 @@ use crate::graph::{
     labelling::LabellingCtx,
     vocabulary::{
         entry::{
-            IndexVocab,
+            HasVertexEntries,
             VertexCtx,
         },
         Vocabulary,
     },
 };
-use crate::graph::vocabulary::entry::VocabEntry;
 use crate::graph::vocabulary::ProcessStatus;
 
 #[derive(Debug, Deref, From, DerefMut)]
@@ -57,7 +57,7 @@ impl<'b> FrequencyCtx<'b>
             .map(|(&id, p)| {
                 p.pattern_indices.iter().map(move |ploc| {
                     (
-                        entry.vocab.graph.expect_child_offset(
+                        entry.vocab.containment.expect_child_offset(
                             &ChildLocation::new(
                                 Child::new(id, p.width),
                                 ploc.pattern_id,
@@ -82,7 +82,7 @@ impl<'b> FrequencyCtx<'b>
             FromIterator::from_iter(Self::next_nodes(&entry));
         while let Some((off, p)) = queue.pop_front()
         {
-            let pe = entry.vocab.get(&p).unwrap();
+            let pe = entry.vocab.get_vertex(&p).unwrap();
             if let Some(occ) = {
                 if self.labels.contains(&p)
                 {
@@ -113,7 +113,7 @@ impl<'b> FrequencyCtx<'b>
         }
         let f = cover
             .iter()
-            .any(|(p, _)| entry.vocab.get(p).unwrap().count() < entry.count());
+            .any(|(p, _)| entry.vocab.get_vertex(p).unwrap().count() < entry.count());
         if f
         {
             println!("{}", entry.ngram);
@@ -125,11 +125,11 @@ impl<'b> FrequencyCtx<'b>
         node: &VertexIndex,
     ) -> Vec<VertexIndex>
     {
-        let entry = self.vocab.get(node).unwrap();
+        let entry = self.vocab.get_vertex(node).unwrap();
         let next = self.entry_next(&entry);
         if self.entry_is_frequent(&entry)
         {
-            let index = entry.data.index;
+            let index = entry.data.vertex_index();
             self.labels.insert(index);
             next
         } else {
@@ -188,7 +188,7 @@ impl Queue
             .0
             .drain(..)
             .sorted_by_key(|i| {
-                (std::cmp::Reverse(vocab.graph.expect_index_width(i)), *i)
+                (std::cmp::Reverse(vocab.containment.expect_index_width(i)), *i)
             })
             .dedup()
             .collect();

@@ -20,7 +20,6 @@ pub mod graph;
 pub mod index;
 pub mod search;
 pub mod traversal;
-pub mod vertex;
 //pub mod logger;
 pub mod mock;
 pub mod split;

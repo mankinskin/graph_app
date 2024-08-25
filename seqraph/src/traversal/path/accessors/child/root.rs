@@ -1,47 +1,45 @@
-use crate::{
-    traversal::{
-        context::QueryStateContext,
-        path::{
-            accessors::{
-                child::RootChildPos,
-                role::{
-                    End,
-                    PathRole,
-                    Start,
-                },
-                root::{
-                    GraphRootPattern,
-                    PatternRoot,
-                },
+use crate::traversal::{
+    context::QueryStateContext,
+    path::{
+        accessors::{
+            child::RootChildPos,
+            role::{
+                End,
+                PathRole,
+                Start,
             },
-            structs::{
-                match_end::{
-                    MatchEnd,
-                    MatchEndPath,
-                },
-                query_range_path::QueryRangePath,
-                rooted_path::{
-                    IndexRoot,
-                    RootedPath,
-                    RootedRolePath,
-                    RootedSplitPath,
-                    RootedSplitPathRef,
-                    SearchPath,
-                },
+            root::{
+                GraphRootPattern,
+                PatternRoot,
             },
         },
-        traversable::Traversable,
-    },
-    vertex::{
-        child::Child,
-        location::child::ChildLocation,
-        pattern::{
-            pattern_post_ctx_width,
-            pattern_pre_ctx_width,
+        structs::{
+            match_end::{
+                MatchEnd,
+                MatchEndPath,
+            },
+            query_range_path::QueryRangePath,
+            rooted_path::{
+                IndexRoot,
+                RootedPath,
+                RootedRolePath,
+                RootedSplitPath,
+                RootedSplitPathRef,
+                SearchPath,
+            },
         },
     },
+    traversable::Traversable,
 };
 use auto_impl::auto_impl;
+use crate::graph::vertex::{
+    child::Child,
+    location::child::ChildLocation,
+    pattern::{
+        pattern_post_ctx_width,
+        pattern_pre_ctx_width,
+    },
+};
 
 #[auto_impl(&, & mut)]
 pub trait RootChild<R>: RootChildPos<R> {

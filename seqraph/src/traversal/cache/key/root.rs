@@ -1,26 +1,24 @@
-use crate::{
-    traversal::{
-        cache::{
-            key::UpKey,
-            state::{
-                child::ChildState,
-                end::{
-                    EndKind,
-                    EndState,
-                },
-                parent::ParentState,
-                start::StartState,
-                InnerKind,
-                TraversalState,
+use crate::traversal::{
+    cache::{
+        key::UpKey,
+        state::{
+            child::ChildState,
+            end::{
+                EndKind,
+                EndState,
             },
-        },
-        path::{
-            accessors::root::GraphRoot,
-            mutators::move_path::key::TokenLocation,
+            InnerKind,
+            parent::ParentState,
+            start::StartState,
+            TraversalState,
         },
     },
-    vertex::wide::Wide,
+    path::{
+        accessors::root::GraphRoot,
+        mutators::move_path::key::TokenLocation,
+    },
 };
+use crate::graph::vertex::wide::Wide;
 
 pub trait RootKey {
     fn root_key(&self) -> UpKey;

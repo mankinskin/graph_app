@@ -4,20 +4,20 @@ use crate::{
         kind::DirectionOf,
     },
     traversal::traversable::Traversable,
-    vertex::{
-        child::Child,
-        location::{
-            child::ChildLocation,
-            pattern::PatternLocation,
-        },
-        pattern::IntoPattern,
-        wide::Wide,
-    },
 };
 use itertools::Itertools;
 use std::{
     borrow::Borrow,
     collections::VecDeque,
+};
+use crate::graph::vertex::{
+    child::Child,
+    location::{
+        child::ChildLocation,
+        pattern::PatternLocation,
+    },
+    pattern::IntoPattern,
+    wide::Wide,
 };
 
 pub trait BandExpandingPolicy<Trav: Traversable> {

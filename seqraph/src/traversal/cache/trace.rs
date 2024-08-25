@@ -51,9 +51,11 @@ impl Trace for EndState {
 pub(crate) mod tests {
     use crate::{
         graph::tests::{
-            context_mut,
             Context,
+            context_mut,
         },
+        HashMap,
+        HashSet,
         search::Searchable,
         traversal::{
             cache::{
@@ -67,15 +69,13 @@ pub(crate) mod tests {
             },
             folder::state::FoldState,
         },
-        vertex::{
-            location::SubLocation,
-            wide::Wide,
-        },
-        HashMap,
-        HashSet,
     };
     use pretty_assertions::assert_eq;
     use std::iter::FromIterator;
+    use crate::graph::vertex::{
+        location::SubLocation,
+        wide::Wide,
+    };
 
     pub fn build_trace1() -> FoldState {
         let Context {

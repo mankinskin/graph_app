@@ -4,11 +4,11 @@ use cache::*;
 use complete::*;
 
 use crate::{
+    HashMap,
     join::partition::splits::offset::OffsetSplits,
     traversal::cache::entry::position::SubSplitLocation,
-    vertex::PatternId,
-    HashMap,
 };
+use crate::graph::vertex::PatternId;
 
 pub mod augment;
 pub mod cache;

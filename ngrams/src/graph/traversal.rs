@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use itertools::Itertools;
 
-use seqraph::vertex::{
+use seqraph::graph::vertex::{
     child::Child,
     wide::Wide,
     VertexIndex,

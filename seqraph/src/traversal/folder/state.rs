@@ -1,18 +1,16 @@
-use crate::{
-    traversal::cache::{
-        entry::vertex::VertexCache,
-        key::{
-            target::TargetKey,
-            DirectedKey,
-        },
-        state::end::EndState,
-        TraversalCache,
+use crate::traversal::cache::{
+    entry::vertex::VertexCache,
+    key::{
+        DirectedKey,
+        target::TargetKey,
     },
-    vertex::{
-        child::Child,
-        indexed::Indexed,
-        wide::Wide,
-    },
+    state::end::EndState,
+    TraversalCache,
+};
+use crate::graph::vertex::{
+    child::Child,
+    has_vertex_index::HasVertexIndex,
+    wide::Wide,
 };
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

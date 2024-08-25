@@ -9,23 +9,21 @@ use std::{
 pub mod bft;
 pub mod pruning;
 
-use crate::{
-    traversal::{
-        cache::{
-            key::root::RootKey,
-            state::TraversalState,
-        },
-        context::TraversalContext,
-        folder::TraversalFolder,
-        iterator::TraversalIterator,
-        policy::DirectedTraversalPolicy,
-        traversable::Traversable,
+use crate::traversal::{
+    cache::{
+        key::root::RootKey,
+        state::TraversalState,
     },
-    vertex::location::child::ChildLocation,
+    context::TraversalContext,
+    folder::TraversalFolder,
+    iterator::TraversalIterator,
+    policy::DirectedTraversalPolicy,
+    traversable::Traversable,
 };
 use pruning::*;
+use crate::graph::vertex::location::child::ChildLocation;
 
-pub trait TraversalOrder: crate::vertex::wide::Wide {
+pub trait TraversalOrder: crate::graph::vertex::wide::Wide {
     fn sub_index(&self) -> usize;
     fn cmp(
         &self,

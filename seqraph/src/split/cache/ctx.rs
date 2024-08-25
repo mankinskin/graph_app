@@ -20,8 +20,8 @@ use crate::{
         },
         traversable::Traversable,
     },
-    vertex::child::Child,
 };
+use crate::graph::vertex::child::Child;
 
 #[derive(Debug)]
 pub struct CacheContext {
