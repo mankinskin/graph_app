@@ -10,7 +10,7 @@ use crate::traversal::{
 #[allow(unused)]
 pub type Dft<'a, Trav, S> = OrderedTraverser<'a, Trav, S, DftStack>;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct DftStack {
     stack: Vec<(usize, TraversalState)>,
 }
@@ -45,13 +45,5 @@ impl ExtendStates for DftStack {
         iter: T,
     ) {
         self.stack.extend(iter.into_iter().rev())
-    }
-}
-
-impl Default for DftStack {
-    fn default() -> Self {
-        Self {
-            stack: Default::default(),
-        }
     }
 }

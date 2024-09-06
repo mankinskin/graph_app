@@ -32,7 +32,6 @@ use crate::graph::vertex::{
         pattern_width,
         replace_in_pattern,
     },
-    PatternId,
     token::{
         NewTokenIndex,
         NewTokenIndices,
@@ -41,18 +40,20 @@ use crate::graph::vertex::{
     TokenPosition,
 };
 use crate::graph::vertex::data::VertexData;
+use crate::graph::vertex::pattern::id::PatternId;
+use crate::graph::getters::vertex::VertexSet;
 
 lazy_static! {
     static ref VERTEX_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 }
-impl<'t, 'g, G> crate::graph::Hypergraph<G>
+impl<'g, G> crate::graph::Hypergraph<G>
 where
     G: GraphKind,
 {
     /// insert single token node
     pub fn insert_vertex(
         &mut self,
-        data: VertexData<G>,
+        data: VertexData,
     ) -> Child {
         let c = Child::new(data.vertex_index(), data.width);
         self.graph.entry(data.key).or_insert_with_key(|_| data);
@@ -65,10 +66,10 @@ where
         &mut self,
         token: Token<G::Token>,
     ) -> Child {
-        let data = VertexData::new(self.next_vertex_id(), 1, Some(token));
-        let c = self.insert_vertex(data);
-        self.tokens.insert(token, c.index);
-        c
+        let data = VertexData::new(self.next_vertex_index(), 1);
+        self.tokens.insert(data.key, token);
+        self.token_keys.insert(token, data.key);
+        self.insert_vertex(data)
     }
     /// insert multiple token nodes
     pub fn insert_tokens(
@@ -90,7 +91,7 @@ where
             .into_iter()
             .map(|index| {
                 let index = index.vertex_index();
-                let w = self.expect_vertex_data(index).get_width();
+                let w = self.expect_vertex(index.vertex_index()).get_width();
                 width += w;
                 (index, Child::new(index, w))
             })
@@ -99,14 +100,14 @@ where
     }
     /// adds a parent to all nodes in a pattern
     #[track_caller]
-    pub fn add_parents_to_pattern_nodes<I: HasVertexIndex, P: crate::graph::vertex::has_vertex_index::ToChild>(
+    pub fn add_parents_to_pattern_nodes<I: HasVertexIndex, P: ToChild>(
         &mut self,
         pattern: Vec<I>,
         parent: P,
         pattern_id: PatternId,
     ) {
         for (i, child) in pattern.into_iter().enumerate() {
-            let node = self.expect_vertex_data_mut(child.vertex_index());
+            let node = self.expect_vertex_mut(child.vertex_index());
             node.add_parent(ChildLocation::new(parent.to_child(), pattern_id, i));
         }
     }
@@ -114,7 +115,7 @@ where
         &self,
         index: impl HasVertexIndex,
     ) {
-        self.expect_vertex_data(index).validate()
+        self.expect_vertex(index.vertex_index()).validate()
     }
     /// add pattern to existing node
     pub fn add_pattern_with_update(
@@ -124,8 +125,8 @@ where
     ) -> PatternId {
         // todo handle token nodes
         let (width, indices, children) = self.to_width_indices_children(indices);
-        let pattern_id = self.next_pattern_id();
-        let data = self.expect_vertex_data_mut(index.vertex_index());
+        let pattern_id = PatternId::new();
+        let data = self.expect_vertex_mut(index.vertex_index());
         data.add_pattern_no_update(pattern_id, children);
         self.add_parents_to_pattern_nodes(indices, Child::new(index, width), pattern_id);
         pattern_id
@@ -170,12 +171,12 @@ where
         indices: impl IntoPattern,
     ) -> (Child, PatternId) {
         let (width, indices, children) = self.to_width_indices_children(indices);
-        let pattern_id = self.next_pattern_id();
-        let id = self.next_vertex_id();
-        let mut new_data = VertexData::new(id, width, None);
+        let index = self.next_vertex_index();
+        let mut new_data = VertexData::new(index, width);
+        let pattern_id = PatternId::new();
         new_data.add_pattern_no_update(pattern_id, children);
         let index = self.insert_vertex(new_data);
-        self.add_parents_to_pattern_nodes(indices, Child::new(index, width), pattern_id);
+        self.add_parents_to_pattern_nodes(indices, index, pattern_id);
         (index, pattern_id)
     }
     /// create new node from a pattern
@@ -204,7 +205,7 @@ where
         let (node, first_id) = self.insert_pattern_with_id(first);
         ids.push(first_id.unwrap());
         for pat in patterns {
-            ids.push(self.add_pattern_with_update(&node, pat));
+            ids.push(self.add_pattern_with_update(node, pat));
         }
         (node, ids)
     }
@@ -221,7 +222,7 @@ where
         patterns
             .iter()
             .find(|p| p.len() == 1)
-            .map(|p| p.first().unwrap().clone())
+            .map(|p| *p.first().unwrap())
             .unwrap_or_else(|| {
                 // todo handle token nodes
                 let mut patterns = patterns.into_iter();
@@ -255,7 +256,7 @@ where
         range: impl PatternRangeIndex,
     ) -> Result<Result<Child, Child>, NoMatch> {
         let location = location.into_pattern_location();
-        let vertex = self.expect_vertex_data(location.parent);
+        let vertex = self.expect_vertex(location.parent);
         vertex
             .get_child_pattern(&location.id)
             .map(|pattern| pattern.to_vec())
@@ -309,7 +310,7 @@ where
         let parent_index = parent.vertex_index();
         let pat = location.id;
         let (replaced, width, start, new_end, rem) = {
-            let vertex = self.expect_vertex_data_mut(parent);
+            let vertex = self.expect_vertex_mut(parent);
             let width = vertex.width;
             let pattern = vertex.expect_child_pattern_mut(&pat);
             let _backup = pattern.clone();
@@ -324,13 +325,13 @@ where
         let old_end = start + replaced.len();
         range
             .clone()
-            .zip(replaced.into_iter())
+            .zip(replaced)
             .for_each(|(pos, c)| {
-                let c = self.expect_vertex_data_mut(c);
+                let c = self.expect_vertex_mut(c);
                 c.remove_parent_index(parent_index, pat, pos);
             });
         for c in rem.into_iter().unique() {
-            let c = self.expect_vertex_data_mut(c);
+            let c = self.expect_vertex_mut(c);
             let indices = &mut c.expect_parent_mut(parent_index).pattern_indices;
             *indices = indices
                 .drain()
@@ -352,14 +353,14 @@ where
     }
     pub fn add_pattern_parent(
         &mut self,
-        parent: impl crate::graph::vertex::has_vertex_index::ToChild,
+        parent: impl ToChild,
         pattern: impl IntoPattern,
         pattern_id: PatternId,
         start: usize,
     ) {
         pattern.into_iter().enumerate().for_each(|(pos, c)| {
             let pos = start + pos;
-            let c = self.expect_vertex_data_mut(c);
+            let c = self.expect_vertex_mut(c.to_child());
             c.add_parent(ChildLocation::new(parent.to_child(), pattern_id, pos));
         });
     }
@@ -377,13 +378,13 @@ where
         let (offset, width) = {
             // Todo: use smart pointers to reference data in the graph
             // so we can mutate multiple different nodes at the same time
-            let vertex = self.expect_vertex_data(parent.vertex_index());
+            let vertex = self.expect_vertex(parent.vertex_index());
             let pattern = vertex.expect_child_pattern(&pattern_id).clone();
             for c in pattern.into_iter().collect::<HashSet<_>>() {
-                let c = self.expect_vertex_data_mut(c);
+                let c = self.expect_vertex_mut(c.to_child());
                 c.get_parent_mut(parent.vertex_index()).unwrap().width += width;
             }
-            let vertex = self.expect_vertex_data_mut(parent.vertex_index());
+            let vertex = self.expect_vertex_mut(parent.vertex_index());
             let pattern = vertex.expect_child_pattern_mut(&pattern_id);
             let offset = pattern.len();
             pattern.extend(new.iter());
@@ -400,8 +401,8 @@ where
     ) -> NewTokenIndices {
         sequence
             .into_iter()
-            .map(|t| Token::Element(t))
-            .map(|t| match { self.get_token_index(t) } {
+            .map(Token::Element)
+            .map(|t| match self.get_token_index(t) {
                 Ok(i) => NewTokenIndex::Known(i),
                 Err(_) => {
                     let i = self.insert_token(t);

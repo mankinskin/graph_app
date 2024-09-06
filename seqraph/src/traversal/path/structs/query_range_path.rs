@@ -63,7 +63,7 @@ impl QueryPath for QueryRangePath {
         Self::new_range(query, 0, len - 1)
     }
     fn new_directed<D: MatchDirection, P: IntoPattern>(query: P) -> Result<Self, (NoMatch, Self)> {
-        let entry = D::head_index(query.borrow());
+        let entry = D::head_index(&query.borrow());
         let query = query.into_pattern();
         let first = *query.first().unwrap();
         let len = query.len();

@@ -9,8 +9,8 @@ use crate::graph::vertex::{
         postfix,
         prefix,
     },
-    PatternId,
 };
+use crate::graph::vertex::has_vertex_index::ToChild;
 
 #[derive(Hash, Debug, Clone, Eq, PartialEq, Default)]
 pub struct Start;
@@ -35,21 +35,21 @@ pub trait PathRole: 'static + Debug + PathBorder + Default {
         Self::top_down_iter(collection).rev()
     }
     /// get remaining pattern agains matching direction excluding index
-    fn back_context<T: crate::graph::vertex::has_vertex_index::ToChild + Clone>(
+    fn back_context<T: ToChild + Clone>(
         pattern: &'_ [T],
-        index: PatternId,
+        index: usize,
     ) -> Vec<T>;
-    fn normalize_index<T: crate::graph::vertex::has_vertex_index::ToChild>(
+    fn normalize_index<T: ToChild>(
         pattern: &'_ [T],
         index: usize,
     ) -> usize;
-    fn split_end<T: crate::graph::vertex::has_vertex_index::ToChild + Clone>(
+    fn split_end<T: ToChild + Clone>(
         pattern: &'_ [T],
-        index: PatternId,
+        index: usize,
     ) -> Vec<T>;
-    fn split_end_normalized<T: crate::graph::vertex::has_vertex_index::ToChild + Clone>(
+    fn split_end_normalized<T: ToChild + Clone>(
         pattern: &'_ [T],
-        index: PatternId,
+        index: usize,
     ) -> Vec<T> {
         Self::split_end(pattern, Self::normalize_index(pattern, index))
     }
@@ -77,21 +77,21 @@ impl PathRole for Start {
     ) -> Self::TopDownPathIter<I, T> {
         collection.rev()
     }
-    fn back_context<T: crate::graph::vertex::has_vertex_index::ToChild + Clone>(
+    fn back_context<T: ToChild + Clone>(
         pattern: &'_ [T],
-        index: PatternId,
+        index: usize,
     ) -> Vec<T> {
         prefix(pattern, index)
     }
-    fn normalize_index<T: crate::graph::vertex::has_vertex_index::ToChild>(
+    fn normalize_index<T: ToChild>(
         _pattern: &'_ [T],
         index: usize,
     ) -> usize {
         index
     }
-    fn split_end<T: crate::graph::vertex::has_vertex_index::ToChild + Clone>(
+    fn split_end<T: ToChild + Clone>(
         pattern: &'_ [T],
-        index: PatternId,
+        index: usize,
     ) -> Vec<T> {
         postfix(pattern, index)
     }
@@ -110,21 +110,21 @@ impl PathRole for End {
     ) -> Self::TopDownPathIter<I, T> {
         collection
     }
-    fn back_context<T: crate::graph::vertex::has_vertex_index::ToChild + Clone>(
+    fn back_context<T: ToChild + Clone>(
         pattern: &'_ [T],
-        index: PatternId,
+        index: usize,
     ) -> Vec<T> {
         postfix(pattern, index + 1)
     }
-    fn normalize_index<T: crate::graph::vertex::has_vertex_index::ToChild>(
+    fn normalize_index<T: ToChild>(
         pattern: &'_ [T],
         index: usize,
     ) -> usize {
         pattern.len() - index - 1
     }
-    fn split_end<T: crate::graph::vertex::has_vertex_index::ToChild + Clone>(
+    fn split_end<T: ToChild + Clone>(
         pattern: &'_ [T],
-        index: PatternId,
+        index: usize,
     ) -> Vec<T> {
         prefix(pattern, index + 1)
     }

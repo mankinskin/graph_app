@@ -233,6 +233,6 @@ impl<R> HasSinglePath for RolePath<R> {
 
 impl<R: PathRole, Root: PathRoot> HasSinglePath for RootedRolePath<R, Root> {
     fn single_path(&self) -> &[ChildLocation] {
-        &self.role_path.sub_path.path.borrow()
+        self.role_path.sub_path.path.borrow()
     }
 }

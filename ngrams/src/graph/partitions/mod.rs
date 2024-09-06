@@ -17,6 +17,7 @@ use seqraph::{HashMap, HashSet};
 use seqraph::graph::Hypergraph;
 use seqraph::graph::vertex::has_vertex_index::{HasVertexIndex, ToChild};
 use seqraph::graph::vertex::data::VertexData;
+use seqraph::graph::vertex::pattern::id::PatternId;
 use crate::graph::partitions::container::PartitionContainer;
 use crate::graph::traversal::{
     TopDown,
@@ -107,8 +108,8 @@ impl<'b> PartitionsCtx<'b>
     }
     fn on_node(
         &mut self,
-        node: &VertexIndex,
-    ) -> Vec<VertexIndex>
+        node: &VertexKey,
+    ) -> Vec<VertexKey>
     {
         let entry = self.vocab.get_vertex(node).unwrap();
         //println!("{}", entry.ngram);
@@ -123,10 +124,10 @@ impl<'b> PartitionsCtx<'b>
         //println!("{:#?}", container);
         //print!("{}", container);
 
-        let pids: Vec<_> = std::iter::repeat_n((), container.len()).map(|_| self.graph.next_pattern_id()).collect();
+        let pids: Vec<_> = std::iter::repeat_n((), container.len()).map(|_| PatternId::new()).collect();
         assert!(self.graph.contains_vertex(node));
         let err = format!("Node not yet created {} in: {:#?}", node, &self.graph);
-        let data = self.graph.get_vertex_data_mut(node).expect(&err);
+        let data = self.graph.get_vertex_data_by_key_mut(node).expect(&err);
 
         // set children
         data.children = pids.into_iter().zip(container.clone()).collect();
@@ -147,18 +148,17 @@ impl<'b> PartitionsCtx<'b>
                 let mut data = VertexData::new(
                         vi.vertex_index(),
                         entry.data.width(),
-                        None,
                     );
                 data.add_parent(loc);
                 self.graph.insert_vertex(data);
             }
         }
         // return next node indices
-        let next: Vec<VertexIndex> = container.into_iter().flatten()
+        let next: Vec<VertexKey> = container.into_iter().flatten()
             .filter(|c|
                 c.width() > 1
             )
-            .map(|c| c.vertex_index())
+            .map(|c| c.vertex_key())
             .collect();
         assert!(
             next.iter()
@@ -171,15 +171,15 @@ impl<'b> PartitionsCtx<'b>
     )
     {
         println!("Partition Pass");
-        let mut queue: VecDeque<VertexIndex> = TopDown::starting_nodes(&self.vocab);
+        let mut queue: VecDeque<VertexKey> = TopDown::starting_nodes(&self.vocab);
         //let mut n = 0;
-        for vi in queue.iter() {
-            let entry = self.vocab.get_vertex(vi).unwrap();
+        for vk in queue.iter() {
+            let entry = self.vocab.get_vertex(vk).unwrap();
+            let index = self.graph.next_vertex_index();
             self.graph.insert_vertex(
                 VertexData::new(
-                    *vi,
+                    index,
                     entry.data.width(),
-                    None,
                 )
             );
         }

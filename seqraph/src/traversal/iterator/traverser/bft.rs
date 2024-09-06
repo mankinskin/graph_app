@@ -13,7 +13,7 @@ use std::{
 
 pub type Bft<'a, Trav, S> = OrderedTraverser<'a, Trav, S, BftQueue>;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct BftQueue {
     queue: BinaryHeap<QueueEntry>,
 }
@@ -41,14 +41,6 @@ impl ExtendStates for BftQueue {
     ) {
         self.queue
             .extend(iter.into_iter().map(|(d, s)| QueueEntry(d, s)))
-    }
-}
-
-impl Default for BftQueue {
-    fn default() -> Self {
-        Self {
-            queue: Default::default(),
-        }
     }
 }
 

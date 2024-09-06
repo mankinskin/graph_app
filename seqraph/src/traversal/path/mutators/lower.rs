@@ -51,7 +51,7 @@ impl PathLower for (&mut TokenLocation, &mut SearchPath) {
         );
         if let Some(prev) = start.path.pop() {
             let graph = trav.graph();
-            let pattern = graph.expect_pattern_at(&prev);
+            let pattern = graph.expect_pattern_at(prev);
             root_pos.retract_key(
                 pattern[prev.sub_index + 1..]
                     .iter()

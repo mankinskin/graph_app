@@ -184,7 +184,7 @@ impl<'p> ReadContext<'p> {
             // entry in last band (could be handled by IndexSplit
             let inner_entry = {
                 let graph = self.graph.graph();
-                let (pid, pattern) = graph.expect_vertex_data(inner).expect_any_child_pattern();
+                let (pid, pattern) = graph.expect_vertex(inner).expect_any_child_pattern();
                 ChildLocation {
                     parent: inner,
                     pattern_id: *pid,

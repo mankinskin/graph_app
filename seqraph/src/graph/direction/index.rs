@@ -102,8 +102,8 @@ impl IndexDirection for Left {
     ) -> Pattern {
         context
             .borrow()
-            .to_owned()
-            .into_iter()
+            .iter()
+            .copied()
             .chain(inner)
             .collect()
     }

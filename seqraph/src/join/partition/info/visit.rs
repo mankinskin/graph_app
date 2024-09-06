@@ -33,7 +33,7 @@ use crate::{
 };
 use crate::graph::vertex::{
     child::Child,
-    PatternId,
+    pattern::id::PatternId,
 };
 
 pub struct PartitionBorders<K: RangeRole, C: PartitionBorderKey = PatternId> {
@@ -48,7 +48,7 @@ pub trait PartitionBorderKey: Hash + Eq {}
 impl<T: Hash + Eq> PartitionBorderKey for T {}
 
 pub trait VisitPartition<K: RangeRole>: Sized + Clone + AsPartition<K> {
-    fn info_borders<'t>(
+    fn info_borders(
         &self,
         ctx: &PatternTraceContext,
     ) -> K::Borders {
@@ -79,8 +79,8 @@ pub trait VisitPartition<K: RangeRole>: Sized + Clone + AsPartition<K> {
     ) -> PartitionBorders<K, C> {
         let ctxs = self.pattern_ctxs(ctx);
         let (borders, perfect): (HashMap<_, _>, K::Perfect) = ctxs
-            .into_iter()
-            .map(|(_, pctx)| {
+            .into_values()
+            .map(|pctx| {
                 let (perfect, borders) = {
                     let pctx = pctx.as_pattern_trace_context();
                     let borders = self.info_borders(&pctx);

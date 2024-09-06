@@ -21,7 +21,7 @@ use crate::{
 };
 use crate::graph::vertex::{
     location::SubLocation,
-    PatternId,
+    pattern::id::PatternId,
 };
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

@@ -8,7 +8,7 @@ pub struct PrevKey {
 
 impl PrevKey {
     pub fn advanced(&self) -> DirectedKey {
-        let mut target = self.prev_target.clone();
+        let mut target = self.prev_target;
         target.pos += self.delta;
         target
     }

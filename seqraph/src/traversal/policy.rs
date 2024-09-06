@@ -18,6 +18,7 @@ use crate::graph::vertex::{
     child::Child,
     location::child::ChildLocation,
 };
+use crate::graph::getters::vertex::VertexSet;
 
 pub trait NodePath<R>: RootChild<R> + Send + Clone + Eq + Debug {}
 
@@ -45,7 +46,7 @@ pub trait DirectedTraversalPolicy: Sized + Debug {
         build_parent: B,
     ) -> Vec<ParentState> {
         trav.graph()
-            .expect_vertex_data(index)
+            .expect_vertex(index)
             .get_parents()
             .iter()
             .flat_map(|(i, parent)| {

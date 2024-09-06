@@ -5,23 +5,13 @@ use pretty_assertions::assert_eq;
 
 use crate::{
     graph::{
-        HypergraphRef,
-        kind::BaseGraphKind,
-        tests::{
+        kind::BaseGraphKind, tests::{
             context,
             Context,
-        },
-    },
-    HashMap,
-    HashSet,
-    search::NoMatch,
-    traversal::{
+        }, vertex::location::{child::ChildLocation, pattern::PatternLocation}, HypergraphRef
+    }, search::{NoMatch, Searchable}, traversal::{
         cache::{
-            entry::{
-                Edges,
-                PositionCache,
-                VertexCache,
-            },
+            entry::{position::{Edges, PositionCache}, vertex::VertexCache},
             key::DirectedKey,
             labelled_key::vkey::lab,
             state::{
@@ -52,20 +42,14 @@ use crate::{
                 SubPath,
             },
         },
-        result::TraversalResult,
-    },
+        result::TraversalResult, traversable::Traversable,
+    }, HashMap, HashSet
 };
 use crate::graph::vertex::{
     child::Child,
-    location::{
-        ChildLocation,
-        PatternLocation,
-        SubLocation,
-    },
+    location::SubLocation,
     token::Token,
 };
-#[allow(clippy::many_single_char_names)]
-use super::*;
 
 //#[test]
 #[allow(dead_code)]
@@ -91,7 +75,7 @@ fn find_parent1() {
 
     let query = bc_pattern;
     assert_eq!(
-        graph.find_parent(&query),
+        graph.find_parent(query),
         Err(NoMatch::SingleIndex(*bc)),
         "bc"
     );
@@ -165,7 +149,7 @@ fn find_ancestor1() {
 
     let query = bc_pattern;
     assert_eq!(
-        graph.find_ancestor(&query),
+        graph.find_ancestor(query),
         Err(NoMatch::SingleIndex(*bc)),
         "bc"
     );
@@ -238,10 +222,10 @@ fn find_ancestor2() {
     let xab = graph.insert_patterns([[x, ab], [xa, b]]); // 10
     let (xaby, xaby_ids) = graph.insert_patterns_with_ids([vec![xab, y], vec![xa, by]]); // 11
     let xa_by_id = xaby_ids[1];
-    assert_eq!(xa_by_id, 7);
+    //assert_eq!(xa_by_id, 7);
     let (xabyz, xabyz_ids) = graph.insert_patterns_with_ids([vec![xaby, z], vec![xab, yz]]); // 12
     let xaby_z_id = xabyz_ids[0];
-    assert_eq!(xaby_z_id, 8);
+    //assert_eq!(xaby_z_id, 8);
     let graph = HypergraphRef::from(graph);
     let query = vec![by, z];
     let byz_found = graph.find_ancestor(&query);
@@ -278,7 +262,7 @@ fn find_ancestor2() {
                                         edges: Edges {
                                             bottom: HashMap::from_iter([(
                                                 DirectedKey::up(xaby, 2),
-                                                SubLocation::new(8, 0),
+                                                SubLocation::new(xaby_z_id, 0),
                                             ),]),
                                             top: Default::default(),
                                         },
@@ -299,7 +283,7 @@ fn find_ancestor2() {
                                         edges: Edges {
                                             bottom: HashMap::from_iter([(
                                                 DirectedKey::up(by, 0),
-                                                SubLocation::new(7, 1)
+                                                SubLocation::new(xa_by_id, 1)
                                             )]),
                                             top: HashSet::from_iter([
                                                 //DirectedKey {
@@ -367,7 +351,7 @@ fn find_ancestor2() {
                             root: IndexRoot {
                                 location: PatternLocation {
                                     parent: xabyz,
-                                    id: 8,
+                                    id: xaby_z_id,
                                 },
                             },
                             role_path: RolePath {
@@ -375,7 +359,7 @@ fn find_ancestor2() {
                                     root_entry: 0,
                                     path: vec![ChildLocation {
                                         parent: xaby,
-                                        pattern_id: 7,
+                                        pattern_id: xa_by_id,
                                         sub_index: 1,
                                     },],
                                 },
@@ -431,11 +415,11 @@ fn find_ancestor3() {
     // 10
     let (xab, xab_ids) = graph.insert_patterns_with_ids([[x, ab], [xa, b]]);
     let x_ab_id = xab_ids[0];
-    assert_eq!(x_ab_id, 4);
+    //assert_eq!(x_ab_id, 4);
     // 11
     let (xaby, xaby_ids) = graph.insert_patterns_with_ids([[xab, y], [xa, by]]);
     let xab_y_id = xaby_ids[0];
-    assert_eq!(xab_y_id, 6);
+    //assert_eq!(xab_y_id, 6);
     // 12
     let _xabyz = graph.insert_patterns([[xaby, z], [xab, yz]]);
     let gr = HypergraphRef::from(graph);
@@ -508,7 +492,7 @@ fn find_ancestor3() {
                                         edges: Edges {
                                             bottom: HashMap::from_iter([(
                                                 DirectedKey::up(xab, 2),
-                                                SubLocation::new(6, 0),
+                                                SubLocation::new(xab_y_id, 0),
                                             ),]),
                                             top: Default::default(),
                                         },
@@ -632,7 +616,7 @@ fn find_ancestor3() {
                             root: IndexRoot {
                                 location: PatternLocation {
                                     parent: xaby,
-                                    id: 6,
+                                    id: xab_y_id,
                                 },
                             },
                             role_path: RolePath {
@@ -640,7 +624,7 @@ fn find_ancestor3() {
                                     root_entry: 0,
                                     path: vec![ChildLocation {
                                         parent: xab,
-                                        pattern_id: 4,
+                                        pattern_id: x_ab_id,
                                         sub_index: 1,
                                     },],
                                 },
@@ -748,7 +732,7 @@ fn find_sequence() {
         graph.find_sequence("a".chars()),
         Err(NoMatch::SingleIndex(*a)),
     );
-    let query = graph.graph().expect_token_pattern("abc".chars());
+    let query = graph.graph().expect_token_children("abc".chars());
     let abc_found = graph.find_ancestor(&query);
     assert_eq!(
         abc_found,
@@ -757,7 +741,7 @@ fn find_sequence() {
     );
     let query = graph
         .graph()
-        .expect_token_pattern("ababababcdefghi".chars());
+        .expect_token_children("ababababcdefghi".chars());
     let ababababcdefghi_found = graph.find_ancestor(&query);
     assert_eq!(
         ababababcdefghi_found,

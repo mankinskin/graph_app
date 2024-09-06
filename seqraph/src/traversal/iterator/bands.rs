@@ -64,7 +64,7 @@ impl<Trav: Traversable, D: MatchDirection> BandExpandingPolicy<Trav> for Postfix
         location: PatternLocation,
         pattern: impl IntoPattern,
     ) -> (ChildLocation, Child) {
-        let last = D::last_index(pattern.borrow());
+        let last = D::last_index(&pattern.borrow());
         (location.to_child_location(last), pattern.borrow()[last])
     }
     fn map_batch(
@@ -134,6 +134,5 @@ where
                 self.last.1 = node;
                 (location, node)
             })
-            .map(|(location, node)| (location, node))
     }
 }

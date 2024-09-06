@@ -35,7 +35,7 @@ impl<'a> AsOffsetSplits for &'a OffsetSplits {
 impl<'a, S: SplitKind> AsOffsetSplits for (&'a NonZeroUsize, S) {
     fn as_offset_splits(self) -> OffsetSplits {
         OffsetSplits {
-            offset: self.0.clone(),
+            offset: *self.0,
             splits: self.1.borrow().clone(),
         }
     }

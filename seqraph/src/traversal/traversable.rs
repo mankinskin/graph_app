@@ -35,7 +35,7 @@ macro_rules! impl_traversable {
         impl <$( $( $par $(: $bhead $( + $btail )* )? ),* )?> Traversable for $target {
             type Kind = BaseGraphKind;
             type Guard<$lt> = $guard where Self: $lt, Self::Kind: $lt;
-            fn graph<'a>(&'a $self_) -> Self::Guard<'a> {
+            fn graph(&$self_) -> Self::Guard<'_> {
                 $func
             }
         }
@@ -47,7 +47,7 @@ macro_rules! impl_traversable_mut {
     } => {
         impl <$( $(, $par $(: $bhead $( + $btail )* )? ),* )?> TraversableMut for $target {
             type GuardMut<$lt> = $guard where Self: $lt;
-            fn graph_mut<'a>(&'a mut $self_) -> Self::GuardMut<'a> {
+            fn graph_mut(&mut $self_) -> Self::GuardMut<'_> {
                 $func
             }
         }
@@ -82,7 +82,7 @@ impl_traversable! {
     impl for &'_ mut Hypergraph, self => *self; <'a> &'a Hypergraph
 }
 impl_traversable! {
-    impl for RwLockReadGuard<'_, Hypergraph>, self => &*self; <'a> &'a Hypergraph
+    impl for RwLockReadGuard<'_, Hypergraph>, self => self; <'a> &'a Hypergraph
 }
 impl_traversable! {
     impl for RwLockWriteGuard<'_, Hypergraph>, self => &**self; <'a> &'a Hypergraph

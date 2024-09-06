@@ -13,7 +13,7 @@ pub mod pattern;
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy, Hash)]
 pub struct SubLocation {
-    pub pattern_id: usize,
+    pub pattern_id: PatternId,
     pub sub_index: usize,
 }
 

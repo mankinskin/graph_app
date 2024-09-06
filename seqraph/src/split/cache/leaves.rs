@@ -5,19 +5,17 @@ use derive_more::{
 };
 
 use crate::{
-    HashMap,
+    graph::getters::vertex::VertexSet,
     split::TraceState,
     traversal::{
         cache::{
             entry::{
-                CompleteLocations,
-                Offset,
-                position::SubSplitLocation,
+                position::SubSplitLocation, CompleteLocations, Offset
             },
             key::SplitKey,
         },
         traversable::Traversable,
-    },
+    }, HashMap
 };
 use crate::graph::vertex::child::Child;
 
@@ -49,7 +47,7 @@ impl Leaves {
         pos_splits: impl IntoIterator<Item = (Offset, Vec<SubSplitLocation>)>,
     ) -> Vec<TraceState> {
         let graph = trav.graph();
-        let (_, node) = graph.expect_vertex(index);
+        let node = graph.expect_vertex(index);
         let (perfect, next) = pos_splits
             .into_iter()
             .flat_map(|(parent_offset, locs)| {

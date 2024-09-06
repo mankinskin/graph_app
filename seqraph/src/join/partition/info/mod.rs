@@ -30,7 +30,7 @@ use crate::{
 };
 use crate::graph::vertex::{
     child::Child,
-    PatternId,
+    pattern::id::PatternId,
 };
 
 pub mod border;
@@ -43,7 +43,7 @@ pub struct PartitionInfo<K: RangeRole> {
     pub perfect: K::Perfect,
 }
 
-impl<'a, K: RangeRole> PartitionInfo<K> {
+impl<K: RangeRole> PartitionInfo<K> {
     pub fn from_partition_borders(
         borders: PartitionBorders<K, ModePatternCtxOf<K>>
     ) -> Result<PartitionInfo<K>, Child> {
@@ -81,9 +81,9 @@ where
     }
 }
 
-impl<K: RangeRole> Into<(PatternId, RangeInfoOf<K>)> for PatternRangeInfo<K> {
-    fn into(self) -> (PatternId, RangeInfoOf<K>) {
-        (self.pattern_id, self.info)
+impl<K: RangeRole> From<PatternRangeInfo<K>> for (PatternId, RangeInfoOf<K>) {
+    fn from(val: PatternRangeInfo<K>) -> Self {
+        (val.pattern_id, val.info)
     }
 }
 

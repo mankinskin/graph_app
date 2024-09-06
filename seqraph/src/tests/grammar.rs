@@ -8,9 +8,11 @@ use std::{
 use derive_more::Deref;
 use derive_new::new;
 
+use crate::graph::getters::vertex::VertexSet;
 use crate::HashMap;
 use crate::graph::vertex::{child::Child, has_vertex_index::HasVertexIndex, location::child::ChildLocation, pattern::Pattern, VertexIndex, wide::Wide};
 use crate::graph::vertex::data::VertexData;
+use crate::graph::vertex::pattern::id::PatternId;
 
 type BuildKey = RangeInclusive<usize>;
 
@@ -83,7 +85,6 @@ impl GraphBuilder {
         self.graph.insert_vertex(VertexData::new(
             node.index.vertex_index(),
             node.range.clone().count(),
-            None,
         ));
         self.queue.push_back(node);
     }
@@ -97,18 +98,18 @@ impl GraphBuilder {
             2 => vec![node.prefix_rule()],
             _ => vec![node.prefix_rule(), node.postfix_rule()],
         } {
-            let pid = self.graph.next_pattern_id();
+            let pid = PatternId::new();
             let pattern: Pattern = rule
                 .iter()
                 .enumerate()
                 .map(|(sub_index, key)| {
                     let loc = ChildLocation::new(node.index, pid, sub_index);
-                    if let Some(v) = self.range_map.get(&key) {
-                        self.graph.expect_vertex_data_mut(v).add_parent(loc);
+                    if let Some(v) = self.range_map.get(key) {
+                        self.graph.expect_vertex_mut(v).add_parent(loc);
                         Child::new(*v, key.clone().count())
                     } else {
                         self.range_map.insert(key.clone(), self.range_map.len());
-                        let vid = self.graph.next_vertex_id();
+                        let vid = self.graph.next_vertex_index();
                         let c = Child::new(vid, key.clone().count());
                         self.queue_node(BuilderNode::new(c, key.clone()));
                         c
@@ -116,24 +117,24 @@ impl GraphBuilder {
                 })
                 .collect();
             self.graph
-                .expect_vertex_data_mut(node.index)
+                .expect_vertex_mut(node.index)
                 .add_pattern_no_update(pid, pattern);
         }
     }
     pub fn fill_grammar(&mut self) {
-        let vid = self.graph.next_vertex_id();
+        let vid = self.graph.next_vertex_index();
         self.queue_node(BuilderNode::new(Child::new(vid, self.N), 0..=self.N - 1));
         while let Some(node) = self.queue.pop_front() {
             self.add_rules(node);
         }
     }
     //fn postfix_count(&self, index: Child) -> usize {
-    //    self.graph.expect_vertex_data(index)
+    //    self.graph.expect_vertex(index)
     //        .get_parents_with_index_at(1)
     //        .len()
     //}
     //fn prefix_count(&self, index: Child) -> usize {
-    //    self.graph.expect_vertex_data(index)
+    //    self.graph.expect_vertex(index)
     //        .get_parents_with_index_at(0)
     //        .len()
     //}
@@ -234,7 +235,7 @@ impl RewireContext {
             .range_map
             .get(&(0..=0))
             .expect("Must include range 0..=0 in range_map");
-        let mut prefixes = vec![first];
+        //let mut prefixes = vec![first];
     }
 }
 
@@ -265,8 +266,7 @@ fn count_max_nodes(
     println!("root: {}", root);
 
     (2..=root)
-        .into_iter()
         .map(|n| k.pow(n))
-        .chain(((root as usize + 1)..=N).into_iter().map(|n| N + 1 - n))
+        .chain(((root as usize + 1)..=N).map(|n| N + 1 - n))
         .sum()
 }

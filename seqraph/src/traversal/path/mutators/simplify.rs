@@ -85,7 +85,7 @@ impl<P: MatchEndPath> PathSimplify for MatchEnd<P> {
                 if p.single_path().is_empty() && {
                     let location = p.root_child_location();
                     let graph = trav.graph();
-                    let pattern = graph.expect_pattern_at(&location);
+                    let pattern = graph.expect_pattern_at(location);
                     <Trav::Kind as GraphKind>::Direction::pattern_index_prev(
                         pattern.borrow(),
                         location.sub_index,

@@ -19,11 +19,11 @@ use crate::graph::vertex::{
 use super::{
     child::Child,
     has_vertex_index::ToChild,
-    PatternId,
     TokenPosition,
 };
 
 pub(crate) mod pattern_range;
+pub mod id;
 //mod pattern_stream;
 
 pub type Pattern = Vec<Child>;
@@ -80,22 +80,22 @@ pub fn pattern_post_ctx_width<T: Borrow<Child>>(
 
 pub fn prefix<T: ToChild + Clone>(
     pattern: &'_ [T],
-    index: PatternId,
+    index: usize,
 ) -> Vec<T> {
     pattern.get(0..index).unwrap_or(pattern).to_vec()
 }
 
 pub fn infix<T: ToChild + Clone>(
     pattern: &'_ [T],
-    start: PatternId,
-    end: PatternId,
+    start: usize,
+    end: usize,
 ) -> Vec<T> {
     pattern.get(start..end).unwrap_or(&[]).to_vec()
 }
 
 pub fn postfix<T: ToChild + Clone>(
     pattern: &'_ [T],
-    index: PatternId,
+    index: usize,
 ) -> Vec<T> {
     pattern.get(index..).unwrap_or(&[]).to_vec()
 }
@@ -130,22 +130,22 @@ pub fn single_child_pattern(half: Pattern) -> Result<Child, Pattern> {
 /// Split a pattern before the specified index
 pub fn split_pattern_at_index<T: ToChild + Clone>(
     pattern: &'_ [T],
-    index: PatternId,
+    index: usize,
 ) -> (Vec<T>, Vec<T>) {
     (prefix(pattern, index), postfix(pattern, index))
 }
 
 pub fn split_context<T: ToChild + Clone>(
     pattern: &'_ [T],
-    index: PatternId,
+    index: usize,
 ) -> (Vec<T>, Vec<T>) {
     (prefix(pattern, index), postfix(pattern, index + 1))
 }
 
 pub fn double_split_context(
     pattern: PatternView<'_>,
-    left_index: PatternId,
-    right_index: PatternId,
+    left_index: usize,
+    right_index: usize,
 ) -> (Pattern, Pattern, Pattern) {
     let (prefix, rem) = split_context(pattern, left_index);
     if left_index < right_index {

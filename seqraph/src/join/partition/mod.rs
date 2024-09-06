@@ -52,7 +52,7 @@ impl<K: RangeRole> AsPartition<K> for Partition<K> {
     }
 }
 
-impl<'a, M: InVisitMode, A: AsOffsetSplits, B: AsOffsetSplits> AsPartition<In<M>> for Infix<A, B> {
+impl<M: InVisitMode, A: AsOffsetSplits, B: AsOffsetSplits> AsPartition<In<M>> for Infix<A, B> {
     fn as_partition(self) -> Partition<In<M>> {
         Partition {
             offsets: (self.left.as_offset_splits(), self.right.as_offset_splits()),
@@ -60,7 +60,7 @@ impl<'a, M: InVisitMode, A: AsOffsetSplits, B: AsOffsetSplits> AsPartition<In<M>
     }
 }
 
-impl<'a, M: InVisitMode> AsPartition<In<M>> for (OffsetSplits, OffsetSplits) {
+impl<M: InVisitMode> AsPartition<In<M>> for (OffsetSplits, OffsetSplits) {
     fn as_partition(self) -> Partition<In<M>> {
         Partition {
             offsets: (self.0, self.1),
@@ -76,7 +76,7 @@ impl<'a, M: InVisitMode> AsPartition<In<M>> for &'a (OffsetSplits, OffsetSplits)
     }
 }
 
-impl<'a, M: PreVisitMode, A: AsOffsetSplits> AsPartition<Pre<M>> for A {
+impl<M: PreVisitMode, A: AsOffsetSplits> AsPartition<Pre<M>> for A {
     fn as_partition(self) -> Partition<Pre<M>> {
         Partition {
             offsets: self.as_offset_splits(),
@@ -84,7 +84,7 @@ impl<'a, M: PreVisitMode, A: AsOffsetSplits> AsPartition<Pre<M>> for A {
     }
 }
 
-impl<'a, M: PostVisitMode, A: AsOffsetSplits> AsPartition<Post<M>> for A {
+impl<M: PostVisitMode, A: AsOffsetSplits> AsPartition<Post<M>> for A {
     fn as_partition(self) -> Partition<Post<M>> {
         Partition {
             offsets: self.as_offset_splits(),
@@ -92,7 +92,7 @@ impl<'a, M: PostVisitMode, A: AsOffsetSplits> AsPartition<Post<M>> for A {
     }
 }
 
-impl<'a, M: PreVisitMode, B: AsOffsetSplits> AsPartition<Pre<M>> for Prefix<B> {
+impl<M: PreVisitMode, B: AsOffsetSplits> AsPartition<Pre<M>> for Prefix<B> {
     fn as_partition(self) -> Partition<Pre<M>> {
         Partition {
             offsets: self.split.as_offset_splits(),
@@ -100,7 +100,7 @@ impl<'a, M: PreVisitMode, B: AsOffsetSplits> AsPartition<Pre<M>> for Prefix<B> {
     }
 }
 
-impl<'a, M: PostVisitMode, A: AsOffsetSplits> AsPartition<Post<M>> for Postfix<A> {
+impl<M: PostVisitMode, A: AsOffsetSplits> AsPartition<Post<M>> for Postfix<A> {
     fn as_partition(self) -> Partition<Post<M>> {
         Partition {
             offsets: self.split.as_offset_splits(),

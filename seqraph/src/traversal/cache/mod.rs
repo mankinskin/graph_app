@@ -97,7 +97,7 @@ impl TraversalCache {
         let mut states = Folder::Iterator::from(folder);
 
         let init = {
-            let mut ctx = TraversalContext::new(&query_root, &mut cache, &mut states);
+            let mut ctx = TraversalContext::new(query_root, &mut cache, &mut states);
             start
                 .next_states(&mut ctx)
                 .into_states()
@@ -118,7 +118,7 @@ impl TraversalCache {
     {
         let key = state.target_key();
         if let Some(ve) = self.entries.get_mut(&key.index.vertex_index()) {
-            if let Some(_) = ve.get_mut(&key.pos) {
+            if ve.get_mut(&key.pos).is_some() {
                 (key, false)
             } else {
                 //drop(ve);
@@ -162,11 +162,11 @@ impl TraversalCache {
         let root_down_pos = root_up_pos
             + pattern
                 .get(root_entry + 1..root_exit.sub_index)
-                .map(|p| pattern_width(p))
+                .map(pattern_width)
                 .unwrap_or_default();
 
         let root_down_key = DownKey::new(path.root_parent(), root_down_pos.into());
-        let exit_down_key = DownKey::new(graph.expect_child_at(&root_exit), root_down_pos.into());
+        let exit_down_key = DownKey::new(graph.expect_child_at(root_exit), root_down_pos.into());
         let mut prev_key: DirectedKey = root_down_key.into();
         let mut target_key = exit_down_key.into();
         self.add_state(
@@ -192,7 +192,7 @@ impl TraversalCache {
                     //root_pos: root_up_pos,
                     prev: prev_key.to_prev(0),
                     kind: NewKind::Child(NewChild {
-                        root: root_up_key.into(),
+                        root: root_up_key,
                         target: target_key,
                         end_leaf: Some(*loc),
                     }),
@@ -234,7 +234,7 @@ impl TraversalCache {
     where
         TravToken<Trav>: Display,
     {
-        if !self.exists(&key) {
+        if !self.exists(key) {
             let pe = PositionCache::start(key.index);
             if let Some(ve) = self.get_vertex_mut(&key.index) {
                 ve.insert(&key.pos, pe);
@@ -301,11 +301,7 @@ impl TraversalCache {
         &self,
         key: &Child,
     ) -> bool {
-        if let Some(_) = self.entries.get(&key.vertex_index()) {
-            true
-        } else {
-            false
-        }
+        self.entries.contains_key(&key.vertex_index())
     }
     pub fn exists(
         &self,

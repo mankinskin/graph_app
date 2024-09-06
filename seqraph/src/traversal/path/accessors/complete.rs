@@ -18,7 +18,7 @@ pub trait PathComplete: Sized + Debug {
     #[track_caller]
     fn unwrap_complete(self) -> Child {
         self.into_complete()
-            .expect(&format!("Unable to unwrap {:?} as complete.", self))
+            .unwrap_or_else(|| panic!("Unable to unwrap {:?} as complete.", self))
     }
     #[track_caller]
     fn expect_complete(
@@ -26,7 +26,7 @@ pub trait PathComplete: Sized + Debug {
         msg: &str,
     ) -> Child {
         self.into_complete()
-            .expect(&format!("Unable to unwrap {:?} as complete: {}", self, msg))
+            .unwrap_or_else(|| panic!("Unable to unwrap {:?} as complete: {}", self, msg))
     }
 }
 

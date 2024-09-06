@@ -1,10 +1,7 @@
-use crate::{
-    graph::kind::GraphKind,
-    traversal::cache::key::{
-        DirectedKey,
-        DownKey,
-        UpKey,
-    },
+use crate::traversal::cache::key::{
+    DirectedKey,
+    DownKey,
+    UpKey,
 };
 use crate::graph::vertex::data::VertexData;
 use super::{
@@ -60,7 +57,7 @@ impl<T: Wide> Wide for &'_ mut T {
 //        self.width
 //    }
 //}
-impl<G: GraphKind> Wide for VertexData<G> {
+impl Wide for VertexData {
     fn width(&self) -> usize {
         self.width
     }

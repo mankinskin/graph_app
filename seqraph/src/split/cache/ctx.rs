@@ -22,6 +22,7 @@ use crate::{
     },
 };
 use crate::graph::vertex::child::Child;
+use crate::graph::getters::vertex::VertexSet;
 
 #[derive(Debug)]
 pub struct CacheContext {
@@ -38,7 +39,7 @@ impl CacheContext {
         prev: SplitKey,
     ) -> SplitPositionCache {
         let graph = trav.graph();
-        let (_, node) = graph.expect_vertex(index);
+        let node = graph.expect_vertex(index);
 
         // handle clean splits
         match cleaned_position_splits(node.children.iter(), offset) {

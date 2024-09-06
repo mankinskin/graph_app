@@ -92,8 +92,7 @@ impl<R: PathRoot> RootedRolePath<Start, R> {
                 sub_path: SubPath {
                     root_entry: exit,
                     path: vec![],
-                }
-                .into(),
+                },
                 _ty: Default::default(),
             },
         }

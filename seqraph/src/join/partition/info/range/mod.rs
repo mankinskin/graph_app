@@ -30,7 +30,7 @@ use crate::graph::vertex::{
         IntoPattern,
         Pattern,
     },
-    PatternId,
+    pattern::id::PatternId,
 };
 
 pub mod role;
@@ -124,13 +124,13 @@ pub struct InnerRangeInfo<K: RangeRole> {
     pub offsets: K::Offsets,
 }
 
-impl<'a, K: RangeRole<Mode = Join>> InnerRangeInfo<K>
+impl<K: RangeRole<Mode = Join>> InnerRangeInfo<K>
 where
     K::Borders: JoinBorders<K>,
 {
-    pub fn index_pattern_inner<'t>(
+    pub fn index_pattern_inner(
         &self,
-        ctx: &mut NodeJoinContext<'a>,
+        ctx: &mut NodeJoinContext,
     ) -> Child {
         match self
             .offsets
@@ -157,13 +157,13 @@ pub struct JoinRangeInfo<K: RangeRole<Mode = Join>> {
     pub delta: usize,
 }
 
-impl<'a, K: RangeRole<Mode = Join>> JoinRangeInfo<K>
+impl<K: RangeRole<Mode = Join>> JoinRangeInfo<K>
 where
     K::Borders: JoinBorders<K>,
 {
-    pub fn joined_pattern<'t>(
+    pub fn joined_pattern(
         self,
-        ctx: &mut NodeJoinContext<'a>,
+        ctx: &mut NodeJoinContext,
         pattern_id: &PatternId,
     ) -> Pattern {
         let inner = self.inner_range.map(|r| r.index_pattern_inner(ctx));

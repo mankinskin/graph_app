@@ -58,9 +58,9 @@ pub trait PruneStates {
         &mut self,
         root: UpKey,
     ) {
-        self.pruning_map()
-            .get_mut(&root)
-            .map(|entry| entry.prune = true);
+        if let Some(entry) = self.pruning_map().get_mut(&root) {
+            entry.prune = true;
+        }
     }
 }
 

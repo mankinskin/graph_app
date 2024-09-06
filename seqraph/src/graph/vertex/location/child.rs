@@ -77,7 +77,7 @@ impl ChildLocation {
     }
     pub fn to_pattern_location(
         self,
-        id: usize,
+        id: PatternId,
     ) -> PatternLocation {
         PatternLocation {
             parent: self.parent,

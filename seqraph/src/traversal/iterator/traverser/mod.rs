@@ -120,7 +120,7 @@ where
                 // count states per root
                 self.pruning_map
                     .entry(s.root_key())
-                    .and_modify(|ps| ps.count = ps.count + 1)
+                    .and_modify(|ps| ps.count += 1)
                     .or_insert(PruningState {
                         count: 1,
                         prune: false,
@@ -153,9 +153,9 @@ where
     type Item = (usize, TraversalState);
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some((d, s)) = self.collection.next() {
+        for (d, s) in self.collection.by_ref() {
             let e = self.pruning_map.get_mut(&s.root_key()).unwrap();
-            e.count = e.count - 1;
+            e.count -= 1;
             let pass = !e.prune;
             if e.count == 0 {
                 self.pruning_map.remove(&s.root_key());

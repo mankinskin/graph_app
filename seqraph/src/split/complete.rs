@@ -6,24 +6,16 @@ use std::{
 use itertools::Itertools;
 
 use crate::{
-    graph::kind::GraphKind,
-    HashSet,
+    graph::getters::vertex::VertexSet,
     index::side::{
         IndexBack,
         IndexSide,
-    },
-    join::partition::splits::offset::OffsetSplits,
-    split::{
+    }, join::partition::splits::offset::OffsetSplits, split::{
         cache::builder::SplitCacheBuilder,
         PatternSplitPos,
-    },
-    traversal::{
+    }, traversal::{
         cache::entry::{
-            NodeSplitOutput,
-            NodeType,
-            Offset,
-            position::SubSplitLocation,
-            vertex::VertexCache,
+            position::SubSplitLocation, vertex::VertexCache, NodeSplitOutput, NodeType, Offset
         },
         folder::state::{
             FoldState,
@@ -31,14 +23,14 @@ use crate::{
         },
         path::mutators::move_path::key::TokenLocation,
         traversable::Traversable,
-    },
+    }, HashSet
 };
 use crate::graph::vertex::{
     child::Child,
     has_vertex_index::HasVertexIndex,
     location::SubLocation,
     pattern::Pattern,
-    PatternId,
+    pattern::id::PatternId,
     wide::Wide,
 };
 use crate::graph::vertex::data::VertexData;
@@ -85,7 +77,7 @@ impl VertexCache {
     pub fn global_splits<N: NodeType>(
         &self,
         end_pos: TokenLocation,
-        node: &VertexData<impl GraphKind>,
+        node: &VertexData,
     ) -> N::GlobalSplitOutput {
         let mut output = N::GlobalSplitOutput::default();
         let (mut front, mut back) = (false, false);
@@ -155,7 +147,7 @@ impl VertexCache {
     ) -> N::CompleteSplitOutput {
         let graph = trav.graph();
 
-        let (_, node) = graph.expect_vertex(self.index);
+        let node = graph.expect_vertex(self.index);
 
         let output = self.global_splits::<N>(end_pos, node);
 

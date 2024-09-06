@@ -7,7 +7,7 @@ use seqraph::graph::vertex::{
     wide::Wide,
     VertexIndex,
 };
-
+use seqraph::graph::vertex::key::VertexKey;
 use crate::graph::vocabulary::{
     entry::VertexCtx,
     Vocabulary,
@@ -28,8 +28,8 @@ pub trait TraversalPolicy
 }
 impl TraversalPolicy for BottomUp
 {
-    type Next = VertexIndex;
-    fn starting_nodes(vocab: &Vocabulary) -> VecDeque<VertexIndex>
+    type Next = VertexKey;
+    fn starting_nodes(vocab: &Vocabulary) -> VecDeque<VertexKey>
     {
         FromIterator::from_iter(vocab.leaves.iter().cloned())
     }
@@ -55,7 +55,7 @@ impl TraversalPolicy for BottomUp
 impl TraversalPolicy for TopDown
 {
     type Next = (usize, Child);
-    fn starting_nodes(vocab: &Vocabulary) -> VecDeque<VertexIndex>
+    fn starting_nodes(vocab: &Vocabulary) -> VecDeque<VertexKey>
     {
         FromIterator::from_iter(vocab.roots.iter().cloned())
     }

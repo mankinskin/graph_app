@@ -8,7 +8,7 @@ use crate::{
     join::partition::splits::offset::OffsetSplits,
     traversal::cache::entry::position::SubSplitLocation,
 };
-use crate::graph::vertex::PatternId;
+use crate::graph::vertex::pattern::id::PatternId;
 
 pub mod augment;
 pub mod cache;

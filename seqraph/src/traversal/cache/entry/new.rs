@@ -45,7 +45,7 @@ impl NewEntry {
         }
     }
     pub fn prev_key(&self) -> PrevKey {
-        self.prev.clone()
+        self.prev
     }
     pub fn state_direction(&self) -> StateDirection {
         match &self.kind {

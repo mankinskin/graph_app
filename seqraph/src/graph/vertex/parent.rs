@@ -1,5 +1,4 @@
 use crate::{
-    graph::kind::GraphKind,
     HashMap,
     HashSet,
 };
@@ -97,16 +96,16 @@ impl Parent {
         self.pattern_indices
             .iter()
             .find(|i| i.sub_index == p)
-            .map(Clone::clone)
+            .cloned()
     }
     pub fn get_index_at_postfix_of(
         &self,
-        v: &VertexData<impl GraphKind>,
+        v: &VertexData,
     ) -> Option<PatternIndex> {
         self.pattern_indices
             .iter()
             .find(|i| v.expect_child_pattern(&i.pattern_id).len() == i.sub_index + 1)
-            .map(Clone::clone)
+            .cloned()
     }
     /// filter for pattern indices which occur at start of their patterns
     pub fn filter_pattern_indices_at_prefix(&self) -> impl Iterator<Item = &PatternIndex> {

@@ -1,15 +1,11 @@
 use std::fmt::Debug;
-use crate::{
-    graph::kind::GraphKind,
-    traversal::traversable::Traversable,
-};
+use crate::traversal::traversable::Traversable;
 use crate::graph::vertex::{
     child::Child,
     ChildPatterns,
     data::VertexData,
     pattern::Pattern,
     PatternId,
-    token::Tokenize,
     VertexIndex,
     wide::Wide,
 };
@@ -49,9 +45,14 @@ impl HasVertexIndex for VertexIndex {
     }
 }
 
-impl<G: GraphKind> HasVertexIndex for VertexData<G> {
+impl HasVertexIndex for VertexData {
     fn vertex_index(&self) -> VertexIndex {
-        self.key.vertex_index()
+        self.index
+    }
+}
+impl HasVertexIndex for Child {
+    fn vertex_index(&self) -> VertexIndex {
+        self.index
     }
 }
 
@@ -63,17 +64,17 @@ pub trait ToChild: HasVertexIndex + Wide + Debug {
 
 impl<T: HasVertexIndex + Wide + Debug> ToChild for T {}
 
-pub trait MaybeIndexed<T: Tokenize> {
-    type Inner: HasVertexIndex;
-    fn into_inner(self) -> Result<Self::Inner, T>;
-}
-
-impl<I: HasVertexIndex, T: Tokenize> MaybeIndexed<T> for Result<I, T> {
-    type Inner = I;
-    fn into_inner(self) -> Result<Self::Inner, T> {
-        self
-    }
-}
+//pub trait MaybeIndexed<T: Tokenize> {
+//    type Inner: HasVertexIndex;
+//    fn into_inner(self) -> Result<Self::Inner, T>;
+//}
+//
+//impl<I: HasVertexIndex, T: Tokenize> MaybeIndexed<T> for Result<I, T> {
+//    type Inner = I;
+//    fn into_inner(self) -> Result<Self::Inner, T> {
+//        self
+//    }
+//}
 //impl<I: Indexed, T: Tokenize> MaybeIndexed<T> for I {
 //    type Inner = I;
 //    fn into_inner(self) -> Result<Self::Inner, T> {

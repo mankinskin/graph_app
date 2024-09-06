@@ -13,24 +13,12 @@ use derive_more::{
 };
 
 use crate::{
-    graph::Hypergraph,
-    HashMap,
-    join::context::node::context::NodeTraceContext,
-    split::cache::{
-        CacheContext,
-        cleaned_position_splits,
-        leaves::Leaves,
-        SplitCache,
-        SplitPositionCache,
-        TraceState,
-        vertex::SplitVertexCache,
-    },
-    traversal::{
+    graph::{getters::vertex::VertexSet, Hypergraph}, join::context::node::context::NodeTraceContext, split::cache::{
+        cleaned_position_splits, leaves::Leaves, vertex::SplitVertexCache, CacheContext, SplitCache, SplitPositionCache, TraceState
+    }, traversal::{
         cache::{
             entry::{
-                InnerNode,
-                position::SubSplitLocation,
-                RootNode,
+                position::SubSplitLocation, InnerNode, RootNode
             },
             key::SplitKey,
             labelled_key::vkey::labelled_key,
@@ -43,7 +31,7 @@ use crate::{
             Traversable,
             TraversableMut,
         },
-    },
+    }, HashMap
 };
 use crate::graph::vertex::{
     child::{
@@ -131,15 +119,12 @@ impl SplitCacheBuilder {
         prev: SplitKey,
     ) -> SplitVertexCache {
         let mut subs = Self::completed_splits::<_, InnerNode>(trav, fold_state, &index);
-        if subs.get(&offset).is_none() {
+        subs.entry(offset).or_insert_with(|| {
             let graph = trav.graph();
-            let (_, node) = graph.expect_vertex(index);
+            let node = graph.expect_vertex(index);
             //let entry = self.cache.entries.get(&index.index).unwrap();
-            subs.insert(
-                offset,
-                cleaned_position_splits(node.children.iter(), offset),
-            );
-        }
+            cleaned_position_splits(node.children.iter(), offset)
+        });
         let pos_splits = self.leaves.filter_leaves(&index, subs.clone());
         let next = self.leaves.filter_trace_states(trav, &index, pos_splits);
         self.states.extend(next);

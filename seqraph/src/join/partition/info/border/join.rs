@@ -25,16 +25,16 @@ use crate::{
 };
 
 pub trait JoinBorders<K: RangeRole<Mode = Join>>: TraceBorders<K> {
-    fn get_child_splits<'a>(
+    fn get_child_splits(
         &self,
-        ctx: &ModePatternCtxOf<'a, K>,
+        ctx: &ModePatternCtxOf<'_, K>,
     ) -> Option<ModeChildrenOf<K>>;
 }
 
 impl JoinBorders<Post<Join>> for BorderInfo {
-    fn get_child_splits<'a>(
+    fn get_child_splits(
         &self,
-        ctx: &PatternJoinContext<'a>,
+        ctx: &PatternJoinContext<'_>,
     ) -> Option<ChildrenOf<Post<Join>>> {
         self.inner_offset.map(|o| {
             ctx.sub_splits
@@ -46,9 +46,9 @@ impl JoinBorders<Post<Join>> for BorderInfo {
 }
 
 impl JoinBorders<Pre<Join>> for BorderInfo {
-    fn get_child_splits<'a>(
+    fn get_child_splits(
         &self,
-        ctx: &PatternJoinContext<'a>,
+        ctx: &PatternJoinContext<'_>,
     ) -> Option<ChildrenOf<Pre<Join>>> {
         self.inner_offset.map(|o| {
             ctx.sub_splits
@@ -60,9 +60,9 @@ impl JoinBorders<Pre<Join>> for BorderInfo {
 }
 
 impl JoinBorders<In<Join>> for (BorderInfo, BorderInfo) {
-    fn get_child_splits<'a>(
+    fn get_child_splits(
         &self,
-        ctx: &PatternJoinContext<'a>,
+        ctx: &PatternJoinContext<'_>,
     ) -> Option<ChildrenOf<In<Join>>> {
         let (lc, rc) = (ctx.pattern[self.0.sub_index], ctx.pattern[self.1.sub_index]);
         match (self.0.inner_offset, self.1.inner_offset) {

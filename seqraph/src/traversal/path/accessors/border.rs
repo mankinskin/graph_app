@@ -46,7 +46,7 @@ pub trait PathBorder {
         location: ChildLocation,
     ) -> bool {
         let graph = trav.graph();
-        let pattern = graph.expect_pattern_at(&location);
+        let pattern = graph.expect_pattern_at(location);
         <Self::BorderDirection<<Trav::Kind as GraphKind>::Direction> as RelativeDirection<_>>::Direction::pattern_index_next(
             pattern.borrow(),
             location.sub_index,

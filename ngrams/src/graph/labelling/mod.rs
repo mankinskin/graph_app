@@ -14,6 +14,7 @@ use crate::graph::vocabulary::{Corpus, CORPUS_DIR, ProcessStatus, Vocabulary};
 
 mod frequency;
 use frequency::FrequencyCtx;
+use seqraph::graph::vertex::key::VertexKey;
 use seqraph::graph::vertex::VertexIndex;
 
 mod wrappers;
@@ -33,7 +34,7 @@ impl From<Vocabulary> for LabellingCtx {
 pub struct LabellingCtx
 {
     pub vocab: Vocabulary,
-    pub labels: HashSet<VertexIndex>,
+    pub labels: HashSet<VertexKey>,
     pub status: ProcessStatus,
 }
 impl LabellingCtx

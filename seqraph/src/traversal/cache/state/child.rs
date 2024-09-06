@@ -1,13 +1,10 @@
 use crate::{
-    graph::direction::r#match::MatchDirection,
+    graph::{direction::r#match::MatchDirection, vertex::pattern::Pattern},
     traversal::{
         cache::{
             entry::new::NewEntry,
             key::{
-                DirectedKey,
-                pos::QueryPosition,
-                prev::ToPrev,
-                target::TargetKey,
+                pos::QueryPosition, prev::ToPrev, target::TargetKey, DirectedKey
             },
             state::{
                 end::{
@@ -15,16 +12,12 @@ use crate::{
                     EndReason,
                     EndState,
                     RangeEnd,
-                },
-                NextStates,
-                parent::ParentState,
-                StateNext,
+                }, parent::ParentState, NextStates, StateNext
             },
         },
         context::TraversalContext,
         iterator::{
-            TraversalIterator,
-            traverser::pruning::PruneStates,
+            traverser::pruning::PruneStates, TraversalIterator
         },
         path::{
             accessors::{
@@ -37,12 +30,10 @@ use crate::{
             mutators::{
                 lower::PathLower,
                 move_path::{
-                    Advance,
                     key::{
                         AdvanceKey,
                         TokenLocation,
-                    },
-                    Retract,
+                    }, Advance, Retract
                 },
             },
             structs::pair::{
@@ -61,16 +52,14 @@ use crate::{
     },
 };
 use itertools::Itertools;
-use std::{
-    borrow::Borrow,
-    cmp::Ordering,
-};
+use std::cmp::Ordering;
 use tap::Tap;
 use crate::graph::vertex::{
     child::Child,
     location::child::ChildLocation,
     wide::Wide,
 };
+use crate::graph::getters::vertex::VertexSet;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChildState {
@@ -235,7 +224,7 @@ impl ChildState {
                     .is_break()
                 {
                     let graph = ctx.trav().graph();
-                    let pattern = graph.expect_pattern_at(&path.root.location);
+                    let pattern = graph.expect_pattern_at(path.root.location);
                     let entry = path.start.sub_path.root_entry;
                     self.root_pos = self.prev_pos;
                     break Some(pattern[entry]);
@@ -309,14 +298,14 @@ impl ChildState {
     ) -> Vec<ChildState> {
         ctx.trav()
             .graph()
-            .expect_vertex_data(index)
+            .expect_vertex(index)
             .get_child_patterns()
             .iter()
             .sorted_unstable_by(|(_, a), (_, b)| {
                 b.first().unwrap().width.cmp(&a.first().unwrap().width)
             })
-            .map(|(&pid, child_pattern)| {
-                let sub_index = DirectionOf::<I::Trav>::head_index(child_pattern.borrow());
+            .map(|(&pid, child_pattern): (_, &Pattern)| {
+                let sub_index = DirectionOf::<I::Trav>::head_index(child_pattern);
                 let mut paths = self.paths.clone();
                 paths.push_major(ChildLocation::new(index, pid, sub_index));
                 ChildState {

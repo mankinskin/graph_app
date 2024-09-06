@@ -35,6 +35,7 @@ use seqraph::graph::vertex::{
 };
 use seqraph::graph::vertex::child::Child;
 use seqraph::graph::vertex::has_vertex_index::ToChild;
+use seqraph::graph::vertex::key::VertexKey;
 use crate::graph::traversal::{TopDown, TraversalPolicy};
 
 use crate::graph::vocabulary::entry::{HasVertexEntries, VocabEntry};
@@ -77,7 +78,7 @@ impl Wide for NGramId
 }
 
 lazy_static::lazy_static! {
-    pub static ref CORPUS_DIR: PathBuf = absolute(PathBuf::from_iter([".", "corpus"])).unwrap();
+    pub static ref CORPUS_DIR: PathBuf = absolute(PathBuf::from_iter([".", "test", "corpus"])).unwrap();
 }
 #[derive(Debug, Default, Deref, Serialize, Deserialize, new)]
 pub struct Corpus
@@ -122,9 +123,9 @@ pub struct Vocabulary
     pub containment: Hypergraph,
     pub name: String,
     pub ids: HashMap<String, NGramId>,
-    pub leaves: HashSet<VertexIndex>,
-    pub roots: HashSet<VertexIndex>,
-    pub entries: HashMap<VertexIndex, VocabEntry>,
+    pub leaves: HashSet<VertexKey>,
+    pub roots: HashSet<VertexKey>,
+    pub entries: HashMap<VertexKey, VocabEntry>,
 }
 
 impl Vocabulary

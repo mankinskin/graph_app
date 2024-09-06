@@ -18,12 +18,6 @@ pub mod vkey {
         has_vertex_index::HasVertexIndex,
     };
 
-    macro_rules! lab {
-        ($x:ident) => {
-            LabelledKey::new($x, stringify!($x))
-        };
-    }
-    pub(crate) use lab;
 
     pub type VertexCacheKey = LabelledKey;
 
@@ -91,6 +85,12 @@ pub mod vkey {
             write!(f, "{}", self.label)
         }
     }
+    macro_rules! lab {
+        ($x:ident) => {
+            crate::traversal::cache::labelled_key::vkey::LabelledKey::new($x, stringify!($x))
+        };
+    }
+    pub(crate) use lab;
 }
 
 #[cfg(not(test))]

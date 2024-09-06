@@ -98,7 +98,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
         context: impl PatternStream<Child, Token<T>>,
         width_ceiling: Option<TokenPosition>,
     ) -> SearchResult {
-        let vertex = self.graph.graph().expect_vertex_data(index);
+        let vertex = self.graph.graph().expect_vertex(index);
         let parents = vertex.get_parents_below_width(width_ceiling);
         let matching_parent = self.find_parent_with_matching_children(parents.clone(), context);
         let search_found = if let Some((&index, child_patterns, parent, pattern_id, sub_index)) =
@@ -155,7 +155,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
     )> {
         parents.find_map(|(index, parent)| {
             async_std::task::block_on(async {
-                let vert = self.graph.graph().expect_vertex_data(*index);
+                let vert = self.graph.graph().expect_vertex(*index);
                 let child_patterns = vert.get_children();
                 //print!("matching parent \"{}\" ", self.insert_string(parent.index));
                 // get child pattern indices able to match at all

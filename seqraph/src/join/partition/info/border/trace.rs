@@ -13,16 +13,16 @@ use crate::join::{
 };
 
 pub trait TraceBorders<K: RangeRole>: VisitBorders<K> {
-    fn inner_info<'a>(
+    fn inner_info(
         &self,
-        ctx: &ModePatternCtxOf<'a, K>,
+        ctx: &ModePatternCtxOf<'_, K>,
     ) -> Option<InnerRangeInfo<K>>;
 }
 
 impl<K: RangeRole> TraceBorders<K> for K::Borders {
-    fn inner_info<'a>(
+    fn inner_info(
         &self,
-        ctx: &ModePatternCtxOf<'a, K>,
+        ctx: &ModePatternCtxOf<'_, K>,
     ) -> Option<InnerRangeInfo<K>> {
         let pctx = ctx.as_pattern_trace_context();
         self.inner_range_offsets(pctx.pattern)

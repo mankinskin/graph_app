@@ -1,14 +1,6 @@
-use std::{
-    borrow::Borrow,
-    sync::{
-        Arc,
-        atomic::{
-            self,
-            AtomicUsize,
-            Ordering,
-        },
-        RwLock,
-    },
+use std::sync::{
+    Arc,
+    RwLock,
 };
 
 use itertools::Itertools;
@@ -24,7 +16,6 @@ use vertex::{
         ToChild,
     },
     pattern::IntoPattern,
-    PatternId,
     token::Token,
     VertexIndex,
 };
@@ -40,6 +31,7 @@ use crate::{
 };
 use crate::graph::vertex::data::VertexData;
 use crate::graph::vertex::key::VertexKey;
+use crate::graph::getters::vertex::VertexSet;
 
 pub mod child_strings;
 pub mod direction;
@@ -95,10 +87,9 @@ impl<G: GraphKind> AsMut<Self> for Hypergraph<G> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Hypergraph<G: GraphKind = BaseGraphKind> {
-    graph: indexmap::IndexMap<VertexKey<G::Token>, VertexData<G>>,
-    tokens: indexmap::IndexMap<Token<G::Token>, VertexIndex>,
-    pattern_id_count: AtomicUsize,
-    vertex_id_count: AtomicUsize,
+    graph: indexmap::IndexMap<VertexKey, VertexData>,
+    tokens: indexmap::IndexMap<VertexKey, Token<G::Token>>,
+    token_keys: indexmap::IndexMap<Token<G::Token>, VertexKey>,
     _ty: std::marker::PhantomData<G>,
 }
 impl<G: GraphKind> Clone for Hypergraph<G> {
@@ -108,8 +99,9 @@ impl<G: GraphKind> Clone for Hypergraph<G> {
         Self {
             graph: self.graph.clone(),
             tokens: self.tokens.clone(),
-            pattern_id_count: self.pattern_id_count.load(Ordering::SeqCst).clone().into(),
-            vertex_id_count: self.vertex_id_count.load(Ordering::SeqCst).clone().into(),
+            token_keys: self.token_keys.clone(),
+            //pattern_id_count: self.pattern_id_count.load(Ordering::SeqCst).clone().into(),
+            //vertex_id_count: self.vertex_id_count.load(Ordering::SeqCst).clone().into(),
             _ty: self._ty,
         }
     }
@@ -121,14 +113,15 @@ impl<G: GraphKind> PartialEq for Hypergraph<G> {
     ) -> bool {
         self.graph.eq(&other.graph)
             && self.tokens.eq(&other.tokens)
-            && self
-                .pattern_id_count
-                .load(Ordering::SeqCst)
-                .eq(&other.pattern_id_count.load(Ordering::SeqCst))
-            && self
-                .vertex_id_count
-                .load(Ordering::SeqCst)
-                .eq(&other.vertex_id_count.load(Ordering::SeqCst))
+            && self.token_keys.eq(&other.token_keys)
+            //&& self
+            //    .pattern_id_count
+            //    .load(Ordering::SeqCst)
+            //    .eq(&other.pattern_id_count.load(Ordering::SeqCst))
+            //&& self
+            //    .vertex_id_count
+            //    .load(Ordering::SeqCst)
+            //    .eq(&other.vertex_id_count.load(Ordering::SeqCst))
             && self._ty.eq(&other._ty)
     }
 }
@@ -139,14 +132,15 @@ impl<G: GraphKind> Default for Hypergraph<G> {
         Self {
             graph: indexmap::IndexMap::default(),
             tokens: indexmap::IndexMap::default(),
-            pattern_id_count: AtomicUsize::new(0),
-            vertex_id_count: AtomicUsize::new(0),
+            token_keys: indexmap::IndexMap::default(),
+            //pattern_id_count: AtomicUsize::new(0),
+            //vertex_id_count: AtomicUsize::new(0),
             _ty: Default::default(),
         }
     }
 }
 
-impl<'t, 'a, G: GraphKind> Hypergraph<G> {
+impl<G: GraphKind> Hypergraph<G> {
     pub fn new() -> Self {
         Self::default()
     }
@@ -156,60 +150,60 @@ impl<'t, 'a, G: GraphKind> Hypergraph<G> {
     pub fn vertex_count(&self) -> usize {
         self.graph.len()
     }
-    pub fn next_vertex_id(&mut self) -> vertex::VertexIndex {
-        self.vertex_id_count.fetch_add(1, atomic::Ordering::SeqCst)
-    }
-    pub fn next_pattern_id(&mut self) -> PatternId {
-        self.pattern_id_count.fetch_add(1, atomic::Ordering::SeqCst)
-    }
+    //pub fn next_vertex_id(&mut self) -> vertex::VertexIndex {
+    //    self.vertex_id_count.fetch_add(1, atomic::Ordering::SeqCst)
+    //}
+    //pub fn next_pattern_id(&mut self) -> PatternId {
+    //    self.pattern_id_count.fetch_add(1, atomic::Ordering::SeqCst)
+    //}
     //pub fn index_sequence<N: Into<G>, I: IntoIterator<Item = N>>(&mut self, seq: I) -> VertexIndex {
     //    let seq = seq.into_iter();
     //    let tokens = T::tokenize(seq);
     //    let pattern = self.to_token_children(tokens);
     //    self.index_pattern(&pattern[..])
     //}
-    pub fn insert_token_indices(
-        &self,
-        index: impl ToChild,
-    ) -> Vec<vertex::VertexIndex> {
-        if index.width() == 1 {
-            vec![index.vertex_index()]
-        } else {
-            let data = self.expect_vertex_data(index);
-            assert!(!data.children.is_empty());
-            data.children
-                .values()
-                .fold(None, |acc, p| {
-                    let exp = self.pattern_token_indices(p.borrow());
-                    acc.map(|acc| {
-                        assert_eq!(acc, exp);
-                        acc
-                    })
-                    .or(Some(exp.clone()))
-                })
-                .unwrap()
-        }
-    }
-    pub fn pattern_token_indices(
-        &self,
-        pattern: impl IntoPattern,
-    ) -> Vec<vertex::VertexIndex> {
-        pattern
-            .into_iter()
-            .flat_map(|c| self.insert_token_indices(c))
-            .collect_vec()
-    }
+    //pub fn insert_token_indices(
+    //    &self,
+    //    index: impl ToChild,
+    //) -> Vec<VertexIndex> {
+    //    if index.width() == 1 {
+    //        vec![index.vertex_index()]
+    //    } else {
+    //        let data = self.expect_vertex(index);
+    //        assert!(!data.children.is_empty());
+    //        data.children
+    //            .values()
+    //            .fold(None, |acc, p| {
+    //                let exp = self.pattern_token_indices(p.borrow());
+    //                acc.map(|acc| {
+    //                    assert_eq!(acc, exp);
+    //                    acc
+    //                })
+    //                .or(Some(exp.clone()))
+    //            })
+    //            .unwrap()
+    //    }
+    //}
+    //pub fn pattern_token_indices(
+    //    &self,
+    //    pattern: impl IntoPattern,
+    //) -> Vec<VertexIndex> {
+    //    pattern
+    //        .into_iter()
+    //        .flat_map(|c| self.insert_token_indices(c))
+    //        .collect_vec()
+    //}
     pub fn validate_expansion(
         &self,
         index: impl HasVertexIndex,
     ) {
         //let root = index.index();
-        let data = self.expect_vertex_data(index);
+        let data = self.expect_vertex(index.vertex_index());
         data.children.iter().fold(
             Vec::new(),
             |mut acc: Vec<vertex::VertexIndex>, (_pid, p)| {
                 assert!(!p.is_empty());
-                let exp = self.pattern_token_indices(p.borrow());
+                let exp = p.iter().map(|c| c.vertex_index()).collect_vec();
                 if acc.is_empty() {
                     acc = exp;
                 } else {
@@ -233,15 +227,15 @@ where
 {
     pub fn to_petgraph(
         &self
-    ) -> DiGraph<(VertexIndex, VertexData<G>), Edge> {
+    ) -> DiGraph<(VertexIndex, VertexData), Edge> {
         let mut pg = DiGraph::new();
         // id refers to index in Hypergraph
         // idx refers to index in petgraph
-        let nodes: HashMap<_, (_, &VertexData<G>)> = self
+        let nodes: HashMap<_, (_, &VertexData)> = self
             .vertex_iter()
-            .map(|(id, node)| {
-                let idx = pg.add_node((id.vertex_index(), node.clone()));
-                (id.vertex_index(), (idx, node))
+            .map(|(_id, node)| {
+                let idx = pg.add_node((node.vertex_index(), node.clone()));
+                (node.vertex_index(), (idx, node))
             })
             .collect();
         nodes.values().for_each(|(idx, node)| {
@@ -277,7 +271,7 @@ where
         let nodes = pattern.into_iter().map(|child| {
             (
                 self.index_string(child.vertex_index()),
-                self.expect_vertex_data(child.vertex_index())
+                self.expect_vertex(child.vertex_index())
                     .to_pattern_strings(self),
             )
         });
@@ -315,11 +309,14 @@ where
             .map(|pattern| self.pattern_string_with_separator(pattern, ""))
             .collect()
     }
+    pub fn get_token_by_key(&self, key: &VertexKey) -> Option<&Token<G::Token>> {
+        self.tokens.get(key)
+    }
     pub fn vertex_data_string(
         &self,
-        data: &VertexData<G>,
+        data: &VertexData,
     ) -> String {
-        if let VertexKey::Token(token, _) = data.key {
+        if let Some(token) = self.get_token_by_key(&data.key) {
             token.to_string()
         } else {
             self.pattern_string(data.expect_any_child_pattern().1)
@@ -329,7 +326,7 @@ where
         &self,
         index: impl HasVertexIndex,
     ) -> String {
-        let data = self.expect_vertex_data(index);
+        let data = self.expect_vertex(index.vertex_index());
         self.vertex_data_string(data)
     }
 }

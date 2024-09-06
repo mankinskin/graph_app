@@ -8,7 +8,7 @@ use crate::join::partition::splits::SubSplits;
 use crate::graph::vertex::{
     location::pattern::PatternLocation,
     pattern::Pattern,
-    PatternId,
+    pattern::id::PatternId,
 };
 
 #[derive(Debug, Deref, DerefMut, Derivative)]

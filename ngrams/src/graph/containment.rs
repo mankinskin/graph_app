@@ -19,6 +19,7 @@ use seqraph::graph::vertex::{
 use seqraph::graph::vertex::child::Child;
 use seqraph::graph::vertex::data::VertexDataBuilder;
 use seqraph::graph::vertex::key::VertexKey;
+use seqraph::graph::vertex::pattern::id::PatternId;
 use crate::graph::vocabulary::{
     entry::{
         VocabEntry,
@@ -127,7 +128,8 @@ impl<'a> NGramFrequencyCtx<'a>
             vocab.ids.insert(self.ngram.clone(), id);
             vocab.entries.insert(id.vertex_index(), entry);
             let data = VertexDataBuilder::default()
-                .key(VertexKey::Pattern(Child::new(id.id, self.n.into())))
+                .key(VertexKey::new())
+                .index(vocab.containment.next_vertex_index())
                 .width(self.n.into())
                 .children(children.clone())
                 .build()
@@ -161,7 +163,7 @@ impl<'a> NGramFrequencyCtx<'a>
                 let x = String::from_iter(ni);
                 let b =
                     ngram.get((i + n)..ngram.len()).filter(|s| !s.is_empty());
-                let pid = vocab.containment.next_pattern_id();
+                let pid = PatternId::new();
 
                 (
                     pid,

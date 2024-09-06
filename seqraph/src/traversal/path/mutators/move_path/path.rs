@@ -50,7 +50,7 @@ pub trait MovePath<D: Direction, R: PathRole = End>:
             self.path_pop().map(|mut location| {
                 self.move_leaf::<Trav>(&mut location, &graph)
                     .is_continue()
-                    .then(|| location)
+                    .then_some(location)
             })
         })
         .find_map(|location| location)

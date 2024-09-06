@@ -10,15 +10,11 @@ use crate::{
         Traversable,
     },
 };
-use crate::graph::vertex::{
-    child::Child,
-    pattern::Pattern,
-    PatternId,
-    token::{
-        AsToken,
-        tokenizing_iter,
-    },
-};
+use crate::graph::vertex::{child::Child, pattern::Pattern, token::{
+    AsToken,
+    tokenizing_iter,
+}, VertexIndex};
+use crate::graph::vertex::pattern::id::PatternId;
 
 pub mod searcher;
 
@@ -32,7 +28,7 @@ pub enum NoMatch {
     NoParents,
     NoChildPatterns,
     NotFound,
-    NoMatchingParent(crate::graph::vertex::VertexIndex),
+    NoMatchingParent(VertexIndex),
     InvalidPattern(PatternId),
     InvalidChild(usize),
     InvalidPatternRange(PatternId, Pattern, String),
@@ -72,7 +68,7 @@ pub trait Searchable: Traversable {
         pattern: impl IntoIterator<Item = impl AsToken<TokenOf<GraphKindOf<Self>>>>,
     ) -> SearchResult {
         let iter = tokenizing_iter(pattern.into_iter());
-        let pattern = self.graph().to_token_children(iter)?;
+        let pattern = self.graph().get_token_children(iter)?;
         self.find_ancestor(pattern)
     }
 }

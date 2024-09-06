@@ -51,24 +51,17 @@ impl Trace for EndState {
 pub(crate) mod tests {
     use crate::{
         graph::tests::{
-            Context,
-            context_mut,
-        },
-        HashMap,
-        HashSet,
-        search::Searchable,
-        traversal::{
+            context_mut, Context
+        }, search::Searchable, traversal::{
             cache::{
                 entry::{
-                    Edges,
-                    PositionCache,
-                    VertexCache,
+                    position::{Edges, PositionCache}, vertex::VertexCache
                 },
                 key::DirectedKey,
                 labelled_key::vkey::lab,
             },
             folder::state::FoldState,
-        },
+        }, HashMap, HashSet
     };
     use pretty_assertions::assert_eq;
     use std::iter::FromIterator;
@@ -187,7 +180,7 @@ pub(crate) mod tests {
                             top: Default::default(),
                             bottom: HashMap::from_iter([(
                                 DirectedKey::up(*a, 0),
-                                SubLocation::new(3, 0),
+                                SubLocation::new(*abc_d_id, 0),
                             )]),
                         },
                         index: *abc,

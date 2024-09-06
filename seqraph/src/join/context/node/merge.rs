@@ -62,7 +62,7 @@ impl<'p> NodeJoinContext<'p> {
         let offsets = splits.pos_splits();
         assert_eq!(partitions.len(), offsets.len() + 1);
 
-        let merges = self.merge_partitions(offsets, &partitions);
+        let merges = self.merge_partitions(offsets, partitions);
 
         let len = offsets.len();
         let index = self.index;
@@ -117,7 +117,7 @@ impl<'p> NodeJoinContext<'p> {
                         let merges = range_map.range_sub_merges(start..start + len);
                         let joined = info.patterns.into_iter().map(|(pid, info)| {
                             (info.joined_pattern(self, &pid).borrow() as &'_ Pattern)
-                                .into_iter()
+                                .iter()
                                 .cloned()
                                 .collect_vec()
                         });

@@ -38,7 +38,7 @@ impl PathRaise for ParentState {
         path.root_entry = parent_entry.sub_index;
         self.path.root.location = parent_entry.into_pattern_location();
         let graph = trav.graph();
-        let pattern = graph.expect_pattern_at(&root);
+        let pattern = graph.expect_pattern_at(root);
         self.prev_pos = self.root_pos;
         self.root_pos
             .advance_key(pattern_width(&pattern[root.sub_index + 1..]));

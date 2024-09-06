@@ -104,9 +104,9 @@ impl Indexer {
         while let Some(key) = {
             frontier
                 .pop_front()
-                .and_then(|key| (key.index != root).then(|| key))
+                .and_then(|key| (key.index != root).then_some(key))
         } {
-            if final_splits.get(&key).is_none() {
+            if !final_splits.contains_key(&key) {
                 let finals = {
                     let mut ctx = JoinContext::new(self.graph_mut(), &final_splits)
                         .node(key.index, &split_cache);

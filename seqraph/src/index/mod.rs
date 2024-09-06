@@ -23,7 +23,7 @@ pub mod side;
 #[macro_use]
 pub mod tests;
 
-impl<'t, 'g> HypergraphRef {
+impl HypergraphRef {
     pub fn indexer(&self) -> Indexer {
         Indexer::new(self.clone())
     }

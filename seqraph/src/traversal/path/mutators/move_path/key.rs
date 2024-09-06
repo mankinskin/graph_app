@@ -25,14 +25,8 @@ use crate::{
     },
 };
 
-#[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, Add, Sub, Deref, DerefMut)]
+#[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, Add, Sub, Deref, DerefMut, Default)]
 pub struct TokenLocation(pub usize);
-
-impl Default for TokenLocation {
-    fn default() -> Self {
-        Self(0)
-    }
-}
 
 impl From<usize> for TokenLocation {
     fn from(pos: usize) -> Self {

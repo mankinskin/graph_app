@@ -58,7 +58,7 @@ impl NextStates {
                 .inner
                 .iter()
                 .map(|s| TraversalState {
-                    prev: state.prev.clone(),
+                    prev: state.prev,
                     new: state.new.clone(),
                     kind: InnerKind::Parent(s.clone()),
                 })
@@ -67,7 +67,7 @@ impl NextStates {
                 .inner
                 .iter()
                 .map(|s| TraversalState {
-                    prev: state.prev.clone(),
+                    prev: state.prev,
                     new: state.new.clone(),
                     kind: InnerKind::Child(s.clone()),
                 })
@@ -167,7 +167,7 @@ impl TraversalState {
         }
     }
     pub fn prev_key(&self) -> PrevKey {
-        self.prev.clone()
+        self.prev
     }
     pub fn root_pos(&self) -> TokenLocation {
         match &self.kind {

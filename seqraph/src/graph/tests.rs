@@ -5,7 +5,8 @@ use std::sync::{
 
 use itertools::Itertools;
 
-use crate::graph::vertex::PatternId;
+
+use crate::graph::vertex::pattern::id::PatternId;
 
 use super::*;
 

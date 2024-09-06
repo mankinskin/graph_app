@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::{
     borrow::Borrow,
     fmt::Debug,
@@ -60,9 +61,6 @@ impl Child {
     pub fn get_width(&self) -> TokenPosition {
         self.width.0
     }
-    pub fn get_index(&self) -> VertexIndex {
-        self.index
-    }
     pub fn to_pattern_location(
         self,
         pattern_id: PatternId,
@@ -94,7 +92,7 @@ impl PartialOrd for Child {
         &self,
         other: &Self,
     ) -> Option<std::cmp::Ordering> {
-        self.index.partial_cmp(&other.index)
+        Some(self.index.cmp(&other.index))
     }
 }
 
@@ -180,11 +178,11 @@ impl IntoIterator for Child {
     }
 }
 
-impl HasVertexIndex for Child {
-    fn vertex_index(&self) -> VertexIndex {
-        self.index
-    }
-}
+//impl HasVertexIndex for Child {
+//    fn vertex_index(&self) -> VertexIndex {
+//        self.index
+//    }
+//}
 
 impl Wide for Child {
     fn width(&self) -> usize {
@@ -207,5 +205,10 @@ impl Borrow<[Child]> for Child {
 impl AsRef<[Child]> for Child {
     fn as_ref(&self) -> &[Child] {
         self.borrow()
+    }
+}
+impl Display for Child {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
     }
 }

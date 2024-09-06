@@ -9,7 +9,7 @@ use derive_more::{
 };
 
 use crate::HashMap;
-use crate::graph::vertex::PatternId;
+use crate::graph::vertex::pattern::id::PatternId;
 
 #[derive(Debug, Default, IntoIterator, DerefMut)]
 pub struct PatternSubDeltas {

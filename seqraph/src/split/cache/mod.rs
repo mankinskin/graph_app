@@ -42,7 +42,7 @@ use crate::graph::vertex::{
     has_vertex_index::HasVertexIndex,
     location::SubLocation,
     pattern::Pattern,
-    PatternId,
+    pattern::id::PatternId,
 };
 
 pub mod vertex;
@@ -203,7 +203,7 @@ mod tests {
 
     macro_rules! nz {
         ($x:expr) => {
-            NonZeroUsize::new($x).unwrap()
+            std::num::NonZeroUsize::new($x).unwrap()
         };
     }
     #[test]

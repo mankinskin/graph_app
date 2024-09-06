@@ -8,7 +8,7 @@ use maplit::hashset;
 use pretty_assertions::assert_eq;
 
 use crate::{
-    graph::kind::BaseGraphKind,
+    graph::{getters::vertex::VertexSet, kind::BaseGraphKind},
     search::Searchable,
     traversal::{
         folder::state::FoldResult,
@@ -24,7 +24,6 @@ use crate::graph::vertex::{
     token::Token,
     wide::Wide,
 };
-#[allow(clippy::many_single_char_names)]
 use super::*;
 
 #[test]
@@ -117,7 +116,7 @@ fn index_pattern2() {
         .expect_complete("ab");
 
     let graph = graph_ref.graph();
-    let aby_vertex = graph.expect_vertex_data(aby);
+    let aby_vertex = graph.expect_vertex(aby);
     assert_eq!(aby_vertex.parents.len(), 1, "aby");
     assert_eq!(
         aby_vertex
@@ -166,7 +165,7 @@ fn index_infix1() {
         .unwrap()
         .expect_complete("ab");
     let graph = graph_ref.graph();
-    let aby_vertex = graph.expect_vertex_data(aby);
+    let aby_vertex = graph.expect_vertex(aby);
     assert_eq!(aby.width(), 3, "aby");
     assert_eq!(aby_vertex.parents.len(), 1, "aby");
     assert_eq!(aby_vertex.children.len(), 1, "aby");
@@ -194,7 +193,7 @@ fn index_infix1() {
         .unwrap()
         .expect_complete("abyz");
     let graph = graph_ref.graph();
-    let abyz_vertex = graph.expect_vertex_data(abyz);
+    let abyz_vertex = graph.expect_vertex(abyz);
     assert_eq!(
         abyz_vertex
             .get_child_pattern_set()
@@ -203,7 +202,7 @@ fn index_infix1() {
         hashset![vec![aby, z], vec![ab, yz]],
         "abyz"
     );
-    let xxabyzw_vertex = graph.expect_vertex_data(xxabyzw);
+    let xxabyzw_vertex = graph.expect_vertex(xxabyzw);
     assert_eq!(
         xxabyzw_vertex
             .get_child_pattern_set()
@@ -246,7 +245,7 @@ fn index_infix2() {
         .index_pattern([a, b, c, d])
         .expect("Indexing failed");
     let graph = graph_ref.graph();
-    let abcd_vertex = graph.expect_vertex_data(abcd);
+    let abcd_vertex = graph.expect_vertex(abcd);
     assert_eq!(abcd.width(), 4, "abcd");
     assert_eq!(abcd_vertex.parents.len(), 1, "abcd");
     assert_eq!(abcd_vertex.children.len(), 1, "abcd");
@@ -260,7 +259,7 @@ fn index_infix2() {
     );
     drop(graph);
     let graph = graph_ref.graph();
-    let abcdx_vertex = graph.expect_vertex_data(abcdx);
+    let abcdx_vertex = graph.expect_vertex(abcdx);
     assert_eq!(
         abcdx_vertex
             .get_child_pattern_set()

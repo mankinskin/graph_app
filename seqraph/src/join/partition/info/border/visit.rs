@@ -79,7 +79,7 @@ impl<M: PreVisitMode> VisitBorders<Pre<M>> for BorderInfo {
         _pattern: &Pattern,
     ) -> Option<OffsetsOf<Pre<M>>> {
         (self.inner_offset.is_some() && self.sub_index > 0)
-            .then(|| self.start_offset)
+            .then_some(self.start_offset)
             .flatten()
     }
     fn inner_range(&self) -> RangeOf<Pre<M>> {

@@ -3,7 +3,7 @@ use std::{
     num::NonZeroUsize,
     slice::SliceIndex,
 };
-use std::borrow::Borrow;
+use std::fmt::Display;
 use derive_builder::Builder;
 use either::Either;
 use serde::{
@@ -12,11 +12,7 @@ use serde::{
 };
 
 use crate::{
-    graph::kind::{
-        BaseGraphKind,
-        GraphKind,
-    },
-    HashMap,
+    graph::kind::GraphKind,
     HashSet,
     search::NoMatch,
 };
@@ -33,39 +29,39 @@ use crate::graph::vertex::{
         pattern_range::PatternRangeIndex,
         pattern_width,
     },
-    token::Token,
     wide::Wide,
 };
-use crate::graph::vertex::key::VertexKey;
 use crate::graph::vertex::{ChildPatterns, IndexPosition, pattern, PatternId, TokenPosition, VertexIndex, VertexParents};
 use crate::graph::vertex::has_vertex_index::ToChild;
 use crate::graph::vertex::parent::Parent;
 use crate::graph::vertex::pattern::Pattern;
+use crate::graph::Hypergraph;
+use crate::graph::vertex::key::VertexKey;
 
 pub fn clone_child_patterns(children: &'_ ChildPatterns) -> impl Iterator<Item = Pattern> + '_ {
     children.iter().map(|(_, p)| p.clone())
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Builder, Serialize, Deserialize)]
-pub struct VertexData<G: GraphKind = BaseGraphKind> {
+pub struct VertexData {
     pub width: TokenPosition,
-    pub key: VertexKey<G::Token>,
+    pub key: VertexKey,
+    pub index: VertexIndex,
     #[builder(default)]
     pub parents: VertexParents,
     #[builder(default)]
     pub children: ChildPatterns,
 }
 
-impl<G: GraphKind> VertexData<G> {
+impl VertexData {
     pub fn new(
         index: VertexIndex,
         width: TokenPosition,
-        token: Option<Token<G::Token>>,
     ) -> Self {
         Self {
             width,
-            key: token.map(|x| VertexKey::Token(x, index))
-                .unwrap_or(VertexKey::Pattern(Child::new(index, width))),
+            key: VertexKey::new(),
+            index,
             parents: VertexParents::default(),
             children: ChildPatterns::default(),
         }
@@ -228,10 +224,10 @@ impl<G: GraphKind> VertexData<G> {
         clone_child_patterns(&self.children)
     }
     pub fn get_child_pattern_set(&self) -> HashSet<Pattern> {
-        self.get_child_pattern_iter().into_iter().collect()
+        self.get_child_pattern_iter().collect()
     }
     pub fn get_child_pattern_vec(&self) -> Vec<Pattern> {
-        self.get_child_pattern_iter().into_iter().collect()
+        self.get_child_pattern_iter().collect()
     }
     pub fn add_pattern_no_update(
         &mut self,
@@ -270,7 +266,7 @@ impl<G: GraphKind> VertexData<G> {
                 let mut p = p.iter().fold(Vec::new(), |mut pa, c| {
                     offset += c.width();
                     assert!(
-                        acc.iter().find(|pr| pr.contains(&offset)).is_none(),
+                        !acc.iter().any(|pr| pr.contains(&offset)),
                         "Duplicate border in index child patterns"
                     );
                     pa.push(offset);
@@ -315,8 +311,8 @@ impl<G: GraphKind> VertexData<G> {
     pub fn remove_parent_index(
         &mut self,
         vertex: impl HasVertexIndex,
-        pattern: usize,
-        index: PatternId,
+        pattern: PatternId,
+        index: usize,
     ) {
         if let Some(parent) = self.parents.get_mut(&vertex.vertex_index()) {
             if parent.pattern_indices.len() > 1 {
@@ -344,12 +340,12 @@ impl<G: GraphKind> VertexData<G> {
             Either::Right(parents.iter())
         }
     }
-    pub fn to_pattern_strings(
+    pub fn to_pattern_strings<G: GraphKind>(
         &self,
-        g: &crate::graph::Hypergraph<G>,
+        g: &Hypergraph<G>,
     ) -> Vec<Vec<String>>
     where
-        G::Token: std::fmt::Display,
+        G::Token: Display,
     {
         self.get_child_pattern_iter()
             .map(|pat| {
@@ -359,46 +355,58 @@ impl<G: GraphKind> VertexData<G> {
             })
             .collect::<Vec<_>>()
     }
-    pub fn filter_parent_to(
-        &self,
-        parent_index: impl HasVertexIndex,
-        cond: impl Fn(&&Parent) -> bool,
-    ) -> Result<&'_ Parent, NoMatch> {
-        let index = parent_index.vertex_index();
-        self.get_parent(index)
-            .ok()
-            .filter(cond)
-            .ok_or(NoMatch::NoMatchingParent(index))
-    }
-    pub fn get_parents_at_prefix(&self) -> HashMap<VertexIndex, PatternId> {
-        self.get_parents_with_index_at(0)
-    }
-    pub fn get_parents_at_postfix(
-        &self,
-        graph: &crate::graph::Hypergraph,
-    ) -> HashMap<VertexIndex, PatternId> {
-        self.parents
-            .iter()
-            .filter_map(|(id, parent)| {
-                parent
-                    .get_index_at_postfix_of(graph.expect_vertex_data(id))
-                    .map(|pat| (*id, pat.pattern_id))
-            })
-            .collect()
-    }
-    pub fn get_parents_with_index_at(
-        &self,
-        offset: usize,
-    ) -> HashMap<VertexIndex, PatternId> {
-        self.parents
-            .iter()
-            .filter_map(|(id, parent)| {
-                parent
-                    .get_index_at_pos(offset)
-                    .map(|pat| (*id, pat.pattern_id))
-            })
-            .collect()
-    }
+    //pub fn get_parents_at_prefix(&self) -> HashMap<VertexIndex, PatternId> {
+    //    self.get_parents_with_index_at(0)
+    //}
+    //pub fn get_parents_at_postfix(
+    //    &self,
+    //    graph: &crate::graph::Hypergraph,
+    //) -> HashMap<VertexIndex, PatternId> {
+    //    self.parents
+    //        .iter()
+    //        .filter_map(|(id, parent)| {
+    //            parent
+    //                .get_index_at_postfix_of(graph.expect_vertex(id))
+    //                .map(|pat| (*id, pat.pattern_id))
+    //        })
+    //        .collect()
+    //}
+    //pub fn get_parents_with_index_at(
+    //    &self,
+    //    offset: usize,
+    //) -> HashMap<VertexIndex, PatternId> {
+    //    self.parents
+    //        .iter()
+    //        .filter_map(|(id, parent)| {
+    //            parent
+    //                .get_index_at_pos(offset)
+    //                .map(|pat| (*id, pat.pattern_id))
+    //        })
+    //        .collect()
+    //}
+    //pub fn filter_parent_to(
+    //    &self,
+    //    parent: impl HasVertexIndex,
+    //    cond: impl Fn(&&Parent) -> bool,
+    //) -> Result<&'_ Parent, NoMatch> {
+    //    let index = parent.vertex_index();
+    //    self.get_parent(index)
+    //        .ok()
+    //        .filter(cond)
+    //        .ok_or(NoMatch::NoMatchingParent(index))
+    //}
+    //pub fn get_parent_to_ending_at(
+    //    &self,
+    //    parent_key: impl HasVertexKey,
+    //    offset: usize,
+    //) -> Result<&'_ Parent, NoMatch> {
+    //    self.filter_parent_to(parent_key, |parent| {
+    //        offset
+    //            .checked_sub(self.width)
+    //            .map(|p| parent.exists_at_pos(p))
+    //            .unwrap_or(false)
+    //    })
+    //}
     pub fn get_parent_to_starting_at(
         &self,
         parent_index: impl HasVertexIndex,
@@ -410,18 +418,6 @@ impl<G: GraphKind> VertexData<G> {
             .and_then(|parent| parent.get_index_at_pos(index_offset))
             .ok_or(NoMatch::NoMatchingParent(index))
     }
-    pub fn get_parent_to_ending_at(
-        &self,
-        parent_index: impl HasVertexIndex,
-        offset: PatternId,
-    ) -> Result<&'_ Parent, NoMatch> {
-        self.filter_parent_to(parent_index, |parent| {
-            offset
-                .checked_sub(self.width)
-                .map(|p| parent.exists_at_pos(p))
-                .unwrap_or(false)
-        })
-    }
     pub fn get_parent_at_prefix_of(
         &self,
         index: impl HasVertexIndex,
@@ -430,29 +426,29 @@ impl<G: GraphKind> VertexData<G> {
     }
     pub fn get_parent_at_postfix_of(
         &self,
-        vertex: &VertexData<G>,
+        vertex: &VertexData,
     ) -> Result<PatternIndex, NoMatch> {
         self.get_parent(vertex.vertex_index())
             .ok()
             .and_then(|parent| parent.get_index_at_postfix_of(vertex))
             .ok_or(NoMatch::NoMatchingParent(vertex.vertex_index()))
     }
-    pub fn find_ancestor_with_range(
-        &self,
-        half: Pattern,
-        range: impl PatternRangeIndex,
-    ) -> Result<PatternId, NoMatch> {
-        self.children
-            .iter()
-            .find_map(|(id, pat)| {
-                if pat[range.clone()] == half[..] {
-                    Some(*id)
-                } else {
-                    None
-                }
-            })
-            .ok_or(NoMatch::NoChildPatterns)
-    }
+    //pub fn find_ancestor_with_range(
+    //    &self,
+    //    half: Pattern,
+    //    range: impl PatternRangeIndex,
+    //) -> Result<PatternId, NoMatch> {
+    //    self.children
+    //        .iter()
+    //        .find_map(|(id, pat)| {
+    //            if pat[range.clone()] == half[..] {
+    //                Some(*id)
+    //            } else {
+    //                None
+    //            }
+    //        })
+    //        .ok_or(NoMatch::NoChildPatterns)
+    //}
     pub fn largest_postfix(&self) -> (PatternId, Child) {
         let (id, c) = self
             .children

@@ -27,7 +27,7 @@ use crate::{
 use crate::graph::vertex::{
     child::Child,
     ChildPatterns,
-    PatternId,
+    pattern::id::PatternId,
 };
 
 #[derive(Debug, Clone, Copy)]

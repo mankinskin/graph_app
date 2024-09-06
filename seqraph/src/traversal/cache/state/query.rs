@@ -57,7 +57,7 @@ impl QueryState {
         }
     }
     pub fn new<G: GraphKind, P: IntoPattern>(query: P) -> Result<Self, (NoMatch, Self)> {
-        let entry = G::Direction::head_index(query.borrow());
+        let entry = G::Direction::head_index(&query.borrow());
         let query = query.into_pattern();
         let first = *query.first().unwrap();
         let len = query.len();

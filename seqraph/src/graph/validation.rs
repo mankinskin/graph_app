@@ -10,7 +10,7 @@ pub enum ValidationError {
     InvalidPattern(PatternLocation),
 }
 
-impl<'t, 'a, G> crate::graph::Hypergraph<G>
+impl<G> crate::graph::Hypergraph<G>
 where
     G: GraphKind,
 {
@@ -39,7 +39,7 @@ where
     ) -> Result<(), ValidationError> {
         let location = location.into_pattern_location();
         let pattern = self
-            .get_pattern_at(&location)
+            .get_pattern_at(location)
             .map_err(|_| ValidationError::InvalidPattern(location))?;
         if end >= pattern.len() {
             Err(ValidationError::InvalidPatternRange(
