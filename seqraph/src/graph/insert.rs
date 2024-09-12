@@ -39,7 +39,8 @@ use crate::graph::vertex::{
     },
     TokenPosition,
 };
-use crate::graph::vertex::data::VertexData;
+use crate::graph::vertex::data::{VertexData, VertexDataBuilder};
+use crate::graph::vertex::key::VertexKey;
 use crate::graph::vertex::pattern::id::PatternId;
 use crate::graph::getters::vertex::VertexSet;
 
@@ -50,26 +51,63 @@ impl<'g, G> crate::graph::Hypergraph<G>
 where
     G: GraphKind,
 {
-    /// insert single token node
-    pub fn insert_vertex(
+    pub fn insert_vertex_builder(
+        &mut self,
+        builder: VertexDataBuilder,
+    ) -> Child {
+        let data = self.finish_vertex_builder(builder);
+        self.insert_vertex_data(data)
+    }
+    pub fn finish_vertex_builder(
+        &mut self,
+        mut builder: VertexDataBuilder,
+    ) -> VertexData {
+        builder
+            .index(self.next_vertex_index())
+            .build()
+            .unwrap()
+    }
+    /// insert raw vertex data
+    pub fn insert_vertex_data(
         &mut self,
         data: VertexData,
     ) -> Child {
         let c = Child::new(data.vertex_index(), data.width);
         self.graph.entry(data.key).or_insert_with_key(|_| data);
-        //data.index = indexmap::map::Entry::index(&entry);
-        //trace!(event = ?logger::Event::NewIndex);
         c
     }
-    /// insert single token node
+    fn insert_token_key(
+        &mut self,
+        token: Token<G::Token>,
+        key: VertexKey,
+    ) {
+        self.tokens.insert(key, token);
+        self.token_keys.insert(token, key);
+    }
+    /// insert raw vertex data
+    pub fn insert_token_data(
+        &mut self,
+        token: Token<G::Token>,
+        data: VertexData,
+    ) -> Child {
+        self.insert_token_key(token, data.key);
+        self.insert_vertex_data(data)
+    }
+    pub fn insert_token_builder(
+        &mut self,
+        token: Token<G::Token>,
+        builder: VertexDataBuilder,
+    ) -> Child {
+        let data = self.finish_vertex_builder(builder);
+        self.insert_token_data(token, data)
+    }
+    // insert single token node
     pub fn insert_token(
         &mut self,
         token: Token<G::Token>,
     ) -> Child {
         let data = VertexData::new(self.next_vertex_index(), 1);
-        self.tokens.insert(data.key, token);
-        self.token_keys.insert(token, data.key);
-        self.insert_vertex(data)
+        self.insert_token_data(token, data)
     }
     /// insert multiple token nodes
     pub fn insert_tokens(
@@ -125,7 +163,7 @@ where
     ) -> PatternId {
         // todo handle token nodes
         let (width, indices, children) = self.to_width_indices_children(indices);
-        let pattern_id = PatternId::new();
+        let pattern_id = PatternId::default();
         let data = self.expect_vertex_mut(index.vertex_index());
         data.add_pattern_no_update(pattern_id, children);
         self.add_parents_to_pattern_nodes(indices, Child::new(index, width), pattern_id);
@@ -173,9 +211,9 @@ where
         let (width, indices, children) = self.to_width_indices_children(indices);
         let index = self.next_vertex_index();
         let mut new_data = VertexData::new(index, width);
-        let pattern_id = PatternId::new();
+        let pattern_id = PatternId::default();
         new_data.add_pattern_no_update(pattern_id, children);
-        let index = self.insert_vertex(new_data);
+        let index = self.insert_vertex_data(new_data);
         self.add_parents_to_pattern_nodes(indices, index, pattern_id);
         (index, pattern_id)
     }

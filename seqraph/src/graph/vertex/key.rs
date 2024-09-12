@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 #[derive(Hash, Debug, PartialEq, Eq, From, Serialize, Deserialize, Clone, Copy, Display)]
 pub struct VertexKey(Uuid);
-impl VertexKey {
-    pub fn new() -> Self {
+impl Default for VertexKey {
+    fn default() -> Self {
         Self(Uuid::new_v4())
     }
 }

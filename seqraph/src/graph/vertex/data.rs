@@ -45,8 +45,9 @@ pub fn clone_child_patterns(children: &'_ ChildPatterns) -> impl Iterator<Item =
 #[derive(Debug, PartialEq, Eq, Clone, Builder, Serialize, Deserialize)]
 pub struct VertexData {
     pub width: TokenPosition,
-    pub key: VertexKey,
     pub index: VertexIndex,
+    #[builder(default, setter(skip))]
+    pub key: VertexKey,
     #[builder(default)]
     pub parents: VertexParents,
     #[builder(default)]
@@ -60,7 +61,7 @@ impl VertexData {
     ) -> Self {
         Self {
             width,
-            key: VertexKey::new(),
+            key: VertexKey::default(),
             index,
             parents: VertexParents::default(),
             children: ChildPatterns::default(),

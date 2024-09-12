@@ -82,7 +82,7 @@ impl GraphBuilder {
         &mut self,
         node: BuilderNode,
     ) {
-        self.graph.insert_vertex(VertexData::new(
+        self.graph.insert_vertex_data(VertexData::new(
             node.index.vertex_index(),
             node.range.clone().count(),
         ));
@@ -98,7 +98,7 @@ impl GraphBuilder {
             2 => vec![node.prefix_rule()],
             _ => vec![node.prefix_rule(), node.postfix_rule()],
         } {
-            let pid = PatternId::new();
+            let pid = PatternId::default();
             let pattern: Pattern = rule
                 .iter()
                 .enumerate()

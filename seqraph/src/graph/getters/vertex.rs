@@ -2,12 +2,12 @@ use std::borrow::Borrow;
 use std::fmt::Display;
 
 use crate::graph::vertex::child::Child;
+use crate::graph::vertex::has_vertex_key::HasVertexKey;
 use crate::graph::Hypergraph;
 use crate::graph::kind::GraphKind;
 use crate::graph::vertex::data::VertexData;
 use crate::graph::vertex::has_vertex_index::HasVertexIndex;
 use crate::graph::vertex::{VertexEntry, VertexIndex, VertexPatternView};
-use crate::graph::vertex::has_vertex_key::HasVertexKey;
 use crate::graph::vertex::key::VertexKey;
 use crate::search::NoMatch;
 
@@ -22,6 +22,19 @@ impl<T: HasVertexIndex> GetVertexIndex for T {
 impl GetVertexIndex for VertexKey {
     fn get_vertex_index<G: GraphKind>(&self, graph: &Hypergraph<G>) -> VertexIndex {
         graph.expect_index_for_key(self)
+    }
+}
+pub trait GetVertexKey {
+    fn get_vertex_key<G: GraphKind>(&self, graph: &Hypergraph<G>) -> VertexKey;
+}
+impl<T: HasVertexKey> GetVertexKey for T {
+    fn get_vertex_key<G: GraphKind>(&self, _: &Hypergraph<G>) -> VertexKey {
+        self.vertex_key()
+    }
+}
+impl GetVertexKey for VertexIndex {
+    fn get_vertex_key<G: GraphKind>(&self, graph: &Hypergraph<G>) -> VertexKey {
+        graph.expect_key_for_index(self)
     }
 }
 
@@ -53,6 +66,10 @@ pub trait VertexSet<I: VSIx> {
         self.get_vertex_mut(index)
             .unwrap_or_else(|_| panic!("Vertex {} does not exist!", index))
     }
+    fn vertex_entry(
+        &mut self,
+        index: I,
+    ) -> VertexEntry<'_>;
     fn get_vertices(
         &self,
         indices: impl Iterator<Item=I>,
@@ -70,6 +87,13 @@ pub trait VertexSet<I: VSIx> {
             .map(move |index| self.expect_vertex(index))
             .collect()
     }
+    #[track_caller]
+    fn contains_vertex(
+        &self,
+        key: I,
+    ) -> bool {
+        self.get_vertex(key).is_ok()
+    }
 }
 impl<'t, G: GraphKind, I: VSIx> VertexSet<&'t I> for Hypergraph<G>
     where Hypergraph<G>: VertexSet<I>
@@ -85,6 +109,34 @@ impl<'t, G: GraphKind, I: VSIx> VertexSet<&'t I> for Hypergraph<G>
         key: &'t I,
     ) -> Result<&mut VertexData, NoMatch> {
         self.get_vertex_mut(*key)
+    }
+    fn vertex_entry(
+        &mut self,
+        index: &'t I,
+    ) -> VertexEntry<'_> {
+        self.vertex_entry(*index)
+    }
+}
+impl<G: GraphKind> VertexSet<VertexKey> for Hypergraph<G> {
+    fn get_vertex(
+        &self,
+        key: VertexKey,
+    ) -> Result<&VertexData, NoMatch> {
+        self.graph.get(key.borrow())
+            .ok_or(NoMatch::UnknownIndex)
+    }
+    fn get_vertex_mut(
+        &mut self,
+        key: VertexKey,
+    ) -> Result<&mut VertexData, NoMatch> {
+        self.graph.get_mut(key.borrow())
+            .ok_or(NoMatch::UnknownIndex)
+    }
+    fn vertex_entry(
+        &mut self,
+        index: VertexKey,
+    ) -> VertexEntry<'_> {
+        self.graph.entry(index)
     }
 }
 impl<G: GraphKind> VertexSet<VertexIndex> for Hypergraph<G> {
@@ -104,21 +156,12 @@ impl<G: GraphKind> VertexSet<VertexIndex> for Hypergraph<G> {
             .map(|(_, d)| d)
             .ok_or(NoMatch::UnknownIndex)
     }
-}
-impl<G: GraphKind> VertexSet<VertexKey> for Hypergraph<G> {
-    fn get_vertex(
-        &self,
-        key: VertexKey,
-    ) -> Result<&VertexData, NoMatch> {
-        self.graph.get(key.borrow())
-            .ok_or(NoMatch::UnknownIndex)
-    }
-    fn get_vertex_mut(
+    fn vertex_entry(
         &mut self,
-        key: VertexKey,
-    ) -> Result<&mut VertexData, NoMatch> {
-        self.graph.get_mut(key.borrow())
-            .ok_or(NoMatch::UnknownIndex)
+        index: VertexIndex,
+    ) -> VertexEntry<'_> {
+        let key = *self.graph.get_index(index).unwrap().0;
+        self.vertex_entry(key)
     }
 }
 impl<G: GraphKind> VertexSet<Child> for Hypergraph<G> {
@@ -134,14 +177,15 @@ impl<G: GraphKind> VertexSet<Child> for Hypergraph<G> {
     ) -> Result<&mut VertexData, NoMatch> {
         self.get_vertex_mut(key.vertex_index())
     }
+    fn vertex_entry(
+        &mut self,
+        index: Child,
+    ) -> VertexEntry<'_> {
+        let key = *self.graph.get_index(index.vertex_index()).unwrap().0;
+        self.vertex_entry(key)
+    }
 }
 impl<G: GraphKind> Hypergraph<G> {
-    pub fn vertex_entry(
-        &mut self,
-        index: impl HasVertexKey,
-    ) -> VertexEntry<'_> {
-        self.graph.entry(index.vertex_key())
-    }
     pub fn get_index_for_key(
         &self,
         key: &VertexKey,
@@ -156,17 +200,24 @@ impl<G: GraphKind> Hypergraph<G> {
     ) -> VertexIndex {
         self.get_index_for_key(key).expect("Key does not exist")
     }
+    pub fn get_key_for_index(
+        &self,
+        index: impl HasVertexIndex,
+    ) -> Result<VertexKey, NoMatch> {
+        self.graph.get_index(index.vertex_index())
+            .map(|(k, _)| *k)
+            .ok_or(NoMatch::UnknownKey)
+    }
+    #[track_caller]
+    pub fn expect_key_for_index(
+        &self,
+        index: impl HasVertexIndex,
+    ) -> VertexKey {
+        self.get_key_for_index(index).expect("Key does not exist")
+    }
 
     pub fn next_vertex_index(&self) -> VertexIndex {
         self.graph.len()
-    }
-    #[track_caller]
-    pub fn contains_vertex(
-        &self,
-        key: impl GetVertexIndex,
-    ) -> bool {
-        let index = key.get_vertex_index(self);
-        self.graph.get_index(index).is_some()
     }
     //pub fn get_vertex_key(
     //    &self,
