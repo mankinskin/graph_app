@@ -1,28 +1,52 @@
-use std::fs::{File, remove_file};
-use std::io::{BufReader, BufWriter};
-use std::path::Path;
-use seqraph::HashSet;
 use ciborium::{
     de::Error as DeError,
     ser::Error as SerError,
 };
 use itertools::Itertools;
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
+use std::{
+    fs::{
+        remove_file,
+        File,
+    },
+    io::{
+        BufReader,
+        BufWriter,
+    },
+    path::Path,
+};
 use tap::Tap;
 
-use crate::graph::vocabulary::{Corpus, CORPUS_DIR, ProcessStatus, Vocabulary};
+use crate::graph::{
+    partitions::PartitionsCtx,
+    vocabulary::{
+        Corpus,
+        ProcessStatus,
+        Vocabulary,
+        CORPUS_DIR,
+    },
+};
+use seqraph::{
+    graph::vertex::{
+        key::VertexKey,
+        VertexIndex,
+    },
+    HashSet,
+};
 
 mod frequency;
 use frequency::FrequencyCtx;
-use seqraph::graph::vertex::key::VertexKey;
-use seqraph::graph::vertex::VertexIndex;
 
 mod wrappers;
-use crate::graph::partitions::PartitionsCtx;
 use wrappers::WrapperCtx;
 
-impl From<Vocabulary> for LabellingCtx {
-    fn from(vocab: Vocabulary) -> Self {
+impl From<Vocabulary> for LabellingCtx
+{
+    fn from(vocab: Vocabulary) -> Self
+    {
         Self {
             vocab,
             labels: Default::default(),
@@ -41,7 +65,7 @@ impl LabellingCtx
 {
     pub fn new(vocab: Vocabulary) -> Self
     {
-        let mut ctx = Self {
+        Self {
             vocab,
             labels: Default::default(),
             status: ProcessStatus::Containment,
@@ -51,16 +75,13 @@ impl LabellingCtx
             //    )
             //    .cloned(),
             //),
-        };
-        ctx
+        }
     }
     pub fn target_file_path(&self) -> impl AsRef<Path>
     {
         CORPUS_DIR.join(&self.vocab.name)
     }
-    pub fn write_to_target_file(
-        &self,
-    ) -> Result<(), SerError<std::io::Error>>
+    pub fn write_to_target_file(&self) -> Result<(), SerError<std::io::Error>>
     {
         self.write_to_file(self.target_file_path())
     }
@@ -74,7 +95,8 @@ impl LabellingCtx
         {
             remove_file(&file_path);
         }
-        let file = File::create(file_path).map_err(|e| SerError::Io(e))?;
+        std::fs::create_dir_all(file_path.as_ref().with_file_name(""));
+        let file = File::create(file_path).map_err(SerError::Io)?;
         let mut writer = BufWriter::new(file);
         ciborium::into_writer(&self, writer)
     }
@@ -83,7 +105,7 @@ impl LabellingCtx
     ) -> Result<Self, DeError<std::io::Error>>
     {
         println!("Read Vocabulary from {}", file_path.as_ref().display());
-        let file = File::open(file_path).map_err(|e| DeError::Io(e))?;
+        let file = File::open(file_path).map_err(DeError::Io)?;
         let mut reader = BufReader::new(file);
         ciborium::from_reader(reader)
     }
@@ -103,7 +125,9 @@ impl LabellingCtx
         {
             FrequencyCtx::from(&mut *self).frequency_pass();
             self.write_to_target_file();
-        } else {
+        }
+        else
+        {
             println!("Frequency Pass already processed.");
         }
     }

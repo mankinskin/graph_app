@@ -18,7 +18,7 @@ mod graph;
 #[cfg(not(debug_assertions))]
 mod shared;
 
-const OTTOS_MOPS_CORPUS: [&'static str; 4] = [
+const OTTOS_MOPS_CORPUS: [&str; 4] = [
     "ottos mops trotzt",
     "otto: fort mops fort",
     "ottos mops hopst fort",
@@ -37,8 +37,5 @@ fn read_corpus(file_path: impl AsRef<Path>) -> String
         .delimiter(b'\t')
         .from_path(file_path)
         .expect("Corpus file not found.");
-    csv.records()
-        .into_iter()
-        .map(|r| r.unwrap()[1].to_string())
-        .join(" ")
+    csv.records().map(|r| r.unwrap()[1].to_string()).join(" ")
 }

@@ -1,12 +1,35 @@
+use crate::graph::{
+    containment::TextLevelCtx,
+    traversal::{
+        TopDown,
+        TraversalPolicy,
+    },
+    vocabulary::entry::{
+        HasVertexEntries,
+        VocabEntry,
+    },
+};
 use derive_more::{
     Deref,
     From,
 };
 use derive_new::new;
-
-use crate::graph::containment::TextLevelCtx;
+use itertools::Itertools;
 use seqraph::{
-    graph::Hypergraph,
+    graph::{
+        vertex::{
+            child::Child,
+            has_vertex_index::{
+                HasVertexIndex,
+                ToChild,
+            },
+            has_vertex_key::HasVertexKey,
+            key::VertexKey,
+            wide::Wide,
+            VertexIndex,
+        },
+        Hypergraph,
+    },
     HashMap,
     HashSet,
 };
@@ -14,31 +37,18 @@ use serde::{
     Deserialize,
     Serialize,
 };
-use std::borrow::Borrow;
-use std::cmp::Ordering;
-use std::fmt::Display;
-use std::ops::Range;
-use std::path::{
-    absolute,
-    Path,
-    PathBuf,
+use std::{
+    borrow::Borrow,
+    cmp::Ordering,
+    fmt::Display,
+    ops::Range,
+    path::{
+        absolute,
+        Path,
+        PathBuf,
+    },
 };
-use itertools::Itertools;
 use tap::Tap;
-use seqraph::graph::vertex::{
-    has_vertex_index::HasVertexIndex
-    ,
-    VertexIndex
-
-    ,
-    wide::Wide,
-};
-use seqraph::graph::vertex::child::Child;
-use seqraph::graph::vertex::has_vertex_index::ToChild;
-use seqraph::graph::vertex::key::VertexKey;
-use crate::graph::traversal::{TopDown, TraversalPolicy};
-
-use crate::graph::vocabulary::entry::{HasVertexEntries, VocabEntry};
 
 pub mod entry;
 
@@ -59,14 +69,14 @@ pub mod entry;
 pub struct NGramId
 {
     #[deref]
-    pub id: usize,
+    pub key: VertexKey,
     pub width: usize,
 }
-impl HasVertexIndex for NGramId
+impl HasVertexKey for NGramId
 {
-    fn vertex_index(&self) -> VertexIndex
+    fn vertex_key(&self) -> VertexKey
     {
-        self.id
+        self.key
     }
 }
 impl Wide for NGramId
@@ -78,7 +88,7 @@ impl Wide for NGramId
 }
 
 lazy_static::lazy_static! {
-    pub static ref CORPUS_DIR: PathBuf = absolute(PathBuf::from_iter([".", "test", "corpus"])).unwrap();
+    pub static ref CORPUS_DIR: PathBuf = absolute(PathBuf::from_iter([".", "test", "cache"])).unwrap();
 }
 #[derive(Debug, Default, Deref, Serialize, Deserialize, new)]
 pub struct Corpus
@@ -95,7 +105,7 @@ impl Corpus
     }
 }
 #[derive(
-    Default, Debug, PartialEq, Eq, Copy, Clone, Ord, Serialize, Deserialize,
+    Default, Debug, PartialEq, Eq, Copy, Clone, Serialize, Deserialize,
 )]
 pub enum ProcessStatus
 {
@@ -113,7 +123,17 @@ impl PartialOrd for ProcessStatus
         other: &Self,
     ) -> Option<Ordering>
     {
-        (*self as usize).partial_cmp(&(*other as usize))
+        Some((*self as usize).cmp(&(*other as usize)))
+    }
+}
+impl Ord for ProcessStatus
+{
+    fn cmp(
+        &self,
+        other: &Self,
+    ) -> Ordering
+    {
+        (*self as usize).cmp(&(*other as usize))
     }
 }
 #[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -123,8 +143,8 @@ pub struct Vocabulary
     pub containment: Hypergraph,
     pub name: String,
     pub ids: HashMap<String, NGramId>,
-    pub leaves: HashSet<VertexKey>,
-    pub roots: HashSet<VertexKey>,
+    pub leaves: HashSet<NGramId>,
+    pub roots: HashSet<NGramId>,
     pub entries: HashMap<VertexKey, VocabEntry>,
 }
 
@@ -145,11 +165,10 @@ impl Vocabulary
     pub fn from_corpus(corpus: &Corpus) -> Self
     {
         let mut vocab: Vocabulary = Default::default();
-        vocab.name = corpus.name.clone();
+        vocab.name.clone_from(&corpus.name);
         let N: usize = corpus.iter().map(|t| t.len()).max().unwrap();
         for n in 1..=N
         {
-            let c = vocab.containment.vertex_count();
             for (i, text) in corpus.iter().enumerate()
             {
                 TextLevelCtx::new(i, text, n).on_nlevel(&mut vocab);
@@ -160,22 +179,26 @@ impl Vocabulary
         vocab
     }
     /// get sub-vertex at range relative to index
-    pub fn get_vertex_subrange(&self, index: &VertexIndex, range: Range<usize>) -> Child {
+    pub fn get_vertex_subrange(
+        &self,
+        index: &VertexKey,
+        range: Range<usize>,
+    ) -> Child
+    {
         let mut entry = self.get_vertex(index).unwrap();
         let mut wrap = 0..entry.len();
         assert!(wrap.start <= range.start && wrap.end >= range.end);
 
-        while range != wrap {
-            let next =
-                TopDown::next_nodes(&entry)
+        while range != wrap
+        {
+            let next = TopDown::next_nodes(&entry)
                 .into_iter()
-                .map(|(pos, c)|
-                         (c.vertex_index(), pos..pos + c.width())
-                    //pos <= range.start || pos + c.width() >= range.end
+                .map(
+                    |(pos, c)| (c.vertex_key(), pos..pos + c.width()), //pos <= range.start || pos + c.width() >= range.end
                 )
-                .find_or_first(|(_, w)|
+                .find_or_first(|(_, w)| {
                     w.start == range.start || w.end == range.end
-                )
+                })
                 .unwrap();
 
             entry = self.get_vertex(&next.0).unwrap();

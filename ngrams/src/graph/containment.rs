@@ -9,24 +9,27 @@ use serde::{
     Serialize,
 };
 
-use seqraph::graph::vertex::{
-    has_vertex_index::{
-        ToChild,
-        HasVertexIndex,
-    },
-    ChildPatterns,
-};
-use seqraph::graph::vertex::child::Child;
-use seqraph::graph::vertex::data::VertexDataBuilder;
-use seqraph::graph::vertex::key::VertexKey;
-use seqraph::graph::vertex::pattern::id::PatternId;
 use crate::graph::vocabulary::{
     entry::{
-        VocabEntry,
         HasVertexEntries,
+        VocabEntry,
     },
     NGramId,
     Vocabulary,
+};
+use seqraph::graph::vertex::{
+    child::Child,
+    data::VertexDataBuilder,
+    has_vertex_index::{
+        HasVertexIndex,
+        ToChild,
+    },
+    has_vertex_key::HasVertexKey,
+    key::VertexKey,
+    pattern::id::PatternId,
+    token::Token,
+    wide::Wide,
+    ChildPatterns,
 };
 
 #[derive(
@@ -108,7 +111,6 @@ impl<'a> NGramFrequencyCtx<'a>
         vocab: &mut Vocabulary,
     )
     {
-        let id = NGramId::new(vocab.len(), self.n);
         let children = self.find_children(vocab);
 
         if self.n == 1 || !children.is_empty()
@@ -117,31 +119,41 @@ impl<'a> NGramFrequencyCtx<'a>
                 occurrences: FromIterator::from_iter([self.occurrence]),
                 ngram: self.ngram.clone(),
             };
+            let mut builder = VertexDataBuilder::default();
+            builder.width(self.n);
+            if self.n != 1
+            {
+                builder.children(children.clone());
+            }
+            let data = vocab.containment.finish_vertex_builder(builder);
+            let id = NGramId::new(data.key, self.n);
+            vocab.ids.insert(self.ngram.clone(), id);
+            vocab.entries.insert(id.vertex_key(), entry);
             if self.n == 1
             {
-                vocab.leaves.insert(id.vertex_index());
+                vocab.containment.insert_token_data(
+                    Token::Element(self.ngram.chars().next().unwrap()),
+                    data,
+                );
+                vocab.leaves.insert(id);
+            }
+            else
+            {
+                vocab.containment.insert_vertex_data(data);
             }
             if self.n == self.level_ctx.text.len()
             {
-                vocab.roots.insert(id.vertex_index());
+                vocab.roots.insert(id);
             }
-            vocab.ids.insert(self.ngram.clone(), id);
-            vocab.entries.insert(id.vertex_index(), entry);
-            let data = VertexDataBuilder::default()
-                .key(VertexKey::new())
-                .index(vocab.containment.next_vertex_index())
-                .width(self.n.into())
-                .children(children.clone())
-                .build()
-                .unwrap();
-            vocab.containment.insert_vertex(data);
             for (pid, pat) in children
             {
-                vocab.containment.add_parents_to_pattern_nodes(
-                    pat,
-                    id.to_child(),
-                    pid,
+                let child = Child::new(
+                    vocab.containment.expect_index_for_key(&id),
+                    id.width(),
                 );
+                vocab
+                    .containment
+                    .add_parents_to_pattern_nodes(pat, child, pid);
             }
         }
     }
@@ -163,7 +175,7 @@ impl<'a> NGramFrequencyCtx<'a>
                 let x = String::from_iter(ni);
                 let b =
                     ngram.get((i + n)..ngram.len()).filter(|s| !s.is_empty());
-                let pid = PatternId::new();
+                let pid = PatternId::default();
 
                 (
                     pid,
@@ -172,19 +184,14 @@ impl<'a> NGramFrequencyCtx<'a>
                         .flatten()
                         .map(|s| {
                             let id = vocab.ids.get(s).unwrap();
-                            let ctx = vocab.get_vertex(id).unwrap();
-                            id.to_child()
+                            Child::new(
+                                vocab.containment.expect_index_for_key(id),
+                                id.width(),
+                            )
                         })
                         .collect(),
                 )
-                //if entry.needs_node() {
-                //if !children.covers_range(i..i+n, vocab) {
-                //}
-                //}
             })
             .collect()
-        //(1..topn).rev()
-        //    .flat_map(|n|
-        //).collect()
     }
 }

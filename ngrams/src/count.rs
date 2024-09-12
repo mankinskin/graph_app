@@ -9,7 +9,6 @@ pub fn ngram_set(s: String) -> Vec<HashMap<String, usize>>
     let slen: usize = s.len();
     let N_MAX: usize = 10;
     (1..N_MAX)
-        .into_iter()
         .map(|n| {
             let ngrams = s.chars().ngrams(n);
             ngrams
@@ -18,7 +17,7 @@ pub fn ngram_set(s: String) -> Vec<HashMap<String, usize>>
                     //println!("{}", x);
                     set.entry(x).and_modify(|v| *v += 1).or_insert_with(|| {
                         len += 1;
-                        1 as usize
+                        1_usize
                     });
                     (len, set)
                 })

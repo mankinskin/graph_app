@@ -5,21 +5,21 @@ use pretty_assertions::assert_eq;
 
 use seqraph::HashSet;
 
-use crate::graph::vocabulary::Corpus;
 use crate::graph::{
+    labelling::LabellingCtx,
     vocabulary::{
         entry::HasVertexEntries,
+        Corpus,
         Vocabulary,
     },
 };
-use crate::graph::labelling::{LabellingCtx};
 
 mod containment;
 mod labelling;
 mod partitions;
+pub mod tests;
 mod traversal;
 mod vocabulary;
-pub mod tests;
 
 pub fn test_graph()
 {
@@ -30,8 +30,7 @@ pub fn test_graph()
     let mut image = LabellingCtx::from_corpus(&corpus);
 
     {
-        tests::TestCtx::new(&image.vocab, &corpus)
-            .test_containment();
+        tests::TestCtx::new(&image.vocab, &corpus).test_containment();
     }
 
     image.label_freq();
@@ -55,7 +54,6 @@ pub fn test_graph()
             &image.labels,
         );
         ctx.test_wrap();
-
     }
 
     image.label_part();
@@ -66,4 +64,3 @@ pub fn test_graph()
         ctx.test_part();
     }
 }
-

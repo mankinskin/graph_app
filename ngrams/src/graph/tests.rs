@@ -1,9 +1,14 @@
+use crate::graph::labelling::LabellingCtx;
+use crate::graph::vocabulary::entry::HasVertexEntries;
+use crate::graph::vocabulary::{
+    Corpus,
+    Vocabulary,
+};
 use itertools::Itertools;
 use ngram::NGram;
+use pretty_assertions::assert_eq;
+use seqraph::graph::vertex::key::VertexKey;
 use seqraph::HashSet;
-use crate::graph::labelling::LabellingCtx;
-use crate::graph::vocabulary::{Corpus, Vocabulary};
-use crate::graph::vocabulary::entry::HasVertexEntries;
 #[derive(Debug)]
 pub struct TestCtx<'a>
 {
@@ -77,77 +82,73 @@ impl<'a> TestCtx<'a>
 pub struct LabelTestCtx<'a>
 {
     ctx: TestCtx<'a>,
-    labels: &'a HashSet<usize>,
+    labels: &'a HashSet<VertexKey>,
     frequency_test: HashSet<String>,
     wrapper_test: HashSet<String>,
     partition_test: HashSet<String>,
 }
-impl<'a> LabelTestCtx<'a> {
+impl<'a> LabelTestCtx<'a>
+{
     pub fn new(
         ctx: TestCtx<'a>,
-        labels: &'a HashSet<usize>,
-    ) -> Self {
-        let frequency_test: HashSet<String> =
-            [
-                "ot",
-                "s ",
-                "so",
-                "os",
-                "t ",
-                "ops",
-                "otto",
-                " mops ",
-                "otto: ",
-                " fort",
-                "ottos mops ",
-            ]
-            .into_iter()
+        labels: &'a HashSet<VertexKey>,
+    ) -> Self
+    {
+        let frequency_test: HashSet<String> = [
+            "ot",
+            "s ",
+            "so",
+            "os",
+            "t ",
+            "ops",
+            "otto",
+            " mops ",
+            "otto: ",
+            " fort",
+            "ottos mops ",
+        ]
+        .into_iter()
+        .map(ToString::to_string)
+        .collect();
+        let wrapper_test: HashSet<String> = [
+            // Todo: check for correctness
+            " fort ",
+            " fort mops ",
+            " fort mops fort",
+            " mops fort",
+            "ops ",
+            "ops fort",
+            "os ",
+            "os mops ",
+            "oso",
+            "oso",
+            "otto: fort",
+            "otto: fort ",
+            "otto: fort mops ",
+            "ottos",
+            "ottos ",
+            "s fort",
+            "s mops ",
+            "sos",
+            "soso",
+            "t fort",
+            "t mops ",
+            "t mops fort",
+        ]
+        .into_iter()
+        .map(ToString::to_string)
+        .collect();
+        let partition_test: HashSet<String> = (&[] as &[&'static str])
+            .iter()
             .map(ToString::to_string)
             .collect();
-        let wrapper_test: HashSet<String> =
-            [
-                // Todo: check for correctness
-                " fort ",
-                " fort mops ",
-                " fort mops fort",
-                " mops fort",
-                "ops ",
-                "ops fort",
-                "os ",
-                "os mops ",
-                "oso",
-                "oso",
-                "otto: fort",
-                "otto: fort ",
-                "otto: fort mops ",
-                "ottos",
-                "ottos ",
-                "s fort",
-                "s mops ",
-                "sos",
-                "soso",
-                "t fort",
-                "t mops ",
-                "t mops fort",
-            ]
+        for (a, b) in [&frequency_test, &wrapper_test, &partition_test]
             .into_iter()
-            .map(ToString::to_string)
-            .collect();
-        let partition_test: HashSet<String> =
-            (&[
-            ] as &[&'static str])
-                .into_iter()
-                .map(ToString::to_string)
-                .collect();
-        for (a, b) in [
-            &frequency_test,
-            &wrapper_test,
-            &partition_test,
-        ].into_iter().combinations(2)
+            .combinations(2)
             .map(|v| (v[0], v[1]))
         {
             assert_eq!(
-                a.intersection(&b).cloned().collect_vec(),
+                a.intersection(b).cloned().collect_vec(),
                 Vec::<String>::default(),
             );
         }
@@ -166,7 +167,6 @@ impl<'a> LabelTestCtx<'a> {
         assert_eq!(
             label_strings
                 .intersection(&roots_test.iter().cloned().collect())
-                .into_iter()
                 .cloned()
                 .sorted()
                 .collect_vec(),
@@ -180,7 +180,6 @@ impl<'a> LabelTestCtx<'a> {
         assert_eq!(
             label_strings
                 .intersection(&leaves_test.iter().cloned().collect())
-                .into_iter()
                 .cloned()
                 .sorted()
                 .collect_vec(),
@@ -192,12 +191,8 @@ impl<'a> LabelTestCtx<'a> {
         self.ctx
             .get_leaves_test()
             .iter()
-            .chain(
-                self.ctx.get_roots_test().iter()
-            )
-            .chain(
-                self.frequency_test.iter()
-            )
+            .chain(self.ctx.get_roots_test().iter())
+            .chain(self.frequency_test.iter())
             .sorted()
             .cloned()
             .collect()
@@ -206,9 +201,7 @@ impl<'a> LabelTestCtx<'a> {
     {
         self.get_frequency_test()
             .iter()
-            .chain(
-                self.wrapper_test.iter()
-            )
+            .chain(self.wrapper_test.iter())
             .sorted()
             .cloned()
             .collect()
@@ -217,14 +210,13 @@ impl<'a> LabelTestCtx<'a> {
     {
         self.get_wrapper_test()
             .iter()
-            .chain(
-                self.partition_test.iter()
-            )
+            .chain(self.partition_test.iter())
             .sorted()
             .cloned()
             .collect()
     }
-    pub fn label_strings_set(&self) -> HashSet<String> {
+    pub fn label_strings_set(&self) -> HashSet<String>
+    {
         self.labels
             .iter()
             .map(|vi| self.ctx.vocab.get_vertex(vi).unwrap().ngram.clone())
@@ -233,12 +225,13 @@ impl<'a> LabelTestCtx<'a> {
     pub fn test_freq(&self)
     {
         let Self {
-            ctx: TestCtx {
-                vocab,
-                corpus,
-                leaves_test,
-                roots_test,
-            },
+            ctx:
+                TestCtx {
+                    vocab,
+                    corpus,
+                    leaves_test,
+                    roots_test,
+                },
             labels,
             ..
         } = self;
@@ -254,12 +247,13 @@ impl<'a> LabelTestCtx<'a> {
     pub fn test_wrap(&self)
     {
         let Self {
-            ctx: TestCtx {
-                vocab,
-                corpus,
-                leaves_test,
-                roots_test,
-            },
+            ctx:
+                TestCtx {
+                    vocab,
+                    corpus,
+                    leaves_test,
+                    roots_test,
+                },
             labels,
             ..
         } = self;
@@ -274,12 +268,13 @@ impl<'a> LabelTestCtx<'a> {
     pub fn test_part(&self)
     {
         let Self {
-            ctx: TestCtx {
-                vocab,
-                corpus,
-                leaves_test,
-                roots_test,
-            },
+            ctx:
+                TestCtx {
+                    vocab,
+                    corpus,
+                    leaves_test,
+                    roots_test,
+                },
             labels,
             ..
         } = self;

@@ -7,30 +7,36 @@ use derive_more::{
 };
 use itertools::Itertools;
 
-use seqraph::HashSet;
-use seqraph::graph::vertex::{
-    child::Child,
-    location::child::ChildLocation,
-    VertexIndex,
-};
-use seqraph::graph::vertex::has_vertex_index::HasVertexIndex;
-use crate::graph::traversal::{
-    BottomUp,
-    TopDown,
-    TraversalPolicy,
-};
 use crate::graph::{
     containment::TextLocation,
     labelling::LabellingCtx,
+    traversal::{
+        BottomUp,
+        TopDown,
+        TraversalPolicy,
+    },
     vocabulary::{
         entry::{
             HasVertexEntries,
             VertexCtx,
         },
+        NGramId,
+        ProcessStatus,
         Vocabulary,
     },
 };
-use crate::graph::vocabulary::ProcessStatus;
+use seqraph::{
+    graph::vertex::{
+        child::Child,
+        has_vertex_index::HasVertexIndex,
+        has_vertex_key::HasVertexKey,
+        key::VertexKey,
+        location::child::ChildLocation,
+        wide::Wide,
+        VertexIndex,
+    },
+    HashSet,
+};
 
 #[derive(Debug, Deref, From, DerefMut)]
 pub struct FrequencyCtx<'b>
@@ -44,17 +50,17 @@ impl<'b> FrequencyCtx<'b>
     pub fn entry_next(
         &self,
         entry: &VertexCtx,
-    ) -> Vec<VertexIndex>
+    ) -> Vec<NGramId>
     {
         let next = TopDown::next_nodes(entry);
-        next.into_iter().map(|(_, c)| c.index).collect()
+        next.into_iter().map(|(_, c)| c).collect()
     }
-    fn next_nodes(entry: &VertexCtx) -> Vec<(usize, VertexIndex)>
+    fn next_nodes(entry: &VertexCtx) -> Vec<(usize, NGramId)>
     {
         entry
             .direct_parents()
             .iter()
-            .map(|(&id, p)| {
+            .flat_map(|(&id, p)| {
                 p.pattern_indices.iter().map(move |ploc| {
                     (
                         entry.vocab.containment.expect_child_offset(
@@ -64,11 +70,13 @@ impl<'b> FrequencyCtx<'b>
                                 ploc.sub_index,
                             ),
                         ),
-                        id,
+                        NGramId::new(
+                            entry.vocab.containment.expect_key_for_index(id),
+                            p.width,
+                        ),
                     )
                 })
             })
-            .flatten()
             .collect_vec()
     }
     pub fn entry_is_frequent(
@@ -79,19 +87,19 @@ impl<'b> FrequencyCtx<'b>
         let mut cover: HashSet<_> = Default::default();
         let mut occ_set: HashSet<_> = Default::default(); //entry.occurrences.clone();
         let mut queue: VecDeque<_> =
-            FromIterator::from_iter(Self::next_nodes(&entry));
+            FromIterator::from_iter(Self::next_nodes(entry));
         while let Some((off, p)) = queue.pop_front()
         {
             let pe = entry.vocab.get_vertex(&p).unwrap();
             if let Some(occ) = {
-                if self.labels.contains(&p)
+                if self.labels.contains(&p.vertex_key())
                 {
                     let occ: HashSet<_> = pe
                         .occurrences
                         .iter()
                         .map(|loc| TextLocation::new(loc.texti, loc.x + off))
                         .collect();
-                    (occ.difference(&occ_set).count() != 0).then(|| occ)
+                    (occ.difference(&occ_set).count() != 0).then_some(occ)
                 }
                 else
                 {
@@ -111,9 +119,9 @@ impl<'b> FrequencyCtx<'b>
                 );
             }
         }
-        let f = cover
-            .iter()
-            .any(|(p, _)| entry.vocab.get_vertex(p).unwrap().count() < entry.count());
+        let f = cover.iter().any(|(p, _)| {
+            entry.vocab.get_vertex(p).unwrap().count() < entry.count()
+        });
         if f
         {
             println!("{}", entry.ngram);
@@ -122,27 +130,28 @@ impl<'b> FrequencyCtx<'b>
     }
     pub fn on_node(
         &mut self,
-        node: &VertexIndex,
-    ) -> Vec<VertexIndex>
+        node: &VertexKey,
+    ) -> Vec<NGramId>
     {
         let entry = self.vocab.get_vertex(node).unwrap();
         let next = self.entry_next(&entry);
         if self.entry_is_frequent(&entry)
         {
-            let index = entry.data.vertex_index();
+            let index = entry.data.vertex_key();
             self.labels.insert(index);
             next
-        } else {
+        }
+        else
+        {
             next
         }
     }
-    pub fn frequency_pass(
-        &mut self,
-    )
+    pub fn frequency_pass(&mut self)
     {
         println!("Frequency Pass");
         let start = TopDown::starting_nodes(&self.vocab);
-        self.labels.extend(start.iter());
+        self.labels
+            .extend(start.iter().map(HasVertexKey::vertex_key));
         let mut queue = Queue::new(VecDeque::default(), &self.vocab);
         for node in start
         {
@@ -159,16 +168,17 @@ impl<'b> FrequencyCtx<'b>
             }
         }
         let bottom = BottomUp::starting_nodes(&self.vocab);
-        self.labels.extend(bottom);
+        self.labels
+            .extend(bottom.iter().map(HasVertexKey::vertex_key));
         self.status = ProcessStatus::Frequency;
     }
 }
 #[derive(Debug, Deref, DerefMut)]
-pub struct Queue(pub VecDeque<usize>);
+pub struct Queue(pub VecDeque<NGramId>);
 
 impl Queue
 {
-    pub fn new<T: IntoIterator<Item = usize>>(
+    pub fn new<T: IntoIterator<Item = NGramId>>(
         iter: T,
         vocab: &Vocabulary,
     ) -> Self
@@ -177,7 +187,7 @@ impl Queue
         v.extend_queue(iter, vocab);
         v
     }
-    pub fn extend_queue<T: IntoIterator<Item = usize>>(
+    pub fn extend_queue<T: IntoIterator<Item = NGramId>>(
         &mut self,
         iter: T,
         vocab: &Vocabulary,
@@ -187,9 +197,7 @@ impl Queue
         self.0 = self
             .0
             .drain(..)
-            .sorted_by_key(|i| {
-                (std::cmp::Reverse(vocab.containment.expect_index_width(i)), *i)
-            })
+            .sorted_by_key(|i| std::cmp::Reverse(i.width()))
             .dedup()
             .collect();
     }

@@ -2,15 +2,16 @@ use std::collections::VecDeque;
 
 use itertools::Itertools;
 
-use seqraph::graph::vertex::{
-    child::Child,
-    wide::Wide,
-    VertexIndex,
-};
-use seqraph::graph::vertex::key::VertexKey;
 use crate::graph::vocabulary::{
     entry::VertexCtx,
+    NGramId,
     Vocabulary,
+};
+use seqraph::graph::vertex::{
+    child::Child,
+    key::VertexKey,
+    wide::Wide,
+    VertexIndex,
 };
 
 pub struct BottomUp;
@@ -19,7 +20,7 @@ pub struct TopDown;
 pub trait TraversalPolicy
 {
     type Next;
-    fn starting_nodes(vocab: &Vocabulary) -> VecDeque<VertexIndex>;
+    fn starting_nodes(vocab: &Vocabulary) -> VecDeque<NGramId>;
     fn next_nodes(entry: &VertexCtx<'_>) -> Vec<Self::Next>;
     fn order_top_bottom<T>(
         prev: T,
@@ -28,8 +29,8 @@ pub trait TraversalPolicy
 }
 impl TraversalPolicy for BottomUp
 {
-    type Next = VertexKey;
-    fn starting_nodes(vocab: &Vocabulary) -> VecDeque<VertexKey>
+    type Next = NGramId;
+    fn starting_nodes(vocab: &Vocabulary) -> VecDeque<NGramId>
     {
         FromIterator::from_iter(vocab.leaves.iter().cloned())
     }
@@ -46,16 +47,20 @@ impl TraversalPolicy for BottomUp
             .data
             .parents
             .iter()
-            .filter_map(
-                |(&id, p)| (p.width == entry.entry.ngram.len() + 1).then(|| id), //Some(id)
-            )
+            .filter(|(&id, p)| p.width == entry.entry.ngram.len() + 1)
+            .map(|(id, p)| {
+                NGramId::new(
+                    entry.vocab.containment.expect_key_for_index(id),
+                    entry.data.width,
+                )
+            })
             .collect_vec()
     }
 }
 impl TraversalPolicy for TopDown
 {
-    type Next = (usize, Child);
-    fn starting_nodes(vocab: &Vocabulary) -> VecDeque<VertexKey>
+    type Next = (usize, NGramId);
+    fn starting_nodes(vocab: &Vocabulary) -> VecDeque<NGramId>
     {
         FromIterator::from_iter(vocab.roots.iter().cloned())
     }
@@ -73,10 +78,18 @@ impl TraversalPolicy for TopDown
             .children
             .iter()
             .flat_map(|(_, pat)| {
-                pat.iter().enumerate().filter_map(|(off, c)| {
-                    (c.width() + 1 == entry.entry.ngram.len())
-                        .then(|| (off, *c))
-                })
+                pat.iter()
+                    .enumerate()
+                    .filter(|(off, c)| c.width() + 1 == entry.entry.ngram.len())
+                    .map(|(off, c)| {
+                        (
+                            off,
+                            NGramId::new(
+                                entry.vocab.containment.expect_key_for_index(c),
+                                entry.data.width,
+                            ),
+                        )
+                    })
             })
             .sorted_by_key(|&(off, _)| off)
             .collect_vec()

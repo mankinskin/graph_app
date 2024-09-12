@@ -4,33 +4,34 @@ use serde::{
     Serialize,
 };
 
-use seqraph::{HashMap, HashSet};
-use seqraph::graph::vertex::{data::VertexData, VertexEntry, IndexedVertexEntry, VertexIndex};
-use seqraph::graph::vertex::has_vertex_index::HasVertexIndex;
-use seqraph::graph::vertex::parent::Parent;
+use seqraph::graph::{
+    getters::vertex::VertexSet,
+    vertex::has_vertex_key::HasVertexKey,
+};
+use seqraph::{
+    graph::vertex::{
+        child::Child,
+        data::VertexData,
+        has_vertex_index::HasVertexIndex,
+        key::VertexKey,
+        parent::Parent,
+        IndexedVertexEntry,
+        VertexEntry,
+        VertexIndex,
+    },
+    HashMap,
+    HashSet,
+};
 
-use crate::graph::containment::TextLocation;
-use crate::graph::vocabulary::{NGramId, Vocabulary};
+use crate::graph::{
+    containment::TextLocation,
+    vocabulary::{
+        NGramId,
+        Vocabulary,
+    },
+};
 use std::borrow::Borrow;
 
-
-// define how to access a graph
-// useful if you store extra labels for nodes by which to query
-pub trait HasVertexEntries<K: ?Sized>
-{
-    fn entry(
-        &mut self,
-        key: K,
-    ) -> Option<IndexedVertexEntry<'_>>;
-    fn get_vertex(
-        &self,
-        key: &K,
-    ) -> Option<VertexCtx>;
-    fn get_vertex_mut(
-        &mut self,
-        key: &K,
-    ) -> Option<VertexCtxMut>;
-}
 #[derive(Debug, Deref, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct VocabEntry
 {
@@ -75,50 +76,71 @@ pub struct VertexCtxMut<'a>
     #[deref]
     pub entry: &'a mut VocabEntry,
 }
+// define how to access a graph
+// useful if you store extra labels for nodes by which to query
+pub trait HasVertexEntries<K: ?Sized>
+{
+    fn entry(
+        &mut self,
+        key: K,
+    ) -> VertexEntry<'_>;
+    fn get_vertex(
+        &self,
+        key: &K,
+    ) -> Option<VertexCtx>;
+    fn get_vertex_mut(
+        &mut self,
+        key: &K,
+    ) -> Option<VertexCtxMut>;
+}
 pub trait VocabIndex: HasVertexIndex {}
 //impl VocabIndex for VertexIndex {}
 //impl VocabIndex for NGramId {}
 macro_rules! impl_index_vocab {
-    ($t:ty) => {
+    ($t:ty, ($_self:ident, $ind:ident) => $func:expr) => {
         impl HasVertexEntries<$t> for Vocabulary
         {
             fn entry(
-                &mut self,
-                key: $t,
-            ) -> Option<IndexedVertexEntry<'_>>
+                &mut $_self,
+                $ind: $t,
+            ) -> VertexEntry<'_>
             {
-                self.containment.vertex_entry(key)
+                $_self.containment.vertex_entry($func)
             }
             fn get_vertex(
-                &self,
-                index: &$t,
+                &$_self,
+                $ind: &$t,
             ) -> Option<VertexCtx>
             {
-                self.containment.get_vertex_data(index).ok().map(|data| {
+                let key = $func;
+                $_self.containment.get_vertex(&key).ok().map(|data| {
                     VertexCtx {
                         data,
-                        entry: self.entries.get(index).unwrap(),
-                        vocab: self,
+                        entry: $_self.entries.get(&key).unwrap(),
+                        vocab: $_self,
                     }
                 })
             }
             fn get_vertex_mut(
-                &mut self,
-                index: &$t,
+                &mut $_self,
+                $ind: &$t,
             ) -> Option<VertexCtxMut>
             {
-                self.containment.get_vertex_data_mut(index).ok().map(|data| {
+                let key = $func;
+                $_self.containment.get_vertex_mut(&key).ok().map(|data| {
                     VertexCtxMut {
                         data,
-                        entry: self.entries.get_mut(index).unwrap(),
+                        entry: $_self.entries.get_mut(&key).unwrap(),
                     }
                 })
             }
         }
     };
 }
-impl_index_vocab!(VertexIndex);
-impl_index_vocab!(NGramId);
+impl_index_vocab!(VertexKey, (self, key) => key.vertex_key());
+impl_index_vocab!(NGramId, (self, key) => key.vertex_key());
+impl_index_vocab!(Child, (self, index) => self.containment.expect_key_for_index(index.vertex_index()));
+impl_index_vocab!(VertexIndex, (self, index) => self.containment.expect_key_for_index(index));
 
 macro_rules! impl_index_vocab_str {
     ($t:ty) => {
@@ -127,7 +149,7 @@ macro_rules! impl_index_vocab_str {
             fn entry(
                 &mut self,
                 key: $t,
-            ) -> Option<IndexedVertexEntry<'_>>
+            ) -> VertexEntry<'_>
             {
                 self.entry(*self.ids.get(key.borrow() as &'_ str).unwrap())
             }

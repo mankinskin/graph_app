@@ -1,12 +1,29 @@
-use std::cmp::{Ordering, Reverse};
-use std::num::NonZeroUsize;
-use derive_more::{Deref, DerefMut};
+use crate::graph::{
+    partitions::{
+        container::PartitionCell,
+        NodePartitionCtx,
+    },
+    vocabulary::NGramId,
+};
+use derive_more::{
+    Deref,
+    DerefMut,
+};
 use itertools::Itertools;
-use seqraph::graph::vertex::child::Child;
-use seqraph::graph::vertex::has_vertex_index::HasVertexIndex;
-use seqraph::graph::vertex::wide::Wide;
-use crate::graph::partitions::container::PartitionCell;
-use crate::graph::partitions::NodePartitionCtx;
+use ngram::NGram;
+use seqraph::graph::vertex::{
+    child::Child,
+    has_vertex_index::HasVertexIndex,
+    has_vertex_key::HasVertexKey,
+    wide::Wide,
+};
+use std::{
+    cmp::{
+        Ordering,
+        Reverse,
+    },
+    num::NonZeroUsize,
+};
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct PartitionLineBuilder<'a, 'b>
@@ -19,7 +36,8 @@ pub struct PartitionLineBuilder<'a, 'b>
 }
 impl<'a, 'b> PartitionLineBuilder<'a, 'b>
 {
-    pub fn new(ctx: &'a NodePartitionCtx<'a, 'b>) -> Self {
+    pub fn new(ctx: &'a NodePartitionCtx<'a, 'b>) -> Self
+    {
         Self {
             ctx,
             pos: Default::default(),
@@ -31,7 +49,8 @@ impl<'a, 'b> PartitionLineBuilder<'a, 'b>
         cell: Child,
     )
     {
-        if let Some(last) = self.line.last() {
+        if let Some(last) = self.line.last()
+        {
             self.pos += last.width();
         }
         self.line.push(cell);
@@ -49,7 +68,7 @@ impl<'a, 'b> PartitionLineBuilder<'a, 'b>
     )
     {
         let index = self.ctx.vocab.get_vertex_subrange(
-            &self.ctx.root.vertex_index(),
+            &self.ctx.root.vertex_key(),
             self.pos..(self.pos + offset.get()),
         );
         self.push_cell(index);
@@ -125,11 +144,10 @@ pub struct PartitionBuilder<'a, 'b>
 
 impl<'a, 'b> PartitionBuilder<'a, 'b>
 {
-
     pub fn new(
         ctx: &'a NodePartitionCtx<'a, 'b>,
         offset: usize,
-        index: Child,
+        first: NGramId,
     ) -> Self
     {
         let mut builder = Self {
@@ -137,7 +155,8 @@ impl<'a, 'b> PartitionBuilder<'a, 'b>
             cursor: PartitionCursor { line: 0 },
             wall: Default::default(),
         };
-        builder.append_child(offset, index);
+        let index = ctx.graph.expect_index_for_key(&first.vertex_key());
+        builder.append_child(offset, Child::new(index, first.width()));
         builder
     }
     pub fn create_line(
@@ -203,8 +222,8 @@ impl<'a, 'b> PartitionBuilder<'a, 'b>
             .into_iter();
 
         sorted_lines
-            .find_map(|line_index| {
-                let line = self.get_line_mut(line_index);
+            .find(|line_index| {
+                let line = self.get_line_mut(*line_index);
 
                 let index_width = index.width();
                 let end_pos = line.end_pos();
@@ -212,8 +231,8 @@ impl<'a, 'b> PartitionBuilder<'a, 'b>
 
                 match end_pos.cmp(&pos)
                 {
-                    Ordering::Equal | Ordering::Less => Some(line_index),
-                    Ordering::Greater => None,
+                    Ordering::Equal | Ordering::Less => true,
+                    Ordering::Greater => false,
                 }
             })
             .map(|line_index| {
