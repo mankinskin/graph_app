@@ -11,38 +11,79 @@ use crate::graph::vertex::{VertexEntry, VertexIndex, VertexPatternView};
 use crate::graph::vertex::key::VertexKey;
 use crate::search::NoMatch;
 
-pub trait GetVertexIndex {
-    fn get_vertex_index<G: GraphKind>(&self, graph: &Hypergraph<G>) -> VertexIndex;
+pub trait GetVertexKey {
+    fn get_vertex_key<G: GraphKind>(&self, graph: &Hypergraph<G>) -> VertexKey;
 }
-impl<T: HasVertexIndex> GetVertexIndex for T {
-    fn get_vertex_index<G: GraphKind>(&self, _: &Hypergraph<G>) -> VertexIndex {
-        self.vertex_index()
+impl<T: GetVertexKey> GetVertexKey for &'_ T {
+    fn get_vertex_key<G: GraphKind>(&self, g: &Hypergraph<G>) -> VertexKey {
+        (*self).get_vertex_key(g)
     }
 }
+macro_rules! impl_GetVertexKey_with {
+    (($g:ident, $_self:ident) => $f:expr, {$($t:ty,)*}) => {
+      $(
+        impl GetVertexKey for $t {
+            fn get_vertex_key<G: GraphKind>(&$_self, $g: &Hypergraph<G>) -> VertexKey {
+                $f
+            }
+        }
+      )*
+    };
+}
+macro_rules! impl_GetVertexIndex_with {
+    (($g:ident, $_self:ident) => $f:expr, {$($t:ty,)*}) => {
+      $(
+        impl GetVertexIndex for $t {
+            fn get_vertex_index<G: GraphKind>(&$_self, $g: &Hypergraph<G>) -> VertexIndex {
+                $f
+            }
+        }
+      )*
+    };
+}
+impl_GetVertexKey_with!(
+    (graph, self) => 
+        graph.expect_key_for_index(self),
+    {
+        VertexIndex,
+        Child,
+    }
+);
+impl_GetVertexKey_with!(
+    (_graph, self) => 
+        self.vertex_key(),
+    {
+        VertexKey,
+    }
+);
+impl_GetVertexIndex_with!(
+    (_graph, self) => self.vertex_index(),
+    {
+        VertexIndex,
+        Child,
+    }
+);
+
+pub trait GetVertexIndex: GetVertexKey + Display + Clone + Copy  {
+    fn get_vertex_index<G: GraphKind>(&self, graph: &Hypergraph<G>) -> VertexIndex;
+}
+//impl<T: HasVertexIndex + GetVertexKey + Display + Clone + Copy> GetVertexIndex for T {
+//    fn get_vertex_index<G: GraphKind>(&self, _: &Hypergraph<G>) -> VertexIndex {
+//        self.vertex_index()
+//    }
+//}
 impl GetVertexIndex for VertexKey {
     fn get_vertex_index<G: GraphKind>(&self, graph: &Hypergraph<G>) -> VertexIndex {
         graph.expect_index_for_key(self)
     }
 }
-pub trait GetVertexKey {
-    fn get_vertex_key<G: GraphKind>(&self, graph: &Hypergraph<G>) -> VertexKey;
-}
-impl<T: HasVertexKey> GetVertexKey for T {
-    fn get_vertex_key<G: GraphKind>(&self, _: &Hypergraph<G>) -> VertexKey {
-        self.vertex_key()
-    }
-}
-impl GetVertexKey for VertexIndex {
-    fn get_vertex_key<G: GraphKind>(&self, graph: &Hypergraph<G>) -> VertexKey {
-        graph.expect_key_for_index(self)
+impl<T: GetVertexIndex> GetVertexIndex for &'_ T {
+    fn get_vertex_index<G: GraphKind>(&self, g: &Hypergraph<G>) -> VertexIndex {
+        (*self).get_vertex_index(g)
     }
 }
 
-// Vertex Set Index
-pub trait VSIx: Display + Clone + Copy {}
-impl<T: Display + Clone + Copy> VSIx for T {}
-
-pub trait VertexSet<I: VSIx> {
+pub trait VertexSet<I: GetVertexIndex> {
     fn get_vertex(
         &self,
         key: I,
@@ -95,7 +136,7 @@ pub trait VertexSet<I: VSIx> {
         self.get_vertex(key).is_ok()
     }
 }
-impl<'t, G: GraphKind, I: VSIx> VertexSet<&'t I> for Hypergraph<G>
+impl<'t, G: GraphKind, I: GetVertexIndex> VertexSet<&'t I> for Hypergraph<G>
     where Hypergraph<G>: VertexSet<I>
 {
     fn get_vertex(

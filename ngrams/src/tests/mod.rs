@@ -1,14 +1,18 @@
-use crate::graph::labelling::LabellingCtx;
-use crate::graph::vocabulary::entry::HasVertexEntries;
-use crate::graph::vocabulary::{
-    Corpus,
-    Vocabulary,
+use crate::graph::{
+    labelling::LabellingCtx,
+    vocabulary::{
+        entry::HasVertexEntries,
+        Corpus,
+        Vocabulary,
+    },
 };
 use itertools::Itertools;
 use ngram::NGram;
 use pretty_assertions::assert_eq;
-use seqraph::graph::vertex::key::VertexKey;
-use seqraph::HashSet;
+use seqraph::{
+    graph::vertex::key::VertexKey,
+    HashSet,
+};
 #[derive(Debug)]
 pub struct TestCtx<'a>
 {
@@ -60,7 +64,7 @@ impl<'a> TestCtx<'a>
             roots_test,
             ..
         } = self;
-        pretty_assertions::assert_eq!(
+        assert_eq!(
             vocab
                 .leaves
                 .iter()
@@ -68,7 +72,7 @@ impl<'a> TestCtx<'a>
                 .collect::<HashSet<_>>(),
             *leaves_test,
         );
-        pretty_assertions::assert_eq!(
+        assert_eq!(
             vocab
                 .roots
                 .iter()
@@ -76,6 +80,18 @@ impl<'a> TestCtx<'a>
                 .collect::<HashSet<_>>(),
             *roots_test,
         );
+        for (k, e) in &vocab.entries {
+            let patterns = vocab.containment.expect_child_patterns(k);
+            assert!([0, 1, 2].contains(&patterns.len()));
+            for (pid, p) in patterns.iter() {
+                assert_eq!(
+                    p.iter().map(|i| {
+                        vocab.entries.get(&vocab.containment.expect_key_for_index(i)).unwrap().ngram.clone()
+                    }).join(""),
+                    e.ngram,
+                );
+            }
+        }
     }
 }
 #[derive(Debug)]
@@ -285,5 +301,47 @@ impl<'a> LabelTestCtx<'a>
             label_strings.iter().cloned().sorted().collect_vec(),
             wrapper_test,
         );
+    }
+}
+
+pub fn test_graph()
+{
+    let corpus = crate::OTTOS_MOPS_CORPUS;
+    let texts = corpus.into_iter().map(ToString::to_string).collect_vec();
+    let corpus = Corpus::new("ottos_mops".to_owned(), texts);
+    // graph of all containment edges between n and n+1
+    let mut image = LabellingCtx::from_corpus(&corpus);
+
+    TestCtx::new(&image.vocab, &corpus).test_containment();
+
+    image.label_freq();
+
+    {
+        let ctx = LabelTestCtx::new(
+            TestCtx::new(&image.vocab, &corpus),
+            &image.labels,
+        );
+        ctx.test_roots();
+        ctx.test_leaves();
+
+        ctx.test_freq();
+    }
+
+    image.label_wrap();
+
+    {
+        let ctx = LabelTestCtx::new(
+            TestCtx::new(&image.vocab, &corpus),
+            &image.labels,
+        );
+        ctx.test_wrap();
+    }
+
+    image.label_part();
+
+    {
+        let ctx = TestCtx::new(&image.vocab, &corpus);
+        let ctx = LabelTestCtx::new(ctx, &image.labels);
+        ctx.test_part();
     }
 }

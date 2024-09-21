@@ -25,6 +25,7 @@ pub use {
 #[cfg(any(test, feature = "test-hashing"))]
 pub type HashSet<T> =
     std::collections::HashSet<T, BuildHasherDefault<DefaultHasher>>;
+
 #[cfg(any(test, feature = "test-hashing"))]
 pub type HashMap<K, V> =
     std::collections::HashMap<K, V, BuildHasherDefault<DefaultHasher>>;

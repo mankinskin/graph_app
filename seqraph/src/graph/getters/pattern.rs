@@ -1,12 +1,5 @@
-use crate::graph::getters::vertex::VertexSet;
-use crate::graph::vertex::ChildPatterns;
-use crate::graph::Hypergraph;
-use crate::graph::kind::GraphKind;
-use crate::graph::vertex::has_vertex_index::HasVertexIndex;
-use crate::graph::vertex::location::pattern::IntoPatternLocation;
-use crate::graph::vertex::pattern::{Pattern, pattern_width};
-use crate::graph::vertex::pattern::id::PatternId;
-use crate::graph::vertex::pattern::pattern_range::PatternRangeIndex;
+use crate::graph::getters::vertex::{GetVertexIndex, VertexSet};
+use crate::graph::{kind::GraphKind, vertex::{has_vertex_index::HasVertexIndex, location::pattern::IntoPatternLocation, pattern::{id::PatternId, pattern_range::PatternRangeIndex, pattern_width, Pattern}, ChildPatterns}, Hypergraph};
 use crate::search::NoMatch;
 
 impl<G: GraphKind> Hypergraph<G> {
@@ -32,9 +25,9 @@ impl<G: GraphKind> Hypergraph<G> {
     }
     pub fn get_child_patterns_of(
         &self,
-        index: impl HasVertexIndex,
+        index: impl GetVertexIndex,
     ) -> Result<&ChildPatterns, NoMatch> {
-        self.get_vertex(index.vertex_index())
+        self.get_vertex(index.get_vertex_index(self))
             .map(|vertex| vertex.get_child_patterns())
     }
     pub fn get_pattern_of(
@@ -48,25 +41,25 @@ impl<G: GraphKind> Hypergraph<G> {
     #[track_caller]
     pub fn expect_child_pattern(
         &self,
-        index: impl HasVertexIndex,
+        index: impl GetVertexIndex,
         pid: PatternId,
     ) -> &Pattern {
-        self.expect_vertex(index.vertex_index()).expect_child_pattern(&pid)
+        self.expect_vertex(index.get_vertex_index(self)).expect_child_pattern(&pid)
     }
     #[track_caller]
     pub fn expect_child_patterns(
         &self,
-        index: impl HasVertexIndex,
+        index: impl GetVertexIndex,
     ) -> &ChildPatterns {
-        self.expect_vertex(index.vertex_index()).get_child_patterns()
+        self.expect_vertex(index.get_vertex_index(self)).get_child_patterns()
     }
 
     #[track_caller]
     pub fn expect_any_child_pattern(
         &self,
-        index: impl HasVertexIndex,
+        index: impl GetVertexIndex,
     ) -> (&PatternId, &Pattern) {
-        self.expect_vertex(index.vertex_index()).expect_any_child_pattern()
+        self.expect_vertex(index.get_vertex_index(self)).expect_any_child_pattern()
     }
     #[track_caller]
     pub fn expect_pattern_range_width(

@@ -1,30 +1,26 @@
 use std::fmt::Debug;
-use crate::traversal::traversable::Traversable;
 use crate::graph::vertex::{
     child::Child,
-    ChildPatterns,
     data::VertexData,
-    pattern::Pattern,
-    PatternId,
     VertexIndex,
     wide::Wide,
 };
 
 pub trait HasVertexIndex: Sized {
     fn vertex_index(&self) -> VertexIndex;
-    fn expect_child_patterns<Trav: Traversable>(
-        &self,
-        trav: &Trav,
-    ) -> ChildPatterns {
-        trav.graph().expect_child_patterns(self).clone()
-    }
-    fn expect_child_pattern<Trav: Traversable>(
-        &self,
-        trav: &Trav,
-        pid: PatternId,
-    ) -> Pattern {
-        trav.graph().expect_child_pattern(self, pid).clone()
-    }
+    //fn expect_child_patterns<Trav: Traversable>(
+    //    &self,
+    //    trav: &Trav,
+    //) -> ChildPatterns {
+    //    trav.graph().expect_child_patterns(self).clone()
+    //}
+    //fn expect_child_pattern<Trav: Traversable>(
+    //    &self,
+    //    trav: &Trav,
+    //    pid: PatternId,
+    //) -> Pattern {
+    //    trav.graph().expect_child_pattern(self, pid).clone()
+    //}
 }
 
 impl<I: HasVertexIndex> HasVertexIndex for &'_ I {

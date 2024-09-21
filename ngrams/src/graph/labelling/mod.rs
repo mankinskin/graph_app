@@ -111,12 +111,12 @@ impl LabellingCtx
     }
     pub fn from_corpus(corpus: &Corpus) -> Self
     {
-        Self::read_from_file(corpus.target_file_path())
-            .inspect(|new| println!("Containment Pass already processed."))
-            .unwrap_or_else(|e| {
-                println!("{:#?}", e);
-                Self::from(Vocabulary::from_corpus(corpus))
-            })
+        //Self::read_from_file(corpus.target_file_path())
+        //    .inspect(|new| println!("Containment Pass already processed."))
+        //    .unwrap_or_else(|e| {
+        //        println!("{:#?}", e);
+        //    })
+        Self::from(Vocabulary::from_corpus(corpus))
     }
     pub fn label_freq(&mut self)
     {

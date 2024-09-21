@@ -92,6 +92,7 @@ pub(crate) mod tests {
             abc,
             abcd,
             abc_d_id,
+            a_bc_id,
             abcdef,
             //abc_def_id,
             abcd_ef_id,
@@ -180,7 +181,7 @@ pub(crate) mod tests {
                             top: Default::default(),
                             bottom: HashMap::from_iter([(
                                 DirectedKey::up(*a, 0),
-                                SubLocation::new(*abc_d_id, 0),
+                                SubLocation::new(*a_bc_id, 0),
                             )]),
                         },
                         index: *abc,

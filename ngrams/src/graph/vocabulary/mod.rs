@@ -1,5 +1,5 @@
 use crate::graph::{
-    containment::TextLevelCtx,
+    containment::{CorpusCtx, TextLevelCtx},
     traversal::{
         TopDown,
         TraversalPolicy,
@@ -136,12 +136,15 @@ impl Ord for ProcessStatus
         (*self as usize).cmp(&(*other as usize))
     }
 }
-#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(
+    Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq, Deref,
+)]
 pub struct Vocabulary
 {
     //#[deref]
     pub containment: Hypergraph,
     pub name: String,
+    #[deref]
     pub ids: HashMap<String, NGramId>,
     pub leaves: HashSet<NGramId>,
     pub roots: HashSet<NGramId>,
@@ -150,32 +153,13 @@ pub struct Vocabulary
 
 impl Vocabulary
 {
-    pub fn len(&self) -> usize
-    {
-        self.ids.len()
-    }
-    //pub fn clean(&mut self) -> HashSet<NGramId> {
-    //    let drained: HashSet<_> = self.entries
-    //        .extract_if(|_, e| !e.needs_node())
-    //        .map(|(i, _)| i)
-    //        .collect();
-    //    self.ids.retain(|_, i| !drained.contains(i));
-    //    drained
-    //}
     pub fn from_corpus(corpus: &Corpus) -> Self
     {
         let mut vocab: Vocabulary = Default::default();
         vocab.name.clone_from(&corpus.name);
-        let N: usize = corpus.iter().map(|t| t.len()).max().unwrap();
-        for n in 1..=N
-        {
-            for (i, text) in corpus.iter().enumerate()
-            {
-                TextLevelCtx::new(i, text, n).on_nlevel(&mut vocab);
-            }
-            //vocab.clean();
-            //println!("Finished counting  n={}: (+{}) {}", n, vocab.len()-c, vocab.len())
-        }
+        CorpusCtx {
+            corpus,
+        }.on_corpus(&mut vocab);
         vocab
     }
     /// get sub-vertex at range relative to index
@@ -207,4 +191,12 @@ impl Vocabulary
 
         entry.data.to_child()
     }
+    //pub fn clean(&mut self) -> HashSet<NGramId> {
+    //    let drained: HashSet<_> = self.entries
+    //        .extract_if(|_, e| !e.needs_node())
+    //        .map(|(i, _)| i)
+    //        .collect();
+    //    self.ids.retain(|_, i| !drained.contains(i));
+    //    drained
+    //}
 }

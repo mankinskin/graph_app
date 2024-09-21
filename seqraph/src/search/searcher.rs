@@ -7,10 +7,7 @@ use crate::{
     traversal::{
         cache::state::parent::ParentState,
         folder::TraversalFolder,
-        iterator::{
-            TraversalIterator,
-            traverser::bft::Bft,
-        },
+        iterator::traverser::bft::Bft,
         policy::DirectedTraversalPolicy,
         result::TraversalResult,
         traversable::Traversable,
@@ -84,9 +81,10 @@ impl<T: Traversable> Searcher<T> {
         &self,
         query: P,
     ) -> SearchResult {
-        self.search::<Bft<Self, S>, _>(query)
+        self.search(query)
     }
-    fn search<'a, Ti: TraversalIterator<'a, Trav = Self>, P: IntoPattern>(
+    //, Ti: TraversalIterator<'a, Trav = Self>
+    fn search<'a, P: IntoPattern>(
         &'a self,
         query: P,
     ) -> SearchResult {

@@ -1,9 +1,12 @@
 mod builder;
 
-use crate::graph::{partitions::{
-    NodePartitionCtx,
-    PartitionsCtx,
-}, vocabulary::NGramId};
+use crate::graph::{
+    partitions::{
+        NodePartitionCtx,
+        PartitionsCtx,
+    },
+    vocabulary::NGramId,
+};
 use builder::PartitionBuilder;
 use derive_more::{
     Deref,
@@ -12,15 +15,22 @@ use derive_more::{
 };
 use itertools::Itertools;
 use pretty_assertions::assert_matches;
-use seqraph::graph::vertex::{child::Child, has_vertex_key::HasVertexKey, wide::Wide};
-use std::{cmp::{
-    Ordering,
-    Reverse,
-}, fmt::{
-    Display,
-    Formatter,
-}};
-use std::num::NonZeroUsize;
+use seqraph::graph::vertex::{
+    child::Child,
+    has_vertex_key::HasVertexKey,
+    wide::Wide,
+};
+use std::{
+    cmp::{
+        Ordering,
+        Reverse,
+    },
+    fmt::{
+        Display,
+        Formatter,
+    },
+    num::NonZeroUsize,
+};
 
 #[derive(Debug, Copy, Clone)]
 pub enum PartitionCell

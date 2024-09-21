@@ -13,10 +13,11 @@ pub use {
     shared::*,
 };
 
-mod count;
-mod graph;
+pub mod count;
+pub mod graph;
 #[cfg(not(debug_assertions))]
 mod shared;
+pub mod tests;
 
 const OTTOS_MOPS_CORPUS: [&str; 4] = [
     "ottos mops trotzt",
@@ -27,7 +28,7 @@ const OTTOS_MOPS_CORPUS: [&str; 4] = [
 
 fn main()
 {
-    graph::test_graph()
+    tests::test_graph()
 }
 
 fn read_corpus(file_path: impl AsRef<Path>) -> String
