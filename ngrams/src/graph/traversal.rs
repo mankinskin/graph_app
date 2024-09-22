@@ -80,13 +80,14 @@ impl TraversalPolicy for TopDown
             .flat_map(|(_, pat)| {
                 pat.iter()
                     .enumerate()
-                    .filter(|(off, c)| c.width() + 1 == entry.entry.ngram.len())
-                    .map(|(off, c)| {
+                    .filter(|(subi, c)| c.width() + 1 == entry.entry.ngram.len())
+                    .map(|(subi, c)| {
                         (
-                            off,
+                            // sub index can be used as offset because child patterns have special structure
+                            subi,
                             NGramId::new(
                                 entry.vocab.containment.expect_key_for_index(c),
-                                entry.data.width,
+                                c.width(),
                             ),
                         )
                     })
