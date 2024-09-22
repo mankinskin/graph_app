@@ -41,12 +41,23 @@ use crate::graph::vertex::key::VertexKey;
 pub fn clone_child_patterns(children: &'_ ChildPatterns) -> impl Iterator<Item = Pattern> + '_ {
     children.iter().map(|(_, p)| p.clone())
 }
+pub fn localized_children_iter_for_index(parent: impl ToChild, children: &ChildPatterns) -> impl IntoIterator<Item=(ChildLocation, &Child)>
+{
+    let parent = parent.to_child();
+    children.iter().flat_map(move |(&pid, pat)|
+        pat.iter().enumerate()
+            .map(move |(i, c)| (
+                ChildLocation::new(parent, pid, i),
+                c,
+            ))
+    )
+}
 
 #[derive(Debug, PartialEq, Eq, Clone, Builder, Serialize, Deserialize)]
 pub struct VertexData {
     pub width: TokenPosition,
     pub index: VertexIndex,
-    #[builder(default, setter(skip))]
+    #[builder(default)]
     pub key: VertexKey,
     #[builder(default)]
     pub parents: VertexParents,
@@ -166,6 +177,22 @@ impl VertexData {
     ) -> &Child {
         self.get_child_at(location).unwrap()
     }
+    pub fn get_child_mut_at(
+        &mut self,
+        location: &SubLocation,
+    ) -> Result<&mut Child, NoMatch> {
+        self.children
+            .get_mut(&location.pattern_id)
+            .ok_or(NoMatch::InvalidPattern(location.pattern_id))?
+            .get_mut(location.sub_index)
+            .ok_or(NoMatch::InvalidChild(location.sub_index))
+    }
+    pub fn expect_child_mut_at(
+        &mut self,
+        location: &SubLocation,
+    ) -> &mut Child {
+        self.get_child_mut_at(location).unwrap()
+    }
     #[track_caller]
     pub fn expect_pattern_len(
         &self,
@@ -220,6 +247,9 @@ impl VertexData {
     }
     pub fn get_child_patterns(&self) -> &ChildPatterns {
         &self.children
+    }
+    pub fn get_child_patterns_mut(&mut self) -> &mut ChildPatterns {
+        &mut self.children
     }
     pub fn get_child_pattern_iter(&'_ self) -> impl Iterator<Item = Pattern> + '_ {
         clone_child_patterns(&self.children)
@@ -475,12 +505,6 @@ impl VertexData {
         )
     }
     pub fn all_localized_children_iter(&self) -> impl IntoIterator<Item=(ChildLocation, &Child)>{
-        self.children.iter().flat_map(move |(&pid, pat)|
-        pat.iter().enumerate()
-            .map(move |(i, c)| (
-                ChildLocation::new(self.to_child(), pid, i),
-                c,
-            ))
-        )
+        localized_children_iter_for_index(self.to_child(), &self.children)
     }
 }

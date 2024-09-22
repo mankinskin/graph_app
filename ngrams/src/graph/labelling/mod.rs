@@ -136,7 +136,7 @@ impl LabellingCtx
         if (self.status < ProcessStatus::Wrappers)
         {
             WrapperCtx::from(&mut *self).wrapping_pass();
-            //self.write_to_target_file();
+            self.write_to_target_file();
         }
         else
         {
@@ -156,12 +156,11 @@ impl LabellingCtx
         if (self.status < ProcessStatus::Partitions)
         {
             PartitionsCtx::new(&mut *self).partitions_pass();
-            //self.write_to_target_file();
+            self.write_to_target_file();
         }
         else
         {
             println!("Partition Pass already processed.");
         }
-        //println!("{:#?}", vocab.labels);
     }
 }

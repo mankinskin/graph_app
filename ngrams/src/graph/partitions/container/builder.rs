@@ -155,7 +155,7 @@ impl<'a, 'b> PartitionBuilder<'a, 'b>
             cursor: PartitionCursor { line: 0 },
             wall: Default::default(),
         };
-        let index = ctx.graph.expect_index_for_key(&first.vertex_key());
+        let index = ctx.vocab.containment.expect_index_for_key(&first.vertex_key());
         builder.append_child(offset, Child::new(index, first.width()));
         builder
     }

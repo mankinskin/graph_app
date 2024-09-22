@@ -23,6 +23,26 @@ impl<G: GraphKind> Hypergraph<G> {
         self.get_pattern_at(location)
             .unwrap_or_else(|_| panic!("Pattern not found at location {:#?}", location))
     }
+    pub fn get_pattern_mut_at(
+        &mut self,
+        location: impl IntoPatternLocation,
+    ) -> Result<&mut Pattern, NoMatch> {
+        let location = location.into_pattern_location();
+        let vertex = self.get_vertex_mut(location.parent)?;
+        let child_patterns = vertex.get_child_patterns_mut();
+        child_patterns
+            .get_mut(&location.id)
+            .ok_or(NoMatch::NoChildPatterns) // todo: better error
+    }
+    #[track_caller]
+    pub fn expect_pattern_mut_at(
+        &mut self,
+        location: impl IntoPatternLocation,
+    ) -> &mut Pattern {
+        let location = location.into_pattern_location();
+        self.get_pattern_mut_at(location)
+            .unwrap_or_else(|_| panic!("Pattern not found at location {:#?}", location))
+    }
     pub fn get_child_patterns_of(
         &self,
         index: impl GetVertexIndex,

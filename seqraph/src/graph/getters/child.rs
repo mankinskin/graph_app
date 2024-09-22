@@ -20,6 +20,16 @@ impl<G: GraphKind> Hypergraph<G> {
             .cloned()
             .ok_or(NoMatch::NoChildPatterns) // todo: better error
     }
+    pub fn get_child_mut_at(
+        &mut self,
+        location: impl IntoChildLocation,
+    ) -> Result<&mut Child, NoMatch> {
+        let location = location.into_child_location();
+        let pattern = self.get_pattern_mut_at(location)?;
+        pattern
+            .get_mut(location.sub_index)
+            .ok_or(NoMatch::NoChildPatterns) // todo: better error
+    }
     #[track_caller]
     pub fn expect_child_at(
         &self,
@@ -27,6 +37,15 @@ impl<G: GraphKind> Hypergraph<G> {
     ) -> Child {
         let location = location.into_child_location();
         self.get_child_at(location)
+            .unwrap_or_else(|_| panic!("Child not found at location {:#?}", location))
+    }
+    #[track_caller]
+    pub fn expect_child_mut_at(
+        &mut self,
+        location: impl IntoChildLocation,
+    ) -> &mut Child {
+        let location = location.into_child_location();
+        self.get_child_mut_at(location)
             .unwrap_or_else(|_| panic!("Child not found at location {:#?}", location))
     }
     pub fn expect_is_at_end(

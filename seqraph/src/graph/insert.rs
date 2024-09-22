@@ -73,7 +73,7 @@ where
         data: VertexData,
     ) -> Child {
         let c = Child::new(data.vertex_index(), data.width);
-        self.graph.entry(data.key).or_insert_with_key(|_| data);
+        self.graph.insert(data.key, data);
         c
     }
     fn insert_token_key(

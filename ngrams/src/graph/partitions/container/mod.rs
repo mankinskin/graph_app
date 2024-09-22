@@ -62,25 +62,25 @@ impl PartitionContainer
         list: impl IntoIterator<Item = (usize, NGramId)>,
     ) -> Self
     {
-        let vec = list.into_iter().sorted_by_key(|&(o, _)| o).collect_vec();
+        let child_vec = list.into_iter().sorted_by_key(|&(o, _)| o).collect_vec();
         //println!("{:#?}", vec.iter().map(|&(p, c)| (p, p + c.width())).collect_vec());
 
         assert!(
-            !vec.is_empty(),
+            !child_vec.is_empty(),
             "Can not build a container from empty list!"
         );
-        vec.iter()
+        child_vec.iter()
             .tuple_windows()
             .for_each(|((prev, _), (pos, _))| {
                 assert!(prev < pos, "{} < {}", prev, pos,)
             });
-        let mut iter = vec.into_iter();
-        let first = iter.next().unwrap();
+        let mut child_iter = child_vec.into_iter();
+        let first = child_iter.next().unwrap();
         assert_eq!(first.0, 0);
         let mut builder = PartitionBuilder::new(ctx, first.0, first.1);
-        for (pos, key) in iter
+        for (pos, key) in child_iter
         {
-            let index = ctx.graph.expect_index_for_key(&key.vertex_key());
+            let index = ctx.vocab.containment.expect_index_for_key(&key.vertex_key());
             builder.append_child(pos, Child::new(index, key.width()));
         }
         Self {

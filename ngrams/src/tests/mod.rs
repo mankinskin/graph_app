@@ -1,9 +1,7 @@
 use crate::graph::{
     labelling::LabellingCtx,
     vocabulary::{
-        entry::HasVertexEntries,
-        Corpus,
-        Vocabulary,
+        entry::HasVertexEntries, Corpus, ProcessStatus, Vocabulary
     },
 };
 use itertools::Itertools;
@@ -295,11 +293,11 @@ impl<'a> LabelTestCtx<'a>
             ..
         } = self;
         let label_strings = self.label_strings_set();
-        let wrapper_test = self.get_partition_test();
+        let partition_test = self.get_partition_test();
 
         assert_eq!(
             label_strings.iter().cloned().sorted().collect_vec(),
-            wrapper_test,
+            partition_test,
         );
     }
 }
@@ -316,7 +314,7 @@ pub fn test_graph()
 
     image.label_freq();
 
-    {
+    if image.status == ProcessStatus::Frequency {
         let ctx = LabelTestCtx::new(
             TestCtx::new(&image.vocab, &corpus),
             &image.labels,
@@ -329,7 +327,7 @@ pub fn test_graph()
 
     image.label_wrap();
 
-    {
+    if image.status == ProcessStatus::Wrappers {
         let ctx = LabelTestCtx::new(
             TestCtx::new(&image.vocab, &corpus),
             &image.labels,
@@ -339,9 +337,10 @@ pub fn test_graph()
 
     image.label_part();
 
-    {
+    if image.status == ProcessStatus::Partitions {
         let ctx = TestCtx::new(&image.vocab, &corpus);
         let ctx = LabelTestCtx::new(ctx, &image.labels);
         ctx.test_part();
     }
+    
 }

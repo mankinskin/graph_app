@@ -131,7 +131,6 @@ impl<'b> PartitionsCtx<'b>
     ) -> Vec<NGramId>
     {
         let entry = self.vocab.get_vertex(node).unwrap();
-        //println!("{}", entry.ngram);
 
         // find all largest children
         let tree = self.child_tree(&entry);
@@ -153,19 +152,20 @@ impl<'b> PartitionsCtx<'b>
         let err = format!(
             "Node not yet created {} in: {:#?}",
             node.vertex_key(),
-            &self.graph
+            &self.graph,
         );
-        let data = self.graph.get_vertex_mut(node.vertex_key()).expect(&err);
+        let parent_data = self.graph.get_vertex_mut(node.vertex_key()).expect(&err);
 
-        // set children
-        data.children = pids.into_iter().zip(container.clone()).collect();
+        // child patterns with indices in containment
+        parent_data.children = pids.into_iter().zip(container.clone()).collect();
 
-        // set parents for children
-        let child_locations = data
+        // child locations parent in self.graph, children indices in self.vocab.containment
+        let child_locations = parent_data
             .all_localized_children_iter()
             .into_iter()
             .map(|(l, c)| (l, *c))
             .collect_vec();
+
         assert_eq!(
             child_locations
                 .iter()
@@ -179,37 +179,46 @@ impl<'b> PartitionsCtx<'b>
                 .sorted()
                 .collect_vec(),
         );
+
+        // create child nodes in self.graph
+        // set child parents and translate child indices to self.graph
         for (loc, vi) in child_locations.into_iter()
         {
-            if let Ok(v) = self.graph.get_vertex_mut(vi)
+            let key = self.vocab.containment.expect_key_for_index(vi);
+            if let Ok(v) = self.graph.get_vertex_mut(key)
             {
                 v.add_parent(loc);
             }
             else
             {
-                let entry = self.vocab.get_vertex(&vi).unwrap();
-                let mut data =
-                    VertexData::new(vi.vertex_index(), entry.data.width());
+                let mut builder = VertexDataBuilder::default();
+                builder.width(vi.width());
+                builder.key(key);
+                let mut data = self.graph.finish_vertex_builder(builder);
+                assert!(data.key == key);
                 data.add_parent(loc);
-                self.graph.insert_vertex_data(data);
+                // translate containment index to output index
+                let out_child = self.graph.insert_vertex_data(data);
+                self.graph.expect_child_mut_at(loc).index = out_child.index;
             }
         }
-        // return next node indices
-        let next: Vec<_> = container
+        container
             .into_iter()
             .flatten()
             .filter(|c| c.width() > 1)
             .map(|c| {
+                let entry = self.vocab.get_vertex(&c).unwrap();
+                let key = entry.data.vertex_key();
+                assert!(
+                    self.graph.contains_vertex(key),
+                    "{:#?}", entry.entry,
+                );
                 NGramId::new(
-                    self.vocab.containment.expect_key_for_index(c),
+                    key,
                     c.width(),
                 )
             })
-            .collect();
-        assert!(next
-            .iter()
-            .all(|v| self.graph.contains_vertex(v.vertex_key())));
-        next
+            .collect()
     }
     pub fn partitions_pass(&mut self)
     {
@@ -221,6 +230,7 @@ impl<'b> PartitionsCtx<'b>
             let entry = self.vocab.get_vertex(vk).unwrap();
             let mut builder = VertexDataBuilder::default();
             builder.width(entry.data.width());
+            builder.key(**vk);
             self.graph.insert_vertex_builder(builder);
         }
         while !queue.is_empty()
@@ -242,5 +252,6 @@ impl<'b> PartitionsCtx<'b>
             queue.extend(next_layer)
         }
         self.status = ProcessStatus::Partitions;
+        println!("{:#?}", &self.graph);
     }
 }
