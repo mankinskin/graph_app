@@ -70,7 +70,7 @@ pub struct PartitionsCtx<'b>
     #[deref]
     #[deref_mut]
     ctx: &'b mut LabellingCtx,
-    graph: Hypergraph,
+    pub graph: Hypergraph,
 }
 
 impl<'b> PartitionsCtx<'b>
@@ -185,9 +185,10 @@ impl<'b> PartitionsCtx<'b>
         for (loc, vi) in child_locations.into_iter()
         {
             let key = self.vocab.containment.expect_key_for_index(vi);
-            if let Ok(v) = self.graph.get_vertex_mut(key)
+            let out_index = if let Ok(v) = self.graph.get_vertex_mut(key)
             {
                 v.add_parent(loc);
+                v.vertex_index()
             }
             else
             {
@@ -198,9 +199,13 @@ impl<'b> PartitionsCtx<'b>
                 assert!(data.key == key);
                 data.add_parent(loc);
                 // translate containment index to output index
-                let out_child = self.graph.insert_vertex_data(data);
-                self.graph.expect_child_mut_at(loc).index = out_child.index;
-            }
+                if vi.width() > 1 {
+                    self.graph.insert_vertex_data(data)
+                } else {
+                    self.graph.insert_token_data(*self.vocab.containment.expect_token_by_key(&key), data)
+                }.vertex_index()
+            };
+            self.graph.expect_child_mut_at(loc).index = out_index;
         }
         container
             .into_iter()

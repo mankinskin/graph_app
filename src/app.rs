@@ -1,14 +1,13 @@
-use crate::examples::*;
-use crate::*;
 use eframe::egui::{
     self,
     Ui,
 };
-use seqraph::HypergraphRef;
+use seqraph::graph::HypergraphRef;
 #[cfg(feature = "persistence")]
 use serde::*;
 use tokio::task::JoinHandle;
 
+use crate::examples::{build_graph1, build_graph2, build_graph3};
 #[allow(unused)]
 use crate::graph::*;
 
@@ -24,17 +23,19 @@ pub struct App
     read_task: Option<JoinHandle<()>>,
 }
 
-impl App
-{
-    pub fn new() -> Self
+impl Default for App {
+    fn default() -> Self
     {
         Self {
             graph_file: None,
-            graph: Graph::new(),
+            graph: Graph::default(),
             inserter: true,
             read_task: None,
         }
     }
+}
+impl App
+{
     #[allow(unused)]
     pub fn from_graph_ref(graph: HypergraphRef) -> Self
     {
@@ -69,7 +70,7 @@ impl App
         {
             let mut vis = self.graph.vis_mut();
             ui.menu_button("Layout", |ui| {
-                nai.radio_value(&mut vis.layout, Layout::Graph, "Graph")
+                ui.radio_value(&mut vis.layout, Layout::Graph, "Graph")
                     .clicked();
                 ui.radio_value(&mut vis.layout, Layout::Nested, "Nested")
                     .clicked();
@@ -196,7 +197,9 @@ impl eframe::App for App
                 {
                     let insert_text = self.graph.insert_text.clone();
                     //self.read_task = Some(self.graph.read_text(insert_text, ctx));
+                    let graph = ngrams::graph::parse_corpus(ngrams::graph::Corpus::new("", [insert_text]));
                     self.graph.insert_text = String::new();
+                    self.graph.set_graph(graph);
                 }
             });
         }
@@ -211,7 +214,7 @@ impl eframe::App for App
         true
     }
 }
-use std::future::Future;
+use std::{future::Future, sync::{Arc, RwLock}};
 #[allow(unused)]
 #[cfg(not(target_arch = "wasm32"))]
 fn execute<F: Future<Output = ()> + Send + 'static>(f: F)

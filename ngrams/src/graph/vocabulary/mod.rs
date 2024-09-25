@@ -8,6 +8,7 @@ use crate::graph::{
         HasVertexEntries,
         VocabEntry,
     },
+    Corpus,
 };
 use derive_more::{
     Deref,
@@ -87,23 +88,6 @@ impl Wide for NGramId
     }
 }
 
-lazy_static::lazy_static! {
-    pub static ref CORPUS_DIR: PathBuf = absolute(PathBuf::from_iter([".", "test", "cache"])).unwrap();
-}
-#[derive(Debug, Default, Deref, Serialize, Deserialize, new)]
-pub struct Corpus
-{
-    pub name: String,
-    #[deref]
-    pub texts: Vec<String>,
-}
-impl Corpus
-{
-    pub fn target_file_path(&self) -> impl AsRef<Path>
-    {
-        CORPUS_DIR.join(&self.name)
-    }
-}
 #[derive(
     Default, Debug, PartialEq, Eq, Copy, Clone, Serialize, Deserialize,
 )]

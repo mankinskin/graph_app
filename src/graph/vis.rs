@@ -1,4 +1,3 @@
-use crate::*;
 use eframe::egui::{
     self,
     vec2,
@@ -21,9 +20,11 @@ use petgraph::{
     },
     visit::EdgeRef,
 };
-use seqraph::graph::vertex::Wide;
-use std::collections::HashMap;
+use seqraph::graph::{vertex::{child::Child, data::VertexData, has_vertex_index::HasVertexIndex, key::VertexKey, pattern::id::PatternId, wide::Wide}, Hypergraph};
+use std::{collections::HashMap, sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard}};
 use std::f32::consts::PI;
+
+use crate::Graph;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Layout
@@ -83,17 +84,17 @@ impl GraphVis
             .map(|(idx, node)| (node.key, idx))
             .collect();
         let filtered = pg.filter_map(
-            |_idx, (key, node)| {
+            |_idx, (_index, node)| {
                 if node.width() <= 1
                 {
                     None
                 }
                 else
                 {
-                    Some((*key, node))
+                    Some((node.key, node))
                 }
             },
-            |_idx, e| (e.child.width() > 1).then(|| ()),
+            |_idx, e| (e.child.width() > 1).then_some(()),
         );
         let node_indices: HashMap<_, _> = filtered
             .nodes()
@@ -224,7 +225,7 @@ impl GraphVis
 #[derive(Clone)]
 pub struct NodeVis
 {
-    key: VertexKey<char>,
+    key: VertexKey,
     idx: NodeIndex,
     name: String,
     data: VertexData,
@@ -260,9 +261,9 @@ impl NodeVis
 {
     pub fn new(
         graph: Graph,
-        node_indices: &HashMap<VertexKey<char>, NodeIndex>,
+        node_indices: &HashMap<VertexKey, NodeIndex>,
         idx: NodeIndex,
-        key: &VertexKey<char>,
+        key: &VertexKey,
         data: &VertexData,
     ) -> Self
     {
@@ -277,7 +278,7 @@ impl NodeVis
     }
     pub fn from_old(
         old: &NodeVis,
-        node_indices: &HashMap<VertexKey<char>, NodeIndex>,
+        node_indices: &HashMap<VertexKey, NodeIndex>,
         idx: NodeIndex,
         data: &VertexData,
     ) -> Self
@@ -293,16 +294,16 @@ impl NodeVis
     }
     pub fn new_impl(
         graph: Graph,
-        node_indices: &HashMap<VertexKey<char>, NodeIndex>,
+        node_indices: &HashMap<VertexKey, NodeIndex>,
         idx: NodeIndex,
-        key: &VertexKey<char>,
+        key: &VertexKey,
         data: &VertexData,
         state: Arc<RwLock<NodeState>>,
     ) -> Self
     {
         let (name, child_patterns) = {
             let graph = &*graph.read();
-            let name = graph.key_data_string(key, data);
+            let name = graph.vertex_data_string(data);
             let child_patterns =
                 Self::child_patterns_vis(graph, node_indices, data);
             (name, child_patterns)
@@ -465,9 +466,9 @@ impl ChildVis
         child: Child,
     ) -> Self
     {
-        let key = graph.expect_vertex_key(child.index);
-        let name = graph.index_string(child.get_index());
-        let idx = node_indices.get(key).cloned();
+        let key = graph.expect_key_for_index(child.index);
+        let name = graph.index_string(child.vertex_index());
+        let idx = node_indices.get(&key).cloned();
         Self { name, child, idx }
     }
 }

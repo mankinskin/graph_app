@@ -27,14 +27,14 @@ pub fn ngram_set(s: String) -> Vec<HashMap<String, usize>>
         .collect()
 }
 
-//#[test]
+#[test]
 pub fn test_ngrams()
 {
     //let file_path = "./corpus/eng_news_2020_100K/eng_news_2020_100K-sentences.txt";
     //let corpus: String = read_corpus(file_path);
     //println!("Finished reading {}", file_path);
     //
-    let corpus = crate::OTTOS_MOPS_CORPUS;
+    let corpus = crate::tests::OTTOS_MOPS_CORPUS;
     let mut total_counts: HashMap<String, usize> = HashMap::default();
     for s in corpus
     {

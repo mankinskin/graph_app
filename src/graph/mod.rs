@@ -1,4 +1,5 @@
-use crate::*;
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+
 use eframe::egui::{
     self,
     Ui,
@@ -11,7 +12,7 @@ use petgraph::{
     },
     visit::EdgeRef,
 };
-use seqraph::*;
+use seqraph::graph::{Hypergraph, HypergraphRef};
 pub mod vis;
 use tokio::task::JoinHandle;
 use vis::GraphVis;
@@ -23,6 +24,14 @@ pub struct Graph
     pub graph: HypergraphRef,
     pub vis: Arc<RwLock<GraphVis>>,
     pub insert_text: String,
+}
+impl Default for Graph
+{
+    fn default() -> Self
+    {
+        let graph = Hypergraph::default();
+        Self::new_from_graph(graph)
+    }
 }
 impl Graph
 {
@@ -41,11 +50,6 @@ impl Graph
         let g = new.clone();
         new.vis_mut().set_graph(g);
         new
-    }
-    pub fn new() -> Self
-    {
-        let graph = Hypergraph::default();
-        Self::new_from_graph(graph)
     }
     pub fn try_read(&self) -> Option<RwLockReadGuard<'_, Hypergraph>>
     {
@@ -77,18 +81,18 @@ impl Graph
     }
     pub fn clear(&mut self)
     {
-        *self = Self::new();
+        *self = Self::default();
     }
-    //pub fn read_text(&mut self, text: impl ToString, ctx: &egui::Context) -> JoinHandle<()> {
-    //    let text = text.to_string();
-    //    let ctx = ctx.clone();
-    //    let mut graph = self.graph.clone();
-    //    tokio::task::spawn_blocking(move || {
-    //        graph.read_sequence(text.chars());
-    //        println!("done reading");
-    //        ctx.request_repaint();
-    //    })
-    //}
+    pub fn read_text(&mut self, text: impl ToString, ctx: &egui::Context) -> JoinHandle<()> {
+        let text = text.to_string();
+        let ctx = ctx.clone();
+        let mut graph = self.graph.clone();
+        tokio::task::spawn_blocking(move || {
+            //graph.read_sequence(text.chars());
+            println!("done reading");
+            ctx.request_repaint();
+        })
+    }
     pub fn poll_events(&self) -> Vec<tracing_egui::LogEvent>
     {
         //println!("polling..");

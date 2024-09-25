@@ -1,7 +1,12 @@
+pub mod count;
+
+use std::path::Path;
+
 use crate::graph::{
+    Corpus,
     labelling::LabellingCtx,
     vocabulary::{
-        entry::HasVertexEntries, Corpus, ProcessStatus, Vocabulary
+        entry::HasVertexEntries, ProcessStatus, Vocabulary
     },
 };
 use itertools::Itertools;
@@ -11,6 +16,23 @@ use seqraph::{
     graph::vertex::key::VertexKey,
     HashSet,
 };
+
+pub const OTTOS_MOPS_CORPUS: [&str; 4] = [
+    "ottos mops trotzt",
+    "otto: fort mops fort",
+    "ottos mops hopst fort",
+    "otto: soso",
+];
+fn read_corpus(file_path: impl AsRef<Path>) -> String
+{
+    //let corpus: String = String::from("fldfjdlsjflskdjflsdfaädüwwrivfokl");
+    let mut csv = csv::ReaderBuilder::new()
+        .delimiter(b'\t')
+        .from_path(file_path)
+        .expect("Corpus file not found.");
+    csv.records().map(|r| r.unwrap()[1].to_string()).join(" ")
+}
+
 #[derive(Debug)]
 pub struct TestCtx<'a>
 {
@@ -302,9 +324,10 @@ impl<'a> LabelTestCtx<'a>
     }
 }
 
+#[test]
 pub fn test_graph()
 {
-    let corpus = crate::OTTOS_MOPS_CORPUS;
+    let corpus = OTTOS_MOPS_CORPUS;
     let texts = corpus.into_iter().map(ToString::to_string).collect_vec();
     let corpus = Corpus::new("ottos_mops".to_owned(), texts);
     // graph of all containment edges between n and n+1

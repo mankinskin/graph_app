@@ -55,12 +55,16 @@ pub fn localized_children_iter_for_index(parent: impl ToChild, children: &ChildP
 
 #[derive(Debug, PartialEq, Eq, Clone, Builder, Serialize, Deserialize)]
 pub struct VertexData {
+
     pub width: TokenPosition,
     pub index: VertexIndex,
+
     #[builder(default)]
     pub key: VertexKey,
+
     #[builder(default)]
     pub parents: VertexParents,
+
     #[builder(default)]
     pub children: ChildPatterns,
 }

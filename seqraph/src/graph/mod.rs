@@ -312,6 +312,10 @@ where
     pub fn get_token_by_key(&self, key: &VertexKey) -> Option<&Token<G::Token>> {
         self.tokens.get(key)
     }
+    pub fn expect_token_by_key(&self, key: &VertexKey) -> &Token<G::Token> {
+        self.get_token_by_key(key)
+            .expect("Key does not belong to a token!")
+    }
     pub fn vertex_data_string(
         &self,
         data: &VertexData,
@@ -319,6 +323,7 @@ where
         if let Some(token) = self.get_token_by_key(&data.key) {
             token.to_string()
         } else {
+            assert!(data.width > 1);
             self.pattern_string(data.expect_any_child_pattern().1)
         }
     }

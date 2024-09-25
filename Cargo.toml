@@ -60,6 +60,9 @@ features=["serde-1"]
 path = "./seqraph"
 #git = "https://github.com/mankinskin/web-app"
 
+[dependencies.ngrams]
+path = "./ngrams"
+
 [features]
 default = []
 persistence = ["eframe/persistence"] # Enable if you want to persist app state on shutdown

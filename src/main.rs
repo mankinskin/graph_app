@@ -31,7 +31,7 @@ async fn main()
 {
     //let graph = seqraph::gen_graph().unwrap_or_else(|g| g);
     //let app = app::App::new(graph);
-    let app = App::new();
+    let app = App::default();
     eframe::run_native(
         "Graph App",
         eframe::NativeOptions::default(),

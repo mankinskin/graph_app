@@ -10,11 +10,14 @@ use serde::{
     Serialize,
 };
 
-use crate::graph::vocabulary::{
-    entry::{
-        HasVertexEntries,
-        VocabEntry,
-    }, Corpus, NGramId, Vocabulary
+use crate::graph::{
+    Corpus,
+    vocabulary::{
+        entry::{
+            HasVertexEntries,
+            VocabEntry,
+        }, NGramId, Vocabulary,
+    }
 };
 use seqraph::{graph::vertex::{
     child::Child,

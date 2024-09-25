@@ -13,7 +13,7 @@ use eframe::wasm_bindgen::{
     self,
     prelude::*,
 };
-use seqraph::HypergraphRef;
+use seqraph::graph::HypergraphRef;
 pub use tracing::*;
 pub use {
     graph::*,

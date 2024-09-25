@@ -1,4 +1,5 @@
-use seqraph::*;
+use seqraph::graph::{vertex::token::Token, Hypergraph};
+
 
 pub fn build_graph1() -> Hypergraph
 {

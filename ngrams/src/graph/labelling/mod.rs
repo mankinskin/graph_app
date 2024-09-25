@@ -21,19 +21,19 @@ use std::{
 use tap::Tap;
 
 use crate::graph::{
+    Corpus,
+    CORPUS_DIR,
     partitions::PartitionsCtx,
     vocabulary::{
-        Corpus,
         ProcessStatus,
         Vocabulary,
-        CORPUS_DIR,
     },
 };
 use seqraph::{
-    graph::vertex::{
+    graph::{vertex::{
         key::VertexKey,
         VertexIndex,
-    },
+    }, Hypergraph},
     HashSet,
 };
 
@@ -143,7 +143,7 @@ impl LabellingCtx
             println!("Wrapper Pass already processed.");
         }
     }
-    pub fn label_part(&mut self)
+    pub fn label_part(&mut self) -> Hypergraph
     {
         //println!("{:#?}",
         //    self.vocab.entries.iter()
@@ -153,14 +153,8 @@ impl LabellingCtx
         //        .sorted_by_key(|s| Reverse(s.len()))
         //        .collect_vec(),
         //);
-        if (self.status < ProcessStatus::Partitions)
-        {
-            PartitionsCtx::new(&mut *self).partitions_pass();
-            self.write_to_target_file();
-        }
-        else
-        {
-            println!("Partition Pass already processed.");
-        }
+        let mut ctx = PartitionsCtx::new(&mut *self);
+        ctx.partitions_pass();
+        ctx.graph
     }
 }
