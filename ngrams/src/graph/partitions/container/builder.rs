@@ -11,11 +11,14 @@ use derive_more::{
 };
 use itertools::Itertools;
 use ngram::NGram;
-use seqraph::graph::vertex::{
-    child::Child,
-    has_vertex_index::HasVertexIndex,
-    has_vertex_key::HasVertexKey,
-    wide::Wide,
+use seqraph::graph::{
+    vertex::{
+        child::Child,
+        has_vertex_index::HasVertexIndex,
+        has_vertex_key::HasVertexKey,
+        wide::Wide,
+    },
+    getters::vertex::VertexSet,
 };
 use std::{
     cmp::{
@@ -67,8 +70,8 @@ impl<'a, 'b> PartitionLineBuilder<'a, 'b>
         offset: NonZeroUsize,
     )
     {
-        let index = self.ctx.vocab.get_vertex_subrange(
-            &self.ctx.root.vertex_key(),
+        let index = self.ctx.vocab.containment.get_vertex_subrange(
+            self.ctx.root.vertex_key(),
             self.pos..(self.pos + offset.get()),
         );
         self.push_cell(index);

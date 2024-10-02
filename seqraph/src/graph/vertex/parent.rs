@@ -1,3 +1,4 @@
+use crate::graph::vertex::wide::Wide;
 use crate::{
     HashMap,
     HashSet,
@@ -39,7 +40,11 @@ pub struct Parent {
     /// positions of child in parent patterns
     pub pattern_indices: HashSet<PatternIndex>,
 }
-
+impl Wide for Parent {
+    fn width(&self) -> usize {
+        self.width
+    }
+}
 impl Parent {
     pub fn new(width: TokenPosition) -> Self {
         Self {

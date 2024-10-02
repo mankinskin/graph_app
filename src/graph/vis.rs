@@ -24,7 +24,7 @@ use seqraph::graph::{vertex::{child::Child, data::VertexData, has_vertex_index::
 use std::{collections::HashMap, sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard}};
 use std::f32::consts::PI;
 
-use crate::Graph;
+use crate::graph::Graph;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Layout

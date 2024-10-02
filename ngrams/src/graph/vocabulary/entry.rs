@@ -1,4 +1,5 @@
 use derive_more::Deref;
+use seqraph::graph::vertex::wide::Wide;
 use serde::{
     Deserialize,
     Serialize,
@@ -61,6 +62,11 @@ pub struct VertexCtx<'a>
     #[deref]
     pub entry: &'a VocabEntry,
     pub vocab: &'a Vocabulary,
+}
+impl<'a> Wide for VertexCtx<'a> {
+    fn width(&self) -> usize {
+        self.data.width()
+    }
 }
 impl<'a> VertexCtx<'a>
 {

@@ -146,35 +146,6 @@ impl Vocabulary
         }.on_corpus(&mut vocab);
         vocab
     }
-    /// get sub-vertex at range relative to index
-    pub fn get_vertex_subrange(
-        &self,
-        index: &VertexKey,
-        range: Range<usize>,
-    ) -> Child
-    {
-        let mut entry = self.get_vertex(index).unwrap();
-        let mut wrap = 0..entry.len();
-        assert!(wrap.start <= range.start && wrap.end >= range.end);
-
-        while range != wrap
-        {
-            let next = TopDown::next_nodes(&entry)
-                .into_iter()
-                .map(
-                    |(pos, c)| (c.vertex_key(), pos..pos + c.width()), //pos <= range.start || pos + c.width() >= range.end
-                )
-                .find_or_first(|(_, w)| {
-                    w.start == range.start || w.end == range.end
-                })
-                .unwrap();
-
-            entry = self.get_vertex(&next.0).unwrap();
-            wrap = next.1;
-        }
-
-        entry.data.to_child()
-    }
     //pub fn clean(&mut self) -> HashSet<NGramId> {
     //    let drained: HashSet<_> = self.entries
     //        .extract_if(|_, e| !e.needs_node())

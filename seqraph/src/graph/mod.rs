@@ -316,6 +316,12 @@ where
         self.get_token_by_key(key)
             .expect("Key does not belong to a token!")
     }
+    pub fn vertex_key_string(
+        &self,
+        key: &VertexKey,
+    ) -> String {
+        self.vertex_data_string(self.expect_vertex(key))
+    }
     pub fn vertex_data_string(
         &self,
         data: &VertexData,

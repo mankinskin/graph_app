@@ -3,6 +3,7 @@ mod container;
 use derive_more::{
     Deref,
     DerefMut,
+    IntoIterator,
 };
 use derive_new::new;
 use itertools::Itertools;
@@ -10,7 +11,7 @@ use std::collections::VecDeque;
 
 use crate::graph::{
     labelling::LabellingCtx,
-    partitions::container::PartitionContainer,
+    partitions::container::{ChildTree, PartitionContainer},
     traversal::{
         TopDown,
         TraversalPolicy,
@@ -82,69 +83,18 @@ impl<'b> PartitionsCtx<'b>
             graph: Default::default(),
         }
     }
-    // find largest labelled children
-    fn child_tree(
-        &self,
-        entry: &VertexCtx,
-    ) -> HashMap<usize, NGramId>
-    {
-        let mut queue: VecDeque<_> =
-            TopDown::next_nodes(entry).into_iter().collect();
-        let mut tree: HashMap<usize, NGramId> = Default::default();
 
-        let mut visited: HashSet<_> = Default::default();
-        while let Some((off, node)) = queue.pop_front()
-        {
-            if visited.contains(&(off, node))
-            {
-                continue;
-            }
-            visited.insert((off, node));
-            // check if covered
-            if tree.iter().any(|(&p, &c)| {
-                let node_end = off + node.width();
-                let probe_end = p + c.width();
-                p <= off && node_end <= probe_end
-            })
-            {
-                continue;
-            }
-            if self.labels.contains(&node)
-            {
-                tree.insert(off, node);
-            }
-            else
-            {
-                let ne = entry.vocab.get_vertex(&node).unwrap();
-                queue.extend(
-                    TopDown::next_nodes(&ne)
-                        .into_iter()
-                        .map(|(o, c)| (o + off, c)),
-                )
-            }
-        }
-        tree
-    }
     fn on_node(
         &mut self,
         node: &NGramId,
     ) -> Vec<NGramId>
     {
+        if node.width() == 1 {
+            return Vec::new();
+        }
         let entry = self.vocab.get_vertex(node).unwrap();
-
-        // find all largest children
-        let tree = self.child_tree(&entry);
-
-        // build container with gaps
-        //let next = tree.iter().map(|(_, c)| c.vertex_index()).collect();
-        let ctx = NodePartitionCtx::new(
-            NGramId::new(entry.data.vertex_key(), entry.data.width()),
-            self,
-        );
-        let container = PartitionContainer::from_child_list(&ctx, tree);
-        //println!("{:#?}", container);
-        //print!("{}", container);
-
+        let container = PartitionContainer::from_entry(self, &entry);
+        
         let pids: Vec<_> = std::iter::repeat_n((), container.len())
             .map(|_| PatternId::default())
             .collect();
@@ -156,9 +106,17 @@ impl<'b> PartitionsCtx<'b>
         );
         let parent_data = self.graph.get_vertex_mut(node.vertex_key()).expect(&err);
 
+        assert!(
+            match parent_data.width() {
+                0 => panic!("Invalid width of zero."),
+                2 => pids.len() == 1,
+                1 => pids.is_empty(),
+                _ => !pids.is_empty(),
+            }
+        );
         // child patterns with indices in containment
-        parent_data.children = pids.into_iter().zip(container.clone()).collect();
 
+        parent_data.children = pids.into_iter().zip(container).collect();
         // child locations parent in self.graph, children indices in self.vocab.containment
         let child_locations = parent_data
             .all_localized_children_iter()
@@ -172,17 +130,18 @@ impl<'b> PartitionsCtx<'b>
                 .map(|(_, c)| c.vertex_index())
                 .sorted()
                 .collect_vec(),
-            container
+            parent_data.children
                 .iter()
-                .flatten()
-                .map(HasVertexIndex::vertex_index)
+                .flat_map(|(_, p)| p)
+                .map(|c| c.vertex_index())
                 .sorted()
                 .collect_vec(),
         );
 
+
         // create child nodes in self.graph
         // set child parents and translate child indices to self.graph
-        for (loc, vi) in child_locations.into_iter()
+        for (loc, vi) in child_locations.iter().copied()
         {
             let key = self.vocab.containment.expect_key_for_index(vi);
             let out_index = if let Ok(v) = self.graph.get_vertex_mut(key)
@@ -198,6 +157,7 @@ impl<'b> PartitionsCtx<'b>
                 let mut data = self.graph.finish_vertex_builder(builder);
                 assert!(data.key == key);
                 data.add_parent(loc);
+
                 // translate containment index to output index
                 if vi.width() > 1 {
                     self.graph.insert_vertex_data(data)
@@ -207,17 +167,19 @@ impl<'b> PartitionsCtx<'b>
             };
             self.graph.expect_child_mut_at(loc).index = out_index;
         }
-        container
+        let parent_data = self.graph.get_vertex_mut(node.vertex_key()).expect(&err);
+        child_locations
+            .clone()
             .into_iter()
-            .flatten()
+            .flat_map(|(_, p)| p)
             .filter(|c| c.width() > 1)
             .map(|c| {
                 let entry = self.vocab.get_vertex(&c).unwrap();
                 let key = entry.data.vertex_key();
-                assert!(
-                    self.graph.contains_vertex(key),
-                    "{:#?}", entry.entry,
-                );
+                //assert!(
+                //    self.graph.contains_vertex(key),
+                //    "{:#?}", entry.entry,
+                //);
                 NGramId::new(
                     key,
                     c.width(),
@@ -229,26 +191,24 @@ impl<'b> PartitionsCtx<'b>
     {
         println!("Partition Pass");
         let mut queue: VecDeque<_> = TopDown::starting_nodes(&self.vocab);
-        //let mut n = 0;
         for vk in queue.iter()
         {
-            let entry = self.vocab.get_vertex(vk).unwrap();
+            let data = self.vocab.containment.expect_vertex(vk.vertex_key());
             let mut builder = VertexDataBuilder::default();
-            builder.width(entry.data.width());
+            builder.width(data.width());
             builder.key(**vk);
             self.graph.insert_vertex_builder(builder);
         }
+
         while !queue.is_empty()
         {
-            //println!("{}", n);
-            //n += 1;
             let mut visited: HashSet<_> = Default::default();
             let mut next_layer: Vec<_> = Default::default();
             while let Some(node) = queue.pop_front()
             {
                 if !visited.contains(&node)
                     && self.labels.contains(&node)
-                    && !self.vocab.leaves.contains(&node)
+                    //&& !self.vocab.leaves.contains(&node)
                 {
                     next_layer.extend(self.on_node(&node));
                     visited.insert(node);
@@ -256,6 +216,9 @@ impl<'b> PartitionsCtx<'b>
             }
             queue.extend(next_layer)
         }
+        self.vocab.roots.iter().for_each(|key| {
+            let _ = self.graph.vertex_key_string(key);
+        });
         self.status = ProcessStatus::Partitions;
         println!("{:#?}", &self.graph);
     }

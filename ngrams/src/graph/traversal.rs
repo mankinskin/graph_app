@@ -47,11 +47,11 @@ impl TraversalPolicy for BottomUp
             .data
             .parents
             .iter()
-            .filter(|(&id, p)| p.width == entry.entry.ngram.len() + 1)
+            .filter(|(&id, p)| p.width == entry.data.width() + 1)
             .map(|(id, p)| {
                 NGramId::new(
                     entry.vocab.containment.expect_key_for_index(id),
-                    entry.data.width,
+                    p.width(),
                 )
             })
             .collect_vec()
@@ -75,24 +75,19 @@ impl TraversalPolicy for TopDown
     {
         entry
             .data
-            .children
-            .iter()
-            .flat_map(|(_, pat)| {
-                pat.iter()
-                    .enumerate()
-                    .filter(|(subi, c)| c.width() + 1 == entry.entry.ngram.len())
-                    .map(|(subi, c)| {
-                        (
-                            // sub index can be used as offset because child patterns have special structure
-                            subi,
-                            NGramId::new(
-                                entry.vocab.containment.expect_key_for_index(c),
-                                c.width(),
-                            ),
-                        )
-                    })
+            .top_down_containment_nodes()
+            .into_iter()
+            .map(|(subi, c)| {
+                (
+                    // sub index can be used as offset because child patterns have special structure
+                    subi,
+                    NGramId::new(
+                        entry.vocab.containment.expect_key_for_index(c),
+                        c.width(),
+                    ),
+                )
             })
-            .sorted_by_key(|&(off, _)| off)
-            .collect_vec()
+            .collect()
+
     }
 }

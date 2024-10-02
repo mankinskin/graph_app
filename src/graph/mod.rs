@@ -45,7 +45,7 @@ impl Graph
         let new = Self {
             graph,
             vis,
-            insert_text: String::from("heldldo"),
+            insert_text: String::from("ababa"),
         };
         let g = new.clone();
         new.vis_mut().set_graph(g);
@@ -83,10 +83,10 @@ impl Graph
     {
         *self = Self::default();
     }
-    pub fn read_text(&mut self, text: impl ToString, ctx: &egui::Context) -> JoinHandle<()> {
-        let text = text.to_string();
+    pub fn read_text(&mut self, _text: impl ToString, ctx: &egui::Context) -> JoinHandle<()> {
+        //let text = text.to_string();
         let ctx = ctx.clone();
-        let mut graph = self.graph.clone();
+        //let mut graph = self.graph.clone();
         tokio::task::spawn_blocking(move || {
             //graph.read_sequence(text.chars());
             println!("done reading");

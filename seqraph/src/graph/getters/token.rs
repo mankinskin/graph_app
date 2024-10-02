@@ -1,46 +1,57 @@
-use crate::graph::getters::vertex::VertexSet;
-use crate::graph::Hypergraph;
-use crate::graph::kind::GraphKind;
-use crate::graph::vertex::child::Child;
-use crate::graph::vertex::data::VertexData;
-use crate::graph::vertex::key::VertexKey;
-use crate::graph::vertex::token::{AsToken, Token};
-use crate::graph::vertex::{IndexPattern, VertexIndex};
-use crate::graph::vertex::pattern::{IntoPattern, Pattern};
-use crate::search::NoMatch;
+use crate::{
+    graph::{
+        getters::vertex::VertexSet,
+        kind::GraphKind,
+        vertex::{
+            child::Child,
+            data::VertexData,
+            key::VertexKey,
+            pattern::{
+                IntoPattern,
+                Pattern,
+            },
+            token::{
+                AsToken,
+                Token,
+            },
+            IndexPattern,
+            VertexIndex,
+        },
+        Hypergraph,
+    },
+    search::NoMatch,
+};
 
 impl<G: GraphKind> Hypergraph<G> {
     pub fn get_token_data(
         &self,
         token: &Token<G::Token>,
     ) -> Result<&VertexData, NoMatch> {
-        self.get_vertex(
-            self.get_token_index(token)?
-        )
+        self.get_vertex(self.get_token_index(token)?)
     }
     pub fn get_token_data_mut(
         &mut self,
         token: &Token<G::Token>,
     ) -> Result<&mut VertexData, NoMatch> {
-        self.get_vertex_mut(
-            self.get_token_index(token)?
-        )
+        self.get_vertex_mut(self.get_token_index(token)?)
     }
     pub fn get_token_index(
         &self,
         token: impl AsToken<G::Token>,
     ) -> Result<VertexIndex, NoMatch> {
-        Ok(
-            self.graph.get_index_of(&self.get_token_key(token.as_token())?)
-            .unwrap()
-        )
+        Ok(self
+            .graph
+            .get_index_of(&self.get_token_key(token.as_token())?)
+            .unwrap())
     }
     pub fn get_token_key(
         &self,
         token: impl AsToken<G::Token>,
     ) -> Result<VertexKey, NoMatch> {
-        self.token_keys.get(&token.as_token())
-            .copied().ok_or(NoMatch::UnknownToken)
+        self.token_keys
+            .get(&token.as_token())
+            .copied()
+            .ok_or(NoMatch::UnknownToken)
     }
     pub fn get_token_child(
         &self,
@@ -74,7 +85,8 @@ impl<G: GraphKind> Hypergraph<G> {
         &'a self,
         tokens: impl IntoIterator<Item = impl AsToken<G::Token>> + 'a,
     ) -> impl Iterator<Item = Result<VertexIndex, NoMatch>> + 'a {
-        tokens.into_iter()
+        tokens
+            .into_iter()
             .map(move |token| self.get_token_index(token))
     }
     pub fn to_token_children_iter<'a>(

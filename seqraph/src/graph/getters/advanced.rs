@@ -1,13 +1,17 @@
+use std::ops::Range;
 use std::slice::SliceIndex;
+use crate::graph::vertex::has_vertex_data::HasVertexData;
+use crate::graph::vertex::wide::Wide;
 use crate::graph::Hypergraph;
 use crate::graph::kind::GraphKind;
 use crate::graph::vertex::child::Child;
-use crate::graph::vertex::has_vertex_index::HasVertexIndex;
+use crate::graph::vertex::has_vertex_index::{HasVertexIndex, ToChild};
 use crate::graph::vertex::location::pattern::IntoPatternLocation;
 use crate::graph::vertex::parent::PatternIndex;
 use crate::graph::vertex::pattern::pattern_range::PatternRangeIndex;
 use crate::search::NoMatch;
 use crate::graph::getters::vertex::VertexSet;
+use itertools::Itertools;
 
 impl<G: GraphKind> Hypergraph<G> {
     pub fn get_common_pattern_in_parent(
@@ -61,5 +65,35 @@ impl<G: GraphKind> Hypergraph<G> {
         let loc = id.into_pattern_location();
         self.expect_vertex(loc.parent)
             .expect_child_pattern_range(&loc.id, range)
+    }
+    /// get sub-vertex at range relative to index
+    pub fn get_vertex_subrange(
+        &self,
+        vertex: impl HasVertexData,
+        range: Range<usize>,
+    ) -> Child
+    {
+
+        let mut data = vertex.vertex(&self);
+        let mut wrap = 0..data.width();
+        assert!(wrap.start <= range.start && wrap.end >= range.end);
+
+        while range != wrap
+        {
+            let next = data.top_down_containment_nodes()
+                .into_iter()
+                .map(
+                    |(pos, c)| (c.vertex_index(), pos..pos + c.width()), //pos <= range.start || pos + c.width() >= range.end
+                )
+                .find_or_first(|(_, w)| {
+                    w.start == range.start || w.end == range.end
+                })
+                .unwrap();
+
+            data = self.expect_vertex(next.0);
+            wrap = next.1;
+        }
+
+        data.to_child()
     }
 }

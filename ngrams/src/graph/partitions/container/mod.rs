@@ -5,7 +5,7 @@ use crate::graph::{
         NodePartitionCtx,
         PartitionsCtx,
     },
-    vocabulary::NGramId,
+    vocabulary::{entry::VocabEntry, NGramId},
 };
 use builder::PartitionBuilder;
 use derive_more::{
@@ -32,6 +32,43 @@ use std::{
     num::NonZeroUsize,
 };
 
+use derive_new::new;
+use std::collections::VecDeque;
+
+use crate::graph::{
+    labelling::LabellingCtx,
+    traversal::{
+        TopDown,
+        TraversalPolicy,
+    },
+    vocabulary::{
+        entry::{
+            HasVertexEntries,
+            VertexCtx,
+        },
+        ProcessStatus,
+    },
+};
+use seqraph::{
+    graph::{
+        getters::vertex::VertexSet,
+        vertex::{
+            data::{
+                VertexData,
+                VertexDataBuilder,
+            },
+            has_vertex_index::{
+                HasVertexIndex,
+                ToChild,
+            },
+            VertexIndex,
+        },
+        Hypergraph,
+    },
+    HashMap,
+    HashSet,
+};
+
 #[derive(Debug, Copy, Clone)]
 pub enum PartitionCell
 {
@@ -49,6 +86,65 @@ impl PartitionCell
         }
     }
 }
+#[derive(Debug, Deref, DerefMut, Default, IntoIterator)]
+pub struct ChildTree
+{
+    #[deref]
+    #[deref_mut]
+    #[into_iterator(owned, ref)]
+    entries: HashMap<usize, NGramId>,
+}
+
+
+impl ChildTree
+{
+        // find largest labelled children
+    pub fn from_entry(
+        ctx: &PartitionsCtx<'_>,
+        entry: &VertexCtx<'_>,
+    ) -> Self
+    {
+        let mut queue: VecDeque<_> =
+            TopDown::next_nodes(entry).into_iter().collect();
+        let mut tree: ChildTree = Default::default();
+
+        let mut visited: HashSet<_> = Default::default();
+        while let Some((off, node)) = queue.pop_front()
+        {
+            if visited.contains(&(off, node))
+            {
+                continue;
+            }
+            visited.insert((off, node));
+            // check if covered
+            if tree.any_covers(off, node)
+            {
+                continue;
+            }
+            if ctx.labels.contains(&node)
+            {
+                tree.insert(off, node);
+            }
+            else
+            {
+                let ne = entry.vocab.get_vertex(&node).unwrap();
+                queue.extend(
+                    TopDown::next_nodes(&ne)
+                        .into_iter()
+                        .map(|(o, c)| (o + off, c)),
+                )
+            }
+        }
+        tree
+    }
+    pub fn any_covers(&self, off: usize, node: impl Wide) -> bool {
+        self.iter().any(|(&p, &c)| {
+            let node_end = off + node.width();
+            let probe_end = p + c.width();
+            p <= off && node_end <= probe_end
+        })
+    }
+}
 
 #[derive(Debug, IntoIterator, Deref)]
 pub struct PartitionContainer
@@ -57,6 +153,24 @@ pub struct PartitionContainer
 }
 impl PartitionContainer
 {
+    pub fn from_entry(ctx: &PartitionsCtx<'_>, entry: &VertexCtx) -> Self {
+        // find all largest children
+        let tree = ChildTree::from_entry(ctx, entry);
+        assert!(
+            match entry.width() {
+                1 => tree.is_empty(),
+                _ => !tree.is_empty()
+            }
+        );
+
+        // build container with gaps
+        //let next = tree.iter().map(|(_, c)| c.vertex_index()).collect();
+        let ctx = NodePartitionCtx::new(
+            NGramId::new(entry.data.vertex_key(), entry.data.width()),
+            ctx,
+        );
+        Self::from_child_list(&ctx, tree)
+    }
     pub fn from_child_list(
         ctx: &NodePartitionCtx,
         list: impl IntoIterator<Item = (usize, NGramId)>,
