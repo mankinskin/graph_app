@@ -1,16 +1,5 @@
 use eframe::egui::{
-    self,
-    vec2,
-    Frame,
-    Pos2,
-    Rect,
-    Response,
-    Shape,
-    Stroke,
-    Style,
-    Ui,
-    Vec2,
-    Window,
+    self, vec2, Color32, Frame, Pos2, Rect, Response, Shape, Stroke, Style, Ui, Vec2, Window
 };
 #[allow(unused)]
 use petgraph::{
@@ -436,6 +425,14 @@ impl NodeVis
             //Window::new(&self.name)
             .vscroll(true)
             .default_width(80.0)
+            .frame(
+                Frame::window(&Style::default())
+                    .fill(
+                        self.graph.labels.read().unwrap().contains(&self.key)
+                            .then_some(Color32::from_rgb(10, 50, 10))
+                            .unwrap_or_default()
+                    )
+            )
             .show(ui.ctx(), |ui| {
                 ui.spacing_mut().item_spacing = Vec2::splat(0.0);
                 self.child_patterns(ui, gvis)

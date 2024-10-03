@@ -89,16 +89,17 @@ impl<'b> PartitionsCtx<'b>
         node: &NGramId,
     ) -> Vec<NGramId>
     {
-        if node.width() == 1 {
-            return Vec::new();
-        }
         let entry = self.vocab.get_vertex(node).unwrap();
         let container = PartitionContainer::from_entry(self, &entry);
         
         let pids: Vec<_> = std::iter::repeat_n((), container.len())
             .map(|_| PatternId::default())
             .collect();
+
+        /////
         assert!(self.graph.contains_vertex(node.vertex_key()));
+        /////
+
         let err = format!(
             "Node not yet created {} in: {:#?}",
             node.vertex_key(),
@@ -106,6 +107,7 @@ impl<'b> PartitionsCtx<'b>
         );
         let parent_data = self.graph.get_vertex_mut(node.vertex_key()).expect(&err);
 
+        /////
         assert!(
             match parent_data.width() {
                 0 => panic!("Invalid width of zero."),
@@ -114,9 +116,11 @@ impl<'b> PartitionsCtx<'b>
                 _ => !pids.is_empty(),
             }
         );
-        // child patterns with indices in containment
+        /////
 
+        // child patterns with indices in containment
         parent_data.children = pids.into_iter().zip(container).collect();
+
         // child locations parent in self.graph, children indices in self.vocab.containment
         let child_locations = parent_data
             .all_localized_children_iter()
@@ -124,6 +128,7 @@ impl<'b> PartitionsCtx<'b>
             .map(|(l, c)| (l, *c))
             .collect_vec();
 
+        /////
         assert_eq!(
             child_locations
                 .iter()
@@ -137,6 +142,7 @@ impl<'b> PartitionsCtx<'b>
                 .sorted()
                 .collect_vec(),
         );
+        /////
 
 
         // create child nodes in self.graph
@@ -151,6 +157,7 @@ impl<'b> PartitionsCtx<'b>
             }
             else
             {
+                self.ctx.labels.insert(key);
                 let mut builder = VertexDataBuilder::default();
                 builder.width(vi.width());
                 builder.key(key);
@@ -176,10 +183,13 @@ impl<'b> PartitionsCtx<'b>
             .map(|c| {
                 let entry = self.vocab.get_vertex(&c).unwrap();
                 let key = entry.data.vertex_key();
-                //assert!(
-                //    self.graph.contains_vertex(key),
-                //    "{:#?}", entry.entry,
-                //);
+                assert!(
+                    self.ctx.labels.contains(&key),
+                );
+                assert!(
+                    self.graph.contains_vertex(key),
+                    "{:#?}", entry.entry,
+                );
                 NGramId::new(
                     key,
                     c.width(),
@@ -206,9 +216,9 @@ impl<'b> PartitionsCtx<'b>
             let mut next_layer: Vec<_> = Default::default();
             while let Some(node) = queue.pop_front()
             {
-                if !visited.contains(&node)
-                    && self.labels.contains(&node)
-                    //&& !self.vocab.leaves.contains(&node)
+                if (!visited.contains(&node)
+                    && self.labels.contains(&node))
+                    || self.vocab.leaves.contains(&node)
                 {
                     next_layer.extend(self.on_node(&node));
                     visited.insert(node);

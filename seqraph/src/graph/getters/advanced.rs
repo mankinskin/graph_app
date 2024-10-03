@@ -82,9 +82,8 @@ impl<G: GraphKind> Hypergraph<G> {
         {
             let next = data.top_down_containment_nodes()
                 .into_iter()
-                .map(
-                    |(pos, c)| (c.vertex_index(), pos..pos + c.width()), //pos <= range.start || pos + c.width() >= range.end
-                )
+                .map(|(pos, c)| (wrap.start + pos, c))
+                .map(|(pos, c)| (c.vertex_index(), pos..pos + c.width()))
                 .find_or_first(|(_, w)| {
                     w.start == range.start || w.end == range.end
                 })

@@ -6,7 +6,7 @@ use itertools::Itertools;
 use ngram::NGram;
 use pretty_assertions::assert_eq;
 
-use seqraph::{graph::Hypergraph, HashSet};
+use seqraph::{graph::{vertex::key::VertexKey, Hypergraph}, HashSet};
 use serde::{Deserialize, Serialize};
 
 use crate::graph::{
@@ -47,10 +47,20 @@ impl Corpus
         CORPUS_DIR.join(&self.name)
     }
 }
-pub fn parse_corpus(corpus: Corpus) -> Hypergraph {
+pub struct ParseResult {
+    pub graph: Hypergraph,
+    pub containment: Hypergraph,
+    pub labels: HashSet<VertexKey>,
+}
+pub fn parse_corpus(corpus: Corpus) -> ParseResult {
     let mut image = LabellingCtx::from_corpus(&corpus);
 
     image.label_freq();
     image.label_wrap();
-    image.label_part()
+    let graph = image.label_part();
+    ParseResult {
+        graph,
+        containment: image.vocab.containment,
+        labels: image.labels,
+    }
 }

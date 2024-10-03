@@ -70,9 +70,10 @@ impl<'a, 'b> PartitionLineBuilder<'a, 'b>
         offset: NonZeroUsize,
     )
     {
+        let end_pos = self.end_pos();
         let index = self.ctx.vocab.containment.get_vertex_subrange(
             self.ctx.root.vertex_key(),
-            self.pos..(self.pos + offset.get()),
+            end_pos..(end_pos + offset.get()),
         );
         self.push_cell(index);
     }
@@ -107,9 +108,9 @@ impl<'a, 'b> PartitionLineBuilder<'a, 'b>
     }
     pub fn end_pos(&self) -> usize
     {
-        let cell = self.line.last().unwrap();
-        let cell_width = cell.width();
-        self.pos + cell_width
+        self.pos + self.line.last().map(|cell|
+            cell.width()
+        ).unwrap_or_default()
     }
     pub fn close(
         mut self,

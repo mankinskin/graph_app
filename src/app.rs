@@ -195,11 +195,12 @@ impl eframe::App for App
                 ui.text_edit_multiline(&mut self.graph.insert_text);
                 if ui.button("Insert").clicked()
                 {
-                    let insert_text = self.graph.insert_text.clone();
+                    let insert_text = std::mem::take(&mut self.graph.insert_text);
                     //self.read_task = Some(self.graph.read_text(insert_text, ctx));
-                    let graph = ngrams::graph::parse_corpus(ngrams::graph::Corpus::new("", [insert_text]));
-                    self.graph.insert_text = String::new();
-                    self.graph.set_graph(graph);
+                    let res = ngrams::graph::parse_corpus(ngrams::graph::Corpus::new("", [insert_text]));
+
+                    *self.graph.graph.write().unwrap() = res.graph;
+                    *self.graph.labels.write().unwrap() = res.labels;
                 }
             });
         }
