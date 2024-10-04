@@ -27,7 +27,8 @@ async-std = "1.12"
 tracing-mutex = "0.3"
 
 [dependencies.tracing-egui]
-path = "../tracing-egui"
+#path = "../tracing-egui"
+git = "https://github.com/mankinskin/tracing-egui"
 #version = "^0.1"
 
 [dependencies.tracing]
@@ -39,9 +40,9 @@ version = "^0.3"
 features = ["json"]
 
 [dependencies.eframe]
-path = "../egui/crates/eframe"
-#git = "https://github.com/mankinskin/egui"
-#branch = "placer-measure"
+#path = "../egui/crates/eframe"
+git = "https://github.com/mankinskin/egui"
+branch = "placer-measure"
 
 [dependencies.tokio]
 version = "^1"

@@ -43,10 +43,13 @@ nrfind = "1"
 ngram = "0.1"
 csv = "1"
 derivative = "^2.2"
-justlog = { path = "../../justlog" }
 derive_builder = "^0.20"
 tracing = { version = "^0.1", features = ["attributes", "valuable"] }
 uuid = { version = "^1.10", features = ["v4", "fast-rng", "serde"] }
+
+[dependencies.justlog]
+git = "https://github.com/mankinskin/justlog"
+#path = "../../justlog"
 
 #console-subscriber = "0.2"
 #tracing-mutex = "0.3"
