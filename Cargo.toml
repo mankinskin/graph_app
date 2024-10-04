@@ -29,6 +29,7 @@ tracing-mutex = "0.3"
 [dependencies.tracing-egui]
 #path = "../tracing-egui"
 git = "https://github.com/mankinskin/tracing-egui"
+branch = "deploy-integration"
 #version = "^0.1"
 
 [dependencies.tracing]
