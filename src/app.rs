@@ -144,7 +144,7 @@ impl App
                     |ui| {
                         if ui.button("Quit").clicked()
                         {
-                            frame.close()
+                            ctx.send_viewport_cmd(egui::ViewportCommand::Close)
                         }
                     },
                 )
@@ -168,10 +168,10 @@ impl App
 }
 impl eframe::App for App
 {
-    fn max_size_points(&self) -> egui::Vec2
-    {
-        (f32::INFINITY, f32::INFINITY).into()
-    }
+    //fn max_size_points(&self) -> egui::Vec2
+    //{
+    //    (f32::INFINITY, f32::INFINITY).into()
+    //}
     /// Called by the frame work to save state before shutdown.
     #[cfg(feature = "persistence")]
     fn save(
@@ -199,20 +199,19 @@ impl eframe::App for App
                     //self.read_task = Some(self.graph.read_text(insert_text, ctx));
                     let res = ngrams::graph::parse_corpus(ngrams::graph::Corpus::new("", [insert_text]));
 
-                    *self.graph.graph.write().unwrap() = res.graph;
+                    *self.graph.graph.write().unwrap() = res.containment;
                     *self.graph.labels.write().unwrap() = res.labels;
                 }
             });
         }
     }
-    fn on_close_event(&mut self) -> bool
+    fn on_exit(&mut self, ctx: Option<&eframe::glow::Context>)
     {
         if let Some(handle) = self.read_task.take()
         {
             println!("abort");
             handle.abort();
         }
-        true
     }
 }
 use std::{future::Future, sync::{Arc, RwLock}};

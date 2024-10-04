@@ -1,6 +1,6 @@
-use eframe::egui::{
+use eframe::{egui::{
     self, vec2, Color32, Frame, Pos2, Rect, Response, Shape, Stroke, Style, Ui, Vec2, Window
-};
+}, epaint::Shadow};
 #[allow(unused)]
 use petgraph::{
     graph::{
@@ -424,13 +424,15 @@ impl NodeVis
         Window::new(&format!("{}({})", self.name, self.idx.index()))
             //Window::new(&self.name)
             .vscroll(true)
-            .default_width(80.0)
+            .auto_sized()
+            //.default_width(80.0)
             .frame(
                 Frame::window(&Style::default())
+                    .shadow(Shadow::NONE)
                     .fill(
                         self.graph.labels.read().unwrap().contains(&self.key)
                             .then_some(Color32::from_rgb(10, 50, 10))
-                            .unwrap_or_default()
+                            .unwrap_or(ui.style().visuals.widgets.open.bg_fill)
                     )
             )
             .show(ui.ctx(), |ui| {

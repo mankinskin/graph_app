@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::all, rust_2018_idioms)]
+#![allow(clippy::obfuscated_if_else)]
 
 mod app;
 pub use app::App;
@@ -49,6 +50,6 @@ pub async fn open(graph: HypergraphRef)
     eframe::run_native(
         "Graph App",
         eframe::NativeOptions::default(),
-        Box::new(|_| Box::new(app)),
+        Box::new(|_| Ok(Box::new(app))),
     );
 }
