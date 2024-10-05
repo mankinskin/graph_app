@@ -83,7 +83,7 @@ where
     }
 }
 
-impl<'a, Trav, S, O> Unpin for OrderedTraverser<'a, Trav, S, O>
+impl<Trav, S, O> Unpin for OrderedTraverser<'_, Trav, S, O>
 where
     Trav: Traversable,
     S: DirectedTraversalPolicy<Trav = Trav>,
@@ -101,7 +101,7 @@ pub trait ExtendStates {
     );
 }
 
-impl<'a, Trav, S, O> ExtendStates for OrderedTraverser<'a, Trav, S, O>
+impl<Trav, S, O> ExtendStates for OrderedTraverser<'_, Trav, S, O>
 where
     Trav: Traversable,
     S: DirectedTraversalPolicy<Trav = Trav>,
@@ -144,7 +144,7 @@ impl<'a, 'b: 'a, I: TraversalIterator<'b>> ExtendStates for TraversalContext<'a,
     }
 }
 
-impl<'a, Trav, S, O> Iterator for OrderedTraverser<'a, Trav, S, O>
+impl<Trav, S, O> Iterator for OrderedTraverser<'_, Trav, S, O>
 where
     Trav: Traversable + TraversalFolder,
     S: DirectedTraversalPolicy<Trav = Trav>,

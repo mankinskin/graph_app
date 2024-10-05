@@ -113,7 +113,7 @@ impl App
             Err(err) =>
             {
                 rfd::AsyncMessageDialog::default()
-                    .set_description(&format!("{}", err))
+                    .set_description(format!("{}", err))
                     .show()
                     .await;
             }
@@ -133,7 +133,7 @@ impl App
     fn top_panel(
         &mut self,
         ctx: &egui::Context,
-        frame: &mut eframe::Frame,
+        _frame: &mut eframe::Frame,
     )
     {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -205,7 +205,7 @@ impl eframe::App for App
             });
         }
     }
-    fn on_exit(&mut self, ctx: Option<&eframe::glow::Context>)
+    fn on_exit(&mut self, _ctx: Option<&eframe::glow::Context>)
     {
         if let Some(handle) = self.read_task.take()
         {

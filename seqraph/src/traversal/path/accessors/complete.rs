@@ -10,14 +10,14 @@ use std::fmt::Debug;
 use crate::graph::vertex::child::Child;
 
 pub trait PathComplete: Sized + Debug {
-    fn into_complete(&self) -> Option<Child>;
+    fn as_complete(&self) -> Option<Child>;
 
     fn is_complete(&self) -> bool {
-        self.into_complete().is_some()
+        self.as_complete().is_some()
     }
     #[track_caller]
     fn unwrap_complete(self) -> Child {
-        self.into_complete()
+        self.as_complete()
             .unwrap_or_else(|| panic!("Unable to unwrap {:?} as complete.", self))
     }
     #[track_caller]
@@ -25,14 +25,14 @@ pub trait PathComplete: Sized + Debug {
         self,
         msg: &str,
     ) -> Child {
-        self.into_complete()
+        self.as_complete()
             .unwrap_or_else(|| panic!("Unable to unwrap {:?} as complete: {}", self, msg))
     }
 }
 
 impl PathComplete for FoldResult {
     /// returns child if reduced to single child
-    fn into_complete(&self) -> Option<Child> {
+    fn as_complete(&self) -> Option<Child> {
         match self {
             Self::Complete(c) => Some(*c),
             _ => None,
@@ -41,7 +41,7 @@ impl PathComplete for FoldResult {
 }
 
 impl<P: MatchEndPath> PathComplete for MatchEnd<P> {
-    fn into_complete(&self) -> Option<Child> {
+    fn as_complete(&self) -> Option<Child> {
         match self {
             Self::Complete(c) => Some(*c),
             _ => None,
@@ -50,7 +50,7 @@ impl<P: MatchEndPath> PathComplete for MatchEnd<P> {
 }
 
 impl PathComplete for EndKind {
-    fn into_complete(&self) -> Option<Child> {
+    fn as_complete(&self) -> Option<Child> {
         match self {
             Self::Complete(c) => Some(*c),
             _ => None,

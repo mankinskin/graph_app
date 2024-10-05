@@ -57,7 +57,7 @@ pub struct TextLocation
 pub struct CorpusCtx<'a> {
     pub corpus: &'a Corpus,
 }
-impl<'a> CorpusCtx<'a>
+impl CorpusCtx<'_>
 {
     pub fn on_corpus(
         &self,
@@ -86,7 +86,7 @@ pub struct TextLevelCtx<'a>
     pub n: usize,
 }
 
-impl<'a> TextLevelCtx<'a>
+impl TextLevelCtx<'_>
 {
     pub fn on_nlevel(
         &self,
@@ -117,7 +117,7 @@ pub struct NGramFrequencyCtx<'a>
     pub occurrence: TextLocation,
 }
 
-impl<'a> NGramFrequencyCtx<'a>
+impl NGramFrequencyCtx<'_>
 {
     pub fn on_ngram(
         &self,

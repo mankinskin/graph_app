@@ -16,24 +16,24 @@ pub struct OffsetSplits {
 //    pub offset: NonZeroUsize,
 //    pub splits: &'a VertexSplitPos,
 //}
-pub trait AsOffsetSplits: Clone {
-    fn as_offset_splits(self) -> OffsetSplits;
+pub trait ToOffsetSplits: Clone {
+    fn to_offset_splits(self) -> OffsetSplits;
 }
 
-impl AsOffsetSplits for OffsetSplits {
-    fn as_offset_splits(self) -> OffsetSplits {
+impl ToOffsetSplits for OffsetSplits {
+    fn to_offset_splits(self) -> OffsetSplits {
         self
     }
 }
 
-impl<'a> AsOffsetSplits for &'a OffsetSplits {
-    fn as_offset_splits(self) -> OffsetSplits {
+impl ToOffsetSplits for &OffsetSplits {
+    fn to_offset_splits(self) -> OffsetSplits {
         self.clone()
     }
 }
 
-impl<'a, S: SplitKind> AsOffsetSplits for (&'a NonZeroUsize, S) {
-    fn as_offset_splits(self) -> OffsetSplits {
+impl<S: SplitKind> ToOffsetSplits for (&NonZeroUsize, S) {
+    fn to_offset_splits(self) -> OffsetSplits {
         OffsetSplits {
             offset: *self.0,
             splits: self.1.borrow().clone(),

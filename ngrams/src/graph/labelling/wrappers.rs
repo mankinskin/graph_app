@@ -48,7 +48,7 @@ pub struct WrapperCtx<'b>
 //  - run top down to find the largest frequent children to cover whole range
 //  - label node x if there are multiple overlapping labelled child nodes
 
-impl<'b> WrapperCtx<'b>
+impl WrapperCtx<'_>
 {
     pub fn labelled_child_ranges(
         &self,

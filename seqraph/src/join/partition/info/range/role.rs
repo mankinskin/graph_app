@@ -24,7 +24,7 @@ use crate::{
             },
         },
         partition::{
-            AsPartition,
+            ToPartition,
             info::{
                 border::{
                     BorderInfo,
@@ -49,7 +49,7 @@ use crate::{
             },
             Partition,
             splits::offset::{
-                AsOffsetSplits,
+                ToOffsetSplits,
                 OffsetSplits,
             },
         },
@@ -128,7 +128,7 @@ pub trait RangeRole: Debug + Clone + Copy {
     type PartitionSplits;
     type Children: RangeChildren<Self>;
     type Borders: VisitBorders<Self, Splits = <Self::Splits as PatternSplits>::Pos>;
-    type Splits: PatternSplits + AsPartition<Self>;
+    type Splits: PatternSplits + ToPartition<Self>;
     fn to_partition(splits: Self::Splits) -> Partition<Self>;
 }
 
@@ -146,7 +146,7 @@ impl<M: InVisitMode> OffsetIndexRange<In<M>> for Range<usize> {
     ) -> <In<M> as RangeRole>::Splits {
         let lo = vertex.positions.iter().nth(self.start).unwrap();
         let ro = vertex.positions.iter().nth(self.end).unwrap();
-        (lo.as_offset_splits(), ro.as_offset_splits())
+        (lo.to_offset_splits(), ro.to_offset_splits())
     }
 }
 
@@ -156,7 +156,7 @@ impl<M: PreVisitMode> OffsetIndexRange<Pre<M>> for Range<usize> {
         vertex: &SplitVertexCache,
     ) -> <Pre<M> as RangeRole>::Splits {
         let ro = vertex.positions.iter().nth(self.end).unwrap();
-        ro.as_offset_splits()
+        ro.to_offset_splits()
     }
 }
 
@@ -166,7 +166,7 @@ impl<M: PostVisitMode> OffsetIndexRange<Post<M>> for RangeFrom<usize> {
         vertex: &SplitVertexCache,
     ) -> <Post<M> as RangeRole>::Splits {
         let lo = vertex.positions.iter().nth(self.start).unwrap();
-        lo.as_offset_splits()
+        lo.to_offset_splits()
     }
 }
 

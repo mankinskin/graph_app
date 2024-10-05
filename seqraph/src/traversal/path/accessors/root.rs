@@ -134,7 +134,7 @@ macro_rules! impl_root {
 impl_root! { PatternRoot for QueryRangePath, self => self.root.borrow() }
 //impl_root! { PatternRoot for PatternPrefixPath, self => self.pattern.borrow() }
 //impl_root! { PatternRoot for OverlapPrimer, self => PatternRoot::pattern_root_pattern(&self.context) }
-impl<'c> PatternRoot for QueryStateContext<'c> {
+impl PatternRoot for QueryStateContext<'_> {
     fn pattern_root_pattern(&self) -> &Pattern {
         &self.ctx.query_root
     }

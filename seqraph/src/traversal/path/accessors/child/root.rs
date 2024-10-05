@@ -123,7 +123,7 @@ impl_child! { RootChild for RootedRolePath<R>, self, trav =>
     trav.graph().expect_child_at(self.path_root().location.to_child_location(RootChildPos::<R>::root_child_pos(&self.role_path)))
 }
 
-impl<'c, R: PathRole> RootChild<R> for QueryStateContext<'c>
+impl<R: PathRole> RootChild<R> for QueryStateContext<'_>
 where
     Self: RootChildPos<R>,
 {

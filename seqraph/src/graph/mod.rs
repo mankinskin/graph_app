@@ -221,9 +221,9 @@ pub struct Edge {
     pub child: Child,
 }
 
-impl<'t, 'a, G: GraphKind> Hypergraph<G>
+impl<'a, G: GraphKind> Hypergraph<G>
 where
-    G::Token: std::fmt::Display + 't,
+    G::Token: std::fmt::Display,
 {
     pub fn to_petgraph(
         &self

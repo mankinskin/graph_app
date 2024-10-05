@@ -26,7 +26,7 @@ pub use {
 
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main(flavor = "multi_thread", worker_threads = 10)]
-async fn main()
+async fn main() -> Result<(), eframe::Error>
 {
     //let graph = seqraph::gen_graph().unwrap_or_else(|g| g);
     //let app = app::App::new(graph);
@@ -35,5 +35,5 @@ async fn main()
         "Graph App",
         eframe::NativeOptions::default(),
         Box::new(|_| Ok(Box::new(app))),
-    );
+    )
 }

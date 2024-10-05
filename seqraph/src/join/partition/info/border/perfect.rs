@@ -53,7 +53,7 @@ pub trait BorderPerfect: Default + Debug + Clone + Extend<Self> {
         pid: PatternId,
     ) -> Self;
     fn complete(&self) -> SinglePerfect;
-    fn as_bool(self) -> Self::Boolean;
+    fn to_bool(self) -> Self::Boolean;
 }
 
 #[derive(Debug, Default, Clone, Copy, From, Into, Deref)]
@@ -152,7 +152,7 @@ impl BorderPerfect for SinglePerfect {
     fn complete(&self) -> SinglePerfect {
         *self
     }
-    fn as_bool(self) -> Self::Boolean {
+    fn to_bool(self) -> Self::Boolean {
         self.0.is_some()
     }
 }
@@ -176,7 +176,7 @@ impl BorderPerfect for DoublePerfect {
             .and_then(|pid| SinglePerfect(self.1).complete().0.filter(|i| *i == pid))
             .into()
     }
-    fn as_bool(self) -> Self::Boolean {
+    fn to_bool(self) -> Self::Boolean {
         (self.0.is_some(), self.1.is_some())
     }
 }

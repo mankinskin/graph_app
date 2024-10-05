@@ -421,7 +421,7 @@ impl NodeVis
         gvis: &GraphVis,
     ) -> Option<Response>
     {
-        Window::new(&format!("{}({})", self.name, self.idx.index()))
+        Window::new(format!("{}({})", self.name, self.idx.index()))
             //Window::new(&self.name)
             .vscroll(true)
             .auto_sized()

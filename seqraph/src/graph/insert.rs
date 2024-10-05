@@ -47,7 +47,7 @@ use crate::graph::getters::vertex::VertexSet;
 lazy_static! {
     static ref VERTEX_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 }
-impl<'g, G> crate::graph::Hypergraph<G>
+impl<G> crate::graph::Hypergraph<G>
 where
     G: GraphKind,
 {
@@ -338,7 +338,7 @@ where
     }
     //#[track_caller]
     pub fn replace_in_pattern(
-        &'g mut self,
+        &mut self,
         location: impl IntoPatternLocation,
         range: impl PatternRangeIndex,
         replace: impl IntoPattern + Clone,

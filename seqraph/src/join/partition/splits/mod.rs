@@ -25,7 +25,7 @@ pub type PosSplitRef<'p, S = SplitVertexCache> = (&'p NonZeroUsize, &'p <S as Ha
 
 pub trait SplitKind: Borrow<VertexSplitPos> + Debug + Sized + Clone {}
 
-impl<'a, S: Borrow<VertexSplitPos> + Debug + Sized + 'a + Clone> SplitKind for S {}
+impl<S: Borrow<VertexSplitPos> + Debug + Sized + Clone> SplitKind for S {}
 
 pub trait HasPosSplits {
     type Split: SplitKind;
@@ -39,14 +39,14 @@ impl HasPosSplits for SplitVertexCache {
     }
 }
 
-impl<'a, S: HasPosSplits> HasPosSplits for &'a S {
+impl<S: HasPosSplits> HasPosSplits for &S {
     type Split = S::Split;
     fn pos_splits(&self) -> &PosSplits<Self> {
         (**self).pos_splits()
     }
 }
 
-impl<'a, S: HasPosSplits> HasPosSplits for &'a mut S {
+impl<S: HasPosSplits> HasPosSplits for &mut S {
     type Split = S::Split;
     fn pos_splits(&self) -> &PosSplits<Self> {
         (**self).pos_splits()

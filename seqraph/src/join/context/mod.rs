@@ -39,7 +39,7 @@ impl<'p> JoinContext<'p> {
         self,
         index: Child,
         split_cache: &'p SplitCache,
-    ) -> NodeJoinContext {
+    ) -> NodeJoinContext<'p> {
         NodeJoinContext::new(
             self,
             index,
@@ -49,15 +49,15 @@ impl<'p> JoinContext<'p> {
 }
 
 // , PatternCtx<'p> = PatternJoinContext<'p>
-pub trait AsNodeJoinContext<'p> {
-    fn as_node_join_context<'t>(self) -> NodeJoinContext<'t>
+pub trait ToNodeJoinContext<'p> {
+    fn to_node_join_context<'t>(self) -> NodeJoinContext<'t>
     where
         Self: 't,
         'p: 't;
 }
 
-impl<'p> AsNodeJoinContext<'p> for NodeJoinContext<'p> {
-    fn as_node_join_context<'t>(self) -> NodeJoinContext<'t>
+impl<'p> ToNodeJoinContext<'p> for NodeJoinContext<'p> {
+    fn to_node_join_context<'t>(self) -> NodeJoinContext<'t>
     where
         Self: 't,
         'p: 't,

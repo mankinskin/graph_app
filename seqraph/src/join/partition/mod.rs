@@ -13,7 +13,7 @@ use crate::join::partition::{
         RangeRole,
     },
     splits::offset::{
-        AsOffsetSplits,
+        ToOffsetSplits,
         OffsetSplits,
     },
 };
@@ -22,18 +22,18 @@ pub mod info;
 pub mod splits;
 
 #[derive(new, Clone, Copy)]
-pub struct Infix<A: AsOffsetSplits, B: AsOffsetSplits> {
+pub struct Infix<A: ToOffsetSplits, B: ToOffsetSplits> {
     pub left: A,
     pub right: B,
 }
 
 #[derive(new, Clone)]
-pub struct Prefix<O: AsOffsetSplits> {
+pub struct Prefix<O: ToOffsetSplits> {
     pub split: O,
 }
 
 #[derive(new, Clone)]
-pub struct Postfix<O: AsOffsetSplits> {
+pub struct Postfix<O: ToOffsetSplits> {
     pub split: O,
 }
 
@@ -42,68 +42,68 @@ pub struct Partition<K: RangeRole> {
     pub offsets: K::Splits,
 }
 
-pub trait AsPartition<K: RangeRole>: Clone {
-    fn as_partition(self) -> Partition<K>;
+pub trait ToPartition<K: RangeRole>: Clone {
+    fn to_partition(self) -> Partition<K>;
 }
 
-impl<K: RangeRole> AsPartition<K> for Partition<K> {
-    fn as_partition(self) -> Partition<K> {
+impl<K: RangeRole> ToPartition<K> for Partition<K> {
+    fn to_partition(self) -> Partition<K> {
         self
     }
 }
 
-impl<M: InVisitMode, A: AsOffsetSplits, B: AsOffsetSplits> AsPartition<In<M>> for Infix<A, B> {
-    fn as_partition(self) -> Partition<In<M>> {
+impl<M: InVisitMode, A: ToOffsetSplits, B: ToOffsetSplits> ToPartition<In<M>> for Infix<A, B> {
+    fn to_partition(self) -> Partition<In<M>> {
         Partition {
-            offsets: (self.left.as_offset_splits(), self.right.as_offset_splits()),
+            offsets: (self.left.to_offset_splits(), self.right.to_offset_splits()),
         }
     }
 }
 
-impl<M: InVisitMode> AsPartition<In<M>> for (OffsetSplits, OffsetSplits) {
-    fn as_partition(self) -> Partition<In<M>> {
+impl<M: InVisitMode> ToPartition<In<M>> for (OffsetSplits, OffsetSplits) {
+    fn to_partition(self) -> Partition<In<M>> {
         Partition {
             offsets: (self.0, self.1),
         }
     }
 }
 
-impl<'a, M: InVisitMode> AsPartition<In<M>> for &'a (OffsetSplits, OffsetSplits) {
-    fn as_partition(self) -> Partition<In<M>> {
+impl<M: InVisitMode> ToPartition<In<M>> for &(OffsetSplits, OffsetSplits) {
+    fn to_partition(self) -> Partition<In<M>> {
         Partition {
             offsets: (self.0.clone(), self.1.clone()),
         }
     }
 }
 
-impl<M: PreVisitMode, A: AsOffsetSplits> AsPartition<Pre<M>> for A {
-    fn as_partition(self) -> Partition<Pre<M>> {
+impl<M: PreVisitMode, A: ToOffsetSplits> ToPartition<Pre<M>> for A {
+    fn to_partition(self) -> Partition<Pre<M>> {
         Partition {
-            offsets: self.as_offset_splits(),
+            offsets: self.to_offset_splits(),
         }
     }
 }
 
-impl<M: PostVisitMode, A: AsOffsetSplits> AsPartition<Post<M>> for A {
-    fn as_partition(self) -> Partition<Post<M>> {
+impl<M: PostVisitMode, A: ToOffsetSplits> ToPartition<Post<M>> for A {
+    fn to_partition(self) -> Partition<Post<M>> {
         Partition {
-            offsets: self.as_offset_splits(),
+            offsets: self.to_offset_splits(),
         }
     }
 }
 
-impl<M: PreVisitMode, B: AsOffsetSplits> AsPartition<Pre<M>> for Prefix<B> {
-    fn as_partition(self) -> Partition<Pre<M>> {
+impl<M: PreVisitMode, B: ToOffsetSplits> ToPartition<Pre<M>> for Prefix<B> {
+    fn to_partition(self) -> Partition<Pre<M>> {
         Partition {
-            offsets: self.split.as_offset_splits(),
+            offsets: self.split.to_offset_splits(),
         }
     }
 }
 
-impl<M: PostVisitMode, A: AsOffsetSplits> AsPartition<Post<M>> for Postfix<A> {
-    fn as_partition(self) -> Partition<Post<M>> {
+impl<M: PostVisitMode, A: ToOffsetSplits> ToPartition<Post<M>> for Postfix<A> {
+    fn to_partition(self) -> Partition<Post<M>> {
         Partition {
-            offsets: self.split.as_offset_splits(),
+            offsets: self.split.to_offset_splits(),
         }
     }
 }
@@ -117,8 +117,10 @@ pub fn to_non_zero_range(
 
 #[cfg(test)]
 mod tests {
+    #[test]
     fn first_partition() {}
 
+    #[test]
     fn inner_partition() {
         //let cache = SplitCache {
         //    entries: HashMap::from([]),
@@ -131,5 +133,6 @@ mod tests {
         //let bundle = (l, r).info_bundle();
     }
 
+    #[test]
     fn last_partition() {}
 }

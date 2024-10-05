@@ -24,7 +24,8 @@ pub struct Indexer {
 #[derive(Debug)]
 pub struct IndexingPolicy {}
 
-impl<'a: 'g, 'g> DirectedTraversalPolicy for IndexingPolicy {
+// <'a: 'g, 'g>
+impl DirectedTraversalPolicy for IndexingPolicy {
     type Trav = Indexer;
 
     //#[instrument(skip(trav, primer))]
@@ -66,7 +67,7 @@ impl<'a: 'g, 'g> DirectedTraversalPolicy for IndexingPolicy {
 
 pub trait IndexerTraversalPolicy: DirectedTraversalPolicy<Trav = Indexer> {}
 
-impl<'a: 'g, 'g> IndexerTraversalPolicy for IndexingPolicy {}
+impl IndexerTraversalPolicy for IndexingPolicy {}
 
 impl TraversalFolder for Indexer {
     //type Break = TraversalResult<R, Q>;

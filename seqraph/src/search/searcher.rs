@@ -84,8 +84,8 @@ impl<T: Traversable> Searcher<T> {
         self.search(query)
     }
     //, Ti: TraversalIterator<'a, Trav = Self>
-    fn search<'a, P: IntoPattern>(
-        &'a self,
+    fn search<P: IntoPattern>(
+        &self,
         query: P,
     ) -> SearchResult {
         <Self as TraversalFolder>::fold_query(self, query).map_err(|(nm, _)| nm)

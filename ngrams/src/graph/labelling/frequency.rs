@@ -45,7 +45,7 @@ pub struct FrequencyCtx<'b>
     #[deref_mut]
     pub ctx: &'b mut LabellingCtx,
 }
-impl<'b> FrequencyCtx<'b>
+impl FrequencyCtx<'_>
 {
     pub fn entry_next(
         &self,

@@ -63,12 +63,12 @@ pub struct VertexCtx<'a>
     pub entry: &'a VocabEntry,
     pub vocab: &'a Vocabulary,
 }
-impl<'a> Wide for VertexCtx<'a> {
+impl Wide for VertexCtx<'_> {
     fn width(&self) -> usize {
         self.data.width()
     }
 }
-impl<'a> VertexCtx<'a>
+impl VertexCtx<'_>
 {
     pub fn direct_parents(&self) -> &HashMap<VertexIndex, Parent>
     {

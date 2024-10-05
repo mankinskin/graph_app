@@ -39,7 +39,7 @@ use crate::graph::vertex::{
     pattern::Pattern,
 };
 
-impl<'p> NodeJoinContext<'p> {
+impl NodeJoinContext<'_> {
     //pub fn indexed_partition_patterns<'a, K: RangeRole<Mode = Join> + 'p, P: AsPartition<K>>(
     //    &mut self,
     //    part: P,

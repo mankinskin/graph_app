@@ -157,7 +157,6 @@ impl<'b> PartitionsCtx<'b>
             }
             else
             {
-                self.ctx.labels.insert(key);
                 let mut builder = VertexDataBuilder::default();
                 builder.width(vi.width());
                 builder.key(key);
@@ -166,11 +165,17 @@ impl<'b> PartitionsCtx<'b>
                 data.add_parent(loc);
 
                 // translate containment index to output index
-                if vi.width() > 1 {
+                let out = if vi.width() > 1 {
                     self.graph.insert_vertex_data(data)
                 } else {
                     self.graph.insert_token_data(*self.vocab.containment.expect_token_by_key(&key), data)
-                }.vertex_index()
+                }.vertex_index();
+
+                if !self.ctx.labels.contains(&key) {
+                    self.ctx.labels.insert(key);
+                    // TODO: Rerun frequency pass for subgraph of key
+                }
+                out
             };
             self.graph.expect_child_mut_at(loc).index = out_index;
         }

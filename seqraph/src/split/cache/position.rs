@@ -49,7 +49,7 @@ impl Borrow<VertexSplitPos> for SplitPositionCache {
     }
 }
 
-impl<'a> Borrow<VertexSplitPos> for &'a SplitPositionCache {
+impl Borrow<VertexSplitPos> for &SplitPositionCache {
     fn borrow(&self) -> &VertexSplitPos {
         &self.pattern_splits
     }

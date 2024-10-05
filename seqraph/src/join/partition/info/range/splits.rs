@@ -109,7 +109,7 @@ impl PatternSplits for OffsetSplits {
     }
 }
 
-impl<'b> PatternSplits for &'b OffsetSplits {
+impl PatternSplits for &OffsetSplits {
     type Pos = PatternSplitPos;
     type Offsets = usize;
     fn get(

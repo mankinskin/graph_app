@@ -64,7 +64,7 @@ pub trait PruneStates {
     }
 }
 
-impl<'a, Trav, S, O> PruneStates for OrderedTraverser<'a, Trav, S, O>
+impl<Trav, S, O> PruneStates for OrderedTraverser<'_, Trav, S, O>
 where
     Trav: Traversable,
     S: DirectedTraversalPolicy<Trav = Trav>,

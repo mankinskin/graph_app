@@ -113,7 +113,7 @@ where
     }
 }
 
-impl<'a, Trav, P> Iterator for BandExpandingIterator<'a, Trav, P>
+impl<Trav, P> Iterator for BandExpandingIterator<'_, Trav, P>
 where
     Trav: Traversable,
     P: BandExpandingPolicy<Trav>,

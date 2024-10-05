@@ -11,7 +11,7 @@ use crate::{
             },
         },
         partition::{
-            AsPartition,
+            ToPartition,
             info::{
                 border::{
                     PartitionBorder,
@@ -47,12 +47,12 @@ pub trait PartitionBorderKey: Hash + Eq {}
 
 impl<T: Hash + Eq> PartitionBorderKey for T {}
 
-pub trait VisitPartition<K: RangeRole>: Sized + Clone + AsPartition<K> {
+pub trait VisitPartition<K: RangeRole>: Sized + Clone + ToPartition<K> {
     fn info_borders(
         &self,
         ctx: &PatternTraceContext,
     ) -> K::Borders {
-        let part = self.clone().as_partition();
+        let part = self.clone().to_partition();
         // todo detect if prev offset is in same index (to use inner partition as result)
         let pctx = ctx.as_pattern_trace_context();
         let splits = part.offsets.get(&pctx.loc.id).unwrap();
@@ -64,7 +64,7 @@ pub trait VisitPartition<K: RangeRole>: Sized + Clone + AsPartition<K> {
         &self,
         ctx: &'t ModeNodeCtxOf<'t, K>,
     ) -> PatternCtxs<'t, K> {
-        let part = self.clone().as_partition();
+        let part = self.clone().to_partition();
         part.offsets
             .ids()
             .map(|id| (*id, ctx.as_pattern_context(id)))
@@ -100,4 +100,4 @@ pub trait VisitPartition<K: RangeRole>: Sized + Clone + AsPartition<K> {
     }
 }
 
-impl<K: RangeRole, P: AsPartition<K>> VisitPartition<K> for P {}
+impl<K: RangeRole, P: ToPartition<K>> VisitPartition<K> for P {}
