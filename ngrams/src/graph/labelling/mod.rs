@@ -153,7 +153,7 @@ impl LabellingCtx
         //        .sorted_by_key(|s| Reverse(s.len()))
         //        .collect_vec(),
         //);
-        let mut ctx = PartitionsCtx::new(&mut *self);
+        let mut ctx = PartitionsCtx::from(&mut *self);
         ctx.partitions_pass();
         ctx.graph
     }

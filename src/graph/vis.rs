@@ -1,6 +1,21 @@
-use eframe::{egui::{
-    self, vec2, Color32, Frame, Pos2, Rect, Response, Shape, Stroke, Style, Ui, Vec2, Window
-}, epaint::Shadow};
+use eframe::{
+    egui::{
+        self,
+        vec2,
+        Color32,
+        Frame,
+        Pos2,
+        Rect,
+        Response,
+        Shape,
+        Stroke,
+        Style,
+        Ui,
+        Vec2,
+        Window,
+    },
+    epaint::Shadow,
+};
 #[allow(unused)]
 use petgraph::{
     graph::{
@@ -9,9 +24,27 @@ use petgraph::{
     },
     visit::EdgeRef,
 };
-use seqraph::graph::{vertex::{child::Child, data::VertexData, has_vertex_index::HasVertexIndex, key::VertexKey, pattern::id::PatternId, wide::Wide}, Hypergraph};
-use std::{collections::HashMap, sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard}};
-use std::f32::consts::PI;
+use seqraph::graph::{
+    vertex::{
+        child::Child,
+        data::VertexData,
+        has_vertex_index::HasVertexIndex,
+        key::VertexKey,
+        pattern::id::PatternId,
+        wide::Wide,
+    },
+    Hypergraph,
+};
+use std::{
+    collections::HashMap,
+    f32::consts::PI,
+    sync::{
+        Arc,
+        RwLock,
+        RwLockReadGuard,
+        RwLockWriteGuard,
+    },
+};
 
 use crate::graph::Graph;
 
@@ -427,13 +460,15 @@ impl NodeVis
             .auto_sized()
             //.default_width(80.0)
             .frame(
-                Frame::window(&Style::default())
-                    .shadow(Shadow::NONE)
-                    .fill(
-                        self.graph.labels.read().unwrap().contains(&self.key)
-                            .then_some(Color32::from_rgb(10, 50, 10))
-                            .unwrap_or(ui.style().visuals.widgets.open.bg_fill)
-                    )
+                Frame::window(&Style::default()).shadow(Shadow::NONE).fill(
+                    self.graph
+                        .labels
+                        .read()
+                        .unwrap()
+                        .contains(&self.key)
+                        .then_some(Color32::from_rgb(10, 50, 10))
+                        .unwrap_or(ui.style().visuals.widgets.open.bg_fill),
+                ),
             )
             .show(ui.ctx(), |ui| {
                 ui.spacing_mut().item_spacing = Vec2::splat(0.0);

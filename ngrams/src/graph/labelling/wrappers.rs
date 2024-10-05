@@ -12,18 +12,15 @@ use itertools::Itertools;
 use range_ext::intersect::Intersect;
 
 use crate::graph::{
-    labelling::LabellingCtx,
-    traversal::{
+    labelling::LabellingCtx, partitions::container::ChildTree, traversal::{
         BottomUp,
         TopDown,
         TraversalPolicy,
-    },
-    vocabulary::{
+    }, vocabulary::{
         entry::VertexCtx,
         NGramId,
         ProcessStatus,
-    },
-    HasVertexEntries,
+    }, HasVertexEntries
 };
 use seqraph::{
     graph::vertex::{
@@ -50,42 +47,6 @@ pub struct WrapperCtx<'b>
 
 impl WrapperCtx<'_>
 {
-    pub fn labelled_child_ranges(
-        &self,
-        entry: &VertexCtx,
-    ) -> HashSet<Range<usize>>
-    {
-        let mut queue: VecDeque<_> =
-            TopDown::next_nodes(entry).into_iter().collect();
-        let mut ranges: HashSet<Range<_>> = HashSet::default();
-        while !queue.is_empty()
-        {
-            let mut next_layer: Vec<_> = Default::default();
-            while let Some((off, node)) = queue.pop_front()
-            {
-                if !ranges
-                    .iter()
-                    .any(|r| r.start <= off && off + node.width() <= r.end)
-                {
-                    if self.labels.contains(&node.vertex_key())
-                    {
-                        ranges.insert(off..off + node.width());
-                    }
-                    else
-                    {
-                        let node_entry = entry.vocab.get_vertex(&node).unwrap();
-                        next_layer.extend(
-                            TopDown::next_nodes(&node_entry)
-                                .into_iter()
-                                .map(|(o, c)| (o + off, c)),
-                        );
-                    }
-                }
-            }
-            queue.extend(next_layer)
-        }
-        ranges
-    }
     pub fn on_node(
         &mut self,
         node: &VertexKey,
@@ -96,20 +57,18 @@ impl WrapperCtx<'_>
             .iter()
             .map(HasVertexKey::vertex_key)
             .collect();
+
         if !self.labels.contains(node)
         {
-            let ranges = self.labelled_child_ranges(&entry);
-            if ranges
-                .iter()
-                .cartesian_product(&ranges)
-                .any(|(l, r)| l != r && l.does_intersect(r))
+            let tree = ChildTree::from_entry(self.ctx, &entry);
+            if tree.any_intersect()
             {
                 let key = entry.data.vertex_key();
+                // label node if it contains overlaps
                 self.labels.insert(key);
             }
         }
 
-        // label node if it contains overlaps
         next
     }
     pub fn wrapping_pass(&mut self)

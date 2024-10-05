@@ -199,7 +199,7 @@ impl eframe::App for App
                     //self.read_task = Some(self.graph.read_text(insert_text, ctx));
                     let res = ngrams::graph::parse_corpus(ngrams::graph::Corpus::new("", [insert_text]));
 
-                    *self.graph.graph.write().unwrap() = res.containment;
+                    *self.graph.graph.write().unwrap() = res.graph;
                     *self.graph.labels.write().unwrap() = res.labels;
                 }
             });

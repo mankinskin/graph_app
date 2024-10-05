@@ -1,12 +1,5 @@
 mod builder;
 
-use crate::graph::{
-    partitions::{
-        NodePartitionCtx,
-        PartitionsCtx,
-    },
-    vocabulary::{entry::VocabEntry, NGramId},
-};
 use builder::PartitionBuilder;
 use derive_more::{
     Deref,
@@ -15,44 +8,12 @@ use derive_more::{
 };
 use itertools::Itertools;
 use pretty_assertions::assert_matches;
-use seqraph::graph::vertex::{
-    child::Child,
-    has_vertex_key::HasVertexKey,
-    wide::Wide,
-};
-use std::{
-    cmp::{
-        Ordering,
-        Reverse,
-    },
-    fmt::{
-        Display,
-        Formatter,
-    },
-    num::NonZeroUsize,
-};
-
-use derive_new::new;
-use std::collections::VecDeque;
-
-use crate::graph::{
-    labelling::LabellingCtx,
-    traversal::{
-        TopDown,
-        TraversalPolicy,
-    },
-    vocabulary::{
-        entry::{
-            HasVertexEntries,
-            VertexCtx,
-        },
-        ProcessStatus,
-    },
-};
+use range_ext::intersect::Intersect;
 use seqraph::{
     graph::{
         getters::vertex::VertexSet,
         vertex::{
+            child::Child,
             data::{
                 VertexData,
                 VertexDataBuilder,
@@ -61,12 +22,50 @@ use seqraph::{
                 HasVertexIndex,
                 ToChild,
             },
+            has_vertex_key::HasVertexKey,
+            wide::Wide,
             VertexIndex,
         },
         Hypergraph,
     },
     HashMap,
     HashSet,
+};
+use std::{
+    cmp::{
+        Ordering,
+        Reverse,
+    },
+    collections::VecDeque,
+    fmt::{
+        Display,
+        Formatter,
+    },
+    num::NonZeroUsize,
+    ops::Range,
+};
+
+use derive_new::new;
+
+use crate::graph::{
+    labelling::LabellingCtx,
+    partitions::{
+        NodePartitionCtx,
+        PartitionsCtx,
+    },
+    traversal::{
+        TopDown,
+        TraversalPolicy,
+    },
+    vocabulary::{
+        entry::{
+            HasVertexEntries,
+            VertexCtx,
+            VocabEntry,
+        },
+        NGramId,
+        ProcessStatus,
+    },
 };
 
 #[derive(Debug, Copy, Clone)]
@@ -95,12 +94,11 @@ pub struct ChildTree
     entries: HashMap<usize, NGramId>,
 }
 
-
 impl ChildTree
 {
-        // find largest labelled children
+    // find largest labelled children
     pub fn from_entry(
-        ctx: &PartitionsCtx<'_>,
+        ctx: &LabellingCtx,
         entry: &VertexCtx<'_>,
     ) -> Self
     {
@@ -109,35 +107,60 @@ impl ChildTree
         let mut tree: ChildTree = Default::default();
 
         let mut visited: HashSet<_> = Default::default();
-        while let Some((off, node)) = queue.pop_front()
+        while !queue.is_empty()
         {
-            if visited.contains(&(off, node))
+            //let mut next_layer: Vec<_> = Default::default();
+            while let Some((off, node)) = queue.pop_front()
             {
-                continue;
+                if visited.contains(&(off, node))
+                {
+                    continue;
+                }
+                visited.insert((off, node));
+                // check if covered
+                if tree.any_covers(off, node)
+                {
+                    continue;
+                }
+                if ctx.labels.contains(&node)
+                {
+                    tree.insert(off, node);
+                }
+                else
+                {
+                    let ne = entry.vocab.get_vertex(&node).unwrap();
+                    queue.extend(
+                        TopDown::next_nodes(&ne)
+                            .into_iter()
+                            .map(|(o, c)| (o + off, c)),
+                    )
+                }
             }
-            visited.insert((off, node));
-            // check if covered
-            if tree.any_covers(off, node)
-            {
-                continue;
-            }
-            if ctx.labels.contains(&node)
-            {
-                tree.insert(off, node);
-            }
-            else
-            {
-                let ne = entry.vocab.get_vertex(&node).unwrap();
-                queue.extend(
-                    TopDown::next_nodes(&ne)
-                        .into_iter()
-                        .map(|(o, c)| (o + off, c)),
-                )
-            }
+            //queue.extend(next_layer)
         }
         tree
     }
-    pub fn any_covers(&self, off: usize, node: impl Wide) -> bool {
+    pub fn as_ranges(&self) -> HashSet<Range<usize>>
+    {
+        self.entries
+            .iter()
+            .map(|(off, id)| *off..(off + id.width()))
+            .collect()
+    }
+    pub fn any_intersect(&self) -> bool
+    {
+        let ranges = self.as_ranges();
+        ranges
+            .iter()
+            .cartesian_product(&ranges)
+            .any(|(l, r)| l != r && l.does_intersect(r))
+    }
+    pub fn any_covers(
+        &self,
+        off: usize,
+        node: impl Wide,
+    ) -> bool
+    {
         self.iter().any(|(&p, &c)| {
             let node_end = off + node.width();
             let probe_end = p + c.width();
@@ -153,13 +176,18 @@ pub struct PartitionContainer
 }
 impl PartitionContainer
 {
-    pub fn from_entry(ctx: &PartitionsCtx<'_>, entry: &VertexCtx) -> Self {
+    pub fn from_entry(
+        ctx: &PartitionsCtx<'_>,
+        entry: &VertexCtx,
+    ) -> Self
+    {
         // find all largest children
         let tree = ChildTree::from_entry(ctx, entry);
         assert!(
-            match entry.width() {
+            match entry.width()
+            {
                 1 => tree.is_empty(),
-                _ => !tree.is_empty()
+                _ => !tree.is_empty(),
             }
         );
 
@@ -176,14 +204,16 @@ impl PartitionContainer
         list: impl IntoIterator<Item = (usize, NGramId)>,
     ) -> Self
     {
-        let child_vec = list.into_iter().sorted_by_key(|&(o, _)| o).collect_vec();
+        let child_vec =
+            list.into_iter().sorted_by_key(|&(o, _)| o).collect_vec();
         //println!("{:#?}", vec.iter().map(|&(p, c)| (p, p + c.width())).collect_vec());
 
         assert!(
             !child_vec.is_empty(),
             "Can not build a container from empty list!"
         );
-        child_vec.iter()
+        child_vec
+            .iter()
             .tuple_windows()
             .for_each(|((prev, _), (pos, _))| {
                 assert!(prev < pos, "{} < {}", prev, pos,)
@@ -194,7 +224,10 @@ impl PartitionContainer
         let mut builder = PartitionBuilder::new(ctx, first.0, first.1);
         for (pos, key) in child_iter
         {
-            let index = ctx.vocab.containment.expect_index_for_key(&key.vertex_key());
+            let index = ctx
+                .vocab
+                .containment
+                .expect_index_for_key(&key.vertex_key());
             builder.append_child(pos, Child::new(index, key.width()));
         }
         Self {
@@ -213,17 +246,10 @@ impl Display for PartitionContainer
         {
             for cell in line
             {
-                //let (t, s) = match cell
-                //{
-                //    PartitionCell::GapSize(s) => ("gp", s.get()),
-                //    PartitionCell::ChildIndex(c) => ("ch", c.width()),
-                //};
                 let (t, s) = ("ch", cell.width());
                 write!(f, "{}({})", t, s);
             }
             writeln!(f);
-            //println!("{:#?}", line)
-            //self.labels.insert(c);
         }
         Ok(())
     }

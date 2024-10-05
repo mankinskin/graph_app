@@ -68,11 +68,9 @@ impl Wide for VertexCtx<'_> {
         self.data.width()
     }
 }
-impl VertexCtx<'_>
-{
-    pub fn direct_parents(&self) -> &HashMap<VertexIndex, Parent>
-    {
-        &self.data.parents
+impl HasVertexKey for VertexCtx<'_> {
+    fn vertex_key(&self) -> VertexKey {
+        self.data.vertex_key()    
     }
 }
 #[derive(Debug, Deref)]

@@ -59,7 +59,7 @@ impl TraversalPolicy for BottomUp
 }
 impl TraversalPolicy for TopDown
 {
-    type Next = (usize, NGramId);
+    type Next = (usize, NGramId); // (off, id)
     fn starting_nodes(vocab: &Vocabulary) -> VecDeque<NGramId>
     {
         FromIterator::from_iter(vocab.roots.iter().cloned())

@@ -8,20 +8,11 @@ mod examples;
 mod graph;
 
 pub use tracing::*;
-pub use {
-    std::sync::{
-        Arc,
-        RwLock,
-        RwLockReadGuard,
-        RwLockWriteGuard,
-    },
-    //tracing_mutex::{
-    //    stdsync::{
-    //        TracingRwLock as RwLock,
-    //        TracingReadGuard as RwLockReadGuard,
-    //        TracingWriteGuard as RwLockWriteGuard,
-    //    },
-    //},
+pub use std::sync::{
+    Arc,
+    RwLock,
+    RwLockReadGuard,
+    RwLockWriteGuard,
 };
 
 #[cfg(not(target_arch = "wasm32"))]

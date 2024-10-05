@@ -1,4 +1,4 @@
-mod container;
+pub mod container;
 
 use derive_more::{
     Deref,
@@ -70,20 +70,21 @@ pub struct PartitionsCtx<'b>
 {
     #[deref]
     #[deref_mut]
-    ctx: &'b mut LabellingCtx,
+    pub ctx: &'b mut LabellingCtx,
     pub graph: Hypergraph,
 }
 
-impl<'b> PartitionsCtx<'b>
-{
-    pub fn new(ctx: &'b mut LabellingCtx) -> Self
+impl<'b> From<&'b mut LabellingCtx> for PartitionsCtx<'b> {
+    fn from(ctx: &'b mut LabellingCtx) -> Self
     {
         Self {
             ctx,
             graph: Default::default(),
         }
     }
-
+}
+impl PartitionsCtx<'_>
+{
     fn on_node(
         &mut self,
         node: &NGramId,
@@ -96,27 +97,7 @@ impl<'b> PartitionsCtx<'b>
             .map(|_| PatternId::default())
             .collect();
 
-        /////
-        assert!(self.graph.contains_vertex(node.vertex_key()));
-        /////
-
-        let err = format!(
-            "Node not yet created {} in: {:#?}",
-            node.vertex_key(),
-            &self.graph,
-        );
-        let parent_data = self.graph.get_vertex_mut(node.vertex_key()).expect(&err);
-
-        /////
-        assert!(
-            match parent_data.width() {
-                0 => panic!("Invalid width of zero."),
-                2 => pids.len() == 1,
-                1 => pids.is_empty(),
-                _ => !pids.is_empty(),
-            }
-        );
-        /////
+        let parent_data = self.graph.expect_vertex_mut(node.vertex_key());
 
         // child patterns with indices in containment
         parent_data.children = pids.into_iter().zip(container).collect();
@@ -127,23 +108,6 @@ impl<'b> PartitionsCtx<'b>
             .into_iter()
             .map(|(l, c)| (l, *c))
             .collect_vec();
-
-        /////
-        assert_eq!(
-            child_locations
-                .iter()
-                .map(|(_, c)| c.vertex_index())
-                .sorted()
-                .collect_vec(),
-            parent_data.children
-                .iter()
-                .flat_map(|(_, p)| p)
-                .map(|c| c.vertex_index())
-                .sorted()
-                .collect_vec(),
-        );
-        /////
-
 
         // create child nodes in self.graph
         // set child parents and translate child indices to self.graph
@@ -161,7 +125,6 @@ impl<'b> PartitionsCtx<'b>
                 builder.width(vi.width());
                 builder.key(key);
                 let mut data = self.graph.finish_vertex_builder(builder);
-                assert!(data.key == key);
                 data.add_parent(loc);
 
                 // translate containment index to output index
@@ -179,27 +142,17 @@ impl<'b> PartitionsCtx<'b>
             };
             self.graph.expect_child_mut_at(loc).index = out_index;
         }
-        let parent_data = self.graph.get_vertex_mut(node.vertex_key()).expect(&err);
         child_locations
             .clone()
             .into_iter()
             .flat_map(|(_, p)| p)
             .filter(|c| c.width() > 1)
-            .map(|c| {
-                let entry = self.vocab.get_vertex(&c).unwrap();
-                let key = entry.data.vertex_key();
-                assert!(
-                    self.ctx.labels.contains(&key),
-                );
-                assert!(
-                    self.graph.contains_vertex(key),
-                    "{:#?}", entry.entry,
-                );
+            .map(|c|
                 NGramId::new(
-                    key,
+                    self.vocab.get_vertex(&c).unwrap().data.vertex_key(),
                     c.width(),
                 )
-            })
+            )
             .collect()
     }
     pub fn partitions_pass(&mut self)

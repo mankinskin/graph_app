@@ -38,27 +38,42 @@ use seqraph::{
     HashSet,
 };
 
-#[derive(Debug, Deref, From, DerefMut)]
-pub struct FrequencyCtx<'b>
-{
+#[derive(Debug, Default, Clone, Deref)]
+pub struct FrequencyCover {
     #[deref]
-    #[deref_mut]
-    pub ctx: &'b mut LabellingCtx,
+    cover: HashSet<NGramId>,
 }
-impl FrequencyCtx<'_>
-{
-    pub fn entry_next(
-        &self,
+impl FrequencyCover {
+    pub fn from_entry(
+        ctx: &LabellingCtx,
         entry: &VertexCtx,
-    ) -> Vec<NGramId>
-    {
-        let next = TopDown::next_nodes(entry);
-        next.into_iter().map(|(_, c)| c).collect()
+    ) -> Self {
+        let mut cover: HashSet<_> = Default::default();
+        let mut occ_set: HashSet<_> = Default::default(); //entry.occurrences.clone();
+        let mut queue: VecDeque<_> =
+            FromIterator::from_iter(Self::next_parent_offsets(entry));
+        while let Some((off, p)) = queue.pop_front()
+        {
+            let pe = entry.vocab.get_vertex(&p).unwrap();
+            let diff = Self::new_occurrences(ctx, off, &pe, &occ_set);
+            if diff.is_empty() {
+                queue.extend(
+                    Self::next_parent_offsets(&pe)
+                        .into_iter()
+                        .map(|(o, p)| (o + off, p)),
+                );
+            }
+            else
+            {
+                cover.insert(p);
+                occ_set.extend(&diff);
+            }
+        }
+        Self { cover }
     }
-    fn next_nodes(entry: &VertexCtx) -> Vec<(usize, NGramId)>
+    fn next_parent_offsets(entry: &VertexCtx) -> Vec<(usize, NGramId)>
     {
-        entry
-            .direct_parents()
+        entry.data.parents
             .iter()
             .flat_map(|(&id, p)| {
                 p.pattern_indices.iter().map(move |ploc| {
@@ -79,54 +94,56 @@ impl FrequencyCtx<'_>
             })
             .collect_vec()
     }
+    pub fn new_occurrences(
+        ctx: &LabellingCtx,
+        offset: usize,
+        parent_entry: &VertexCtx,
+        occ_set: &HashSet<TextLocation>,
+    ) -> HashSet<TextLocation>
+    {
+        ctx.labels.contains(&parent_entry.vertex_key())
+            .then(|| {
+                let occ: HashSet<_> = parent_entry
+                    .occurrences
+                    .iter()
+                    .map(|loc| TextLocation::new(loc.texti, loc.x + offset))
+                    .collect();
+                occ.difference(occ_set).copied().collect()
+            })
+            .unwrap_or_default()
+    }
+}
+#[derive(Debug, Deref, From, DerefMut)]
+pub struct FrequencyCtx<'b>
+{
+    #[deref]
+    #[deref_mut]
+    pub ctx: &'b mut LabellingCtx,
+}
+impl FrequencyCtx<'_>
+{
+    pub fn entry_next(
+        &self,
+        entry: &VertexCtx,
+    ) -> Vec<NGramId>
+    {
+        TopDown::next_nodes(entry)
+            .into_iter()
+            .map(|(_, c)| c)
+            .collect()
+    }
     pub fn entry_is_frequent(
         &self,
         entry: &VertexCtx,
     ) -> bool
     {
-        let mut cover: HashSet<_> = Default::default();
-        let mut occ_set: HashSet<_> = Default::default(); //entry.occurrences.clone();
-        let mut queue: VecDeque<_> =
-            FromIterator::from_iter(Self::next_nodes(entry));
-        while let Some((off, p)) = queue.pop_front()
-        {
-            let pe = entry.vocab.get_vertex(&p).unwrap();
-            if let Some(occ) = {
-                if self.labels.contains(&p.vertex_key())
-                {
-                    let occ: HashSet<_> = pe
-                        .occurrences
-                        .iter()
-                        .map(|loc| TextLocation::new(loc.texti, loc.x + off))
-                        .collect();
-                    (occ.difference(&occ_set).count() != 0).then_some(occ)
-                }
-                else
-                {
-                    None
-                }
-            }
-            {
-                cover.insert((p, pe.ngram.clone()));
-                occ_set.extend(&occ);
-            }
-            else
-            {
-                queue.extend(
-                    Self::next_nodes(&pe)
-                        .into_iter()
-                        .map(|(o, p)| (o + off, p)),
-                );
-            }
-        }
-        let f = cover.iter().any(|(p, _)| {
-            entry.vocab.get_vertex(p).unwrap().count() < entry.count()
-        });
-        if f
-        {
-            println!("{}", entry.ngram);
-        }
-        f
+        FrequencyCover::from_entry(self, entry)
+            .iter()
+            .any(|p|
+                self.vocab.get_vertex(p).unwrap().count() < entry.count()
+            )
+            .then(|| println!("{}", entry.ngram))
+            .is_some()
     }
     pub fn on_node(
         &mut self,
@@ -137,34 +154,32 @@ impl FrequencyCtx<'_>
         let next = self.entry_next(&entry);
         if self.entry_is_frequent(&entry)
         {
-            let index = entry.data.vertex_key();
-            self.labels.insert(index);
-            next
+            let key = entry.data.vertex_key();
+            self.labels.insert(key);
         }
-        else
-        {
-            next
-        }
+        next
     }
     pub fn frequency_pass(&mut self)
     {
         println!("Frequency Pass");
         let start = TopDown::starting_nodes(&self.vocab);
-        self.labels
-            .extend(start.iter().map(HasVertexKey::vertex_key));
-        let mut queue = Queue::new(VecDeque::default(), &self.vocab);
-        for node in start
+        let mut queue = Queue::new(
+            VecDeque::default(),
+        );
+        self.labels.extend(start.iter().map(HasVertexKey::vertex_key));
+        for node in start.into_iter()
         {
-            let next = self.on_node(&node);
-            queue.extend_queue(next, &self.vocab);
+            queue.extend_queue(
+                self.on_node(&node)
+            );
         }
         while let Some(node) = queue.pop_front()
         {
             if !self.labels.contains(&node)
             {
-                let next = self.on_node(&node);
-                //layer.extend(next);
-                queue.extend_queue(next, &self.vocab);
+                queue.extend_queue(
+                    self.on_node(&node)
+                );
             }
         }
         let bottom = BottomUp::starting_nodes(&self.vocab);
@@ -174,28 +189,30 @@ impl FrequencyCtx<'_>
     }
 }
 #[derive(Debug, Deref, DerefMut)]
-pub struct Queue(pub VecDeque<NGramId>);
+pub struct Queue {
+    pub queue: VecDeque<NGramId>,
+}
 
 impl Queue
 {
     pub fn new<T: IntoIterator<Item = NGramId>>(
         iter: T,
-        vocab: &Vocabulary,
     ) -> Self
     {
-        let mut v = Self(VecDeque::default());
-        v.extend_queue(iter, vocab);
+        let mut v = Self {
+            queue: VecDeque::default(),
+        };
+        v.extend_queue(iter);
         v
     }
     pub fn extend_queue<T: IntoIterator<Item = NGramId>>(
         &mut self,
         iter: T,
-        vocab: &Vocabulary,
     )
     {
-        self.0.extend(iter);
-        self.0 = self
-            .0
+        self.queue.extend(iter);
+        self.queue = self
+            .queue
             .drain(..)
             .sorted_by_key(|i| std::cmp::Reverse(i.width()))
             .dedup()
