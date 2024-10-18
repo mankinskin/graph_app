@@ -43,7 +43,7 @@ nrfind = "1"
 ngram = "0.1"
 csv = "1"
 derivative = "^2.2"
-justlog = { path = "../../justlog" }
+justlog = { path = "../justlog" }
 derive_builder = "^0.20"
 tracing = { version = "^0.1", features = ["attributes", "valuable"] }
 uuid = { version = "^1.10", features = ["v4", "fast-rng", "serde"] }
@@ -73,7 +73,8 @@ features = ["derive"]
 version = "^0.32"
 
 [dependencies.petgraph]
-git = "https://github.com/mankinskin/petgraph"
+#git = "https://github.com/mankinskin/petgraph"
+path = "../petgraph"
 
 [dependencies.pretty_assertions]
 features = ["unstable"]

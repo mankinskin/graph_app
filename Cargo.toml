@@ -1,71 +1,17 @@
-[package]
-name = "graph_app"
-version = "0.1.0"
-authors = ["Linus Behrbohm <linusbehrbohm@web.de>"]
-edition = "2018"
-resolver = "2"
-
 
 [workspace]
+resolver = "2"
+exclude = [
+  "./egui",
+  "./egui/crates/eframe",
+  "./tracing-egui",
+  "./petgraph"
+]
 members = [
   "seqraph",
   "ngrams",
-  #"tax_dao",
-  "."
+  "graph_app"
 ]
-
-[dependencies]
-rfd = "0.14"
-serde = { version = "1", features = ["derive"] }
-wasm-bindgen-futures = "0.4.23"
-futures = "0.3"
-lazy_static = "^1.4"
-rand = "^0.8"
-rand_distr = "^0.4"
-itertools = "^0.12"
-async-std = "1.12"
-tracing-mutex = "0.3"
-
-[dependencies.tracing-egui]
-path = "../tracing-egui"
-#version = "^0.1"
-
-[dependencies.tracing]
-version = "^0.1"
-features = ["attributes"]
-
-[dependencies.tracing-subscriber]
-version = "^0.3"
-features = ["json"]
-
-[dependencies.eframe]
-path = "../egui/crates/eframe"
-#git = "https://github.com/mankinskin/egui"
-#branch = "placer-measure"
-
-[dependencies.tokio]
-version = "^1"
-features = [
-  "macros",
-  "rt-multi-thread",
-]
-
-[dependencies.petgraph]
-#version = "^0.5"
-#path = "../petgraph"
-git = "https://github.com/mankinskin/petgraph"
-features=["serde-1"]
-
-[dependencies.seqraph]
-path = "./seqraph"
-#git = "https://github.com/mankinskin/web-app"
-
-[dependencies.ngrams]
-path = "./ngrams"
-
-[features]
-default = []
-persistence = ["eframe/persistence"] # Enable if you want to persist app state on shutdown
 
 [profile.release]
 opt-level = 2 # fast and small wasm
