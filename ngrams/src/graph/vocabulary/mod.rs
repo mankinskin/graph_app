@@ -2,7 +2,7 @@ use crate::graph::{
     containment::{CorpusCtx, TextLevelCtx},
     traversal::{
         TopDown,
-        TraversalPolicy,
+        TraversalDirection,
     },
     vocabulary::entry::{
         HasVertexEntries,

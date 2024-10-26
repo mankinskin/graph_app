@@ -15,7 +15,8 @@ use crate::graph::{
     labelling::LabellingCtx, partitions::container::ChildTree, traversal::{
         BottomUp,
         TopDown,
-        TraversalPolicy,
+        TraversalDirection,
+        TraversalPass,
     }, vocabulary::{
         entry::VertexCtx,
         NGramId,
@@ -45,12 +46,14 @@ pub struct WrapperCtx<'b>
 //  - run top down to find the largest frequent children to cover whole range
 //  - label node x if there are multiple overlapping labelled child nodes
 
-impl WrapperCtx<'_>
+impl TraversalPass for WrapperCtx<'_>
 {
-    pub fn on_node(
+    type Node = VertexKey;
+    type NextNode = VertexKey;
+    fn on_node(
         &mut self,
-        node: &VertexKey,
-    ) -> Vec<VertexKey>
+        node: &Self::Node,
+    ) -> Vec<Self::NextNode>
     {
         let entry = self.vocab.get_vertex(node).unwrap();
         let next = BottomUp::next_nodes(&entry)
@@ -71,7 +74,7 @@ impl WrapperCtx<'_>
 
         next
     }
-    pub fn wrapping_pass(&mut self)
+    fn run(&mut self)
     {
         println!("Wrapper Pass");
         let mut queue: VecDeque<_> = BottomUp::starting_nodes(&self.vocab)

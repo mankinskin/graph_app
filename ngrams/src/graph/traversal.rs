@@ -14,10 +14,17 @@ use seqraph::graph::vertex::{
     VertexIndex,
 };
 
+pub trait TraversalPass {
+    type Node;
+    type NextNode;
+    fn on_node(&mut self, node: &Self::Node) -> Vec<Self::NextNode>;
+    fn run(&mut self);
+}
+
 pub struct BottomUp;
 pub struct TopDown;
 
-pub trait TraversalPolicy
+pub trait TraversalDirection
 {
     type Next;
     fn starting_nodes(vocab: &Vocabulary) -> VecDeque<NGramId>;
@@ -27,7 +34,7 @@ pub trait TraversalPolicy
         next: T,
     ) -> (T, T);
 }
-impl TraversalPolicy for BottomUp
+impl TraversalDirection for BottomUp
 {
     type Next = NGramId;
     fn starting_nodes(vocab: &Vocabulary) -> VecDeque<NGramId>
@@ -57,7 +64,7 @@ impl TraversalPolicy for BottomUp
             .collect_vec()
     }
 }
-impl TraversalPolicy for TopDown
+impl TraversalDirection for TopDown
 {
     type Next = (usize, NGramId); // (off, id)
     fn starting_nodes(vocab: &Vocabulary) -> VecDeque<NGramId>

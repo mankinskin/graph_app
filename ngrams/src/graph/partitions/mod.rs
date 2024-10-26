@@ -14,7 +14,8 @@ use crate::graph::{
     partitions::container::{ChildTree, PartitionContainer},
     traversal::{
         TopDown,
-        TraversalPolicy,
+        TraversalDirection,
+        TraversalPass,
     },
     vocabulary::{
         entry::{
@@ -83,8 +84,10 @@ impl<'b> From<&'b mut LabellingCtx> for PartitionsCtx<'b> {
         }
     }
 }
-impl PartitionsCtx<'_>
+impl TraversalPass for PartitionsCtx<'_>
 {
+    type Node = NGramId;
+    type NextNode = NGramId;
     fn on_node(
         &mut self,
         node: &NGramId,
@@ -155,7 +158,7 @@ impl PartitionsCtx<'_>
             )
             .collect()
     }
-    pub fn partitions_pass(&mut self)
+    fn run(&mut self)
     {
         println!("Partition Pass");
         let mut queue: VecDeque<_> = TopDown::starting_nodes(&self.vocab);

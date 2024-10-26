@@ -55,7 +55,7 @@ use crate::graph::{
     },
     traversal::{
         TopDown,
-        TraversalPolicy,
+        TraversalDirection,
     },
     vocabulary::{
         entry::{

@@ -28,6 +28,7 @@ use crate::graph::{
         ProcessStatus,
         Vocabulary,
     },
+    traversal::TraversalPass,
 };
 use seqraph::{
     graph::{vertex::{
@@ -123,7 +124,7 @@ impl LabellingCtx
         //let roots = texts.iter().map(|s| *vocab.ids.get(s).unwrap()).collect_vec();
         if (self.status < ProcessStatus::Frequency)
         {
-            FrequencyCtx::from(&mut *self).frequency_pass();
+            FrequencyCtx::from(&mut *self).run();
             self.write_to_target_file();
         }
         else
@@ -135,7 +136,7 @@ impl LabellingCtx
     {
         if (self.status < ProcessStatus::Wrappers)
         {
-            WrapperCtx::from(&mut *self).wrapping_pass();
+            WrapperCtx::from(&mut *self).run();
             self.write_to_target_file();
         }
         else
@@ -154,7 +155,7 @@ impl LabellingCtx
         //        .collect_vec(),
         //);
         let mut ctx = PartitionsCtx::from(&mut *self);
-        ctx.partitions_pass();
+        ctx.run();
         ctx.graph
     }
 }
