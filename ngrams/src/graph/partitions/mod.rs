@@ -11,12 +11,13 @@ use std::collections::VecDeque;
 
 use crate::graph::{
     labelling::LabellingCtx,
-    partitions::container::{ChildTree, PartitionContainer},
+    partitions::container::PartitionContainer,
     traversal::{
         TopDown,
         TraversalDirection,
         TraversalPass,
     },
+    utils::tree::ChildTree,
     vocabulary::{
         entry::{
             HasVertexEntries,

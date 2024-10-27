@@ -41,8 +41,8 @@ use seqraph::{
 mod frequency;
 use frequency::FrequencyCtx;
 
-mod wrappers;
-use wrappers::WrapperCtx;
+mod wrapper;
+use wrapper::WrapperCtx;
 
 impl From<Vocabulary> for LabellingCtx
 {

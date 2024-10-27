@@ -1,4 +1,3 @@
-pub mod cover;
 
 use std::collections::VecDeque;
 
@@ -11,10 +10,8 @@ use itertools::Itertools;
 
 use crate::graph::{
     containment::TextLocation,
-    labelling::{
-        LabellingCtx,
-        frequency::cover::FrequencyCover,
-    },
+    labelling::LabellingCtx,
+    utils::cover::FrequencyCover,
     traversal::{
         TraversalPass,
         BottomUp,

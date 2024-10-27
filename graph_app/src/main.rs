@@ -21,10 +21,13 @@ async fn main() -> Result<(), eframe::Error>
 {
     //let graph = seqraph::gen_graph().unwrap_or_else(|g| g);
     //let app = app::App::new(graph);
-    let app = App::default();
     eframe::run_native(
         "Graph App",
         eframe::NativeOptions::default(),
-        Box::new(|_| Ok(Box::new(app))),
+        Box::new(|creation_context|
+            Ok(Box::new(
+                App::new(creation_context)
+            ))
+        ),
     )
 }

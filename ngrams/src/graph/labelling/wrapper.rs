@@ -12,7 +12,7 @@ use itertools::Itertools;
 use range_ext::intersect::Intersect;
 
 use crate::graph::{
-    labelling::LabellingCtx, partitions::container::ChildTree, traversal::{
+    labelling::LabellingCtx, utils::tree::ChildTree, traversal::{
         BottomUp,
         TopDown,
         TraversalDirection,

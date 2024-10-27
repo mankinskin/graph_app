@@ -17,6 +17,7 @@ use crate::graph::{
     },
 };
 
+pub mod utils;
 pub mod containment;
 pub mod labelling;
 pub mod partitions;

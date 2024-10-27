@@ -1,7 +1,6 @@
-use eframe::egui::{
-    self,
-    Ui,
-};
+use eframe::{egui::{
+    self, ThemePreference, Ui
+}, CreationContext};
 use seqraph::graph::HypergraphRef;
 #[cfg(feature = "persistence")]
 use serde::*;
@@ -36,10 +35,18 @@ impl Default for App {
 }
 impl App
 {
+    pub fn new(creation_context: &CreationContext<'_>) -> Self {
+        creation_context.egui_ctx.set_theme(ThemePreference::Dark);
+        Self
+        {
+            ..Default::default()
+        }
+    }
     #[allow(unused)]
     pub fn from_graph_ref(graph: HypergraphRef) -> Self
     {
-        Self {
+        Self
+        {
             graph_file: None,
             graph: Graph::new_from_graph_ref(graph),
             inserter: true,
