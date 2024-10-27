@@ -1,6 +1,5 @@
 **/target
 **/Cargo.lock
-.vscode
 workspace.code-workspace
 docs/graph_app.js
 docs/graph_app_bg.wasm
