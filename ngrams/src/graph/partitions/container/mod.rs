@@ -51,7 +51,7 @@ use crate::graph::{
     labelling::LabellingCtx, partitions::{
         NodePartitionCtx,
         PartitionsCtx,
-    }, traversal::{
+    }, traversal::direction::{
         TopDown,
         TraversalDirection,
     }, utils::tree::ChildTree, vocabulary::{

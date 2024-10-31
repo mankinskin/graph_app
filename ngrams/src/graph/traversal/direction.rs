@@ -14,12 +14,6 @@ use seqraph::graph::vertex::{
     VertexIndex,
 };
 
-pub trait TraversalPass {
-    type Node;
-    type NextNode;
-    fn on_node(&mut self, node: &Self::Node) -> Vec<Self::NextNode>;
-    fn run(&mut self);
-}
 
 pub struct BottomUp;
 pub struct TopDown;

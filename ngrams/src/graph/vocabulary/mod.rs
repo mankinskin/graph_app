@@ -1,6 +1,6 @@
 use crate::graph::{
     containment::{CorpusCtx, TextLevelCtx},
-    traversal::{
+    traversal::direction::{
         TopDown,
         TraversalDirection,
     },
@@ -72,6 +72,12 @@ pub struct NGramId
     #[deref]
     pub key: VertexKey,
     pub width: usize,
+}
+impl Into<VertexKey> for NGramId
+{
+    fn into(self) -> VertexKey {
+        self.key
+    }
 }
 impl HasVertexKey for NGramId
 {

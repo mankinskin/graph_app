@@ -8,19 +8,22 @@ use derive_more::{
     DerefMut,
     From,
 };
+use derive_new::new;
 use itertools::Itertools;
 use range_ext::intersect::Intersect;
 
 use crate::graph::{
-    labelling::LabellingCtx, utils::tree::ChildTree, traversal::{
-        BottomUp,
-        TopDown,
-        TraversalDirection,
-        TraversalPass,
-    }, vocabulary::{
+    labelling::LabellingCtx, traversal::{
+        direction::{
+            BottomUp,
+            TopDown,
+            TraversalDirection,
+        },
+        pass::TraversalPass, queue::{LayeredQueue, Queue},
+    }, utils::tree::ChildTree, vocabulary::{
         entry::VertexCtx,
         NGramId,
-        ProcessStatus,
+        ProcessStatus, Vocabulary,
     }, HasVertexEntries
 };
 use seqraph::{
@@ -34,12 +37,14 @@ use seqraph::{
     HashSet,
 };
 
-#[derive(Debug, Deref, From, DerefMut)]
+#[derive(Debug, Deref, new, DerefMut)]
 pub struct WrapperCtx<'b>
 {
     #[deref]
     #[deref_mut]
     ctx: &'b mut LabellingCtx,
+    #[new(default)]
+    visited: <Self as TraversalPass>::Visited,
 }
 // - run bottom up (all smaller nodes need to be fully labelled)
 // - for each node x:
@@ -48,12 +53,21 @@ pub struct WrapperCtx<'b>
 
 impl TraversalPass for WrapperCtx<'_>
 {
+    type Visited = HashSet<Self::Node>;
     type Node = VertexKey;
     type NextNode = VertexKey;
+    type Queue = LayeredQueue<Self>;
+    fn visited(&mut self) -> &mut Self::Visited {
+        &mut self.visited
+    }
+    fn start_queue(&mut self) -> Self::Queue {
+        BottomUp::starting_nodes(&self.vocab).into_iter()
+            .map(|ng| ng.key).collect()
+    }
     fn on_node(
         &mut self,
         node: &Self::Node,
-    ) -> Vec<Self::NextNode>
+    ) -> Option<Vec<Self::NextNode>>
     {
         let entry = self.vocab.get_vertex(node).unwrap();
         let next = BottomUp::next_nodes(&entry)
@@ -72,30 +86,12 @@ impl TraversalPass for WrapperCtx<'_>
             }
         }
 
-        next
+        Some(next)
     }
-    fn run(&mut self)
-    {
+    fn begin_run(&mut self) {
         println!("Wrapper Pass");
-        let mut queue: VecDeque<_> = BottomUp::starting_nodes(&self.vocab)
-            .iter()
-            .map(HasVertexKey::vertex_key)
-            .collect();
-        while !queue.is_empty()
-        {
-            let mut visited: HashSet<_> = Default::default();
-            let mut next_layer: Vec<_> = Default::default();
-
-            while let Some(node) = queue.pop_front()
-            {
-                if !visited.contains(&node)
-                {
-                    visited.insert(node);
-                    next_layer.extend(self.on_node(&node));
-                }
-            }
-            queue.extend(next_layer)
-        }
+    }
+    fn finish_run(&mut self) {
         self.status = ProcessStatus::Wrappers;
     }
 }

@@ -13,9 +13,11 @@ use crate::graph::{
     labelling::LabellingCtx,
     partitions::container::PartitionContainer,
     traversal::{
-        TopDown,
-        TraversalDirection,
-        TraversalPass,
+        direction::{
+            TopDown,
+            TraversalDirection,
+        },
+        pass::TraversalPass, queue::Queue,
     },
     utils::tree::ChildTree,
     vocabulary::{
@@ -52,6 +54,8 @@ use seqraph::{
     HashSet,
 };
 
+use super::{traversal::queue::LayeredQueue, vocabulary::Vocabulary};
+
 // - run top down (smaller nodes to label need to be found)
 // - for each node x:
 //  - run top down to find all largest labelled children
@@ -74,6 +78,7 @@ pub struct PartitionsCtx<'b>
     #[deref_mut]
     pub ctx: &'b mut LabellingCtx,
     pub graph: Hypergraph,
+    visited: <Self as TraversalPass>::Visited,
 }
 
 impl<'b> From<&'b mut LabellingCtx> for PartitionsCtx<'b> {
@@ -82,17 +87,37 @@ impl<'b> From<&'b mut LabellingCtx> for PartitionsCtx<'b> {
         Self {
             ctx,
             graph: Default::default(),
+            visited: Default::default(),
         }
     }
 }
 impl TraversalPass for PartitionsCtx<'_>
 {
+    type Visited = HashSet<Self::Node>;
     type Node = NGramId;
     type NextNode = NGramId;
+    type Queue = LayeredQueue<Self>;
+    fn visited(&mut self) -> &mut Self::Visited {
+        &mut self.visited
+    }
+    fn start_queue(&mut self) -> Self::Queue {
+        let queue = Self::Queue::from_iter(
+            TopDown::starting_nodes(&self.vocab)
+        );
+        for vk in queue.iter()
+        {
+            let data = self.vocab.containment.expect_vertex(vk.vertex_key());
+            let mut builder = VertexDataBuilder::default();
+            builder.width(data.width());
+            builder.key(**vk);
+            self.graph.insert_vertex_builder(builder);
+        }
+        queue
+    }
     fn on_node(
         &mut self,
         node: &NGramId,
-    ) -> Vec<NGramId>
+    ) -> Option<Vec<NGramId>>
     {
         let entry = self.vocab.get_vertex(node).unwrap();
         let container = PartitionContainer::from_entry(self, &entry);
@@ -146,7 +171,7 @@ impl TraversalPass for PartitionsCtx<'_>
             };
             self.graph.expect_child_mut_at(loc).index = out_index;
         }
-        child_locations
+        let next = child_locations
             .clone()
             .into_iter()
             .flat_map(|(_, p)| p)
@@ -157,37 +182,20 @@ impl TraversalPass for PartitionsCtx<'_>
                     c.width(),
                 )
             )
-            .collect()
+            .collect();
+        Some(next)
     }
-    fn run(&mut self)
-    {
+    fn begin_run(&mut self) {
         println!("Partition Pass");
-        let mut queue: VecDeque<_> = TopDown::starting_nodes(&self.vocab);
-        for vk in queue.iter()
-        {
-            let data = self.vocab.containment.expect_vertex(vk.vertex_key());
-            let mut builder = VertexDataBuilder::default();
-            builder.width(data.width());
-            builder.key(**vk);
-            self.graph.insert_vertex_builder(builder);
-        }
-
-        while !queue.is_empty()
-        {
-            let mut visited: HashSet<_> = Default::default();
-            let mut next_layer: Vec<_> = Default::default();
-            while let Some(node) = queue.pop_front()
-            {
-                if (!visited.contains(&node)
-                    && self.labels.contains(&node))
-                    || self.vocab.leaves.contains(&node)
-                {
-                    next_layer.extend(self.on_node(&node));
-                    visited.insert(node);
-                }
-            }
-            queue.extend(next_layer)
-        }
+    }
+    fn node_condition(&mut self, node: Self::Node) -> bool {
+        (!self.visited().contains(&node)
+            && self.labels.contains(&node))
+            || self.vocab.leaves.contains(&node)
+            .then(|| self.visited().insert(node))
+            .is_some()
+    }
+    fn finish_run(&mut self) {
         self.vocab.roots.iter().for_each(|key| {
             let _ = self.graph.vertex_key_string(key);
         });

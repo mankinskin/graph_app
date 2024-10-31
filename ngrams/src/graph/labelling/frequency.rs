@@ -6,19 +6,17 @@ use derive_more::{
     DerefMut,
     From,
 };
+use derive_new::new;
 use itertools::Itertools;
 
 use crate::graph::{
-    containment::TextLocation,
-    labelling::LabellingCtx,
-    utils::cover::FrequencyCover,
-    traversal::{
-        TraversalPass,
-        BottomUp,
-        TopDown,
-        TraversalDirection,
-    },
-    vocabulary::{
+    containment::TextLocation, labelling::LabellingCtx, traversal::{
+        direction::{
+            BottomUp,
+            TopDown,
+            TraversalDirection,
+        }, pass::TraversalPass, queue::{Queue, SortedQueue}
+    }, utils::cover::FrequencyCover, vocabulary::{
         entry::{
             HasVertexEntries,
             VertexCtx,
@@ -26,7 +24,7 @@ use crate::graph::{
         NGramId,
         ProcessStatus,
         Vocabulary,
-    },
+    }
 };
 use seqraph::{
     graph::vertex::{
@@ -41,54 +39,62 @@ use seqraph::{
     HashSet,
 };
 
-#[derive(Debug, Deref, From, DerefMut)]
+#[derive(Debug, Deref, new, DerefMut)]
 pub struct FrequencyCtx<'b>
 {
     #[deref]
     #[deref_mut]
     pub ctx: &'b mut LabellingCtx,
+    #[new(default)]
+    visited: <Self as TraversalPass>::Visited,
 }
 impl TraversalPass for FrequencyCtx<'_>
 {
+    type Visited = ();
     type Node = VertexKey;
     type NextNode = NGramId;
+    type Queue = SortedQueue;
+    fn start_queue(&mut self) -> Self::Queue {
+        let start = TopDown::starting_nodes(&self.vocab);
+
+        let mut queue = SortedQueue::default();
+        for node in start.iter()
+        {
+            queue.extend_layer(
+                self.on_node(&node).unwrap_or_default()
+            );
+        }
+        self.labels.extend(start.iter().map(HasVertexKey::vertex_key));
+        queue
+    }
+    fn visited(&mut self) -> &mut Self::Visited {
+        &mut self.visited
+    }
     fn on_node(
         &mut self,
         node: &Self::Node,
-    ) -> Vec<Self::NextNode>
+    ) -> Option<Vec<Self::NextNode>>
     {
-        let entry = self.vocab.get_vertex(node).unwrap();
-        let next = self.entry_next(&entry);
-        if self.entry_is_frequent(&entry)
+        if self.labels.contains(&node)
         {
-            let key = entry.data.vertex_key();
-            self.labels.insert(key);
+            None
         }
-        next
-    }
-    fn run(&mut self)
-    {
-        println!("Frequency Pass");
-        let start = TopDown::starting_nodes(&self.vocab);
-        let mut queue = Queue::new(
-            VecDeque::default(),
-        );
-        self.labels.extend(start.iter().map(HasVertexKey::vertex_key));
-        for node in start.into_iter()
+        else
         {
-            queue.extend_queue(
-                self.on_node(&node)
-            );
-        }
-        while let Some(node) = queue.pop_front()
-        {
-            if !self.labels.contains(&node)
+            let entry = self.vocab.get_vertex(node).unwrap();
+            let next = self.entry_next(&entry);
+            if self.entry_is_frequent(&entry)
             {
-                queue.extend_queue(
-                    self.on_node(&node)
-                );
+                let key = entry.data.vertex_key();
+                self.labels.insert(key);
             }
+            Some(next)
         }
+    }
+    fn begin_run(&mut self) {
+        println!("Frequency Pass");
+    }
+    fn finish_run(&mut self) {
         let bottom = BottomUp::starting_nodes(&self.vocab);
         self.labels
             .extend(bottom.iter().map(HasVertexKey::vertex_key));
@@ -119,36 +125,5 @@ impl FrequencyCtx<'_>
             )
             .then(|| println!("{}", entry.ngram))
             .is_some()
-    }
-}
-#[derive(Debug, Deref, DerefMut)]
-pub struct Queue {
-    pub queue: VecDeque<NGramId>,
-}
-
-impl Queue
-{
-    pub fn new<T: IntoIterator<Item = NGramId>>(
-        iter: T,
-    ) -> Self
-    {
-        let mut v = Self {
-            queue: VecDeque::default(),
-        };
-        v.extend_queue(iter);
-        v
-    }
-    pub fn extend_queue<T: IntoIterator<Item = NGramId>>(
-        &mut self,
-        iter: T,
-    )
-    {
-        self.queue.extend(iter);
-        self.queue = self
-            .queue
-            .drain(..)
-            .sorted_by_key(|i| std::cmp::Reverse(i.width()))
-            .dedup()
-            .collect();
     }
 }

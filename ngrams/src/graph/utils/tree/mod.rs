@@ -1,3 +1,7 @@
+pub mod child_cover;
+pub mod child_dedup;
+
+use child_cover::ChildCoverPass;
 use itertools::Itertools;
 use pretty_assertions::assert_matches;
 use range_ext::intersect::Intersect;
@@ -51,8 +55,11 @@ use crate::graph::{
         PartitionsCtx,
     },
     traversal::{
-        TopDown,
-        TraversalDirection,
+        direction::{
+            TopDown,
+            TraversalDirection,
+        },
+        pass::TraversalPass,
     },
     vocabulary::{
         entry::{
@@ -61,7 +68,7 @@ use crate::graph::{
             VocabEntry,
         },
         NGramId,
-        ProcessStatus,
+        ProcessStatus, Vocabulary,
     },
 };
 
@@ -73,7 +80,6 @@ pub struct ChildTree
     #[into_iterator(owned, ref)]
     entries: HashMap<usize, NGramId>,
 }
-
 impl ChildTree
 {
     // find largest labelled children
@@ -82,43 +88,9 @@ impl ChildTree
         entry: &VertexCtx<'_>,
     ) -> Self
     {
-        let mut queue: VecDeque<_> =
-            TopDown::next_nodes(entry).into_iter().collect();
-        let mut tree: ChildTree = Default::default();
-
-        let mut visited: HashSet<_> = Default::default();
-        while !queue.is_empty()
-        {
-            //let mut next_layer: Vec<_> = Default::default();
-            while let Some((off, node)) = queue.pop_front()
-            {
-                if visited.contains(&(off, node))
-                {
-                    continue;
-                }
-                visited.insert((off, node));
-                // check if covered
-                if tree.any_covers(off, node)
-                {
-                    continue;
-                }
-                if ctx.labels.contains(&node)
-                {
-                    tree.insert(off, node);
-                }
-                else
-                {
-                    let ne = entry.vocab.get_vertex(&node).unwrap();
-                    queue.extend(
-                        TopDown::next_nodes(&ne)
-                            .into_iter()
-                            .map(|(o, c)| (o + off, c)),
-                    )
-                }
-            }
-            //queue.extend(next_layer)
-        }
-        tree
+        let mut ctx = ChildCoverPass::new(ctx, entry);
+        ctx.run();
+        ctx.tree
     }
     pub fn as_ranges(&self) -> HashSet<Range<usize>>
     {

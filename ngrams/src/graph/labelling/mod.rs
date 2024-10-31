@@ -28,7 +28,7 @@ use crate::graph::{
         ProcessStatus,
         Vocabulary,
     },
-    traversal::TraversalPass,
+    traversal::pass::TraversalPass,
 };
 use seqraph::{
     graph::{vertex::{
@@ -38,10 +38,10 @@ use seqraph::{
     HashSet,
 };
 
-mod frequency;
+pub mod frequency;
 use frequency::FrequencyCtx;
 
-mod wrapper;
+pub mod wrapper;
 use wrapper::WrapperCtx;
 
 impl From<Vocabulary> for LabellingCtx
@@ -124,7 +124,7 @@ impl LabellingCtx
         //let roots = texts.iter().map(|s| *vocab.ids.get(s).unwrap()).collect_vec();
         if (self.status < ProcessStatus::Frequency)
         {
-            FrequencyCtx::from(&mut *self).run();
+            FrequencyCtx::new(&mut *self).run();
             self.write_to_target_file();
         }
         else
@@ -136,7 +136,7 @@ impl LabellingCtx
     {
         if (self.status < ProcessStatus::Wrappers)
         {
-            WrapperCtx::from(&mut *self).run();
+            WrapperCtx::new(&mut *self).run();
             self.write_to_target_file();
         }
         else

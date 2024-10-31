@@ -12,7 +12,7 @@ use crate::graph::{
     labelling::{
         LabellingCtx,
     },
-    traversal::{
+    traversal::direction::{
         BottomUp,
         TopDown,
         TraversalDirection,
