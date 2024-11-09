@@ -16,7 +16,7 @@ use crate::graph::{
             TopDown,
             TraversalDirection,
         }, pass::TraversalPass, queue::{Queue, SortedQueue}
-    }, utils::cover::FrequencyCover, vocabulary::{
+    }, utils::cover::frequency::FrequencyCover, vocabulary::{
         entry::{
             HasVertexEntries,
             VertexCtx,
@@ -45,12 +45,10 @@ pub struct FrequencyCtx<'b>
     #[deref]
     #[deref_mut]
     pub ctx: &'b mut LabellingCtx,
-    #[new(default)]
-    visited: <Self as TraversalPass>::Visited,
 }
+
 impl TraversalPass for FrequencyCtx<'_>
 {
-    type Visited = ();
     type Node = VertexKey;
     type NextNode = NGramId;
     type Queue = SortedQueue;
@@ -66,9 +64,6 @@ impl TraversalPass for FrequencyCtx<'_>
         }
         self.labels.extend(start.iter().map(HasVertexKey::vertex_key));
         queue
-    }
-    fn visited(&mut self) -> &mut Self::Visited {
-        &mut self.visited
     }
     fn on_node(
         &mut self,

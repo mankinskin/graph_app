@@ -18,20 +18,18 @@ use seqraph::graph::vertex::{
     VertexIndex,
 };
 
-use super::{queue::Queue, visited::Visited};
+use super::{queue::Queue, visited::{Visited, VisitorCollection}};
 pub trait PassNode: Eq + PartialEq + Debug + Clone + Hash {}
 impl<N: Eq + PartialEq + Debug + Clone + Hash> PassNode for N {}
 
 pub trait TraversalPass : Sized {
     type Node: PassNode + Copy;
     type NextNode: PassNode + Into<Self::Node>;
-    type Visited: Visited<Self>;
     type Queue: Queue<Self>;
-    fn visited(&mut self) -> &mut Self::Visited;
     fn start_queue(&mut self) -> Self::Queue;
     fn on_node(&mut self, node: &Self::Node) -> Option<Vec<Self::NextNode>>;
     fn node_condition(&mut self, node: Self::Node) -> bool {
-        self.visited().insert(node)
+        true
     }
     fn begin_run(&mut self) {}
     fn finish_run(&mut self) {}
@@ -56,4 +54,3 @@ pub trait TraversalPass : Sized {
         self.finish_run()
     }
 }
-

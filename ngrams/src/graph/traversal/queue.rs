@@ -2,7 +2,7 @@ use std::{collections::VecDeque, ops::{Deref, DerefMut}};
 
 use itertools::Itertools;
 
-use crate::graph::{utils::cover::FrequencyCover, vocabulary::{
+use crate::graph::{utils::cover::frequency::FrequencyCover, vocabulary::{
     entry::VertexCtx,
     NGramId,
     Vocabulary,

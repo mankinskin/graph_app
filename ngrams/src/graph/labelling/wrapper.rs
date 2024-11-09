@@ -19,8 +19,8 @@ use crate::graph::{
             TopDown,
             TraversalDirection,
         },
-        pass::TraversalPass, queue::{LayeredQueue, Queue},
-    }, utils::tree::ChildTree, vocabulary::{
+        pass::TraversalPass, queue::{LayeredQueue, Queue}, visited::Visited,
+    }, utils::cover::ChildCover, vocabulary::{
         entry::VertexCtx,
         NGramId,
         ProcessStatus, Vocabulary,
@@ -44,22 +44,25 @@ pub struct WrapperCtx<'b>
     #[deref_mut]
     ctx: &'b mut LabellingCtx,
     #[new(default)]
-    visited: <Self as TraversalPass>::Visited,
+    visited: <Self as Visited>::Collection,
 }
 // - run bottom up (all smaller nodes need to be fully labelled)
 // - for each node x:
 //  - run top down to find the largest frequent children to cover whole range
 //  - label node x if there are multiple overlapping labelled child nodes
 
+impl Visited for WrapperCtx<'_>
+{
+    type Collection = HashSet<<Self as TraversalPass>::Node>;
+    fn visited<'t>(&'t mut self) -> &'t mut <Self as Visited>::Collection {
+        &mut self.visited
+    }
+}
 impl TraversalPass for WrapperCtx<'_>
 {
-    type Visited = HashSet<Self::Node>;
     type Node = VertexKey;
     type NextNode = VertexKey;
     type Queue = LayeredQueue<Self>;
-    fn visited(&mut self) -> &mut Self::Visited {
-        &mut self.visited
-    }
     fn start_queue(&mut self) -> Self::Queue {
         BottomUp::starting_nodes(&self.vocab).into_iter()
             .map(|ng| ng.key).collect()
@@ -77,7 +80,7 @@ impl TraversalPass for WrapperCtx<'_>
 
         if !self.labels.contains(node)
         {
-            let tree = ChildTree::from_entry(self.ctx, &entry);
+            let tree = ChildCover::from_key(self.ctx, entry.vertex_key());
             if tree.any_intersect()
             {
                 let key = entry.data.vertex_key();

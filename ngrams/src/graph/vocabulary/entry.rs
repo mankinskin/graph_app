@@ -31,7 +31,10 @@ use crate::graph::{
         Vocabulary,
     },
 };
-use std::borrow::Borrow;
+use std::{
+    fmt::Debug,
+    borrow::Borrow,
+};
 
 #[derive(Debug, Deref, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct VocabEntry
@@ -82,7 +85,7 @@ pub struct VertexCtxMut<'a>
 }
 // define how to access a graph
 // useful if you store extra labels for nodes by which to query
-pub trait HasVertexEntries<K: ?Sized>
+pub trait HasVertexEntries<K: ?Sized + Debug>
 {
     fn entry(
         &mut self,
@@ -96,6 +99,20 @@ pub trait HasVertexEntries<K: ?Sized>
         &mut self,
         key: &K,
     ) -> Option<VertexCtxMut>;
+    fn expect_vertex(
+        &self,
+        key: &K,
+    ) -> VertexCtx {
+        self.get_vertex(key)
+            .expect(&format!("No VertexKey: {:?}", key))
+    }
+    fn expect_vertex_mut(
+        &mut self,
+        key: &K,
+    ) -> VertexCtxMut {
+        self.get_vertex_mut(key)
+            .expect(&format!("No VertexKey: {:?}", key))
+    }
 }
 pub trait VocabIndex: HasVertexIndex {}
 //impl VocabIndex for VertexIndex {}

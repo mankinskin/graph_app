@@ -54,7 +54,7 @@ use crate::graph::{
     }, traversal::direction::{
         TopDown,
         TraversalDirection,
-    }, utils::tree::ChildTree, vocabulary::{
+    }, utils::cover::ChildCover, vocabulary::{
         entry::{
             HasVertexEntries,
             VertexCtx,
@@ -89,15 +89,16 @@ pub struct PartitionContainer
 }
 impl PartitionContainer
 {
-    pub fn from_entry(
+    pub fn from_ngram(
         ctx: &PartitionsCtx<'_>,
-        entry: &VertexCtx,
+        ngram: NGramId,
     ) -> Self
     {
         // find all largest children
-        let tree = ChildTree::from_entry(ctx, entry);
+        let tree = ChildCover::from_key(ctx, ngram.vertex_key());
+
         assert!(
-            match entry.width()
+            match ngram.width()
             {
                 1 => tree.is_empty(),
                 _ => !tree.is_empty(),
@@ -107,7 +108,7 @@ impl PartitionContainer
         // build container with gaps
         //let next = tree.iter().map(|(_, c)| c.vertex_index()).collect();
         let ctx = NodePartitionCtx::new(
-            NGramId::new(entry.data.vertex_key(), entry.data.width()),
+            ngram,
             ctx,
         );
         Self::from_child_list(&ctx, tree)

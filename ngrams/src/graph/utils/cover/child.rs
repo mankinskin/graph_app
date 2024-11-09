@@ -5,18 +5,13 @@ use seqraph::{
     graph::{
         getters::vertex::VertexSet,
         vertex::{
-            child::Child,
-            data::{
+            child::Child, data::{
                 VertexData,
                 VertexDataBuilder,
-            },
-            has_vertex_index::{
+            }, has_vertex_index::{
                 HasVertexIndex,
                 ToChild,
-            },
-            has_vertex_key::HasVertexKey,
-            wide::Wide,
-            VertexIndex,
+            }, has_vertex_key::HasVertexKey, key::VertexKey, wide::Wide, VertexIndex
         },
         Hypergraph,
     },
@@ -55,7 +50,7 @@ use crate::graph::{
             TopDown,
             TraversalDirection,
         },
-        pass::TraversalPass, queue::{LayeredQueue, Queue},
+        pass::TraversalPass, queue::{LayeredQueue, Queue}, visited::Visited,
     },
     vocabulary::{
         entry::{
@@ -68,45 +63,47 @@ use crate::graph::{
     },
 };
 
-use super::ChildTree;
-#[derive(Debug, new)]
-pub struct ChildDedupPass<'a> {
+use super::ChildCover;
+
+#[derive(Debug)]
+pub struct ChildCoverPass<'a> {
     pub ctx: &'a LabellingCtx,
-    pub root: &'a VertexCtx<'a>,
-    #[new(default)]
-    pub tree: ChildTree,
-    #[new(default)]
-    pub visited: <Self as TraversalPass>::Visited,
+    pub root: VertexKey,
+    pub cover: ChildCover,
 }
-impl TraversalPass for ChildDedupPass<'_> {
-    type Visited = HashSet<Self::Node>;
+impl<'a> ChildCoverPass<'a> {
+    pub fn new(ctx: &'a LabellingCtx, root: VertexKey) -> Self {
+        Self {
+            ctx,
+            root,
+            cover: Default::default(),
+        }
+    }
+}
+impl TraversalPass for ChildCoverPass<'_> {
     type Node = (usize, NGramId);
     type NextNode = (usize, NGramId);
     type Queue = LayeredQueue<Self>;
-
-    fn visited(&mut self) -> &mut Self::Visited {
-        &mut self.visited
-    }
     fn start_queue(&mut self) -> Self::Queue {
         Self::Queue::from_iter(
-            TopDown::next_nodes(self.root)
+            TopDown::next_nodes(&self.ctx.vocab.expect_vertex(&self.root))
         )
     }
     fn on_node(&mut self, node: &Self::Node) -> Option<Vec<Self::NextNode>> {
         let &(off, node) = node;
         // check if covered
-        if self.tree.any_covers(off, node)
+        if self.cover.any_covers(off, node)
         {
             None
         }
         else if self.ctx.labels.contains(&node)
         {
-            self.tree.insert(off, node);
+            self.cover.insert(off, node);
             None
         }
         else
         {
-            let ne = self.root.vocab.get_vertex(&node).unwrap();
+            let ne = self.ctx.vocab.get_vertex(&node).unwrap();
             Some(
                 TopDown::next_nodes(&ne)
                     .into_iter()

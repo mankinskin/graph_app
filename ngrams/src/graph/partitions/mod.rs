@@ -19,7 +19,7 @@ use crate::graph::{
         },
         pass::TraversalPass, queue::Queue,
     },
-    utils::tree::ChildTree,
+    utils::cover::ChildCover,
     vocabulary::{
         entry::{
             HasVertexEntries,
@@ -54,7 +54,7 @@ use seqraph::{
     HashSet,
 };
 
-use super::{traversal::queue::LayeredQueue, vocabulary::Vocabulary};
+use super::{traversal::{queue::LayeredQueue, visited::Visited}, vocabulary::Vocabulary};
 
 // - run top down (smaller nodes to label need to be found)
 // - for each node x:
@@ -78,7 +78,7 @@ pub struct PartitionsCtx<'b>
     #[deref_mut]
     pub ctx: &'b mut LabellingCtx,
     pub graph: Hypergraph,
-    visited: <Self as TraversalPass>::Visited,
+    visited: <Self as Visited>::Collection,
 }
 
 impl<'b> From<&'b mut LabellingCtx> for PartitionsCtx<'b> {
@@ -91,15 +91,18 @@ impl<'b> From<&'b mut LabellingCtx> for PartitionsCtx<'b> {
         }
     }
 }
+impl Visited for PartitionsCtx<'_>
+{
+    type Collection = HashSet<<Self as TraversalPass>::Node>;
+    fn visited<'t>(&'t mut self) -> &'t mut <Self as Visited>::Collection {
+        &mut self.visited
+    }
+}
 impl TraversalPass for PartitionsCtx<'_>
 {
-    type Visited = HashSet<Self::Node>;
     type Node = NGramId;
     type NextNode = NGramId;
     type Queue = LayeredQueue<Self>;
-    fn visited(&mut self) -> &mut Self::Visited {
-        &mut self.visited
-    }
     fn start_queue(&mut self) -> Self::Queue {
         let queue = Self::Queue::from_iter(
             TopDown::starting_nodes(&self.vocab)
@@ -119,8 +122,8 @@ impl TraversalPass for PartitionsCtx<'_>
         node: &NGramId,
     ) -> Option<Vec<NGramId>>
     {
+        let container = PartitionContainer::from_ngram(self, *node);
         let entry = self.vocab.get_vertex(node).unwrap();
-        let container = PartitionContainer::from_entry(self, &entry);
         
         let pids: Vec<_> = std::iter::repeat_n((), container.len())
             .map(|_| PatternId::default())

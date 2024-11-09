@@ -5,18 +5,13 @@ use seqraph::{
     graph::{
         getters::vertex::VertexSet,
         vertex::{
-            child::Child,
-            data::{
+            child::Child, data::{
                 VertexData,
                 VertexDataBuilder,
-            },
-            has_vertex_index::{
+            }, has_vertex_index::{
                 HasVertexIndex,
                 ToChild,
-            },
-            has_vertex_key::HasVertexKey,
-            wide::Wide,
-            VertexIndex,
+            }, has_vertex_key::HasVertexKey, key::VertexKey, wide::Wide, VertexIndex
         },
         Hypergraph,
     },
@@ -55,7 +50,7 @@ use crate::graph::{
             TopDown,
             TraversalDirection,
         },
-        pass::TraversalPass, queue::{LayeredQueue, Queue},
+        pass::TraversalPass, queue::{LayeredQueue, Queue}, visited::Visited,
     },
     vocabulary::{
         entry::{
@@ -68,48 +63,58 @@ use crate::graph::{
     },
 };
 
-use super::ChildTree;
-#[derive(Debug, new)]
-pub struct ChildCoverPass<'a> {
+use super::cover::ChildCover;
+
+#[derive(Debug)]
+pub struct ChildDedupPass<'a> {
     pub ctx: &'a LabellingCtx,
-    pub root: &'a VertexCtx<'a>,
-    #[new(default)]
-    pub visited: <Self as TraversalPass>::Visited,
-    #[new(default)]
-    pub tree: ChildTree,
+    pub covers: HashMap<VertexKey, ChildCover>,
 }
-impl TraversalPass for ChildCoverPass<'_> {
-    type Visited = HashSet<Self::Node>;
-    type Node = (usize, NGramId);
-    type NextNode = (usize, NGramId);
-    type Queue = LayeredQueue<Self>;
-    fn visited(&mut self) -> &mut Self::Visited {
-        &mut self.visited
+
+impl<'a> ChildDedupPass<'a> {
+    pub fn new(ctx: &'a LabellingCtx, roots: impl IntoIterator<Item=VertexKey>) -> Self {
+        Self {
+            ctx,
+            covers: roots.into_iter().map(|root| (root, ChildCover::default())).collect(),
+        }
     }
+}
+
+impl TraversalPass for ChildDedupPass<'_> {
+    type Node = (VertexKey, usize, NGramId);
+    type NextNode = (VertexKey, usize, NGramId);
+    type Queue = LayeredQueue<Self>;
+
     fn start_queue(&mut self) -> Self::Queue {
         Self::Queue::from_iter(
-            TopDown::next_nodes(self.root)
+            //TopDown::next_nodes(&self.ctx.vocab.expect_vertex(&self.root))
+            self.covers.iter().flat_map(|(key, tree)| 
+                TopDown::next_nodes(&self.ctx.vocab.expect_vertex(key))
+                    .into_iter()
+                    .map(|(p, n)| (*key, p, n))
+            )
         )
     }
     fn on_node(&mut self, node: &Self::Node) -> Option<Vec<Self::NextNode>> {
-        let &(off, node) = node;
+        let &(root, off, node) = node;
+        let cover = self.covers.get_mut(&root).unwrap();
         // check if covered
-        if self.tree.any_covers(off, node)
+        if cover.any_covers(off, node)
         {
             None
         }
         else if self.ctx.labels.contains(&node)
         {
-            self.tree.insert(off, node);
+            cover.insert(off, node);
             None
         }
         else
         {
-            let ne = self.root.vocab.get_vertex(&node).unwrap();
+            let ne = self.ctx.vocab.get_vertex(&node).unwrap();
             Some(
                 TopDown::next_nodes(&ne)
                     .into_iter()
-                    .map(|(o, c)| (o + off, c))
+                    .map(|(o, c)| (root, o + off, c))
                     .collect()
             )
         }

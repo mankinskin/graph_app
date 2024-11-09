@@ -20,17 +20,33 @@ use seqraph::{
     HashSet,
 };
 
-pub trait Visited<P: TraversalPass> {
-    fn insert(&mut self, node: <P as TraversalPass>::Node) -> bool;
+use super::pass::PassNode;
+
+pub trait Visited: TraversalPass {
+    type Collection: VisitorCollection<Self::Node>;
+    fn visited(&mut self) -> &mut Self::Collection;
+}
+pub trait VisitorCollection<N: PassNode> {
+    type Ref<'t>: VisitorCollection<N> where N: 't;
+    fn insert(&mut self, node: N) -> bool;
 }
 
-impl<P: TraversalPass> Visited<P> for HashSet<P::Node> {
-    fn insert(&mut self, node: <P as TraversalPass>::Node) -> bool {
-        HashSet::insert(self, node)
+impl<N: PassNode> VisitorCollection<N> for HashSet<N>
+{
+    type Ref<'t> = &'t mut Self where N: 't;
+    fn insert(&mut self, node: N) -> bool {
+        <&mut Self as VisitorCollection<N>>::insert(&mut &mut *self, node)
     }
 }
-impl<P: TraversalPass> Visited<P> for () {
-    fn insert(&mut self, node: <P as TraversalPass>::Node) -> bool {
+impl<'a, N: PassNode> VisitorCollection<N> for &'a mut HashSet<N> {
+    type Ref<'t> = &'t mut HashSet<N> where N: 't;
+    fn insert(&mut self, node: N) -> bool {
+        HashSet::insert(*self, node)
+    }
+}
+impl<N: PassNode> VisitorCollection<N> for () {
+    type Ref<'t> = Self where N: 't;
+    fn insert(&mut self, node: N) -> bool {
         true
     }
 }

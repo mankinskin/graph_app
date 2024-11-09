@@ -23,6 +23,7 @@ pretty_assertions = "1.4.0"
 serde = { version = "1.0.203", features = ["derive"] }
 ciborium = "0.2"
 lazy_static = "1.4.0"
+derivative = "^2.2"
 
 
 [dependencies.seqraph]

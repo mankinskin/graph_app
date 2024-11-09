@@ -1,26 +1,23 @@
-pub mod child_cover;
-pub mod child_dedup;
+pub mod child;
+pub mod parent;
+pub mod frequency;
 
-use child_cover::ChildCoverPass;
+use child::ChildCoverPass;
 use itertools::Itertools;
 use pretty_assertions::assert_matches;
 use range_ext::intersect::Intersect;
+use derivative::Derivative;
 use seqraph::{
     graph::{
         getters::vertex::VertexSet,
         vertex::{
-            child::Child,
-            data::{
+            child::Child, data::{
                 VertexData,
                 VertexDataBuilder,
-            },
-            has_vertex_index::{
+            }, has_vertex_index::{
                 HasVertexIndex,
                 ToChild,
-            },
-            has_vertex_key::HasVertexKey,
-            wide::Wide,
-            VertexIndex,
+            }, has_vertex_key::HasVertexKey, key::VertexKey, wide::Wide, VertexIndex
         },
         Hypergraph,
     },
@@ -72,25 +69,25 @@ use crate::graph::{
     },
 };
 
-#[derive(Debug, Deref, DerefMut, Default, IntoIterator)]
-pub struct ChildTree
+#[derive(Debug, Deref, DerefMut, Default, IntoIterator, new)]
+pub struct ChildCover
 {
+    #[into_iterator(owned, ref)]
     #[deref]
     #[deref_mut]
-    #[into_iterator(owned, ref)]
     entries: HashMap<usize, NGramId>,
 }
-impl ChildTree
+impl ChildCover
 {
     // find largest labelled children
-    pub fn from_entry(
+    pub fn from_key(
         ctx: &LabellingCtx,
-        entry: &VertexCtx<'_>,
+        key: VertexKey,
     ) -> Self
     {
-        let mut ctx = ChildCoverPass::new(ctx, entry);
+        let mut ctx = ChildCoverPass::new(ctx, key);
         ctx.run();
-        ctx.tree
+        ctx.cover
     }
     pub fn as_ranges(&self) -> HashSet<Range<usize>>
     {
