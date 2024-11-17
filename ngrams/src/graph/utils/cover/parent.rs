@@ -50,7 +50,7 @@ use crate::graph::{
             TopDown,
             TraversalDirection,
         },
-        pass::TraversalPass, queue::{LayeredQueue, Queue}, visited::Visited,
+        pass::TraversalPass, queue::{LayeredQueue, Queue}, visited::VisitTracking,
     },
     vocabulary::{
         entry::{
@@ -121,7 +121,6 @@ impl TraversalPass for ParentCoverPass<'_> {
         {
             while let Some(node) = queue.pop_front()
             {
-                let node = node.into();
                 if let Some(next) = self.node_condition(node)
                     .then(|| self.on_node(&node))
                     .flatten()

@@ -1,4 +1,5 @@
 pub mod container;
+pub mod collect;
 
 use derive_more::{
     Deref,
@@ -54,7 +55,7 @@ use seqraph::{
     HashSet,
 };
 
-use super::{traversal::{queue::LayeredQueue, visited::Visited}, vocabulary::Vocabulary};
+use super::{traversal::{queue::{LayeredQueue, LinearQueue}, visited::VisitTracking}, vocabulary::Vocabulary, utils::dedup::ChildDedupPass};
 
 // - run top down (smaller nodes to label need to be found)
 // - for each node x:
@@ -77,8 +78,8 @@ pub struct PartitionsCtx<'b>
     #[deref]
     #[deref_mut]
     pub ctx: &'b mut LabellingCtx,
+    visited: <Self as VisitTracking>::Collection,
     pub graph: Hypergraph,
-    visited: <Self as Visited>::Collection,
 }
 
 impl<'b> From<&'b mut LabellingCtx> for PartitionsCtx<'b> {
@@ -86,15 +87,15 @@ impl<'b> From<&'b mut LabellingCtx> for PartitionsCtx<'b> {
     {
         Self {
             ctx,
-            graph: Default::default(),
             visited: Default::default(),
+            graph: Default::default(),
         }
     }
 }
-impl Visited for PartitionsCtx<'_>
+impl VisitTracking for PartitionsCtx<'_>
 {
     type Collection = HashSet<<Self as TraversalPass>::Node>;
-    fn visited<'t>(&'t mut self) -> &'t mut <Self as Visited>::Collection {
+    fn visited_mut(&mut self) -> &mut <Self as VisitTracking>::Collection {
         &mut self.visited
     }
 }
@@ -102,7 +103,7 @@ impl TraversalPass for PartitionsCtx<'_>
 {
     type Node = NGramId;
     type NextNode = NGramId;
-    type Queue = LayeredQueue<Self>;
+    type Queue = LinearQueue<Self>;
     fn start_queue(&mut self) -> Self::Queue {
         let queue = Self::Queue::from_iter(
             TopDown::starting_nodes(&self.vocab)
@@ -117,6 +118,13 @@ impl TraversalPass for PartitionsCtx<'_>
         }
         queue
     }
+    fn node_condition(&mut self, node: Self::Node) -> bool {
+        (!self.visited_mut().contains(&node)
+            && self.labels.contains(&node))
+            || self.vocab.leaves.contains(&node)
+            .then(|| self.visited_mut().insert(node))
+            .is_some()
+    }
     fn on_node(
         &mut self,
         node: &NGramId,
@@ -124,6 +132,9 @@ impl TraversalPass for PartitionsCtx<'_>
     {
         let container = PartitionContainer::from_ngram(self, *node);
         let entry = self.vocab.get_vertex(node).unwrap();
+        if entry.ngram == "ab" || entry.ngram == "ba" {
+            println!("{}: {:?}", entry.ngram, self.ctx.labels);
+        }
         
         let pids: Vec<_> = std::iter::repeat_n((), container.len())
             .map(|_| PatternId::default())
@@ -140,6 +151,14 @@ impl TraversalPass for PartitionsCtx<'_>
             .into_iter()
             .map(|(l, c)| (l, *c))
             .collect_vec();
+
+        let unlabelled = child_locations
+            .iter()
+            .map(|(_, vi)| self.vocab.containment.expect_key_for_index(*vi))
+            .filter(|k| !self.labels.contains(k))
+            .collect_vec();
+
+        ChildDedupPass::new(self.ctx, unlabelled).run();
 
         // create child nodes in self.graph
         // set child parents and translate child indices to self.graph
@@ -166,10 +185,6 @@ impl TraversalPass for PartitionsCtx<'_>
                     self.graph.insert_token_data(*self.vocab.containment.expect_token_by_key(&key), data)
                 }.vertex_index();
 
-                if !self.ctx.labels.contains(&key) {
-                    self.ctx.labels.insert(key);
-                    // TODO: Rerun frequency pass for subgraph of key
-                }
                 out
             };
             self.graph.expect_child_mut_at(loc).index = out_index;
@@ -186,23 +201,18 @@ impl TraversalPass for PartitionsCtx<'_>
                 )
             )
             .collect();
+        //let next = vec![];
         Some(next)
     }
     fn begin_run(&mut self) {
         println!("Partition Pass");
     }
-    fn node_condition(&mut self, node: Self::Node) -> bool {
-        (!self.visited().contains(&node)
-            && self.labels.contains(&node))
-            || self.vocab.leaves.contains(&node)
-            .then(|| self.visited().insert(node))
-            .is_some()
-    }
+
     fn finish_run(&mut self) {
         self.vocab.roots.iter().for_each(|key| {
             let _ = self.graph.vertex_key_string(key);
         });
-        self.status = ProcessStatus::Partitions;
         println!("{:#?}", &self.graph);
+        self.status = ProcessStatus::Partitions;
     }
 }

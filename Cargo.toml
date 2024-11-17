@@ -5,13 +5,17 @@ exclude = [
   "./egui",
   "./egui/crates/eframe",
   "./tracing-egui",
-  "./petgraph"
+  "./petgraph",
+  "./minimal_options",
+  "./graph_app",
+  "./ngrams",
+  "./justlog"
 ]
-members = [
-  "seqraph",
-  "ngrams",
-  "graph_app"
-]
+#members = [
+#  "seqraph",
+#  "ngrams",
+#  "graph_app"
+#]
 
 [profile.release]
 opt-level = 2 # fast and small wasm

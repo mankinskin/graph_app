@@ -59,7 +59,7 @@ impl TraversalPass for FrequencyCtx<'_>
         for node in start.iter()
         {
             queue.extend_layer(
-                self.on_node(&node).unwrap_or_default()
+                self.on_node(node).unwrap_or_default()
             );
         }
         self.labels.extend(start.iter().map(HasVertexKey::vertex_key));
@@ -70,21 +70,18 @@ impl TraversalPass for FrequencyCtx<'_>
         node: &Self::Node,
     ) -> Option<Vec<Self::NextNode>>
     {
-        if self.labels.contains(&node)
-        {
-            None
-        }
-        else
-        {
-            let entry = self.vocab.get_vertex(node).unwrap();
-            let next = self.entry_next(&entry);
-            if self.entry_is_frequent(&entry)
-            {
-                let key = entry.data.vertex_key();
-                self.labels.insert(key);
-            }
-            Some(next)
-        }
+        self.labels.contains(node)
+            .then_some(None)
+            .unwrap_or_else(|| {
+                let entry = self.vocab.get_vertex(node).unwrap();
+                let next = self.entry_next(&entry);
+                if self.entry_is_frequent(&entry)
+                {
+                    let key = entry.data.vertex_key();
+                    self.labels.insert(key);
+                }
+                Some(next)
+            })
     }
     fn begin_run(&mut self) {
         println!("Frequency Pass");

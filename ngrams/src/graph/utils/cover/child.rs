@@ -50,7 +50,7 @@ use crate::graph::{
             TopDown,
             TraversalDirection,
         },
-        pass::TraversalPass, queue::{LayeredQueue, Queue}, visited::Visited,
+        pass::TraversalPass, queue::{LayeredQueue, Queue}, visited::VisitTracking,
     },
     vocabulary::{
         entry::{

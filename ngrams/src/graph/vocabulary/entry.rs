@@ -104,14 +104,14 @@ pub trait HasVertexEntries<K: ?Sized + Debug>
         key: &K,
     ) -> VertexCtx {
         self.get_vertex(key)
-            .expect(&format!("No VertexKey: {:?}", key))
+            .unwrap_or_else(|| panic!("No VertexKey: {:?}", key))
     }
     fn expect_vertex_mut(
         &mut self,
         key: &K,
     ) -> VertexCtxMut {
         self.get_vertex_mut(key)
-            .expect(&format!("No VertexKey: {:?}", key))
+            .unwrap_or_else(|| panic!("No VertexKey: {:?}", key))
     }
 }
 pub trait VocabIndex: HasVertexIndex {}

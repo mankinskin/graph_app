@@ -19,7 +19,7 @@ use crate::graph::{
             TopDown,
             TraversalDirection,
         },
-        pass::TraversalPass, queue::{LayeredQueue, Queue}, visited::Visited,
+        pass::TraversalPass, queue::{LayeredQueue, Queue}, visited::VisitTracking,
     }, utils::cover::ChildCover, vocabulary::{
         entry::VertexCtx,
         NGramId,
@@ -44,18 +44,18 @@ pub struct WrapperCtx<'b>
     #[deref_mut]
     ctx: &'b mut LabellingCtx,
     #[new(default)]
-    visited: <Self as Visited>::Collection,
+    visited_mut: <Self as VisitTracking>::Collection,
 }
 // - run bottom up (all smaller nodes need to be fully labelled)
 // - for each node x:
 //  - run top down to find the largest frequent children to cover whole range
 //  - label node x if there are multiple overlapping labelled child nodes
 
-impl Visited for WrapperCtx<'_>
+impl VisitTracking for WrapperCtx<'_>
 {
     type Collection = HashSet<<Self as TraversalPass>::Node>;
-    fn visited<'t>(&'t mut self) -> &'t mut <Self as Visited>::Collection {
-        &mut self.visited
+    fn visited_mut(&mut self) -> &mut <Self as VisitTracking>::Collection {
+        &mut self.visited_mut
     }
 }
 impl TraversalPass for WrapperCtx<'_>

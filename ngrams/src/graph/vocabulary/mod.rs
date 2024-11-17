@@ -73,10 +73,10 @@ pub struct NGramId
     pub key: VertexKey,
     pub width: usize,
 }
-impl Into<VertexKey> for NGramId
+impl From<NGramId> for VertexKey
 {
-    fn into(self) -> VertexKey {
-        self.key
+    fn from(ngram_id: NGramId) -> Self {
+        ngram_id.key
     }
 }
 impl HasVertexKey for NGramId

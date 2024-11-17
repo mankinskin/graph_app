@@ -22,9 +22,9 @@ use seqraph::{
 
 use super::pass::PassNode;
 
-pub trait Visited: TraversalPass {
+pub trait VisitTracking: TraversalPass {
     type Collection: VisitorCollection<Self::Node>;
-    fn visited(&mut self) -> &mut Self::Collection;
+    fn visited_mut(&mut self) -> &mut Self::Collection;
 }
 pub trait VisitorCollection<N: PassNode> {
     type Ref<'t>: VisitorCollection<N> where N: 't;
@@ -38,7 +38,7 @@ impl<N: PassNode> VisitorCollection<N> for HashSet<N>
         <&mut Self as VisitorCollection<N>>::insert(&mut &mut *self, node)
     }
 }
-impl<'a, N: PassNode> VisitorCollection<N> for &'a mut HashSet<N> {
+impl<N: PassNode> VisitorCollection<N> for &'_ mut HashSet<N> {
     type Ref<'t> = &'t mut HashSet<N> where N: 't;
     fn insert(&mut self, node: N) -> bool {
         HashSet::insert(*self, node)

@@ -18,7 +18,7 @@ use seqraph::graph::vertex::{
     VertexIndex,
 };
 
-use super::{queue::Queue, visited::{Visited, VisitorCollection}};
+use super::{queue::Queue, visited::{VisitTracking, VisitorCollection}};
 pub trait PassNode: Eq + PartialEq + Debug + Clone + Hash {}
 impl<N: Eq + PartialEq + Debug + Clone + Hash> PassNode for N {}
 

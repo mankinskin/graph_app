@@ -13,14 +13,10 @@
                     "build",
                     "--bin=graph_app",
                     "--package=graph_app"
-                ],
-                "filter": {
-                    "name": "graph_app",
-                    "kind": "bin"
-                }
+                ]
             },
             "args": [],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}/graph_app"
         }
     ]
 }
