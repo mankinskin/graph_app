@@ -50,6 +50,8 @@ use std::{
     },
 };
 use tap::Tap;
+use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
 
 pub mod entry;
 
@@ -95,7 +97,7 @@ impl Wide for NGramId
 }
 
 #[derive(
-    Default, Debug, PartialEq, Eq, Copy, Clone, Serialize, Deserialize,
+    Default, Debug, PartialEq, Eq, Copy, Clone, Serialize, Deserialize, EnumIter
 )]
 pub enum ProcessStatus
 {

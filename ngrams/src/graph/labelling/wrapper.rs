@@ -95,6 +95,6 @@ impl TraversalPass for WrapperCtx<'_>
         println!("Wrapper Pass");
     }
     fn finish_run(&mut self) {
-        self.status = ProcessStatus::Wrappers;
+        self.status.as_ref().inspect(|s| s.write().unwrap().pass = ProcessStatus::Wrappers);
     }
 }

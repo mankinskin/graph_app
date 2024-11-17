@@ -1,6 +1,7 @@
 use eframe::{egui::{
     self, ThemePreference, Ui
 }, CreationContext};
+use ngrams::graph::{vocabulary::ProcessStatus, Status};
 use seqraph::graph::HypergraphRef;
 #[cfg(feature = "persistence")]
 use serde::*;
@@ -9,6 +10,7 @@ use tokio::task::JoinHandle;
 use crate::examples::{build_graph1, build_graph2, build_graph3};
 #[allow(unused)]
 use crate::graph::*;
+use strum::IntoEnumIterator;
 
 #[cfg_attr(feature = "persistence", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "persistence", serde(default))] // if we add new fields, give them default values when deserializing old state
@@ -19,6 +21,7 @@ pub struct App
     #[cfg_attr(feature = "persistence", serde(skip))]
     graph: Graph,
     inserter: bool,
+    status: Option<Arc<RwLock<ngrams::graph::Status>>>,
     read_task: Option<JoinHandle<()>>,
 }
 
@@ -30,6 +33,7 @@ impl Default for App {
             graph: Graph::default(),
             inserter: true,
             read_task: None,
+            status: None,
         }
     }
 }
@@ -51,6 +55,7 @@ impl App
             graph: Graph::new_from_graph_ref(graph),
             inserter: true,
             read_task: None,
+            status: None,
         }
     }
     pub fn context_menu(
@@ -203,11 +208,28 @@ impl eframe::App for App
                 if ui.button("Insert").clicked()
                 {
                     let insert_text = std::mem::take(&mut self.graph.insert_text);
-                    //self.read_task = Some(self.graph.read_text(insert_text, ctx));
-                    let res = ngrams::graph::parse_corpus(ngrams::graph::Corpus::new("", [insert_text]));
+                    let graph = self.graph.graph.clone();
+                    let labels = self.graph.labels.clone();
+                    let status = Status::new(insert_text.clone());
+                    let status_arc: Arc<RwLock<Status>> = Arc::new(RwLock::new(status));
+                    self.status = Some(status_arc.clone());
+                    std::thread::spawn(move || {
+                        let res = ngrams::graph::parse_corpus(ngrams::graph::Corpus::new("", [insert_text]), status_arc);
 
-                    *self.graph.graph.write().unwrap() = res.graph;
-                    *self.graph.labels.write().unwrap() = res.labels;
+                        *graph.write().unwrap() = res.graph;
+                        *labels.write().unwrap() = res.labels;
+                    });
+                }
+            });
+        }
+        if let Some(status) = self.status.as_ref()
+        {
+            let status = status.read().unwrap();
+            egui::Window::new("Status").show(ctx, |ui| {
+                ui.label(format!("Text: \"{}\"", status.insert_text));
+                for pass in ProcessStatus::iter()
+                {
+                    ui.checkbox(&mut (status.pass >= pass), format!("{:?} Pass", pass));
                 }
             });
         }

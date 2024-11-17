@@ -189,7 +189,7 @@ impl TraversalPass for AccumulateCtx<'_>
         self.vocab.roots.iter().for_each(|key| {
             let _ = self.result.vertex_key_string(key);
         });
-        self.status = ProcessStatus::Partitions;
+        self.status.as_ref().inspect(|s| s.write().unwrap().pass = ProcessStatus::Partitions);
         println!("{:#?}", &self.result);
     }
 }

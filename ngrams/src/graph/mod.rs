@@ -1,4 +1,4 @@
-use std::path::{absolute, Path, PathBuf};
+use std::{path::{absolute, Path, PathBuf}, sync::{Arc, RwLock}};
 
 use derive_new::new;
 use derive_more::Deref;
@@ -12,8 +12,7 @@ use serde::{Deserialize, Serialize};
 use crate::graph::{
     labelling::LabellingCtx,
     vocabulary::{
-        entry::HasVertexEntries,
-        Vocabulary,
+        entry::HasVertexEntries, ProcessStatus, Vocabulary
     },
 };
 
@@ -28,6 +27,21 @@ lazy_static::lazy_static! {
     pub static ref CORPUS_DIR: PathBuf = absolute(PathBuf::from_iter([".", "test", "cache"])).unwrap();
 }
 
+#[derive(Debug)]
+pub struct Status
+{
+    pub insert_text: String,
+    pub pass: ProcessStatus,
+}
+impl Status
+{
+    pub fn new(insert_text: impl ToString) -> Self {
+        Self {
+            insert_text: insert_text.to_string(),
+            pass: ProcessStatus::default(),
+        }
+    }
+}
 #[derive(Debug, Default, Deref, Serialize, Deserialize)]
 pub struct Corpus
 {
@@ -53,15 +67,15 @@ pub struct ParseResult {
     pub containment: Hypergraph,
     pub labels: HashSet<VertexKey>,
 }
-pub fn parse_corpus(corpus: Corpus) -> ParseResult {
-    let mut image = LabellingCtx::from_corpus(&corpus);
+pub fn parse_corpus(corpus: Corpus, status: Arc<RwLock<Status>>) -> ParseResult {
+    let mut ctx = LabellingCtx::from_corpus(&corpus, status);
 
-    image.label_freq();
-    image.label_wrap();
-    let graph = image.label_part();
+    ctx.label_freq();
+    ctx.label_wrap();
+    let graph = ctx.label_part();
     ParseResult {
         graph,
-        containment: image.vocab.containment,
-        labels: image.labels,
+        containment: ctx.image.vocab.containment,
+        labels: ctx.image.labels,
     }
 }

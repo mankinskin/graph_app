@@ -213,6 +213,6 @@ impl TraversalPass for PartitionsCtx<'_>
             let _ = self.graph.vertex_key_string(key);
         });
         println!("{:#?}", &self.graph);
-        self.status = ProcessStatus::Partitions;
+        self.status.as_ref().inspect(|s| s.write().unwrap().pass = ProcessStatus::Partitions);
     }
 }

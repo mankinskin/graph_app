@@ -2,6 +2,10 @@ use ciborium::{
     de::Error as DeError,
     ser::Error as SerError,
 };
+use derive_more::derive::{
+    Deref,
+    DerefMut,
+};
 use itertools::Itertools;
 use serde::{
     Deserialize,
@@ -16,19 +20,15 @@ use std::{
         BufReader,
         BufWriter,
     },
-    path::Path,
+    path::Path, sync::{Arc, RwLock},
 };
 use tap::Tap;
 
 use crate::graph::{
-    Corpus,
-    CORPUS_DIR,
-    partitions::PartitionsCtx,
-    vocabulary::{
+    partitions::PartitionsCtx, traversal::pass::TraversalPass, vocabulary::{
         ProcessStatus,
         Vocabulary,
-    },
-    traversal::pass::TraversalPass,
+    }, Corpus, Status, CORPUS_DIR
 };
 use seqraph::{
     graph::{vertex::{
@@ -44,40 +44,23 @@ use frequency::FrequencyCtx;
 pub mod wrapper;
 use wrapper::WrapperCtx;
 
-impl From<Vocabulary> for LabellingCtx
+impl From<Vocabulary> for LabellingImage
 {
     fn from(vocab: Vocabulary) -> Self
     {
         Self {
             vocab,
             labels: Default::default(),
-            status: ProcessStatus::Containment,
         }
     }
 }
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct LabellingCtx
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LabellingImage
 {
     pub vocab: Vocabulary,
     pub labels: HashSet<VertexKey>,
-    pub status: ProcessStatus,
 }
-impl LabellingCtx
-{
-    pub fn new(vocab: Vocabulary) -> Self
-    {
-        Self {
-            vocab,
-            labels: Default::default(),
-            status: ProcessStatus::Containment,
-            //FromIterator::from_iter(
-            //    vocab.leaves.iter().chain(
-            //        vocab.roots.iter()
-            //    )
-            //    .cloned(),
-            //),
-        }
-    }
+impl LabellingImage {
     pub fn target_file_path(&self) -> impl AsRef<Path>
     {
         CORPUS_DIR.join(&self.vocab.name)
@@ -119,10 +102,28 @@ impl LabellingCtx
                 Self::from(Vocabulary::from_corpus(corpus))
             })
     }
+}
+#[derive(Debug, Deref, DerefMut)]
+pub struct LabellingCtx
+{
+    #[deref]
+    #[deref_mut]
+    pub image: LabellingImage,
+    pub status: Option<Arc<RwLock<Status>>>,
+}
+impl LabellingCtx
+{
+    pub fn from_corpus(corpus: &Corpus, status: Arc<RwLock<Status>>) -> Self
+    {
+        Self {
+            image: LabellingImage::from_corpus(corpus),
+            status: Some(status),
+        }
+    }
     pub fn label_freq(&mut self)
     {
         //let roots = texts.iter().map(|s| *vocab.ids.get(s).unwrap()).collect_vec();
-        if (self.status < ProcessStatus::Frequency)
+        if (self.status.as_ref().map(|s| s.read().unwrap().pass < ProcessStatus::Frequency).unwrap_or(true))
         {
             FrequencyCtx::new(&mut *self).run();
             self.write_to_target_file();
@@ -134,7 +135,7 @@ impl LabellingCtx
     }
     pub fn label_wrap(&mut self)
     {
-        if (self.status < ProcessStatus::Wrappers)
+        if (self.status.as_ref().map(|s| s.read().unwrap().pass < ProcessStatus::Wrappers).unwrap_or(true))
         {
             WrapperCtx::new(&mut *self).run();
             self.write_to_target_file();

@@ -90,7 +90,7 @@ impl TraversalPass for FrequencyCtx<'_>
         let bottom = BottomUp::starting_nodes(&self.vocab);
         self.labels
             .extend(bottom.iter().map(HasVertexKey::vertex_key));
-        self.status = ProcessStatus::Frequency;
+        self.status.as_ref().inspect(|s| s.write().unwrap().pass = ProcessStatus::Frequency);
     }
 }
 impl FrequencyCtx<'_>
