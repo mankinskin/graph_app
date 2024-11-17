@@ -61,12 +61,22 @@ use crate::graph::{
 
 use super::cover::ChildCover;
 
+// - roots are not labelled in the beginning
+// - all nodes with multiple occurences are labelled
+// - there are at least two roots
+// Todo:
+// - visit each root child only once (use visited set) 
+// - do not expand labelled or covered nodes (use child cover)
+// - detect nodes that have been visited in other roots
+#[derive(Debug, Default)]
+pub struct DedupRoot {
+    pub cover: ChildCover,
+    pub visited: HashSet<VertexKey>,
+}
 #[derive(Debug)]
 pub struct ChildDedupPass<'a> {
     pub ctx: &'a mut LabellingCtx,
-    pub covers: HashMap<VertexKey, ChildCover>,
-    roots: Vec<VertexKey>,
-    pub visited: HashSet<VertexKey>,
+    pub roots: HashMap<VertexKey, DedupRoot>,
 }
 
 impl<'a> ChildDedupPass<'a> {
@@ -74,9 +84,7 @@ impl<'a> ChildDedupPass<'a> {
         let roots: Vec<_> = roots.into_iter().collect();
         Self {
             ctx,
-            covers: roots.iter().map(|root| (*root, ChildCover::default())).collect(),
-            roots,
-            visited: Default::default(),
+            roots: roots.iter().map(|root| (*root, DedupRoot::default())).collect(),
         }
     }
 }
@@ -89,13 +97,16 @@ impl TraversalPass for ChildDedupPass<'_> {
         Self::Queue::from_iter(
             //self.roots.iter()
             //    .map(|&root| (0, NGramId::new(root, self.ctx.vocab.expect_vertex(&root).width())))
-            self.covers.iter().flat_map(|(root, tree)| {
+            self.roots.iter().flat_map(|(root, tree)| {
                 self.ctx.labels.insert(*root);
                 TopDown::next_nodes(&self.ctx.vocab.expect_vertex(root))
                     .into_iter()
                     .map(|(p, n)| (*root, p, n))
             })
         )
+    }
+    fn node_condition(&mut self, (root, _, node): Self::Node) -> bool {
+        self.roots.get_mut(&root).unwrap().visited.insert(node.vertex_key())
     }
     fn on_node(&mut self, node: &Self::Node) -> Option<Vec<Self::NextNode>> {
         let &(root, off, node) = node;
@@ -104,32 +115,42 @@ impl TraversalPass for ChildDedupPass<'_> {
             let re = self.ctx.vocab.get_vertex(&root).unwrap();
             println!("{}({})found in root {}({})", entry.ngram, entry.vertex_key(), re.ngram, root);
         }
-        let cover = self.covers.get_mut(&root).unwrap();
+        let (this_tree, other_trees): (Vec<_>, Vec<_>) = self.roots
+                .iter_mut()
+                .partition(|(k, _)| **k == root);
+
+        let tree = this_tree.into_iter().next().unwrap().1;
+        let other_trees = other_trees.into_iter().map(|(k, v)| v).collect_vec();
+
         // check if covered
         let next = (node.vertex_key() == root).then(|| {
-            cover.insert(off, node);
+            tree.cover.insert(off, node);
             Some(())
         })
         .unwrap_or_else(||
-            if cover.any_covers(off, &node)
-            {
-                None
-            }
-            else if self.visited.contains(&node)
-            {
-                self.ctx.labels.insert(node.vertex_key());
-                cover.insert(off, node);
-                None
-            }
-            else if self.ctx.labels.contains(&node)
-            {
-                cover.insert(off, node);
-                None
-            } else {
-                Some(())
-            }
+            (!tree.cover.any_covers(off, &node))
+                .then_some(())
+                .and_then(|_|
+                    (
+                        !other_trees.iter().any(|r| r.visited.contains(&node))
+                    )
+                    .then_some(())
+                    .or_else(|| {
+                        self.ctx.labels.insert(node.vertex_key());
+                        tree.cover.insert(off, node);
+                        None
+                    })
+                )
+                .and_then(|_| {
+                    (!self.ctx.labels.contains(&node))
+                        .then_some(())
+                        .or_else(|| {
+                            tree.cover.insert(off, node);
+                            None
+                        })
+                }) 
         );
-        self.visited.insert(node.vertex_key());
+        //self.visited.insert(node.vertex_key());
         next.map(|_| {
             let ne = self.ctx.vocab.get_vertex(&node).unwrap();
             TopDown::next_nodes(&ne)
