@@ -24,6 +24,7 @@ lazy_static = "1.5.0"
 derivative = "^2.2"
 strum = "0.26.3"
 strum_macros = "0.26.3"
+derive-getters = "0.5"
 
 
 [dependencies.derive_more]

@@ -5,8 +5,9 @@ use derive_more::Deref;
 use itertools::Itertools;
 use ngram::NGram;
 use pretty_assertions::assert_eq;
+use derive_getters::Getters;
 
-use seqraph::{graph::{vertex::key::VertexKey, Hypergraph}, HashSet};
+use seqraph::{graph::{getters, vertex::key::VertexKey, Hypergraph}, HashSet};
 use serde::{Deserialize, Serialize};
 
 use crate::graph::{
@@ -27,11 +28,14 @@ lazy_static::lazy_static! {
     pub static ref CORPUS_DIR: PathBuf = absolute(PathBuf::from_iter([".", "test", "cache"])).unwrap();
 }
 
-#[derive(Debug)]
+#[derive(Debug, Getters)]
 pub struct Status
 {
+    #[getter(skip)]
     pub insert_text: String,
-    pub pass: ProcessStatus,
+    pass: ProcessStatus,
+    steps: u32,
+    steps_total: u32,
 }
 impl Status
 {
@@ -39,7 +43,15 @@ impl Status
         Self {
             insert_text: insert_text.to_string(),
             pass: ProcessStatus::default(),
+            steps: 0,
+            steps_total: 1,
         }
+    }
+    pub fn next_pass(&mut self, pass: ProcessStatus, steps: u32, steps_total: u32) {
+        assert!(steps_total > 0);
+        self.pass = pass;
+        self.steps = steps;
+        self.steps_total = steps_total;
     }
 }
 #[derive(Debug, Default, Deref, Serialize, Deserialize)]
@@ -52,6 +64,8 @@ pub struct Corpus
 impl Corpus
 {
     pub fn new(name: impl ToString, texts: impl IntoIterator<Item=impl ToString>) -> Self {
+        let mut s = Status::new(String::new());
+        s.pass = ProcessStatus::Frequency;
         Self {
             name: name.to_string(),
             texts: texts.into_iter().map(|s| s.to_string()).collect(),

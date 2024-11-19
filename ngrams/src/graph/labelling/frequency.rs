@@ -63,6 +63,10 @@ impl TraversalPass for FrequencyCtx<'_>
             );
         }
         self.labels.extend(start.iter().map(HasVertexKey::vertex_key));
+
+        self.status.as_ref().inspect(|s|
+            s.write().unwrap().next_pass(ProcessStatus::Frequency, 0, 100)
+        );
         queue
     }
     fn on_node(
@@ -70,6 +74,7 @@ impl TraversalPass for FrequencyCtx<'_>
         node: &Self::Node,
     ) -> Option<Vec<Self::NextNode>>
     {
+        self.status.as_ref().inspect(|s| s.write().unwrap().steps += 1);
         self.labels.contains(node)
             .then_some(None)
             .unwrap_or_else(|| {
@@ -90,7 +95,6 @@ impl TraversalPass for FrequencyCtx<'_>
         let bottom = BottomUp::starting_nodes(&self.vocab);
         self.labels
             .extend(bottom.iter().map(HasVertexKey::vertex_key));
-        self.status.as_ref().inspect(|s| s.write().unwrap().pass = ProcessStatus::Frequency);
     }
 }
 impl FrequencyCtx<'_>

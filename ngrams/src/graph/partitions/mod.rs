@@ -116,6 +116,9 @@ impl TraversalPass for PartitionsCtx<'_>
             builder.key(**vk);
             self.graph.insert_vertex_builder(builder);
         }
+        self.status.as_ref().inspect(|s|
+            s.write().unwrap().next_pass(ProcessStatus::Wrappers, 0, 100)
+        );
         queue
     }
     fn node_condition(&mut self, node: Self::Node) -> bool {
@@ -130,11 +133,9 @@ impl TraversalPass for PartitionsCtx<'_>
         node: &NGramId,
     ) -> Option<Vec<NGramId>>
     {
+        self.status.as_ref().inspect(|s| s.write().unwrap().steps += 1);
         let container = PartitionContainer::from_ngram(self, *node);
         let entry = self.vocab.get_vertex(node).unwrap();
-        if entry.ngram == "ab" || entry.ngram == "ba" {
-            println!("{}: {:?}", entry.ngram, self.ctx.labels);
-        }
         
         let pids: Vec<_> = std::iter::repeat_n((), container.len())
             .map(|_| PatternId::default())

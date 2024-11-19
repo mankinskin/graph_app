@@ -18,6 +18,8 @@ itertools = "^0.12"
 async-std = "1.12"
 tracing-mutex = "0.3"
 strum = "0.26.3"
+derive_more = "1.0.0"
+derive-getters = "0.5"
 
 [dependencies.tracing-egui]
 path = "../tracing-egui"

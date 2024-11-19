@@ -93,13 +93,13 @@ impl LabellingImage {
         let mut reader = BufReader::new(file);
         ciborium::from_reader(reader)
     }
-    pub fn from_corpus(corpus: &Corpus) -> Self
+    pub fn from_corpus(corpus: &Corpus, status: Option<Arc<RwLock<Status>>>) -> Self
     {
         Self::read_from_file(corpus.target_file_path())
             .inspect(|new| println!("Containment Pass already processed."))
             .unwrap_or_else(|e| {
                 println!("{:#?}", e);
-                Self::from(Vocabulary::from_corpus(corpus))
+                Self::from(Vocabulary::from_corpus(corpus, status))
             })
     }
 }
@@ -115,8 +115,9 @@ impl LabellingCtx
 {
     pub fn from_corpus(corpus: &Corpus, status: Arc<RwLock<Status>>) -> Self
     {
+        let image = LabellingImage::from_corpus(corpus, Some(status.clone()));
         Self {
-            image: LabellingImage::from_corpus(corpus),
+            image,
             status: Some(status),
         }
     }

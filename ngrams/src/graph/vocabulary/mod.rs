@@ -47,11 +47,13 @@ use std::{
         absolute,
         Path,
         PathBuf,
-    },
+    }, sync::{Arc, RwLock},
 };
 use tap::Tap;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
+
+use super::Status;
 
 pub mod entry;
 
@@ -145,12 +147,13 @@ pub struct Vocabulary
 
 impl Vocabulary
 {
-    pub fn from_corpus(corpus: &Corpus) -> Self
+    pub fn from_corpus(corpus: &Corpus, status: Option<Arc<RwLock<Status>>>) -> Self
     {
         let mut vocab: Vocabulary = Default::default();
         vocab.name.clone_from(&corpus.name);
         CorpusCtx {
             corpus,
+            status,
         }.on_corpus(&mut vocab);
         vocab
     }

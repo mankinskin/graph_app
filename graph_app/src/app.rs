@@ -11,6 +11,38 @@ use crate::examples::{build_graph1, build_graph2, build_graph3};
 #[allow(unused)]
 use crate::graph::*;
 use strum::IntoEnumIterator;
+use std::{future::Future, sync::{Arc, RwLock}};
+use derive_more::{Deref, DerefMut};
+
+#[derive(Deref, DerefMut, Debug)]
+struct ShowStatus<'a>(&'a ngrams::graph::Status);
+impl ShowStatus<'_>  {
+    fn show(&self, ctx: &egui::Context) {
+        egui::Window::new("Status").show(ctx, |ui| {
+            ui.label(format!("Text: \"{}\"", self.insert_text));
+            ProcessStatus::iter().skip(1)
+                .for_each(|pass| self.show_pass(ui, pass))
+        });
+    }
+    fn show_pass(&self, ui: &mut Ui, pass: ProcessStatus) {
+        let checked = *self.pass() > pass;
+        let percent = (*self.steps() as f32 / *self.steps_total() as f32 * 100.0) as u32;
+        let text = format!(
+            "{:?} Pass{}",
+            pass,
+            checked.then_some(100)
+                .or_else(||
+                    (*self.pass() == ProcessStatus::iter().skip_while(|i| *i < *self.pass()).next().unwrap())
+                        // is next
+                        .then_some(percent)
+                )
+                .map(|p| format!(": {}%", p))
+                .unwrap_or_default()
+        );
+        ui.checkbox(&mut (checked.clone()), text);
+    }
+}
+
 
 #[cfg_attr(feature = "persistence", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "persistence", serde(default))] // if we add new fields, give them default values when deserializing old state
@@ -225,13 +257,7 @@ impl eframe::App for App
         if let Some(status) = self.status.as_ref()
         {
             let status = status.read().unwrap();
-            egui::Window::new("Status").show(ctx, |ui| {
-                ui.label(format!("Text: \"{}\"", status.insert_text));
-                for pass in ProcessStatus::iter()
-                {
-                    ui.checkbox(&mut (status.pass >= pass), format!("{:?} Pass", pass));
-                }
-            });
+            ShowStatus(&*status).show(ctx);
         }
     }
     fn on_exit(&mut self, _ctx: Option<&eframe::glow::Context>)
@@ -243,7 +269,6 @@ impl eframe::App for App
         }
     }
 }
-use std::{future::Future, sync::{Arc, RwLock}};
 #[allow(unused)]
 #[cfg(not(target_arch = "wasm32"))]
 fn execute<F: Future<Output = ()> + Send + 'static>(f: F)

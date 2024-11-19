@@ -1,3 +1,5 @@
+use std::sync::{Arc, RwLock};
+
 use derive_more::{
     Deref,
     From,
@@ -34,6 +36,8 @@ use seqraph::{graph::vertex::{
     ChildPatterns,
 }, HashMap};
 
+use super::Status;
+
 #[derive(
     Debug,
     Clone,
@@ -53,9 +57,10 @@ pub struct TextLocation
     pub x: usize,
 }
 
-#[derive(Debug, Clone, Copy, From)]
+#[derive(Debug, Clone, From)]
 pub struct CorpusCtx<'a> {
     pub corpus: &'a Corpus,
+    pub status: Option<Arc<RwLock<Status>>>,
 }
 impl CorpusCtx<'_>
 {
@@ -64,6 +69,9 @@ impl CorpusCtx<'_>
         vocab: &mut Vocabulary,
     )
     {
+        self.status.as_ref().inspect(|s|
+            s.write().unwrap().next_pass(super::vocabulary::ProcessStatus::Containment, 0, 100)
+        );
         let N: usize = self.corpus.iter().map(|t| t.len()).max().unwrap();
         Itertools::cartesian_product(
             (1..=N),

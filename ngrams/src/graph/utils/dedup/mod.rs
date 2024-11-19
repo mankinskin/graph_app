@@ -111,10 +111,6 @@ impl TraversalPass for ChildDedupPass<'_> {
     fn on_node(&mut self, node: &Self::Node) -> Option<Vec<Self::NextNode>> {
         let &(root, off, node) = node;
         let entry = self.ctx.vocab.get_vertex(&node).unwrap();
-        if entry.ngram == "ab" || entry.ngram == "ba" {
-            let re = self.ctx.vocab.get_vertex(&root).unwrap();
-            println!("{}({})found in root {}({})", entry.ngram, entry.vertex_key(), re.ngram, root);
-        }
         let (this_tree, other_trees): (Vec<_>, Vec<_>) = self.roots
                 .iter_mut()
                 .partition(|(k, _)| **k == root);
