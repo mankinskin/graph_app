@@ -1,22 +1,30 @@
-use overlap::*;
-use reader::*;
-use sequence::*;
 
-use crate::shared::*;
+use crate::{
+    graph::{
+        kind::DefaultToken,
+        vertex::{
+            child::Child,
+            pattern::IntoPattern,
+        },
+        HypergraphRef,
+    },
+    traversal::traversable::TraversableMut,
+    read::reader::context::ReadContext,
+};
 
-mod overlap;
-mod reader;
+pub mod overlap;
+pub mod reader;
 pub mod sequence;
 #[cfg(test)]
 mod tests;
 
 impl HypergraphRef {
-    pub fn read_context<'g>(&'g self) -> ReadContext<'g> {
+    pub fn read_context<'g>(&'g mut self) -> ReadContext<'g> {
         ReadContext::new(self.graph_mut())
     }
     pub fn read_sequence(
         &mut self,
-        sequence: impl IntoIterator<Item=DefaultToken> + std::fmt::Debug + Send + Sync,
+        sequence: impl IntoIterator<Item = DefaultToken> + std::fmt::Debug + Send + Sync,
     ) -> Option<Child> {
         self.read_context().read_sequence(sequence)
     }

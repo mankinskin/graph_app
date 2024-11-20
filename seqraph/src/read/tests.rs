@@ -1,16 +1,16 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, iter::FromIterator};
 
 //use tokio::sync::mpsc;
 //use tokio_stream::wrappers::*;
 use maplit::hashset;
 use pretty_assertions::assert_eq;
 
-use crate::shared::*;
+use crate::{graph::{vertex::{has_vertex_data::HasVertexData, has_vertex_index::ToChild, parent::{Parent, PatternIndex}, wide::Wide}, Hypergraph, HypergraphRef}, search::Searchable, traversal::traversable::Traversable, HashMap};
 
 fn assert_child_of_at(
     graph: &Hypergraph,
-    child: impl AsChild,
-    parent: impl AsChild,
+    child: impl ToChild,
+    parent: impl ToChild,
     pattern_indices: impl IntoIterator<Item=PatternIndex>,
 ) {
     assert_eq!(

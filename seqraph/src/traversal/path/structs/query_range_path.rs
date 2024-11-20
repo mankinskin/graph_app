@@ -24,6 +24,8 @@ use crate::graph::vertex::pattern::{
     Pattern,
 };
 
+use super::role_path::RolePath;
+
 //#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 //pub struct QueryRangePath {
 //    pub root: Pattern,
@@ -65,13 +67,38 @@ impl QueryPath for QueryRangePath {
     fn new_directed<D: MatchDirection, P: IntoPattern>(query: P) -> Result<Self, (NoMatch, Self)> {
         let entry = D::head_index(&query.borrow());
         let query = query.into_pattern();
-        let first = *query.first().unwrap();
         let len = query.len();
         let query = Self::new_range(query, entry, entry);
         match len {
             0 => Err((NoMatch::EmptyPatterns, query)),
-            1 => Err((NoMatch::SingleIndex(first), query)),
+            1 => Err((NoMatch::SingleIndex(*query.root.first().unwrap()), query)),
             _ => Ok(query),
+        }
+    }
+}
+impl QueryPath for PatternPrefixPath {
+    fn complete(query: impl IntoPattern) -> Self {
+        let pattern = query.into_pattern();
+        Self {
+            role_path: RolePath::from(
+                SubPath::new(pattern.len() - 1),
+            ),
+            root: pattern,
+        }
+    }
+    fn new_directed<D: MatchDirection, P: IntoPattern>(query: P) -> Result<Self, (NoMatch, Self)> {
+        let pattern = query.into_pattern();
+        let len = pattern.len();
+        let p = Self {
+            role_path: RolePath::from(
+                SubPath::new(0),
+            ),
+            root: pattern,
+        };
+        match len {
+            0 => Err((NoMatch::EmptyPatterns, p)),
+            1 => Err((NoMatch::SingleIndex(*p.root.first().unwrap()), p)),
+            _ => Ok(p),
         }
     }
 }

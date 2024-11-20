@@ -1,6 +1,17 @@
 use std::collections::BTreeMap;
 
-use super::*;
+use itertools::Itertools;
+use tracing::instrument;
+
+use crate::{
+    graph::vertex::child::Child,
+    index::side::IndexFront,
+    read::{
+        overlap::Overlap,
+        reader::context::ReadContext,
+    },
+    traversal::traversable::TraversableMut,
+};
 
 #[derive(Default, Clone, Debug)]
 pub struct OverlapChain {
@@ -20,9 +31,9 @@ impl OverlapChain {
         }
     }
     #[instrument(skip(self, reader))]
-    pub fn close<'a: 'g, 'g, T: Tokenize, D: IndexDirection>(
+    pub fn close(
         self,
-        reader: &'a mut ReadContext<'a>,
+        reader: &mut ReadContext<'_>,
     ) -> Option<Child> {
         //println!("closing {:#?}", self);
         let mut path = self.path.into_iter();

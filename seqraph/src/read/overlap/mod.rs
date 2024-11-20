@@ -1,13 +1,15 @@
-use band::*;
-use cache::*;
-use chain::*;
 
-use super::*;
+use band::{BandEnd, OverlapBand};
 
-mod band;
-mod cache;
-mod chain;
-mod context;
+use crate::{
+    read::reader::context::ReadContext,
+    traversal::path::{accessors::role::{End, Start}, structs::{match_end::MatchEnd, role_path::RolePath, rooted_path::RootedRolePath}},
+};
+
+pub mod band;
+pub mod cache;
+pub mod chain;
+pub mod context;
 
 #[derive(Clone, Debug)]
 pub struct OverlapLink {
@@ -22,7 +24,7 @@ pub struct Overlap {
 }
 
 impl Overlap {
-    pub fn appended<'a: 'g, 'g, T: Tokenize, D: IndexDirection>(
+    pub fn appended(
         mut self,
         reader: &mut ReadContext<'_>,
         end: BandEnd,
@@ -30,7 +32,7 @@ impl Overlap {
         self.append(reader, end);
         self
     }
-    pub fn append<'a: 'g, 'g, T: Tokenize, D: IndexDirection>(
+    pub fn append(
         &mut self,
         reader: &mut ReadContext<'_>,
         end: BandEnd,

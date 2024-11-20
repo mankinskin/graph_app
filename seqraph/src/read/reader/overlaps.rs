@@ -1,4 +1,64 @@
-use crate::shared::*;
+use std::{
+    borrow::Borrow,
+    num::NonZeroUsize,
+    ops::ControlFlow,
+};
+
+use tap::Tap;
+use tracing::instrument;
+
+use crate::{
+    graph::{
+        direction::r#match::MatchDirection,
+        getters::vertex::VertexSet,
+        kind::DefaultDirection,
+        vertex::{
+            child::Child,
+            location::child::ChildLocation,
+            pattern::Pattern,
+            wide::Wide,
+        },
+    },
+    index::{
+        side::{
+            IndexBack,
+            IndexFront,
+        },
+        IndexSplitResult,
+    },
+    read::{
+        overlap::{
+            band::{
+                BandEnd,
+                OverlapBand,
+                OverlapBundle,
+            },
+            cache::OverlapCache,
+            Overlap,
+            OverlapLink,
+        },
+        reader::context::ReadContext,
+    },
+    traversal::{
+        iterator::bands::{
+            BandIterator,
+            PostfixIterator,
+        },
+        path::{
+            accessors::role::End,
+            mutators::append::PathAppend,
+            structs::{
+                overlap_primer::OverlapPrimer,
+                query_range_path::PatternPrefixPath,
+                role_path::RolePath,
+            },
+        },
+        traversable::{
+            Traversable,
+            TraversableMut,
+        },
+    },
+};
 
 impl<'p> ReadContext<'p> {
     #[instrument(skip(self, first, context))]
@@ -111,12 +171,12 @@ impl<'p> ReadContext<'p> {
                 .index_query(OverlapPrimer::new(postfix, prefix_query.clone()))
             {
                 Ok((
-                       //OriginPath {
-                       //    postfix: expansion,
-                       //    origin: prefix_path,
-                       //},
-                       advanced,
-                   )) => {
+                    //OriginPath {
+                    //    postfix: expansion,
+                    //    origin: prefix_path,
+                    //},
+                    advanced,
+                )) => {
                     *prefix_query = advanced.into_prefix_path();
 
                     acc = ControlFlow::Break((
@@ -191,7 +251,8 @@ impl<'p> ReadContext<'p> {
                     sub_index: DefaultDirection::last_index(pattern.borrow()),
                 }
             };
-            let postfix_path = next_link.postfix_path.clone().into_context_path();
+            // FIXME: maybe mising root!!!
+            let postfix_path = next_link.postfix_path.clone().sub_path;
             Vec::with_capacity(postfix_path.len() + 2).tap_mut(|v| {
                 v.push(location);
                 v.push(inner_entry);

@@ -9,8 +9,8 @@ exclude = [
   "./minimal_options",
   "./graph_app",
   "./ngrams",
+  "./justlog",
   "./seqraph",
-  "./justlog"
 ]
 #members = [
 #  "seqraph",

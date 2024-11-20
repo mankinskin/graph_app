@@ -1,4 +1,22 @@
-use super::*;
+use std::borrow::Borrow;
+
+use tracing::instrument;
+
+use crate::{
+    graph::{
+        direction::index::IndexDirection,
+        kind::DefaultDirection,
+        vertex::pattern::Pattern,
+    },
+    index::side::IndexBack,
+    read::{
+        overlap::{
+            chain::OverlapChain,
+            OverlapLink,
+        },
+        reader::context::ReadContext,
+    },
+};
 
 impl<'g> ReadContext<'g> {
     #[instrument(skip(self, overlaps, link))]
@@ -10,7 +28,9 @@ impl<'g> ReadContext<'g> {
         let (inner_back_ctx, _loc) = self
             .contexter::<IndexBack>()
             .try_context_path(
-                link.postfix_path.clone().into_context_path(),
+                //link.postfix_path.clone().into_context_path(),
+                // FIXME: maybe mising root!!!
+                link.postfix_path.clone().sub_path,
                 //link.overlap,
             )
             .unwrap();
@@ -29,7 +49,7 @@ impl<'g> ReadContext<'g> {
         } else {
             None
         }
-            .unwrap_or_default();
+        .unwrap_or_default();
         DefaultDirection::context_then_inner(back_ctx, inner_back_ctx)
     }
     #[instrument(skip(self, start_bound, overlaps))]

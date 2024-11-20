@@ -1,4 +1,12 @@
-use super::*;
+use itertools::Itertools;
+
+use crate::{
+    graph::vertex::{
+        child::Child,
+        pattern::Pattern,
+    },
+    read::reader::context::ReadContext,
+};
 
 #[derive(Clone, Debug)]
 pub enum BandEnd {

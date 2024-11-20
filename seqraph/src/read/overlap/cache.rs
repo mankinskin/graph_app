@@ -1,4 +1,20 @@
-use super::*;
+use crate::{
+    graph::vertex::{
+        child::Child,
+        wide::Wide,
+    },
+    read::{
+        overlap::{
+            band::{
+                OverlapBand,
+                OverlapBundle,
+            },
+            chain::OverlapChain,
+            Overlap,
+        },
+        reader::context::ReadContext,
+    },
+};
 
 #[derive(Default, Clone, Debug)]
 pub struct OverlapCache {
@@ -15,7 +31,7 @@ impl OverlapCache {
                 link: None,
                 band: OverlapBand::from(first),
             }
-                .into(),
+            .into(),
             chain: OverlapChain::default(),
         }
     }

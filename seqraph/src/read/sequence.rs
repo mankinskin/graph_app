@@ -1,4 +1,31 @@
-use crate::shared::*;
+use derive_more::{
+    Deref,
+    DerefMut,
+};
+use itertools::{
+    Itertools,
+    PeekingNext,
+};
+use crate::{
+    graph::{
+        kind::{
+            BaseGraphKind,
+            DefaultToken,
+        },
+        vertex::{
+            child::Child,
+            pattern::Pattern,
+            token::{
+                NewTokenIndex,
+                NewTokenIndices,
+            },
+        },
+    },
+    read::reader::context::ReadContext,
+    traversal::traversable::TraversableMut,
+};
+
+use std::fmt::Debug;
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct SequenceIter<'it> {
@@ -17,21 +44,18 @@ impl<'it> PeekingNext for SequenceIter<'it> {
         &mut self,
         accept: F,
     ) -> Option<Self::Item>
-        where
-            Self: Sized,
-            F: FnOnce(&Self::Item) -> bool,
+    where
+        Self: Sized,
+        F: FnOnce(&Self::Item) -> bool,
     {
         self.iter.peeking_next(accept)
     }
 }
 
 impl<'it> SequenceIter<'it> {
-    pub fn new<N, S: ToNewTokenIndices<N>>(
-        ctx: &mut ReadContext<'it>,
-        sequence: S,
-    ) -> Self {
+    pub fn new(sequence: &'it NewTokenIndices) -> Self {
         Self {
-            iter: sequence.to_new_token_indices(ctx).iter().peekable(),
+            iter: sequence.iter().peekable(),
         }
     }
     pub fn next_block<'g>(
@@ -50,22 +74,22 @@ impl<'it> SequenceIter<'it> {
         &mut self,
         f: impl FnMut(&<Self as Iterator>::Item) -> bool,
     ) -> Pattern
-        where
-            Child: From<<Self as Iterator>::Item>,
+    where
+        Child: From<<Self as Iterator>::Item>,
     {
         self.peeking_take_while(f).map(Child::from).collect()
     }
 }
 
 pub trait ToNewTokenIndices<N>: Debug {
-    fn to_new_token_indices<'a: 'g, 'g, Trav: TraversableMut<Kind=BaseGraphKind>>(
+    fn to_new_token_indices<'a: 'g, 'g, Trav: TraversableMut<Kind = BaseGraphKind>>(
         self,
         graph: &'a mut Trav,
     ) -> NewTokenIndices;
 }
 
 impl ToNewTokenIndices<NewTokenIndex> for NewTokenIndices {
-    fn to_new_token_indices<'a: 'g, 'g, Trav: TraversableMut<Kind=BaseGraphKind>>(
+    fn to_new_token_indices<'a: 'g, 'g, Trav: TraversableMut<Kind = BaseGraphKind>>(
         self,
         _graph: &'a mut Trav,
     ) -> NewTokenIndices {
@@ -82,10 +106,10 @@ impl ToNewTokenIndices<NewTokenIndex> for NewTokenIndices {
 //    }
 //}
 
-impl<Iter: IntoIterator<Item=DefaultToken> + Debug + Send + Sync> ToNewTokenIndices<DefaultToken>
-for Iter
+impl<Iter: IntoIterator<Item = DefaultToken> + Debug + Send + Sync> ToNewTokenIndices<DefaultToken>
+    for Iter
 {
-    fn to_new_token_indices<'a: 'g, 'g, Trav: TraversableMut<Kind=BaseGraphKind>>(
+    fn to_new_token_indices<'a: 'g, 'g, Trav: TraversableMut<Kind = BaseGraphKind>>(
         self,
         graph: &'a mut Trav,
     ) -> NewTokenIndices {

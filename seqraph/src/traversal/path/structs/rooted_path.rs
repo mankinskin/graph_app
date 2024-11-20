@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::traversal::path::{
+use crate::{graph::vertex::pattern::IntoPattern, traversal::path::{
     accessors::role::{
         End,
         PathRole,
@@ -10,7 +10,7 @@ use crate::traversal::path::{
         query_range_path::QueryRangePath,
         role_path::RolePath,
     },
-};
+}};
 use crate::graph::vertex::{
     location::{
         child::ChildLocation,

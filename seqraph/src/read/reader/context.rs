@@ -1,12 +1,66 @@
+use std::{
+    borrow::Borrow,
+    ops::{
+        Deref,
+        DerefMut,
+    },
+    sync::RwLockWriteGuard,
+};
+
+use tracing::{
+    debug,
+    instrument,
+};
+
 use crate::{
+    direction::Right,
+    graph::{
+        vertex::{
+            child::Child,
+            has_vertex_data::HasVertexDataMut,
+            has_vertex_index::{
+                HasVertexIndex,
+                ToChild,
+            },
+            pattern::{
+                IntoPattern,
+                Pattern,
+            },
+        },
+        Hypergraph,
+    },
+    read::sequence::{
+        SequenceIter,
+        ToNewTokenIndices,
+    },
     search::NoMatch,
-    shared::*,
+    traversal::{
+        path::{
+            mutators::move_path::Advance,
+            structs::query_range_path::{
+                PatternPrefixPath,
+                QueryPath,
+            },
+        },
+        traversable::TraversableMut,
+    },
 };
 
 #[derive(Debug)]
 pub struct ReadContext<'g> {
     pub graph: RwLockWriteGuard<'g, Hypergraph>,
     pub root: Option<Child>,
+}
+impl Deref for ReadContext<'_> {
+    type Target = Hypergraph;
+    fn deref(&self) -> &Self::Target {
+        self.graph.deref()
+    }
+}
+impl DerefMut for ReadContext<'_> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.graph.deref_mut()
+    }
 }
 
 impl<'g> ReadContext<'g> {
@@ -19,7 +73,8 @@ impl<'g> ReadContext<'g> {
         sequence: S,
     ) -> Option<Child> {
         debug!("start reading: {:?}", sequence);
-        let mut sequence = SequenceIter::new(self, sequence);
+        let sequence = sequence.to_new_token_indices(self);
+        let mut sequence = SequenceIter::new(&sequence);
         while let Some((unknown, known)) = sequence.next_block(self) {
             // todo: read to result type
             self.append_pattern(unknown);
@@ -40,9 +95,9 @@ impl<'g> ReadContext<'g> {
         &mut self,
         known: Pattern,
     ) {
-        match PatternPrefixPath::new_directed(known.borrow()) {
+        match PatternPrefixPath::new_directed::<Right, _>(known.borrow()) {
             Ok(path) => self.read_bands(path),
-            Err(err) => match err {
+            Err((err, _)) => match err {
                 NoMatch::SingleIndex(c) => {
                     self.append_index(c);
                     Ok(())
@@ -50,7 +105,7 @@ impl<'g> ReadContext<'g> {
                 NoMatch::EmptyPatterns => Ok(()),
                 err => Err(err),
             }
-                .unwrap(),
+            .unwrap(),
         }
     }
     #[instrument(skip(self, sequence))]
@@ -75,7 +130,10 @@ impl<'g> ReadContext<'g> {
                 *context = advanced;
                 Some(index)
             }
-            Err(_) => context.advance::<_, _>(self),
+            Err(_) => {
+                context.advance(self);
+                None
+            }
         }
     }
     //pub fn indexer(&self) -> Indexer {
