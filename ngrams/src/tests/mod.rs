@@ -3,11 +3,9 @@ pub mod count;
 use std::path::Path;
 
 use crate::graph::{
-    Corpus,
-    labelling::LabellingCtx,
-    vocabulary::{
+    labelling::LabellingCtx, vocabulary::{
         entry::HasVertexEntries, ProcessStatus, Vocabulary
-    },
+    }, Corpus, StatusHandle
 };
 use itertools::Itertools;
 use ngram::NGram;
@@ -331,13 +329,13 @@ pub fn test_graph()
     let texts = corpus.into_iter().map(ToString::to_string).collect_vec();
     let corpus = Corpus::new("ottos_mops".to_owned(), texts);
     // graph of all containment edges between n and n+1
-    let mut image = LabellingCtx::from_corpus(&corpus);
+    let mut image = LabellingCtx::from_corpus(&corpus, StatusHandle::default());
 
     TestCtx::new(&image.vocab, &corpus).test_containment();
 
     image.label_freq();
 
-    if image.status == ProcessStatus::Frequency {
+    if *image.status.pass() == ProcessStatus::Frequency {
         let ctx = LabelTestCtx::new(
             TestCtx::new(&image.vocab, &corpus),
             &image.labels,
@@ -350,7 +348,7 @@ pub fn test_graph()
 
     image.label_wrap();
 
-    if image.status == ProcessStatus::Wrappers {
+    if *image.status.pass() == ProcessStatus::Wrappers {
         let ctx = LabelTestCtx::new(
             TestCtx::new(&image.vocab, &corpus),
             &image.labels,
@@ -360,7 +358,7 @@ pub fn test_graph()
 
     image.label_part();
 
-    if image.status == ProcessStatus::Partitions {
+    if *image.status.pass() == ProcessStatus::Partitions {
         let ctx = TestCtx::new(&image.vocab, &corpus);
         let ctx = LabelTestCtx::new(ctx, &image.labels);
         ctx.test_part();

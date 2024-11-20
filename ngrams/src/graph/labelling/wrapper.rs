@@ -64,9 +64,7 @@ impl TraversalPass for WrapperCtx<'_>
     type NextNode = VertexKey;
     type Queue = LayeredQueue<Self>;
     fn start_queue(&mut self) -> Self::Queue {
-        self.status.as_ref().inspect(|s|
-            s.write().unwrap().next_pass(ProcessStatus::Wrappers, 0, 100)
-        );
+        self.status.next_pass(ProcessStatus::Wrappers, 0, self.vocab.containment.vertex_count());
         BottomUp::starting_nodes(&self.vocab).into_iter()
             .map(|ng| ng.key).collect()
     }
@@ -76,7 +74,7 @@ impl TraversalPass for WrapperCtx<'_>
     ) -> Option<Vec<Self::NextNode>>
     {
 
-        self.status.as_ref().inspect(|s| s.write().unwrap().steps += 1);
+        *self.status.steps_mut() += 1;
         let entry = self.vocab.get_vertex(node).unwrap();
         let next = BottomUp::next_nodes(&entry)
             .iter()

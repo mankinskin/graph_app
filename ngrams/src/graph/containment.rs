@@ -36,7 +36,7 @@ use seqraph::{graph::vertex::{
     ChildPatterns,
 }, HashMap};
 
-use super::Status;
+use super::{Status, StatusHandle};
 
 #[derive(
     Debug,
@@ -60,7 +60,7 @@ pub struct TextLocation
 #[derive(Debug, Clone, From)]
 pub struct CorpusCtx<'a> {
     pub corpus: &'a Corpus,
-    pub status: Option<Arc<RwLock<Status>>>,
+    pub status: StatusHandle,
 }
 impl CorpusCtx<'_>
 {
@@ -69,26 +69,27 @@ impl CorpusCtx<'_>
         vocab: &mut Vocabulary,
     )
     {
-        self.status.as_ref().inspect(|s|
-            s.write().unwrap().next_pass(super::vocabulary::ProcessStatus::Containment, 0, 100)
-        );
         let N: usize = self.corpus.iter().map(|t| t.len()).max().unwrap();
+        self.status.next_pass(super::vocabulary::ProcessStatus::Containment, 0, N * (N-1));
         Itertools::cartesian_product(
             (1..=N),
             self.corpus.iter().enumerate(),
         )
         .for_each(|(n, (i, text))|
             TextLevelCtx {
-               texti: i,
-               text,
-               n,
+                corpus_ctx: self,
+                texti: i,
+                text,
+                n,
             }.on_nlevel(vocab)
         )
     }
 }
-#[derive(Debug, Clone, Copy, From, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, From, Deref)]
 pub struct TextLevelCtx<'a>
 {
+    #[deref]
+    pub corpus_ctx: &'a CorpusCtx<'a>,
     pub texti: usize,
     pub text: &'a String,
     pub n: usize,
@@ -116,7 +117,7 @@ impl TextLevelCtx<'_>
     }
 }
 
-#[derive(Debug, Clone, Copy, From, Hash, Eq, PartialEq, Deref)]
+#[derive(Debug, Clone, Copy, From, Deref)]
 pub struct NGramFrequencyCtx<'a>
 {
     #[deref]
@@ -132,6 +133,7 @@ impl NGramFrequencyCtx<'_>
         vocab: &mut Vocabulary,
     )
     {
+        *self.status.steps_mut() += 1;
         if let Some(ctx) = vocab.get_vertex_mut(self.ngram)
         {
             ctx.entry.occurrences.insert(self.occurrence);

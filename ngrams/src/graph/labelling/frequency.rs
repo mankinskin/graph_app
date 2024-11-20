@@ -64,9 +64,7 @@ impl TraversalPass for FrequencyCtx<'_>
         }
         self.labels.extend(start.iter().map(HasVertexKey::vertex_key));
 
-        self.status.as_ref().inspect(|s|
-            s.write().unwrap().next_pass(ProcessStatus::Frequency, 0, 100)
-        );
+        self.status.next_pass(ProcessStatus::Frequency, 0, self.image.vocab.containment.vertex_count());
         queue
     }
     fn on_node(
@@ -74,7 +72,7 @@ impl TraversalPass for FrequencyCtx<'_>
         node: &Self::Node,
     ) -> Option<Vec<Self::NextNode>>
     {
-        self.status.as_ref().inspect(|s| s.write().unwrap().steps += 1);
+        *self.status.steps_mut() += 1;
         self.labels.contains(node)
             .then_some(None)
             .unwrap_or_else(|| {

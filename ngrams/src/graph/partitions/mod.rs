@@ -116,9 +116,7 @@ impl TraversalPass for PartitionsCtx<'_>
             builder.key(**vk);
             self.graph.insert_vertex_builder(builder);
         }
-        self.status.as_ref().inspect(|s|
-            s.write().unwrap().next_pass(ProcessStatus::Wrappers, 0, 100)
-        );
+        self.status.next_pass(ProcessStatus::Partitions, 0, self.labels.len() + self.vocab.leaves.len());
         queue
     }
     fn node_condition(&mut self, node: Self::Node) -> bool {
@@ -133,7 +131,7 @@ impl TraversalPass for PartitionsCtx<'_>
         node: &NGramId,
     ) -> Option<Vec<NGramId>>
     {
-        self.status.as_ref().inspect(|s| s.write().unwrap().steps += 1);
+        *self.status.steps_mut() += 1;
         let container = PartitionContainer::from_ngram(self, *node);
         let entry = self.vocab.get_vertex(node).unwrap();
         
@@ -214,6 +212,6 @@ impl TraversalPass for PartitionsCtx<'_>
             let _ = self.graph.vertex_key_string(key);
         });
         println!("{:#?}", &self.graph);
-        self.status.as_ref().inspect(|s| s.write().unwrap().pass = ProcessStatus::Partitions);
+        *self.status.pass_mut() = ProcessStatus::Finished;
     }
 }

@@ -53,7 +53,7 @@ use tap::Tap;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-use super::Status;
+use super::{Status, StatusHandle};
 
 pub mod entry;
 
@@ -109,6 +109,7 @@ pub enum ProcessStatus
     Frequency,
     Wrappers,
     Partitions,
+    Finished,
 }
 impl PartialOrd for ProcessStatus
 {
@@ -147,7 +148,7 @@ pub struct Vocabulary
 
 impl Vocabulary
 {
-    pub fn from_corpus(corpus: &Corpus, status: Option<Arc<RwLock<Status>>>) -> Self
+    pub fn from_corpus(corpus: &Corpus, status: StatusHandle) -> Self
     {
         let mut vocab: Vocabulary = Default::default();
         vocab.name.clone_from(&corpus.name);

@@ -44,6 +44,8 @@ use frequency::FrequencyCtx;
 pub mod wrapper;
 use wrapper::WrapperCtx;
 
+use super::StatusHandle;
+
 impl From<Vocabulary> for LabellingImage
 {
     fn from(vocab: Vocabulary) -> Self
@@ -93,7 +95,7 @@ impl LabellingImage {
         let mut reader = BufReader::new(file);
         ciborium::from_reader(reader)
     }
-    pub fn from_corpus(corpus: &Corpus, status: Option<Arc<RwLock<Status>>>) -> Self
+    pub fn from_corpus(corpus: &Corpus, status: StatusHandle) -> Self
     {
         Self::read_from_file(corpus.target_file_path())
             .inspect(|new| println!("Containment Pass already processed."))
@@ -109,22 +111,22 @@ pub struct LabellingCtx
     #[deref]
     #[deref_mut]
     pub image: LabellingImage,
-    pub status: Option<Arc<RwLock<Status>>>,
+    pub status: StatusHandle,
 }
 impl LabellingCtx
 {
-    pub fn from_corpus(corpus: &Corpus, status: Arc<RwLock<Status>>) -> Self
+    pub fn from_corpus(corpus: &Corpus, status: StatusHandle) -> Self
     {
-        let image = LabellingImage::from_corpus(corpus, Some(status.clone()));
+        let image = LabellingImage::from_corpus(corpus, status.clone());
         Self {
             image,
-            status: Some(status),
+            status,
         }
     }
     pub fn label_freq(&mut self)
     {
         //let roots = texts.iter().map(|s| *vocab.ids.get(s).unwrap()).collect_vec();
-        if (self.status.as_ref().map(|s| s.read().unwrap().pass < ProcessStatus::Frequency).unwrap_or(true))
+        if *self.status.pass() < ProcessStatus::Frequency
         {
             FrequencyCtx::new(&mut *self).run();
             self.write_to_target_file();
@@ -136,7 +138,7 @@ impl LabellingCtx
     }
     pub fn label_wrap(&mut self)
     {
-        if (self.status.as_ref().map(|s| s.read().unwrap().pass < ProcessStatus::Wrappers).unwrap_or(true))
+        if *self.status.pass() < ProcessStatus::Wrappers
         {
             WrapperCtx::new(&mut *self).run();
             self.write_to_target_file();

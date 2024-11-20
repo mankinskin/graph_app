@@ -1,7 +1,7 @@
 use eframe::{egui::{
     self, ThemePreference, Ui
 }, CreationContext};
-use ngrams::graph::{vocabulary::ProcessStatus, Status};
+use ngrams::graph::{vocabulary::ProcessStatus, Status, StatusHandle};
 use seqraph::graph::HypergraphRef;
 #[cfg(feature = "persistence")]
 use serde::*;
@@ -25,19 +25,25 @@ impl ShowStatus<'_>  {
         });
     }
     fn show_pass(&self, ui: &mut Ui, pass: ProcessStatus) {
-        let checked = *self.pass() > pass;
+        let checked = *self.pass() > pass || (
+            pass == ProcessStatus::Finished && *self.pass() == ProcessStatus::Finished
+        );
         let percent = (*self.steps() as f32 / *self.steps_total() as f32 * 100.0) as u32;
         let text = format!(
-            "{:?} Pass{}",
+            "{:?}{}",
             pass,
-            checked.then_some(100)
-                .or_else(||
-                    (*self.pass() == ProcessStatus::iter().skip_while(|i| *i < *self.pass()).next().unwrap())
-                        // is next
-                        .then_some(percent)
+            (pass == ProcessStatus::Finished)
+                .then(|| String::new())
+                .unwrap_or_else(||
+                    checked.then_some(100)
+                        .or_else(||
+                            (pass == ProcessStatus::iter().skip_while(|i| *i < *self.pass()).next().unwrap())
+                                // is next
+                                .then_some(percent)
+                        )
+                        .map(|p| format!(" Pass: {}%", p))
+                        .unwrap_or(String::from(" Pass"))
                 )
-                .map(|p| format!(": {}%", p))
-                .unwrap_or_default()
         );
         ui.checkbox(&mut (checked.clone()), text);
     }
@@ -53,7 +59,7 @@ pub struct App
     #[cfg_attr(feature = "persistence", serde(skip))]
     graph: Graph,
     inserter: bool,
-    status: Option<Arc<RwLock<ngrams::graph::Status>>>,
+    status: Option<ngrams::graph::StatusHandle>,
     read_task: Option<JoinHandle<()>>,
 }
 
@@ -242,11 +248,10 @@ impl eframe::App for App
                     let insert_text = std::mem::take(&mut self.graph.insert_text);
                     let graph = self.graph.graph.clone();
                     let labels = self.graph.labels.clone();
-                    let status = Status::new(insert_text.clone());
-                    let status_arc: Arc<RwLock<Status>> = Arc::new(RwLock::new(status));
-                    self.status = Some(status_arc.clone());
+                    let status = StatusHandle::from(Status::new(insert_text.clone()));
+                    self.status = Some(status.clone());
                     std::thread::spawn(move || {
-                        let res = ngrams::graph::parse_corpus(ngrams::graph::Corpus::new("", [insert_text]), status_arc);
+                        let res = ngrams::graph::parse_corpus(ngrams::graph::Corpus::new("", [insert_text]), status);
 
                         *graph.write().unwrap() = res.graph;
                         *labels.write().unwrap() = res.labels;
@@ -256,8 +261,7 @@ impl eframe::App for App
         }
         if let Some(status) = self.status.as_ref()
         {
-            let status = status.read().unwrap();
-            ShowStatus(&*status).show(ctx);
+            ShowStatus(&*status.read().unwrap()).show(ctx);
         }
     }
     fn on_exit(&mut self, _ctx: Option<&eframe::glow::Context>)
