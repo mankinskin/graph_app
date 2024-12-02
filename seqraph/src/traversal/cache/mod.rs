@@ -42,7 +42,7 @@ use crate::{
             },
             mutators::move_path::key::{
                 AdvanceKey,
-                TokenLocation,
+                TokenPosition,
             },
         },
         result_kind::RoleChildPath,
@@ -141,7 +141,7 @@ impl TraversalCache {
         trav: &Trav,
         root_entry: usize,
         path: &P,
-        root_up_pos: TokenLocation,
+        root_up_pos: TokenPosition,
         add_edges: bool,
     ) where
         TravToken<Trav>: Display,

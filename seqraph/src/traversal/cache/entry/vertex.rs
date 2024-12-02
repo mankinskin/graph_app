@@ -5,12 +5,12 @@ use crate::{
             entry::PositionCache,
             key::DirectedPosition,
         },
-        path::mutators::move_path::key::TokenLocation,
+        path::mutators::move_path::key::TokenPosition,
     },
 };
 use crate::graph::vertex::child::Child;
 
-pub type DirectedPositions = HashMap<TokenLocation, PositionCache>;
+pub type DirectedPositions = HashMap<TokenPosition, PositionCache>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VertexCache {

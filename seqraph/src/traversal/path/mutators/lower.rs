@@ -5,7 +5,7 @@ use crate::traversal::{
         accessors::role::End,
         mutators::move_path::key::{
             RetractKey,
-            TokenLocation,
+            TokenPosition,
         },
         structs::{
             role_path::RolePath,
@@ -38,7 +38,7 @@ pub trait PathLower {
     ) -> ControlFlow<()>;
 }
 
-impl PathLower for (&mut TokenLocation, &mut SearchPath) {
+impl PathLower for (&mut TokenPosition, &mut SearchPath) {
     fn path_lower<Trav: Traversable>(
         &mut self,
         trav: &Trav,

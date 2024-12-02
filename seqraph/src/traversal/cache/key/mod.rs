@@ -1,4 +1,4 @@
-use crate::traversal::path::mutators::move_path::key::TokenLocation;
+use crate::traversal::path::mutators::move_path::key::TokenPosition;
 
 pub mod leaf;
 pub mod pos;
@@ -28,7 +28,7 @@ use crate::graph::vertex::{
 };
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, From)]
-pub struct UpPosition(pub TokenLocation);
+pub struct UpPosition(pub TokenPosition);
 
 impl UpPosition {
     pub fn flipped(self) -> DownPosition {
@@ -62,7 +62,7 @@ impl Add<usize> for UpPosition {
 }
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, From)]
-pub struct DownPosition(pub TokenLocation);
+pub struct DownPosition(pub TokenPosition);
 
 impl DownPosition {
     pub fn flipped(self) -> UpPosition {
@@ -114,7 +114,7 @@ pub enum DirectedPosition {
 }
 
 impl DirectedPosition {
-    pub fn pos(&self) -> &TokenLocation {
+    pub fn pos(&self) -> &TokenPosition {
         match self {
             Self::BottomUp(pos) => &pos.0,
             Self::TopDown(pos) => &pos.0,

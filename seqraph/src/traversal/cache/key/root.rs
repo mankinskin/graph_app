@@ -15,7 +15,7 @@ use crate::traversal::{
     },
     path::{
         accessors::root::GraphRoot,
-        mutators::move_path::key::TokenLocation,
+        mutators::move_path::key::TokenPosition,
     },
 };
 use crate::graph::vertex::wide::Wide;
@@ -32,7 +32,7 @@ impl RootKey for ParentState {
 
 impl RootKey for StartState {
     fn root_key(&self) -> UpKey {
-        UpKey::new(self.index, TokenLocation(self.index.width()).into())
+        UpKey::new(self.index, TokenPosition(self.index.width()).into())
     }
 }
 

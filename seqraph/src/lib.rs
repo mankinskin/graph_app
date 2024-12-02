@@ -13,20 +13,17 @@
 
 extern crate test;
 
-//use reexports::*;
-
 pub mod direction;
 pub mod graph;
-pub mod index;
+pub mod insert;
 pub mod search;
 pub mod traversal;
 //pub mod logger;
 pub mod mock;
 pub mod split;
-//pub mod read;
+pub mod read;
 pub mod join;
 pub mod tests;
-//pub mod reexports;
 
 #[cfg(not(any(test, feature = "test-hashing")))]
 pub use std::collections::{

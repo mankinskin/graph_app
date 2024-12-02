@@ -1,3 +1,7 @@
+pub mod insert;
+pub mod r#match;
+pub mod merge;
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Left;
 

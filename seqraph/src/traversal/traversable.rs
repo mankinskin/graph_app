@@ -55,7 +55,7 @@ macro_rules! impl_traversable_mut {
 }
 use crate::{
     graph::Hypergraph,
-    index::indexer::Indexer,
+    insert::context::InsertContext,
 };
 pub(crate) use impl_traversable;
 pub(crate) use impl_traversable_mut;
@@ -148,22 +148,22 @@ impl_traversable_mut! {
 }
 
 impl_traversable! {
-    impl for Indexer,
+    impl for InsertContext,
     self => self.graph.read().unwrap();
     <'a> RwLockReadGuard<'a, Hypergraph>
 }
 impl_traversable! {
-    impl for &'_ mut Indexer,
+    impl for &'_ mut InsertContext,
     self => self.graph.read().unwrap();
     <'a> RwLockReadGuard<'a, Hypergraph>
 }
 impl_traversable_mut! {
-    impl for Indexer,
+    impl for InsertContext,
     self => self.graph.write().unwrap();
     <'a> RwLockWriteGuard<'a, Hypergraph>
 }
 impl_traversable_mut! {
-    impl for &'_ mut Indexer,
+    impl for &'_ mut InsertContext,
     self => self.graph.write().unwrap();
     <'a> RwLockWriteGuard<'a, Hypergraph>
 }

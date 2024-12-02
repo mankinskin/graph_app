@@ -25,7 +25,7 @@ use crate::traversal::{
         },
         mutators::{
             adapters::into_advanced::IntoAdvanced,
-            move_path::key::TokenLocation,
+            move_path::key::TokenPosition,
         },
     },
     policy::DirectedTraversalPolicy,
@@ -35,8 +35,8 @@ use std::cmp::Ordering;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParentState {
-    pub prev_pos: TokenLocation,
-    pub root_pos: TokenLocation,
+    pub prev_pos: TokenPosition,
+    pub root_pos: TokenPosition,
     pub path: Primer,
     pub query: QueryState,
 }

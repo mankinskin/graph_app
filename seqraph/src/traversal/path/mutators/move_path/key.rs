@@ -26,15 +26,15 @@ use crate::{
 };
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, Add, Sub, Deref, DerefMut, Default)]
-pub struct TokenLocation(pub usize);
+pub struct TokenPosition(pub usize);
 
-impl From<usize> for TokenLocation {
+impl From<usize> for TokenPosition {
     fn from(pos: usize) -> Self {
         Self(pos)
     }
 }
 
-impl std::ops::Add<usize> for TokenLocation {
+impl std::ops::Add<usize> for TokenPosition {
     type Output = Self;
     fn add(
         mut self,
@@ -45,7 +45,7 @@ impl std::ops::Add<usize> for TokenLocation {
     }
 }
 
-impl std::ops::Sub<usize> for TokenLocation {
+impl std::ops::Sub<usize> for TokenPosition {
     type Output = Self;
     fn sub(
         mut self,
@@ -56,7 +56,7 @@ impl std::ops::Sub<usize> for TokenLocation {
     }
 }
 
-impl std::ops::AddAssign<usize> for TokenLocation {
+impl std::ops::AddAssign<usize> for TokenPosition {
     fn add_assign(
         &mut self,
         delta: usize,
@@ -65,7 +65,7 @@ impl std::ops::AddAssign<usize> for TokenLocation {
     }
 }
 
-impl std::ops::SubAssign<usize> for TokenLocation {
+impl std::ops::SubAssign<usize> for TokenPosition {
     fn sub_assign(
         &mut self,
         delta: usize,
@@ -112,10 +112,10 @@ impl MoveKey<Right> for DirectedPosition {
     ) {
         match self {
             DirectedPosition::BottomUp(UpPosition(p)) => {
-                <TokenLocation as MoveKey<Right>>::move_key(p, delta)
+                <TokenPosition as MoveKey<Right>>::move_key(p, delta)
             }
             DirectedPosition::TopDown(DownPosition(p)) => {
-                <TokenLocation as MoveKey<Right>>::move_key(p, delta)
+                <TokenPosition as MoveKey<Right>>::move_key(p, delta)
             }
         }
     }
@@ -131,7 +131,7 @@ impl MoveKey<Right> for DirectedKey {
     }
 }
 
-impl MoveKey<Right> for TokenLocation {
+impl MoveKey<Right> for TokenPosition {
     type Delta = usize;
     fn move_key(
         &mut self,
@@ -161,7 +161,7 @@ impl MoveKey<Right> for QueryState {
     }
 }
 
-impl MoveKey<Left> for TokenLocation {
+impl MoveKey<Left> for TokenPosition {
     type Delta = usize;
     fn move_key(
         &mut self,

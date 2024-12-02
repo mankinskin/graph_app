@@ -1,4 +1,4 @@
-use indexer::*;
+use context::*;
 
 use crate::{
     graph::HypergraphRef,
@@ -11,27 +11,22 @@ use crate::graph::vertex::{
     pattern::IntoPattern,
 };
 
-pub mod indexer;
+pub mod context;
 pub mod side;
-//pub mod context;
-//use context::*;
-
-//pub mod path;
-//use path::*;
 
 #[cfg(test)]
 #[macro_use]
 pub mod tests;
 
 impl HypergraphRef {
-    pub fn indexer(&self) -> Indexer {
-        Indexer::new(self.clone())
+    pub fn indexer(&self) -> InsertContext {
+        InsertContext::new(self.clone())
     }
     pub fn index_pattern(
         &self,
         pattern: impl IntoPattern,
     ) -> Result<(Child, QueryRangePath), NoMatch> {
-        self.indexer().index_pattern(pattern)
+        self.indexer().insert_pattern(pattern)
     }
     //pub fn index_query_with_origin<
     //    Q: QueryPath

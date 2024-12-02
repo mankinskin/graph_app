@@ -1,4 +1,4 @@
-use crate::traversal::path::mutators::move_path::key::TokenLocation;
+use crate::traversal::path::mutators::move_path::key::TokenPosition;
 use itertools::Itertools;
 use std::cmp::Ordering;
 
@@ -169,7 +169,7 @@ impl TraversalState {
     pub fn prev_key(&self) -> PrevKey {
         self.prev
     }
-    pub fn root_pos(&self) -> TokenLocation {
+    pub fn root_pos(&self) -> TokenPosition {
         match &self.kind {
             InnerKind::Parent(state) => state.root_pos,
             InnerKind::Child(state) => state.root_pos,

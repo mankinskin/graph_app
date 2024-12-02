@@ -33,23 +33,13 @@ use crate::{
     },
     split::cache::split::Split,
     traversal::cache::key::SplitKey,
-};
-use crate::graph::vertex::{
-    child::Child,
-    pattern::Pattern,
+    graph::vertex::{
+        child::Child,
+        pattern::Pattern,
+    },
 };
 
 impl NodeJoinContext<'_> {
-    //pub fn indexed_partition_patterns<'a, K: RangeRole<Mode = Join> + 'p, P: AsPartition<K>>(
-    //    &mut self,
-    //    part: P,
-    //) -> Result<JoinedPatterns<K>, Child>
-    //    where 'p: 'a,
-    //        &'a K::Splits: AsPartition<K>
-    //{
-    //    part.visit_partition(&*self)
-    //        .map(|b| b.join_patterns(self))
-    //}
     pub fn merge_node<S: HasPosSplits>(
         &mut self,
         splits: S,

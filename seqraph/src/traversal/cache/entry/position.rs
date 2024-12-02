@@ -42,7 +42,6 @@ impl TraversalDirection for TopDown {
 }
 
 /// optional offset inside of pattern sub location
-///
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SubSplitLocation {
     pub location: SubLocation,

@@ -32,7 +32,7 @@ use crate::{
                 move_path::{
                     key::{
                         AdvanceKey,
-                        TokenLocation,
+                        TokenPosition,
                     }, Advance, Retract
                 },
             },
@@ -63,8 +63,8 @@ use crate::graph::getters::vertex::VertexSet;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChildState {
-    pub prev_pos: TokenLocation,
-    pub root_pos: TokenLocation,
+    pub prev_pos: TokenPosition,
+    pub root_pos: TokenPosition,
     pub target: DirectedKey,
     pub paths: PathPair,
 }

@@ -9,14 +9,15 @@ use crate::traversal::{
         TraversalState,
     },
     path::{
-        mutators::move_path::key::TokenLocation,
+        mutators::move_path::key::TokenPosition,
         structs::pair::PathPair,
     },
 };
 
+/// get the token position in a query
 pub trait QueryPosition {
-    fn query_pos(&self) -> &TokenLocation;
-    fn query_pos_mut(&mut self) -> &mut TokenLocation;
+    fn query_pos(&self) -> &TokenPosition;
+    fn query_pos_mut(&mut self) -> &mut TokenPosition;
 }
 macro_rules! impl_query_pos {
     {
@@ -62,7 +63,7 @@ impl_query_pos! {
 //    }
 //}
 impl QueryPosition for TraversalState {
-    fn query_pos(&self) -> &TokenLocation {
+    fn query_pos(&self) -> &TokenPosition {
         match &self.kind {
             InnerKind::Parent(state) => &state.query.pos,
             InnerKind::Child(state) => &state.paths.query.pos,
@@ -70,7 +71,7 @@ impl QueryPosition for TraversalState {
             //    => &state.query.pos,
         }
     }
-    fn query_pos_mut(&mut self) -> &mut TokenLocation {
+    fn query_pos_mut(&mut self) -> &mut TokenPosition {
         match &mut self.kind {
             InnerKind::Parent(state) => &mut state.query.pos,
             InnerKind::Child(state) => &mut state.paths.query.pos,

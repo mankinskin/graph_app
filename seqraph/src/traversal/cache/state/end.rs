@@ -18,7 +18,7 @@ use crate::traversal::{
                 Start,
             },
         },
-        mutators::move_path::key::TokenLocation,
+        mutators::move_path::key::TokenPosition,
         structs::rooted_path::{
             RootedRolePath,
             RootedSplitPathRef,
@@ -58,7 +58,7 @@ pub struct PostfixEnd {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EndState {
     pub reason: EndReason,
-    pub root_pos: TokenLocation,
+    pub root_pos: TokenPosition,
     pub kind: EndKind,
     pub query: QueryState,
 }

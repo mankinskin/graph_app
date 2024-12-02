@@ -7,7 +7,7 @@ use itertools::Itertools;
 
 use crate::{
     graph::getters::vertex::VertexSet,
-    index::side::{
+    insert::side::{
         IndexBack,
         IndexSide,
     }, join::partition::splits::offset::OffsetSplits, split::{
@@ -21,7 +21,7 @@ use crate::{
             FoldState,
             RootMode,
         },
-        path::mutators::move_path::key::TokenLocation,
+        path::mutators::move_path::key::TokenPosition,
         traversable::Traversable,
     }, HashSet
 };
@@ -76,7 +76,7 @@ impl SplitCacheBuilder {
 impl VertexCache {
     pub fn global_splits<N: NodeType>(
         &self,
-        end_pos: TokenLocation,
+        end_pos: TokenPosition,
         node: &VertexData,
     ) -> N::GlobalSplitOutput {
         let mut output = N::GlobalSplitOutput::default();
@@ -143,7 +143,7 @@ impl VertexCache {
     pub fn complete_splits<Trav: Traversable, N: NodeType>(
         &self,
         trav: &Trav,
-        end_pos: TokenLocation,
+        end_pos: TokenPosition,
     ) -> N::CompleteSplitOutput {
         let graph = trav.graph();
 

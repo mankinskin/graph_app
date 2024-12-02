@@ -9,13 +9,13 @@ use std::fmt::{
 };
 use crate::{
     direction::Right,
-    graph::direction::index::IndexDirection,
+    graph::direction::index::InsertDirection,
 };
 use crate::graph::vertex::token::Tokenize;
 
 pub trait GraphKind: Debug + Clone + Default + PartialEq + Eq {
     type Token: Tokenize + Display + DeserializeOwned;
-    type Direction: IndexDirection;
+    type Direction: InsertDirection;
 }
 
 pub type TokenOf<K> = <K as GraphKind>::Token;

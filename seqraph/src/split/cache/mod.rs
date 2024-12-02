@@ -15,7 +15,7 @@ use position::*;
 
 use crate::{
     HashMap,
-    index::side::{
+    insert::side::{
         IndexBack,
         IndexSide,
     },

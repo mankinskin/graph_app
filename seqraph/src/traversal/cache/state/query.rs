@@ -15,7 +15,7 @@ use crate::{
                 End,
                 Start,
             },
-            mutators::move_path::key::TokenLocation,
+            mutators::move_path::key::TokenPosition,
             structs::{
                 query_range_path::QueryRangePath,
                 role_path::RolePath,
@@ -36,7 +36,7 @@ use crate::graph::vertex::{
 pub struct QueryState {
     pub start: RolePath<Start>,
     pub end: RolePath<End>,
-    pub pos: TokenLocation,
+    pub pos: TokenPosition,
 }
 
 impl QueryState {
@@ -71,7 +71,7 @@ impl QueryState {
     fn new_range(
         entry: usize,
         exit: usize,
-        pos: TokenLocation,
+        pos: TokenPosition,
     ) -> Self {
         Self {
             start: SubPath::new(entry).into(),
