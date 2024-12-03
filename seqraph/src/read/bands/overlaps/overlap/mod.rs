@@ -6,7 +6,6 @@ use crate::{
     traversal::path::{accessors::role::{End, Start}, structs::{match_end::MatchEnd, role_path::RolePath, rooted_path::RootedRolePath}},
 };
 
-pub mod band;
 pub mod cache;
 pub mod chain;
 pub mod context;

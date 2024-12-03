@@ -59,6 +59,7 @@ use crate::{
         },
     },
 };
+pub mod overlap;
 
 impl<'p> ReadContext<'p> {
     #[instrument(skip(self, first, context))]

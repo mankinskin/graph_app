@@ -61,7 +61,7 @@ pub trait TraversalFolder: Sized + Traversable {
         Self: 'a;
 
     //#[instrument(skip(self))]
-    fn fold_query<P: IntoPattern>(
+    fn fold_pattern<P: IntoPattern>(
         &self,
         query_pattern: P,
     ) -> Result<TraversalResult, (NoMatch, QueryRangePath)> {
@@ -69,11 +69,20 @@ pub trait TraversalFolder: Sized + Traversable {
         //debug!("fold {:?}", query_pattern);
         let query = QueryState::new::<Self::Kind, _>(query_pattern.borrow())
             .map_err(|(err, q)| (err, q.to_rooted(query_pattern.clone())))?;
-        let start_index = query
+        let query_range_path = query
             .clone()
-            .to_rooted(query_pattern.clone())
-            .role_leaf_child::<End, _>(self);
+            .to_rooted(query_pattern.clone());
         let query_root = QueryContext::new(query_pattern);
+        self.fold_query(query_root, query_range_path)
+    }
+    //#[instrument(skip(self))]
+    fn fold_query(
+        &self,
+        query_root: QueryContext,
+        query_range_path: QueryRangePath,
+    ) -> Result<TraversalResult, (NoMatch, QueryRangePath)> {
+        let start_index = query_range_path
+            .role_leaf_child::<End, _>(self);
 
         //let query_ctx = QueryContext::new(query_pattern.clone());
 
@@ -171,7 +180,8 @@ pub trait TraversalFolder: Sized + Traversable {
             }
         } else {
             TraversalResult {
-                query: query.to_rooted(query_root.query_root),
+                //query: query.to_rooted(query_root.query_root),
+                query: query_range_path,
                 result: FoldResult::Complete(start_index),
             }
         })

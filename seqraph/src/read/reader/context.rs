@@ -13,8 +13,7 @@ use tracing::{
 };
 
 use crate::{
-    direction::Right,
-    graph::{
+    direction::Right, graph::{
         vertex::{
             child::Child,
             has_vertex_data::HasVertexDataMut,
@@ -27,14 +26,14 @@ use crate::{
                 Pattern,
             },
         },
-        Hypergraph,
-    },
-    read::sequence::{
-        SequenceIter,
-        ToNewTokenIndices,
-    },
-    search::NoMatch,
-    traversal::{
+        Hypergraph, HypergraphRef,
+    }, index::indexer::Indexer, read::{
+        bands::BandsContext,
+        sequence::{
+            SequenceIter,
+            ToNewTokenIndices,
+        },
+    }, search::NoMatch, traversal::{
         path::{
             mutators::move_path::Advance,
             structs::query_range_path::{
@@ -43,29 +42,36 @@ use crate::{
             },
         },
         traversable::TraversableMut,
-    },
+    }
 };
 
 #[derive(Debug)]
 pub struct ReadContext<'g> {
-    pub graph: RwLockWriteGuard<'g, Hypergraph>,
+    //pub graph: RwLockWriteGuard<'g, Hypergraph>,
+    pub graph: HypergraphRef,
     pub root: Option<Child>,
+    _ty: std::marker::PhantomData<&'g ()>,
 }
-impl Deref for ReadContext<'_> {
-    type Target = Hypergraph;
-    fn deref(&self) -> &Self::Target {
-        self.graph.deref()
-    }
-}
-impl DerefMut for ReadContext<'_> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.graph.deref_mut()
-    }
-}
+//impl Deref for ReadContext<'_> {
+//    type Target = Hypergraph;
+//    fn deref(&self) -> &Self::Target {
+//        self.graph.deref()
+//    }
+//}
+//impl DerefMut for ReadContext<'_> {
+//    fn deref_mut(&mut self) -> &mut Self::Target {
+//        self.graph.deref_mut()
+//    }
+//}
 
 impl<'g> ReadContext<'g> {
-    pub fn new(graph: RwLockWriteGuard<'g, Hypergraph>) -> Self {
-        Self { graph, root: None }
+    //pub fn new(graph: RwLockWriteGuard<'g, Hypergraph>) -> Self {
+    pub fn new(graph: HypergraphRef) -> Self {
+        Self {
+            graph,
+            root: None,
+            _ty: Default::default(),
+        }
     }
     #[instrument(skip(self))]
     pub fn read_sequence<N, S: ToNewTokenIndices<N>>(
@@ -96,7 +102,7 @@ impl<'g> ReadContext<'g> {
         known: Pattern,
     ) {
         match PatternPrefixPath::new_directed::<Right, _>(known.borrow()) {
-            Ok(path) => self.read_bands(path),
+            Ok(path) => self.bands().read(path),
             Err((err, _)) => match err {
                 NoMatch::SingleIndex(c) => {
                     self.append_index(c);
@@ -108,37 +114,12 @@ impl<'g> ReadContext<'g> {
             .unwrap(),
         }
     }
-    #[instrument(skip(self, sequence))]
-    fn read_bands(
-        &mut self,
-        mut sequence: PatternPrefixPath,
-    ) {
-        //println!("reading known bands");
-        while let Some(next) = self.get_next(&mut sequence) {
-            //println!("found next {:?}", next);
-            let next = self.read_overlaps(next, &mut sequence).unwrap_or(next);
-            self.append_index(next);
-        }
+    pub fn bands(&self) -> BandsContext {
+        BandsContext::new(self.graph.clone())
     }
-    #[instrument(skip(self, context))]
-    fn get_next(
-        &mut self,
-        context: &mut PatternPrefixPath,
-    ) -> Option<Child> {
-        match self.indexer().index_query(context.clone()) {
-            Ok((index, advanced)) => {
-                *context = advanced;
-                Some(index)
-            }
-            Err(_) => {
-                context.advance(self);
-                None
-            }
-        }
+    pub fn indexer(&self) -> Indexer {
+        Indexer::new(self.graph.clone())
     }
-    //pub fn indexer(&self) -> Indexer {
-    //    Indexer::new(self.graph.clone())
-    //}
     //pub fn contexter<Side: IndexSide<D>>(&self) -> Contexter<Side> {
     //    Contexter::new(self.indexer())
     //}
@@ -196,7 +177,7 @@ impl<'g> ReadContext<'g> {
                         graph.insert_pattern([&[*root], new.as_slice()].concat())
                     };
                 } else {
-                    let c = self.graph.insert_pattern(new);
+                    let c = self.graph_mut().insert_pattern(new);
                     self.root = Some(c);
                 }
             }

@@ -12,15 +12,16 @@ use crate::{
     read::reader::context::ReadContext,
 };
 
-pub mod overlap;
 pub mod reader;
 pub mod sequence;
+pub mod bands;
 #[cfg(test)]
 mod tests;
 
 impl HypergraphRef {
     pub fn read_context<'g>(&'g mut self) -> ReadContext<'g> {
-        ReadContext::new(self.graph_mut())
+        //ReadContext::new(self.graph_mut())
+        ReadContext::new(self.clone())
     }
     pub fn read_sequence(
         &mut self,
