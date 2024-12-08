@@ -1,11 +1,4 @@
-use std::{
-    borrow::Borrow,
-    ops::{
-        Deref,
-        DerefMut,
-    },
-    sync::RwLockWriteGuard,
-};
+use std::borrow::Borrow;
 
 use tracing::{
     debug,
@@ -27,7 +20,8 @@ use crate::{
             },
         },
         Hypergraph, HypergraphRef,
-    }, index::indexer::Indexer, read::{
+    },
+    insert::context::InsertContext, read::{
         bands::BandsContext,
         sequence::{
             SequenceIter,
@@ -117,8 +111,8 @@ impl<'g> ReadContext<'g> {
     pub fn bands(&self) -> BandsContext {
         BandsContext::new(self.graph.clone())
     }
-    pub fn indexer(&self) -> Indexer {
-        Indexer::new(self.graph.clone())
+    pub fn indexer(&self) -> InsertContext {
+        InsertContext::new(self.graph.clone())
     }
     //pub fn contexter<Side: IndexSide<D>>(&self) -> Contexter<Side> {
     //    Contexter::new(self.indexer())

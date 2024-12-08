@@ -6,7 +6,7 @@ use crate::traversal::{
             rooted_path::SearchPath,
         },
     },
-    result_kind::Advanced,
+    result::kind::Advanced,
     traversable::Traversable,
 };
 

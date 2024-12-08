@@ -3,8 +3,8 @@ use crate::{
         Direction,
         Left,
         Right,
+        r#match::MatchDirection,
     },
-    graph::direction::r#match::MatchDirection,
     traversal::{
         context::QueryStateContext,
         path::{

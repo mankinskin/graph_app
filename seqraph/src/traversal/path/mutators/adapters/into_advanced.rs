@@ -1,7 +1,7 @@
 use std::borrow::Borrow;
 
 use crate::{
-    graph::direction::r#match::MatchDirection,
+    direction::r#match::MatchDirection,
     traversal::{
         cache::{
             key::DirectedKey,

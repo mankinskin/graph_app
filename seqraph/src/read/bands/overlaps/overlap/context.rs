@@ -3,19 +3,12 @@ use std::borrow::Borrow;
 use tracing::instrument;
 
 use crate::{
-    graph::{
-        direction::index::IndexDirection,
+    direction::insert::InsertDirection, graph::{
         kind::DefaultDirection,
         vertex::pattern::Pattern,
-    },
-    index::side::IndexBack,
-    read::{
-        overlap::{
-            chain::OverlapChain,
-            OverlapLink,
-        },
-        reader::context::ReadContext,
-    },
+    }, insert::side::IndexBack, read::{
+        bands::overlaps::overlap::{chain::OverlapChain, OverlapLink}, reader::context::ReadContext
+    }
 };
 
 impl<'g> ReadContext<'g> {

@@ -29,7 +29,7 @@ use crate::traversal::{
         },
     },
     policy::DirectedTraversalPolicy,
-    result_kind::Primer,
+    result::kind::Primer,
 };
 use std::cmp::Ordering;
 

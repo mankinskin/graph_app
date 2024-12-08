@@ -25,7 +25,7 @@ use crate::traversal::{
             SearchPath,
         },
     },
-    result_kind::Primer,
+    result::kind::Primer,
 };
 use crate::graph::vertex::{
     child::Child,

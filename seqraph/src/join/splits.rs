@@ -1,3 +1,12 @@
+use std::iter::FromIterator;
+
+use derive_more::{Deref, DerefMut};
+
+use itertools::Itertools;
+use linked_hash_set::LinkedHashSet;
+
+use crate::{graph::vertex::{child::Child, wide::Wide}, join::JoinContext, split::cache::{split::Split, SplitCache}, traversal::cache::key::SplitKey, HashMap};
+
 
 #[derive(Debug, Default, Deref, DerefMut)]
 pub struct SplitFrontier {
@@ -20,7 +29,7 @@ impl SplitFrontier {
             if !final_splits.contains_key(&key) {
                 let finals = JoinContext::new(self.graph_mut(), &final_splits)
                         .node(key.index, split_cache)
-                        .join_node_partitions();
+                        .join_partitions();
 
                 for (key, split) in finals {
                     final_splits.insert(key, split);

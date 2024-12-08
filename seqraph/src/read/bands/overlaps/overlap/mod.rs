@@ -2,7 +2,7 @@
 use band::{BandEnd, OverlapBand};
 
 use crate::{
-    read::reader::context::ReadContext,
+    read::{bands::band, reader::context::ReadContext},
     traversal::path::{accessors::role::{End, Start}, structs::{match_end::MatchEnd, role_path::RolePath, rooted_path::RootedRolePath}},
 };
 

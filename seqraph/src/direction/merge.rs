@@ -1,21 +1,6 @@
-use std::ops::{
-    Range,
-    RangeInclusive,
-};
-
-use crate::{
-    direction::{
-        Left,
-        Right,
-    },
-    graph::direction::MatchDirection,
-};
 use crate::graph::vertex::{
     child::Child,
-    pattern::{
-        IntoPattern,
-        Pattern,
-    },
+    pattern::Pattern,
 };
 
 pub trait Merge {

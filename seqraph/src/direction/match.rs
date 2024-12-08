@@ -16,7 +16,7 @@ use crate::{
         Left,
         Right,
     },
-    graph::GraphKind,
+    graph::kind::GraphKind,
     HashMap,
     HashSet,
     search::NoMatch,

@@ -3,7 +3,6 @@ use state::*;
 use std::fmt::Display;
 
 use crate::{
-    HashMap,
     traversal::{
         cache::{
             entry::{
@@ -27,14 +26,10 @@ use crate::{
                 query::QueryState,
                 start::StartState,
             },
-        },
-        context::{
+        }, context::{
             QueryContext,
             TraversalContext,
-        },
-        folder::TraversalFolder,
-        iterator::traverser::ExtendStates,
-        path::{
+        }, folder::TraversalFolder, iterator::traverser::ExtendStates, path::{
             accessors::{
                 child::root::GraphRootChild,
                 has_path::HasRolePath,
@@ -44,13 +39,10 @@ use crate::{
                 AdvanceKey,
                 TokenPosition,
             },
-        },
-        result_kind::RoleChildPath,
-        traversable::{
-            Traversable,
-            TravToken,
-        },
-    },
+        }, result::kind::RoleChildPath, traversable::{
+            TravToken, Traversable
+        }
+    }, HashMap
 };
 use crate::graph::vertex::{
     child::Child,

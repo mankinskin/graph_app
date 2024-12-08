@@ -1,5 +1,6 @@
 use crate::{
-    graph::{direction::r#match::MatchDirection, vertex::pattern::Pattern},
+    direction::r#match::MatchDirection, 
+    graph::vertex::pattern::Pattern,
     traversal::{
         cache::{
             entry::new::NewEntry,
@@ -41,7 +42,7 @@ use crate::{
                 PathPairMode,
             },
         },
-        result_kind::{
+        result::kind::{
             Primer,
             RoleChildPath,
         },

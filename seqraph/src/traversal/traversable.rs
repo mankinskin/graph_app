@@ -11,7 +11,7 @@ use std::{
 
 use crate::{
     graph::{
-        direction::index::IndexDirection, kind::{
+        kind::{
             BaseGraphKind,
             GraphKind,
         }, HypergraphRef,

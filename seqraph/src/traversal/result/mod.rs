@@ -12,6 +12,7 @@ use crate::graph::vertex::{
     child::Child,
     pattern::IntoPattern,
 };
+pub mod kind;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TraversalResult {

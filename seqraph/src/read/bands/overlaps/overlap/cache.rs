@@ -4,15 +4,7 @@ use crate::{
         wide::Wide,
     },
     read::{
-        overlap::{
-            band::{
-                OverlapBand,
-                OverlapBundle,
-            },
-            chain::OverlapChain,
-            Overlap,
-        },
-        reader::context::ReadContext,
+        bands::{band::{OverlapBand, OverlapBundle}, overlaps::overlap::{chain::OverlapChain, Overlap}}, reader::context::ReadContext
     },
 };
 

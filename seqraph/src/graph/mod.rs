@@ -34,7 +34,6 @@ use crate::graph::vertex::key::VertexKey;
 use crate::graph::getters::vertex::VertexSet;
 
 pub mod child_strings;
-pub mod direction;
 pub mod getters;
 pub mod insert;
 pub mod kind;

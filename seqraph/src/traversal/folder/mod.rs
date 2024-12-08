@@ -37,8 +37,10 @@ use crate::{
             accessors::role::End,
             structs::query_range_path::QueryRangePath,
         },
-        result::TraversalResult,
-        result_kind::RoleChildPath,
+        result::{
+            TraversalResult,
+            kind::RoleChildPath,
+        },
         traversable::Traversable,
     },
 };

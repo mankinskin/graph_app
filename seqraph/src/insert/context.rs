@@ -1,13 +1,10 @@
 use crate::{
-    graph::HypergraphRef, join::context::JoinContext, search::NoMatch, traversal::{
-        folder::{
-            state::FoldResult,
+    graph::HypergraphRef, join::{context::JoinContext, splits::SplitFrontier}, search::NoMatch, split::cache::{split::Split, SplitCache}, traversal::{
+        cache::key::SplitKey, folder::{
+            state::{FoldResult, FoldState},
             TraversalFolder,
-        },
-        iterator::traverser::bft::Bft,
-        path::structs::query_range_path::QueryRangePath,
-        policy::DirectedTraversalPolicy,
-    }
+        }, iterator::traverser::bft::Bft, path::structs::query_range_path::QueryRangePath, policy::DirectedTraversalPolicy, traversable::TraversableMut
+    }, HashMap
 };
 use crate::graph::vertex::{
     child::Child,
@@ -68,9 +65,10 @@ impl InsertContext {
             .join_final_splits(root, &split_cache);
 
         let root_mode = split_cache.root_mode;
-        self.join(&final_splits)
+        let x = self.join(&final_splits)
             .node(root, &split_cache)
-            .join_root_partitions(root_mode)
+            .join_root_partitions(root_mode);
+        x
     }
     //pub fn index_query<
     //    Q: QueryPath,

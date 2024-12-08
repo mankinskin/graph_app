@@ -1,8 +1,6 @@
 use crate::{
-    graph::{
-        direction::r#match::MatchDirection,
-        kind::DirectionOf,
-    },
+    direction::r#match::MatchDirection,
+    graph::kind::DirectionOf,
     traversal::traversable::Traversable,
 };
 use itertools::Itertools;

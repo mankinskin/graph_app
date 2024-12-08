@@ -1,6 +1,8 @@
 use crate::{
-    direction::Right,
-    graph::direction::r#match::MatchDirection,
+    direction::{
+        Right,
+        r#match::MatchDirection,
+    },
     search::NoMatch,
     traversal::path::{
         accessors::role::End,

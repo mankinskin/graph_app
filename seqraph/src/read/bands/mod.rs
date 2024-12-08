@@ -27,7 +27,7 @@ use crate::{
             },
         },
         Hypergraph, HypergraphRef,
-    }, index::indexer::Indexer, read::sequence::{
+    }, insert::context::InsertContext, read::sequence::{
         SequenceIter,
         ToNewTokenIndices,
     }, search::NoMatch, traversal::{
@@ -52,8 +52,8 @@ impl BandsContext {
             graph,
         }
     }
-    pub fn indexer(&self) -> Indexer {
-        Indexer::new(self.graph.clone())
+    pub fn indexer(&self) -> InsertContext {
+        InsertContext::new(self.graph.clone())
     }
     #[instrument(skip(self, sequence))]
     pub fn read(

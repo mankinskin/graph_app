@@ -1,8 +1,6 @@
 use crate::{
-    graph::{
-        direction::r#match::MatchDirection,
-        kind::GraphKind,
-    },
+    direction::r#match::MatchDirection,
+    graph::kind::GraphKind,
     traversal::{
         path::accessors::role::{
             End,

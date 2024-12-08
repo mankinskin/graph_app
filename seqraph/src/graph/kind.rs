@@ -7,9 +7,9 @@ use std::fmt::{
     Debug,
     Display,
 };
+use crate::direction::insert::InsertDirection;
 use crate::{
     direction::Right,
-    graph::direction::index::InsertDirection,
 };
 use crate::graph::vertex::token::Tokenize;
 

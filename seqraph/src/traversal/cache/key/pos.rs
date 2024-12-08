@@ -24,10 +24,10 @@ macro_rules! impl_query_pos {
         QueryPosition for $target:ty, $self_:ident => $func:expr
     } => {
         impl QueryPosition for $target {
-            fn query_pos(& $self_) -> &TokenLocation {
+            fn query_pos(& $self_) -> &TokenPosition {
                 &$func
             }
-            fn query_pos_mut(&mut $self_) -> &mut TokenLocation {
+            fn query_pos_mut(&mut $self_) -> &mut TokenPosition {
                 &mut $func
             }
         }

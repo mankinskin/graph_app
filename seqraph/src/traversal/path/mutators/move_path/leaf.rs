@@ -8,8 +8,8 @@ use crate::{
         Direction,
         Left,
         Right,
+        r#match::MatchDirection,
     },
-    graph::direction::r#match::MatchDirection,
     traversal::{
         path::mutators::move_path::MoveKey,
         traversable::{

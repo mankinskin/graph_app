@@ -3,15 +3,11 @@ use std::ops::{
     RangeInclusive,
 };
 
-use crate::{
-    direction::{
-        Left,
-        Right,
-    },
-    graph::direction::{
-        r#match::MatchDirection,
-        merge::Merge,
-    },
+use crate::direction::{
+    Left,
+    Right,
+    r#match::MatchDirection,
+    merge::Merge,
 };
 use crate::graph::vertex::{
     child::Child,

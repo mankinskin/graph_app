@@ -1,8 +1,6 @@
 use crate::{
-    graph::{
-        direction::r#match::MatchDirection,
-        kind::GraphKind,
-    },
+    graph::kind::GraphKind,
+    direction::r#match::MatchDirection,
     traversal::{
         cache::state::end::{
             EndKind,
@@ -32,7 +30,7 @@ use crate::{
                 },
             },
         },
-        result_kind::{
+        result::kind::{
             Primer,
             RoleChildPath,
         },

@@ -8,8 +8,8 @@ use tap::Tap;
 use tracing::instrument;
 
 use crate::{
+    direction::r#match::MatchDirection,
     graph::{
-        direction::r#match::MatchDirection,
         getters::vertex::VertexSet,
         kind::DefaultDirection,
         vertex::{
@@ -19,7 +19,7 @@ use crate::{
             wide::Wide,
         },
     },
-    index::{
+    insert::{
         side::{
             IndexBack,
             IndexFront,
@@ -27,15 +27,17 @@ use crate::{
         IndexSplitResult,
     },
     read::{
-        overlap::{
+        bands::{
             band::{
                 BandEnd,
                 OverlapBand,
                 OverlapBundle,
             },
-            cache::OverlapCache,
-            Overlap,
-            OverlapLink,
+            overlaps::overlap::{
+                cache::OverlapCache,
+                Overlap,
+                OverlapLink,
+            },
         },
         reader::context::ReadContext,
     },

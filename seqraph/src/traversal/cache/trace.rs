@@ -7,7 +7,6 @@ use crate::traversal::{
         TraversalCache,
     },
     path::accessors::role::Start,
-    result_kind::RoleChildPath,
     traversable::Traversable,
 };
 

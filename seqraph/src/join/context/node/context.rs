@@ -1,34 +1,33 @@
 use std::{
-    borrow::Borrow,
-    sync::RwLockWriteGuard,
+    borrow::Borrow, num::NonZeroUsize, sync::RwLockWriteGuard
 };
 
 use derive_more::{
     Deref,
     DerefMut,
 };
+use linked_hash_map::LinkedHashMap;
 
 use crate::{
-    graph::Hypergraph,
+    graph::{vertex::{location::SubLocation, wide::Wide}, Hypergraph},
     join::{
         context::pattern::{
             AsPatternTraceContext,
             PatternJoinContext,
             PatternTraceContext,
-        },
-        JoinContext,
-        partition::splits::{
-            HasPosSplits,
-            PosSplits,
-        },
+        }, info::{range::role::{In, Join, Post, Pre}, visit::PartitionBorders}, partition::splits::{
+            offset::OffsetSplits, HasPosSplits, PosSplitRef, PosSplits
+        }, Infix, JoinContext, JoinedPartition, Postfix, Prefix
     },
-    split::cache::vertex::SplitVertexCache,
+    split::{cache::vertex::SplitVertexCache, complete::position_splits}, traversal::folder::state::RootMode,
 };
 use crate::graph::vertex::{
     child::Child,
     ChildPatterns,
     pattern::id::PatternId,
 };
+
+use crate::{split::cache::split::Split, traversal::cache::key::SplitKey};
 
 #[derive(Debug, Clone, Copy)]
 pub struct NodeTraceContext<'p> {
@@ -182,8 +181,6 @@ impl<'p, SP: HasPosSplits + 'p> NodeJoinContext<'p, SP> {
     pub fn index_partitions(
         &mut self,
     ) -> Vec<Child>
-    where
-        'p: 't,
     {
         let offset_splits = self.pos_splits.pos_splits();
         let len = offset_splits.len();
@@ -245,7 +242,7 @@ impl<'p, SP: HasPosSplits + 'p> NodeJoinContext<'p, SP> {
         .map(|part| part.index)
         .unwrap_or_else(|c| c)
     }
-    pub fn join_incomplete_infix<'p>(
+    pub fn join_incomplete_infix(
         &mut self,
         part: JoinedPartition<In<Join>>,
         loffset: PosSplitRef<'p>,

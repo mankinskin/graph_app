@@ -27,7 +27,7 @@ use crate::traversal::{
             Start,
         },
     },
-    result_kind::RoleChildPath,
+    result::kind::RoleChildPath,
 };
 use crate::graph::vertex::location::child::ChildLocation;
 

@@ -31,7 +31,7 @@ use crate::traversal::{
         child::root::GraphRootChild,
         role::End,
     },
-    result_kind::RoleChildPath,
+    result::kind::RoleChildPath,
 };
 use crate::graph::vertex::location::child::ChildLocation;
 
