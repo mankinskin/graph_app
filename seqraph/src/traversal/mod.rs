@@ -5,5 +5,4 @@ pub mod iterator;
 pub mod path;
 pub mod policy;
 pub mod result;
-pub mod result_kind;
 pub mod traversable;
