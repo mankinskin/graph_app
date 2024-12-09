@@ -6,3 +6,4 @@ docs/graph_app_bg.wasm
 **/assets/test_graph1.dot
 **/thesis/out/
 **/*.toc
+.vscode
