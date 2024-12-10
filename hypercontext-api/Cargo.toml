@@ -1,0 +1,29 @@
+[package]
+name = "hypercontext-api"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = [] #["log_stdout", "log_gui"]
+test-hashing = []
+
+[dependencies]
+itertools = "^0.13"
+indexmap = { version = "^2.7", features = ["serde"]}
+tracing = { version = "^0.1", features = ["attributes", "valuable"] }
+uuid = { version = "^1.10", features = ["v4", "fast-rng", "serde"] }
+derive_builder = "^0.20"
+lazy_static = "^1.4"
+either = "^1.6"
+derive_more = { version = "1", features = ["full"] }
+auto_impl = "1.2.0"
+derive-new = "0.7"
+tap = "^1"
+
+[dependencies.petgraph]
+#git = "https://github.com/mankinskin/petgraph"
+path = "../petgraph"
+
+[dependencies.serde]
+features = ["derive"]
+version = "^1"

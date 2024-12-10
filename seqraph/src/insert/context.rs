@@ -126,3 +126,24 @@ impl InsertContext {
     //    Ok(acc)
     //}
 }
+
+impl_traversable! {
+    impl for InsertContext,
+    self => self.graph.read().unwrap();
+    <'a> RwLockReadGuard<'a, Hypergraph>
+}
+impl_traversable! {
+    impl for &'_ mut InsertContext,
+    self => self.graph.read().unwrap();
+    <'a> RwLockReadGuard<'a, Hypergraph>
+}
+impl_traversable_mut! {
+    impl for InsertContext,
+    self => self.graph.write().unwrap();
+    <'a> RwLockWriteGuard<'a, Hypergraph>
+}
+impl_traversable_mut! {
+    impl for &'_ mut InsertContext,
+    self => self.graph.write().unwrap();
+    <'a> RwLockWriteGuard<'a, Hypergraph>
+}

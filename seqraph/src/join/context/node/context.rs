@@ -11,13 +11,21 @@ use linked_hash_map::LinkedHashMap;
 use crate::{
     graph::{vertex::{location::SubLocation, wide::Wide}, Hypergraph},
     join::{
-        context::pattern::{
-            AsPatternTraceContext,
-            PatternJoinContext,
-            PatternTraceContext,
-        }, info::{range::role::{In, Join, Post, Pre}, visit::PartitionBorders}, partition::splits::{
-            offset::OffsetSplits, HasPosSplits, PosSplitRef, PosSplits
-        }, Infix, JoinContext, JoinedPartition, Postfix, Prefix
+        context::{
+            node::merge::NodeMergeContext,
+            pattern::{
+                AsPatternTraceContext,
+                PatternJoinContext,
+                PatternTraceContext,
+            },
+        },
+        partition::{
+            info::{range::role::{In, Join, Post, Pre}, visit::PartitionBorders},
+            splits::{
+                offset::OffsetSplits, HasPosSplits, PosSplitRef, PosSplits
+            },
+        },
+        Infix, JoinContext, JoinedPartition, Postfix, Prefix
     },
     split::{cache::vertex::SplitVertexCache, complete::position_splits}, traversal::folder::state::RootMode,
 };

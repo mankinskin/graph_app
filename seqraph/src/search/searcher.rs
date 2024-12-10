@@ -140,3 +140,19 @@ impl<T: Traversable> Searcher<T> {
     //    }
     //}
 }
+
+impl<T: Traversable> Traversable for Searcher<T> {
+    type Kind = T::Kind;
+    type Guard<'a> = T::Guard<'a> where T: 'a;
+    fn graph(&self) -> Self::Guard<'_> {
+        self.graph.graph()
+    }
+}
+
+impl<'g, T: Traversable> Traversable for &'g Searcher<T> {
+    type Kind = T::Kind;
+    type Guard<'a> = T::Guard<'a> where T: 'a, 'g: 'a;
+    fn graph(&self) -> Self::Guard<'_> {
+        self.graph.graph()
+    }
+}

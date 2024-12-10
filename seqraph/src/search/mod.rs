@@ -30,25 +30,7 @@ pub mod searcher;
 #[cfg(test)]
 pub mod tests;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum NoMatch
-{
-    EmptyPatterns,
-    NoParents,
-    NoChildPatterns,
-    NotFound,
-    NoMatchingParent(VertexIndex),
-    InvalidPattern(PatternId),
-    InvalidChild(usize),
-    InvalidPatternRange(PatternId, Pattern, String),
-    SingleIndex(Child),
-    ParentMatchingPartially,
-    UnknownKey,
-    UnknownIndex,
-    UnknownToken,
-    Unnecessary,
-    EmptyRange,
-}
+
 
 pub trait Searchable: Traversable
 {

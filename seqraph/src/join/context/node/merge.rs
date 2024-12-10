@@ -39,7 +39,12 @@ use crate::{
     },
 };
 
-impl NodeJoinContext<'_> {
+pub struct NodeMergeContext<'a> {
+    pub graph: &'a mut NodeJoinContext<'a>,
+    pub index: usize,
+}
+
+impl NodeMergeContext<'_> {
     pub fn merge_node<S: HasPosSplits>(
         &mut self,
         splits: S,
