@@ -1,12 +1,10 @@
 use crate::{
     HashMap,
-    traversal::{
-        cache::{
-            entry::PositionCache,
-            key::DirectedPosition,
-        },
-        path::mutators::move_path::key::TokenPosition,
+    traversal::cache::{
+        entry::PositionCache,
+        key::DirectedPosition,
     },
+    path::mutators::move_path::key::TokenPosition,
 };
 use crate::graph::vertex::child::Child;
 

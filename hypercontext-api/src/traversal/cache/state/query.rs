@@ -7,17 +7,17 @@ use crate::{
             TraversalContext,
         },
         iterator::TraversalIterator,
-        path::{
-            accessors::role::{
-                End,
-                Start,
-            },
-            mutators::move_path::key::TokenPosition,
-            structs::{
-                query_range_path::QueryRangePath,
-                role_path::RolePath,
-                rooted_path::SubPath,
-            },
+    },
+    path::{
+        accessors::role::{
+            End,
+            Start,
+        },
+        mutators::move_path::key::TokenPosition,
+        structs::{
+            query_range_path::QueryRangePath,
+            role_path::RolePath,
+            rooted_path::SubPath,
         },
     },
 };

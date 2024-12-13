@@ -1,22 +1,25 @@
-use crate::traversal::{
-    cache::{
-        key::{
-            prev::ToPrev,
-            UpKey,
-        },
-        state::{
-            end::{
-                EndKind,
-                EndReason,
-                EndState,
+use crate::{
+    traversal::{
+        cache::{
+            key::{
+                prev::ToPrev,
+                UpKey,
             },
-            NextStates,
-            query::QueryState,
-            StateNext,
+            state::{
+                end::{
+                    EndKind,
+                    EndReason,
+                    EndState,
+                },
+                NextStates,
+                query::QueryState,
+                StateNext,
+            },
         },
+        context::TraversalContext,
+        iterator::TraversalIterator,
+        policy::DirectedTraversalPolicy,
     },
-    context::TraversalContext,
-    iterator::TraversalIterator,
     path::mutators::{
         adapters::into_primer::IntoPrimer,
         move_path::{
@@ -24,7 +27,6 @@ use crate::traversal::{
             key::RetractKey,
         },
     },
-    policy::DirectedTraversalPolicy,
 };
 use crate::graph::vertex::{
     child::Child,

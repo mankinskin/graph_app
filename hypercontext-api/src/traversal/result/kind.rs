@@ -1,50 +1,41 @@
 use crate::{
-    direction::Right,
-    traversal::{
+    direction::Right, path::{
+        accessors::{
+            child::{
+                pos::{
+                    RootChildPos,
+                    RootChildPosMut,
+                }, root::GraphRootChild, LeafChild
+            },
+            complete::PathComplete,
+            has_path::{
+                HasRolePath,
+                HasSinglePath,
+            },
+            role::{
+                End,
+                PathRole,
+                Start,
+            },
+            root::GraphRoot,
+        }, mutators::{
+            adapters::into_advanced::IntoAdvanced,
+            append::PathAppend,
+            move_path::root::MoveRootPos,
+        }, structs::{
+            match_end::{
+                MatchEnd,
+                MatchEndPath,
+            }, query_range_path::QueryRangePath, role_path::RolePath, rooted_path::{
+                RootedRolePath,
+                SearchPath,
+            }
+        }, BasePath
+    }, traversal::{
         cache::key::root::RootKey,
-        path::{
-            accessors::{
-                child::{
-                    LeafChild,
-                    pos::{
-                        RootChildPos,
-                        RootChildPosMut,
-                    },
-                    root::GraphRootChild,
-                },
-                complete::PathComplete,
-                has_path::{
-                    HasRolePath,
-                    HasSinglePath,
-                },
-                role::{
-                    End,
-                    PathRole,
-                    Start,
-                },
-                root::GraphRoot,
-            },
-            BasePath,
-            mutators::{
-                adapters::into_advanced::IntoAdvanced,
-                append::PathAppend,
-                move_path::root::MoveRootPos,
-            },
-            structs::{
-                match_end::{
-                    MatchEnd,
-                    MatchEndPath,
-                },
-                role_path::RolePath,
-                rooted_path::{
-                    RootedRolePath,
-                    SearchPath,
-                },
-            },
-        },
         policy::NodePath,
         traversable::Traversable,
-    },
+    }
 };
 use std::hash::Hash;
 use crate::graph::vertex::{
@@ -307,4 +298,4 @@ pub struct BaseResult;
 //    //    }
 //    //}
 //}
-//
+

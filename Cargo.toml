@@ -17,6 +17,7 @@ members = [
   "ngrams",
   "justlog",
   "seqraph",
+  "hypercontext-api",
 ]
 
 [profile.release]

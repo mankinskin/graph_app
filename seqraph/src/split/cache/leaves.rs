@@ -3,10 +3,9 @@ use derive_more::{
     DerefMut,
     From,
 };
-
-use crate::{
+use crate::split::TraceState;
+use hypercontext_api::{
     graph::getters::vertex::VertexSet,
-    split::TraceState,
     traversal::{
         cache::{
             entry::{
@@ -15,9 +14,10 @@ use crate::{
             key::SplitKey,
         },
         traversable::Traversable,
-    }, HashMap
+    },
+    HashMap
 };
-use crate::graph::vertex::child::Child;
+use hypercontext_api::graph::vertex::child::Child;
 
 #[derive(Default, Debug, Deref, DerefMut, From)]
 pub struct Leaves(Vec<SplitKey>);

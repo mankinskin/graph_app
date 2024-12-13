@@ -2,8 +2,8 @@
 //    ParallelBridge,
 //    ParallelIterator,
 //};
-use crate::{
-    search::NoMatch,
+use hypercontext_api::{
+    graph::getters::NoMatch,
     traversal::{
         cache::state::parent::ParentState,
         folder::TraversalFolder,
@@ -17,7 +17,7 @@ use crate::{
 //    ParallelBridge,
 //    ParallelIterator,
 //};
-use crate::graph::vertex::pattern::IntoPattern;
+use hypercontext_api::graph::vertex::pattern::IntoPattern;
 
 #[derive(Clone, Debug)]
 pub struct Searcher<T: Traversable> {

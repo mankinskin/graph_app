@@ -1,14 +1,32 @@
-use crate::{
-    graph::HypergraphRef, join::{context::JoinContext, splits::SplitFrontier}, search::NoMatch, split::cache::{split::Split, SplitCache}, traversal::{
+use std::{ops::ControlFlow, sync::{RwLockReadGuard, RwLockWriteGuard}};
+
+use hypercontext_api::{
+    graph::{
+        getters::NoMatch, vertex::{
+            child::Child,
+            pattern::IntoPattern,
+        }, Hypergraph, HypergraphRef
+    }, path::structs::query_range_path::QueryPath, traversal::{
         cache::key::SplitKey, folder::{
-            state::{FoldResult, FoldState},
+            state::{
+                FoldResult,
+                FoldState,
+            },
             TraversalFolder,
-        }, iterator::traverser::bft::Bft, path::structs::query_range_path::QueryRangePath, policy::DirectedTraversalPolicy, traversable::TraversableMut
+        }, iterator::{traverser::bft::Bft, TraversalIterator}, path::structs::query_range_path::QueryRangePath, policy::DirectedTraversalPolicy, result::{kind::BaseResult, TraversalResult}, traversable::{
+            impl_traversable, impl_traversable_mut, Traversable, TraversableMut
+        }
     }, HashMap
 };
-use crate::graph::vertex::{
-    child::Child,
-    pattern::IntoPattern,
+use crate::{
+    join::{
+        context::JoinContext,
+        splits::SplitFrontier,
+    },
+    split::cache::{
+        split::Split,
+        SplitCache,
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -32,13 +50,14 @@ impl TraversalFolder for InsertContext {
     type Iterator<'a> = Bft<'a, Self, InsertPolicy>;
 }
 
-
-
 impl InsertContext {
     pub fn new(graph: HypergraphRef) -> Self {
         Self { graph }
     }
-    pub fn join(&self, final_splits: &HashMap<SplitKey, Split>) -> JoinContext {
+    pub fn join(
+        &self,
+        final_splits: &HashMap<SplitKey, Split>,
+    ) -> JoinContext {
         JoinContext::new(self.clone().graph_mut(), final_splits)
     }
     pub fn insert_pattern(
@@ -65,19 +84,20 @@ impl InsertContext {
             .join_final_splits(root, &split_cache);
 
         let root_mode = split_cache.root_mode;
-        let x = self.join(&final_splits)
+        let x = self
+            .join(&final_splits)
             .node(root, &split_cache)
             .join_root_partitions(root_mode);
         x
     }
-    //pub fn index_query<
-    //    Q: QueryPath,
-    //>(
-    //    &mut self,
-    //    query: Q,
-    //) -> Result<(Child, Q), NoMatch> {
-    //    self.index_result_kind::<BaseResult, _>(query)
-    //}
+    pub fn index_query<
+        Q: QueryPath,
+    >(
+        &mut self,
+        query: Q,
+    ) -> Result<(Child, Q), NoMatch> {
+        self.index_result_kind::<BaseResult, _>(query)
+    }
     //pub fn index_query_with_origin<
     //    Q: QueryPath,
     //>(
@@ -86,45 +106,45 @@ impl InsertContext {
     //) -> Result<(OriginPath<Child>, Q), NoMatch> {
     //    self.index_result_kind::<OriginPathResult, _>(query)
     //}
-    //pub fn index_result_kind<
-    //    R: ResultKind,
-    //    Q: QueryPath,
-    //>(
-    //    &mut self,
-    //    query: Q,
-    //) -> Result<(<R as ResultKind>::Indexed, Q), NoMatch> {
-    //    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    //    query.hash(&mut hasher);
-    //    let _h = hasher.finish();
-    //    let acc = self.run_indexing::<R, _, IndexingPolicy<T, D, Q, _>, Bft<_, _, _, _, _, _>>(query)?;
-    //    self.finish_result::<R, Q>(acc)
-    //}
-    //fn run_indexing<
-    //    'a,
-    //    R: ResultKind,
-    //    Q: QueryPath,
-    //    S: IndexerTraversalPolicy<T, D, Q, R>,
-    //    Ti: TraversalIterator<'a, T, D, Self, Q, IndexingTraversalPolicy<T, D, Q, R>, R>,
-    //>(
-    //    &'a mut self,
-    //    query_path: Q,
-    //) -> Result<ControlFlow<(<R as ResultKind>::Indexed, Q), Option<TraversalResult<R, Q>>>, NoMatch> {
-    //    let mut acc = ControlFlow::Continue(None);
-    //    let mut stream = Ti::new(self, query_path)
-    //        .ok_or(NoMatch::EmptyPatterns)?;
-    //    while let Some((_depth, node)) = stream.next() {
-    //        match <S::Folder as TraversalFolder<_, _, _, R>>::fold_found(self, acc.continue_value().unwrap(), node) {
-    //            ControlFlow::Continue(c) => {
-    //                acc = ControlFlow::Continue(c);
-    //            },
-    //            ControlFlow::Break(found) => {
-    //                acc = ControlFlow::Break(found);
-    //                break;
-    //            },
-    //        };
-    //    }
-    //    Ok(acc)
-    //}
+    pub fn index_result_kind<
+        R: ResultKind,
+        Q: QueryPath,
+    >(
+        &mut self,
+        query: Q,
+    ) -> Result<(<R as ResultKind>::Indexed, Q), NoMatch> {
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        query.hash(&mut hasher);
+        let _h = hasher.finish();
+        let acc = self.run_indexing::<R, _, InsertPolicy<T, D, Q, _>, Bft<_, _, _, _, _, _>>(query)?;
+        self.finish_result::<R, Q>(acc)
+    }
+    fn run_indexing<
+        'a,
+        R: ResultKind,
+        Q: QueryPath,
+        S: InsertTraversalPolicy<T, D, Q, R>,
+        Ti: TraversalIterator<'a, T, D, Self, Q, InsertTraversalPolicy<T, D, Q, R>, R>,
+    >(
+        &'a mut self,
+        query_path: Q,
+    ) -> Result<ControlFlow<(<R as ResultKind>::Indexed, Q), Option<TraversalResult<R, Q>>>, NoMatch> {
+        let mut acc = ControlFlow::Continue(None);
+        let mut stream = Ti::new(self, query_path)
+            .ok_or(NoMatch::EmptyPatterns)?;
+        while let Some((_depth, node)) = stream.next() {
+            match <S::Folder as TraversalFolder<_, _, _, R>>::fold_found(self, acc.continue_value().unwrap(), node) {
+                ControlFlow::Continue(c) => {
+                    acc = ControlFlow::Continue(c);
+                },
+                ControlFlow::Break(found) => {
+                    acc = ControlFlow::Break(found);
+                    break;
+                },
+            };
+        }
+        Ok(acc)
+    }
 }
 
 impl_traversable! {

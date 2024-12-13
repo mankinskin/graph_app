@@ -4,9 +4,15 @@ use itertools::Itertools;
 use tracing::instrument;
 
 use crate::{
-    graph::vertex::child::Child, insert::side::IndexFront, read::{
-        bands::overlaps::overlap::Overlap, reader::context::ReadContext
-    }, traversal::traversable::TraversableMut
+    insert::side::IndexFront,
+    read::{
+        bands::overlaps::overlap::Overlap,
+        reader::context::ReadContext,
+    },
+};
+use hypercontext_api::{
+    graph::vertex::child::Child,
+    traversal::traversable::TraversableMut,
 };
 
 #[derive(Default, Clone, Debug)]

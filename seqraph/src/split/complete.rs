@@ -6,14 +6,17 @@ use std::{
 use itertools::Itertools;
 
 use crate::{
-    graph::getters::vertex::VertexSet,
     insert::side::{
         IndexBack,
         IndexSide,
     }, join::partition::splits::offset::OffsetSplits, split::{
         cache::builder::SplitCacheBuilder,
         PatternSplitPos,
-    }, traversal::{
+    },
+};
+use hypercontext_api::{
+    graph::getters::vertex::VertexSet,
+    traversal::{
         cache::entry::{
             position::SubSplitLocation, vertex::VertexCache, NodeSplitOutput, NodeType, Offset
         },
@@ -23,9 +26,10 @@ use crate::{
         },
         path::mutators::move_path::key::TokenPosition,
         traversable::Traversable,
-    }, HashSet
+    },
+    HashSet
 };
-use crate::graph::vertex::{
+use hypercontext_api::graph::vertex::{
     child::Child,
     has_vertex_index::HasVertexIndex,
     location::SubLocation,
@@ -33,7 +37,7 @@ use crate::graph::vertex::{
     pattern::id::PatternId,
     wide::Wide,
 };
-use crate::graph::vertex::data::VertexData;
+use hypercontext_api::graph::vertex::data::VertexData;
 
 pub fn position_splits<'a>(
     patterns: impl IntoIterator<Item = (&'a PatternId, &'a Pattern)>,

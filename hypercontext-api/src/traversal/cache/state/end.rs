@@ -1,14 +1,22 @@
-use crate::traversal::{
-    cache::{
-        key::{
-            DirectedKey,
-            root::RootKey,
-            UpKey,
+use crate::{
+    graph::vertex::{
+        child::Child,
+        location::child::ChildLocation,
+        wide::Wide,
+    },
+    traversal::{
+        cache::{
+            key::{
+                DirectedKey,
+                root::RootKey,
+                UpKey,
+            },
+            state::{
+                query::QueryState,
+                StateDirection,
+            },
         },
-        state::{
-            query::QueryState,
-            StateDirection,
-        },
+        result::kind::Primer,
     },
     path::{
         accessors::{
@@ -25,12 +33,6 @@ use crate::traversal::{
             SearchPath,
         },
     },
-    result::kind::Primer,
-};
-use crate::graph::vertex::{
-    child::Child,
-    location::child::ChildLocation,
-    wide::Wide,
 };
 
 // End types:

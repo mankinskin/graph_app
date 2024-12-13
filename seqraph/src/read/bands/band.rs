@@ -1,12 +1,10 @@
 use itertools::Itertools;
 
-use crate::{
-    graph::vertex::{
-        child::Child,
-        pattern::Pattern,
-    },
-    read::reader::context::ReadContext,
+use hypercontext_api::graph::vertex::{
+    child::Child,
+    pattern::Pattern,
 };
+use crate::read::reader::context::ReadContext;
 
 #[derive(Clone, Debug)]
 pub enum BandEnd {

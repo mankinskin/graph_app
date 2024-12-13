@@ -1,28 +1,26 @@
-use crate::{
-    join::{
-        context::pattern::PatternJoinContext,
-        partition::info::{
-            border::{
-                trace::TraceBorders,
-                BorderInfo,
-            },
-            range::{
-                children::InfixChildren,
-                role::{
-                    ChildrenOf,
-                    In,
-                    Join,
-                    ModeChildrenOf,
-                    ModePatternCtxOf,
-                    Post,
-                    Pre,
-                    RangeRole,
-                },
+use crate::join::{
+    context::pattern::PatternJoinContext,
+    partition::info::{
+        border::{
+            trace::TraceBorders,
+            BorderInfo,
+        },
+        range::{
+            children::InfixChildren,
+            role::{
+                ChildrenOf,
+                In,
+                Join,
+                ModeChildrenOf,
+                ModePatternCtxOf,
+                Post,
+                Pre,
+                RangeRole,
             },
         },
     },
-    traversal::cache::key::SplitKey,
 };
+use hypercontext_api::traversal::cache::key::SplitKey;
 
 pub trait JoinBorders<K: RangeRole<Mode = Join>>: TraceBorders<K> {
     fn get_child_splits(

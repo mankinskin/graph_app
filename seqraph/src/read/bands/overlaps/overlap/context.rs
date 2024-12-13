@@ -2,11 +2,16 @@ use std::borrow::Borrow;
 
 use tracing::instrument;
 
-use crate::{
-    direction::insert::InsertDirection, graph::{
+use hypercontext_api::{
+    direction::insert::InsertDirection,
+    graph::{
         kind::DefaultDirection,
         vertex::pattern::Pattern,
-    }, insert::side::IndexBack, read::{
+    },
+};
+use crate::{
+    insert::side::IndexBack,
+    read::{
         bands::overlaps::overlap::{chain::OverlapChain, OverlapLink}, reader::context::ReadContext
     }
 };

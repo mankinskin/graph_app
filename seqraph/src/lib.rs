@@ -11,13 +11,14 @@
 #![feature(associated_type_defaults)]
 //#![feature(return_position_impl_trait_in_trait)]
 
+#[macro_use]
+extern crate hypercontext_api;
+
 extern crate test;
 
 pub mod direction;
-pub mod graph;
 pub mod insert;
 pub mod search;
-pub mod traversal;
 //pub mod logger;
 pub mod mock;
 pub mod split;

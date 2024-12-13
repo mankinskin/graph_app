@@ -6,9 +6,11 @@ use complete::*;
 use crate::{
     HashMap,
     join::partition::splits::offset::OffsetSplits,
-    traversal::cache::entry::position::SubSplitLocation,
 };
-use crate::graph::vertex::pattern::id::PatternId;
+use hypercontext_api::{
+    traversal::cache::entry::position::SubSplitLocation,
+    graph::vertex::pattern::id::PatternId,
+};
 
 pub mod augment;
 pub mod cache;

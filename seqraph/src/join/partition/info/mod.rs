@@ -28,7 +28,7 @@ use crate::{
         },
     },
 };
-use crate::graph::vertex::{
+use hypercontext_api::graph::vertex::{
     child::Child,
     pattern::id::PatternId,
 };

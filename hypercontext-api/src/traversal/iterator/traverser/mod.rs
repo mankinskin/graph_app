@@ -1,15 +1,16 @@
-pub mod dft;
 
 use itertools::Itertools;
+use pruning::{PruningMap, PruningState};
 use std::{
     cmp::Ordering,
     fmt::Debug,
 };
 
+pub mod dft;
 pub mod bft;
 pub mod pruning;
 
-use crate::traversal::{
+use crate::{graph::vertex::wide::Wide, traversal::{
     cache::{
         key::root::RootKey,
         state::TraversalState,
@@ -19,11 +20,10 @@ use crate::traversal::{
     iterator::TraversalIterator,
     policy::DirectedTraversalPolicy,
     traversable::Traversable,
-};
-use pruning::*;
+}};
 use crate::graph::vertex::location::child::ChildLocation;
 
-pub trait TraversalOrder: crate::graph::vertex::wide::Wide {
+pub trait TraversalOrder: Wide {
     fn sub_index(&self) -> usize;
     fn cmp(
         &self,

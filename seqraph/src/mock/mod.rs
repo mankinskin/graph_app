@@ -1,7 +1,7 @@
 //pub mod gen_graph;
 //use gen_graph::*;
 
-use crate::graph::vertex::{
+use hypercontext_api::graph::vertex::{
     child::Child,
     pattern::Pattern,
 };

@@ -24,7 +24,7 @@ use crate::join::{
         JoinPartition,
     },
 };
-use crate::graph::vertex::{
+use hypercontext_api::graph::vertex::{
     child::Child,
     pattern::{
         IntoPattern,

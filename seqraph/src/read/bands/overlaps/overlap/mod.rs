@@ -1,11 +1,8 @@
 
 use band::{BandEnd, OverlapBand};
 
-use crate::{
-    read::{bands::band, reader::context::ReadContext},
-    traversal::path::{accessors::role::{End, Start}, structs::{match_end::MatchEnd, role_path::RolePath, rooted_path::RootedRolePath}},
-};
-
+use crate::read::{bands::band, reader::context::ReadContext};
+use hypercontext_api::traversal::path::{accessors::role::{End, Start}, structs::{match_end::MatchEnd, role_path::RolePath, rooted_path::RootedRolePath}};
 pub mod cache;
 pub mod chain;
 pub mod context;

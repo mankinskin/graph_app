@@ -1,3 +1,4 @@
+#[macro_use]
 #[cfg(test)]
 pub mod vkey {
     use crate::traversal::traversable::{
@@ -85,12 +86,13 @@ pub mod vkey {
             write!(f, "{}", self.label)
         }
     }
+    #[macro_export]
     macro_rules! lab {
         ($x:ident) => {
             crate::traversal::cache::labelled_key::vkey::LabelledKey::new($x, stringify!($x))
         };
     }
-    pub(crate) use lab;
+    pub use lab;
 }
 
 #[cfg(not(test))]

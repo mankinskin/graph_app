@@ -3,17 +3,30 @@ use std::iter::FromIterator;
 use itertools::*;
 use pretty_assertions::assert_eq;
 
-use crate::{
+use hypercontext_api::{
     graph::{
-        kind::BaseGraphKind, tests::{
-            context,
-            Context,
-        }, vertex::location::{child::ChildLocation, pattern::PatternLocation}, HypergraphRef
-    }, search::{NoMatch, Searchable}, traversal::{
+        kind::BaseGraphKind,
+        vertex::{
+            child::Child,
+            token::Token,
+            location::{
+                SubLocation,
+                child::ChildLocation,
+                pattern::PatternLocation,
+            },
+        },
+        HypergraphRef,
+    },
+    traversal::{
         cache::{
-            entry::{position::{Edges, PositionCache}, vertex::VertexCache},
+            entry::{
+                position::{
+                    Edges,
+                    PositionCache,
+                },
+                vertex::VertexCache,
+            },
             key::DirectedKey,
-            labelled_key::vkey::lab,
             state::{
                 end::{
                     EndKind,
@@ -42,13 +55,14 @@ use crate::{
                 SubPath,
             },
         },
-        result::TraversalResult, traversable::Traversable,
-    }, HashMap, HashSet
+        result::TraversalResult,
+        traversable::Traversable,
+    },
 };
-use crate::graph::vertex::{
-    child::Child,
-    location::SubLocation,
-    token::Token,
+use crate::{
+    search::Searchable,
+    HashMap,
+    HashSet,
 };
 
 //#[test]
@@ -202,7 +216,7 @@ fn find_ancestor1() {
 
 #[test]
 fn find_ancestor2() {
-    let mut graph = crate::graph::Hypergraph::<BaseGraphKind>::default();
+    let mut graph = hypercontext_api::graph::Hypergraph::<BaseGraphKind>::default();
     let (a, b, _w, x, y, z) = graph
         .insert_tokens([
             Token::Element('a'),
@@ -394,7 +408,7 @@ fn find_ancestor2() {
 
 #[test]
 fn find_ancestor3() {
-    let mut graph = crate::graph::Hypergraph::<BaseGraphKind>::default();
+    let mut graph = hypercontext_api::graph::Hypergraph::<BaseGraphKind>::default();
     let (a, b, _w, x, y, z) = graph
         .insert_tokens([
             Token::Element('a'),

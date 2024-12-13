@@ -9,7 +9,7 @@ use crate::join::partition::info::range::role::{
     PreVisitMode,
     RangeRole,
 };
-use crate::graph::vertex::{
+use hypercontext_api::graph::vertex::{
     child::Child,
     pattern::{
         IntoPattern,

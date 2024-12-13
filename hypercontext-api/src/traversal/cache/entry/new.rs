@@ -1,24 +1,27 @@
-use crate::traversal::{
-    cache::{
-        key::{
-            DirectedKey,
-            prev::PrevKey,
-            root::RootKey,
-            target::TargetKey,
-            UpKey,
-        },
-        state::{
-            child::ChildState,
-            end::{
-                EndKind,
-                EndState,
-                RangeEnd,
+use crate::{
+    traversal::{
+        cache::{
+            key::{
+                DirectedKey,
+                prev::PrevKey,
+                root::RootKey,
+                target::TargetKey,
+                UpKey,
             },
-            InnerKind,
-            parent::ParentState,
-            StateDirection,
-            TraversalState,
+            state::{
+                child::ChildState,
+                end::{
+                    EndKind,
+                    EndState,
+                    RangeEnd,
+                },
+                InnerKind,
+                parent::ParentState,
+                StateDirection,
+                traversal::TraversalState,
+            },
         },
+        result::kind::RoleChildPath,
     },
     path::accessors::{
         child::root::GraphRootChild,
@@ -27,7 +30,6 @@ use crate::traversal::{
             Start,
         },
     },
-    result::kind::RoleChildPath,
 };
 use crate::graph::vertex::location::child::ChildLocation;
 

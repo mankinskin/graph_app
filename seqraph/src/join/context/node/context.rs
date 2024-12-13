@@ -9,7 +9,6 @@ use derive_more::{
 use linked_hash_map::LinkedHashMap;
 
 use crate::{
-    graph::{vertex::{location::SubLocation, wide::Wide}, Hypergraph},
     join::{
         context::{
             node::merge::NodeMergeContext,
@@ -27,15 +26,26 @@ use crate::{
         },
         Infix, JoinContext, JoinedPartition, Postfix, Prefix
     },
-    split::{cache::vertex::SplitVertexCache, complete::position_splits}, traversal::folder::state::RootMode,
+    split::{cache::vertex::SplitVertexCache, complete::position_splits},
 };
-use crate::graph::vertex::{
-    child::Child,
-    ChildPatterns,
-    pattern::id::PatternId,
+use hypercontext_api::{
+    traversal::{
+       cache::key::SplitKey,
+       folder::state::RootMode,
+    },
+    graph::{
+        vertex::{
+            location::SubLocation,
+            wide::Wide,
+            child::Child,
+            ChildPatterns,
+            pattern::id::PatternId,
+        },
+        Hypergraph
+    },
 };
 
-use crate::{split::cache::split::Split, traversal::cache::key::SplitKey};
+use crate::split::cache::split::Split;
 
 #[derive(Debug, Clone, Copy)]
 pub struct NodeTraceContext<'p> {

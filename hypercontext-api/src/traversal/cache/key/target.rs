@@ -17,7 +17,7 @@ use crate::traversal::cache::{
         },
         parent::ParentState,
         InnerKind,
-        TraversalState,
+        traversal::TraversalState,
     },
 };
 

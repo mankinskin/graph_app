@@ -11,11 +11,26 @@ use derive_more::{
     Deref,
     DerefMut,
 };
-
 use crate::{
-    graph::{getters::vertex::VertexSet, Hypergraph}, join::context::node::context::NodeTraceContext, split::cache::{
+    split::cache::{
         cleaned_position_splits, leaves::Leaves, vertex::SplitVertexCache, CacheContext, SplitCache, SplitPositionCache, TraceState
-    }, traversal::{
+    },
+    join::context::node::context::NodeTraceContext,
+};
+use hypercontext_api::{
+    graph::{
+        getters::vertex::VertexSet,
+        Hypergraph,
+        vertex::{
+            child::{
+                Child,
+                ChildWidth,
+            },
+            has_vertex_index::HasVertexIndex,
+            wide::Wide,
+        }
+    },
+    traversal::{
         cache::{
             entry::{
                 position::SubSplitLocation, InnerNode, RootNode
@@ -31,15 +46,8 @@ use crate::{
             Traversable,
             TraversableMut,
         },
-    }, HashMap
-};
-use crate::graph::vertex::{
-    child::{
-        Child,
-        ChildWidth,
     },
-    has_vertex_index::HasVertexIndex,
-    wide::Wide,
+    HashMap,
 };
 
 #[derive(Debug, Deref, DerefMut)]

@@ -10,9 +10,12 @@ use crate::{
     },
     split::cache::SplitCache,
 };
-use crate::graph::vertex::{
-    child::Child,
-    has_vertex_index::HasVertexIndex,
+use hypercontext_api::graph::{
+    Hypergraph,
+    vertex::{
+        child::Child,
+        has_vertex_index::HasVertexIndex,
+    },
 };
 
 pub mod node;
@@ -21,13 +24,13 @@ pub mod pattern;
 
 #[derive(Debug)]
 pub struct JoinContext<'p> {
-    pub graph: RwLockWriteGuard<'p, crate::graph::Hypergraph>,
+    pub graph: RwLockWriteGuard<'p, Hypergraph>,
     pub sub_splits: &'p SubSplits,
 }
 
 impl<'p> JoinContext<'p> {
     pub fn new<SS: HasSubSplits>(
-        graph: RwLockWriteGuard<'p, crate::graph::Hypergraph>,
+        graph: RwLockWriteGuard<'p, Hypergraph>,
         sub_splits: &'p SS,
     ) -> Self {
         Self {

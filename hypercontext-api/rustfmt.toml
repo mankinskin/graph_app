@@ -1,0 +1,4 @@
+imports_indent = "Block"
+imports_layout = "Vertical"
+fn_params_layout = "Vertical"
+merge_imports = true

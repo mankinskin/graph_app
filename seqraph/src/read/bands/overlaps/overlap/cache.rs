@@ -1,11 +1,13 @@
-use crate::{
-    graph::vertex::{
-        child::Child,
-        wide::Wide,
+use hypercontext_api::graph::vertex::{
+    child::Child,
+    wide::Wide,
+};
+use crate::read::{
+    bands::{
+        band::{OverlapBand, OverlapBundle},
+        overlaps::overlap::{chain::OverlapChain, Overlap}
     },
-    read::{
-        bands::{band::{OverlapBand, OverlapBundle}, overlaps::overlap::{chain::OverlapChain, Overlap}}, reader::context::ReadContext
-    },
+    reader::context::ReadContext,
 };
 
 #[derive(Default, Clone, Debug)]

@@ -22,7 +22,7 @@ use super::{
     TokenPosition,
 };
 
-pub(crate) mod pattern_range;
+pub mod pattern_range;
 pub mod id;
 
 pub type Pattern = Vec<Child>;

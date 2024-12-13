@@ -7,7 +7,6 @@ use std::{
 use itertools::Itertools;
 
 use crate::{
-    graph::Hypergraph,
     join::{
         context::node::context::NodeTraceContext,
         partition::{
@@ -37,12 +36,15 @@ use crate::{
         },
         position_splits,
     },
+};
+use hypercontext_api::{
+    graph::Hypergraph,
     traversal::{
         cache::key::SplitKey,
         folder::state::RootMode,
     },
 };
-use crate::graph::vertex::{
+use hypercontext_api::graph::vertex::{
     child::Child,
     has_vertex_index::HasVertexIndex,
 };

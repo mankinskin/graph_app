@@ -1,10 +1,13 @@
 use itertools::Itertools;
 use std::fmt::Debug;
 
-use crate::traversal::{
-    cache::state::parent::ParentState,
-    folder::TraversalFolder,
-    iterator::traverser::TraversalOrder,
+use crate::{
+    traversal::{
+        cache::state::parent::ParentState,
+        folder::TraversalFolder,
+        iterator::traverser::TraversalOrder,
+        traversable::Traversable,
+    },
     path::{
         accessors::{
             child::root::RootChild,
@@ -12,7 +15,6 @@ use crate::traversal::{
         },
         mutators::raise::PathRaise,
     },
-    traversable::Traversable,
 };
 use crate::graph::vertex::{
     child::Child,

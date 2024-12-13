@@ -1,14 +1,16 @@
 use context::*;
 
-use crate::{
-    graph::HypergraphRef,
-    search::NoMatch,
+use hypercontext_api::{
     traversal::path::structs::query_range_path::QueryRangePath,
-};
-use crate::graph::vertex::{
-    child::Child,
-    location::child::ChildLocation,
-    pattern::IntoPattern,
+    graph::{
+        HypergraphRef,
+        getters::NoMatch,
+        vertex::{
+            child::Child,
+            location::child::ChildLocation,
+            pattern::IntoPattern,
+        },
+    },
 };
 
 pub mod context;

@@ -4,25 +4,23 @@ use std::{
     num::NonZeroUsize,
 };
 
-use crate::{
-    split::{
-        cache::{
-            leaves::Leaves,
-            position::SplitPositionCache,
-        },
-        cleaned_position_splits,
-        TraceState,
+use crate::split::{
+    cache::{
+        leaves::Leaves,
+        position::SplitPositionCache,
     },
-    traversal::{
-        cache::{
-            entry::position::SubSplitLocation,
-            key::SplitKey,
-        },
-        traversable::Traversable,
-    },
+    cleaned_position_splits,
+    TraceState,
 };
-use crate::graph::vertex::child::Child;
-use crate::graph::getters::vertex::VertexSet;
+use hypercontext_api::traversal::{
+    cache::{
+        entry::position::SubSplitLocation,
+        key::SplitKey,
+    },
+    traversable::Traversable,
+};
+use hypercontext_api::graph::vertex::child::Child;
+use hypercontext_api::graph::getters::vertex::VertexSet;
 
 #[derive(Debug)]
 pub struct CacheContext {

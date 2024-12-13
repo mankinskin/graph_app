@@ -1,5 +1,3 @@
-use crate::traversal::path::mutators::move_path::key::TokenPosition;
-
 pub mod leaf;
 pub mod pos;
 pub mod prev;
@@ -18,13 +16,16 @@ use std::{
     },
 };
 
-use crate::traversal::cache::state::child::ChildState;
 use leaf::*;
 use pos::*;
 use root::*;
-use crate::graph::vertex::{
-    child::Child,
-    wide::Wide,
+use crate::{
+    path::mutators::move_path::key::TokenPosition,
+    traversal::cache::state::child::ChildState,
+    graph::vertex::{
+        child::Child,
+        wide::Wide,
+    },
 };
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, From)]

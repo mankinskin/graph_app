@@ -5,7 +5,7 @@ use derive_more::{
 };
 
 use crate::join::partition::splits::SubSplits;
-use crate::graph::vertex::{
+use hypercontext_api::graph::vertex::{
     location::pattern::PatternLocation,
     pattern::Pattern,
     pattern::id::PatternId,

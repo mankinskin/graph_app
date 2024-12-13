@@ -1,5 +1,5 @@
 
-use crate::{
+use hypercontext_api::{
     graph::{
         kind::DefaultToken,
         vertex::{
@@ -9,8 +9,8 @@ use crate::{
         HypergraphRef,
     },
     traversal::traversable::TraversableMut,
-    read::reader::context::ReadContext,
 };
+use crate::read::reader::context::ReadContext;
 
 pub mod reader;
 pub mod sequence;

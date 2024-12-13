@@ -3,7 +3,7 @@ use std::{
     num::NonZeroUsize,
 };
 
-use crate::graph::vertex::{
+use hypercontext_api::graph::vertex::{
     pattern::IntoPattern,
     wide::Wide,
 };
@@ -81,7 +81,7 @@ mod tests {
         },
         mock,
     };
-    use crate::graph::vertex::{
+    use hypercontext_api::graph::vertex::{
         child::Child,
         pattern::pattern_width,
     };

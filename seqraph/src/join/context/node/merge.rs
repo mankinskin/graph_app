@@ -32,6 +32,8 @@ use crate::{
         },
     },
     split::cache::split::Split,
+};
+use hypercontext_api::{
     traversal::cache::key::SplitKey,
     graph::vertex::{
         child::Child,

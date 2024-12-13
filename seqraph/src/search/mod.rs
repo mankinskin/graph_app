@@ -1,6 +1,4 @@
-use searcher::*;
-
-use crate::{
+use hypercontext_api::{
     graph::{
         kind::TokenOf,
         vertex::{
@@ -44,7 +42,7 @@ pub trait Searchable: Traversable
     fn find_ancestor(
         &self,
         pattern: impl IntoIterator<
-            Item = impl crate::graph::vertex::has_vertex_index::HasVertexIndex,
+            Item = impl hypercontext_api::graph::vertex::has_vertex_index::HasVertexIndex,
         >,
     ) -> SearchResult
     {
@@ -54,7 +52,7 @@ pub trait Searchable: Traversable
     fn find_parent(
         &self,
         pattern: impl IntoIterator<
-            Item = impl crate::graph::vertex::has_vertex_index::HasVertexIndex,
+            Item = impl hypercontext_api::graph::vertex::has_vertex_index::HasVertexIndex,
         >,
     ) -> SearchResult
     {

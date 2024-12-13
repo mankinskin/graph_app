@@ -20,7 +20,7 @@ use crate::{
     },
     split::PatternSplitPos,
 };
-use crate::graph::vertex::{
+use hypercontext_api::graph::vertex::{
     pattern::Pattern,
     wide::Wide,
 };

@@ -14,12 +14,12 @@ use crate::{
         ToVertexSplitPos,
         VertexSplitPos,
     },
-    traversal::cache::{
-        entry::position::SubSplitLocation,
-        key::SplitKey,
-    },
 };
-use crate::graph::vertex::{
+use hypercontext_api::traversal::cache::{
+    entry::position::SubSplitLocation,
+    key::SplitKey,
+};
+use hypercontext_api::graph::vertex::{
     location::SubLocation,
     pattern::id::PatternId,
 };

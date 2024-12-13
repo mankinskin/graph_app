@@ -5,8 +5,11 @@ use derive_more::{Deref, DerefMut};
 use itertools::Itertools;
 use linked_hash_set::LinkedHashSet;
 
-use crate::{graph::vertex::{child::Child, wide::Wide}, join::JoinContext, split::cache::{split::Split, SplitCache}, traversal::cache::key::SplitKey, HashMap};
-
+use crate::{join::JoinContext, split::cache::{split::Split, SplitCache}, HashMap};
+use hypercontext_api::{
+    graph::vertex::{child::Child, wide::Wide},
+    traversal::cache::key::SplitKey, 
+};
 
 #[derive(Debug, Default, Deref, DerefMut)]
 pub struct SplitFrontier {

@@ -14,7 +14,7 @@ use crate::{
     },
     split::PatternSplitPos,
 };
-use crate::graph::vertex::pattern::{
+use hypercontext_api::graph::vertex::pattern::{
     Pattern,
     pattern_pre_ctx_width,
 };

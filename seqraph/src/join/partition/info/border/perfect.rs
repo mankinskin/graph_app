@@ -9,7 +9,7 @@ use derive_more::{
     Into,
 };
 
-use crate::graph::vertex::pattern::id::PatternId;
+use hypercontext_api::graph::vertex::pattern::id::PatternId;
 
 pub trait BoolPerfect: Default + Debug + Clone {
     type Result: BorderPerfect<Boolean = Self>;

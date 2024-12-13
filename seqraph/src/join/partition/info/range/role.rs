@@ -56,7 +56,7 @@ use crate::{
     },
     split::cache::vertex::SplitVertexCache,
 };
-use crate::graph::vertex::{
+use hypercontext_api::graph::vertex::{
     child::Child,
     pattern::pattern_range::PatternRangeIndex,
 };

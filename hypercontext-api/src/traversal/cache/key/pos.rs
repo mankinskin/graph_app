@@ -1,5 +1,5 @@
-use crate::traversal::{
-    cache::state::{
+use crate::{
+    traversal::cache::state::{
         child::ChildState,
         end::EndState,
         parent::ParentState,

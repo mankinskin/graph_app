@@ -1,50 +1,48 @@
-use crate::{graph::getters::NoMatch, traversal::{
-    cache::{
-        key::{
-            root::RootKey, DirectedKey
-        },
-        state::{
-            end::{
-                EndKind,
-                EndReason,
-                EndState,
-            }, query::QueryState, NextStates, StateNext
-        },
-        TraversalCache,
-    },
-    context::{
-        QueryContext,
-        TraversalContext,
-    },
-    folder::state::{
-        FinalState, FoldResult, FoldState
-    },
-    iterator::{
-        traverser::{
-            pruning::PruneStates, ExtendStates
-        }, TraversalIterator
-    },
+use crate::{graph::getters::NoMatch,
     path::{
         accessors::role::End,
         structs::query_range_path::QueryRangePath,
     },
-    result::{
-        kind::RoleChildPath, TraversalResult
+    traversal::{
+        cache::{
+            key::{
+                root::RootKey, DirectedKey
+            },
+            state::{
+                end::{
+                    EndKind,
+                    EndReason,
+                }, query::QueryState, NextStates, StateNext
+            },
+            TraversalCache,
+        },
+        context::{
+            QueryContext,
+            TraversalContext,
+        },
+        folder::state::{
+            FinalState, FoldResult, FoldState
+        },
+        iterator::{
+            traverser::{
+                pruning::PruneStates, ExtendStates
+            }, TraversalIterator
+        },
+        result::{
+            kind::RoleChildPath, TraversalResult
+        },
+        traversable::Traversable,
     },
-    traversable::Traversable,
-}};
-use std::{
-    borrow::Borrow,
-    cmp::Ordering,
 };
+use std::borrow::Borrow;
 use crate::graph::vertex::{
     pattern::IntoPattern,
     wide::Wide,
 };
 
-pub mod state;
+use super::trace::Trace;
 
-use super::cache::trace::Trace;
+pub mod state;
 
 pub trait TraversalFolder: Sized + Traversable {
     type Iterator<'a>: TraversalIterator<'a, Trav = Self> + From<&'a Self>
@@ -55,7 +53,8 @@ pub trait TraversalFolder: Sized + Traversable {
     fn fold_pattern<P: IntoPattern>(
         &self,
         query_pattern: P,
-    ) -> Result<TraversalResult, (NoMatch, QueryRangePath)> {
+    ) -> Result<TraversalResult, (NoMatch, QueryRangePath)>
+    {
         let query_pattern = query_pattern.into_pattern();
         //debug!("fold {:?}", query_pattern);
         let query = QueryState::new::<Self::Kind, _>(query_pattern.borrow())
@@ -64,14 +63,16 @@ pub trait TraversalFolder: Sized + Traversable {
             .clone()
             .to_rooted(query_pattern.clone());
         let query_root = QueryContext::new(query_pattern);
-        self.fold_query(query_root, query_range_path)
+        self.fold_query(query_root, query_range_path, query)
     }
     //#[instrument(skip(self))]
     fn fold_query(
         &self,
         query_root: QueryContext,
         query_range_path: QueryRangePath,
-    ) -> Result<TraversalResult, (NoMatch, QueryRangePath)> {
+        query: QueryState,
+    ) -> Result<TraversalResult, (NoMatch, QueryRangePath)>
+    {
         let start_index = query_range_path
             .role_leaf_child::<End, _>(self);
 

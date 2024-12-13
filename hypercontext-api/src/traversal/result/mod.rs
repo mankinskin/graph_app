@@ -1,5 +1,5 @@
-use crate::traversal::{
-    folder::state::FoldResult,
+use crate::{
+    traversal::folder::state::FoldResult,
     path::{
         accessors::complete::PathComplete,
         structs::query_range_path::{

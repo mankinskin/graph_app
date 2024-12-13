@@ -11,10 +11,8 @@ use std::{
 
 use crate::{
     graph::{
-        kind::{
-            BaseGraphKind,
-            GraphKind,
-        }, HypergraphRef,
+        kind::GraphKind,
+        HypergraphRef,
         Hypergraph,
     },
     traversal::{
@@ -26,13 +24,13 @@ use crate::{
         },
     },
 };
-
+#[macro_export]
 macro_rules! impl_traversable {
     {
         impl $(< $( $par:ident $( : $bhead:tt $( + $btail:tt )*)? ),* >)? for $target:ty, $self_:ident => $func:expr; <$lt:lifetime> $guard:ty
     } => {
         impl <$( $( $par $(: $bhead $( + $btail )* )? ),* )?> Traversable for $target {
-            type Kind = BaseGraphKind;
+            type Kind = $crate::graph::kind::BaseGraphKind;
             type Guard<$lt> = $guard where Self: $lt, Self::Kind: $lt;
             fn graph(&$self_) -> Self::Guard<'_> {
                 $func
@@ -40,6 +38,7 @@ macro_rules! impl_traversable {
         }
     }
 }
+#[macro_export]
 macro_rules! impl_traversable_mut {
     {
         impl $(< $( $par:ident $( : $bhead:tt $( + $btail:tt )*)? ),* >)? for $target:ty, $self_:ident => $func:expr; <$lt:lifetime> $guard:ty
@@ -52,8 +51,8 @@ macro_rules! impl_traversable_mut {
         }
     }
 }
-pub(crate) use impl_traversable;
-pub(crate) use impl_traversable_mut;
+pub use impl_traversable;
+pub use impl_traversable_mut;
 
 pub trait Traversable: Sized + std::fmt::Debug {
     type Kind: GraphKind;

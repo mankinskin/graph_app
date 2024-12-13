@@ -12,8 +12,9 @@ use tracing::{
     instrument,
 };
 
-use crate::{
-    direction::Right, graph::{
+use hypercontext_api::{
+    direction::Right,
+    graph::{
         vertex::{
             child::Child,
             has_vertex_data::HasVertexDataMut,
@@ -27,10 +28,8 @@ use crate::{
             },
         },
         Hypergraph, HypergraphRef,
-    }, insert::context::InsertContext, read::sequence::{
-        SequenceIter,
-        ToNewTokenIndices,
-    }, search::NoMatch, traversal::{
+    },
+    traversal::{
         path::{
             mutators::move_path::Advance,
             structs::query_range_path::{
@@ -40,6 +39,12 @@ use crate::{
         },
         traversable::TraversableMut,
     }
+};
+use crate::{
+    insert::context::InsertContext, read::sequence::{
+        SequenceIter,
+        ToNewTokenIndices,
+    },
 };
 pub mod band;
 pub mod overlaps;

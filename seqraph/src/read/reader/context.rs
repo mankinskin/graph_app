@@ -1,4 +1,10 @@
-use std::borrow::Borrow;
+use std::{
+    borrow::Borrow,
+    sync::{
+        RwLockReadGuard,
+        RwLockWriteGuard,
+    },
+};
 
 use tracing::{
     debug,
@@ -6,7 +12,19 @@ use tracing::{
 };
 
 use crate::{
-    direction::Right, graph::{
+    insert::context::InsertContext,
+    read::{
+        bands::BandsContext,
+        sequence::{
+            SequenceIter,
+            ToNewTokenIndices,
+        },
+    },
+};
+use hypercontext_api::{
+    direction::Right,
+    graph::{
+        getters::NoMatch,
         vertex::{
             child::Child,
             has_vertex_data::HasVertexDataMut,
@@ -19,24 +37,18 @@ use crate::{
                 Pattern,
             },
         },
-        Hypergraph, HypergraphRef,
+        Hypergraph,
+        HypergraphRef,
     },
-    insert::context::InsertContext, read::{
-        bands::BandsContext,
-        sequence::{
-            SequenceIter,
-            ToNewTokenIndices,
+    traversal::{
+        path::structs::query_range_path::PatternPrefixPath,
+        traversable::{
+            impl_traversable,
+            impl_traversable_mut,
+            Traversable,
+            TraversableMut,
         },
-    }, search::NoMatch, traversal::{
-        path::{
-            mutators::move_path::Advance,
-            structs::query_range_path::{
-                PatternPrefixPath,
-                QueryPath,
-            },
-        },
-        traversable::TraversableMut,
-    }
+    },
 };
 
 #[derive(Debug)]

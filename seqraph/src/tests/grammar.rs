@@ -8,11 +8,11 @@ use std::{
 use derive_more::Deref;
 use derive_new::new;
 
-use crate::graph::getters::vertex::VertexSet;
+use hypercontext_api::graph::getters::vertex::VertexSet;
 use crate::HashMap;
-use crate::graph::vertex::{child::Child, has_vertex_index::HasVertexIndex, location::child::ChildLocation, pattern::Pattern, VertexIndex, wide::Wide};
-use crate::graph::vertex::data::VertexData;
-use crate::graph::vertex::pattern::id::PatternId;
+use hypercontext_api::graph::vertex::{child::Child, has_vertex_index::HasVertexIndex, location::child::ChildLocation, pattern::Pattern, VertexIndex, wide::Wide};
+use hypercontext_api::graph::vertex::data::VertexData;
+use hypercontext_api::graph::vertex::pattern::id::PatternId;
 
 type BuildKey = RangeInclusive<usize>;
 
@@ -38,7 +38,7 @@ pub fn test_grammar() {
         * (std::mem::size_of::<VertexData>()
             + std::mem::size_of::<VertexIndex>())
         + 4 * g.vertex_count()
-            * (std::mem::size_of::<Child>() + std::mem::size_of::<crate::graph::vertex::parent::Parent>());
+            * (std::mem::size_of::<Child>() + std::mem::size_of::<hypercontext_api::graph::vertex::parent::Parent>());
     println!("total MB = {}", num_bytes as u32 / 10_u32.pow(6),);
     println!("mul = {}", num_bytes / N,);
 }
@@ -65,7 +65,7 @@ impl BuilderNode {
 struct GraphBuilder {
     range_map: HashMap<BuildKey, usize>,
     queue: VecDeque<BuilderNode>,
-    graph: crate::graph::Hypergraph,
+    graph: hypercontext_api::graph::Hypergraph,
     N: usize,
 }
 
@@ -141,7 +141,7 @@ impl GraphBuilder {
     pub fn saturated_grammar(
         mut self,
         k: usize,
-    ) -> crate::graph::Hypergraph {
+    ) -> hypercontext_api::graph::Hypergraph {
         self.fill_grammar();
         let mut ctx = RewireContext::new(k, self);
         ctx.rewire_grammar();
@@ -242,7 +242,7 @@ impl RewireContext {
 fn worst_case_grammar(
     N: usize,
     k: usize,
-) -> crate::graph::Hypergraph {
+) -> hypercontext_api::graph::Hypergraph {
     GraphBuilder::new(N).saturated_grammar(k)
 }
 

@@ -14,9 +14,9 @@ use crate::{
         },
         VertexSplitPos,
     },
-    traversal::cache::key::SplitKey,
     HashMap,
 };
+use hypercontext_api::traversal::cache::key::SplitKey;
 
 pub mod offset;
 

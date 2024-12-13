@@ -7,10 +7,13 @@ use itertools::*;
 use maplit::hashset;
 use pretty_assertions::assert_eq;
 
-use crate::{
-    graph::{getters::vertex::VertexSet, kind::BaseGraphKind},
-    search::Searchable,
-    traversal::{
+use crate::search::Searchable;
+use hypercontext_api::{
+    graph::{
+        getters::vertex::VertexSet, kind::BaseGraphKind, vertex::{
+            child::Child, token::Token, wide::Wide
+        }, Hypergraph, HypergraphRef
+    }, traversal::{
         folder::state::FoldResult,
         path::structs::query_range_path::{
             QueryPath,
@@ -18,17 +21,12 @@ use crate::{
         },
         result::TraversalResult,
         traversable::Traversable,
-    },
+    }
 };
-use crate::graph::vertex::{
-    token::Token,
-    wide::Wide,
-};
-use super::*;
 
 #[test]
 fn index_pattern1() {
-    let mut graph = crate::graph::Hypergraph::<BaseGraphKind>::default();
+    let mut graph = Hypergraph::<BaseGraphKind>::default();
     let (a, b, _w, x, y, z) = graph
         .insert_tokens([
             Token::Element('a'),
@@ -83,7 +81,7 @@ fn index_pattern1() {
 
 #[test]
 fn index_pattern2() {
-    let mut graph = crate::graph::Hypergraph::<BaseGraphKind>::default();
+    let mut graph = hypercontext_api::graph::Hypergraph::<BaseGraphKind>::default();
     let (a, b, _w, x, y, z) = graph
         .insert_tokens([
             Token::Element('a'),
@@ -140,7 +138,7 @@ fn index_pattern2() {
 
 #[test]
 fn index_infix1() {
-    let mut graph = crate::graph::Hypergraph::<BaseGraphKind>::default();
+    let mut graph = hypercontext_api::graph::Hypergraph::<BaseGraphKind>::default();
     let (a, b, w, x, y, z) = graph
         .insert_tokens([
             Token::Element('a'),
@@ -215,7 +213,7 @@ fn index_infix1() {
 
 #[test]
 fn index_infix2() {
-    let mut graph = crate::graph::Hypergraph::<BaseGraphKind>::default();
+    let mut graph = hypercontext_api::graph::Hypergraph::<BaseGraphKind>::default();
     let (a, b, c, d, x, y) = graph
         .insert_tokens([
             Token::Element('a'),

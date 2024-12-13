@@ -7,7 +7,7 @@ use std::{
 use tap::Tap;
 use tracing::instrument;
 
-use crate::{
+use hypercontext_api::{
     direction::r#match::MatchDirection,
     graph::{
         getters::vertex::VertexSet,
@@ -19,6 +19,27 @@ use crate::{
             wide::Wide,
         },
     },
+    traversal::{
+        iterator::bands::{
+            BandIterator,
+            PostfixIterator,
+        },
+        path::{
+            accessors::role::End,
+            mutators::append::PathAppend,
+            structs::{
+                overlap_primer::OverlapPrimer,
+                query_range_path::PatternPrefixPath,
+                role_path::RolePath,
+            },
+        },
+        traversable::{
+            Traversable,
+            TraversableMut,
+        },
+    },
+};
+use crate::{
     insert::{
         side::{
             IndexBack,
@@ -40,25 +61,6 @@ use crate::{
             },
         },
         reader::context::ReadContext,
-    },
-    traversal::{
-        iterator::bands::{
-            BandIterator,
-            PostfixIterator,
-        },
-        path::{
-            accessors::role::End,
-            mutators::append::PathAppend,
-            structs::{
-                overlap_primer::OverlapPrimer,
-                query_range_path::PatternPrefixPath,
-                role_path::RolePath,
-            },
-        },
-        traversable::{
-            Traversable,
-            TraversableMut,
-        },
     },
 };
 pub mod overlap;

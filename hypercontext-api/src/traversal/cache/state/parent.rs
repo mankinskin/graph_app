@@ -1,22 +1,26 @@
-use crate::traversal::{
-    cache::{
-        entry::new::NewEntry,
-        key::{
-            prev::ToPrev,
-            target::TargetKey,
-        },
-        state::{
-            end::{
-                EndReason,
-                EndState,
+use crate::{
+    traversal::{
+        cache::{
+            entry::new::NewEntry,
+            key::{
+                prev::ToPrev,
+                target::TargetKey,
             },
-            query::QueryState,
-            NextStates,
-            StateNext,
+            state::{
+                end::{
+                    EndReason,
+                    EndState,
+                },
+                query::QueryState,
+                NextStates,
+                StateNext,
+            },
         },
+        context::TraversalContext,
+        iterator::TraversalIterator,
+        policy::DirectedTraversalPolicy,
+        result::kind::Primer,
     },
-    context::TraversalContext,
-    iterator::TraversalIterator,
     path::{
         accessors::{
             child::root::GraphRootChild,
@@ -28,8 +32,6 @@ use crate::traversal::{
             move_path::key::TokenPosition,
         },
     },
-    policy::DirectedTraversalPolicy,
-    result::kind::Primer,
 };
 use std::cmp::Ordering;
 

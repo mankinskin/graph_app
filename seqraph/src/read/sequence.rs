@@ -6,7 +6,7 @@ use itertools::{
     Itertools,
     PeekingNext,
 };
-use crate::{
+use hypercontext_api::{
     graph::{
         kind::{
             BaseGraphKind,
@@ -21,9 +21,9 @@ use crate::{
             },
         },
     },
-    read::reader::context::ReadContext,
     traversal::traversable::TraversableMut,
 };
+use crate::read::reader::context::ReadContext;
 
 use std::fmt::Debug;
 

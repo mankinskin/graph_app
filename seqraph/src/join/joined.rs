@@ -18,7 +18,7 @@ use crate::join::{
         },
     },
 };
-use crate::graph::vertex::{
+use hypercontext_api::graph::vertex::{
     child::Child,
     pattern::Pattern,
 };

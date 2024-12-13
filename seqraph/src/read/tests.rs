@@ -1,17 +1,39 @@
-use std::{collections::HashSet, iter::FromIterator};
+use std::{
+    collections::HashSet,
+    iter::FromIterator,
+};
 
 //use tokio::sync::mpsc;
 //use tokio_stream::wrappers::*;
 use maplit::hashset;
 use pretty_assertions::assert_eq;
 
-use crate::{graph::{vertex::{has_vertex_data::HasVertexData, has_vertex_index::ToChild, parent::{Parent, PatternIndex}, wide::Wide}, Hypergraph, HypergraphRef}, search::Searchable, traversal::traversable::Traversable, HashMap};
+use hypercontext_api::{
+    graph::{
+        vertex::{
+            has_vertex_data::HasVertexData,
+            has_vertex_index::ToChild,
+            parent::{
+                Parent,
+                PatternIndex,
+            },
+            wide::Wide,
+        },
+        Hypergraph,
+        HypergraphRef,
+    },
+    traversal::traversable::Traversable,
+};
+use crate::{
+    search::Searchable,
+    HashMap,
+};
 
 fn assert_child_of_at(
     graph: &Hypergraph,
     child: impl ToChild,
     parent: impl ToChild,
-    pattern_indices: impl IntoIterator<Item=PatternIndex>,
+    pattern_indices: impl IntoIterator<Item = PatternIndex>,
 ) {
     assert_eq!(
         graph
@@ -25,7 +47,7 @@ fn assert_child_of_at(
                 pattern_indices: pattern_indices.into_iter().collect(),
                 width: parent.width(),
             }
-        ), ])
+        ),])
     );
 }
 

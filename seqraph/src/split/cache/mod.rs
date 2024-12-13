@@ -24,6 +24,8 @@ use crate::{
         cache::vertex::SplitVertexCache,
         PatternSplitPos,
     },
+};
+use hypercontext_api::{
     traversal::{
         cache::{
             entry::position::SubSplitLocation,
@@ -36,13 +38,13 @@ use crate::{
         },
         traversable::TraversableMut,
     },
-};
-use crate::graph::vertex::{
-    child::Child,
-    has_vertex_index::HasVertexIndex,
-    location::SubLocation,
-    pattern::Pattern,
-    pattern::id::PatternId,
+    graph::vertex::{
+        child::Child,
+        has_vertex_index::HasVertexIndex,
+        location::SubLocation,
+        pattern::Pattern,
+        pattern::id::PatternId,
+    },
 };
 
 pub mod vertex;
@@ -72,7 +74,7 @@ pub struct SplitCache {
 impl SplitCache {
     pub fn new<
         'a,
-        Trav: TraversableMut<GuardMut<'a> = RwLockWriteGuard<'a, crate::graph::Hypergraph>> + 'a,
+        Trav: TraversableMut<GuardMut<'a> = RwLockWriteGuard<'a, hypercontext_api::graph::Hypergraph>> + 'a,
     >(
         trav: &'a mut Trav,
         fold_state: FoldState,
@@ -180,10 +182,6 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        graph::tests::{
-            Context,
-            context_mut,
-        },
         HashMap,
         HashSet,
         split::{
@@ -193,6 +191,12 @@ mod tests {
             },
             PatternSplitPos,
             SplitCache,
+        },
+    };
+    use hypercontext_api::{
+        graph::tests::{
+            Context,
+            context_mut,
         },
         traversal::cache::{
             key::SplitKey,

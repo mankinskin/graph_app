@@ -1,22 +1,16 @@
-use crate::traversal::{
-    cache::{
-        key::UpKey,
-        state::{
-            child::ChildState,
-            end::{
-                EndKind,
-                EndState,
-            },
-            InnerKind,
-            parent::ParentState,
-            start::StartState,
-            TraversalState,
-        },
-    },
+use crate::{
     path::{
         accessors::root::GraphRoot,
         mutators::move_path::key::TokenPosition,
-    },
+    }, traversal::cache::{
+        key::UpKey,
+        state::{
+            child::ChildState, end::{
+                EndKind,
+                EndState,
+            }, parent::ParentState, start::StartState, InnerKind
+        }, traversal::TraversalState,
+    }
 };
 use crate::graph::vertex::wide::Wide;
 

@@ -20,28 +20,6 @@ use crate::{
         iterator::{
             traverser::pruning::PruneStates, TraversalIterator
         },
-        path::{
-            accessors::{
-                role::{
-                    End,
-                    Start,
-                },
-                root::GraphRoot,
-            },
-            mutators::{
-                lower::PathLower,
-                move_path::{
-                    key::{
-                        AdvanceKey,
-                        TokenPosition,
-                    }, Advance, Retract
-                },
-            },
-            structs::pair::{
-                PathPair,
-                PathPairMode,
-            },
-        },
         result::kind::{
             Primer,
             RoleChildPath,
@@ -49,6 +27,28 @@ use crate::{
         traversable::{
             DirectionOf,
             Traversable,
+        },
+    },
+    path::{
+        accessors::{
+            role::{
+                End,
+                Start,
+            },
+            root::GraphRoot,
+        },
+        mutators::{
+            lower::PathLower,
+            move_path::{
+                key::{
+                    AdvanceKey,
+                    TokenPosition,
+                }, Advance, Retract
+            },
+        },
+        structs::pair::{
+            PathPair,
+            PathPairMode,
         },
     },
 };
