@@ -43,7 +43,43 @@ use crate::graph::vertex::{
 use super::trace::Trace;
 
 pub mod state;
-
+pub struct FoldFinished {
+    end_state: EndState,
+    cache: TraversalCache,
+}
+impl FoldFinished {
+    pub fn to_traversal_result(self) -> FoldResult {
+        let final_state = FinalState {
+            num_parents: self.cache
+                .get(&DirectedKey::from(self.end_state.root_key()))
+                .unwrap()
+                .num_parents(),
+            state: &self.end_state,
+        };
+        let query = final_state.state.query.clone();
+        let found_path = if let EndKind::Complete(c) = &final_state.state.kind {
+            FoldResult::Complete(*c)
+        } else {
+            // todo: complete bottom edges of root if
+            // assert same root
+            //let min_end = end_states.iter()
+            //    .min_by(|a, b| a.root_key().index.width().cmp(&b.root_key().index.width()))
+            //    .unwrap();
+            let root = state.root_key().index;
+            let state = FoldState {
+                cache,
+                root,
+                end_state: state,
+                start: start_index,
+            };
+            FoldResult::Incomplete(state)
+        };
+        TraversalResult {
+            query: query.to_rooted(query_root.query_root),
+            result: found_path,
+        }
+    }
+}
 pub trait TraversalFolder: Sized + Traversable {
     type Iterator<'a>: TraversalIterator<'a, Trav = Self> + From<&'a Self>
     where
@@ -140,42 +176,19 @@ pub trait TraversalFolder: Sized + Traversable {
         //        (root.index(), root.width(), s.root_pos.0)
         //    }).collect_vec()
         //);
-        Ok(if let Some(state) = end_state {
-            let final_state = FinalState {
-                num_parents: cache
-                    .get(&DirectedKey::from(state.root_key()))
-                    .unwrap()
-                    .num_parents(),
-                state: &state,
-            };
-            let query = final_state.state.query.clone();
-            let found_path = if let EndKind::Complete(c) = &final_state.state.kind {
-                FoldResult::Complete(*c)
-            } else {
-                // todo: complete bottom edges of root if
-                // assert same root
-                //let min_end = end_states.iter()
-                //    .min_by(|a, b| a.root_key().index.width().cmp(&b.root_key().index.width()))
-                //    .unwrap();
-                let root = state.root_key().index;
-                let state = FoldState {
-                    cache,
-                    root,
+        end_state.map(|state|
+            state.map(|state|
+                FoldFinished {
                     end_state: state,
-                    start: start_index,
-                };
-                FoldResult::Incomplete(state)
-            };
-            TraversalResult {
-                query: query.to_rooted(query_root.query_root),
-                result: found_path,
-            }
-        } else {
-            TraversalResult {
-                //query: query.to_rooted(query_root.query_root),
-                query: query_range_path,
-                result: FoldResult::Complete(start_index),
-            }
-        })
+                    cache,
+                }.to_traversal_result()
+            ).or_else(||
+                TraversalResult {
+                    //query: query.to_rooted(query_root.query_root),
+                    query: query_range_path,
+                    result: FoldResult::Complete(start_index),
+                }
+            )
+        )
     }
 }
