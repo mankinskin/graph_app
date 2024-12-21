@@ -2,7 +2,7 @@ use crate::{
     HashMap,
     traversal::{
         cache::key::UpKey,
-        context::TraversalContext,
+        context::TraversalStateContext,
         iterator::{
             TraversalIterator,
             traverser::{
@@ -78,7 +78,7 @@ where
     }
 }
 
-impl<'a, 'b: 'a, I: TraversalIterator<'b>> PruneStates for TraversalContext<'a, 'b, I> {
+impl<'a, 'b: 'a, I: TraversalIterator<'b>> PruneStates for TraversalStateContext<'a, 'b, I> {
     fn clear(&mut self) {
         self.iter.clear();
     }

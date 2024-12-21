@@ -1,10 +1,9 @@
 use crate::traversal::{
-    cache::state::TraversalState,
-    iterator::traverser::{
+    cache::state::traversal::TraversalState, iterator::traverser::{
         ExtendStates,
         NodeVisitor,
         OrderedTraverser,
-    },
+    }
 };
 
 #[allow(unused)]

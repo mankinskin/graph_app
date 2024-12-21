@@ -4,7 +4,7 @@ use crate::{
     traversal::{
         context::{
             QueryStateContext,
-            TraversalContext,
+            TraversalStateContext,
         },
         iterator::TraversalIterator,
     },
@@ -39,7 +39,7 @@ pub struct QueryState {
 impl QueryState {
     pub fn to_ctx<'a, 'b: 'a, I: TraversalIterator<'b>>(
         &'a mut self,
-        ctx: &TraversalContext<'a, 'b, I>,
+        ctx: &TraversalStateContext<'a, 'b, I>,
     ) -> QueryStateContext<'a> {
         ctx.query_state(self)
     }

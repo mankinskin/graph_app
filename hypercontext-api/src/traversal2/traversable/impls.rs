@@ -24,20 +24,6 @@ use crate::{
         },
     },
 };
-pub trait Traversable: Sized + std::fmt::Debug {
-    type Kind: GraphKind;
-    type Guard<'a>: Traversable<Kind = Self::Kind> + Deref<Target = Hypergraph<Self::Kind>>
-    where
-        Self: 'a;
-    fn graph(&self) -> Self::Guard<'_>;
-}
-
-pub type GraphKindOf<T> = <T as Traversable>::Kind;
-pub(crate) type DirectionOf<T> = <GraphKindOf<T> as GraphKind>::Direction;
-
-pub type TravKind<Trav> = <Trav as Traversable>::Kind;
-pub type TravDir<Trav> = <TravKind<Trav> as GraphKind>::Direction;
-pub type TravToken<Trav> = <TravKind<Trav> as GraphKind>::Token;
 
 #[macro_export]
 macro_rules! impl_traversable {
@@ -131,5 +117,3 @@ impl_traversable_mut! {
 impl_traversable_mut! {
     impl for HypergraphRef, self => self.write().unwrap(); <'a> RwLockWriteGuard<'a, Hypergraph>
 }
-
-

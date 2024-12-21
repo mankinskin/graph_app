@@ -16,7 +16,7 @@ use crate::{
                 StateNext,
             },
         },
-        context::TraversalContext,
+        context::TraversalStateContext,
         iterator::TraversalIterator,
         policy::DirectedTraversalPolicy,
     },
@@ -43,7 +43,7 @@ pub struct StartState {
 impl StartState {
     pub fn next_states<'a, 'b: 'a, I: TraversalIterator<'b>>(
         &mut self,
-        ctx: &mut TraversalContext<'a, 'b, I>,
+        ctx: &mut TraversalStateContext<'a, 'b, I>,
     ) -> NextStates
     where
         Self: 'a,

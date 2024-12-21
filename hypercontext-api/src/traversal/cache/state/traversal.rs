@@ -11,7 +11,7 @@ use crate::{
                 target::TargetKey,
             },
         },
-        context::TraversalContext,
+        context::TraversalStateContext,
         iterator::TraversalIterator,
         result::kind::RoleChildPath,
     },
@@ -85,7 +85,7 @@ impl TraversalState {
     /// Retrieves next unvisited states and adds edges to cache
     pub fn next_states<'a, 'b: 'a, I: TraversalIterator<'b>>(
         mut self,
-        ctx: &mut TraversalContext<'a, 'b, I>,
+        ctx: &mut TraversalStateContext<'a, 'b, I>,
     ) -> Option<NextStates> {
         let key = self.target_key();
         let exists = ctx.cache.exists(&key);

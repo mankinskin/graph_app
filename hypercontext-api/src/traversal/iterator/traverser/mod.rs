@@ -1,6 +1,6 @@
 
-use itertools::Itertools;
-use pruning::{PruningMap, PruningState};
+use extend::ExtendStates;
+use pruning::PruningMap;
 use std::{
     cmp::Ordering,
     fmt::Debug,
@@ -9,13 +9,13 @@ use std::{
 pub mod dft;
 pub mod bft;
 pub mod pruning;
+pub mod extend;
 
 use crate::{graph::vertex::wide::Wide, traversal::{
     cache::{
-        key::root::RootKey,
-        state::TraversalState,
+        key::root::RootKey, state::traversal::TraversalState,
     },
-    context::TraversalContext,
+    context::TraversalStateContext,
     folder::TraversalFolder,
     iterator::TraversalIterator,
     policy::DirectedTraversalPolicy,
@@ -91,59 +91,6 @@ where
 {
 }
 
-pub trait ExtendStates {
-    fn extend<
-        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
-        T: IntoIterator<Item = (usize, TraversalState), IntoIter = It>,
-    >(
-        &mut self,
-        iter: T,
-    );
-}
-
-impl<Trav, S, O> ExtendStates for OrderedTraverser<'_, Trav, S, O>
-where
-    Trav: Traversable,
-    S: DirectedTraversalPolicy<Trav = Trav>,
-    O: NodeVisitor,
-{
-    fn extend<
-        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
-        In: IntoIterator<Item = (usize, TraversalState), IntoIter = It>,
-    >(
-        &mut self,
-        iter: In,
-    ) {
-        let states = iter
-            .into_iter()
-            .map(|(d, s)| {
-                // count states per root
-                self.pruning_map
-                    .entry(s.root_key())
-                    .and_modify(|ps| ps.count += 1)
-                    .or_insert(PruningState {
-                        count: 1,
-                        prune: false,
-                    });
-                (d, s)
-            })
-            .collect_vec();
-        self.collection.extend(states)
-    }
-}
-
-impl<'a, 'b: 'a, I: TraversalIterator<'b>> ExtendStates for TraversalContext<'a, 'b, I> {
-    fn extend<
-        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
-        In: IntoIterator<Item = (usize, TraversalState), IntoIter = It>,
-    >(
-        &mut self,
-        iter: In,
-    ) {
-        self.iter.extend(iter)
-    }
-}
-
 impl<Trav, S, O> Iterator for OrderedTraverser<'_, Trav, S, O>
 where
     Trav: Traversable + TraversalFolder,
@@ -168,7 +115,7 @@ where
     }
 }
 
-impl<'a, 'b: 'a, I: TraversalIterator<'b>> Iterator for TraversalContext<'a, 'b, I> {
+impl<'a, 'b: 'a, I: TraversalIterator<'b>> Iterator for TraversalStateContext<'a, 'b, I> {
     type Item = <I as Iterator>::Item;
 
     fn next(&mut self) -> Option<Self::Item> {

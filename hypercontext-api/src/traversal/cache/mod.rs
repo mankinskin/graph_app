@@ -1,7 +1,7 @@
-use key::*;
-use state::*;
-use traversal::TraversalState;
 use std::fmt::Display;
+
+use key::{DirectedKey, UpKey};
+use state::traversal::TraversalState;
 
 use crate::{
     traversal::{
@@ -16,15 +16,8 @@ use crate::{
                 labelled_key,
                 VertexCacheKey,
             },
-            state::{
-                query::QueryState,
-                start::StartState,
-            },
-        }, context::{
-            QueryContext,
-            TraversalContext,
         },
-        folder::TraversalFolder, iterator::traverser::ExtendStates, traversable::{
+        traversable::{
             TravToken, Traversable
         }
     },
@@ -39,6 +32,7 @@ pub mod entry;
 pub mod key;
 pub mod labelled_key;
 pub mod state;
+pub mod trace;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TraversalCache {
@@ -46,42 +40,19 @@ pub struct TraversalCache {
 }
 
 impl TraversalCache {
-    pub fn new<'a, Folder: TraversalFolder>(
-        folder: &'a Folder,
+    pub fn new<'a, Trav: Traversable>(
+        folder: &'a Trav,
         start_index: Child,
-        query_root: &QueryContext,
-        query_state: QueryState,
-    ) -> (Folder::Iterator<'a>, Self)
+    ) -> Self
     where
-        TravToken<Folder>: Display,
+        TravToken<Trav>: Display,
     {
         let mut entries = HashMap::default();
         entries.insert(
             labelled_key(folder, start_index),
             VertexCache::start(start_index),
         );
-        let mut start = StartState {
-            index: start_index,
-            key: UpKey::new(
-                start_index,
-                0.into(), //TokenLocation(start_index.width()).into(),
-            ),
-            query: query_state,
-        };
-
-        let mut cache = Self { entries };
-        let mut states = Folder::Iterator::from(folder);
-
-        let init = {
-            let mut ctx = TraversalContext::new(query_root, &mut cache, &mut states);
-            start
-                .next_states(&mut ctx)
-                .into_states()
-                .into_iter()
-                .map(|n| (1, n))
-        };
-        states.extend(init);
-        (states, cache)
+        Self { entries }
     }
     pub fn add_state<Trav: Traversable>(
         &mut self,

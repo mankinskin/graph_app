@@ -1,17 +1,10 @@
 use crate::{
-    traversal::cache::state::{
-        child::ChildState,
-        end::EndState,
-        parent::ParentState,
-        query::QueryState,
-        start::StartState,
-        InnerKind,
-        TraversalState,
-    },
     path::{
         mutators::move_path::key::TokenPosition,
         structs::pair::PathPair,
-    },
+    }, traversal::cache::state::{
+        child::ChildState, end::EndState, parent::ParentState, query::QueryState, start::StartState, traversal::TraversalState, InnerKind
+    }
 };
 
 /// get the token position in a query

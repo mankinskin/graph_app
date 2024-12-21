@@ -1,54 +1,47 @@
-use crate::{graph::getters::NoMatch,
-    path::{
-        accessors::role::End,
-        structs::query_range_path::QueryRangePath,
+use crate::{
+    graph::{
+        getters::NoMatch,
+        vertex::{
+            child::Child,
+            pattern::{
+                IntoPattern, Pattern
+            },
+        },
     },
+    path::{accessors::role::End, structs::query_range_path::QueryRangePath},
     traversal::{
         cache::{
             key::{
                 root::RootKey, DirectedKey
             },
             state::{
-                end::{
-                    EndKind,
-                    EndReason,
-                }, query::QueryState, NextStates, StateNext
+                end::EndKind,
+                query::QueryState,
             },
             TraversalCache,
         },
-        context::{
-            QueryContext,
-            TraversalContext,
-        },
+        context::QueryContext,
         folder::state::{
             FinalState, FoldResult, FoldState
         },
-        iterator::{
-            traverser::{
-                pruning::PruneStates, ExtendStates
-            }, TraversalIterator
-        },
-        result::{
-            kind::RoleChildPath, TraversalResult
-        },
+        iterator::TraversalIterator,
+        result::TraversalResult,
         traversable::Traversable,
     },
 };
 use std::borrow::Borrow;
-use crate::graph::vertex::{
-    pattern::IntoPattern,
-    wide::Wide,
-};
-
-use super::trace::Trace;
+use super::{cache::{key::UpKey, state::{end::EndState, start::StartState}}, context::TraversalStateContext, iterator::traverser::extend::ExtendStates, result::kind::RoleChildPath};
 
 pub mod state;
+
 pub struct FoldFinished {
     end_state: EndState,
     cache: TraversalCache,
+    start_index: Child,
+    query_root: Pattern,
 }
 impl FoldFinished {
-    pub fn to_traversal_result(self) -> FoldResult {
+    pub fn to_traversal_result(self) -> TraversalResult {
         let final_state = FinalState {
             num_parents: self.cache
                 .get(&DirectedKey::from(self.end_state.root_key()))
@@ -65,21 +58,22 @@ impl FoldFinished {
             //let min_end = end_states.iter()
             //    .min_by(|a, b| a.root_key().index.width().cmp(&b.root_key().index.width()))
             //    .unwrap();
-            let root = state.root_key().index;
+            let root = self.end_state.root_key().index;
             let state = FoldState {
-                cache,
+                cache: self.cache,
                 root,
-                end_state: state,
-                start: start_index,
+                end_state: self.end_state,
+                start: self.start_index,
             };
             FoldResult::Incomplete(state)
         };
         TraversalResult {
-            query: query.to_rooted(query_root.query_root),
+            query: query.to_rooted(self.query_root),
             result: found_path,
         }
     }
 }
+
 pub trait TraversalFolder: Sized + Traversable {
     type Iterator<'a>: TraversalIterator<'a, Trav = Self> + From<&'a Self>
     where
@@ -92,12 +86,15 @@ pub trait TraversalFolder: Sized + Traversable {
     ) -> Result<TraversalResult, (NoMatch, QueryRangePath)>
     {
         let query_pattern = query_pattern.into_pattern();
-        //debug!("fold {:?}", query_pattern);
+
+        // build cursor path
         let query = QueryState::new::<Self::Kind, _>(query_pattern.borrow())
             .map_err(|(err, q)| (err, q.to_rooted(query_pattern.clone())))?;
+
         let query_range_path = query
             .clone()
             .to_rooted(query_pattern.clone());
+
         let query_root = QueryContext::new(query_pattern);
         self.fold_query(query_root, query_range_path, query)
     }
@@ -109,86 +106,33 @@ pub trait TraversalFolder: Sized + Traversable {
         query: QueryState,
     ) -> Result<TraversalResult, (NoMatch, QueryRangePath)>
     {
-        let start_index = query_range_path
-            .role_leaf_child::<End, _>(self);
 
+        let start_index = query_range_path.role_leaf_child::<End, _>(self);
         //let query_ctx = QueryContext::new(query_pattern.clone());
 
-        let (mut states, mut cache) =
-            TraversalCache::new(self, start_index, &query_root, query.clone());
+        let mut start = StartState {
+            index: start_index,
+            key: UpKey::new(
+                start_index,
+                0.into(),
+            ),
+            query,
+        };
 
-        let mut end_state = None;
-        let mut max_width = start_index.width();
+        let mut cache = TraversalCache::new(self, start_index);
 
-        // 1. expand first parents
-        // 2. expand next children/parents
+        let mut states = Self::Iterator::from(self);
 
-        while let Some((depth, tstate)) = states.next() {
-            if let Some(next_states) = {
-                let mut ctx = TraversalContext::new(&query_root, &mut cache, &mut states);
-                tstate.next_states(&mut ctx)
-            } {
-                match next_states {
-                    NextStates::Child(_) | NextStates::Prefixes(_) | NextStates::Parents(_) => {
-                        states.extend(
-                            next_states
-                                .into_states()
-                                .into_iter()
-                                .map(|nstate| (depth + 1, nstate)),
-                        );
-                    }
-                    NextStates::Empty => {}
-                    NextStates::End(StateNext { inner: end, .. }) => {
-                        //debug!("{:#?}", state);
-                        if end.width() >= max_width {
-                            end.trace(self, &mut cache);
+        let init = {
+            let mut ctx = TraversalStateContext::new(&query_root, &mut cache, &mut states);
+            start
+                .next_states(&mut ctx)
+                .into_states()
+                .into_iter()
+                .map(|n| (1, n))
+        };
+        states.extend(init);
 
-                            // note: not really needed with completion
-                            //if let Some(root_key) = end.waiting_root_key() {
-                            //    // continue paths also arrived at this root
-                            //    // this must happen before simplification
-                            //    states.extend(
-                            //        cache.continue_waiting(&root_key)
-                            //    );
-                            //}
-                            if end.width() > max_width {
-                                max_width = end.width();
-                                //end_states.clear();
-                            }
-                            let is_final = end.reason == EndReason::QueryEnd
-                                && matches!(end.kind, EndKind::Complete(_));
-                            end_state = Some(end);
-                            if is_final {
-                                break;
-                            }
-                        } else {
-                            // larger root already found
-                            // stop other paths with this root
-                            states.prune_below(end.root_key());
-                        }
-                    }
-                }
-            }
-        }
-        //debug!("end roots: {:#?}", end_states.iter()
-        //    .map(|s| {
-        //        let root = s.root_parent();
-        //        (root.index(), root.width(), s.root_pos.0)
-        //    }).collect_vec()
-        //);
-        end_state.map(|state|
-            state.map(|state|
-                FoldFinished {
-                    end_state: state,
-                    cache,
-                }.to_traversal_result()
-            ).or_else(||
-                TraversalResult {
-                    //query: query.to_rooted(query_root.query_root),
-                    query: query_range_path,
-                    result: FoldResult::Complete(start_index),
-                }
-            )
-        )
+        states.fold_states()
     }
 }

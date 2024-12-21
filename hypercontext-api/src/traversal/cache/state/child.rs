@@ -16,7 +16,7 @@ use crate::{
                 }, parent::ParentState, NextStates, StateNext
             },
         },
-        context::TraversalContext,
+        context::TraversalStateContext,
         iterator::{
             traverser::pruning::PruneStates, TraversalIterator
         },
@@ -103,7 +103,7 @@ impl PartialOrd for ChildState {
 impl ChildState {
     pub fn next_states<'a, 'b: 'a, I: TraversalIterator<'b>>(
         mut self,
-        ctx: &mut TraversalContext<'a, 'b, I>,
+        ctx: &mut TraversalStateContext<'a, 'b, I>,
         new: Vec<NewEntry>,
     ) -> NextStates {
         let key = self.target_key();
@@ -158,7 +158,7 @@ impl ChildState {
     }
     fn on_match<'a, 'b: 'a, I: TraversalIterator<'b>>(
         mut self,
-        ctx: &mut TraversalContext<'a, 'b, I>,
+        ctx: &mut TraversalStateContext<'a, 'b, I>,
         new: Vec<NewEntry>,
     ) -> NextStates {
         let key = self.target_key();
@@ -206,7 +206,7 @@ impl ChildState {
     }
     fn on_mismatch<'a, 'b: 'a, I: TraversalIterator<'b>>(
         mut self,
-        ctx: &mut TraversalContext<'a, 'b, I>,
+        ctx: &mut TraversalStateContext<'a, 'b, I>,
         new: Vec<NewEntry>,
     ) -> NextStates {
         let key = self.target_key();
@@ -266,7 +266,7 @@ impl ChildState {
     }
     fn on_query_end<'a, 'b: 'a, I: TraversalIterator<'b>>(
         self,
-        ctx: &mut TraversalContext<'a, 'b, I>,
+        ctx: &mut TraversalStateContext<'a, 'b, I>,
         new: Vec<NewEntry>,
     ) -> NextStates {
         let key = self.target_key();

@@ -41,13 +41,16 @@ use crate::traversal::cache::entry::new::{
     NewKind,
 };
 
-impl TraversalCache {
+#[derive(Debug)]
+pub struct TraceContext<'a, Trav: Traversable> {
+    pub trav: &'a Trav,
+    pub cache: &'a mut TraversalCache
+}
+impl<'a, Trav: Traversable> TraceContext<'a, Trav> {
     pub fn trace_path<
-        Trav: Traversable,
         P: RoleChildPath + GraphRootChild<End> + HasRolePath<End>,
     >(
         &mut self,
-        trav: &Trav,
         root_entry: usize,
         path: &P,
         root_up_pos: TokenPosition,
@@ -55,7 +58,7 @@ impl TraversalCache {
     ) where
         TravToken<Trav>: Display,
     {
-        let graph = trav.graph();
+        let graph = self.trav.graph();
         let root_exit = path.role_root_child_location::<End>();
 
         if add_edges
@@ -78,8 +81,8 @@ impl TraversalCache {
         let exit_down_key = DownKey::new(graph.expect_child_at(root_exit), root_down_pos.into());
         let mut prev_key: DirectedKey = root_down_key.into();
         let mut target_key = exit_down_key.into();
-        self.add_state(
-            trav,
+        self.cache.add_state(
+            self.trav,
             NewEntry {
                 prev: prev_key.to_prev(0),
                 kind: NewKind::Child(NewChild {
@@ -95,8 +98,8 @@ impl TraversalCache {
             let delta = graph.expect_child_offset(loc);
             prev_key.advance_key(delta);
             target_key = DirectedKey::down(graph.expect_child_at(loc), *prev_key.pos.pos());
-            self.add_state(
-                trav,
+            self.cache.add_state(
+                self.trav,
                 NewEntry {
                     //root_pos: root_up_pos,
                     prev: prev_key.to_prev(0),
@@ -114,35 +117,22 @@ impl TraversalCache {
 pub trait Trace {
     fn trace<Trav: Traversable>(
         &self,
-        trav: &Trav,
-        cache: &mut TraversalCache,
+        ctx: &mut TraceContext<'_, Trav>,
     );
 }
 
 impl Trace for EndState {
     fn trace<Trav: Traversable>(
         &self,
-        trav: &Trav,
-        cache: &mut TraversalCache,
+        ctx: &mut TraceContext<'_, Trav>,
     ) {
         match &self.kind {
             EndKind::Range(p) => {
                 let root_entry = p.path.role_root_child_location::<Start>().sub_index;
-                cache.trace_path(trav, root_entry, &p.path, self.root_pos, true)
+                ctx.trace_path(root_entry, &p.path, self.root_pos, true)
             }
-            EndKind::Prefix(p) => cache.trace_path(trav, 0, &p.path, self.root_pos, true),
+            EndKind::Prefix(p) => ctx.trace_path(0, &p.path, self.root_pos, true),
             _ => {}
         }
     }
 }
-//impl Trace for ChildState {
-//    fn trace<Trav: Traversable>(&self, trav: &Trav, cache: &mut TraversalCache) {
-//        cache.trace_path(
-//            trav,
-//            self.paths.path.role_root_child_location::<Start>().sub_index,
-//            &self.paths.path,
-//            self.root_pos,
-//            false,
-//        );
-//    }
-//}

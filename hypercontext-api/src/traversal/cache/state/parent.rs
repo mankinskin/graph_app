@@ -16,7 +16,7 @@ use crate::{
                 StateNext,
             },
         },
-        context::TraversalContext,
+        context::TraversalStateContext,
         iterator::TraversalIterator,
         policy::DirectedTraversalPolicy,
         result::kind::Primer,
@@ -64,7 +64,7 @@ impl PartialOrd for ParentState {
 impl ParentState {
     pub fn next_states<'a, 'b: 'a, I: TraversalIterator<'b>>(
         self,
-        ctx: &mut TraversalContext<'a, 'b, I>,
+        ctx: &mut TraversalStateContext<'a, 'b, I>,
         new: Vec<NewEntry>,
     ) -> NextStates {
         let key = self.target_key();
@@ -87,7 +87,7 @@ impl ParentState {
     }
     pub fn next_parents<'a, 'b: 'a, I: TraversalIterator<'b>>(
         self,
-        ctx: &mut TraversalContext<'a, 'b, I>,
+        ctx: &mut TraversalStateContext<'a, 'b, I>,
         new: Vec<NewEntry>,
     ) -> NextStates {
         // get next parents

@@ -21,14 +21,14 @@ pub struct QueryContext {
 }
 
 #[derive(Debug)]
-pub struct TraversalContext<'a, 'b: 'a, I: TraversalIterator<'b>> {
+pub struct TraversalStateContext<'a, 'b: 'a, I: TraversalIterator<'b>> {
     pub query: &'a QueryContext,
     pub cache: &'a mut TraversalCache,
     pub iter: &'a mut I,
     _ty: std::marker::PhantomData<&'b ()>,
 }
 
-impl<'a, 'b: 'a, I: TraversalIterator<'b>> TraversalContext<'a, 'b, I> {
+impl<'a, 'b: 'a, I: TraversalIterator<'b>> TraversalStateContext<'a, 'b, I> {
     pub fn new(
         query: &'a QueryContext,
         cache: &'a mut TraversalCache,
@@ -43,7 +43,7 @@ impl<'a, 'b: 'a, I: TraversalIterator<'b>> TraversalContext<'a, 'b, I> {
     }
 }
 
-impl<'a, 'b: 'a, I: TraversalIterator<'b>> TraversalContext<'a, 'b, I> {
+impl<'a, 'b: 'a, I: TraversalIterator<'b>> TraversalStateContext<'a, 'b, I> {
     pub fn query_state(
         &self,
         state: &'a mut QueryState,

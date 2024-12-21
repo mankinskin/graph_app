@@ -8,8 +8,8 @@ use crate::{
             child::ChildState, end::{
                 EndKind,
                 EndState,
-            }, parent::ParentState, start::StartState, InnerKind
-        }, traversal::TraversalState,
+            }, parent::ParentState, start::StartState, traversal::TraversalState, InnerKind
+        },
     }
 };
 use crate::graph::vertex::wide::Wide;
