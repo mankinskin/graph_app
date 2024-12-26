@@ -2,8 +2,8 @@ use crate::{
     path::{
         accessors::root::GraphRoot,
         mutators::move_path::key::TokenPosition,
-    }, traversal::cache::{
-        key::UpKey,
+    }, traversal::{
+        cache::key::UpKey,
         state::{
             child::ChildState, end::{
                 EndKind,

@@ -1,15 +1,11 @@
 use crate::{
-    path::{
+    graph::vertex::child::Child, path::{
         accessors::{
             child::root::GraphRootChild,
             has_path::HasSinglePath,
             role::Start,
-        },
-        BasePath,
-        structs::rooted_path::RootedRolePath,
-    },
-    traversal::policy::NodePath,
-    graph::vertex::child::Child,
+        }, structs::rooted_path::RootedRolePath, BasePath
+    }, traversal::iterator::policy::NodePath
 };
 //pub trait NotStartPath {}
 //impl NotStartPath for PathLeaf {}

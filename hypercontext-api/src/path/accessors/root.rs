@@ -1,12 +1,4 @@
 use crate::{
-    traversal::{
-        cache::state::end::{
-            EndKind,
-            EndState,
-        },
-        context::QueryStateContext,
-        traversable::Traversable,
-    },
     path::{
         accessors::role::PathRole,
         structs::{
@@ -23,7 +15,9 @@ use crate::{
                 SearchPath,
             },
         },
-    },
+    }, traversal::{
+        state::{end::{EndKind, EndState}, query::QueryState}, traversable::Traversable
+    }
 };
 use std::borrow::Borrow;
 use crate::graph::vertex::{
@@ -136,9 +130,9 @@ macro_rules! impl_root {
 impl_root! { PatternRoot for QueryRangePath, self => self.root.borrow() }
 //impl_root! { PatternRoot for PatternPrefixPath, self => self.pattern.borrow() }
 //impl_root! { PatternRoot for OverlapPrimer, self => PatternRoot::pattern_root_pattern(&self.context) }
-impl PatternRoot for QueryStateContext<'_> {
+impl PatternRoot for QueryState {
     fn pattern_root_pattern(&self) -> &Pattern {
-        &self.ctx.query_root
+        &self.path.root
     }
 }
 //impl_root! { RootChild for FoundPath, self =>

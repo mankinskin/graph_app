@@ -1,29 +1,29 @@
 use crate::{
-    traversal::folder::state::FoldResult,
     path::{
         accessors::complete::PathComplete,
         structs::query_range_path::{
-            QueryPath,
-            QueryRangePath,
+            QueryPath, QueryRangePath,
         },
-    },
+    }, traversal::fold::state::FoldResult
 };
 use crate::graph::vertex::{
     child::Child,
     pattern::IntoPattern,
 };
+
+use super::state::query::QueryState;
 pub mod kind;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TraversalResult {
     pub result: FoldResult,
-    pub query: QueryRangePath,
+    pub query: QueryState,
 }
 
 impl TraversalResult {
     pub fn new(
         result: impl Into<FoldResult>,
-        query: impl Into<QueryRangePath>,
+        query: impl Into<QueryState>,
     ) -> Self {
         Self {
             result: result.into(),
@@ -50,9 +50,13 @@ impl TraversalResult {
         query: impl IntoPattern,
         index: impl crate::graph::vertex::has_vertex_index::ToChild,
     ) -> Self {
+        let query = query.into_pattern();
         Self {
             result: FoldResult::Complete(index.to_child()),
-            query: QueryRangePath::complete(query),
+            query: QueryState {
+                pos: query.len().into(),
+                path: QueryRangePath::complete(query),
+            }
         }
     }
 }

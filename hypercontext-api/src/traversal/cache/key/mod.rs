@@ -21,7 +21,7 @@ use pos::*;
 use root::*;
 use crate::{
     path::mutators::move_path::key::TokenPosition,
-    traversal::cache::state::child::ChildState,
+    traversal::state::child::ChildState,
     graph::vertex::{
         child::Child,
         wide::Wide,

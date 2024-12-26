@@ -6,10 +6,6 @@ use pos::*;
 pub mod root;
 
 use crate::{
-    traversal::{
-        context::QueryStateContext,
-        traversable::Traversable,
-    },
     path::{
         accessors::{
             has_path::{
@@ -26,7 +22,9 @@ use crate::{
             role_path::RolePath,
             rooted_path::SearchPath,
         },
-    },
+    }, traversal::{
+        state::query::QueryState, traversable::Traversable
+    }
 };
 use root::*;
 use crate::graph::vertex::{
@@ -68,11 +66,11 @@ pub trait LeafChildPosMut<R>: RootChildPosMut<R> {
 //        }
 //    }
 //}
-impl LeafChildPosMut<End> for QueryStateContext<'_> {
-    fn leaf_child_pos_mut(&mut self) -> &mut usize {
-        self.state.end.leaf_child_pos_mut()
-    }
-}
+//impl LeafChildPosMut<End> for QueryState {
+//    fn leaf_child_pos_mut(&mut self) -> &mut usize {
+//        self.end.leaf_child_pos_mut()
+//    }
+//}
 
 impl LeafChildPosMut<End> for RolePath<End> {
     fn leaf_child_pos_mut(&mut self) -> &mut usize {
@@ -112,7 +110,7 @@ pub trait PathChild<R: PathRole>: HasPath<R> {
 //}
 impl<R: PathRole> PathChild<R> for QueryRangePath where Self: HasPath<R> + PatternRootChild<R> {}
 
-impl<R: PathRole> PathChild<R> for QueryStateContext<'_> where Self: HasPath<R> + PatternRootChild<R>
+impl<R: PathRole> PathChild<R> for QueryState where Self: HasPath<R> + PatternRootChild<R>
 {}
 
 impl<R: PathRole> PathChild<R> for RolePath<R> {}

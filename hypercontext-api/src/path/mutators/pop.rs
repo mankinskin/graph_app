@@ -1,6 +1,6 @@
+
 use crate::{
-    graph::vertex::location::child::ChildLocation,
-    traversal::context::QueryStateContext,
+    graph::vertex::{location::child::ChildLocation, pattern::Pattern}, path::structs::rooted_path::RootedRangePath, traversal::state::query::QueryState
 };
 use super::super::{
     accessors::role::PathRole,
@@ -38,15 +38,15 @@ impl PathPop for SearchPath {
     }
 }
 
-impl PathPop for QueryRangePath {
+impl PathPop for RootedRangePath<Pattern> {
     fn path_pop(&mut self) -> Option<ChildLocation> {
         self.end.path_pop()
     }
 }
 
-impl PathPop for QueryStateContext<'_> {
+impl PathPop for QueryState {
     fn path_pop(&mut self) -> Option<ChildLocation> {
-        self.state.end.path_pop()
+        self.path.path_pop()
     }
 }
 //impl<P: MatchEndPath + PathPop<Result=Self>> PathPop for MatchEnd<P> {

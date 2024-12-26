@@ -9,11 +9,11 @@ use crate::{
                 StateDepth,
             },
             key::DirectedKey,
-            state::{
-                StateDirection,
-                WaitingState,
-            },
             TraversalCache,
+        },
+        state::{
+            StateDirection,
+            WaitingState,
         },
         traversable::Traversable,
     },

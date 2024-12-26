@@ -12,16 +12,12 @@ use crate::{
         Right,
     },
     traversal::{
-        cache::{
-            key::{
+        cache::key::{
                 DirectedKey,
                 DirectedPosition,
                 DownPosition,
                 UpPosition,
-            },
-            state::query::QueryState,
-        },
-        context::QueryStateContext,
+            }, state::query::QueryState,
     },
 };
 
@@ -141,16 +137,6 @@ impl MoveKey<Right> for TokenPosition {
     }
 }
 
-impl MoveKey<Right> for QueryStateContext<'_> {
-    type Delta = usize;
-    fn move_key(
-        &mut self,
-        delta: Self::Delta,
-    ) {
-        self.state.advance_key(delta)
-    }
-}
-
 impl MoveKey<Right> for QueryState {
     type Delta = usize;
     fn move_key(
@@ -168,16 +154,6 @@ impl MoveKey<Left> for TokenPosition {
         delta: Self::Delta,
     ) {
         *self -= delta;
-    }
-}
-
-impl MoveKey<Left> for QueryStateContext<'_> {
-    type Delta = usize;
-    fn move_key(
-        &mut self,
-        delta: Self::Delta,
-    ) {
-        self.state.retract_key(delta)
     }
 }
 

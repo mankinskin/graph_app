@@ -5,8 +5,7 @@ use crate::{
         Right,
     },
     traversal::{
-        context::QueryStateContext,
-        traversable::Traversable,
+        state::query::QueryState, traversable::Traversable
     },
 };
 use super::super::super::{
@@ -65,7 +64,7 @@ pub trait MovePath<D: Direction, R: PathRole = End>:
     }
 }
 
-impl MovePath<Right, End> for QueryStateContext<'_> {
+impl MovePath<Right, End> for QueryState {
     fn move_leaf<Trav: Traversable>(
         &mut self,
         location: &mut ChildLocation,
@@ -75,7 +74,7 @@ impl MovePath<Right, End> for QueryStateContext<'_> {
     }
 }
 
-impl MovePath<Left, End> for QueryStateContext<'_> {
+impl MovePath<Left, End> for QueryState {
     fn move_leaf<Trav: Traversable>(
         &mut self,
         location: &mut ChildLocation,

@@ -1,32 +1,21 @@
 use crate::{
-    traversal::{
-        cache::{
-            key::{
-                prev::ToPrev,
-                UpKey,
-            },
-            state::{
-                end::{
-                    EndKind,
-                    EndReason,
-                    EndState,
-                },
-                NextStates,
-                query::QueryState,
-                StateNext,
-            },
-        },
-        context::TraversalStateContext,
-        iterator::TraversalIterator,
-        policy::DirectedTraversalPolicy,
-    },
     path::mutators::{
         adapters::into_primer::IntoPrimer,
         move_path::{
-            Advance,
-            key::RetractKey,
+            key::RetractKey, Advance
         },
-    },
+    }, traversal::{
+        cache::key::{
+            prev::ToPrev,
+            UpKey,
+        }, fold::TraversalKind, iterator::policy::DirectedTraversalPolicy, state::{
+            end::{
+                EndKind,
+                EndReason,
+                EndState,
+            }, query::QueryState, NextStates, StateNext
+        }
+    }
 };
 use crate::graph::vertex::{
     child::Child,
@@ -41,22 +30,21 @@ pub struct StartState {
 }
 
 impl StartState {
-    pub fn next_states<'a, 'b: 'a, I: TraversalIterator<'b>>(
+    pub fn next_states<'a, 'b: 'a, K: TraversalKind>(
         &mut self,
-        ctx: &mut TraversalStateContext<'a, 'b, I>,
+        trav: &K::Trav,
     ) -> NextStates
     where
         Self: 'a,
     {
-        let mut query = self.query.to_ctx(ctx);
         let delta = self.index.width();
-        if query.advance(ctx.trav()).is_continue() {
+        if self.query.advance(trav).is_continue() {
             // undo extra key advance
-            query.retract_key(self.index.width());
+            self.query.retract_key(self.index.width());
             NextStates::Parents(StateNext {
                 prev: self.key.to_prev(delta),
                 new: vec![],
-                inner: I::Policy::gen_parent_states(ctx.trav(), self.index, |trav, p| {
+                inner: K::Policy::gen_parent_states(trav, self.index, |trav, p| {
                     (self.index, self.query.clone()).into_primer(trav, p)
                 }),
             })
@@ -68,7 +56,7 @@ impl StartState {
                     reason: EndReason::QueryEnd,
                     root_pos: self.index.width().into(),
                     kind: EndKind::Complete(self.index),
-                    query: query.state.clone(),
+                    query: self.query.clone(),
                 },
             })
         }

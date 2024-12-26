@@ -1,9 +1,5 @@
 use crate::{
-    graph::vertex::location::child::ChildLocation,
-    traversal::{
-        cache::state::query::QueryState,
-        context::QueryStateContext,
-    },
+    graph::vertex::location::child::ChildLocation, traversal::state::query::QueryState,
 };
 use super::super::{
     accessors::role::{
@@ -75,21 +71,12 @@ impl PathAppend for QueryRangePath {
     }
 }
 
-impl PathAppend for QueryStateContext<'_> {
-    fn path_append(
-        &mut self,
-        parent_entry: ChildLocation,
-    ) {
-        self.state.path_append(parent_entry)
-    }
-}
-
 impl PathAppend for QueryState {
     fn path_append(
         &mut self,
         parent_entry: ChildLocation,
     ) {
-        self.end.path_append(parent_entry)
+        self.path.end.path_append(parent_entry)
     }
 }
 //impl PathAppend for SubPath {

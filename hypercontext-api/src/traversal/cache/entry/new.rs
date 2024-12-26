@@ -8,20 +8,20 @@ use crate::{
                 target::TargetKey,
                 UpKey,
             },
-            state::{
-                child::ChildState,
-                end::{
-                    EndKind,
-                    EndState,
-                    RangeEnd,
-                },
-                InnerKind,
-                parent::ParentState,
-                StateDirection,
-                traversal::TraversalState,
-            },
         },
         result::kind::RoleChildPath,
+        state::{
+            child::ChildState,
+            end::{
+                EndKind,
+                EndState,
+                RangeEnd,
+            },
+            InnerKind,
+            parent::ParentState,
+            StateDirection,
+            traversal::TraversalState,
+        },
     },
     path::accessors::{
         child::root::GraphRootChild,

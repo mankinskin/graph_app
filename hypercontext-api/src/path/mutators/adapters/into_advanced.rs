@@ -3,17 +3,10 @@ use std::borrow::Borrow;
 use crate::{
     direction::r#match::MatchDirection,
     traversal::{
-        cache::{
-            key::DirectedKey,
-            state::{
-                child::ChildState,
-                parent::ParentState,
-            },
-        },
-        traversable::{
+        cache::key::DirectedKey, state::{child::ChildState, parent::ParentState}, traversable::{
             TravDir,
             Traversable,
-        },
+        }
     },
 };
 

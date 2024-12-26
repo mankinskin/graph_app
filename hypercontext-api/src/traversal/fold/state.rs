@@ -1,14 +1,16 @@
 use std::cmp::Ordering;
 
-use crate::traversal::cache::{
-    entry::vertex::VertexCache,
-    key::{
-        DirectedKey,
-        root::RootKey,
-        target::TargetKey,
-    },
+use crate::traversal::{
     state::end::EndState,
-    TraversalCache,
+    cache::{
+        entry::vertex::VertexCache,
+        key::{
+            DirectedKey,
+            root::RootKey,
+            target::TargetKey,
+        },
+        TraversalCache,
+    }
 };
 use crate::graph::vertex::{
     child::Child,

@@ -9,7 +9,7 @@ pub mod position;
 
 use crate::{
     HashMap,
-    traversal::folder::state::RootMode,
+    traversal::fold::state::RootMode,
 };
 use position::*;
 use crate::graph::vertex::location::SubLocation;

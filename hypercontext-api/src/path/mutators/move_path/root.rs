@@ -1,18 +1,12 @@
 use crate::{
     direction::{
-        Direction,
-        Left,
-        Right,
-        r#match::MatchDirection,
-    },
-    traversal::{
-        context::QueryStateContext,
-        traversable::{
+        r#match::MatchDirection, Direction, Left, Right
+    }, graph::vertex::wide::Wide, traversal::{
+        state::query::QueryState, traversable::{
             TravDir,
             Traversable,
-        },
-    },
-    graph::vertex::wide::Wide,
+        }
+    }
 };
 use super::super::super::{
     accessors::{
@@ -101,17 +95,17 @@ impl MoveRootPos<Left, End> for SearchPath {
     }
 }
 
-impl MoveRootPos<Right, End> for QueryStateContext<'_> {
+impl MoveRootPos<Right, End> for QueryState {
     fn move_root_pos<Trav: Traversable>(
         &mut self,
         _trav: &Trav,
     ) -> ControlFlow<()> {
-        let pattern = &self.ctx.query_root;
+        let pattern = &self.path.root;
         if let Some(next) =
-            TravDir::<Trav>::pattern_index_next(pattern.borrow(), self.state.end.root_child_pos())
+            TravDir::<Trav>::pattern_index_next(pattern.borrow(), self.path.end.root_child_pos())
         {
-            self.advance_key(pattern[self.state.end.root_child_pos()].width());
-            *self.state.end.root_child_pos_mut() = next;
+            self.advance_key(pattern[self.path.end.root_child_pos()].width());
+            *self.path.end.root_child_pos_mut() = next;
             ControlFlow::Continue(())
         } else {
             ControlFlow::Break(())
@@ -119,17 +113,17 @@ impl MoveRootPos<Right, End> for QueryStateContext<'_> {
     }
 }
 
-impl MoveRootPos<Left, End> for QueryStateContext<'_> {
+impl MoveRootPos<Left, End> for QueryState {
     fn move_root_pos<Trav: Traversable>(
         &mut self,
         _trav: &Trav,
     ) -> ControlFlow<()> {
-        let pattern = &self.ctx.query_root;
+        let pattern = &self.path.root;
         if let Some(prev) =
-            TravDir::<Trav>::pattern_index_prev(pattern.borrow(), self.state.end.root_child_pos())
+            TravDir::<Trav>::pattern_index_prev(pattern.borrow(), self.path.end.root_child_pos())
         {
-            self.retract_key(pattern[self.state.end.root_child_pos()].width());
-            *self.state.end.root_child_pos_mut() = prev;
+            self.retract_key(pattern[self.path.end.root_child_pos()].width());
+            *self.path.end.root_child_pos_mut() = prev;
             ControlFlow::Continue(())
         } else {
             ControlFlow::Break(())

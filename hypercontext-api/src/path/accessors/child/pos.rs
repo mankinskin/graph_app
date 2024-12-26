@@ -1,5 +1,4 @@
 use crate::{
-    traversal::context::QueryStateContext,
     path::{
         accessors::role::{
             End,
@@ -22,7 +21,7 @@ use crate::{
                 SubPath,
             },
         },
-    },
+    }, traversal::state::query::QueryState,
 };
 use auto_impl::auto_impl;
 
@@ -89,15 +88,15 @@ impl RootChildPos<Start> for QueryRangePath {
     }
 }
 
-impl RootChildPos<End> for QueryStateContext<'_> {
+impl RootChildPos<End> for QueryState {
     fn root_child_pos(&self) -> usize {
-        self.state.end.root_entry
+        self.path.end.root_entry
     }
 }
 
-impl RootChildPos<Start> for QueryStateContext<'_> {
+impl RootChildPos<Start> for QueryState {
     fn root_child_pos(&self) -> usize {
-        self.state.start.root_entry
+        self.path.start.root_entry
     }
 }
 
@@ -135,9 +134,9 @@ impl RootChildPosMut<End> for SearchPath {
     }
 }
 
-impl RootChildPosMut<End> for QueryStateContext<'_> {
+impl RootChildPosMut<End> for QueryState {
     fn root_child_pos_mut(&mut self) -> &mut usize {
-        &mut self.state.end.sub_path.root_entry
+        &mut self.path.end.sub_path.root_entry
     }
 }
 //impl<R, P: RootChildPos<R>> RootChildPos<R> for OriginPath<P> {

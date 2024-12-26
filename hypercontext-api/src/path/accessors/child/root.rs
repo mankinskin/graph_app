@@ -1,8 +1,4 @@
 use crate::{
-    traversal::{
-        context::QueryStateContext,
-        traversable::Traversable,
-    },
     path::{
         accessors::{
             child::RootChildPos,
@@ -31,7 +27,9 @@ use crate::{
                 SearchPath,
             },
         },
-    },
+    }, traversal::{
+        state::query::QueryState, traversable::Traversable
+    }
 };
 use auto_impl::auto_impl;
 use crate::graph::vertex::{
@@ -125,7 +123,7 @@ impl_child! { RootChild for RootedRolePath<R>, self, trav =>
     trav.graph().expect_child_at(self.path_root().location.to_child_location(RootChildPos::<R>::root_child_pos(&self.role_path)))
 }
 
-impl<R: PathRole> RootChild<R> for QueryStateContext<'_>
+impl<R: PathRole> RootChild<R> for QueryState
 where
     Self: RootChildPos<R>,
 {
@@ -234,7 +232,7 @@ pub trait PatternRootChild<R>: RootChildPos<R> + PatternRoot {
 
 impl<R> PatternRootChild<R> for QueryRangePath where Self: RootChildPos<R> {}
 
-impl<R> PatternRootChild<R> for QueryStateContext<'_> where Self: RootChildPos<R> {}
+impl<R> PatternRootChild<R> for QueryState where Self: RootChildPos<R> {}
 //impl<R> PatternRootChild<R> for PatternPrefixPath
 //    where PatternPrefixPath: RootChildPos<R>
 //{

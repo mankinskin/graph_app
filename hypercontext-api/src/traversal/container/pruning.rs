@@ -1,18 +1,6 @@
 use crate::{
-    HashMap,
-    traversal::{
-        cache::key::UpKey,
-        context::TraversalStateContext,
-        iterator::{
-            TraversalIterator,
-            traverser::{
-                NodeVisitor,
-                OrderedTraverser,
-            },
-        },
-        policy::DirectedTraversalPolicy,
-        traversable::Traversable,
-    },
+    traversal::cache::key::UpKey,
+    HashMap
 };
 use crate::graph::vertex::child::Child;
 
@@ -64,25 +52,13 @@ pub trait PruneStates {
     }
 }
 
-impl<Trav, S, O> PruneStates for OrderedTraverser<'_, Trav, S, O>
-where
-    Trav: Traversable,
-    S: DirectedTraversalPolicy<Trav = Trav>,
-    O: NodeVisitor,
-{
-    fn clear(&mut self) {
-        self.collection.clear();
-    }
-    fn pruning_map(&mut self) -> &mut PruningMap {
-        &mut self.pruning_map
-    }
-}
 
-impl<'a, 'b: 'a, I: TraversalIterator<'b>> PruneStates for TraversalStateContext<'a, 'b, I> {
-    fn clear(&mut self) {
-        self.iter.clear();
-    }
-    fn pruning_map(&mut self) -> &mut PruningMap {
-        self.iter.pruning_map()
-    }
-}
+//impl<'a, 'b: 'a, K: TraversalKind> PruneStates for TraversalStateContext<'a, 'b, K> {
+//    fn clear(&mut self) {
+//        self.ctx.clear();
+//    }
+//    fn pruning_map(&mut self) -> &mut PruningMap {
+//        self.ctx.pruning_map()
+//    }
+//}
+//

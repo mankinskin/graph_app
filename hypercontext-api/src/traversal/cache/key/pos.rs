@@ -2,7 +2,7 @@ use crate::{
     path::{
         mutators::move_path::key::TokenPosition,
         structs::pair::PathPair,
-    }, traversal::cache::state::{
+    }, traversal::state::{
         child::ChildState, end::EndState, parent::ParentState, query::QueryState, start::StartState, traversal::TraversalState, InnerKind
     }
 };

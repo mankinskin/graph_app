@@ -5,16 +5,14 @@ use crate::{
         wide::Wide,
     },
     traversal::{
-        cache::{
-            key::{
-                DirectedKey,
-                root::RootKey,
-                UpKey,
-            },
-            state::{
-                query::QueryState,
-                StateDirection,
-            },
+        cache::key::{
+            DirectedKey,
+            root::RootKey,
+            UpKey,
+        },
+        state::{
+            query::QueryState,
+            StateDirection,
         },
         result::kind::Primer,
     },

@@ -1,26 +1,4 @@
 use crate::{
-    traversal::{
-        cache::{
-            entry::new::NewEntry,
-            key::{
-                prev::ToPrev,
-                target::TargetKey,
-            },
-            state::{
-                end::{
-                    EndReason,
-                    EndState,
-                },
-                query::QueryState,
-                NextStates,
-                StateNext,
-            },
-        },
-        context::TraversalStateContext,
-        iterator::TraversalIterator,
-        policy::DirectedTraversalPolicy,
-        result::kind::Primer,
-    },
     path::{
         accessors::{
             child::root::GraphRootChild,
@@ -31,9 +9,27 @@ use crate::{
             adapters::into_advanced::IntoAdvanced,
             move_path::key::TokenPosition,
         },
-    },
+    }, traversal::{
+        cache::{
+            entry::new::NewEntry,
+            key::{
+                prev::ToPrev,
+                target::TargetKey,
+            },
+        }, fold::TraversalKind, iterator::policy::DirectedTraversalPolicy, result::kind::Primer
+    }
 };
 use std::cmp::Ordering;
+
+use super::{
+    end::{
+        EndReason,
+        EndState,
+    },
+    query::QueryState,
+    NextStates,
+    StateNext,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParentState {
@@ -62,18 +58,18 @@ impl PartialOrd for ParentState {
 }
 
 impl ParentState {
-    pub fn next_states<'a, 'b: 'a, I: TraversalIterator<'b>>(
+    pub fn next_states<'a, 'b: 'a, K: TraversalKind>(
         self,
-        ctx: &mut TraversalStateContext<'a, 'b, I>,
+        trav: &K::Trav,
         new: Vec<NewEntry>,
     ) -> NextStates {
         let key = self.target_key();
-        match self.into_advanced(ctx.trav()) {
+        match self.into_advanced(trav) {
             // first child state in this parent
             Ok(advanced) => {
                 let delta = <_ as GraphRootChild<Start>>::root_post_ctx_width(
                     &advanced.paths.path,
-                    ctx.trav(),
+                    trav,
                 );
                 NextStates::Child(StateNext {
                     prev: key.flipped().to_prev(delta),
@@ -82,18 +78,18 @@ impl ParentState {
                 })
             }
             // no child state, bottom up path at end of parent
-            Err(state) => state.next_parents(ctx, new),
+            Err(state) => state.next_parents::<K>(trav, new),
         }
     }
-    pub fn next_parents<'a, 'b: 'a, I: TraversalIterator<'b>>(
+    pub fn next_parents<'a, 'b: 'a, K: TraversalKind>(
         self,
-        ctx: &mut TraversalStateContext<'a, 'b, I>,
+        trav: &K::Trav,
         new: Vec<NewEntry>,
     ) -> NextStates {
         // get next parents
         let key = self.target_key();
-        let parents = I::Policy::next_parents(ctx.trav(), &self);
-        let delta = self.path.root_post_ctx_width(ctx.trav());
+        let parents = K::Policy::next_parents(trav, &self);
+        let delta = self.path.root_post_ctx_width(trav);
         if parents.is_empty() {
             NextStates::End(StateNext {
                 prev: key.to_prev(delta),
@@ -101,7 +97,7 @@ impl ParentState {
                 inner: EndState {
                     reason: EndReason::Mismatch,
                     root_pos: self.root_pos,
-                    kind: self.path.simplify(ctx.trav()),
+                    kind: self.path.simplify(trav),
                     query: self.query,
                 },
             })

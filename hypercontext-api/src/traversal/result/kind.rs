@@ -26,14 +26,15 @@ use crate::{
             match_end::{
                 MatchEnd,
                 MatchEndPath,
-            }, query_range_path::QueryRangePath, role_path::RolePath, rooted_path::{
+            },
+            role_path::RolePath, rooted_path::{
                 RootedRolePath,
                 SearchPath,
             }
         }, BasePath
     }, traversal::{
         cache::key::root::RootKey,
-        policy::NodePath,
+        iterator::policy::NodePath,
         traversable::Traversable,
     }
 };
@@ -215,39 +216,7 @@ impl<T> RoleChildPath for T {}
 //        }
 //    }
 //}
-pub trait Advanced:
-    RoleChildPath
-    + NodePath<Start>
-    + BasePath
-    + HasRolePath<Start>
-    + HasRolePath<End>
-    + GraphRootChild<Start>
-    + GraphRootChild<End>
-    + LeafChild<Start>
-    + LeafChild<End>
-    + MoveRootPos<Right, End>
-    + RootChildPosMut<End>
-    + GraphRoot
-    + PathAppend
-{
-}
 
-impl<
-        T: RoleChildPath
-            + NodePath<Start>
-            + BasePath
-            + HasRolePath<Start>
-            + HasRolePath<End>
-            + GraphRootChild<Start>
-            + GraphRootChild<End>
-            + LeafChild<Start>
-            + LeafChild<End>
-            + MoveRootPos<Right, End>
-            + RootChildPosMut<End>
-            + PathAppend,
-    > Advanced for T
-{
-}
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct BaseResult;

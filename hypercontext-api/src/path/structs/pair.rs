@@ -1,9 +1,8 @@
 use crate::{
-    traversal::cache::state::query::QueryState,
     path::{
         mutators::append::PathAppend,
         structs::rooted_path::SearchPath,
-    },
+    }, traversal::state::query::QueryState,
 };
 use crate::graph::vertex::location::child::ChildLocation;
 

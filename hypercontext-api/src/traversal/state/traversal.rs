@@ -2,26 +2,20 @@ use std::cmp::Ordering;
 
 use super::{InnerKind, NextStates, StateDirection, WaitingState};
 use crate::{
-    graph::vertex::location::child::ChildLocation,
-    traversal::{
+    graph::vertex::location::child::ChildLocation, path::{
+        accessors::{
+            child::root::GraphRootChild,
+            role::End,
+        }, mutators::move_path::key::TokenPosition
+    }, traversal::{
         cache::{
             entry::new::NewEntry,
             key::{
                 prev::PrevKey,
                 target::TargetKey,
             },
-        },
-        context::TraversalStateContext,
-        iterator::TraversalIterator,
-        result::kind::RoleChildPath,
-    },
-    path::{
-        mutators::move_path::key::TokenPosition,
-        accessors::{
-            child::root::GraphRootChild,
-            role::End,
-        },
-    },
+        }, fold::{TraversalContext, TraversalKind}, result::kind::RoleChildPath
+    }
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -83,12 +77,12 @@ impl TraversalState {
         }
     }
     /// Retrieves next unvisited states and adds edges to cache
-    pub fn next_states<'a, 'b: 'a, I: TraversalIterator<'b>>(
+    pub fn next_states<'a, 'b: 'a, K: TraversalKind>(
         mut self,
-        ctx: &mut TraversalStateContext<'a, 'b, I>,
+        ctx: &mut TraversalContext<'a, K>,
     ) -> Option<NextStates> {
         let key = self.target_key();
-        let exists = ctx.cache.exists(&key);
+        let exists = ctx.states.cache.exists(&key);
 
         //let prev = tstate.prev_key();
         //if !exists {
@@ -101,11 +95,11 @@ impl TraversalState {
             InnerKind::Parent(state) => {
                 //debug!("Parent({}, {})", key.index.index(), key.index.width());
                 if !exists {
-                    state.next_states(ctx, self.new)
+                    state.next_states::<K>(ctx.trav, self.new)
                 } else {
                     // add other edges leading to this parent
                     for entry in self.new {
-                        ctx.cache.add_state(ctx.trav(), entry, true);
+                        ctx.states.cache.add_state(ctx.trav, entry, true);
                     }
                     NextStates::Empty
                 }

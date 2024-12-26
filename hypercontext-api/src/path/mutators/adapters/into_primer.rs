@@ -1,9 +1,5 @@
 use crate::traversal::{
-    cache::state::{
-        parent::ParentState,
-        query::QueryState,
-    },
-    traversable::Traversable,
+    state::{parent::ParentState, query::QueryState}, traversable::Traversable
 };
 use super::super::super::structs::{
     role_path::RolePath,

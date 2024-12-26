@@ -1,13 +1,15 @@
-use crate::traversal::cache::{
-    entry::new::{
-        NewEnd,
-        NewEntry,
-        NewKind,
-    },
-    key::{
-        DirectedKey,
-        QueryPosition,
-        RootKey,
+use crate::traversal::{
+    cache::{
+        entry::new::{
+            NewEnd,
+            NewEntry,
+            NewKind,
+        },
+        key::{
+            DirectedKey,
+            QueryPosition,
+            RootKey,
+        },
     },
     state::{
         child::ChildState,

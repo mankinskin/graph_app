@@ -1,5 +1,4 @@
 use crate::{
-    traversal::context::QueryStateContext,
     path::{
         accessors::role::{
             End,
@@ -15,7 +14,7 @@ use crate::{
                 SearchPath,
             },
         },
-    },
+    }, traversal::state::query::QueryState,
 };
 use auto_impl::auto_impl;
 use std::borrow::Borrow;
@@ -82,7 +81,7 @@ where
     }
 }
 
-impl<R: 'static> HasPath<R> for QueryStateContext<'_>
+impl<R: 'static> HasPath<R> for QueryState
 where
     Self: HasRolePath<R>,
 {
@@ -173,21 +172,21 @@ impl<R: PathRole, Root: PathRoot> HasRolePath<R> for RootedRolePath<R, Root> {
     }
 }
 
-impl HasRolePath<Start> for QueryStateContext<'_> {
+impl HasRolePath<Start> for QueryState {
     fn role_path(&self) -> &RolePath<Start> {
-        &self.state.start
+        &self.path.start
     }
     fn role_path_mut(&mut self) -> &mut RolePath<Start> {
-        &mut self.state.start
+        &mut self.path.start
     }
 }
 
-impl HasRolePath<End> for QueryStateContext<'_> {
+impl HasRolePath<End> for QueryState {
     fn role_path(&self) -> &RolePath<End> {
-        &self.state.end
+        &self.path.end
     }
     fn role_path_mut(&mut self) -> &mut RolePath<End> {
-        &mut self.state.end
+        &mut self.path.end
     }
 }
 

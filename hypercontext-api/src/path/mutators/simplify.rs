@@ -1,22 +1,13 @@
 use crate::{
-    graph::{
+    direction::r#match::MatchDirection, graph::{
         kind::GraphKind,
         vertex::pattern::pattern_width,
-    },
-    direction::r#match::MatchDirection,
-    traversal::{
-        cache::state::end::{
-            EndKind,
-            PostfixEnd,
-            PrefixEnd,
-            RangeEnd,
-        },
+    }, traversal::{
         result::kind::{
             Primer,
             RoleChildPath,
-        },
-        traversable::Traversable,
-    },
+        }, state::end::{EndKind, PostfixEnd, PrefixEnd, RangeEnd}, traversable::Traversable
+    }
 };
 
 use super::super::{

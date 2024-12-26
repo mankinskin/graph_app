@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use key::{DirectedKey, UpKey};
-use state::traversal::TraversalState;
 
 use crate::{
     traversal::{
@@ -19,7 +18,8 @@ use crate::{
         },
         traversable::{
             TravToken, Traversable
-        }
+        },
+        state::traversal::TraversalState,
     },
     HashMap
 };
@@ -31,8 +31,6 @@ use crate::graph::vertex::{
 pub mod entry;
 pub mod key;
 pub mod labelled_key;
-pub mod state;
-pub mod trace;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TraversalCache {
@@ -41,7 +39,7 @@ pub struct TraversalCache {
 
 impl TraversalCache {
     pub fn new<'a, Trav: Traversable>(
-        folder: &'a Trav,
+        trav: &'a Trav,
         start_index: Child,
     ) -> Self
     where
@@ -49,7 +47,7 @@ impl TraversalCache {
     {
         let mut entries = HashMap::default();
         entries.insert(
-            labelled_key(folder, start_index),
+            labelled_key(trav, start_index),
             VertexCache::start(start_index),
         );
         Self { entries }

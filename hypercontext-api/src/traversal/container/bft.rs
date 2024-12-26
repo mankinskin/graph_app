@@ -1,23 +1,24 @@
 use crate::traversal::{
-    cache::state::traversal::TraversalState, iterator::traverser::{
-        ExtendStates,
-        NodeVisitor,
-        OrderedTraverser,
-    }
+    fold::TraversalContext, state::traversal::TraversalState
 };
 use std::{
     cmp::Ordering,
     collections::BinaryHeap,
 };
 
-pub type Bft<'a, Trav, S> = OrderedTraverser<'a, Trav, S, BftQueue>;
+use super::{
+    StateContainer,
+    extend::ExtendStates,
+};
+
+pub type Bft<'a, K> = TraversalContext<'a, K>;
 
 #[derive(Debug, Default)]
 pub struct BftQueue {
     queue: BinaryHeap<QueueEntry>,
 }
 
-impl NodeVisitor for BftQueue {
+impl StateContainer for BftQueue {
     fn clear(&mut self) {
         self.queue.clear()
     }

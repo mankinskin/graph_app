@@ -2,19 +2,14 @@ use itertools::Itertools;
 use std::fmt::Debug;
 
 use crate::{
-    traversal::{
-        cache::state::parent::ParentState,
-        folder::TraversalFolder,
-        iterator::traverser::TraversalOrder,
-        traversable::Traversable,
-    },
     path::{
         accessors::{
-            child::root::RootChild,
-            root::GraphRoot,
+            child::root::RootChild, role::PathRole, root::GraphRoot
         },
         mutators::raise::PathRaise,
-    },
+    }, traversal::{
+        container::order::TraversalOrder, state::parent::ParentState, traversable::Traversable
+    }
 };
 use crate::graph::vertex::{
     child::Child,
@@ -22,12 +17,12 @@ use crate::graph::vertex::{
 };
 use crate::graph::getters::vertex::VertexSet;
 
-pub trait NodePath<R>: RootChild<R> + Send + Clone + Eq + Debug {}
+pub trait NodePath<R: PathRole>: RootChild<R> + Send + Clone + Eq + Debug {}
 
-impl<R, T: RootChild<R> + Send + Clone + Eq + Debug> NodePath<R> for T {}
+impl<R: PathRole, T: RootChild<R> + Send + Clone + Eq + Debug> NodePath<R> for T {}
 
 pub trait DirectedTraversalPolicy: Sized + Debug {
-    type Trav: TraversalFolder;
+    type Trav: Traversable;
 
     /// nodes generated when an index ended
     /// (parent nodes)

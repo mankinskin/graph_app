@@ -1,21 +1,18 @@
 use std::borrow::Borrow;
 
 use crate::{
-    direction::r#match::MatchDirection,
-    traversal::{
-        cache::state::parent::ParentState,
-        traversable::{
-            TravDir,
-            Traversable,
-        },
-    },
-    graph::vertex::{
+    direction::r#match::MatchDirection, graph::vertex::{
         location::{
             child::ChildLocation,
             pattern::IntoPatternLocation,
         },
         pattern::pattern_width,
-    },
+    }, traversal::{
+        state::parent::ParentState, traversable::{
+            TravDir,
+            Traversable,
+        }
+    }
 };
 use super::super::mutators::move_path::key::AdvanceKey;
 

@@ -1,14 +1,13 @@
 use crate::traversal::{
-    result::kind::Advanced,
     traversable::Traversable,
 };
-use super::super::super::{
+use super::{super::super::{
     accessors::role::Start,
     structs::{
         role_path::RolePath,
         rooted_path::SearchPath,
     },
-};
+}, Advanced};
 
 pub trait FromAdvanced<A: Advanced> {
     fn from_advanced<Trav: Traversable>(

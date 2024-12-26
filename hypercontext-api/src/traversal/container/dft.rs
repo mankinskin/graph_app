@@ -1,13 +1,11 @@
 use crate::traversal::{
-    cache::state::traversal::TraversalState, iterator::traverser::{
-        ExtendStates,
-        NodeVisitor,
-        OrderedTraverser,
-    }
+    container::extend::ExtendStates, fold::TraversalContext, state::traversal::TraversalState
 };
 
+use super::StateContainer;
+
 #[allow(unused)]
-pub type Dft<'a, Trav, S> = OrderedTraverser<'a, Trav, S, DftStack>;
+pub type Dft<'a, K> = TraversalContext<'a, K>;
 
 #[derive(Debug, Default)]
 pub struct DftStack {
@@ -22,7 +20,7 @@ pub struct DftStack {
 //        }
 //    }
 //}
-impl NodeVisitor for DftStack {
+impl StateContainer for DftStack {
     fn clear(&mut self) {
         self.stack.clear()
     }

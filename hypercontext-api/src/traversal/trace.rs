@@ -7,16 +7,16 @@ use crate::{
             key::{
                 prev::ToPrev, DirectedKey, DownKey, UpKey
             },
-            state::end::{
-                EndKind,
-                EndState,
-            },
             TraversalCache,
         },
         result::kind::RoleChildPath,
         traversable::{
             TravToken,
             Traversable,
+        },
+        state::end::{
+            EndKind,
+            EndState,
         },
     },
     path::{

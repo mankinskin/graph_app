@@ -1,12 +1,8 @@
 use crate::{
-    traversal::{
-        cache::state::end::EndKind,
-        folder::state::FoldResult,
-    },
     path::structs::match_end::{
         MatchEnd,
         MatchEndPath,
-    },
+    }, traversal::{fold::state::FoldResult, state::end::EndKind}
 };
 use std::fmt::Debug;
 use crate::graph::vertex::child::Child;
