@@ -4,7 +4,7 @@ use derive_more::{
     From,
 };
 use crate::split::TraceState;
-use hypercontext_api::{
+use crate::{
     graph::getters::vertex::VertexSet,
     traversal::{
         cache::{
@@ -17,7 +17,7 @@ use hypercontext_api::{
     },
     HashMap
 };
-use hypercontext_api::graph::vertex::child::Child;
+use crate::graph::vertex::child::Child;
 
 #[derive(Default, Debug, Deref, DerefMut, From)]
 pub struct Leaves(Vec<SplitKey>);

@@ -12,40 +12,33 @@ use derive_more::{
     DerefMut,
 };
 use crate::{
-    split::cache::{
+    join::context::node::context::NodeTraceContext, split::cache::{
         cleaned_position_splits, leaves::Leaves, vertex::SplitVertexCache, CacheContext, SplitCache, SplitPositionCache, TraceState
-    },
-    join::context::node::context::NodeTraceContext,
+    }
+    //join::context::node::context::NodeTraceContext,
 };
-use hypercontext_api::{
+use crate::{
     graph::{
-        getters::vertex::VertexSet,
-        Hypergraph,
-        vertex::{
+        getters::vertex::VertexSet, vertex::{
             child::{
                 Child,
                 ChildWidth,
             },
             has_vertex_index::HasVertexIndex,
             wide::Wide,
-        }
+        }, Hypergraph
     },
     traversal::{
         cache::{
             entry::{
-                position::SubSplitLocation, InnerNode, RootNode
+                position::SubSplitLocation, InnerNode, RootMode, RootNode
             },
             key::SplitKey,
             labelled_key::vkey::labelled_key,
-        },
-        folder::state::{
-            FoldState,
-            RootMode,
-        },
-        traversable::{
+        }, fold::state::FoldState, traversable::{
             Traversable,
             TraversableMut,
-        },
+        }
     },
     HashMap,
 };

@@ -22,8 +22,7 @@ use crate::{
     },
 };
 use hypercontext_api::{
-    direction::Right,
-    graph::{
+    direction::Right, graph::{
         getters::NoMatch,
         vertex::{
             child::Child,
@@ -39,16 +38,12 @@ use hypercontext_api::{
         },
         Hypergraph,
         HypergraphRef,
-    },
-    traversal::{
-        path::structs::query_range_path::PatternPrefixPath,
-        traversable::{
+    }, path::structs::query_range_path::PatternPrefixPath, traversal::traversable::{
             impl_traversable,
             impl_traversable_mut,
             Traversable,
             TraversableMut,
-        },
-    },
+        }
 };
 
 #[derive(Debug)]

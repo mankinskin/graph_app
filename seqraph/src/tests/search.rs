@@ -5,19 +5,12 @@ use pretty_assertions::assert_eq;
 
 use hypercontext_api::{
     graph::{
-        kind::BaseGraphKind,
-        vertex::{
-            child::Child,
-            token::Token,
-            location::{
-                SubLocation,
-                child::ChildLocation,
-                pattern::PatternLocation,
-            },
-        },
-        HypergraphRef,
-    },
-    traversal::{
+        getters::NoMatch, kind::BaseGraphKind, tests::Context, vertex::{
+            child::Child, location::{
+                child::ChildLocation, pattern::PatternLocation, SubLocation
+            }, token::Token
+        }, HypergraphRef
+    }, path::structs::query_range_path::QueryRangePath, traversal::{
         cache::{
             entry::{
                 position::{
@@ -27,37 +20,9 @@ use hypercontext_api::{
                 vertex::VertexCache,
             },
             key::DirectedKey,
-            state::{
-                end::{
-                    EndKind,
-                    EndReason,
-                    EndState,
-                    PostfixEnd,
-                },
-                query::QueryState,
-            },
             TraversalCache,
-        },
-        folder::state::{
-            FoldResult,
-            FoldState,
-        },
-        path::structs::{
-            query_range_path::{
-                QueryPath,
-                QueryRangePath,
-                RangePath,
-            },
-            role_path::RolePath,
-            rooted_path::{
-                IndexRoot,
-                RootedRolePath,
-                SubPath,
-            },
-        },
-        result::TraversalResult,
-        traversable::Traversable,
-    },
+        }, context, result::{FoldResult, TraversalResult}, traversable::Traversable
+    }
 };
 use crate::{
     search::Searchable,
@@ -127,7 +92,7 @@ fn find_parent1() {
     assert_eq!(
         graph.find_parent(&query),
         Ok(TraversalResult {
-            result: FoldResult::Complete(*abc),
+            result: Some(FoldResult::Complete(*abc)),
             query: QueryRangePath::new_range(query.clone(), 0, query.len() - 1),
         }),
         "a_b_c_c"
@@ -207,7 +172,7 @@ fn find_ancestor1() {
     assert_eq!(
         graph.find_ancestor(&query),
         Ok(TraversalResult {
-            result: FoldResult::Complete(*abc),
+            result: Some(FoldResult::Complete(*abc)),
             query: QueryRangePath::new_range(query.clone(), 0, query.len() - 2),
         }),
         "a_b_c_c"
@@ -246,7 +211,7 @@ fn find_ancestor2() {
     assert_eq!(
         byz_found,
         Ok(TraversalResult {
-            result: FoldResult::Incomplete(FoldState {
+            result: Some(FoldResult::Incomplete(FoldState {
                 root: xabyz,
                 start: by,
                 cache: TraversalCache {
@@ -399,7 +364,7 @@ fn find_ancestor2() {
                         pos: 3.into(),
                     },
                 },
-            }),
+            })),
             query: QueryRangePath::complete(query),
         }),
         "by_z"
@@ -443,7 +408,7 @@ fn find_ancestor3() {
     assert_eq!(
         aby_found,
         Ok(TraversalResult {
-            result: FoldResult::Incomplete(FoldState {
+            result: Some(FoldResult::Incomplete(FoldState {
                 root: xaby,
                 start: ab,
                 cache: TraversalCache {
@@ -726,7 +691,7 @@ fn find_ancestor3() {
                 //        pos: 3.into(),
                 //    },
                 //},
-            }),
+            })),
             query: QueryRangePath::complete(query),
         }),
         "ab_y"

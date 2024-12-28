@@ -4,17 +4,13 @@ use cache::*;
 use complete::*;
 
 use crate::{
-    HashMap,
-    join::partition::splits::offset::OffsetSplits,
-};
-use hypercontext_api::{
-    traversal::cache::entry::position::SubSplitLocation,
-    graph::vertex::pattern::id::PatternId,
+    graph::vertex::pattern::id::PatternId, traversal::cache::entry::position::SubSplitLocation, HashMap
 };
 
 pub mod augment;
 pub mod cache;
 pub mod complete;
+pub mod frontier;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct PatternSplitPos {

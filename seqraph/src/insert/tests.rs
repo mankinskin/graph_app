@@ -10,18 +10,24 @@ use pretty_assertions::assert_eq;
 use crate::search::Searchable;
 use hypercontext_api::{
     graph::{
-        getters::vertex::VertexSet, kind::BaseGraphKind, vertex::{
-            child::Child, token::Token, wide::Wide
-        }, Hypergraph, HypergraphRef
-    }, traversal::{
-        folder::state::FoldResult,
-        path::structs::query_range_path::{
-            QueryPath,
-            QueryRangePath,
+        getters::vertex::VertexSet,
+        kind::BaseGraphKind,
+        vertex::{
+            child::Child,
+            token::Token,
+            wide::Wide,
         },
-        result::TraversalResult,
+        Hypergraph,
+        HypergraphRef,
+    },
+    path::structs::query_range_path::{
+        QueryPath,
+        QueryRangePath,
+    },
+    traversal::{
+        result::{FoldResult, TraversalResult},
         traversable::Traversable,
-    }
+    },
 };
 
 #[test]
@@ -129,7 +135,7 @@ fn index_pattern2() {
     assert_eq!(
         aby_found,
         Ok(TraversalResult {
-            result: FoldResult::Complete(aby),
+            result: Some(FoldResult::Complete(aby)),
             query: QueryRangePath::complete(query),
         }),
         "aby"
@@ -181,7 +187,7 @@ fn index_infix1() {
     assert_eq!(
         aby_found,
         Ok(TraversalResult {
-            result: FoldResult::Complete(aby),
+            result: Some(FoldResult::Complete(aby)),
             query: QueryRangePath::complete(query),
         }),
         "aby"

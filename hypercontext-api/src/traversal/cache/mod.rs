@@ -34,7 +34,7 @@ pub mod labelled_key;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TraversalCache {
-    pub(crate) entries: HashMap<VertexCacheKey, VertexCache>,
+    pub entries: HashMap<VertexCacheKey, VertexCache>,
 }
 
 impl TraversalCache {

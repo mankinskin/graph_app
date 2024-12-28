@@ -21,14 +21,9 @@ use hypercontext_api::{
         Traversable,
     },
 };
+use searcher::{SearchResult, Searcher};
 
 pub mod searcher;
-
-#[macro_use]
-#[cfg(test)]
-pub mod tests;
-
-
 
 pub trait Searchable: Traversable
 {

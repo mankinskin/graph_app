@@ -106,13 +106,13 @@ impl ToNewTokenIndices<NewTokenIndex> for NewTokenIndices {
 //    }
 //}
 
-impl<Iter: IntoIterator<Item = DefaultToken> + Debug + Send + Sync> ToNewTokenIndices<DefaultToken>
-    for Iter
-{
-    fn to_new_token_indices<'a: 'g, 'g, Trav: TraversableMut<Kind = BaseGraphKind>>(
-        self,
-        graph: &'a mut Trav,
-    ) -> NewTokenIndices {
-        graph.graph_mut().new_token_indices(self)
-    }
-}
+//impl<Iter: IntoIterator<Item = DefaultToken> + Debug + Send + Sync> ToNewTokenIndices<DefaultToken>
+//    for Iter
+//{
+//    fn to_new_token_indices<'a: 'g, 'g, Trav: TraversableMut<Kind = BaseGraphKind>>(
+//        self,
+//        graph: &'a mut Trav,
+//    ) -> NewTokenIndices {
+//        graph.graph_mut().new_token_indices(self)
+//    }
+//}

@@ -1,20 +1,53 @@
+use std::{
+    borrow::Borrow,
+    num::NonZeroUsize,
+};
+
+use itertools::Itertools;
+
 use crate::{
-    HashMap,
-    traversal::cache::{
-        entry::PositionCache,
-        key::DirectedPosition,
+    graph::{
+        getters::vertex::VertexSet,
+        vertex::{
+            child::Child,
+            data::VertexData,
+            location::SubLocation,
+            pattern::{
+                id::PatternId,
+                Pattern,
+            },
+            wide::Wide,
+        },
     },
     path::mutators::move_path::key::TokenPosition,
+    //partition::splits::offset::OffsetSplits,
+    //split::PatternSplitPos,
+    traversal::{
+        cache::{
+            entry::PositionCache,
+            key::DirectedPosition,
+        },
+        traversable::Traversable,
+    },
+    HashMap,
+    HashSet,
 };
-use crate::graph::vertex::child::Child;
+
+use super::{
+    NodeSplitOutput,
+    NodeType,
+    Offset,
+    RootMode,
+    SubSplitLocation,
+};
 
 pub type DirectedPositions = HashMap<TokenPosition, PositionCache>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VertexCache {
-    pub(crate) bottom_up: DirectedPositions,
-    pub(crate) top_down: DirectedPositions,
-    pub(crate) index: Child,
+    pub bottom_up: DirectedPositions,
+    pub top_down: DirectedPositions,
+    pub index: Child,
 }
 
 impl From<Child> for VertexCache {

@@ -17,6 +17,10 @@ pub mod direction;
 pub mod traversal;
 pub mod path;
 
+//pub mod split;
+//pub mod join;
+//pub mod partition;
+
 #[cfg(test)]
 pub mod tests;
 

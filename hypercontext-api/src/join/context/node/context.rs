@@ -26,26 +26,15 @@ use crate::{
         },
         Infix, JoinContext, JoinedPartition, Postfix, Prefix
     },
-    split::{cache::vertex::SplitVertexCache, complete::position_splits},
 };
 use hypercontext_api::{
-    traversal::{
-       cache::key::SplitKey,
-       folder::state::RootMode,
-    },
     graph::{
         vertex::{
-            location::SubLocation,
-            wide::Wide,
-            child::Child,
-            ChildPatterns,
-            pattern::id::PatternId,
+            child::Child, location::SubLocation, pattern::id::PatternId, wide::Wide, ChildPatterns
         },
         Hypergraph
-    },
+    }, traversal::cache::{entry::RootMode, key::SplitKey}
 };
-
-use crate::split::cache::split::Split;
 
 #[derive(Debug, Clone, Copy)]
 pub struct NodeTraceContext<'p> {

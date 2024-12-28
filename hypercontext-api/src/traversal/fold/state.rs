@@ -57,8 +57,8 @@ impl Ord for FinalState<'_> {
 pub struct FoldState {
     pub cache: TraversalCache,
     pub end_state: EndState,
-    pub(crate) start: Child,
-    pub(crate) root: Child,
+    pub start: Child,
+    pub root: Child,
 }
 
 impl FoldState {

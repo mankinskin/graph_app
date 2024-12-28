@@ -137,7 +137,7 @@ impl<K: TraversalKind> Iterator for FoldContext<'_, K> {
 }
 impl<'a, K: TraversalKind> FoldContext<'a, K>
 {
-    fn fold_pattern<P: IntoPattern>(
+    pub fn fold_pattern<P: IntoPattern>(
         trav: &'a K::Trav,
         query_pattern: P,
     ) -> Result<TraversalResult, (NoMatch, TraversalResult)>
@@ -153,7 +153,7 @@ impl<'a, K: TraversalKind> FoldContext<'a, K>
 
         Self::fold_query(trav, query)
     }
-    fn fold_query(
+    pub fn fold_query(
         trav: &'a K::Trav,
         query: QueryState,
     ) -> Result<TraversalResult, (NoMatch, TraversalResult)>

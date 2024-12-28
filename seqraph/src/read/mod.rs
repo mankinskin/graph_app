@@ -18,18 +18,30 @@ pub mod bands;
 #[cfg(test)]
 mod tests;
 
-impl HypergraphRef {
-    pub fn read_context<'g>(&'g mut self) -> ReadContext<'g> {
+pub trait HasReadContext {
+    fn read_context<'g>(&'g mut self) -> ReadContext<'g>;
+    fn read_sequence(
+        &mut self,
+        sequence: impl IntoIterator<Item = DefaultToken> + std::fmt::Debug + Send + Sync,
+    ) -> Option<Child>;
+    fn read_pattern(
+        &mut self,
+        pattern: impl IntoPattern,
+    ) -> Option<Child>;
+}
+
+impl HasReadContext for HypergraphRef {
+    fn read_context<'g>(&'g mut self) -> ReadContext<'g> {
         //ReadContext::new(self.graph_mut())
         ReadContext::new(self.clone())
     }
-    pub fn read_sequence(
+    fn read_sequence(
         &mut self,
         sequence: impl IntoIterator<Item = DefaultToken> + std::fmt::Debug + Send + Sync,
     ) -> Option<Child> {
         self.read_context().read_sequence(sequence)
     }
-    pub fn read_pattern(
+    fn read_pattern(
         &mut self,
         pattern: impl IntoPattern,
     ) -> Option<Child> {

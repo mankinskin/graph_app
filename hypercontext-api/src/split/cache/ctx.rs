@@ -12,15 +12,15 @@ use crate::split::{
     cleaned_position_splits,
     TraceState,
 };
-use hypercontext_api::traversal::{
+use crate::traversal::{
     cache::{
         entry::position::SubSplitLocation,
         key::SplitKey,
     },
     traversable::Traversable,
 };
-use hypercontext_api::graph::vertex::child::Child;
-use hypercontext_api::graph::getters::vertex::VertexSet;
+use crate::graph::vertex::child::Child;
+use crate::graph::getters::vertex::VertexSet;
 
 #[derive(Debug)]
 pub struct CacheContext {

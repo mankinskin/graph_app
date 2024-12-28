@@ -6,14 +6,8 @@ use hypercontext_api::{
             child::Child,
             pattern::IntoPattern,
         }, Hypergraph, HypergraphRef
-    }, path::structs::query_range_path::QueryPath, traversal::{
-        cache::key::SplitKey, folder::{
-            state::{
-                FoldResult,
-                FoldState,
-            },
-            TraversalFolder,
-        }, iterator::{traverser::bft::Bft, TraversalIterator}, path::structs::query_range_path::QueryRangePath, policy::DirectedTraversalPolicy, result::{kind::BaseResult, TraversalResult}, traversable::{
+    }, path::structs::query_range_path::{QueryPath, QueryRangePath}, traversal::{
+        cache::key::SplitKey, container::bft::Bft, fold::{state::FoldState, FoldContext}, iterator::policy::DirectedTraversalPolicy, result::{kind::BaseResult, FoldResult, TraversalResult}, traversable::{
             impl_traversable, impl_traversable_mut, Traversable, TraversableMut
         }
     }, HashMap
@@ -46,9 +40,9 @@ pub trait InsertTraversalPolicy: DirectedTraversalPolicy<Trav = InsertContext> {
 
 impl InsertTraversalPolicy for InsertPolicy {}
 
-impl TraversalFolder for InsertContext {
-    type Iterator<'a> = Bft<'a, Self, InsertPolicy>;
-}
+//impl TraversalFolder for InsertContext {
+//    type Iterator<'a> = Bft<'a, Self, InsertPolicy>;
+//}
 
 impl InsertContext {
     pub fn new(graph: HypergraphRef) -> Self {
@@ -64,7 +58,7 @@ impl InsertContext {
         &mut self,
         query: impl IntoPattern,
     ) -> Result<(Child, QueryRangePath), NoMatch> {
-        match <Self as TraversalFolder>::fold_query(self, query) {
+        match FoldContext::fold_query(self, query) {
             Ok(result) => match result.result {
                 FoldResult::Complete(c) => Ok((c, result.query)),
                 FoldResult::Incomplete(s) => Ok((self.join_subgraph(s), result.query)),
@@ -128,12 +122,12 @@ impl InsertContext {
     >(
         &'a mut self,
         query_path: Q,
-    ) -> Result<ControlFlow<(<R as ResultKind>::Indexed, Q), Option<TraversalResult<R, Q>>>, NoMatch> {
+    ) -> Result<ControlFlow<(<R as ResultKind>::Indexed, Q), Option<TraversalResult>>, NoMatch> {
         let mut acc = ControlFlow::Continue(None);
         let mut stream = Ti::new(self, query_path)
             .ok_or(NoMatch::EmptyPatterns)?;
         while let Some((_depth, node)) = stream.next() {
-            match <S::Folder as TraversalFolder<_, _, _, R>>::fold_found(self, acc.continue_value().unwrap(), node) {
+            match FoldContext::fold_found(self, acc.continue_value().unwrap(), node) {
                 ControlFlow::Continue(c) => {
                     acc = ControlFlow::Continue(c);
                 },
@@ -149,6 +143,11 @@ impl InsertContext {
 
 impl_traversable! {
     impl for InsertContext,
+    self => self.graph.read().unwrap();
+    <'a> RwLockReadGuard<'a, Hypergraph>
+}
+impl_traversable! {
+    impl for &'_ InsertContext,
     self => self.graph.read().unwrap();
     <'a> RwLockReadGuard<'a, Hypergraph>
 }

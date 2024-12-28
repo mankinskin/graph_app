@@ -7,46 +7,42 @@ use std::{
 use itertools::Itertools;
 
 use crate::{
-    join::{
-        context::node::context::NodeTraceContext,
-        partition::{
-            ToPartition,
-            info::{
-                range::{
-                    role::{
-                        In,
-                        OffsetIndexRange,
-                        Post,
-                        Pre,
-                        RangeRole,
-                        Trace,
-                    },
-                    splits::RangeOffsets,
-                },
-                visit::VisitPartition,
-            },
-            Partition,
-        },
-    },
-    split::{
-        cache::{
+    //join::{
+    //    context::node::context::NodeTraceContext,
+    //    partition::{
+    //        ToPartition,
+    //        info::{
+    //            range::{
+    //                role::{
+    //                    In,
+    //                    OffsetIndexRange,
+    //                    Post,
+    //                    Pre,
+    //                    RangeRole,
+    //                    Trace,
+    //                },
+    //                splits::RangeOffsets,
+    //            },
+    //            visit::VisitPartition,
+    //        },
+    //        Partition,
+    //    },
+    //},
+    partition::{info::range::role::RangeRole, Partition, ToPartition}, split::cache::{
             builder::SplitCacheBuilder,
             position::SplitPositionCache,
             TraceState,
+        }, traversal::trace::Trace
+};
+use crate::{
+    graph::{
+        Hypergraph,
+        vertex::{
+            child::Child,
+            has_vertex_index::HasVertexIndex,
         },
-        position_splits,
     },
-};
-use hypercontext_api::{
-    graph::Hypergraph,
-    traversal::{
-        cache::key::SplitKey,
-        folder::state::RootMode,
-    },
-};
-use hypercontext_api::graph::vertex::{
-    child::Child,
-    has_vertex_index::HasVertexIndex,
+    traversal::cache::{entry::RootMode, key::SplitKey},
 };
 use super::cache::vertex::SplitVertexCache;
 

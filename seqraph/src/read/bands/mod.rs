@@ -29,14 +29,14 @@ use hypercontext_api::{
         },
         Hypergraph, HypergraphRef,
     },
-    traversal::{
-        path::{
-            mutators::move_path::Advance,
-            structs::query_range_path::{
-                PatternPrefixPath,
-                QueryPath,
-            },
+    path::{
+        mutators::move_path::Advance,
+        structs::query_range_path::{
+            PatternPrefixPath,
+            QueryPath,
         },
+    },
+    traversal::{
         traversable::TraversableMut,
     }
 };

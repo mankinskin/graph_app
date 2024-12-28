@@ -7,19 +7,17 @@ use std::{
 };
 
 use crate::{
-    HashSet,
-    join::delta::PatternSubDeltas,
-    split::{
+    join::delta::PatternSubDeltas, split::{
         PatternSplitPos,
         ToVertexSplitPos,
         VertexSplitPos,
-    },
+    }, HashSet
 };
-use hypercontext_api::traversal::cache::{
+use crate::traversal::cache::{
     entry::position::SubSplitLocation,
     key::SplitKey,
 };
-use hypercontext_api::graph::vertex::{
+use crate::graph::vertex::{
     location::SubLocation,
     pattern::id::PatternId,
 };

@@ -19,19 +19,19 @@ use hypercontext_api::{
             wide::Wide,
         },
     },
+    path::{
+        accessors::role::End,
+        mutators::append::PathAppend,
+        structs::{
+            overlap_primer::OverlapPrimer,
+            query_range_path::PatternPrefixPath,
+            role_path::RolePath,
+        },
+    },
     traversal::{
         iterator::bands::{
             BandIterator,
             PostfixIterator,
-        },
-        path::{
-            accessors::role::End,
-            mutators::append::PathAppend,
-            structs::{
-                overlap_primer::OverlapPrimer,
-                query_range_path::PatternPrefixPath,
-                role_path::RolePath,
-            },
         },
         traversable::{
             Traversable,

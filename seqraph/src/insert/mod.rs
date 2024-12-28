@@ -1,7 +1,7 @@
 use context::*;
 
 use hypercontext_api::{
-    traversal::path::structs::query_range_path::QueryRangePath,
+    path::structs::query_range_path::QueryRangePath,
     graph::{
         HypergraphRef,
         getters::NoMatch,
@@ -20,11 +20,18 @@ pub mod side;
 #[macro_use]
 pub mod tests;
 
-impl HypergraphRef {
-    pub fn indexer(&self) -> InsertContext {
+pub trait HasInsertContext {
+    fn indexer(&self) -> InsertContext;
+    fn index_pattern(
+        &self,
+        pattern: impl IntoPattern,
+    ) -> Result<(Child, QueryRangePath), NoMatch>;
+}
+impl HasInsertContext for HypergraphRef {
+    fn indexer(&self) -> InsertContext {
         InsertContext::new(self.clone())
     }
-    pub fn index_pattern(
+    fn index_pattern(
         &self,
         pattern: impl IntoPattern,
     ) -> Result<(Child, QueryRangePath), NoMatch> {
