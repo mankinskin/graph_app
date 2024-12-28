@@ -9,7 +9,6 @@ pub mod position;
 
 use crate::{
     HashMap,
-    traversal::fold::state::RootMode,
 };
 use position::*;
 use crate::graph::vertex::location::SubLocation;
@@ -53,6 +52,20 @@ pub trait NodeType {
         global: Self::GlobalSplitOutput,
         f: impl Fn(OffsetLocations) -> CompleteLocations,
     ) -> Self::CompleteSplitOutput;
+}
+
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum RootMode {
+    Prefix,
+    Postfix,
+    Infix,
+}
+
+impl Default for RootMode {
+    fn default() -> Self {
+        Self::Infix
+    }
 }
 
 pub struct RootNode;

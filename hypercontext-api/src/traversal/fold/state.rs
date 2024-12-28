@@ -1,16 +1,13 @@
 use std::cmp::Ordering;
 
 use crate::traversal::{
-    state::end::EndState,
     cache::{
         entry::vertex::VertexCache,
         key::{
-            DirectedKey,
-            root::RootKey,
-            target::TargetKey,
+            root::RootKey, target::TargetKey, DirectedKey
         },
         TraversalCache,
-    }
+    }, result::FoldResult, state::end::EndState
 };
 use crate::graph::vertex::{
     child::Child,
@@ -18,39 +15,7 @@ use crate::graph::vertex::{
     wide::Wide,
 };
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum RootMode {
-    Prefix,
-    Postfix,
-    Infix,
-}
 
-impl Default for RootMode {
-    fn default() -> Self {
-        Self::Infix
-    }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum FoldResult {
-    Complete(Child),
-    Incomplete(FoldState),
-}
-
-impl FoldResult {
-    pub fn unwrap_complete(self) -> Child {
-        match self {
-            Self::Complete(c) => c,
-            _ => panic!("Unable to unwrap complete FoldResult"),
-        }
-    }
-    pub fn unwrap_incomplete(self) -> FoldState {
-        match self {
-            Self::Incomplete(s) => s,
-            _ => panic!("Unable to unwrap incomplete FoldResult"),
-        }
-    }
-}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct FinalState<'a> {

@@ -9,7 +9,7 @@ pub trait InitStates<K: TraversalKind> {
 }
 pub struct QueryStateInit<'a, K: TraversalKind> {
     pub trav: &'a K::Trav,
-    pub query: QueryState,
+    pub query: &'a QueryState,
 }
 impl<K: TraversalKind> InitStates<K> for QueryStateInit<'_, K> {
     fn start_index(&self) -> Child {
@@ -24,7 +24,7 @@ impl<K: TraversalKind> InitStates<K> for QueryStateInit<'_, K> {
                 start_index,
                 0.into(),
             ),
-            query: self.query,
+            query: self.query.clone(),
         };
         let init = start
             .next_states::<K>(self.trav)

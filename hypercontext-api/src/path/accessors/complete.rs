@@ -2,7 +2,7 @@ use crate::{
     path::structs::match_end::{
         MatchEnd,
         MatchEndPath,
-    }, traversal::{fold::state::FoldResult, state::end::EndKind}
+    }, traversal::{result::FoldResult, state::end::EndKind}
 };
 use std::fmt::Debug;
 use crate::graph::vertex::child::Child;
