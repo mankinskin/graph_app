@@ -3,7 +3,7 @@ use std::num::NonZeroUsize;
 use perfect::*;
 
 use crate::{
-    join::partition::info::range::role::{
+    partition::info::range::role::{
         BooleanPerfectOf,
         In,
         InVisitMode,
@@ -14,7 +14,7 @@ use crate::{
     },
     split::PatternSplitPos,
 };
-use hypercontext_api::graph::vertex::pattern::{
+use crate::graph::vertex::pattern::{
     Pattern,
     pattern_pre_ctx_width,
 };

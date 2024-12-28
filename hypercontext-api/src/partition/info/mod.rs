@@ -12,23 +12,23 @@ use crate::{
             JoinedPartition,
             JoinedPatterns,
         },
-        partition::info::{
-            border::{
-                join::JoinBorders,
-                perfect::BoolPerfect,
-            },
-            range::{
-                mode::RangeInfoOf,
-                role::{
-                    Join,
-                    ModePatternCtxOf,
-                    RangeRole,
-                },
+    },
+    partition::info::{
+        border::{
+            join::JoinBorders,
+            perfect::BoolPerfect,
+        },
+        range::{
+            mode::RangeInfoOf,
+            role::{
+                Join,
+                ModePatternCtxOf,
+                RangeRole,
             },
         },
     },
 };
-use hypercontext_api::graph::vertex::{
+use crate::graph::vertex::{
     child::Child,
     pattern::id::PatternId,
 };

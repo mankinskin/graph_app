@@ -2,7 +2,7 @@ use std::num::NonZeroUsize;
 
 use derive_new::new;
 
-use crate::join::partition::{
+use crate::partition::{
     info::range::role::{
         In,
         InVisitMode,

@@ -3,13 +3,13 @@ use std::iter::FromIterator;
 use derive_more::{Deref, DerefMut};
 
 use itertools::Itertools;
-use linked_hash_set::LinkedHashSet;
 
-use crate::{join::JoinContext, split::cache::{split::Split, SplitCache}, HashMap};
-use hypercontext_api::{
+use crate::{join::context::JoinContext, split::cache::{split::Split, SplitCache}, HashMap};
+use crate::{
     graph::vertex::{child::Child, wide::Wide},
     traversal::cache::key::SplitKey, 
 };
+use linked_hash_set::LinkedHashSet;
 
 #[derive(Debug, Default, Deref, DerefMut)]
 pub struct SplitFrontier {

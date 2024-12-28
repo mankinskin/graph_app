@@ -5,8 +5,8 @@ use mode::*;
 use role::*;
 use splits::*;
 
-use crate::join::{
-    context::{
+use crate::{
+    join::context::{
         node::context::{
             AsNodeTraceContext,
             NodeJoinContext,
@@ -24,7 +24,7 @@ use crate::join::{
         JoinPartition,
     },
 };
-use hypercontext_api::graph::vertex::{
+use crate::graph::vertex::{
     child::Child,
     pattern::{
         IntoPattern,

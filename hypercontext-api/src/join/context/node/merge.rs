@@ -12,28 +12,26 @@ use linked_hash_map::LinkedHashMap;
 
 use crate::{
     HashMap,
-    join::{
-        context::node::context::NodeJoinContext,
-        partition::{
-            Infix,
-            info::{
-                PartitionInfo,
-                range::role::{
-                    In,
-                    Join,
-                },
-                visit::VisitPartition,
+    join::context::node::context::NodeJoinContext,
+    partition::{
+        Infix,
+        info::{
+            PartitionInfo,
+            range::role::{
+                In,
+                Join,
             },
-            splits::{
-                HasPosSplits,
-                PosSplits,
-                SplitKind,
-            },
+            visit::VisitPartition,
+        },
+        splits::{
+            HasPosSplits,
+            PosSplits,
+            SplitKind,
         },
     },
     split::cache::split::Split,
 };
-use hypercontext_api::{
+use crate::{
     traversal::cache::key::SplitKey,
     graph::vertex::{
         child::Child,
@@ -71,13 +69,13 @@ impl NodeMergeContext<'_> {
             let right = *merges.get(&rr).unwrap();
             if !lr.is_empty() || !lr.is_empty() {
                 if let Some((&pid, _)) = v.borrow().iter().find(|(_, s)| s.inner_offset.is_none()) {
-                    self.graph.replace_in_pattern(
+                    self.graph.ctx.graph.replace_in_pattern(
                         index.to_pattern_location(pid),
                         0..,
                         [left, right],
                     );
                 } else {
-                    self.graph.add_pattern_with_update(index, [left, right]);
+                    self.graph.ctx.graph.add_pattern_with_update(index, [left, right]);
                 }
             }
             finals.insert(SplitKey::new(index, *offset), Split::new(left, right));

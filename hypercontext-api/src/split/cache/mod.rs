@@ -14,24 +14,29 @@ use ctx::*;
 use position::*;
 
 use crate::{
-    partition::splits::offset::OffsetSplits, split::{
-        cache::vertex::SplitVertexCache,
-        PatternSplitPos,
-    }, HashMap
-};
-use crate::{
     graph::vertex::{
         child::Child,
         has_vertex_index::HasVertexIndex,
         location::SubLocation,
-        pattern::{id::PatternId, Pattern},
+        pattern::{
+            id::PatternId,
+            Pattern,
+        },
+    }, partition::splits::offset::OffsetSplits, split::{
+        cache::vertex::SplitVertexCache,
+        PatternSplitPos,
     }, traversal::{
         cache::{
-            entry::{position::SubSplitLocation, RootMode},
+            entry::{
+                position::SubSplitLocation,
+                RootMode,
+            },
             key::SplitKey,
             labelled_key::vkey::VertexCacheKey,
-        }, fold::state::FoldState, traversable::TraversableMut
-    }
+        },
+        fold::state::FoldState,
+        traversable::TraversableMut,
+    }, HashMap
 };
 
 pub mod vertex;
@@ -98,6 +103,29 @@ impl SplitCache {
     }
 }
 
+pub fn position_splits<'a>(
+    patterns: impl IntoIterator<Item = (&'a PatternId, &'a Pattern)>,
+    offset: NonZeroUsize,
+) -> OffsetSplits {
+    OffsetSplits {
+        offset,
+        splits: patterns
+            .into_iter()
+            .map(|(pid, pat)| {
+                let (sub_index, inner_offset) =
+                    IndexBack::token_offset_split(pat.borrow(), offset).unwrap();
+                (
+                    *pid,
+                    PatternSplitPos {
+                        sub_index,
+                        inner_offset,
+                    },
+                )
+            })
+            .collect(),
+    }
+}
+
 pub fn range_splits<'a>(
     patterns: impl Iterator<Item = (&'a PatternId, &'a Pattern)>,
     parent_range: (NonZeroUsize, NonZeroUsize),
@@ -158,4 +186,3 @@ pub fn cleaned_position_splits<'a>(
         })
         .collect()
 }
-

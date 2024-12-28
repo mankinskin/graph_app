@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::join::partition::info::range::role::{
+use crate::partition::info::range::role::{
     In,
     InVisitMode,
     Post,
@@ -9,7 +9,7 @@ use crate::join::partition::info::range::role::{
     PreVisitMode,
     RangeRole,
 };
-use hypercontext_api::graph::vertex::{
+use crate::graph::vertex::{
     child::Child,
     pattern::{
         IntoPattern,

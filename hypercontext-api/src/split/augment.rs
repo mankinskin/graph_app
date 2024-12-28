@@ -7,32 +7,32 @@ use std::{
 use itertools::Itertools;
 
 use crate::{
-    //join::{
-    //    context::node::context::NodeTraceContext,
-    //    partition::{
-    //        ToPartition,
-    //        info::{
-    //            range::{
-    //                role::{
-    //                    In,
-    //                    OffsetIndexRange,
-    //                    Post,
-    //                    Pre,
-    //                    RangeRole,
-    //                    Trace,
-    //                },
-    //                splits::RangeOffsets,
-    //            },
-    //            visit::VisitPartition,
-    //        },
-    //        Partition,
-    //    },
-    //},
-    partition::{info::range::role::RangeRole, Partition, ToPartition}, split::cache::{
+    join::{
+        context::node::context::NodeTraceContext,
+        partition::{
+            info::{
+                range::{
+                    role::{
+                        In,
+                        OffsetIndexRange,
+                        Post,
+                        Pre,
+                        RangeRole,
+                        Trace,
+                    },
+                    splits::RangeOffsets,
+                },
+                visit::VisitPartition,
+            }, Partition, ToPartition
+        },
+    },
+    partition::{info::range::role::{OffsetIndexRange, RangeRole}, Partition, ToPartition},
+    split::cache::{
             builder::SplitCacheBuilder,
             position::SplitPositionCache,
             TraceState,
-        }, traversal::trace::Trace
+    },
+    traversal::trace::Trace
 };
 use crate::{
     graph::{
@@ -44,7 +44,7 @@ use crate::{
     },
     traversal::cache::{entry::RootMode, key::SplitKey},
 };
-use super::cache::vertex::SplitVertexCache;
+use super::{cache::vertex::SplitVertexCache, position_splits};
 
 impl SplitVertexCache {
     pub fn offset_range_partition<K: RangeRole>(

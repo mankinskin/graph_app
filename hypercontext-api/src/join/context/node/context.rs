@@ -1,5 +1,7 @@
 use std::{
-    borrow::Borrow, num::NonZeroUsize, sync::RwLockWriteGuard
+    borrow::Borrow,
+    num::NonZeroUsize,
+    sync::RwLockWriteGuard,
 };
 
 use derive_more::{
@@ -9,6 +11,16 @@ use derive_more::{
 use linked_hash_map::LinkedHashMap;
 
 use crate::{
+    graph::{
+        vertex::{
+            child::Child,
+            location::SubLocation,
+            pattern::id::PatternId,
+            wide::Wide,
+            ChildPatterns,
+        },
+        Hypergraph,
+    },
     join::{
         context::{
             node::merge::NodeMergeContext,
@@ -18,22 +30,32 @@ use crate::{
                 PatternTraceContext,
             },
         },
-        partition::{
-            info::{range::role::{In, Join, Post, Pre}, visit::PartitionBorders},
-            splits::{
-                offset::OffsetSplits, HasPosSplits, PosSplitRef, PosSplits
-            },
-        },
-        Infix, JoinContext, JoinedPartition, Postfix, Prefix
+        JoinContext,
+        JoinedPartition,
     },
-};
-use hypercontext_api::{
-    graph::{
-        vertex::{
-            child::Child, location::SubLocation, pattern::id::PatternId, wide::Wide, ChildPatterns
-        },
-        Hypergraph
-    }, traversal::cache::{entry::RootMode, key::SplitKey}
+    partition::{
+        info::{
+            range::role::{
+                In,
+                Join,
+                Post,
+                Pre,
+            },
+            visit::{PartitionBorders, VisitPartition}, JoinPartition,
+        }, splits::{
+            offset::OffsetSplits,
+            HasPosSplits,
+            PosSplitRef,
+            PosSplits,
+        }, Infix, Postfix, Prefix
+    },
+    split::cache::{
+        position_splits, split::Split, vertex::SplitVertexCache
+    },
+    traversal::cache::{
+        entry::RootMode,
+        key::SplitKey,
+    },
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -108,7 +130,11 @@ pub trait ToPatternContext<'p> {
 }
 
 impl<'p, SP: HasPosSplits + 'p> AsPatternContext<'p> for NodeJoinContext<'p, SP> {
-    type PatternCtx<'a> = PatternJoinContext<'a> where Self: 'a, 'a: 'p;
+    type PatternCtx<'a>
+        = PatternJoinContext<'a>
+    where
+        Self: 'a,
+        'a: 'p;
     fn as_pattern_context<'t>(
         &'t self,
         pattern_id: &PatternId,
@@ -143,7 +169,11 @@ pub trait AsPatternContext<'p> {
 }
 
 impl<'p> AsPatternContext<'p> for NodeTraceContext<'p> {
-    type PatternCtx<'a> = PatternTraceContext<'p> where Self: 'a, 'a: 'p;
+    type PatternCtx<'a>
+        = PatternTraceContext<'p>
+    where
+        Self: 'a,
+        'a: 'p;
     fn as_pattern_context<'t>(
         &'t self,
         pattern_id: &PatternId,
@@ -174,9 +204,7 @@ impl<'p, SP: HasPosSplits + 'p> NodeJoinContext<'p, SP> {
     pub fn patterns(&self) -> &ChildPatterns {
         self.ctx.graph.expect_child_patterns(self.index)
     }
-    pub fn join_partitions(
-        &mut self,
-    ) -> LinkedHashMap<SplitKey, Split> {
+    pub fn join_partitions(&mut self) -> LinkedHashMap<SplitKey, Split> {
         let partitions = self.index_partitions();
         assert_eq!(
             self.index.width(),
@@ -185,10 +213,7 @@ impl<'p, SP: HasPosSplits + 'p> NodeJoinContext<'p, SP> {
         assert_eq!(partitions.len(), self.pos_splits.len() + 1,);
         self.merge_node(self.pos_splits, &partitions)
     }
-    pub fn index_partitions(
-        &mut self,
-    ) -> Vec<Child>
-    {
+    pub fn index_partitions(&mut self) -> Vec<Child> {
         let offset_splits = self.pos_splits.pos_splits();
         let len = offset_splits.len();
         assert!(len > 0);
@@ -218,31 +243,30 @@ impl<'p, SP: HasPosSplits + 'p> NodeJoinContext<'p, SP> {
         let offset = offset_iter.next().unwrap();
 
         match root_mode {
-            RootMode::Prefix => Prefix::new(offset).join_partition(self)
-                .inspect(|part|
-                    if part.perfect.is_none() {
-                        let post = Postfix::new(offset).join_partition(self).unwrap();
-                        self.graph
-                            .add_pattern_with_update(index, [part.index, post.index]);
-                    }
-                ),
-            RootMode::Postfix => Postfix::new(offset).join_partition(self)
-                .inspect(|part|
-                    if part.perfect.is_none() {
-                        let pre = match Prefix::new(offset).join_partition(self) {
-                            Ok(pre) => {
-                                println!("{:#?}", pre);
-                                pre.index
-                            }
-                            Err(c) => c,
-                        };
-                        self.graph.add_pattern_with_update(index, [pre, part.index]);
-                    }
-                ),
+            RootMode::Prefix => Prefix::new(offset).join_partition(self).inspect(|part| {
+                if part.perfect.is_none() {
+                    let post = Postfix::new(offset).join_partition(self).unwrap();
+                    self.graph
+                        .add_pattern_with_update(index, [part.index, post.index]);
+                }
+            }),
+            RootMode::Postfix => Postfix::new(offset).join_partition(self).inspect(|part| {
+                if part.perfect.is_none() {
+                    let pre = match Prefix::new(offset).join_partition(self) {
+                        Ok(pre) => {
+                            println!("{:#?}", pre);
+                            pre.index
+                        }
+                        Err(c) => c,
+                    };
+                    self.graph.add_pattern_with_update(index, [pre, part.index]);
+                }
+            }),
             RootMode::Infix => {
                 let loffset = offset;
                 let roffset = offset_iter.next().unwrap();
-                Infix::new(loffset, roffset).join_partition(self)
+                Infix::new(loffset, roffset)
+                    .join_partition(self)
                     .inspect(|part| self.join_incomplete_infix(part, loffset, roffset, index))
             }
         }

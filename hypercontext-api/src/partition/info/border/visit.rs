@@ -1,7 +1,7 @@
 use std::num::NonZeroUsize;
 
 use crate::{
-    join::partition::info::{
+    partition::info::{
         border::{
             BorderInfo,
             PartitionBorder,
@@ -20,7 +20,7 @@ use crate::{
     },
     split::PatternSplitPos,
 };
-use hypercontext_api::graph::vertex::{
+use crate::graph::vertex::{
     pattern::Pattern,
     wide::Wide,
 };

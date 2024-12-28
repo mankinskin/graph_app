@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::join::partition::info::{
+use crate::partition::info::{
     border::join::JoinBorders,
     range::{
         role::{

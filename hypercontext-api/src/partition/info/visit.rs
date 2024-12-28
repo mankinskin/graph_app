@@ -10,28 +10,28 @@ use crate::{
                 PatternTraceContext,
             },
         },
-        partition::{
-            ToPartition,
-            info::{
-                border::{
-                    PartitionBorder,
-                    perfect::BoolPerfect,
-                    visit::VisitBorders,
+    },
+    partition::{
+        ToPartition,
+        info::{
+            border::{
+                PartitionBorder,
+                perfect::BoolPerfect,
+                visit::VisitBorders,
+            },
+            PartitionInfo,
+            range::{
+                role::{
+                    ModeNodeCtxOf,
+                    ModePatternCtxOf,
+                    RangeRole,
                 },
-                PartitionInfo,
-                range::{
-                    role::{
-                        ModeNodeCtxOf,
-                        ModePatternCtxOf,
-                        RangeRole,
-                    },
-                    splits::PatternSplits,
-                },
+                splits::PatternSplits,
             },
         },
     },
 };
-use hypercontext_api::graph::vertex::{
+use crate::graph::vertex::{
     child::Child,
     pattern::id::PatternId,
 };

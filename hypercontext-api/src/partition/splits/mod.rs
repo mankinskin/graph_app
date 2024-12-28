@@ -16,7 +16,7 @@ use crate::{
     },
     HashMap,
 };
-use hypercontext_api::traversal::cache::key::SplitKey;
+use crate::traversal::cache::key::SplitKey;
 
 pub mod offset;
 

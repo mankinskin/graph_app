@@ -4,8 +4,8 @@ use derive_more::{
     DerefMut,
 };
 
-use crate::join::partition::splits::SubSplits;
-use hypercontext_api::graph::vertex::{
+use crate::partition::splits::SubSplits;
+use crate::graph::vertex::{
     location::pattern::PatternLocation,
     pattern::Pattern,
     pattern::id::PatternId,

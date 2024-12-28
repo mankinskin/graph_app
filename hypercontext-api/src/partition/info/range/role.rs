@@ -23,6 +23,7 @@ use crate::{
                 PatternTraceContext,
             },
         },
+    },
         partition::{
             ToPartition,
             info::{
@@ -53,10 +54,9 @@ use crate::{
                 OffsetSplits,
             },
         },
-    },
     split::cache::vertex::SplitVertexCache,
 };
-use hypercontext_api::graph::vertex::{
+use crate::graph::vertex::{
     child::Child,
     pattern::pattern_range::PatternRangeIndex,
 };

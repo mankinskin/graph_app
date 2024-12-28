@@ -1,8 +1,10 @@
 use std::borrow::Borrow;
 
-use crate::join::{
-    context::node::context::NodeJoinContext,
-    delta::PatternSubDeltas,
+use crate::{
+    join::{
+        context::node::context::NodeJoinContext,
+        delta::PatternSubDeltas,
+    },
     partition::info::{
         border::{
             join::JoinBorders,
@@ -18,7 +20,7 @@ use crate::join::{
         },
     },
 };
-use hypercontext_api::graph::vertex::{
+use crate::graph::vertex::{
     child::Child,
     pattern::Pattern,
 };

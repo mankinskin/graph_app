@@ -1,5 +1,5 @@
-use crate::join::{
-    context::pattern::AsPatternTraceContext,
+use crate::{
+    join::context::pattern::AsPatternTraceContext,
     partition::info::{
         border::visit::VisitBorders,
         range::{

@@ -1,7 +1,7 @@
 use std::num::NonZeroUsize;
 
 use crate::{
-    join::partition::splits::SplitKind,
+    partition::splits::SplitKind,
     split::VertexSplitPos,
 };
 

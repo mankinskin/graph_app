@@ -4,28 +4,25 @@ use std::{
 };
 
 use crate::{
-    join::{
-        context::node::context::AsNodeTraceContext,
-        partition::{
-            info::range::role::{
-                In,
-                InVisitMode,
-                Post,
-                PostVisitMode,
-                Pre,
-                PreVisitMode,
-                RangeRole,
-            },
-            splits::offset::OffsetSplits,
+    join::context::node::context::AsNodeTraceContext,
+    partition::{
+        info::range::role::{
+            In,
+            InVisitMode,
+            Post,
+            PostVisitMode,
+            Pre,
+            PreVisitMode,
+            RangeRole,
         },
+        splits::offset::OffsetSplits,
     },
     split::{
-        cache::range_splits,
-        complete::position_splits,
+        cache::{position_splits, range_splits},
         PatternSplitPos,
     },
 };
-use hypercontext_api::graph::vertex::pattern::id::PatternId;
+use crate::graph::vertex::pattern::id::PatternId;
 
 pub trait RangeOffsets<K: RangeRole>: Debug + Clone + Copy {
     fn as_splits<'a, C: AsNodeTraceContext<'a>>(

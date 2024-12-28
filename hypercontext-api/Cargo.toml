@@ -21,6 +21,9 @@ derive-new = "0.7"
 tap = "^1"
 pretty_assertions = "^1.4"
 nrfind = "1"
+derivative = "2.2"
+linked_hash_set = "0.1"
+linked-hash-map = "0.5"
 
 [dependencies.petgraph]
 #git = "https://github.com/mankinskin/petgraph"
