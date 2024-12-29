@@ -4,9 +4,8 @@ use std::{
 };
 
 use crate::{
-    join::context::node::context::AsNodeTraceContext,
     partition::{
-        info::range::role::{
+        context::AsNodeTraceContext, info::range::role::{
             In,
             InVisitMode,
             Post,
@@ -14,8 +13,7 @@ use crate::{
             Pre,
             PreVisitMode,
             RangeRole,
-        },
-        splits::offset::OffsetSplits,
+        }, splits::offset::OffsetSplits
     },
     split::{
         cache::{position_splits, range_splits},
@@ -24,11 +22,11 @@ use crate::{
 };
 use crate::graph::vertex::pattern::id::PatternId;
 
-pub trait RangeOffsets<K: RangeRole>: Debug + Clone + Copy {
+pub trait RangeOffsets<R: RangeRole>: Debug + Clone + Copy {
     fn as_splits<'a, C: AsNodeTraceContext<'a>>(
         &'a self,
         ctx: C,
-    ) -> K::Splits;
+    ) -> R::Splits;
 }
 
 impl<M: InVisitMode> RangeOffsets<In<M>> for (NonZeroUsize, NonZeroUsize) {

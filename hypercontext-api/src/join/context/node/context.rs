@@ -1,7 +1,6 @@
 use std::{
     borrow::Borrow,
     num::NonZeroUsize,
-    sync::RwLockWriteGuard,
 };
 
 use derive_more::{
@@ -11,46 +10,51 @@ use derive_more::{
 use linked_hash_map::LinkedHashMap;
 
 use crate::{
-    graph::{
-        vertex::{
-            child::Child,
-            location::SubLocation,
-            pattern::id::PatternId,
-            wide::Wide,
-            ChildPatterns,
-        },
-        Hypergraph,
+    graph::vertex::{
+        child::Child,
+        location::SubLocation,
+        wide::Wide,
+        ChildPatterns,
     },
     join::{
         context::{
             node::merge::NodeMergeContext,
-            pattern::{
-                AsPatternTraceContext,
-                PatternJoinContext,
-                PatternTraceContext,
-            },
-        },
-        JoinContext,
-        JoinedPartition,
+            JoinContext,
+        }, joined::JoinedPartition, partition::{
+            Join,
+            JoinPartition,
+        }
     },
     partition::{
+        context::{
+            AsNodeTraceContext,
+            NodeTraceContext,
+        },
         info::{
             range::role::{
                 In,
-                Join,
                 Post,
                 Pre,
             },
-            visit::{PartitionBorders, VisitPartition}, JoinPartition,
-        }, splits::{
+            visit::{
+                PartitionBorders,
+                VisitPartition,
+            },
+        },
+        splits::{
             offset::OffsetSplits,
             HasPosSplits,
             PosSplitRef,
             PosSplits,
-        }, Infix, Postfix, Prefix
+        },
+        Infix,
+        Postfix,
+        Prefix,
     },
     split::cache::{
-        position_splits, split::Split, vertex::SplitVertexCache
+        position_splits,
+        split::Split,
+        vertex::SplitVertexCache,
     },
     traversal::cache::{
         entry::RootMode,
@@ -58,51 +62,34 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone, Copy)]
-pub struct NodeTraceContext<'p> {
-    pub patterns: &'p ChildPatterns,
-    pub index: Child,
-}
+use super::kind::JoinKind;
 
-impl<'p> NodeTraceContext<'p> {
-    pub fn new(
-        graph: &'p RwLockWriteGuard<'p, Hypergraph>,
-        index: Child,
-    ) -> Self {
-        Self {
-            patterns: graph.expect_child_patterns(index),
-            index,
-        }
-    }
-}
-
-pub trait AsNodeTraceContext<'p>: 'p {
-    fn as_trace_context<'t>(&'t self) -> NodeTraceContext<'t>
+pub trait ToNodeJoinContext<'p, K: JoinKind + 'p> {
+    fn to_node_join_context<'t>(self) -> NodeJoinContext<'t, K>
     where
         Self: 't,
         'p: 't;
 }
 
-impl<'p> AsNodeTraceContext<'p> for NodeTraceContext<'p> {
-    fn as_trace_context<'t>(&'t self) -> NodeTraceContext<'t>
-    where
-        Self: 't,
-        'p: 't,
-    {
-        *self
-    }
-}
-
+//impl<'p, Trav: TraversableMut> ToNodeJoinContext<'p, Trav> for NodeJoinContext<'p, Trav> {
+//    fn to_node_join_context<'t>(self) -> NodeJoinContext<'t, Trav>
+//    where
+//        Self: 't,
+//        'p: 't,
+//    {
+//        self
+//    }
+//}
 #[derive(Debug, Deref, DerefMut)]
-pub struct NodeJoinContext<'p, S: HasPosSplits + 'p = SplitVertexCache> {
+pub struct NodeJoinContext<'p, K: JoinKind + 'p> {
     #[deref]
     #[deref_mut]
-    pub ctx: JoinContext<'p>,
+    pub ctx: JoinContext<'p, K>,
     pub index: Child,
-    pub pos_splits: &'p PosSplits<S>,
+    pub pos_splits: &'p PosSplits<SplitVertexCache>,
 }
 
-impl<'p, S: HasPosSplits + 'p> AsNodeTraceContext<'p> for NodeJoinContext<'p, S> {
+impl<'p, K: JoinKind> AsNodeTraceContext<'p> for NodeJoinContext<'p, K> {
     fn as_trace_context<'t>(&'t self) -> NodeTraceContext<'t>
     where
         Self: 't,
@@ -115,85 +102,11 @@ impl<'p, S: HasPosSplits + 'p> AsNodeTraceContext<'p> for NodeJoinContext<'p, S>
     }
 }
 
-pub trait ToPatternContext<'p> {
-    type PatternCtx<'a>: AsPatternTraceContext<'p>
-    where
-        Self: 'a,
-        'a: 'p;
-    fn to_pattern_context<'t>(
-        self,
-        pattern_id: &PatternId,
-    ) -> Self::PatternCtx<'t>
-    where
-        Self: 't,
-        't: 'p;
-}
-
-impl<'p, SP: HasPosSplits + 'p> AsPatternContext<'p> for NodeJoinContext<'p, SP> {
-    type PatternCtx<'a>
-        = PatternJoinContext<'a>
-    where
-        Self: 'a,
-        'a: 'p;
-    fn as_pattern_context<'t>(
-        &'t self,
-        pattern_id: &PatternId,
-    ) -> Self::PatternCtx<'t>
-    where
-        Self: 't,
-        't: 'p,
-    {
-        let ctx = PatternTraceContext {
-            loc: self.index.to_pattern_location(*pattern_id),
-            pattern: self.as_trace_context().patterns.get(pattern_id).unwrap(),
-        };
-        PatternJoinContext {
-            ctx,
-            sub_splits: self.borrow().sub_splits,
-        }
-    }
-}
-
-pub trait AsPatternContext<'p> {
-    type PatternCtx<'a>: AsPatternTraceContext<'p>
-    where
-        Self: 'a,
-        'a: 'p;
-    fn as_pattern_context<'t>(
-        &'t self,
-        pattern_id: &PatternId,
-    ) -> Self::PatternCtx<'t>
-    where
-        Self: 't,
-        't: 'p;
-}
-
-impl<'p> AsPatternContext<'p> for NodeTraceContext<'p> {
-    type PatternCtx<'a>
-        = PatternTraceContext<'p>
-    where
-        Self: 'a,
-        'a: 'p;
-    fn as_pattern_context<'t>(
-        &'t self,
-        pattern_id: &PatternId,
-    ) -> Self::PatternCtx<'t>
-    where
-        Self: 't,
-        't: 'p,
-    {
-        PatternTraceContext {
-            loc: self.index.to_pattern_location(*pattern_id),
-            pattern: self.as_trace_context().patterns.get(pattern_id).unwrap(),
-        }
-    }
-}
-
-impl<'p, SP: HasPosSplits + 'p> NodeJoinContext<'p, SP> {
+impl<'p, K: JoinKind> NodeJoinContext<'p, K> {
     pub fn new(
-        ctx: JoinContext<'p>,
+        ctx: JoinContext<'p, K>,
         index: Child,
-        pos_splits: &'p SP,
+        pos_splits: &'p SplitVertexCache,
     ) -> Self {
         Self {
             ctx,
@@ -211,7 +124,7 @@ impl<'p, SP: HasPosSplits + 'p> NodeJoinContext<'p, SP> {
             partitions.iter().map(Child::width).sum::<usize>()
         );
         assert_eq!(partitions.len(), self.pos_splits.len() + 1,);
-        self.merge_node(self.pos_splits, &partitions)
+        NodeMergeContext::new(self).merge_node(self.pos_splits, &partitions)
     }
     pub fn index_partitions(&mut self) -> Vec<Child> {
         let offset_splits = self.pos_splits.pos_splits();

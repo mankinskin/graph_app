@@ -1,37 +1,25 @@
 use std::fmt::Debug;
 
-use crate::partition::info::{
-    border::join::JoinBorders,
-    range::{
-        role::{
-            Join,
-            ModeChildren,
-            ModeContext,
-            ModeOf,
-            RangeRole,
-            Trace,
-        },
-        JoinRangeInfo,
-        ModeRangeInfo,
-        TraceRangeInfo,
+use crate::partition::info::range::{
+    role::{
+        ModeChildren,
+        ModeContext,
+        ModeOf,
+        RangeRole,
+        Trace,
     },
+    ModeRangeInfo,
+    TraceRangeInfo,
 };
 
-pub trait VisitMode<K: RangeRole<Mode = Self>>:
-    Debug + Clone + Copy + ModeChildren<K> + for<'a> ModeContext<'a>
+pub trait VisitMode<R: RangeRole<Mode = Self>>:
+    Debug + Clone + Copy + ModeChildren<R> + for<'a> ModeContext<'a>
 {
-    type RangeInfo: ModeRangeInfo<K>;
+    type RangeInfo: ModeRangeInfo<R>;
 }
 
-pub type RangeInfoOf<K> = <ModeOf<K> as VisitMode<K>>::RangeInfo;
+pub type RangeInfoOf<R> = <ModeOf<R> as VisitMode<R>>::RangeInfo;
 
-impl<K: RangeRole<Mode = Self>> VisitMode<K> for Trace {
-    type RangeInfo = TraceRangeInfo<K>;
-}
-
-impl<K: RangeRole<Mode = Self>> VisitMode<K> for Join
-where
-    K::Borders: JoinBorders<K>,
-{
-    type RangeInfo = JoinRangeInfo<K>;
+impl<R: RangeRole<Mode = Self>> VisitMode<R> for Trace {
+    type RangeInfo = TraceRangeInfo<R>;
 }

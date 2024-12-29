@@ -121,10 +121,10 @@ impl<'g> ReadContext<'g> {
     pub fn indexer(&self) -> InsertContext {
         InsertContext::new(self.graph.clone())
     }
-    //pub fn contexter<Side: IndexSide<D>>(&self) -> Contexter<Side> {
+    //pub fn contexter<Side: SplitSide<D>>(&self) -> Contexter<Side> {
     //    Contexter::new(self.indexer())
     //}
-    //pub fn splitter<Side: IndexSide<D>>(&self) -> Splitter<Side> {
+    //pub fn splitter<Side: SplitSide<D>>(&self) -> Splitter<Side> {
     //    Splitter::new(self.indexer())
     //}
     //fn append_next(&mut self, end_bound: usize, index: Child) -> usize {

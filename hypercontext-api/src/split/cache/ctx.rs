@@ -4,14 +4,9 @@ use std::{
     num::NonZeroUsize,
 };
 
-use crate::split::{
-    cache::{
-        leaves::Leaves,
-        position::SplitPositionCache,
-    },
-    cleaned_position_splits,
-    TraceState,
-};
+use crate::split::cache::{
+        cleaned_position_splits, leaves::Leaves, position::SplitPositionCache, TraceState
+    };
 use crate::traversal::{
     cache::{
         entry::position::SubSplitLocation,

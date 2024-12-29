@@ -20,6 +20,9 @@ use crate::partition::{
 
 pub mod info;
 pub mod splits;
+pub mod pattern;
+pub mod context;
+pub mod delta;
 
 #[derive(new, Clone, Copy)]
 pub struct Infix<A: ToOffsetSplits, B: ToOffsetSplits> {
@@ -33,26 +36,31 @@ pub struct Prefix<O: ToOffsetSplits> {
 }
 
 #[derive(new, Clone)]
-pub struct Postfix<O: ToOffsetSplits> {
+pub struct
+Postfix<O: ToOffsetSplits> {
     pub split: O,
 }
 
 #[derive(Debug, Clone)]
-pub struct Partition<K: RangeRole> {
-    pub offsets: K::Splits,
+pub struct
+Partition<R: RangeRole> {
+    pub offsets: R::Splits,
 }
 
-pub trait ToPartition<K: RangeRole>: Clone {
-    fn to_partition(self) -> Partition<K>;
+pub trait
+ToPartition<R: RangeRole>: Clone {
+    fn to_partition(self) -> Partition<R>;
 }
 
-impl<K: RangeRole> ToPartition<K> for Partition<K> {
-    fn to_partition(self) -> Partition<K> {
+impl<R: RangeRole>
+ToPartition<R> for Partition<R> {
+    fn to_partition(self) -> Partition<R> {
         self
     }
 }
 
-impl<M: InVisitMode, A: ToOffsetSplits, B: ToOffsetSplits> ToPartition<In<M>> for Infix<A, B> {
+impl<M: InVisitMode, A: ToOffsetSplits, B: ToOffsetSplits>
+ToPartition<In<M>> for Infix<A, B> {
     fn to_partition(self) -> Partition<In<M>> {
         Partition {
             offsets: (self.left.to_offset_splits(), self.right.to_offset_splits()),
@@ -60,7 +68,8 @@ impl<M: InVisitMode, A: ToOffsetSplits, B: ToOffsetSplits> ToPartition<In<M>> fo
     }
 }
 
-impl<M: InVisitMode> ToPartition<In<M>> for (OffsetSplits, OffsetSplits) {
+impl<M: InVisitMode>
+ToPartition<In<M>> for (OffsetSplits, OffsetSplits) {
     fn to_partition(self) -> Partition<In<M>> {
         Partition {
             offsets: (self.0, self.1),

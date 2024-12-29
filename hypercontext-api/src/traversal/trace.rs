@@ -114,14 +114,14 @@ impl<'a, Trav: Traversable> TraceContext<'a, Trav> {
         }
     }
 }
-pub trait Trace {
+pub trait TraceInit {
     fn trace<Trav: Traversable>(
         &self,
         ctx: &mut TraceContext<'_, Trav>,
     );
 }
 
-impl Trace for EndState {
+impl TraceInit for EndState {
     fn trace<Trav: Traversable>(
         &self,
         ctx: &mut TraceContext<'_, Trav>,

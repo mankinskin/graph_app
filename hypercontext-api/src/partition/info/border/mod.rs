@@ -21,8 +21,6 @@ use crate::graph::vertex::pattern::{
 
 pub mod perfect;
 
-pub mod join;
-
 pub mod trace;
 
 pub mod visit;
@@ -48,18 +46,18 @@ impl BorderInfo {
     }
 }
 
-pub trait PartitionBorder<K: RangeRole>: Sized {
-    fn perfect(&self) -> BooleanPerfectOf<K>;
-    fn offsets(&self) -> OffsetsOf<K>;
+pub trait PartitionBorder<R: RangeRole>: Sized {
+    fn perfect(&self) -> BooleanPerfectOf<R>;
+    fn offsets(&self) -> OffsetsOf<R>;
 }
 
-impl<P: BorderPerfect<Boolean = bool>, K: RangeRole<Perfect = P, Offsets = NonZeroUsize>>
-    PartitionBorder<K> for BorderInfo
+impl<P: BorderPerfect<Boolean = bool>, R: RangeRole<Perfect = P, Offsets = NonZeroUsize>>
+    PartitionBorder<R> for BorderInfo
 {
-    fn perfect(&self) -> BooleanPerfectOf<K> {
+    fn perfect(&self) -> BooleanPerfectOf<R> {
         self.inner_offset.is_none()
     }
-    fn offsets(&self) -> OffsetsOf<K> {
+    fn offsets(&self) -> OffsetsOf<R> {
         self.start_offset
             .map(|o| {
                 self.inner_offset
@@ -85,11 +83,11 @@ impl<M: InVisitMode> PartitionBorder<In<M>> for (BorderInfo, BorderInfo) {
     }
 }
 
-//impl<'a, K: RangeRole<Mode = Join>> TraceBorders<'a, K> for K::Borders<'a> {
+//impl<'a, R: RangeRole<Mode = Join>> TraceBorders<'a, R> for R::Borders<'a> {
 //    fn inner_info(
 //        &self,
 //        ctx: &PatternJoinContext<'a>,
-//    ) -> Option<InnerRangeInfo<K>> {
+//    ) -> Option<InnerRangeInfo<R>> {
 //        let pctx = ctx.as_pattern_join_context();
 //        self.inner_range_offsets(pctx.pattern)
 //            .map(|offsets|
@@ -102,10 +100,10 @@ impl<M: InVisitMode> PartitionBorder<In<M>> for (BorderInfo, BorderInfo) {
 //    }
 //}
 
-//pub trait PartitionBorders<'a, K: RangeRole, Ctx: AsPatternTraceContext<'a>>: VisitBorders<'a, K, Ctx> {
+//pub trait PartitionBorders<'a, R: RangeRole, Ctx: AsPatternTraceContext<'a>>: VisitBorders<'a, R, Ctx> {
 //}
-//impl<'a, K: RangeRole<Borders<'a, Ctx>=Self>, Ctx: AsPatternTraceContext<'a>> PartitionBorders<'a, K, Ctx> for BorderInfo
-//    where BorderInfo: VisitBorders<'a, K, Ctx>,
+//impl<'a, R: RangeRole<Borders<'a, Ctx>=Self>, Ctx: AsPatternTraceContext<'a>> PartitionBorders<'a, R, Ctx> for BorderInfo
+//    where BorderInfo: VisitBorders<'a, R, Ctx>,
 //{
 //}
 //impl<'a, M: InVisitMode, Ctx: AsPatternTraceContext<'a>> PartitionBorders<'a, In<M>, Ctx> for (BorderInfo, BorderInfo)

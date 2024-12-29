@@ -1,22 +1,18 @@
 use crate::{
     direction::r#match::MatchDirection,
-    graph::kind::DirectionOf,
+    graph::vertex::{
+        child::Child,
+        location::{
+            child::ChildLocation,
+            pattern::PatternLocation,
+        },
+        pattern::IntoPattern,
+        wide::Wide,
+    },
     traversal::traversable::Traversable,
 };
 use itertools::Itertools;
-use std::{
-    borrow::Borrow,
-    collections::VecDeque,
-};
-use crate::graph::vertex::{
-    child::Child,
-    location::{
-        child::ChildLocation,
-        pattern::PatternLocation,
-    },
-    pattern::IntoPattern,
-    wide::Wide,
-};
+
 pub trait BandExpandingPolicy<Trav: Traversable> {
     fn map_band(
         location: PatternLocation,

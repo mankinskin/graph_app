@@ -39,6 +39,8 @@ use crate::{
     }, HashMap
 };
 
+use super::side::{SplitBack, SplitSide};
+
 pub mod vertex;
 
 pub mod builder;
@@ -113,7 +115,7 @@ pub fn position_splits<'a>(
             .into_iter()
             .map(|(pid, pat)| {
                 let (sub_index, inner_offset) =
-                    IndexBack::token_offset_split(pat.borrow(), offset).unwrap();
+                    SplitBack::token_offset_split(pat.borrow(), offset).unwrap();
                 (
                     *pid,
                     PatternSplitPos {
@@ -132,8 +134,8 @@ pub fn range_splits<'a>(
 ) -> (OffsetSplits, OffsetSplits) {
     let (ls, rs) = patterns
         .map(|(pid, pat)| {
-            let (li, lo) = IndexBack::token_offset_split(pat.borrow(), parent_range.0).unwrap();
-            let (ri, ro) = IndexBack::token_offset_split(pat.borrow(), parent_range.1).unwrap();
+            let (li, lo) = SplitBack::token_offset_split(pat.borrow(), parent_range.0).unwrap();
+            let (ri, ro) = SplitBack::token_offset_split(pat.borrow(), parent_range.1).unwrap();
             (
                 (
                     *pid,
@@ -171,7 +173,7 @@ pub fn cleaned_position_splits<'a>(
     patterns
         .map(|(pid, pat)| {
             let (sub_index, inner_offset) =
-                IndexBack::token_offset_split(pat.borrow(), parent_offset).unwrap();
+                SplitBack::token_offset_split(pat.borrow(), parent_offset).unwrap();
             let location = SubLocation::new(*pid, sub_index);
             if inner_offset.is_some() || pat.len() > 2 {
                 // can't be clean

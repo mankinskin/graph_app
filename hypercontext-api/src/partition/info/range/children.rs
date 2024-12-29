@@ -33,7 +33,7 @@ impl InfixChildren {
     }
 }
 
-pub trait RangeChildren<K: RangeRole>: Debug + Clone {
+pub trait RangeChildren<R: RangeRole>: Debug + Clone {
     fn insert_inner(
         self,
         inner: Option<Child>,

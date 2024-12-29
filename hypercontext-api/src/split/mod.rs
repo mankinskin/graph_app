@@ -1,17 +1,39 @@
-use std::{borrow::Borrow, num::NonZeroUsize};
+use std::num::NonZeroUsize;
 
-use cache::*;
-use complete::*;
+use cache::position_splits;
 use itertools::Itertools;
 
 use crate::{
-    graph::{getters::vertex::VertexSet, vertex::{data::VertexData, location::SubLocation, pattern::{id::PatternId, Pattern}, wide::Wide, TokenPosition}}, partition::splits::offset::OffsetSplits, traversal::{cache::entry::{position::SubSplitLocation, NodeSplitOutput, NodeType, Offset, RootMode}, traversable::Traversable}, HashMap, HashSet
+    graph::{
+        getters::vertex::VertexSet,
+        vertex::{
+            data::VertexData,
+            location::SubLocation,
+            pattern::id::PatternId,
+            wide::Wide,
+            TokenPosition,
+        },
+    },
+    partition::splits::offset::OffsetSplits,
+    traversal::{
+        cache::entry::{
+            position::SubSplitLocation,
+            vertex::VertexCache,
+            NodeSplitOutput,
+            NodeType,
+            Offset,
+            RootMode,
+        },
+        traversable::Traversable,
+    },
+    HashMap,
+    HashSet,
 };
 
-pub mod augment;
 pub mod cache;
 pub mod complete;
 pub mod frontier;
+pub mod side;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct PatternSplitPos {

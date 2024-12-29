@@ -3,7 +3,6 @@ use derive_more::{
     DerefMut,
     From,
 };
-use crate::split::TraceState;
 use crate::{
     graph::getters::vertex::VertexSet,
     traversal::{
@@ -18,6 +17,8 @@ use crate::{
     HashMap
 };
 use crate::graph::vertex::child::Child;
+
+use super::TraceState;
 
 #[derive(Default, Debug, Deref, DerefMut, From)]
 pub struct Leaves(Vec<SplitKey>);

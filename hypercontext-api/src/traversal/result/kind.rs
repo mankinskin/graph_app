@@ -1,11 +1,14 @@
 use crate::{
-    direction::Right, path::{
+    graph::vertex::{
+        child::Child,
+        location::child::ChildLocation,
+    },
+    path::{
         accessors::{
             child::{
-                pos::{
-                    RootChildPos,
-                    RootChildPosMut,
-                }, root::GraphRootChild, LeafChild
+                pos::RootChildPos,
+                root::GraphRootChild,
+                LeafChild,
             },
             complete::PathComplete,
             has_path::{
@@ -13,36 +16,31 @@ use crate::{
                 HasSinglePath,
             },
             role::{
-                End,
                 PathRole,
                 Start,
             },
-            root::GraphRoot,
-        }, mutators::{
-            adapters::into_advanced::IntoAdvanced,
-            append::PathAppend,
-            move_path::root::MoveRootPos,
-        }, structs::{
+        },
+        mutators::adapters::into_advanced::IntoAdvanced,
+        structs::{
             match_end::{
                 MatchEnd,
                 MatchEndPath,
             },
-            role_path::RolePath, rooted_path::{
+            role_path::RolePath,
+            rooted_path::{
                 RootedRolePath,
                 SearchPath,
-            }
-        }, BasePath
-    }, traversal::{
+            },
+        },
+        BasePath,
+    },
+    traversal::{
         cache::key::root::RootKey,
         iterator::policy::NodePath,
         traversable::Traversable,
-    }
+    },
 };
 use std::hash::Hash;
-use crate::graph::vertex::{
-    child::Child,
-    location::child::ChildLocation,
-};
 
 //pub trait ResultKind: Eq + Clone + Debug + Send + Sync + Unpin {
 //    type Query: QueryPath;
@@ -217,7 +215,6 @@ impl<T> RoleChildPath for T {}
 //    }
 //}
 
-
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct BaseResult;
 
@@ -267,4 +264,3 @@ pub struct BaseResult;
 //    //    }
 //    //}
 //}
-

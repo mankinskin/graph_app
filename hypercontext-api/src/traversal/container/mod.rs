@@ -1,25 +1,15 @@
+use crate::traversal::state::traversal::TraversalState;
 use extend::ExtendStates;
-use std::{
-    cmp::Ordering,
-    fmt::Debug,
-};
-use crate::{
-    graph::vertex::wide::Wide, traversal::{
-    cache::key::root::RootKey,
-    state::traversal::TraversalState,
-    traversable::Traversable,
-}};
-use crate::graph::vertex::location::child::ChildLocation;
+use std::fmt::Debug;
 
-pub mod extend;
-pub mod dft;
 pub mod bft;
-pub mod pruning;
+pub mod dft;
+pub mod extend;
 pub mod order;
+pub mod pruning;
 
 pub trait StateContainer:
     ExtendStates + Iterator<Item = (usize, TraversalState)> + Default + Debug
 {
     fn clear(&mut self);
 }
-

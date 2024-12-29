@@ -5,7 +5,6 @@ use crate::{
 use super::super::{
     accessors::role::PathRole,
     structs::{
-        query_range_path::QueryRangePath,
         role_path::RolePath,
         rooted_path::{
             PathRoot,

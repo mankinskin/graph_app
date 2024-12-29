@@ -1,10 +1,5 @@
-use itertools::Itertools;
+use crate::traversal::state::traversal::TraversalState;
 
-use crate::traversal::{
-    cache::key::root::RootKey,state::traversal::TraversalState, traversable::Traversable
-};
-
-use super::{pruning::PruningState, StateContainer};
 pub trait ExtendStates {
     fn extend<
         It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,

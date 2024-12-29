@@ -14,7 +14,6 @@ use hypercontext_api::{
 };
 
 pub mod context;
-pub mod side;
 
 #[cfg(test)]
 #[macro_use]

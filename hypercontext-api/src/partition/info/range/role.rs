@@ -9,56 +9,36 @@ use std::{
 };
 
 use crate::{
-    join::{
-        context::{
-            node::context::{
-                AsNodeTraceContext,
-                AsPatternContext,
-                NodeJoinContext,
-                NodeTraceContext,
-            },
-            pattern::{
-                AsPatternTraceContext,
-                PatternJoinContext,
-                PatternTraceContext,
-            },
-        },
-    },
-        partition::{
-            ToPartition,
-            info::{
-                border::{
-                    BorderInfo,
-                    perfect::{
-                        BorderPerfect,
-                        DoublePerfect,
-                        SinglePerfect,
-                    },
-                    visit::VisitBorders,
+    graph::vertex::{
+        child::Child,
+        pattern::pattern_range::PatternRangeIndex,
+    }, partition::{
+        context::{AsNodeTraceContext, NodeTraceContext}, info::{
+            border::{
+                perfect::{
+                    BorderPerfect,
+                    DoublePerfect,
+                    SinglePerfect,
                 },
-                range::{
-                    children::{
-                        InfixChildren,
-                        RangeChildren,
-                    },
-                    mode::VisitMode,
-                    splits::{
-                        PatternSplits,
-                        RangeOffsets,
-                    },
+                visit::VisitBorders,
+                BorderInfo,
+            },
+            range::{
+                children::{
+                    InfixChildren,
+                    RangeChildren,
+                },
+                mode::VisitMode,
+                splits::{
+                    PatternSplits,
+                    RangeOffsets,
                 },
             },
-            Partition,
-            splits::offset::{
-                ToOffsetSplits,
-                OffsetSplits,
-            },
-        },
-    split::cache::vertex::SplitVertexCache,
-};
-use crate::graph::vertex::{
-    child::Child,
-    pattern::pattern_range::PatternRangeIndex,
+        }, pattern::{AsPatternContext, AsPatternTraceContext, PatternTraceContext}, splits::offset::{
+            OffsetSplits,
+            ToOffsetSplits,
+        }, Partition, ToPartition
+    }, split::cache::vertex::SplitVertexCache
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -67,23 +47,21 @@ pub struct Outer;
 #[derive(Debug, Clone, Copy)]
 pub struct Inner;
 
-#[derive(Debug, Clone, Copy)]
-pub struct Join;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Trace;
 
-pub type OffsetsOf<K> = <K as RangeRole>::Offsets;
-pub type PerfectOf<K> = <K as RangeRole>::Perfect;
-pub type BooleanPerfectOf<K> = <PerfectOf<K> as BorderPerfect>::Boolean;
-pub type ChildrenOf<K> = <K as RangeRole>::Children;
-pub type RangeOf<K> = <K as RangeRole>::Range;
-pub type ModeOf<K> = <K as RangeRole>::Mode;
-pub type BordersOf<K> = <K as RangeRole>::Borders;
-pub type ModeChildrenOf<K> = <ModeOf<K> as ModeChildren<K>>::Result;
-pub type PatternCtxOf<'a, K> = <<K as RangeRole>::Mode as ModeContext<'a>>::PatternResult;
-pub type ModeNodeCtxOf<'a, K> = <<K as RangeRole>::Mode as ModeContext<'a>>::NodeResult;
-pub type ModePatternCtxOf<'a, K> = <<K as RangeRole>::Mode as ModeContext<'a>>::PatternResult;
+pub type OffsetsOf<R> = <R as RangeRole>::Offsets;
+pub type PerfectOf<R> = <R as RangeRole>::Perfect;
+pub type BooleanPerfectOf<R> = <PerfectOf<R> as BorderPerfect>::Boolean;
+pub type ChildrenOf<R> = <R as RangeRole>::Children;
+pub type RangeOf<R> = <R as RangeRole>::Range;
+pub type ModeOf<R> = <R as RangeRole>::Mode;
+pub type BordersOf<R> = <R as RangeRole>::Borders;
+pub type ModeChildrenOf<R> = <ModeOf<R> as ModeChildren<R>>::Result;
+pub type PatternCtxOf<'a, R> = <<R as RangeRole>::Mode as ModeContext<'a>>::PatternResult;
+pub type ModeNodeCtxOf<'a, R> = <<R as RangeRole>::Mode as ModeContext<'a>>::NodeResult;
+pub type ModePatternCtxOf<'a, R> = <<R as RangeRole>::Mode as ModeContext<'a>>::PatternResult;
 
 pub trait ModeContext<'a> {
     type NodeResult: AsNodeTraceContext<'a>
@@ -96,21 +74,12 @@ impl<'a> ModeContext<'a> for Trace {
     type PatternResult = PatternTraceContext<'a>;
 }
 
-impl<'a> ModeContext<'a> for Join {
-    type NodeResult = NodeJoinContext<'a>;
-    type PatternResult = PatternJoinContext<'a>;
-}
-
-pub trait ModeChildren<K: RangeRole> {
+pub trait ModeChildren<R: RangeRole> {
     type Result: Clone + Debug;
 }
 
-impl<K: RangeRole<Mode = Trace>> ModeChildren<K> for Trace {
+impl<R: RangeRole<Mode = Trace>> ModeChildren<R> for Trace {
     type Result = ();
-}
-
-impl<K: RangeRole<Mode = Join>> ModeChildren<K> for Join {
-    type Result = K::Children;
 }
 
 pub trait RangeKind: Debug + Clone {}
@@ -132,11 +101,11 @@ pub trait RangeRole: Debug + Clone + Copy {
     fn to_partition(splits: Self::Splits) -> Partition<Self>;
 }
 
-pub trait OffsetIndexRange<K: RangeRole>: PatternRangeIndex {
+pub trait OffsetIndexRange<R: RangeRole>: PatternRangeIndex {
     fn get_splits(
         &self,
         vertex: &SplitVertexCache,
-    ) -> K::Splits;
+    ) -> R::Splits;
 }
 
 impl<M: InVisitMode> OffsetIndexRange<In<M>> for Range<usize> {
@@ -192,19 +161,15 @@ pub trait PreVisitMode: VisitMode<Pre<Self>> {}
 
 impl PreVisitMode for Trace {}
 
-impl PreVisitMode for Join {}
-
 pub trait PostVisitMode: VisitMode<Post<Self>> {}
 
 impl PostVisitMode for Trace {}
 
-impl PostVisitMode for Join {}
 
 pub trait InVisitMode: VisitMode<In<Self>> + PreVisitMode + PostVisitMode {}
 
 impl InVisitMode for Trace {}
 
-impl InVisitMode for Join {}
 
 #[derive(Debug, Clone, Default, Copy)]
 pub struct In<M: InVisitMode>(std::marker::PhantomData<M>);

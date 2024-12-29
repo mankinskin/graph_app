@@ -7,7 +7,7 @@ use crate::{
                 IntoPattern, Pattern
             }, wide::Wide,
         },
-    }, path::accessors::role::End, traversal::{
+    }, traversal::{
         cache::{
             key::{
                 root::RootKey, DirectedKey
@@ -21,13 +21,12 @@ use crate::{
                 EndState,
             },
             query::QueryState,
-            start::StartState,
         }, traversable::Traversable
     }
 };
 use std::{borrow::Borrow, ops::ControlFlow};
 use super::{
-    cache::key::UpKey, container::{extend::ExtendStates, pruning::{PruneStates, PruningMap, PruningState}, StateContainer},iterator::policy::DirectedTraversalPolicy, result::{kind::RoleChildPath, FoldResult}, state::{traversal::TraversalState, ApplyStatesCtx}, traversable::TravKind
+    container::{extend::ExtendStates, pruning::{PruneStates, PruningMap, PruningState}, StateContainer},iterator::policy::DirectedTraversalPolicy, result::FoldResult, state::{traversal::TraversalState, ApplyStatesCtx}, traversable::TravKind
 };
 use init::{InitStates, QueryStateInit};
 use itertools::Itertools;

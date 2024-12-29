@@ -1,5 +1,4 @@
 pub mod cache;
-pub mod context;
 pub mod fold;
 pub mod iterator;
 pub mod result;

@@ -7,29 +7,21 @@ use derive_more::{
     Deref,
     DerefMut,
 };
+use derive_new::new;
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 
 use crate::{
-    HashMap,
-    join::context::node::context::NodeJoinContext,
-    partition::{
-        Infix,
+    join::{context::node::context::NodeJoinContext, partition::Join}, partition::{
         info::{
-            PartitionInfo,
-            range::role::{
-                In,
-                Join,
-            },
-            visit::VisitPartition,
-        },
-        splits::{
+            range::role::In,
+            visit::VisitPartition, PartitionInfo
+        }, splits::{
             HasPosSplits,
             PosSplits,
             SplitKind,
-        },
-    },
-    split::cache::split::Split,
+        }, Infix
+    }, split::cache::split::Split, HashMap
 };
 use crate::{
     traversal::cache::key::SplitKey,
@@ -38,13 +30,16 @@ use crate::{
         pattern::Pattern,
     },
 };
+use std::fmt::Debug;
 
-pub struct NodeMergeContext<'a> {
-    pub graph: &'a mut NodeJoinContext<'a>,
-    pub index: usize,
+use super::kind::JoinKind;
+
+#[derive(Debug, new)]
+pub struct NodeMergeContext<'a, K: JoinKind> {
+    pub ctx: &'a mut NodeJoinContext<'a, K>,
 }
 
-impl NodeMergeContext<'_> {
+impl<K: JoinKind> NodeMergeContext<'_, K> {
     pub fn merge_node<S: HasPosSplits>(
         &mut self,
         splits: S,
@@ -60,7 +55,7 @@ impl NodeMergeContext<'_> {
         let merges = self.merge_partitions(offsets, partitions);
 
         let len = offsets.len();
-        let index = self.index;
+        let index = self.ctx.index;
         let mut finals = LinkedHashMap::new();
         for (i, (offset, v)) in offsets.iter().enumerate() {
             let lr = 0..i;
@@ -69,13 +64,13 @@ impl NodeMergeContext<'_> {
             let right = *merges.get(&rr).unwrap();
             if !lr.is_empty() || !lr.is_empty() {
                 if let Some((&pid, _)) = v.borrow().iter().find(|(_, s)| s.inner_offset.is_none()) {
-                    self.graph.ctx.graph.replace_in_pattern(
+                    self.ctx.ctx.graph.replace_in_pattern(
                         index.to_pattern_location(pid),
                         0..,
                         [left, right],
                     );
                 } else {
-                    self.graph.ctx.graph.add_pattern_with_update(index, [left, right]);
+                    self.ctx.ctx.graph.add_pattern_with_update(index, [left, right]);
                 }
             }
             finals.insert(SplitKey::new(index, *offset), Split::new(left, right));
@@ -118,7 +113,7 @@ impl NodeMergeContext<'_> {
                         });
                         // todo: insert into perfect context
                         let patterns = merges.into_iter().chain(joined).collect_vec();
-                        self.graph.insert_patterns(patterns)
+                        self.ctx.ctx.graph.insert_patterns(patterns)
                     }
                     Err(c) => c,
                 };

@@ -1,30 +1,29 @@
 use std::sync::RwLockWriteGuard;
 
+use node::kind::{DefaultJoin, JoinKind};
+
 use crate::partition::splits::HasSubSplits;
+use crate::traversal::traversable::TraversableMut;
 use crate::{
     join::context::node::context::NodeJoinContext, partition::splits::SubSplits, split::cache::SplitCache
 };
-use crate::graph::{
-    Hypergraph,
-    vertex::{
+use crate::graph::vertex::{
         child::Child,
         has_vertex_index::HasVertexIndex,
-    },
-};
+    };
 
 pub mod node;
 
-pub mod pattern;
 
 #[derive(Debug)]
-pub struct JoinContext<'p> {
-    pub graph: RwLockWriteGuard<'p, Hypergraph>,
+pub struct JoinContext<'p, K: JoinKind + 'p = DefaultJoin> {
+    pub graph: <K::Trav as TraversableMut>::GuardMut<'p>,
     pub sub_splits: &'p SubSplits,
 }
 
-impl<'p> JoinContext<'p> {
+impl<'p, K: JoinKind> JoinContext<'p, K> {
     pub fn new<SS: HasSubSplits>(
-        graph: RwLockWriteGuard<'p, Hypergraph>,
+        graph: <<K as JoinKind>::Trav as TraversableMut>::GuardMut<'p>,
         sub_splits: &'p SS,
     ) -> Self {
         Self {
@@ -36,7 +35,7 @@ impl<'p> JoinContext<'p> {
         self,
         index: Child,
         split_cache: &'p SplitCache,
-    ) -> NodeJoinContext<'p> {
+    ) -> NodeJoinContext<'p, K> {
         NodeJoinContext::new(
             self,
             index,
@@ -46,19 +45,4 @@ impl<'p> JoinContext<'p> {
 }
 
 // , PatternCtx<'p> = PatternJoinContext<'p>
-pub trait ToNodeJoinContext<'p> {
-    fn to_node_join_context<'t>(self) -> NodeJoinContext<'t>
-    where
-        Self: 't,
-        'p: 't;
-}
 
-impl<'p> ToNodeJoinContext<'p> for NodeJoinContext<'p> {
-    fn to_node_join_context<'t>(self) -> NodeJoinContext<'t>
-    where
-        Self: 't,
-        'p: 't,
-    {
-        self
-    }
-}

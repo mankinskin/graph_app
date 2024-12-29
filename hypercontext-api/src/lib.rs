@@ -16,6 +16,7 @@ pub mod graph;
 pub mod direction;
 pub mod traversal;
 pub mod path;
+pub mod mock;
 
 pub mod split;
 pub mod partition;

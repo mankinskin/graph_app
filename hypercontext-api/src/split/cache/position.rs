@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::{
-    join::delta::PatternSubDeltas, split::{
+    partition::delta::PatternSubDeltas, split::{
         PatternSplitPos,
         ToVertexSplitPos,
         VertexSplitPos,

@@ -25,7 +25,7 @@ use crate::graph::vertex::{
     wide::Wide,
 };
 
-pub trait VisitBorders<K: RangeRole>: Sized + PartitionBorder<K> {
+pub trait VisitBorders<R: RangeRole>: Sized + PartitionBorder<R> {
     type Splits;
     fn info_border(
         pattern: &Pattern,
@@ -34,9 +34,9 @@ pub trait VisitBorders<K: RangeRole>: Sized + PartitionBorder<K> {
     fn inner_range_offsets(
         &self,
         pattern: &Pattern,
-    ) -> Option<OffsetsOf<K>>;
-    fn inner_range(&self) -> RangeOf<K>;
-    fn outer_range(&self) -> RangeOf<K>;
+    ) -> Option<OffsetsOf<R>>;
+    fn inner_range(&self) -> RangeOf<R>;
+    fn outer_range(&self) -> RangeOf<R>;
 }
 
 impl<M: PostVisitMode> VisitBorders<Post<M>> for BorderInfo {

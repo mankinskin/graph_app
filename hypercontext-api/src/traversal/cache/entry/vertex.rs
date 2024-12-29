@@ -1,44 +1,11 @@
-use std::{
-    borrow::Borrow,
-    num::NonZeroUsize,
-};
-
-use itertools::Itertools;
-
 use crate::{
-    graph::{
-        getters::vertex::VertexSet,
-        vertex::{
-            child::Child,
-            data::VertexData,
-            location::SubLocation,
-            pattern::{
-                id::PatternId,
-                Pattern,
-            },
-            wide::Wide,
-        },
-    },
+    graph::vertex::child::Child,
     path::mutators::move_path::key::TokenPosition,
-    //partition::splits::offset::OffsetSplits,
-    //split::PatternSplitPos,
-    traversal::{
-        cache::{
+    traversal::cache::{
             entry::PositionCache,
             key::DirectedPosition,
         },
-        traversable::Traversable,
-    },
     HashMap,
-    HashSet,
-};
-
-use super::{
-    NodeSplitOutput,
-    NodeType,
-    Offset,
-    RootMode,
-    SubSplitLocation,
 };
 
 pub type DirectedPositions = HashMap<TokenPosition, PositionCache>;

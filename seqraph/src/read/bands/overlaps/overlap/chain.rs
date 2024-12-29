@@ -4,7 +4,7 @@ use itertools::Itertools;
 use tracing::instrument;
 
 use crate::{
-    insert::side::IndexFront,
+    insert::side::SplitFront,
     read::{
         bands::overlaps::overlap::Overlap,
         reader::context::ReadContext,
@@ -49,7 +49,7 @@ impl OverlapChain {
                     // index context of prefix
                     let ctx = if let Some(node) = overlap.link.as_ref() {
                         reader
-                            .contexter::<IndexFront>()
+                            .contexter::<SplitFront>()
                             .try_context_path(
                                 node.prefix_path
                                     .get_path()

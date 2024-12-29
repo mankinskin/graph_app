@@ -1,48 +1,15 @@
-use std::{
-    borrow::Borrow,
-    num::NonZeroUsize,
-};
-
-use itertools::Itertools;
-
 use crate::{
-    //insert::side::{
-    //    IndexBack,
-    //    IndexSide,
-    //},
-    //join::partition::splits::offset::OffsetSplits,
-    split::{
-        cache::builder::SplitCacheBuilder,
-        PatternSplitPos,
+    graph::vertex::{
+        child::Child,
+        has_vertex_index::HasVertexIndex,
+        wide::Wide,
     },
-};
-use crate::{
-    graph::{
-        getters::vertex::VertexSet,
-        vertex::{
-            child::Child,
-            data::VertexData,
-            has_vertex_index::HasVertexIndex,
-            location::SubLocation,
-            pattern::{
-                id::PatternId,
-                Pattern,
-            },
-            wide::Wide,
-        },
-    },
+    split::cache::builder::SplitCacheBuilder,
     traversal::{
-        cache::entry::{
-            position::SubSplitLocation,
-            vertex::VertexCache,
-            NodeSplitOutput,
-            NodeType,
-            Offset,
-        },
+        cache::entry::NodeType,
         fold::state::FoldState,
         traversable::Traversable,
     },
-    HashSet,
 };
 
 impl SplitCacheBuilder {

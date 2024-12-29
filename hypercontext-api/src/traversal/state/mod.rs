@@ -19,7 +19,7 @@ use crate::{graph::vertex::wide::Wide, traversal::{
     }, trace::TraceContext
 }};
 
-use super::{cache::key::root::RootKey, container::{extend::ExtendStates, pruning::PruneStates}, fold::{TraversalContext, TraversalKind}, trace::Trace};
+use super::{cache::key::root::RootKey, container::{extend::ExtendStates, pruning::PruneStates}, fold::{TraversalContext, TraversalKind}, trace::TraceInit};
 
 #[derive(Clone, Debug)]
 pub struct StateNext<T> {
@@ -45,7 +45,7 @@ pub struct ApplyStatesCtx<'a, 'b: 'a, K: TraversalKind> {
     pub end_state: &'b mut Option<EndState>,
 }
 impl NextStates {
-    pub fn apply<K: TraversalKind>(self, mut ctx: ApplyStatesCtx<'_, '_, K>) -> ControlFlow<()> {
+    pub fn apply<K: TraversalKind>(self, ctx: ApplyStatesCtx<'_, '_, K>) -> ControlFlow<()> {
         match self {
             NextStates::Child(_) | NextStates::Prefixes(_) | NextStates::Parents(_) => {
                 ctx.tctx.states.extend(

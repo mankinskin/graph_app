@@ -21,9 +21,7 @@ pub mod insert;
 pub mod search;
 //pub mod logger;
 pub mod mock;
-pub mod split;
 pub mod read;
-pub mod join;
 pub mod tests;
 
 #[cfg(not(any(test, feature = "test-hashing")))]

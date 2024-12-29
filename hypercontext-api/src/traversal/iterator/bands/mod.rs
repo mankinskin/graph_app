@@ -1,26 +1,26 @@
 use crate::{
-    direction::r#match::MatchDirection,
-    graph::kind::DirectionOf,
+    graph::{
+        kind::DirectionOf,
+        vertex::{
+            child::Child,
+            location::{
+                child::ChildLocation,
+                pattern::PatternLocation,
+            },
+        },
+    },
     traversal::traversable::Traversable,
 };
-use itertools::Itertools;
-use policy::{BandExpandingPolicy, PostfixExpandingPolicy};
+use policy::{
+    BandExpandingPolicy,
+    PostfixExpandingPolicy,
+};
 use std::{
     borrow::Borrow,
     collections::VecDeque,
 };
-use crate::graph::vertex::{
-    child::Child,
-    location::{
-        child::ChildLocation,
-        pattern::PatternLocation,
-    },
-    pattern::IntoPattern,
-    wide::Wide,
-};
 
 pub mod policy;
-
 
 pub trait BandIterator<'a, Trav: Traversable + 'a>:
     Iterator<Item = (ChildLocation, Child)>
@@ -43,7 +43,6 @@ pub trait BandIterator<'a, Trav: Traversable + 'a>:
         ))
     }
 }
-
 
 pub struct BandExpandingIterator<'a, Trav, P>
 where
@@ -95,12 +94,10 @@ where
             //segment = last_location.take();
             self.queue.extend(next)
         }
-        self.queue
-            .pop_front()
-            .map(|(location, node)| {
-                self.last.0 = Some(location);
-                self.last.1 = node;
-                (location, node)
-            })
+        self.queue.pop_front().map(|(location, node)| {
+            self.last.0 = Some(location);
+            self.last.1 = node;
+            (location, node)
+        })
     }
 }

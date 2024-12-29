@@ -42,8 +42,8 @@ use hypercontext_api::{
 use crate::{
     insert::{
         side::{
-            IndexBack,
-            IndexFront,
+            SplitBack,
+            SplitFront,
         },
         IndexSplitResult,
     },
@@ -240,7 +240,7 @@ impl<'p> ReadContext<'p> {
     //        inner,
     //        location,
     //        path,
-    //    } = self.splitter::<IndexFront>().single_offset_split(
+    //    } = self.splitter::<SplitFront>().single_offset_split(
     //        prev,
     //        NonZeroUsize::new(cache.end_bound - past_end_bound).unwrap(),
     //    );
@@ -268,7 +268,7 @@ impl<'p> ReadContext<'p> {
     //    };
     //    // get index between past and next overlap
     //    let (inner_back_ctx, _loc) = self
-    //        .contexter::<IndexBack>()
+    //        .contexter::<SplitBack>()
     //        .try_context_path(
     //            context_path,
     //            //next_link.overlap,

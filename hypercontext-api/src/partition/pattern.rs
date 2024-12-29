@@ -1,42 +1,12 @@
 use derivative::Derivative;
-use derive_more::{
-    Deref,
-    DerefMut,
-};
 
-use crate::partition::splits::SubSplits;
 use crate::graph::vertex::{
     location::pattern::PatternLocation,
     pattern::Pattern,
     pattern::id::PatternId,
 };
 
-#[derive(Debug, Deref, DerefMut, Derivative)]
-#[derivative(Hash, PartialEq, Eq)]
-pub struct PatternJoinContext<'p> {
-    #[deref]
-    #[deref_mut]
-    pub ctx: PatternTraceContext<'p>,
-    //pub graph: RwLockWriteGuard<'p, Hypergraph>,
-    #[derivative(Hash = "ignore", PartialEq = "ignore")]
-    pub sub_splits: &'p SubSplits,
-}
 
-impl<'p> AsPatternTraceContext<'p> for PatternJoinContext<'p> {
-    fn as_pattern_trace_context<'t>(&'t self) -> PatternTraceContext<'t>
-    where
-        Self: 't,
-        'p: 't,
-    {
-        self.ctx
-    }
-}
-
-impl<'p> From<PatternJoinContext<'p>> for PatternId {
-    fn from(value: PatternJoinContext<'p>) -> Self {
-        Self::from(value.ctx)
-    }
-}
 //pub trait AsPatternContext<'p> {
 //    type PatternCtx<'t>;
 //    fn as_pattern_context<'t>(&'t self) -> Self::PatternCtx<'t> where Self: 't, 'p: 't;
@@ -76,4 +46,33 @@ impl<'p> AsPatternTraceContext<'p> for PatternTraceContext<'p> {
     {
         *self
     }
+}
+pub trait ToPatternContext<'p> {
+    type PatternCtx<'a>: AsPatternTraceContext<'p>
+    where
+        Self: 'a,
+        'a: 'p;
+    fn to_pattern_context<'t>(
+        self,
+        pattern_id: &PatternId,
+    ) -> Self::PatternCtx<'t>
+    where
+        Self: 't,
+        't: 'p;
+}
+
+
+
+pub trait AsPatternContext<'p> {
+    type PatternCtx<'a>: AsPatternTraceContext<'p>
+    where
+        Self: 'a,
+        'a: 'p;
+    fn as_pattern_context<'t>(
+        &'p self,
+        pattern_id: &PatternId,
+    ) -> Self::PatternCtx<'t>
+    where
+        Self: 't,
+        't: 'p;
 }

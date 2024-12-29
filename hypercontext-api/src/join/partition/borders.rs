@@ -1,5 +1,4 @@
 use crate::{
-    join::context::pattern::PatternJoinContext,
     partition::info::{
         border::{
             trace::TraceBorders,
@@ -10,7 +9,6 @@ use crate::{
             role::{
                 ChildrenOf,
                 In,
-                Join,
                 ModeChildrenOf,
                 ModePatternCtxOf,
                 Post,
@@ -19,14 +17,19 @@ use crate::{
             },
         },
     },
+    traversal::cache::key::SplitKey,
 };
-use crate::traversal::cache::key::SplitKey;
 
-pub trait JoinBorders<K: RangeRole<Mode = Join>>: TraceBorders<K> {
+use super::{
+    Join,
+    PatternJoinContext,
+};
+
+pub trait JoinBorders<R: RangeRole<Mode = Join>>: TraceBorders<R> {
     fn get_child_splits(
         &self,
-        ctx: &ModePatternCtxOf<'_, K>,
-    ) -> Option<ModeChildrenOf<K>>;
+        ctx: &ModePatternCtxOf<'_, R>,
+    ) -> Option<ModeChildrenOf<R>>;
 }
 
 impl JoinBorders<Post<Join>> for BorderInfo {

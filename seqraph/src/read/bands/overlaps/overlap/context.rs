@@ -10,7 +10,7 @@ use hypercontext_api::{
     },
 };
 use crate::{
-    insert::side::IndexBack,
+    insert::side::SplitBack,
     read::{
         bands::overlaps::overlap::{chain::OverlapChain, OverlapLink}, reader::context::ReadContext
     }
@@ -24,7 +24,7 @@ impl<'g> ReadContext<'g> {
         link: &OverlapLink,
     ) -> Pattern {
         let (inner_back_ctx, _loc) = self
-            .contexter::<IndexBack>()
+            .contexter::<SplitBack>()
             .try_context_path(
                 //link.postfix_path.clone().into_context_path(),
                 // FIXME: maybe mising root!!!

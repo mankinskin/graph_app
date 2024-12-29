@@ -1,9 +1,18 @@
-use crate::{graph::{getters::NoMatch, vertex::{
-    child::Child,
-    pattern::IntoPattern,
-}}, path::structs::query_range_path::{QueryPath, QueryRangePath}};
+use crate::{
+    graph::vertex::{
+        child::Child,
+        pattern::IntoPattern,
+    },
+    path::structs::query_range_path::{
+        QueryPath,
+        QueryRangePath,
+    },
+};
 
-use super::{fold::state::FoldState, state::query::QueryState};
+use super::{
+    fold::state::FoldState,
+    state::query::QueryState,
+};
 pub mod kind;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -81,7 +90,7 @@ impl TraversalResult {
             query: QueryState {
                 pos: query.len().into(),
                 path: QueryRangePath::complete(query),
-            }
+            },
         }
     }
 }

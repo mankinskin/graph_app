@@ -1,6 +1,4 @@
-use crate::{
-    join::context::pattern::AsPatternTraceContext,
-    partition::info::{
+use crate::partition::{info::{
         border::visit::VisitBorders,
         range::{
             role::{
@@ -9,21 +7,20 @@ use crate::{
             },
             InnerRangeInfo,
         },
-    },
-};
+    }, pattern::AsPatternTraceContext};
 
-pub trait TraceBorders<K: RangeRole>: VisitBorders<K> {
+pub trait TraceBorders<R: RangeRole>: VisitBorders<R> {
     fn inner_info(
         &self,
-        ctx: &ModePatternCtxOf<'_, K>,
-    ) -> Option<InnerRangeInfo<K>>;
+        ctx: &ModePatternCtxOf<'_, R>,
+    ) -> Option<InnerRangeInfo<R>>;
 }
 
-impl<K: RangeRole> TraceBorders<K> for K::Borders {
+impl<R: RangeRole> TraceBorders<R> for R::Borders {
     fn inner_info(
         &self,
-        ctx: &ModePatternCtxOf<'_, K>,
-    ) -> Option<InnerRangeInfo<K>> {
+        ctx: &ModePatternCtxOf<'_, R>,
+    ) -> Option<InnerRangeInfo<R>> {
         let pctx = ctx.as_pattern_trace_context();
         self.inner_range_offsets(pctx.pattern)
             .map(|offsets| InnerRangeInfo {

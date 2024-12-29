@@ -12,7 +12,7 @@ use derive_more::{
     DerefMut,
 };
 use crate::{
-    join::context::node::context::NodeTraceContext, split::cache::{
+    partition::context::NodeTraceContext, split::cache::{
         cleaned_position_splits, leaves::Leaves, vertex::SplitVertexCache, CacheContext, SplitCache, SplitPositionCache, TraceState
     }
     //join::context::node::context::NodeTraceContext,
@@ -187,5 +187,38 @@ impl SplitCacheBuilder {
     }
     pub fn build(self) -> SplitCache {
         self.0
+    }
+
+    /// complete inner range offsets for non-roots
+    pub fn augment_node(
+        &mut self,
+        ctx: NodeTraceContext,
+    ) -> Vec<TraceState> {
+        self.entries
+            .get_mut(&ctx.index.vertex_index())
+            .unwrap()
+            .augment_node(ctx)
+    }
+    /// complete inner range offsets for root
+    pub fn augment_root(
+        &mut self,
+        ctx: NodeTraceContext,
+        root_mode: RootMode,
+    ) -> Vec<TraceState> {
+        self.entries
+            .get_mut(&ctx.index.vertex_index())
+            .unwrap()
+            .augment_root(ctx, root_mode)
+    }
+    pub fn augment_nodes<I: IntoIterator<Item = Child>>(
+        &mut self,
+        graph: &RwLockWriteGuard<'_, Hypergraph>,
+        nodes: I,
+    ) {
+        for c in nodes {
+            let new = self.augment_node(NodeTraceContext::new(graph, c));
+            // todo: force order
+            self.states.extend(new.into_iter());
+        }
     }
 }
