@@ -40,9 +40,9 @@ impl<'a, R: RangeRole<Mode = Join>> JoinedPartition<R>
 where
     R::Borders: JoinBorders<R>,
 {
-    pub fn from_joined_patterns<K: JoinKind + 'a>(
+    pub fn from_joined_patterns(
         pats: JoinedPatterns<R>,
-        ctx: &mut NodeJoinContext<'a, K>,
+        ctx: &mut NodeJoinContext<'a>,
     ) -> Self {
         // collect infos about partition in each pattern
         let index = ctx.graph.insert_patterns(pats.patterns);
@@ -58,9 +58,9 @@ where
             delta: pats.delta,
         }
     }
-    pub fn from_partition_info<K: JoinKind + 'a>(
+    pub fn from_partition_info<'p: 'a>(
         info: PartitionInfo<R>,
-        ctx: &mut NodeJoinContext<'a, K>,
+        ctx: &'p mut NodeJoinContext<'a>,
     ) -> Self {
         // collect infos about partition in each pattern
         let pats = JoinedPatterns::from_partition_info(info, ctx);
@@ -92,9 +92,9 @@ impl<'a, R: RangeRole<Mode = Join>> JoinedPatterns<R>
 where
     R::Borders: JoinBorders<R>,
 {
-    pub fn from_partition_info<K: JoinKind + 'a>(
+    pub fn from_partition_info(
         info: PartitionInfo<R>,
-        ctx: &mut NodeJoinContext<'a, K>,
+        ctx: &mut NodeJoinContext<'a>,
     ) -> Self {
         // assert: no complete perfect child
         // todo: index inner ranges and get child splits
@@ -123,9 +123,9 @@ where
             delta,
         }
     }
-    pub fn to_joined_partition<K: JoinKind + 'a>(
+    pub fn to_joined_partition(
         self,
-        ctx: &mut NodeJoinContext<'a, K>,
+        ctx: &mut NodeJoinContext<'a>,
     ) -> JoinedPartition<R> {
         JoinedPartition::from_joined_patterns(self, ctx)
     }

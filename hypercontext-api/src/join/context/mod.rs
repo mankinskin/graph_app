@@ -1,7 +1,8 @@
 use std::sync::RwLockWriteGuard;
 
-use node::kind::{DefaultJoin, JoinKind};
+use node::kind::JoinKind;
 
+use crate::graph::Hypergraph;
 use crate::partition::splits::HasSubSplits;
 use crate::traversal::traversable::TraversableMut;
 use crate::{
@@ -13,17 +14,18 @@ use crate::graph::vertex::{
     };
 
 pub mod node;
+pub mod pattern;
 
 
 #[derive(Debug)]
-pub struct JoinContext<'p, K: JoinKind + 'p = DefaultJoin> {
-    pub graph: <K::Trav as TraversableMut>::GuardMut<'p>,
+pub struct JoinContext<'p> {
+    pub graph: <Hypergraph as TraversableMut>::GuardMut<'p>,
     pub sub_splits: &'p SubSplits,
 }
 
-impl<'p, K: JoinKind> JoinContext<'p, K> {
+impl<'p> JoinContext<'p> {
     pub fn new<SS: HasSubSplits>(
-        graph: <<K as JoinKind>::Trav as TraversableMut>::GuardMut<'p>,
+        graph: <Hypergraph as TraversableMut>::GuardMut<'p>,
         sub_splits: &'p SS,
     ) -> Self {
         Self {
@@ -35,7 +37,7 @@ impl<'p, K: JoinKind> JoinContext<'p, K> {
         self,
         index: Child,
         split_cache: &'p SplitCache,
-    ) -> NodeJoinContext<'p, K> {
+    ) -> NodeJoinContext<'p> {
         NodeJoinContext::new(
             self,
             index,

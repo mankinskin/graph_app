@@ -45,9 +45,9 @@ pub trait VisitPartition<R: RangeRole>: Sized + Clone + ToPartition<R> {
         R::Borders::info_border(pctx.pattern, &splits)
     }
 
-    fn pattern_ctxs<'t>(
+    fn pattern_ctxs<'t, 'p: 't>(
         &self,
-        ctx: &'t ModeNodeCtxOf<'t, R>,
+        ctx: &'p ModeNodeCtxOf<'t, R>,
     ) -> PatternCtxs<'t, R> {
         let part = self.clone().to_partition();
         part.offsets
@@ -58,9 +58,9 @@ pub trait VisitPartition<R: RangeRole>: Sized + Clone + ToPartition<R> {
 
     /// bundle pattern range infos of each pattern
     /// or extract complete child for range
-    fn partition_borders<'t, C: PartitionBorderKey + From<ModePatternCtxOf<'t, R>>>(
+    fn partition_borders<'t, 'p: 't, C: PartitionBorderKey + From<ModePatternCtxOf<'t, R>>>(
         self,
-        ctx: &'t ModeNodeCtxOf<'t, R>,
+        ctx: &'p ModeNodeCtxOf<'t, R>,
     ) -> PartitionBorders<R, C>
     {
         let ctxs = self.pattern_ctxs(ctx);
@@ -77,9 +77,9 @@ pub trait VisitPartition<R: RangeRole>: Sized + Clone + ToPartition<R> {
             .unzip();
         PartitionBorders { borders, perfect }
     }
-    fn info_partition<'t>(
+    fn info_partition<'t, 'p: 't>(
         self,
-        ctx: &'t ModeNodeCtxOf<'t, R>,
+        ctx: &'p ModeNodeCtxOf<'t, R>,
     ) -> Result<PartitionInfo<R>, Child> {
         let borders = self.partition_borders(ctx);
         PartitionInfo::from_partition_borders(borders)

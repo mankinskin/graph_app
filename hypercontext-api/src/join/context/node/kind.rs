@@ -1,19 +1,23 @@
 use crate::{
-    graph::Hypergraph,
-    partition::splits::HasPosSplits,
-    split::cache::vertex::SplitVertexCache,
-    traversal::traversable::TraversableMut,
+    graph::Hypergraph, join::partition::Join, partition::{info::range::role::{In, Post, Pre, RangeRole}, splits::HasPosSplits}, split::cache::vertex::SplitVertexCache, traversal::traversable::TraversableMut
 };
 use std::fmt::Debug;
 
-pub trait JoinKind: Debug + Clone + Copy{
+pub trait JoinKind: RangeRole<Mode = Join> + Debug + Clone + Copy {
     type Trav: TraversableMut;
     type SP: HasPosSplits + Debug;
 }
-#[derive(Debug, Clone, Copy)]
-pub struct DefaultJoin;
 
-impl JoinKind for DefaultJoin {
+impl JoinKind for Pre<Join> {
+    type Trav = Hypergraph;
+    type SP = SplitVertexCache;
+}
+impl JoinKind for In<Join> {
+    type Trav = Hypergraph;
+    type SP = SplitVertexCache;
+}
+
+impl JoinKind for Post<Join> {
     type Trav = Hypergraph;
     type SP = SplitVertexCache;
 }

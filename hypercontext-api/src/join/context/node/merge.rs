@@ -32,24 +32,22 @@ use crate::{
 };
 use std::fmt::Debug;
 
-use super::kind::JoinKind;
 
 #[derive(Debug, new)]
-pub struct NodeMergeContext<'a, K: JoinKind> {
-    pub ctx: &'a mut NodeJoinContext<'a, K>,
+pub struct NodeMergeContext<'a> {
+    pub ctx: &'a mut NodeJoinContext<'a>,
 }
 
-impl<K: JoinKind> NodeMergeContext<'_, K> {
-    pub fn merge_node<S: HasPosSplits>(
+impl NodeMergeContext<'_> {
+    pub fn merge_node(
         &mut self,
-        splits: S,
         partitions: &Vec<Child>,
     ) -> LinkedHashMap<SplitKey, Split>
-    where
-        for<'t> &'t S::Split: SplitKind,
-        PosSplits<S>: HasPosSplits<Split = S::Split>,
+    //where
+    //    for<'t> &'t S::Split: SplitKind,
+    //    PosSplits<S>: HasPosSplits<Split = S::Split>,
     {
-        let offsets = splits.pos_splits();
+        let offsets = self.ctx.sub_splits.pos_splits();
         assert_eq!(partitions.len(), offsets.len() + 1);
 
         let merges = self.merge_partitions(offsets, partitions);
@@ -100,13 +98,13 @@ impl<K: JoinKind> NodeMergeContext<'_, K> {
 
                 // todo: could be read from cache
                 let res: Result<PartitionInfo<In<Join>>, _> =
-                    Infix::new(lo, ro).info_partition(self);
+                    Infix::new(lo, ro).info_partition(self.ctx);
 
                 let index = match res {
                     Ok(info) => {
                         let merges = range_map.range_sub_merges(start..start + len);
                         let joined = info.patterns.into_iter().map(|(pid, info)| {
-                            (info.joined_pattern(self, &pid).borrow() as &'_ Pattern)
+                            (info.joined_pattern(self.ctx, &pid).borrow() as &'_ Pattern)
                                 .iter()
                                 .cloned()
                                 .collect_vec()

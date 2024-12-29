@@ -1,17 +1,18 @@
 use context::{node::kind::JoinKind, JoinContext};
 use itertools::Itertools;
 
-use crate::{graph::vertex::{wide::Wide, child::Child}, split::{cache::{split::Split, SplitCache}, frontier::SplitFrontier}, traversal::{cache::key::SplitKey, traversable::TraversableMut}, HashMap};
+use crate::{graph::{vertex::{child::Child, wide::Wide}, Hypergraph}, split::{cache::{split::Split, SplitCache}, frontier::SplitFrontier}, traversal::{cache::key::SplitKey, traversable::TraversableMut}, HashMap};
 
 pub mod context;
 pub mod joined;
 
 pub mod partition;
 
+
 impl SplitFrontier {
-    pub fn join_final_splits<K: JoinKind>(
+    pub fn join_final_splits(
         &mut self,
-        trav: &mut K::Trav,
+        trav: &mut Hypergraph,
         root: Child,
         split_cache: &SplitCache,
     ) -> HashMap<SplitKey, Split> {
@@ -21,7 +22,7 @@ impl SplitFrontier {
                 .and_then(|key| (key.index != root).then_some(key))
         } {
             if !final_splits.contains_key(&key) {
-                let finals = JoinContext::<K>::new(trav.graph_mut(), &final_splits)
+                let finals = JoinContext::new(trav.graph_mut(), &final_splits)
                     .node(key.index, split_cache)
                     .join_partitions();
 
