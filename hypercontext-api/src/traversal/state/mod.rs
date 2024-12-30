@@ -38,11 +38,11 @@ pub enum NextStates {
 }
 
 #[derive(Debug)]
-pub struct ApplyStatesCtx<'a, 'b: 'a, K: TraversalKind> {
-    pub tctx: &'b mut TraversalContext<'a, K>,
+pub struct ApplyStatesCtx<'a: 'b, 'b, K: TraversalKind> {
+    pub tctx: &'a mut TraversalContext<'b, K>,
     pub depth: usize,
-    pub max_width: &'b mut usize,
-    pub end_state: &'b mut Option<EndState>,
+    pub max_width: &'a mut usize,
+    pub end_state: &'a mut Option<EndState>,
 }
 impl NextStates {
     pub fn apply<K: TraversalKind>(self, ctx: ApplyStatesCtx<'_, '_, K>) -> ControlFlow<()> {

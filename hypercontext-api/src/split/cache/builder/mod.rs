@@ -7,19 +7,9 @@ use std::{
     sync::RwLockWriteGuard,
 };
 
-use derive_more::{
-    Deref,
-    DerefMut,
-};
-use crate::{
-    partition::context::NodeTraceContext, split::cache::{
-        cleaned_position_splits, leaves::Leaves, vertex::SplitVertexCache, CacheContext, SplitCache, SplitPositionCache, TraceState
-    }
-    //join::context::node::context::NodeTraceContext,
-};
 use crate::{
     graph::{
-        getters::vertex::VertexSet, vertex::{
+        getters::vertex::VertexSet, kind::GraphKind, vertex::{
             child::{
                 Child,
                 ChildWidth,
@@ -28,26 +18,42 @@ use crate::{
             wide::Wide,
         }, Hypergraph
     },
+    partition::context::NodeTraceContext,
+    split::{cache::{
+        cleaned_position_splits,
+        leaves::Leaves,
+        vertex::SplitVertexCache,
+        CacheContext,
+        SplitCache,
+        SplitPositionCache,
+        TraceState,
+    }, SplitContext},
     traversal::{
         cache::{
             entry::{
-                position::SubSplitLocation, InnerNode, RootMode, RootNode
+                position::SubSplitLocation, InnerNode, NodeType, RootMode, RootNode
             },
             key::SplitKey,
             labelled_key::vkey::labelled_key,
-        }, fold::state::FoldState, traversable::{
+        },
+        fold::state::FoldState,
+        traversable::{
             Traversable,
             TraversableMut,
-        }
+        },
     },
     HashMap,
+};
+use derive_more::{
+    Deref,
+    DerefMut,
 };
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct SplitCacheBuilder(pub SplitCache);
 
 impl SplitCacheBuilder {
-    pub fn new<'a, Trav: TraversableMut<GuardMut<'a> = RwLockWriteGuard<'a, Hypergraph>> + 'a>(
+    pub fn new<'a, Trav: TraversableMut + 'a>(
         trav: &'a mut Trav,
         mut fold_state: FoldState,
     ) -> Self {
@@ -58,10 +64,11 @@ impl SplitCacheBuilder {
         let mut cache = Self(SplitCache {
             entries,
             root_mode,
+            root: fold_state.root,
             context: CacheContext { leaves, states },
         });
         let graph = trav.graph_mut();
-        cache.augment_root(NodeTraceContext::new(&graph, fold_state.root), root_mode);
+        cache.augment_root(NodeTraceContext::new(&*graph, fold_state.root), root_mode);
         // stores past states
         let mut incomplete = BTreeSet::<Child>::default();
         // traverse top down by width
@@ -74,9 +81,9 @@ impl SplitCacheBuilder {
             cache.trace(&graph, &mut fold_state, &state);
             incomplete.insert(state.index);
             let complete = incomplete.split_off(&ChildWidth(state.index.width() + 1));
-            cache.augment_nodes(&graph, complete);
+            cache.augment_nodes(&*graph, complete);
         }
-        cache.augment_nodes(&graph, incomplete);
+        cache.augment_nodes(&*graph, incomplete);
         cache
     }
     pub fn new_root_vertex<Trav: Traversable>(
@@ -210,9 +217,9 @@ impl SplitCacheBuilder {
             .unwrap()
             .augment_root(ctx, root_mode)
     }
-    pub fn augment_nodes<I: IntoIterator<Item = Child>>(
+    pub fn augment_nodes<K: GraphKind, I: IntoIterator<Item = Child>>(
         &mut self,
-        graph: &RwLockWriteGuard<'_, Hypergraph>,
+        graph: &Hypergraph<K>,
         nodes: I,
     ) {
         for c in nodes {
@@ -220,5 +227,17 @@ impl SplitCacheBuilder {
             // todo: force order
             self.states.extend(new.into_iter());
         }
+    }
+    pub fn completed_splits<Trav: Traversable, N: NodeType>(
+        trav: &Trav,
+        fold_state: &FoldState,
+        index: &Child,
+    ) -> N::CompleteSplitOutput {
+        fold_state
+            .cache
+            .entries
+            .get(&index.vertex_index())
+            .map(|e| SplitContext::new(e).complete_splits::<_, N>(trav, fold_state.end_state.width().into()))
+            .unwrap_or_default()
     }
 }

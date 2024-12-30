@@ -3,38 +3,37 @@ use crate::{
         child::Child,
         pattern::{
             id::PatternId,
-            Pattern,
             IntoPattern,
+            Pattern,
         },
     },
-    join::{
-        context::node::{
-            context::NodeJoinContext,
-        },
-    },
+    join::context::node::context::NodeJoinContext,
     partition::{
         context::AsNodeTraceContext, info::{
-            border::{perfect::BoolPerfect, trace::TraceBorders, visit::VisitBorders, PartitionBorder},
+            border::{
+                perfect::BoolPerfect,
+                trace::TraceBorders,
+                visit::VisitBorders,
+                PartitionBorder,
+            },
             range::{
-                children::RangeChildren,
-                role::{
+                children::RangeChildren, role::{
                     BordersOf,
                     ModeChildrenOf,
                     ModePatternCtxOf,
                     RangeRole,
-                }, InnerRangeInfo, ModeRangeInfo, PatternRangeInfo
+                }, splits::RangeOffsets, InnerRangeInfo, ModeRangeInfo, PatternRangeInfo
             },
-        }, pattern::{
-            AsPatternTraceContext,
-        },
+        }, pattern::AsPatternTraceContext
     },
 };
 
-use super::{borders::JoinBorders, Join};
-pub mod inner;
+use super::{
+    borders::JoinBorders, join::JoinPartition, Join
+};
 
 #[derive(Debug, Clone)]
-pub struct JoinRangeInfo<R: RangeRole<Mode = Join>> {
+pub struct JoinPatternInfo<R: RangeRole<Mode = Join>> {
     pub inner_range: Option<InnerRangeInfo<R>>,
     pub range: R::Range,
     pub children: Option<ModeChildrenOf<R>>,
@@ -42,21 +41,24 @@ pub struct JoinRangeInfo<R: RangeRole<Mode = Join>> {
     pub delta: usize,
 }
 
-impl<R: RangeRole<Mode = Join>> JoinRangeInfo<R>
+impl<R: RangeRole<Mode = Join>> JoinPatternInfo<R>
 where
     R::Borders: JoinBorders<R>,
 {
-    pub fn joined_pattern(
+    pub fn join_pattern<'a: 'b, 'b: 'c, 'c>(
         self,
-        ctx: &mut NodeJoinContext<'_>,
+        ctx: &'c mut NodeJoinContext<'a, 'b>,
         pattern_id: &PatternId,
-    ) -> Pattern {
+    ) -> Pattern
+        where R: 'a
+    {
+        let index = ctx.index;
         let inner = self.inner_range.map(|r| r.index_pattern_inner(ctx));
         match (inner, self.children) {
             (inner, Some(children)) => children.insert_inner(inner).unwrap(),
             (None, None) => ctx
                 .graph
-                .expect_pattern_range(ctx.index.to_pattern_location(*pattern_id), self.range)
+                .expect_pattern_range(index.to_pattern_location(*pattern_id), self.range)
                 .into_pattern(),
             (Some(_), None) => panic!("inner range without children"),
             //let pat = ctx.pattern.get(range.clone()).unwrap();
@@ -64,7 +66,7 @@ where
     }
 }
 
-impl<R: RangeRole<Mode = Join>> ModeRangeInfo<R> for JoinRangeInfo<R>
+impl<R: RangeRole<Mode = Join>> ModeRangeInfo<R> for JoinPatternInfo<R>
 where
     R::Borders: JoinBorders<R>,
 {
@@ -95,7 +97,7 @@ where
             (1, None) => Err(pat[0]),
             (_, children) => Ok(PatternRangeInfo {
                 pattern_id: pid,
-                info: JoinRangeInfo {
+                info: JoinPatternInfo {
                     inner_range: inner,
                     delta,
                     offsets,
@@ -103,6 +105,27 @@ where
                     children,
                 },
             }),
+        }
+    }
+}
+
+impl<R: RangeRole<Mode = Join>> InnerRangeInfo<R>
+where
+    R::Borders: JoinBorders<R>,
+{
+    pub fn index_pattern_inner<'a: 'b, 'b: 'c, 'c>(
+        &self,
+        ctx: &'c mut NodeJoinContext<'a, 'b>,
+    ) -> Child
+        where Self: 'a
+    {
+        match self
+            .offsets
+            .as_splits(ctx.as_trace_context())
+            .join_partition(ctx)
+        {
+            Ok(inner) => inner.index,
+            Err(p) => p,
         }
     }
 }

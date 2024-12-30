@@ -77,7 +77,7 @@ impl TraversalState {
         }
     }
     /// Retrieves next unvisited states and adds edges to cache
-    pub fn next_states<'a, 'b: 'a, K: TraversalKind>(
+    pub fn next_states<'a, K: TraversalKind>(
         mut self,
         ctx: &mut TraversalContext<'a, K>,
     ) -> Option<NextStates> {

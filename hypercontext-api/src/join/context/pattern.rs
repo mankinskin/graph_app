@@ -15,11 +15,9 @@ pub struct PatternJoinContext<'p> {
     pub sub_splits: &'p SubSplits,
 }
 
-impl<'p> AsPatternTraceContext<'p> for PatternJoinContext<'p> {
-    fn as_pattern_trace_context<'t>(&'t self) -> PatternTraceContext<'t>
-    where
-        Self: 't,
-        'p: 't,
+impl<'a> AsPatternTraceContext for PatternJoinContext<'a> {
+    fn as_pattern_trace_context<'b>(&'b self) -> PatternTraceContext<'b>
+        where Self: 'b
     {
         self.ctx
     }

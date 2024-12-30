@@ -58,7 +58,7 @@ impl PartialOrd for ParentState {
 }
 
 impl ParentState {
-    pub fn next_states<'a, 'b: 'a, K: TraversalKind>(
+    pub fn next_states<'a, K: TraversalKind>(
         self,
         trav: &K::Trav,
         new: Vec<NewEntry>,
@@ -81,7 +81,7 @@ impl ParentState {
             Err(state) => state.next_parents::<K>(trav, new),
         }
     }
-    pub fn next_parents<'a, 'b: 'a, K: TraversalKind>(
+    pub fn next_parents<'a, K: TraversalKind>(
         self,
         trav: &K::Trav,
         new: Vec<NewEntry>,

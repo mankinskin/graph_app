@@ -1,6 +1,6 @@
-use std::sync::RwLockWriteGuard;
+use std::{ops::Deref, sync::RwLockWriteGuard};
 
-use crate::graph::{vertex::{child::Child, pattern::id::PatternId, ChildPatterns}, Hypergraph};
+use crate::{graph::{kind::GraphKind, vertex::{child::Child, pattern::id::PatternId, ChildPatterns}, Hypergraph}, traversal::traversable::Traversable};
 
 use super::pattern::{AsPatternContext, PatternTraceContext};
 
@@ -12,8 +12,8 @@ pub struct NodeTraceContext<'p> {
 }
 
 impl<'p> NodeTraceContext<'p> {
-    pub fn new(
-        graph: &'p RwLockWriteGuard<'p, Hypergraph>,
+    pub fn new<K: GraphKind>(
+        graph: &'p Hypergraph<K>,
         index: Child,
     ) -> Self {
         Self {
@@ -23,40 +23,33 @@ impl<'p> NodeTraceContext<'p> {
     }
 }
 
-impl<'p> AsPatternContext<'p> for NodeTraceContext<'p> {
-    type PatternCtx<'a>
-        = PatternTraceContext<'p>
-    where
-        Self: 'a,
-        'a: 'p;
-    fn as_pattern_context<'t>(
-        &'p self,
+impl<'a> AsPatternContext for NodeTraceContext<'a> {
+    type PatternCtx<'b>
+        = PatternTraceContext<'b> where Self: 'b;
+    fn as_pattern_context<'b>(
+        &'b self,
         pattern_id: &PatternId,
-    ) -> Self::PatternCtx<'t>
-    where
-        Self: 't,
-        't: 'p,
+    ) -> Self::PatternCtx<'b>
+        where Self: 'b
     {
         PatternTraceContext {
             loc: self.index.to_pattern_location(*pattern_id),
-            pattern: self.as_trace_context().patterns.get(pattern_id).unwrap(),
+            pattern: self.patterns.get(pattern_id).unwrap(),
         }
     }
 }
 
 
-pub trait AsNodeTraceContext<'p>: 'p {
-    fn as_trace_context<'t>(&'t self) -> NodeTraceContext<'t>
+pub trait AsNodeTraceContext {
+    fn as_trace_context<'a>(&'a self) -> NodeTraceContext<'a>
     where
-        Self: 't,
-        'p: 't;
+        Self: 'a;
 }
 
-impl<'p> AsNodeTraceContext<'p> for NodeTraceContext<'p> {
-    fn as_trace_context<'t>(&'t self) -> NodeTraceContext<'t>
+impl<'a> AsNodeTraceContext for NodeTraceContext<'a> {
+    fn as_trace_context<'b>(&'b self) -> NodeTraceContext<'b>
     where
-        Self: 't,
-        'p: 't,
+        Self: 'b
     {
         *self
     }

@@ -94,7 +94,7 @@ impl PartialOrd for ChildState {
 }
 
 impl ChildState {
-    pub fn next_states<'a, 'b: 'a, K: TraversalKind>(
+    pub fn next_states<'a, K: TraversalKind>(
         self,
         ctx: &mut TraversalContext<'a, K>,
         new: Vec<NewEntry>,
@@ -254,7 +254,7 @@ impl ChildState {
             })
         }
     }
-    fn on_query_end<'a, 'b: 'a, Trav: Traversable>(
+    fn on_query_end<'a, Trav: Traversable>(
         self,
         trav: &Trav,
         new: Vec<NewEntry>,
@@ -282,7 +282,7 @@ impl ChildState {
         })
     }
     /// generate child states for index prefixes
-    fn prefix_states<'a, 'b: 'a, Trav: Traversable>(
+    fn prefix_states<'a, Trav: Traversable>(
         self,
         trav: &Trav,
         index: Child,

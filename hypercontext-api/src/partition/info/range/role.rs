@@ -28,7 +28,7 @@ use crate::{
                     InfixChildren,
                     RangeChildren,
                 },
-                mode::VisitMode,
+                mode::ModeInfo,
                 splits::{
                     PatternSplits,
                     RangeOffsets,
@@ -59,19 +59,18 @@ pub type RangeOf<R> = <R as RangeRole>::Range;
 pub type ModeOf<R> = <R as RangeRole>::Mode;
 pub type BordersOf<R> = <R as RangeRole>::Borders;
 pub type ModeChildrenOf<R> = <ModeOf<R> as ModeChildren<R>>::Result;
-pub type PatternCtxOf<'a, R> = <<R as RangeRole>::Mode as ModeContext<'a>>::PatternResult;
-pub type ModeNodeCtxOf<'a, R> = <<R as RangeRole>::Mode as ModeContext<'a>>::NodeResult;
-pub type ModePatternCtxOf<'a, R> = <<R as RangeRole>::Mode as ModeContext<'a>>::PatternResult;
+pub type ModePatternCtxOf<'a, R> = <<R as RangeRole>::Mode as ModeContext>::PatternResult<'a>;
+pub type ModeNodeCtxOf<'a, 'b, R> = <<R as RangeRole>::Mode as ModeContext>::NodeContext<'a, 'b>;
 
-pub trait ModeContext<'a> {
-    type NodeResult: AsNodeTraceContext<'a>
-        + AsPatternContext<'a, PatternCtx<'a> = Self::PatternResult>;
-    type PatternResult: AsPatternTraceContext<'a> + Hash + Eq;
+pub trait ModeContext {
+    type NodeContext<'a: 'b, 'b>: AsNodeTraceContext
+        + AsPatternContext<PatternCtx<'b> = Self::PatternResult<'b>> + 'b where Self: 'a;
+    type PatternResult<'a>: AsPatternTraceContext + Hash + Eq where Self: 'a;
 }
 
-impl<'a> ModeContext<'a> for Trace {
-    type NodeResult = NodeTraceContext<'a>;
-    type PatternResult = PatternTraceContext<'a>;
+impl ModeContext for Trace {
+    type NodeContext<'a: 'b, 'b> = NodeTraceContext<'b>;
+    type PatternResult<'a> = PatternTraceContext<'a>;
 }
 
 pub trait ModeChildren<R: RangeRole> {
@@ -89,7 +88,7 @@ impl RangeKind for Inner {}
 impl RangeKind for Outer {}
 
 pub trait RangeRole: Debug + Clone + Copy {
-    type Mode: VisitMode<Self>; // todo: use to change join/trace
+    type Mode: ModeInfo<Self>; // todo: use to change join/trace
     type Perfect: BorderPerfect;
     type Offsets: RangeOffsets<Self>;
     type Kind: RangeKind;
@@ -157,16 +156,16 @@ impl<M: PreVisitMode> RangeRole for Pre<M> {
     }
 }
 
-pub trait PreVisitMode: VisitMode<Pre<Self>> {}
+pub trait PreVisitMode: ModeInfo<Pre<Self>> {}
 
 impl PreVisitMode for Trace {}
 
-pub trait PostVisitMode: VisitMode<Post<Self>> {}
+pub trait PostVisitMode: ModeInfo<Post<Self>> {}
 
 impl PostVisitMode for Trace {}
 
 
-pub trait InVisitMode: VisitMode<In<Self>> + PreVisitMode + PostVisitMode {}
+pub trait InVisitMode: ModeInfo<In<Self>> + PreVisitMode + PostVisitMode {}
 
 impl InVisitMode for Trace {}
 

@@ -67,23 +67,6 @@ impl InsertContext {
             Err((err, _)) => Err(err),
         }
     }
-    pub fn join_subgraph(
-        &mut self,
-        fold_state: FoldState,
-    ) -> Child {
-        let root = fold_state.root;
-        let split_cache = SplitCache::new(self, fold_state);
-
-        let final_splits = SplitFrontier::new(split_cache.leaves.iter().cloned().rev())
-            .join_final_splits(root, &split_cache);
-
-        let root_mode = split_cache.root_mode;
-        let x = self
-            .join(&final_splits)
-            .node(root, &split_cache)
-            .join_root_partitions(root_mode);
-        x
-    }
     pub fn index_query<
         Q: QueryPath,
     >(

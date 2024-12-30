@@ -12,16 +12,20 @@ use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 
 use crate::{
-    join::{context::node::context::NodeJoinContext, partition::Join}, partition::{
+    join::partition::Join, partition::{
         info::{
-            range::role::In,
-            visit::VisitPartition, PartitionInfo
+            range::role::In, InfoPartition, PartitionInfo
         }, splits::{
             HasPosSplits,
             PosSplits,
             SplitKind,
         }, Infix
-    }, split::cache::split::Split, HashMap
+    },
+    split::{
+        cache::split::Split,
+        VertexSplitPos,
+    },
+    HashMap
 };
 use crate::{
     traversal::cache::key::SplitKey,
@@ -31,23 +35,24 @@ use crate::{
     },
 };
 use std::fmt::Debug;
+use super::context::NodeJoinContext;
 
 
 #[derive(Debug, new)]
-pub struct NodeMergeContext<'a> {
-    pub ctx: &'a mut NodeJoinContext<'a>,
+pub struct NodeMergeContext<'a: 'b, 'b: 'c, 'c> {
+    pub ctx: &'c mut NodeJoinContext<'a, 'b>,
 }
 
-impl NodeMergeContext<'_> {
+impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b, 'c> {
     pub fn merge_node(
-        &mut self,
+        &'c mut self,
         partitions: &Vec<Child>,
     ) -> LinkedHashMap<SplitKey, Split>
     //where
     //    for<'t> &'t S::Split: SplitKind,
     //    PosSplits<S>: HasPosSplits<Split = S::Split>,
     {
-        let offsets = self.ctx.sub_splits.pos_splits();
+        let offsets = self.ctx.pos_splits;
         assert_eq!(partitions.len(), offsets.len() + 1);
 
         let merges = self.merge_partitions(offsets, partitions);
@@ -61,7 +66,7 @@ impl NodeMergeContext<'_> {
             let left = *merges.get(&lr).unwrap();
             let right = *merges.get(&rr).unwrap();
             if !lr.is_empty() || !lr.is_empty() {
-                if let Some((&pid, _)) = v.borrow().iter().find(|(_, s)| s.inner_offset.is_none()) {
+                if let Some((&pid, _)) = (v.borrow() as &VertexSplitPos).iter().find(|(_, s)| s.inner_offset.is_none()) {
                     self.ctx.ctx.graph.replace_in_pattern(
                         index.to_pattern_location(pid),
                         0..,
@@ -75,8 +80,8 @@ impl NodeMergeContext<'_> {
         }
         finals
     }
-    pub fn merge_partitions<S: HasPosSplits>(
-        &mut self,
+    pub fn merge_partitions<'d, S: HasPosSplits + 'd>(
+        &'d mut self,
         splits: S,
         partitions: &Vec<Child>,
     ) -> RangeMap
@@ -104,7 +109,7 @@ impl NodeMergeContext<'_> {
                     Ok(info) => {
                         let merges = range_map.range_sub_merges(start..start + len);
                         let joined = info.patterns.into_iter().map(|(pid, info)| {
-                            (info.joined_pattern(self.ctx, &pid).borrow() as &'_ Pattern)
+                            (info.join_pattern(self.ctx, &pid).borrow() as &'_ Pattern)
                                 .iter()
                                 .cloned()
                                 .collect_vec()

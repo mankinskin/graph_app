@@ -23,7 +23,7 @@ impl<R: RangeRole> TraceBorders<R> for R::Borders {
     ) -> Option<InnerRangeInfo<R>> {
         let pctx = ctx.as_pattern_trace_context();
         self.inner_range_offsets(pctx.pattern)
-            .map(|offsets| InnerRangeInfo {
+            .map(move |offsets| InnerRangeInfo {
                 range: self.inner_range(),
                 offsets,
             })

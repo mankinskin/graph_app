@@ -2,30 +2,25 @@ pub mod borders;
 pub mod info;
 pub mod join;
 
-
 use borders::JoinBorders;
-use derivative::Derivative;
-use derive_more::derive::{
-    Deref,
-    DerefMut,
-};
-use info::JoinRangeInfo;
+use info::JoinPatternInfo;
 
 use crate::{
     join::{
         context::node::context::NodeJoinContext,
         joined::{
-            JoinedPartition,
-            JoinedPatterns,
+            partition::JoinedPartition,
+            patterns::JoinedPatterns,
         },
     },
     partition::info::{
         range::{
-            mode::VisitMode,
+            mode::ModeInfo,
             role::{
                 InVisitMode,
                 ModeChildren,
                 ModeContext,
+                ModeNodeCtxOf,
                 PostVisitMode,
                 PreVisitMode,
                 RangeRole,
@@ -40,9 +35,9 @@ use super::context::pattern::PatternJoinContext;
 #[derive(Debug, Clone, Copy)]
 pub struct Join;
 
-impl<'a> ModeContext<'a> for Join {
-    type NodeResult = NodeJoinContext<'a>;
-    type PatternResult = PatternJoinContext<'a>;
+impl ModeContext for Join {
+    type NodeContext<'a: 'b, 'b> = NodeJoinContext<'a, 'b>;
+    type PatternResult<'a> = PatternJoinContext<'a>;
 }
 
 impl<R: RangeRole<Mode = Join>> ModeChildren<R> for Join {
@@ -53,29 +48,30 @@ impl PreVisitMode for Join {}
 impl PostVisitMode for Join {}
 impl InVisitMode for Join {}
 
-impl<'a, R: RangeRole<Mode = Join>> PartitionInfo<R>
+impl<'a: 'b, 'b: 'c, 'c, R: RangeRole<Mode = Join>> PartitionInfo<R>
 where
     R::Borders: JoinBorders<R>,
+    Self: 'a,
 {
     pub fn to_joined_patterns(
         self,
-        ctx: &mut NodeJoinContext<'a>,
-    ) -> JoinedPatterns<R> {
+        ctx: &'c mut ModeNodeCtxOf<'a, 'b, R>,
+    ) -> JoinedPatterns<R>
+    {
         JoinedPatterns::from_partition_info(self, ctx)
     }
     pub fn to_joined_partition(
         self,
-        ctx: &mut NodeJoinContext<'a>,
-    ) -> JoinedPartition<R> {
+        ctx: &'c mut ModeNodeCtxOf<'a, 'b, R>,
+    ) -> JoinedPartition<R>
+    {
         JoinedPartition::from_partition_info(self, ctx)
     }
 }
 
-
-impl<R: RangeRole<Mode = Self>> VisitMode<R> for Join
+impl<R: RangeRole<Mode = Self>> ModeInfo<R> for Join
 where
     R::Borders: JoinBorders<R>,
 {
-    type RangeInfo = JoinRangeInfo<R>;
+    type PatternInfo = JoinPatternInfo<R>;
 }
-

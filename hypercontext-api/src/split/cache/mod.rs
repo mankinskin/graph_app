@@ -63,12 +63,13 @@ pub struct SplitCache {
     #[deref_mut]
     pub context: CacheContext,
     pub root_mode: RootMode,
+    pub root: Child,
 }
 
 impl SplitCache {
     pub fn new<
         'a,
-        Trav: TraversableMut<GuardMut<'a> = RwLockWriteGuard<'a, crate::graph::Hypergraph>> + 'a,
+        Trav: TraversableMut + 'a,
     >(
         trav: &'a mut Trav,
         fold_state: FoldState,

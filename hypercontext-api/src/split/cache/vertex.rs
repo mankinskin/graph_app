@@ -7,16 +7,29 @@ use std::{
 
 use crate::{
     partition::{
-        context::NodeTraceContext, info::{
+        context::NodeTraceContext,
+        info::{
+            InfoPartition,
             range::{
                 role::{
-                    In, OffsetIndexRange, Post, Pre, RangeRole, Trace
-                }, splits::RangeOffsets
-            }, visit::VisitPartition
-        }, Partition, ToPartition
+                    In,
+                    OffsetIndexRange,
+                    Post,
+                    Pre,
+                    RangeRole,
+                    Trace,
+                },
+                splits::RangeOffsets,
+            },
+        },
+        Partition,
+        ToPartition,
     },
     split::cache::position::SplitPositionCache,
-    traversal::cache::{entry::RootMode, key::SplitKey},
+    traversal::cache::{
+        entry::RootMode,
+        key::SplitKey,
+    },
 };
 
 use super::{

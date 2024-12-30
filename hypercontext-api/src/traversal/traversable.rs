@@ -67,7 +67,7 @@ macro_rules! impl_traversable_mut {
 pub use impl_traversable;
 pub use impl_traversable_mut;
 
-use crate::graph::{kind::GraphKind, Hypergraph, HypergraphRef};
+use crate::{graph::{kind::{BaseGraphKind, GraphKind}, Hypergraph, HypergraphRef}, join::context::JoinContext};
 
 use super::fold::{TraversalContext, TraversalKind};
 
@@ -157,3 +157,57 @@ impl_traversable_mut! {
 }
 
 
+//impl_traversable! {
+//    impl for &'_ mut JoinContext<'_>,
+//    self => &mut self.graph;
+//    <'a> &'a mut <HypergraphRef as TraversableMut>::GuardMut<'a>
+//}
+//
+//impl_traversable_mut! {
+//    impl for JoinContext<'_>,
+//    self => self.graph;
+//    <'a> &'a mut <HypergraphRef as TraversableMut>::GuardMut<'a>
+//}
+//#[derive(Debug)]
+//pub struct GuardMutRef<'a: 'b, 'b, T: TraversableMut + 'a> {
+//    pub guard: &'b <T as TraversableMut>::GuardMut<'a>,
+//}
+//impl Deref for GuardMutRef<'_, '_, HypergraphRef> {
+//    type Target = Hypergraph;
+//    fn deref(&self) -> &Self::Target {
+//        self.guard.deref()
+//    }
+//}
+//impl<'a: 'b, 'b, 'g, T: TraversableMut<Kind=BaseGraphKind, GuardMut<'g> = Hypergraph> + 'a> Traversable for GuardMutRef<'a, 'b, T> {
+//    type Kind = TravKind<Hypergraph>;
+//    type Guard<'g> = &'b <T as TraversableMut>::GuardMut<'g> where Self: 'g;
+//    fn graph(&self) -> Self::Guard<'_> {
+//        self.guard
+//    }
+//}
+impl<'a> Traversable for JoinContext<'a> {
+    type Kind = TravKind<Hypergraph>;
+    type Guard<'g> = &'g Hypergraph where Self: 'g;
+    fn graph(&self) -> Self::Guard<'_> {
+        &self.graph
+    }
+}
+impl<'a> TraversableMut for JoinContext<'a> {
+    type GuardMut<'g> = &'g mut Hypergraph where Self: 'g;
+    fn graph_mut(&mut self) -> Self::GuardMut<'_> {
+        &mut self.graph
+    }
+}
+//impl<'a> Traversable for &'a mut JoinContext<'a> {
+//    type Kind = TravKind<Hypergraph>;
+//    type Guard<'g> = &'g <HypergraphRef as TraversableMut>::GuardMut<'g> where Self: 'g;
+//    fn graph(&self) -> Self::Guard<'_> {
+//        &self.graph
+//    }
+//}
+//impl<'a> TraversableMut for &'a mut JoinContext<'a> {
+//    type GuardMut<'g> = &'g mut <HypergraphRef as TraversableMut>::GuardMut<'g> where Self: 'g;
+//    fn graph_mut(&self) -> Self::GuardMut<'_> {
+//        &mut self.graph
+//    }
+//}

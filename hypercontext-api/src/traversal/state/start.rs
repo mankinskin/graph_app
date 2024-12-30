@@ -30,7 +30,7 @@ pub struct StartState {
 }
 
 impl StartState {
-    pub fn next_states<'a, 'b: 'a, K: TraversalKind>(
+    pub fn next_states<'a, K: TraversalKind>(
         &mut self,
         trav: &K::Trav,
     ) -> NextStates

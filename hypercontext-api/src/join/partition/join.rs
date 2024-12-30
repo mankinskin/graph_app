@@ -1,23 +1,37 @@
-use crate::{graph::vertex::child::Child, join::{context::node::context::NodeJoinContext, joined::JoinedPartition}, partition::info::{range::role::RangeRole, visit::VisitPartition}};
+use crate::{
+    graph::vertex::child::Child,
+    join::{context::node::context::NodeJoinContext, joined::partition::JoinedPartition},
+    partition::info::{range::role::{
+        ModeNodeCtxOf,
+        RangeRole,
+    }, InfoPartition},
+};
 
-use super::{borders::JoinBorders, Join};
+use super::{
+    borders::JoinBorders,
+    Join,
+};
 
-pub trait JoinPartition<R: RangeRole<Mode = Join>>: VisitPartition<R>
+pub trait JoinPartition<R: RangeRole<Mode = Join>>: InfoPartition<R>
 where
     R::Borders: JoinBorders<R>,
 {
-    fn join_partition<'t>(
+    fn join_partition<'a: 'b, 'b: 'c, 'c>(
         self,
-        ctx: &mut NodeJoinContext<'t>,
-    ) -> Result<JoinedPartition<R>, Child> {
+        ctx: &'c mut NodeJoinContext<'a, 'b>,
+    ) -> Result<JoinedPartition<R>, Child>
+    where
+        Self: 'c,
+        R: 'a,
+    {
         match self.info_partition(ctx) {
-            Ok(info) => Ok(JoinedPartition::from_partition_info(info, ctx)),
+            Ok(info) => Ok(info.to_joined_partition(ctx)),
             Err(c) => Err(c),
         }
     }
 }
 
-impl<R: RangeRole<Mode=Join>, P: VisitPartition<R>> JoinPartition<R> for P where
+impl<R: RangeRole<Mode = Join>, P: InfoPartition<R>> JoinPartition<R> for P where
     R::Borders: JoinBorders<R>
 {
 }

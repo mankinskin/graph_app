@@ -25,10 +25,10 @@ pub mod splits;
 #[derive(Debug)]
 pub struct PatternRangeInfo<R: RangeRole> {
     pub pattern_id: PatternId,
-    pub info: RangeInfoOf<R>,
+    pub info: PatternInfoOf<R>,
 }
 
-impl<R: RangeRole> From<PatternRangeInfo<R>> for (PatternId, RangeInfoOf<R>) {
+impl<R: RangeRole> From<PatternRangeInfo<R>> for (PatternId, PatternInfoOf<R>) {
     fn from(val: PatternRangeInfo<R>) -> Self {
         (val.pattern_id, val.info)
     }

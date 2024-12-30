@@ -23,14 +23,14 @@ use crate::{
 use crate::graph::vertex::pattern::id::PatternId;
 
 pub trait RangeOffsets<R: RangeRole>: Debug + Clone + Copy {
-    fn as_splits<'a, C: AsNodeTraceContext<'a>>(
+    fn as_splits<'a, C: AsNodeTraceContext>(
         &'a self,
         ctx: C,
     ) -> R::Splits;
 }
 
 impl<M: InVisitMode> RangeOffsets<In<M>> for (NonZeroUsize, NonZeroUsize) {
-    fn as_splits<'a, C: AsNodeTraceContext<'a>>(
+    fn as_splits<'a, C: AsNodeTraceContext>(
         &'a self,
         ctx: C,
     ) -> <In<M> as RangeRole>::Splits {
@@ -39,7 +39,7 @@ impl<M: InVisitMode> RangeOffsets<In<M>> for (NonZeroUsize, NonZeroUsize) {
 }
 
 impl<M: PreVisitMode> RangeOffsets<Pre<M>> for NonZeroUsize {
-    fn as_splits<'a, C: AsNodeTraceContext<'a>>(
+    fn as_splits<'a, C: AsNodeTraceContext>(
         &'a self,
         ctx: C,
     ) -> <Pre<M> as RangeRole>::Splits {
@@ -48,7 +48,7 @@ impl<M: PreVisitMode> RangeOffsets<Pre<M>> for NonZeroUsize {
 }
 
 impl<M: PostVisitMode> RangeOffsets<Post<M>> for NonZeroUsize {
-    fn as_splits<'a, C: AsNodeTraceContext<'a>>(
+    fn as_splits<'a, C: AsNodeTraceContext>(
         &'a self,
         ctx: C,
     ) -> <Post<M> as RangeRole>::Splits {

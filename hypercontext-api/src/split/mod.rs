@@ -1,6 +1,8 @@
 use std::num::NonZeroUsize;
 
 use cache::position_splits;
+use derive_more::derive::Deref;
+use derive_new::new;
 use itertools::Itertools;
 
 use crate::{
@@ -31,8 +33,6 @@ use crate::{
 };
 
 pub mod cache;
-pub mod complete;
-pub mod frontier;
 pub mod side;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -74,7 +74,11 @@ impl ToVertexSplitPos for OffsetSplits {
         self.splits
     }
 }
-impl VertexCache {
+#[derive(Debug, Copy, Clone, Deref, new)]
+struct SplitContext<'a> {
+    pub cache: &'a VertexCache,
+}
+impl SplitContext<'_> {
     pub fn global_splits<N: NodeType>(
         &self,
         end_pos: TokenPosition,

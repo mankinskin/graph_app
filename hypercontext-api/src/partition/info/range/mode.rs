@@ -12,14 +12,14 @@ use crate::partition::info::range::{
     TraceRangeInfo,
 };
 
-pub trait VisitMode<R: RangeRole<Mode = Self>>:
-    Debug + Clone + Copy + ModeChildren<R> + for<'a> ModeContext<'a>
+pub trait ModeInfo<R: RangeRole<Mode = Self>>:
+    Debug + Clone + Copy + ModeChildren<R> + ModeContext
 {
-    type RangeInfo: ModeRangeInfo<R>;
+    type PatternInfo: ModeRangeInfo<R>;
 }
 
-pub type RangeInfoOf<R> = <ModeOf<R> as VisitMode<R>>::RangeInfo;
+pub type PatternInfoOf<R> = <ModeOf<R> as ModeInfo<R>>::PatternInfo;
 
-impl<R: RangeRole<Mode = Self>> VisitMode<R> for Trace {
-    type RangeInfo = TraceRangeInfo<R>;
+impl<R: RangeRole<Mode = Self>> ModeInfo<R> for Trace {
+    type PatternInfo = TraceRangeInfo<R>;
 }
