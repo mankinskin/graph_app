@@ -16,7 +16,7 @@ use crate::{
             TokenPosition,
         },
     },
-    partition::splits::offset::OffsetSplits,
+    partition::splits::offset::OffsetSplit,
     traversal::{
         cache::entry::{
             position::SubSplitLocation,
@@ -69,7 +69,7 @@ impl ToVertexSplitPos for Vec<SubSplitLocation> {
     }
 }
 
-impl ToVertexSplitPos for OffsetSplits {
+impl ToVertexSplitPos for OffsetSplit {
     fn to_vertex_split_pos(self) -> VertexSplitPos {
         self.splits
     }

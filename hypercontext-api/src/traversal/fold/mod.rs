@@ -1,6 +1,6 @@
 use crate::{
     graph::{
-        getters::NoMatch,
+        getters::ErrorReason,
         vertex::{
             child::Child,
             pattern::{
@@ -15,7 +15,7 @@ use crate::{
             TraversalCache,
         }, fold::state::{
             FinalState, FoldState
-        }, result::TraversalResult, state::{
+        }, result::FinishedState, state::{
             end::{
                 EndKind,
                 EndState,
@@ -26,7 +26,7 @@ use crate::{
 };
 use std::{borrow::Borrow, ops::ControlFlow};
 use super::{
-    container::{extend::ExtendStates, pruning::{PruneStates, PruningMap, PruningState}, StateContainer},iterator::policy::DirectedTraversalPolicy, result::FoldResult, state::{traversal::TraversalState, ApplyStatesCtx}, traversable::TravKind
+    container::{extend::ExtendStates, pruning::{PruneStates, PruningMap, PruningState}, StateContainer},iterator::policy::DirectedTraversalPolicy, result::FoundRange, state::{traversal::TraversalState, ApplyStatesCtx}, traversable::TravKind
 };
 use init::{InitStates, QueryStateInit};
 use itertools::Itertools;
@@ -134,28 +134,30 @@ impl<K: TraversalKind> Iterator for FoldContext<'_, K> {
         self.states.next()
     }
 }
+#[derive(Debug)]
+pub struct ErrorState {
+    pub reason: ErrorReason,
+    pub query: QueryState,
+    pub found: Option<FoundRange>,
+}
 impl<'a, K: TraversalKind> FoldContext<'a, K>
 {
     pub fn fold_pattern<P: IntoPattern>(
         trav: &'a K::Trav,
         query_pattern: P,
-    ) -> Result<TraversalResult, (NoMatch, TraversalResult)>
+    ) -> Result<FinishedState, ErrorState>
     {
         let query_pattern = query_pattern.into_pattern();
 
         // build cursor path
-        let query = QueryState::new::<TravKind<K::Trav>, _>(query_pattern.borrow())
-            .map_err(|(err, query)| (err, TraversalResult {
-                result: None,
-                query
-            }))?;
+        let query = QueryState::new::<TravKind<K::Trav>, _>(query_pattern.borrow())?;
 
         Self::fold_query(trav, query)
     }
     pub fn fold_query(
         trav: &'a K::Trav,
         query: QueryState,
-    ) -> Result<TraversalResult, (NoMatch, TraversalResult)>
+    ) -> Result<FinishedState, ErrorState>
     {
         let init = QueryStateInit::<K> {
             trav,
@@ -177,7 +179,7 @@ impl<'a, K: TraversalKind> FoldContext<'a, K>
         ctx.fold_states()?;
         ctx.finish_fold(query)
     }
-    fn fold_states(&mut self) -> Result<(), (NoMatch, TraversalResult)> {
+    fn fold_states(&mut self) -> Result<(), ErrorState> {
         while let Some((depth, tstate)) = self.next() {
             let mut ctx = TraversalContext::<K> {
                 trav: self.trav,
@@ -198,7 +200,7 @@ impl<'a, K: TraversalKind> FoldContext<'a, K>
         }
         Ok(())
     }
-    fn finish_fold(self, query: QueryState) -> Result<TraversalResult, (NoMatch, TraversalResult)> {
+    fn finish_fold(self, query: QueryState) -> Result<FinishedState, ErrorState> {
         if let Some(state) = self.end_state {
             Ok(
                 FoldFinished {
@@ -210,14 +212,11 @@ impl<'a, K: TraversalKind> FoldContext<'a, K>
                 .to_traversal_result()
             )
         } else {
-            Err((
-                NoMatch::NotFound,
-                TraversalResult {
-                    //query: query.to_rooted(query_root.query_root),
-                    query,
-                    result: Some(FoldResult::Complete(self.start_index)),
-                }
-            ))
+            Err(ErrorState {
+                reason: ErrorReason::NotFound,
+                query,
+                found: Some(FoundRange::Complete(self.start_index)),
+            })
         }
     }
 }
@@ -228,7 +227,7 @@ pub struct FoldFinished {
     pub query_root: Pattern,
 }
 impl FoldFinished {
-    pub fn to_traversal_result(self) -> TraversalResult {
+    pub fn to_traversal_result(self) -> FinishedState {
         let final_state = FinalState {
             num_parents: self.cache
                 .get(&DirectedKey::from(self.end_state.root_key()))
@@ -238,7 +237,7 @@ impl FoldFinished {
         };
         let query = final_state.state.query.clone();
         let found_path = if let EndKind::Complete(c) = &final_state.state.kind {
-            FoldResult::Complete(*c)
+            FoundRange::Complete(*c)
         } else {
             // todo: complete bottom edges of root if
             // assert same root
@@ -252,11 +251,11 @@ impl FoldFinished {
                 end_state: self.end_state,
                 start: self.start_index,
             };
-            FoldResult::Incomplete(state)
+            FoundRange::Incomplete(state)
         };
-        TraversalResult {
+        FinishedState {
             query: query,
-            result: Some(found_path),
+            result: found_path,
         }
     }
 }

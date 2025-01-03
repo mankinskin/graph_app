@@ -1,7 +1,7 @@
 use crate::{
     direction::r#match::MatchDirection,
     graph::{
-        getters::NoMatch,
+        getters::ErrorReason,
         kind::GraphKind,
         vertex::{
             child::Child,
@@ -21,8 +21,7 @@ use crate::{
         },
     },
     traversal::{
-        result::kind::RoleChildPath,
-        traversable::Traversable,
+        fold::ErrorState, result::kind::RoleChildPath, traversable::Traversable
     },
 };
 
@@ -33,7 +32,7 @@ pub struct QueryState {
 }
 
 impl QueryState {
-    pub fn new<G: GraphKind, P: IntoPattern>(query: P) -> Result<Self, (NoMatch, Self)> {
+    pub fn new<G: GraphKind, P: IntoPattern>(query: P) -> Result<Self, ErrorState> {
         let entry = G::Direction::head_index(&query.borrow());
         let query = query.into_pattern();
         let first = *query.first().unwrap();
@@ -48,10 +47,15 @@ impl QueryState {
             pos,
         };
         match len {
-            0 => Err((NoMatch::EmptyPatterns, query)),
-            1 => Err((NoMatch::SingleIndex(first), query)),
+            0 => Err((ErrorReason::EmptyPatterns, query)),
+            1 => Err((ErrorReason::SingleIndex(first), query)),
             _ => Ok(query),
         }
+        .map_err(|(reason, query)| ErrorState {
+            reason,
+            query,
+            found: None,
+        })
     }
     pub fn start_index<Trav: Traversable>(
         &self,

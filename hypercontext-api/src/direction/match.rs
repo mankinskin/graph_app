@@ -16,7 +16,7 @@ use crate::{
         Left,
         Right,
     },
-    graph::{getters::NoMatch, kind::GraphKind},
+    graph::{getters::ErrorReason, kind::GraphKind},
     HashMap,
     HashSet,
 };
@@ -62,7 +62,7 @@ pub trait MatchDirection: Clone + Debug + Send + Sync + 'static + Unpin {
         graph: &Hypergraph<G>,
         vertex: &VertexData,
         sup: impl HasVertexIndex,
-    ) -> Result<PatternIndex, NoMatch>;
+    ) -> Result<PatternIndex, ErrorReason>;
     fn skip_equal_indices<
         'a,
         I: HasVertexIndex,
@@ -165,7 +165,7 @@ impl MatchDirection for Right {
         _graph: &Hypergraph<G>,
         vertex: &VertexData,
         sup: impl HasVertexIndex,
-    ) -> Result<PatternIndex, NoMatch> {
+    ) -> Result<PatternIndex, ErrorReason> {
         vertex.get_parent_at_prefix_of(sup)
     }
     fn skip_equal_indices<
@@ -224,7 +224,7 @@ impl MatchDirection for Left {
         graph: &Hypergraph<G>,
         vertex: &VertexData,
         sup: impl HasVertexIndex,
-    ) -> Result<PatternIndex, NoMatch> {
+    ) -> Result<PatternIndex, ErrorReason> {
         let sup = graph.expect_vertex(sup.vertex_index());
         vertex.get_parent_at_postfix_of(sup)
     }

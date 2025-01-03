@@ -1,9 +1,16 @@
-use std::{ops::Deref, sync::RwLockWriteGuard};
+use crate::graph::{
+    kind::GraphKind,
+    vertex::{
+        child::Child,
+        pattern::id::PatternId,
+        ChildPatterns,
+    },
+    Hypergraph,
+};
 
-use crate::{graph::{kind::GraphKind, vertex::{child::Child, pattern::id::PatternId, ChildPatterns}, Hypergraph}, traversal::traversable::Traversable};
-
-use super::pattern::{AsPatternContext, PatternTraceContext};
-
+use super::pattern::{
+    GetPatternContext, GetPatternTraceContext, PatternTraceContext
+};
 
 #[derive(Debug, Clone, Copy)]
 pub struct NodeTraceContext<'p> {
@@ -23,14 +30,28 @@ impl<'p> NodeTraceContext<'p> {
     }
 }
 
-impl<'a> AsPatternContext for NodeTraceContext<'a> {
+impl<'a> GetPatternContext for NodeTraceContext<'a> {
     type PatternCtx<'b>
-        = PatternTraceContext<'b> where Self: 'b;
-    fn as_pattern_context<'b>(
+        = PatternTraceContext<'b>
+    where
+        Self: 'b;
+    fn get_pattern_context<'b>(
         &'b self,
         pattern_id: &PatternId,
     ) -> Self::PatternCtx<'b>
-        where Self: 'b
+    where
+        Self: 'b,
+    {
+        self.get_pattern_trace_context(pattern_id)
+    }
+}
+impl<'a> GetPatternTraceContext for NodeTraceContext<'a> {
+    fn get_pattern_trace_context<'b>(
+        &'b self,
+        pattern_id: &PatternId,
+    ) -> PatternTraceContext<'b>
+    where
+        Self: 'b,
     {
         PatternTraceContext {
             loc: self.index.to_pattern_location(*pattern_id),
@@ -38,7 +59,6 @@ impl<'a> AsPatternContext for NodeTraceContext<'a> {
         }
     }
 }
-
 
 pub trait AsNodeTraceContext {
     fn as_trace_context<'a>(&'a self) -> NodeTraceContext<'a>
@@ -49,7 +69,7 @@ pub trait AsNodeTraceContext {
 impl<'a> AsNodeTraceContext for NodeTraceContext<'a> {
     fn as_trace_context<'b>(&'b self) -> NodeTraceContext<'b>
     where
-        Self: 'b
+        Self: 'b,
     {
         *self
     }

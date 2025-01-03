@@ -1,5 +1,5 @@
 use crate::{
-    search::NoMatch,
+    search::ErrorReason,
     shared::*,
 };
 
@@ -12,12 +12,12 @@ pub struct PatternPrefixPath {
 }
 
 impl PatternPrefixPath {
-    pub fn new_directed<D: MatchDirection, P: IntoPattern>(pattern: P) -> Result<Self, NoMatch> {
+    pub fn new_directed<D: MatchDirection, P: IntoPattern>(pattern: P) -> Result<Self, ErrorReason> {
         let exit = D::head_index(pattern.borrow());
         let pattern = pattern.into_pattern();
         match pattern.len() {
-            0 => Err(NoMatch::EmptyPatterns),
-            1 => Err(NoMatch::SingleIndex(pattern.into_iter().next().unwrap())),
+            0 => Err(ErrorReason::EmptyPatterns),
+            1 => Err(ErrorReason::SingleIndex(pattern.into_iter().next().unwrap())),
             _ => Ok(Self {
                 pattern,
                 exit,

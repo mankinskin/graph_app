@@ -16,7 +16,7 @@ use std::{
 
 use crate::{
     graph::{
-        getters::NoMatch, kind::GraphKind, vertex::{
+        getters::ErrorReason, kind::GraphKind, vertex::{
             child::Child,
             has_vertex_index::{
                 HasVertexIndex,
@@ -107,22 +107,22 @@ impl VertexData
     pub fn get_parent(
         &self,
         index: impl HasVertexIndex,
-    ) -> Result<&Parent, NoMatch>
+    ) -> Result<&Parent, ErrorReason>
     {
         let index = index.vertex_index();
         self.parents
             .get(&index)
-            .ok_or(NoMatch::NoMatchingParent(index))
+            .ok_or(ErrorReason::ErrorReasoningParent(index))
     }
     pub fn get_parent_mut(
         &mut self,
         index: impl HasVertexIndex,
-    ) -> Result<&mut Parent, NoMatch>
+    ) -> Result<&mut Parent, ErrorReason>
     {
         let index = index.vertex_index();
         self.parents
             .get_mut(&index)
-            .ok_or(NoMatch::NoMatchingParent(index))
+            .ok_or(ErrorReason::ErrorReasoningParent(index))
     }
     #[track_caller]
     pub fn expect_parent(
@@ -152,7 +152,7 @@ impl VertexData
         &self,
         id: &PatternId,
         range: R,
-    ) -> Result<&<R as SliceIndex<[Child]>>::Output, NoMatch>
+    ) -> Result<&<R as SliceIndex<[Child]>>::Output, ErrorReason>
     {
         self.get_child_pattern(id).and_then(|p| {
             pattern::pattern_range::get_child_pattern_range(
@@ -177,12 +177,12 @@ impl VertexData
         &self,
         id: &PatternId,
         pos: IndexPosition,
-    ) -> Result<&Child, NoMatch>
+    ) -> Result<&Child, ErrorReason>
     {
         self.children
             .get(id)
             .and_then(|p| p.get(pos))
-            .ok_or(NoMatch::NoChildPatterns)
+            .ok_or(ErrorReason::NoChildPatterns)
     }
     pub fn get_child_pattern_with_prefix_width(
         &self,
@@ -196,20 +196,20 @@ impl VertexData
     pub fn get_child_pattern(
         &self,
         id: &PatternId,
-    ) -> Result<&Pattern, NoMatch>
+    ) -> Result<&Pattern, ErrorReason>
     {
-        self.children.get(id).ok_or(NoMatch::InvalidPattern(*id))
+        self.children.get(id).ok_or(ErrorReason::InvalidPattern(*id))
     }
     pub fn get_child_at(
         &self,
         location: &SubLocation,
-    ) -> Result<&Child, NoMatch>
+    ) -> Result<&Child, ErrorReason>
     {
         self.children
             .get(&location.pattern_id)
-            .ok_or(NoMatch::InvalidPattern(location.pattern_id))?
+            .ok_or(ErrorReason::InvalidPattern(location.pattern_id))?
             .get(location.sub_index)
-            .ok_or(NoMatch::InvalidChild(location.sub_index))
+            .ok_or(ErrorReason::InvalidChild(location.sub_index))
     }
     pub fn expect_child_at(
         &self,
@@ -221,13 +221,13 @@ impl VertexData
     pub fn get_child_mut_at(
         &mut self,
         location: &SubLocation,
-    ) -> Result<&mut Child, NoMatch>
+    ) -> Result<&mut Child, ErrorReason>
     {
         self.children
             .get_mut(&location.pattern_id)
-            .ok_or(NoMatch::InvalidPattern(location.pattern_id))?
+            .ok_or(ErrorReason::InvalidPattern(location.pattern_id))?
             .get_mut(location.sub_index)
-            .ok_or(NoMatch::InvalidChild(location.sub_index))
+            .ok_or(ErrorReason::InvalidChild(location.sub_index))
     }
     pub fn expect_child_mut_at(
         &mut self,
@@ -263,9 +263,9 @@ impl VertexData
     pub fn get_child_pattern_mut(
         &mut self,
         id: &PatternId,
-    ) -> Result<&mut Pattern, NoMatch>
+    ) -> Result<&mut Pattern, ErrorReason>
     {
-        self.children.get_mut(id).ok_or(NoMatch::NoChildPatterns)
+        self.children.get_mut(id).ok_or(ErrorReason::NoChildPatterns)
     }
     #[track_caller]
     pub fn expect_any_child_pattern(&self) -> (&PatternId, &Pattern)
@@ -502,18 +502,18 @@ impl VertexData
     //    &self,
     //    parent: impl HasVertexIndex,
     //    cond: impl Fn(&&Parent) -> bool,
-    //) -> Result<&'_ Parent, NoMatch> {
+    //) -> Result<&'_ Parent, ErrorReason> {
     //    let index = parent.vertex_index();
     //    self.get_parent(index)
     //        .ok()
     //        .filter(cond)
-    //        .ok_or(NoMatch::NoMatchingParent(index))
+    //        .ok_or(ErrorReason::ErrorReasoningParent(index))
     //}
     //pub fn get_parent_to_ending_at(
     //    &self,
     //    parent_key: impl HasVertexKey,
     //    offset: usize,
-    //) -> Result<&'_ Parent, NoMatch> {
+    //) -> Result<&'_ Parent, ErrorReason> {
     //    self.filter_parent_to(parent_key, |parent| {
     //        offset
     //            .checked_sub(self.width)
@@ -525,36 +525,36 @@ impl VertexData
         &self,
         parent_index: impl HasVertexIndex,
         index_offset: usize,
-    ) -> Result<PatternIndex, NoMatch>
+    ) -> Result<PatternIndex, ErrorReason>
     {
         let index = parent_index.vertex_index();
         self.get_parent(index)
             .ok()
             .and_then(|parent| parent.get_index_at_pos(index_offset))
-            .ok_or(NoMatch::NoMatchingParent(index))
+            .ok_or(ErrorReason::ErrorReasoningParent(index))
     }
     pub fn get_parent_at_prefix_of(
         &self,
         index: impl HasVertexIndex,
-    ) -> Result<PatternIndex, NoMatch>
+    ) -> Result<PatternIndex, ErrorReason>
     {
         self.get_parent_to_starting_at(index, 0)
     }
     pub fn get_parent_at_postfix_of(
         &self,
         vertex: &VertexData,
-    ) -> Result<PatternIndex, NoMatch>
+    ) -> Result<PatternIndex, ErrorReason>
     {
         self.get_parent(vertex.vertex_index())
             .ok()
             .and_then(|parent| parent.get_index_at_postfix_of(vertex))
-            .ok_or(NoMatch::NoMatchingParent(vertex.vertex_index()))
+            .ok_or(ErrorReason::ErrorReasoningParent(vertex.vertex_index()))
     }
     //pub fn find_ancestor_with_range(
     //    &self,
     //    half: Pattern,
     //    range: impl PatternRangeIndex,
-    //) -> Result<PatternId, NoMatch> {
+    //) -> Result<PatternId, ErrorReason> {
     //    self.children
     //        .iter()
     //        .find_map(|(id, pat)| {
@@ -564,7 +564,7 @@ impl VertexData
     //                None
     //            }
     //        })
-    //        .ok_or(NoMatch::NoChildPatterns)
+    //        .ok_or(ErrorReason::NoChildPatterns)
     //}
     pub fn largest_postfix(&self) -> (PatternId, Child)
     {

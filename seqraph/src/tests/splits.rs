@@ -5,20 +5,19 @@ use std::{
 
 use pretty_assertions::assert_eq;
 
-use crate::{
-    HashMap,
-    HashSet,
-    split::{
+use crate::tests::trace::build_trace1;
+use hypercontext_api::{
+    lab, partition::splits::PosSplits, split::{
         cache::{
             position::SplitPositionCache,
             vertex::SplitVertexCache,
+            SplitCache,
         },
         PatternSplitPos,
-        SplitCache,
-    },
-};
-use hypercontext_api::{
-    graph::tests::{context_mut, Context}, traversal::{cache::key::SplitKey, trace}
+    }, tests::graph::{
+        context_mut,
+        Context,
+    }, traversal::cache::key::SplitKey, HashMap, HashSet
 };
 
 macro_rules! nz {
@@ -28,7 +27,7 @@ macro_rules! nz {
 }
 #[test]
 fn split_graph1() {
-    let res = trace::tests::build_trace1();
+    let mut res = build_trace1();
     let Context {
         graph,
         def,
@@ -43,11 +42,11 @@ fn split_graph1() {
         e_f_id,
         ..
     } = &mut *context_mut();
-    let splits = SplitCache::new(&mut *graph, res);
+    let splits = SplitCache::new(&mut *graph, &mut res);
     assert_eq!(
         splits.entries[&lab!(ef)],
         SplitVertexCache {
-            positions: BTreeMap::from_iter([(
+            positions: PosSplits { splits: BTreeMap::from_iter([(
                 nz!(1),
                 SplitPositionCache {
                     top: HashSet::from_iter([
@@ -68,13 +67,13 @@ fn split_graph1() {
                         }
                     )])
                 }
-            )]),
+            )]) },
         },
     );
     assert_eq!(
         splits.entries[&lab!(def)],
         SplitVertexCache {
-            positions: BTreeMap::from_iter([(
+            positions: PosSplits { splits: BTreeMap::from_iter([(
                 nz!(2),
                 SplitPositionCache {
                     top: HashSet::from_iter([
@@ -95,13 +94,13 @@ fn split_graph1() {
                         }
                     )])
                 }
-            )]),
+            )]) },
         },
     );
     assert_eq!(
         splits.entries[&lab!(cdef)],
         SplitVertexCache {
-            positions: BTreeMap::from_iter([(
+            positions: PosSplits { splits: BTreeMap::from_iter([(
                 nz!(3),
                 SplitPositionCache {
                     top: HashSet::from_iter([SplitKey {
@@ -116,13 +115,13 @@ fn split_graph1() {
                         }
                     )])
                 }
-            )]),
+            )]) },
         },
     );
     assert_eq!(
         splits.entries[&lab!(abcdef)],
         SplitVertexCache {
-            positions: BTreeMap::from_iter([(
+            positions: PosSplits { splits: BTreeMap::from_iter([(
                 nz!(5),
                 SplitPositionCache {
                     top: HashSet::from_iter([]),
@@ -150,7 +149,7 @@ fn split_graph1() {
                         ),
                     ])
                 }
-            )]),
+            )]) },
         },
     );
     assert_eq!(splits.entries.len(), 4);

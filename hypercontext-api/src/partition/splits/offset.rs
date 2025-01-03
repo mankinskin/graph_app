@@ -1,74 +1,100 @@
 use std::num::NonZeroUsize;
 
 use crate::{
-    partition::splits::SplitKind,
+    partition::splits::pos::SplitKind,
     split::VertexSplitPos,
 };
 
+use super::pos::PosSplitContext;
+
 #[derive(Debug, Clone)]
-pub struct OffsetSplits {
+pub struct OffsetSplit {
     pub offset: NonZeroUsize,
     pub splits: VertexSplitPos,
 }
 
 //#[derive(Debug, Clone, Copy)]
-//pub struct OffsetSplitsRef<'a> {
+//pub struct OffsetSplitRef<'a> {
 //    pub offset: NonZeroUsize,
 //    pub splits: &'a VertexSplitPos,
 //}
-pub trait ToOffsetSplits: Clone {
-    fn to_offset_splits(self) -> OffsetSplits;
+pub trait ToOffsetSplit: Clone {
+    fn to_offset_splits(self) -> OffsetSplit;
 }
 
-impl ToOffsetSplits for OffsetSplits {
-    fn to_offset_splits(self) -> OffsetSplits {
+impl ToOffsetSplit for OffsetSplit {
+    fn to_offset_splits(self) -> OffsetSplit {
         self
     }
 }
 
-impl ToOffsetSplits for &OffsetSplits {
-    fn to_offset_splits(self) -> OffsetSplits {
+impl ToOffsetSplit for &OffsetSplit {
+    fn to_offset_splits(self) -> OffsetSplit {
         self.clone()
     }
 }
 
-impl<S: SplitKind> ToOffsetSplits for (&NonZeroUsize, S) {
-    fn to_offset_splits(self) -> OffsetSplits {
-        OffsetSplits {
-            offset: *self.0,
+impl<'a, S: SplitKind> ToOffsetSplit for PosSplitContext<'a, S> {
+    fn to_offset_splits(self) -> OffsetSplit {
+        OffsetSplit {
+            offset: *self.pos,
+            splits: self.split.borrow().clone(),
+        }
+    }
+}
+impl<'a, S: SplitKind> ToOffsetSplit for (NonZeroUsize, S) {
+    fn to_offset_splits(self) -> OffsetSplit {
+        OffsetSplit {
+            offset: self.0,
             splits: self.1.borrow().clone(),
         }
     }
 }
-//impl<'a, O: AsOffsetSplits<'a>> AsOffsetSplits<'a> for &'a O {
-//    fn as_offset_splits<'t>(self) -> OffsetSplitsRef<'t> where 'a: 't {
+impl<'a, S: SplitKind> From<(NonZeroUsize, S)> for OffsetSplit {
+    fn from(item: (NonZeroUsize, S)) -> OffsetSplit {
+        OffsetSplit {
+            offset: item.0,
+            splits: item.1.borrow().clone(),
+        }
+    }
+}
+impl<'a, S: SplitKind> From<(&'a NonZeroUsize, &'a S)> for OffsetSplit {
+    fn from(item: (&'a NonZeroUsize, &'a S)) -> OffsetSplit {
+        OffsetSplit {
+            offset: *item.0,
+            splits: (*item.1).borrow().clone(),
+        }
+    }
+}
+//impl<'a, O: AsOffsetSplit<'a>> AsOffsetSplit<'a> for &'a O {
+//    fn as_offset_splits<'t>(self) -> OffsetSplitRef<'t> where 'a: 't {
 //        (*self).as_offset_splits()
 //    }
 //}
-//impl<'a> AsOffsetSplits<'a> for &'a SplitPositionCache {
-//    fn as_offset_splits<'t>(self) -> OffsetSplitsRef<'t> where 'a: 't {
+//impl<'a> AsOffsetSplit<'a> for &'a SplitPositionCache {
+//    fn as_offset_splits<'t>(self) -> OffsetSplitRef<'t> where 'a: 't {
 //        (*self).as_offset_splits()
 //    }
 //}
-//impl<'a> AsOffsetSplits<'a> for &'a OffsetSplits {
-//    fn as_offset_splits<'t>(self) -> &'t OffsetSplits where 'a: 't {
-//        &OffsetSplits {
+//impl<'a> AsOffsetSplit<'a> for &'a OffsetSplit {
+//    fn as_offset_splits<'t>(self) -> &'t OffsetSplit where 'a: 't {
+//        &OffsetSplit {
 //            offset: self.offset,
 //            splits: self.splits,
 //        }
 //    }
 //}
-//impl<'a> AsOffsetSplits<'a> for (&'a NonZeroUsize, &'a SplitPositionCache) {
-//    fn as_offset_splits<'t>(self) -> OffsetSplitsRef<'t> where 'a: 't {
-//        OffsetSplitsRef {
+//impl<'a> AsOffsetSplit<'a> for (&'a NonZeroUsize, &'a SplitPositionCache) {
+//    fn as_offset_splits<'t>(self) -> OffsetSplitRef<'t> where 'a: 't {
+//        OffsetSplitRef {
 //            offset: self.0.clone(),
 //            splits: self.1.borrow(),
 //        }
 //    }
 //}
-//impl<'a> AsOffsetSplits<'a> for (&'a NonZeroUsize, &'a VertexSplitPos) {
-//    fn as_offset_splits<'t>(self) -> OffsetSplitsRef<'t> where 'a: 't {
-//        OffsetSplitsRef {
+//impl<'a> AsOffsetSplit<'a> for (&'a NonZeroUsize, &'a VertexSplitPos) {
+//    fn as_offset_splits<'t>(self) -> OffsetSplitRef<'t> where 'a: 't {
+//        OffsetSplitRef {
 //            offset: self.0.clone(),
 //            splits: self.1,
 //        }

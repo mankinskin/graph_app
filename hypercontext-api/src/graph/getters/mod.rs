@@ -18,13 +18,13 @@ use crate::graph::vertex::{
 };
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum NoMatch
+pub enum ErrorReason
 {
     EmptyPatterns,
     NoParents,
     NoChildPatterns,
     NotFound,
-    NoMatchingParent(VertexIndex),
+    ErrorReasoningParent(VertexIndex),
     InvalidPattern(PatternId),
     InvalidChild(usize),
     InvalidPatternRange(PatternId, Pattern, String),

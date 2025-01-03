@@ -1,16 +1,13 @@
 use context::*;
 
 use hypercontext_api::{
-    path::structs::query_range_path::QueryRangePath,
     graph::{
-        HypergraphRef,
-        getters::NoMatch,
-        vertex::{
+        getters::ErrorReason, vertex::{
             child::Child,
             location::child::ChildLocation,
             pattern::IntoPattern,
-        },
-    },
+        }, HypergraphRef
+    }, path::structs::query_range_path::QueryRangePath
 };
 
 pub mod context;
@@ -24,7 +21,7 @@ pub trait HasInsertContext {
     fn index_pattern(
         &self,
         pattern: impl IntoPattern,
-    ) -> Result<(Child, QueryRangePath), NoMatch>;
+    ) -> Result<(Child, QueryRangePath), ErrorReason>;
 }
 impl HasInsertContext for HypergraphRef {
     fn indexer(&self) -> InsertContext {
@@ -33,7 +30,7 @@ impl HasInsertContext for HypergraphRef {
     fn index_pattern(
         &self,
         pattern: impl IntoPattern,
-    ) -> Result<(Child, QueryRangePath), NoMatch> {
+    ) -> Result<(Child, QueryRangePath), ErrorReason> {
         self.indexer().insert_pattern(pattern)
     }
     //pub fn index_query_with_origin<
@@ -41,7 +38,7 @@ impl HasInsertContext for HypergraphRef {
     //>(
     //    &self,
     //    query: Q,
-    //) -> Result<(OriginPath<Child>, Q), NoMatch> {
+    //) -> Result<(OriginPath<Child>, Q), ErrorReason> {
     //    self.indexer().index_query_with_origin(query)
     //}
 }

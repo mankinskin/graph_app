@@ -41,9 +41,6 @@ pub mod insert;
 pub mod kind;
 pub mod validation;
 
-#[cfg(test)]
-#[macro_use]
-pub mod tests;
 
 pub mod vertex;
 

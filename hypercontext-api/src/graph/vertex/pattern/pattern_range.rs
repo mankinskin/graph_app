@@ -4,7 +4,7 @@ use std::{
     slice::SliceIndex,
 };
 
-use crate::graph::{getters::NoMatch, vertex::PatternId};
+use crate::graph::{getters::ErrorReason, vertex::PatternId};
 use super::{
     Pattern,
     super::child::Child,
@@ -14,9 +14,9 @@ pub fn get_child_pattern_range<'a, R: PatternRangeIndex>(
     id: &PatternId,
     p: &'a Pattern,
     range: R,
-) -> Result<&'a <R as SliceIndex<[Child]>>::Output, NoMatch> {
+) -> Result<&'a <R as SliceIndex<[Child]>>::Output, ErrorReason> {
     p.get(range.clone())
-        .ok_or_else(|| NoMatch::InvalidPatternRange(*id, p.clone(), format!("{:#?}", range)))
+        .ok_or_else(|| ErrorReason::InvalidPatternRange(*id, p.clone(), format!("{:#?}", range)))
 }
 
 pub trait PatternRangeIndex<T = Child>:

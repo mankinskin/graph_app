@@ -2,7 +2,7 @@ use crate::{
     path::structs::match_end::{
         MatchEnd,
         MatchEndPath,
-    }, traversal::{result::FoldResult, state::end::EndKind}
+    }, traversal::{result::FoundRange, state::end::EndKind}
 };
 use std::fmt::Debug;
 use crate::graph::vertex::child::Child;
@@ -28,7 +28,7 @@ pub trait PathComplete: Sized + Debug {
     }
 }
 
-impl PathComplete for FoldResult {
+impl PathComplete for FoundRange {
     /// returns child if reduced to single child
     fn as_complete(&self) -> Option<Child> {
         match self {

@@ -1,27 +1,97 @@
 use std::{
     fmt::Debug,
     num::NonZeroUsize,
+    ops::{
+        Range,
+        RangeFrom,
+    },
 };
 
 use crate::{
+    graph::vertex::pattern::{
+        id::PatternId,
+        pattern_range::PatternRangeIndex,
+    },
     partition::{
-        context::AsNodeTraceContext, info::range::role::{
-            In,
-            InVisitMode,
-            Post,
-            PostVisitMode,
-            Pre,
-            PreVisitMode,
-            RangeRole,
-        }, splits::offset::OffsetSplits
+        context::AsNodeTraceContext,
+        info::range::{
+            mode::{
+                InVisitMode,
+                PostVisitMode,
+                PreVisitMode,
+            },
+            role::{
+                In,
+                Post,
+                Pre,
+                RangeRole,
+            },
+        },
+        splits::{
+            offset::{
+                OffsetSplit,
+                ToOffsetSplit,
+            },
+            pos::PosSplitContext,
+        },
     },
     split::{
-        cache::{position_splits, range_splits},
+        cache::{
+            position_splits,
+            range_splits,
+            vertex::SplitVertexCache,
+        },
         PatternSplitPos,
     },
 };
-use crate::graph::vertex::pattern::id::PatternId;
 
+pub trait OffsetIndexRange<R: RangeRole>: PatternRangeIndex {
+    fn get_splits(
+        &self,
+        vertex: &SplitVertexCache,
+    ) -> R::Splits;
+}
+
+impl<M: InVisitMode> OffsetIndexRange<In<M>> for Range<usize> {
+    fn get_splits(
+        &self,
+        vertex: &SplitVertexCache,
+    ) -> <In<M> as RangeRole>::Splits {
+        let lo = vertex
+            .positions
+            .iter()
+            .map(PosSplitContext::from)
+            .nth(self.start)
+            .unwrap();
+        let ro = vertex
+            .positions
+            .iter()
+            .map(PosSplitContext::from)
+            .nth(self.end)
+            .unwrap();
+        (lo.to_offset_splits(), ro.to_offset_splits())
+    }
+}
+
+impl<M: PreVisitMode> OffsetIndexRange<Pre<M>> for Range<usize> {
+    fn get_splits(
+        &self,
+        vertex: &SplitVertexCache,
+    ) -> <Pre<M> as RangeRole>::Splits {
+        let ro = vertex.positions.iter().map(PosSplitContext::from).nth(self.end).unwrap();
+        ro.to_offset_splits()
+    }
+}
+
+impl<M: PostVisitMode> OffsetIndexRange<Post<M>> for RangeFrom<usize> {
+    fn get_splits(
+        &self,
+        vertex: &SplitVertexCache,
+    ) -> <Post<M> as RangeRole>::Splits {
+        let lo = vertex.positions.iter().map(PosSplitContext::from).nth(self.start).unwrap();
+        lo.to_offset_splits()
+    }
+}
 pub trait RangeOffsets<R: RangeRole>: Debug + Clone + Copy {
     fn as_splits<'a, C: AsNodeTraceContext>(
         &'a self,
@@ -71,7 +141,7 @@ pub trait PatternSplits: Debug + Clone {
 //    type Ref<'t>: Copy where Self: 't;
 //    fn as_ref<'t>(&'t self) -> Self::Ref<'t> where Self: 't;
 //}
-//impl<'a> PatternSplits for OffsetSplitsRef<'a> {
+//impl<'a> PatternSplits for OffsetSplitRef<'a> {
 //    type Pos = PatternSplitPos;
 //    type Offsets = usize;
 //    fn get(&self, pid: &PatternId) -> Option<Self::Pos> {
@@ -81,13 +151,13 @@ pub trait PatternSplits: Debug + Clone {
 //        self.offset.get()
 //    }
 //}
-//impl<'a> PatternSplitsRef<'a> for OffsetSplitsRef<'a> {
+//impl<'a> PatternSplitsRef<'a> for OffsetSplitRef<'a> {
 //    type Ref<'t> = Self where Self: 't;
 //    fn as_ref<'t>(&'t self) -> Self::Ref<'t> where Self: 't {
 //        *self
 //    }
 //}
-impl PatternSplits for OffsetSplits {
+impl PatternSplits for OffsetSplit {
     type Pos = PatternSplitPos;
     type Offsets = usize;
     fn get(
@@ -104,7 +174,7 @@ impl PatternSplits for OffsetSplits {
     }
 }
 
-impl PatternSplits for &OffsetSplits {
+impl PatternSplits for &OffsetSplit {
     type Pos = PatternSplitPos;
     type Offsets = usize;
     fn get(
@@ -121,7 +191,7 @@ impl PatternSplits for &OffsetSplits {
     }
 }
 
-//impl<'a> PatternSplitsRef<'a> for &'a OffsetSplits {
+//impl<'a> PatternSplitsRef<'a> for &'a OffsetSplit {
 //    type Ref<'t> = Self where Self: 't;
 //    fn as_ref<'t>(&'t self) -> Self::Ref<'t> where Self: 't {
 //        *self
@@ -148,10 +218,10 @@ impl<A: PatternSplits, B: PatternSplits> PatternSplits for (A, B) {
 }
 //impl<
 //    'a,
-//    A: PatternSplitsRef<'a, Ref<'a> = OffsetSplitsRef<'a>> + 'a,
-//    B: PatternSplitsRef<'a, Ref<'a> = OffsetSplitsRef<'a>> + 'a,
+//    A: PatternSplitsRef<'a, Ref<'a> = OffsetSplitRef<'a>> + 'a,
+//    B: PatternSplitsRef<'a, Ref<'a> = OffsetSplitRef<'a>> + 'a,
 //> PatternSplitsRef<'a> for (A, B) {
-//    type Ref<'t> = (OffsetSplitsRef<'t>, OffsetSplitsRef<'t>) where Self: 't;
+//    type Ref<'t> = (OffsetSplitRef<'t>, OffsetSplitRef<'t>) where Self: 't;
 //    fn as_ref<'t>(&'t self) -> Self::Ref<'t> where Self: 't {
 //        (
 //            self.0.as_ref(),

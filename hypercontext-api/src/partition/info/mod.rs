@@ -29,7 +29,7 @@ use crate::partition::{
             role::ModeNodeCtxOf,
             splits::PatternSplits,
         },
-    }, pattern::{AsPatternContext, AsPatternTraceContext, PatternTraceContext}, ToPartition
+    }, pattern::{GetPatternContext, HasPatternTraceContext, PatternTraceContext}, ToPartition
 };
 
 pub mod border;
@@ -79,7 +79,7 @@ pub trait InfoPartition<R: RangeRole>: Sized + Clone + ToPartition<R> {
     ) -> R::Borders {
         let part = self.clone().to_partition();
         // todo detect if prev offset is in same index (to use inner partition as result)
-        let pctx = ctx.as_pattern_trace_context();
+        let pctx = ctx.pattern_trace_context();
         let splits = part.offsets.get(&pctx.loc.id).unwrap();
 
         R::Borders::info_border(pctx.pattern, &splits)
@@ -93,7 +93,7 @@ pub trait InfoPartition<R: RangeRole>: Sized + Clone + ToPartition<R> {
         let part = self.clone().to_partition();
         part.offsets
             .ids()
-            .map(|id| (*id, ctx.as_pattern_context(id)))
+            .map(|id| (*id, ctx.get_pattern_context(id)))
             .collect()
     }
 
@@ -109,7 +109,7 @@ pub trait InfoPartition<R: RangeRole>: Sized + Clone + ToPartition<R> {
             .into_values()
             .map(|pctx| {
                 let (perfect, borders) = {
-                    let pctx = pctx.as_pattern_trace_context();
+                    let pctx = pctx.pattern_trace_context();
                     let borders = self.info_borders(&pctx);
                     (borders.perfect().then_some(pctx.loc.id), borders)
                 };

@@ -7,7 +7,7 @@ use itertools::*;
 use maplit::hashset;
 use pretty_assertions::assert_eq;
 
-use crate::search::Searchable;
+use crate::{insert::HasInsertContext, search::Searchable};
 use hypercontext_api::{
     graph::{
         getters::vertex::VertexSet,
@@ -25,8 +25,7 @@ use hypercontext_api::{
         QueryRangePath,
     },
     traversal::{
-        result::{FoldResult, TraversalResult},
-        traversable::Traversable,
+        result::{FinishedState, FoundRange}, state::query::QueryState, traversable::Traversable
     },
 };
 
@@ -70,7 +69,7 @@ fn index_pattern1() {
     let byz_found = graph.find_ancestor(&query);
     assert_eq!(
         byz_found,
-        Ok(TraversalResult::new_complete(query, byz)),
+        Ok(FinishedState::new_complete(query, byz)),
         "byz"
     );
     let query = vec![ab, y];
@@ -80,7 +79,7 @@ fn index_pattern1() {
     let aby_found = graph.find_parent(&query);
     assert_eq!(
         aby_found,
-        Ok(TraversalResult::new_complete(query, aby)),
+        Ok(FinishedState::new_complete(query, aby)),
         "aby"
     );
 }
@@ -134,9 +133,12 @@ fn index_pattern2() {
     let aby_found = graph_ref.find_ancestor(&query);
     assert_eq!(
         aby_found,
-        Ok(TraversalResult {
-            result: Some(FoldResult::Complete(aby)),
-            query: QueryRangePath::complete(query),
+        Ok(FinishedState {
+            result: FoundRange::Complete(aby),
+            query: QueryState {
+                pos: (query.len() - 1).into(),
+                path: QueryRangePath::complete(query),
+            },
         }),
         "aby"
     );
@@ -186,9 +188,12 @@ fn index_infix1() {
     let aby_found = graph_ref.find_ancestor(&query);
     assert_eq!(
         aby_found,
-        Ok(TraversalResult {
-            result: Some(FoldResult::Complete(aby)),
-            query: QueryRangePath::complete(query),
+        Ok(FinishedState {
+            result: FoundRange::Complete(aby),
+            query: QueryState {
+                pos: (query.len() - 1).into(),
+                path: QueryRangePath::complete(query),
+            }
         }),
         "aby"
     );

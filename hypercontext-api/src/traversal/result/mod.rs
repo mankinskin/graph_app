@@ -16,17 +16,17 @@ use super::{
 pub mod kind;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum FoldResult {
+pub enum FoundRange {
     Complete(Child),
     Incomplete(FoldState),
 }
 
-impl FoldResult {
+impl FoundRange {
     pub fn unwrap_complete(self) -> Child {
-        self.expect_complete("Unable to unwrap complete FoldResult")
+        self.expect_complete("Unable to unwrap complete FoundRange")
     }
     pub fn unwrap_incomplete(self) -> FoldState {
-        self.expect_incomplete("Unable to unwrap incomplete FoldResult")
+        self.expect_incomplete("Unable to unwrap incomplete FoundRange")
     }
     pub fn expect_complete(
         self,
@@ -49,14 +49,14 @@ impl FoldResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TraversalResult {
-    pub result: Option<FoldResult>,
+pub struct FinishedState {
+    pub result: FoundRange,
     pub query: QueryState,
 }
 
-impl TraversalResult {
+impl FinishedState {
     pub fn new(
-        result: impl Into<Option<FoldResult>>,
+        result: impl Into<FoundRange>,
         query: impl Into<QueryState>,
     ) -> Self {
         Self {
@@ -66,7 +66,7 @@ impl TraversalResult {
     }
     #[track_caller]
     pub fn unwrap_complete(self) -> Child {
-        self.result.unwrap().unwrap_complete()
+        self.result.unwrap_complete()
     }
     #[allow(unused)]
     #[track_caller]
@@ -74,11 +74,11 @@ impl TraversalResult {
         self,
         msg: &str,
     ) -> Child {
-        self.result.expect(msg).expect_complete(msg)
+        self.result.expect_complete(msg)
     }
 }
 
-impl TraversalResult {
+impl FinishedState {
     #[allow(unused)]
     pub fn new_complete(
         query: impl IntoPattern,
@@ -86,7 +86,7 @@ impl TraversalResult {
     ) -> Self {
         let query = query.into_pattern();
         Self {
-            result: Some(FoldResult::Complete(index.to_child())),
+            result: FoundRange::Complete(index.to_child()),
             query: QueryState {
                 pos: query.len().into(),
                 path: QueryRangePath::complete(query),

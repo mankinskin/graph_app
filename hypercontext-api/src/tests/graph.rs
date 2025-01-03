@@ -1,14 +1,11 @@
 use std::sync::{
-    RwLockReadGuard,
-    RwLockWriteGuard,
+    Arc, RwLock, RwLockReadGuard, RwLockWriteGuard
 };
 
 use itertools::Itertools;
 
 
-use crate::graph::vertex::pattern::id::PatternId;
-
-use super::*;
+use crate::graph::{kind::BaseGraphKind, vertex::{child::Child, pattern::id::PatternId, token::Token}, Hypergraph, HypergraphRef};
 
 pub struct Context {
     pub graph: HypergraphRef,

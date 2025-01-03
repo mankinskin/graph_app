@@ -16,9 +16,7 @@ use crate::{
         info::{
             range::role::In, InfoPartition, PartitionInfo
         }, splits::{
-            HasPosSplits,
-            PosSplits,
-            SplitKind,
+            has_splits::HasPosSplits, pos::{PosSplitContext, SplitKind}, PosSplitsOf
         }, Infix
     },
     split::{
@@ -52,10 +50,10 @@ impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b, 'c> {
     //    for<'t> &'t S::Split: SplitKind,
     //    PosSplits<S>: HasPosSplits<Split = S::Split>,
     {
-        let offsets = self.ctx.pos_splits;
+        let offsets = self.ctx.vertex_cache().pos_splits().clone();
         assert_eq!(partitions.len(), offsets.len() + 1);
 
-        let merges = self.merge_partitions(offsets, partitions);
+        let merges = self.merge_partitions(&offsets, partitions);
 
         let len = offsets.len();
         let index = self.ctx.index;
@@ -87,7 +85,7 @@ impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b, 'c> {
     ) -> RangeMap
     where
         for<'t> &'t S::Split: SplitKind,
-        PosSplits<S>: HasPosSplits<Split = S::Split>,
+        PosSplitsOf<S>: HasPosSplits<Split = S::Split>,
     {
         let offsets = splits.pos_splits();
         let num_offsets = offsets.len();
@@ -98,8 +96,8 @@ impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b, 'c> {
             for start in 0..num_offsets - len + 1 {
                 let range = start..start + len;
 
-                let lo = offsets.iter().nth(start).unwrap();
-                let ro = offsets.iter().nth(start + len).unwrap();
+                let lo = offsets.iter().map(PosSplitContext::from).nth(start).unwrap();
+                let ro = offsets.iter().map(PosSplitContext::from).nth(start + len).unwrap();
 
                 // todo: could be read from cache
                 let res: Result<PartitionInfo<In<Join>>, _> =

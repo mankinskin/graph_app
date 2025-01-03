@@ -15,14 +15,9 @@ use crate::{
     },
     partition::info::{
         range::{
-            mode::ModeInfo,
+            mode::{InVisitMode, ModeChildren, ModeContext, ModeInfo, PostVisitMode, PreVisitMode},
             role::{
-                InVisitMode,
-                ModeChildren,
-                ModeContext,
                 ModeNodeCtxOf,
-                PostVisitMode,
-                PreVisitMode,
                 RangeRole,
             },
         },

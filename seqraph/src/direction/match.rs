@@ -18,8 +18,7 @@ use hypercontext_api::{
     },
     graph::{
         getters::{
-            vertex::VertexSet,
-            NoMatch,
+            vertex::VertexSet, ErrorReason,
         },
         kind::GraphKind,
         vertex::{
@@ -34,10 +33,7 @@ use hypercontext_api::{
                 PatternIndex,
             },
             pattern::{
-                id::PatternId,
-                IntoPattern,
-                Pattern,
-                pattern_range::PatternRangeIndex,
+                id::PatternId, pattern_range::PatternRangeIndex, IntoPattern, Pattern
             },
             TokenPosition,
         },
@@ -67,7 +63,7 @@ pub trait MatchDirection: Clone + Debug + Send + Sync + 'static + Unpin {
         graph: &Hypergraph<G>,
         vertex: &VertexData,
         sup: impl HasVertexIndex,
-    ) -> Result<PatternIndex, NoMatch>;
+    ) -> Result<PatternIndex, ErrorReason>;
     fn skip_equal_indices<'a, I: HasVertexIndex, J: HasVertexIndex>(
         a: impl DoubleEndedIterator<Item = &'a I>,
         b: impl DoubleEndedIterator<Item = &'a J>,
@@ -160,7 +156,7 @@ impl MatchDirection for Right {
         _graph: &Hypergraph<G>,
         vertex: &VertexData,
         sup: impl HasVertexIndex,
-    ) -> Result<PatternIndex, NoMatch> {
+    ) -> Result<PatternIndex, ErrorReason> {
         vertex.get_parent_at_prefix_of(sup)
     }
     fn skip_equal_indices<'a, I: HasVertexIndex, J: HasVertexIndex>(
@@ -215,7 +211,7 @@ impl MatchDirection for Left {
         graph: &Hypergraph<G>,
         vertex: &VertexData,
         sup: impl HasVertexIndex,
-    ) -> Result<PatternIndex, NoMatch> {
+    ) -> Result<PatternIndex, ErrorReason> {
         let sup = graph.expect_vertex(sup.vertex_index());
         vertex.get_parent_at_postfix_of(sup)
     }

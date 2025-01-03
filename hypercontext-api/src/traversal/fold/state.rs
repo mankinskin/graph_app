@@ -7,7 +7,7 @@ use crate::traversal::{
             root::RootKey, target::TargetKey, DirectedKey
         },
         TraversalCache,
-    }, result::FoldResult, state::end::EndState
+    }, result::FoundRange, state::end::EndState
 };
 use crate::graph::vertex::{
     child::Child,
@@ -82,8 +82,8 @@ impl FoldState {
     pub fn root(&self) -> Child {
         self.root
     }
-    pub fn into_fold_result(self) -> FoldResult {
-        FoldResult::Incomplete(self)
+    pub fn into_fold_result(self) -> FoundRange {
+        FoundRange::Incomplete(self)
     }
     pub fn leaf(&self) -> DirectedKey {
         self.end_state.target_key()

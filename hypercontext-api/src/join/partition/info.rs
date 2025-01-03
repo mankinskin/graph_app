@@ -24,7 +24,7 @@ use crate::{
                     RangeRole,
                 }, splits::RangeOffsets, InnerRangeInfo, ModeRangeInfo, PatternRangeInfo
             },
-        }, pattern::AsPatternTraceContext
+        }, pattern::HasPatternTraceContext
     },
 };
 
@@ -79,7 +79,7 @@ where
         let offsets = borders.offsets();
         let inner = borders.inner_info(ctx);
         let (delta, pat, pid) = {
-            let ctx = ctx.as_pattern_trace_context();
+            let ctx = ctx.pattern_trace_context();
             let delta = inner
                 .as_ref()
                 .and_then(|inner| {

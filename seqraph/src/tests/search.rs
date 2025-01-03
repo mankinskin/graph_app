@@ -3,14 +3,37 @@ use std::iter::FromIterator;
 use itertools::*;
 use pretty_assertions::assert_eq;
 
+use crate::{
+    search::Searchable,
+};
 use hypercontext_api::{
     graph::{
-        getters::NoMatch, kind::BaseGraphKind, tests::Context, vertex::{
-            child::Child, location::{
-                child::ChildLocation, pattern::PatternLocation, SubLocation
-            }, token::Token
+        getters::ErrorReason, kind::BaseGraphKind, vertex::{
+            child::Child,
+            location::{
+                child::ChildLocation,
+                pattern::PatternLocation,
+                SubLocation,
+            },
+            token::Token,
         }, HypergraphRef
-    }, path::structs::query_range_path::QueryRangePath, traversal::{
+    },
+    lab,
+    path::structs::{
+        query_range_path::{QueryPath, QueryRangePath, RangePath},
+        role_path::RolePath,
+        rooted_path::{
+            IndexRoot,
+            RootedRangePath,
+            RootedRolePath,
+            SubPath,
+        },
+    },
+    tests::graph::{
+        context,
+        Context,
+    },
+    traversal::{
         cache::{
             entry::{
                 position::{
@@ -21,13 +44,16 @@ use hypercontext_api::{
             },
             key::DirectedKey,
             TraversalCache,
-        }, context, result::{FoldResult, TraversalResult}, traversable::Traversable
-    }
-};
-use crate::{
-    search::Searchable,
-    HashMap,
-    HashSet,
+        }, fold::state::FoldState, result::{FinishedState, FoundRange}, state::{
+            end::{
+                EndKind,
+                EndReason,
+                EndState,
+                PostfixEnd,
+            },
+            query::QueryState,
+        }, traversable::Traversable
+    }, HashMap, HashSet,
 };
 
 //#[test]
@@ -55,45 +81,48 @@ fn find_parent1() {
     let query = bc_pattern;
     assert_eq!(
         graph.find_parent(query),
-        Err(NoMatch::SingleIndex(*bc)),
+        Err(ErrorReason::SingleIndex(*bc)),
         "bc"
     );
     let query = b_c_pattern;
     assert_eq!(
         graph.find_parent(&query),
-        Ok(TraversalResult::new_complete(query, bc)),
+        Ok(FinishedState::new_complete(query, bc)),
         "b_c"
     );
     let query = a_bc_pattern;
     assert_eq!(
         graph.find_parent(&query),
-        Ok(TraversalResult::new_complete(query, abc)),
+        Ok(FinishedState::new_complete(query, abc)),
         "a_bc"
     );
     let query = ab_c_pattern;
     assert_eq!(
         graph.find_parent(&query),
-        Ok(TraversalResult::new_complete(query, abc)),
+        Ok(FinishedState::new_complete(query, abc)),
         "ab_c"
     );
     let query = a_bc_d_pattern;
     assert_eq!(
         graph.find_parent(&query),
-        Ok(TraversalResult::new_complete(query, abcd)),
+        Ok(FinishedState::new_complete(query, abcd)),
         "a_bc_d"
     );
     let query = a_b_c_pattern.clone();
     assert_eq!(
         graph.find_parent(&query),
-        Ok(TraversalResult::new_complete(query, abc)),
+        Ok(FinishedState::new_complete(query, abc)),
         "a_b_c"
     );
     let query = [&a_b_c_pattern[..], &[Child::new(c, 1)]].concat();
     assert_eq!(
         graph.find_parent(&query),
-        Ok(TraversalResult {
-            result: Some(FoldResult::Complete(*abc)),
-            query: QueryRangePath::new_range(query.clone(), 0, query.len() - 1),
+        Ok(FinishedState {
+            result: FoundRange::Complete(*abc),
+            query: QueryState {
+                path: QueryRangePath::new_range(query.clone(), 0, query.len() - 1),
+                pos: (query.len() - 1).into(),
+            },
         }),
         "a_b_c_c"
     );
@@ -129,51 +158,54 @@ fn find_ancestor1() {
     let query = bc_pattern;
     assert_eq!(
         graph.find_ancestor(query),
-        Err(NoMatch::SingleIndex(*bc)),
+        Err(ErrorReason::SingleIndex(*bc)),
         "bc"
     );
     let query = b_c_pattern;
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(TraversalResult::new_complete(query, bc)),
+        Ok(FinishedState::new_complete(query, bc)),
         "b_c"
     );
     let query = a_bc_pattern;
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(TraversalResult::new_complete(query, abc)),
+        Ok(FinishedState::new_complete(query, abc)),
         "a_bc"
     );
     let query = ab_c_pattern;
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(TraversalResult::new_complete(query, abc)),
+        Ok(FinishedState::new_complete(query, abc)),
         "ab_c"
     );
     let query = a_bc_d_pattern;
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(TraversalResult::new_complete(query, abcd)),
+        Ok(FinishedState::new_complete(query, abcd)),
         "a_bc_d"
     );
     let query = a_b_c_pattern.clone();
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(TraversalResult::new_complete(query, abc)),
+        Ok(FinishedState::new_complete(query, abc)),
         "a_b_c"
     );
     let query = vec![*a, *b, *a, *b, *a, *b, *a, *b, *c, *d, *e, *f, *g, *h, *i];
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(TraversalResult::new_complete(query, ababababcdefghi)),
+        Ok(FinishedState::new_complete(query, ababababcdefghi)),
         "a_b_a_b_a_b_a_b_c_d_e_f_g_h_i"
     );
     let query = [&a_b_c_pattern[..], &[Child::new(c, 1)]].concat();
     assert_eq!(
         graph.find_ancestor(&query),
-        Ok(TraversalResult {
-            result: Some(FoldResult::Complete(*abc)),
-            query: QueryRangePath::new_range(query.clone(), 0, query.len() - 2),
+        Ok(FinishedState {
+            result: FoundRange::Complete(*abc),
+            query: QueryState {
+                path: QueryRangePath::new_range(query.clone(), 0, query.len() - 2),
+                pos: (query.len() - 2).into(),
+            }
         }),
         "a_b_c_c"
     );
@@ -210,8 +242,8 @@ fn find_ancestor2() {
     let byz_found = graph.find_ancestor(&query);
     assert_eq!(
         byz_found,
-        Ok(TraversalResult {
-            result: Some(FoldResult::Incomplete(FoldState {
+        Ok(FinishedState {
+            result: FoundRange::Incomplete(FoldState {
                 root: xabyz,
                 start: by,
                 cache: TraversalCache {
@@ -347,25 +379,31 @@ fn find_ancestor2() {
                         },
                     }),
                     query: QueryState {
-                        start: RolePath {
-                            sub_path: SubPath {
-                                root_entry: 0,
-                                path: vec![],
+                        path: RootedRangePath {
+                            root: query.clone(),
+                            start: RolePath {
+                                sub_path: SubPath {
+                                    root_entry: 0,
+                                    path: vec![],
+                                },
+                                _ty: Default::default(),
                             },
-                            _ty: Default::default(),
-                        },
-                        end: RolePath {
-                            sub_path: SubPath {
-                                root_entry: 1,
-                                path: vec![],
+                            end: RolePath {
+                                sub_path: SubPath {
+                                    root_entry: 1,
+                                    path: vec![],
+                                },
+                                _ty: Default::default(),
                             },
-                            _ty: Default::default(),
                         },
                         pos: 3.into(),
                     },
                 },
-            })),
-            query: QueryRangePath::complete(query),
+            }),
+            query: QueryState {
+                pos: (query.len() - 1).into(),
+                path: QueryRangePath::complete(query),
+            }
         }),
         "by_z"
     );
@@ -407,8 +445,8 @@ fn find_ancestor3() {
     let aby_found = gr.find_ancestor(&query);
     assert_eq!(
         aby_found,
-        Ok(TraversalResult {
-            result: Some(FoldResult::Incomplete(FoldState {
+        Ok(FinishedState {
+            result: FoundRange::Incomplete(FoldState {
                 root: xaby,
                 start: ab,
                 cache: TraversalCache {
@@ -612,19 +650,22 @@ fn find_ancestor3() {
                         },
                     }),
                     query: QueryState {
-                        start: RolePath {
-                            sub_path: SubPath {
-                                root_entry: 0,
-                                path: vec![],
+                        path: RootedRangePath {
+                            root: query.clone(),
+                            start: RolePath {
+                                sub_path: SubPath {
+                                    root_entry: 0,
+                                    path: vec![],
+                                },
+                                _ty: Default::default(),
                             },
-                            _ty: Default::default(),
-                        },
-                        end: RolePath {
-                            sub_path: SubPath {
-                                root_entry: 1,
-                                path: vec![],
+                            end: RolePath {
+                                sub_path: SubPath {
+                                    root_entry: 1,
+                                    path: vec![],
+                                },
+                                _ty: Default::default(),
                             },
-                            _ty: Default::default(),
                         },
                         pos: 3.into(),
                     },
@@ -691,8 +732,11 @@ fn find_ancestor3() {
                 //        pos: 3.into(),
                 //    },
                 //},
-            })),
-            query: QueryRangePath::complete(query),
+            }),
+            query: QueryState {
+                pos: (query.len() - 1).into(),
+                path: QueryRangePath::complete(query),
+            }
         }),
         "ab_y"
     );
@@ -709,13 +753,13 @@ fn find_sequence() {
     } = &*context();
     assert_eq!(
         graph.find_sequence("a".chars()),
-        Err(NoMatch::SingleIndex(*a)),
+        Err(ErrorReason::SingleIndex(*a)),
     );
     let query = graph.graph().expect_token_children("abc".chars());
     let abc_found = graph.find_ancestor(&query);
     assert_eq!(
         abc_found,
-        Ok(TraversalResult::new_complete(query, abc)),
+        Ok(FinishedState::new_complete(query, abc)),
         "abc"
     );
     let query = graph
@@ -724,7 +768,7 @@ fn find_sequence() {
     let ababababcdefghi_found = graph.find_ancestor(&query);
     assert_eq!(
         ababababcdefghi_found,
-        Ok(TraversalResult::new_complete(query, ababababcdefghi)),
+        Ok(FinishedState::new_complete(query, ababababcdefghi)),
         "ababababcdefghi"
     );
 }

@@ -23,7 +23,7 @@ use crate::{
 };
 use hypercontext_api::{
     direction::Right, graph::{
-        getters::NoMatch,
+        getters::ErrorReason,
         vertex::{
             child::Child,
             has_vertex_data::HasVertexDataMut,
@@ -105,11 +105,11 @@ impl<'g> ReadContext<'g> {
         match PatternPrefixPath::new_directed::<Right, _>(known.borrow()) {
             Ok(path) => self.bands().read(path),
             Err((err, _)) => match err {
-                NoMatch::SingleIndex(c) => {
+                ErrorReason::SingleIndex(c) => {
                     self.append_index(c);
                     Ok(())
                 }
-                NoMatch::EmptyPatterns => Ok(()),
+                ErrorReason::EmptyPatterns => Ok(()),
                 err => Err(err),
             }
             .unwrap(),

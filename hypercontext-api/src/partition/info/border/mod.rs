@@ -3,20 +3,22 @@ use std::num::NonZeroUsize;
 use perfect::*;
 
 use crate::{
-    partition::info::range::role::{
-        BooleanPerfectOf,
-        In,
-        InVisitMode,
-        OffsetsOf,
-        Post,
-        Pre,
-        RangeRole,
+    graph::vertex::pattern::{
+        pattern_pre_ctx_width,
+        Pattern,
+    },
+    partition::info::range::{
+        mode::InVisitMode,
+        role::{
+            BooleanPerfectOf,
+            In,
+            OffsetsOf,
+            Post,
+            Pre,
+            RangeRole,
+        },
     },
     split::PatternSplitPos,
-};
-use crate::graph::vertex::pattern::{
-    Pattern,
-    pattern_pre_ctx_width,
 };
 
 pub mod perfect;
@@ -100,12 +102,12 @@ impl<M: InVisitMode> PartitionBorder<In<M>> for (BorderInfo, BorderInfo) {
 //    }
 //}
 
-//pub trait PartitionBorders<'a, R: RangeRole, Ctx: AsPatternTraceContext<'a>>: VisitBorders<'a, R, Ctx> {
+//pub trait PartitionBorders<'a, R: RangeRole, Ctx: GetPatternTraceContext<'a>>: VisitBorders<'a, R, Ctx> {
 //}
-//impl<'a, R: RangeRole<Borders<'a, Ctx>=Self>, Ctx: AsPatternTraceContext<'a>> PartitionBorders<'a, R, Ctx> for BorderInfo
+//impl<'a, R: RangeRole<Borders<'a, Ctx>=Self>, Ctx: GetPatternTraceContext<'a>> PartitionBorders<'a, R, Ctx> for BorderInfo
 //    where BorderInfo: VisitBorders<'a, R, Ctx>,
 //{
 //}
-//impl<'a, M: InVisitMode, Ctx: AsPatternTraceContext<'a>> PartitionBorders<'a, In<M>, Ctx> for (BorderInfo, BorderInfo)
+//impl<'a, M: InVisitMode, Ctx: GetPatternTraceContext<'a>> PartitionBorders<'a, In<M>, Ctx> for (BorderInfo, BorderInfo)
 //{
 //}

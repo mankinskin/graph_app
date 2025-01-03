@@ -9,7 +9,7 @@ use crate::{
     r#match::*,
     search::{
         *,
-        NoMatch,
+        ErrorReason,
     },
     vertex::{
         *,
@@ -48,18 +48,18 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
     }
     pub fn find_ancestor_iter(
         &self,
-        pattern: impl IntoIterator<Item=Result<impl AsChild, NoMatch>>,
+        pattern: impl IntoIterator<Item=Result<impl AsChild, ErrorReason>>,
     ) -> SearchResult {
         let pattern: Pattern = pattern
             .into_iter()
             .map(|r| r.map(Into::into))
-            .collect::<Result<Pattern, NoMatch>>()?;
+            .collect::<Result<Pattern, ErrorReason>>()?;
         Right::split_head_tail(&pattern)
-            .ok_or(NoMatch::EmptyPatterns)
+            .ok_or(ErrorReason::EmptyPatterns)
             .and_then(|(head, tail)| {
                 if tail.is_empty() {
                     // single index is not a pattern
-                    Err(NoMatch::SingleIndex)
+                    Err(ErrorReason::SingleIndex)
                 } else {
                     async_std::task::block_on(
                         self.find_largest_matching_parent(head, tokio_stream::iter(tail.to_vec())),
@@ -73,11 +73,11 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
     ) -> SearchResult {
         let pattern: Pattern = pattern.into_pattern();
         Right::split_head_tail(&pattern)
-            .ok_or(NoMatch::EmptyPatterns)
+            .ok_or(ErrorReason::EmptyPatterns)
             .and_then(|(head, tail)| {
                 if tail.is_empty() {
                     // single index is not a pattern
-                    Err(NoMatch::SingleIndex)
+                    Err(ErrorReason::SingleIndex)
                 } else {
                     async_std::task::block_on(
                         self.find_largest_matching_parent(head, tokio_stream::iter(tail.to_vec())),
@@ -112,7 +112,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
                     sub_index,
                     parent_match,
                 })
-                .map_err(NoMatch::Mismatch)
+                .map_err(ErrorReason::Mismatch)
         } else {
             // compare all parent's children
             parents
@@ -130,7 +130,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
                             .ok()
                     })
                 })
-                .ok_or(NoMatch::NoMatchingParent)
+                .ok_or(ErrorReason::ErrorReasoningParent)
         }?;
         match search_found.parent_match.remainder {
             Some(post) => self.find_largest_matching_parent(
@@ -199,7 +199,7 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
         child_patterns: &'a ChildPatterns,
         candidates: impl Iterator<Item=(usize, PatternId)>,
         sub_context: impl PatternStream<Child, Token<T>>,
-    ) -> Result<(PatternId, usize), NoMatch> {
+    ) -> Result<(PatternId, usize), ErrorReason> {
         candidates
             .find_or_first(|(pattern_index, sub_index)| {
                 async_std::task::block_on(Self::compare_next_index_in_child_pattern(
@@ -209,6 +209,6 @@ impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<
                     *sub_index,
                 ))
             })
-            .ok_or(NoMatch::NoChildPatterns)
+            .ok_or(ErrorReason::NoChildPatterns)
     }
 }

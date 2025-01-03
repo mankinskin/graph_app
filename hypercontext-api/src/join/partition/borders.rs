@@ -7,13 +7,7 @@ use crate::{
         range::{
             children::InfixChildren,
             role::{
-                ChildrenOf,
-                In,
-                ModeChildrenOf,
-                ModePatternCtxOf,
-                Post,
-                Pre,
-                RangeRole,
+                ChildrenOf, In, ModeChildrenOf, ModePatternCtxOf, Post, Pre, RangeRole
             },
         },
     }, traversal::cache::key::SplitKey

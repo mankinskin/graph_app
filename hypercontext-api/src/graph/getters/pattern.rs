@@ -1,18 +1,18 @@
 use crate::graph::getters::vertex::{GetVertexIndex, VertexSet};
-use crate::graph::getters::NoMatch;
+use crate::graph::getters::ErrorReason;
 use crate::graph::{kind::GraphKind, vertex::{has_vertex_index::HasVertexIndex, location::pattern::IntoPatternLocation, pattern::{id::PatternId, pattern_range::PatternRangeIndex, pattern_width, Pattern}, ChildPatterns}, Hypergraph};
 
 impl<G: GraphKind> Hypergraph<G> {
     pub fn get_pattern_at(
         &self,
         location: impl IntoPatternLocation,
-    ) -> Result<&Pattern, NoMatch> {
+    ) -> Result<&Pattern, ErrorReason> {
         let location = location.into_pattern_location();
         let vertex = self.get_vertex(location.parent)?;
         let child_patterns = vertex.get_child_patterns();
         child_patterns
             .get(&location.id)
-            .ok_or(NoMatch::NoChildPatterns) // todo: better error
+            .ok_or(ErrorReason::NoChildPatterns) // todo: better error
     }
     #[track_caller]
     pub fn expect_pattern_at(
@@ -26,13 +26,13 @@ impl<G: GraphKind> Hypergraph<G> {
     pub fn get_pattern_mut_at(
         &mut self,
         location: impl IntoPatternLocation,
-    ) -> Result<&mut Pattern, NoMatch> {
+    ) -> Result<&mut Pattern, ErrorReason> {
         let location = location.into_pattern_location();
         let vertex = self.get_vertex_mut(location.parent)?;
         let child_patterns = vertex.get_child_patterns_mut();
         child_patterns
             .get_mut(&location.id)
-            .ok_or(NoMatch::NoChildPatterns) // todo: better error
+            .ok_or(ErrorReason::NoChildPatterns) // todo: better error
     }
     #[track_caller]
     pub fn expect_pattern_mut_at(
@@ -46,7 +46,7 @@ impl<G: GraphKind> Hypergraph<G> {
     pub fn get_child_patterns_of(
         &self,
         index: impl GetVertexIndex,
-    ) -> Result<&ChildPatterns, NoMatch> {
+    ) -> Result<&ChildPatterns, ErrorReason> {
         self.get_vertex(index.get_vertex_index(self))
             .map(|vertex| vertex.get_child_patterns())
     }
@@ -54,7 +54,7 @@ impl<G: GraphKind> Hypergraph<G> {
         &self,
         index: impl HasVertexIndex,
         pid: PatternId,
-    ) -> Result<&Pattern, NoMatch> {
+    ) -> Result<&Pattern, ErrorReason> {
         self.get_vertex(index.vertex_index())
             .and_then(|vertex| vertex.get_child_pattern(&pid))
     }

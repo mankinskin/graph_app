@@ -4,37 +4,46 @@ use std::{
         VecDeque,
     },
     num::NonZeroUsize,
-    sync::RwLockWriteGuard,
 };
 
 use crate::{
     graph::{
-        getters::vertex::VertexSet, kind::GraphKind, vertex::{
+        getters::vertex::VertexSet,
+        kind::GraphKind,
+        vertex::{
             child::{
                 Child,
                 ChildWidth,
             },
             has_vertex_index::HasVertexIndex,
             wide::Wide,
-        }, Hypergraph
+        },
+        Hypergraph,
     },
     partition::context::NodeTraceContext,
-    split::{cache::{
-        cleaned_position_splits,
-        leaves::Leaves,
-        vertex::SplitVertexCache,
-        CacheContext,
-        SplitCache,
-        SplitPositionCache,
-        TraceState,
-    }, SplitContext},
+    split::{
+        cache::{
+            cleaned_position_splits,
+            leaves::Leaves,
+            vertex::SplitVertexCache,
+            CacheContext,
+            SplitCache,
+            SplitPositionCache,
+            TraceState,
+        },
+        SplitContext,
+    },
     traversal::{
         cache::{
             entry::{
-                position::SubSplitLocation, InnerNode, NodeType, RootMode, RootNode
+                position::SubSplitLocation,
+                InnerNode,
+                NodeType,
+                RootMode,
+                RootNode,
             },
             key::SplitKey,
-            labelled_key::vkey::labelled_key,
+            label_key::vkey::labelled_key,
         },
         fold::state::FoldState,
         traversable::{
@@ -55,7 +64,7 @@ pub struct SplitCacheBuilder(pub SplitCache);
 impl SplitCacheBuilder {
     pub fn new<'a, Trav: TraversableMut + 'a>(
         trav: &'a mut Trav,
-        mut fold_state: FoldState,
+        mut fold_state: &mut FoldState,
     ) -> Self {
         let mut entries = HashMap::default();
 
@@ -237,7 +246,10 @@ impl SplitCacheBuilder {
             .cache
             .entries
             .get(&index.vertex_index())
-            .map(|e| SplitContext::new(e).complete_splits::<_, N>(trav, fold_state.end_state.width().into()))
+            .map(|e| {
+                SplitContext::new(e)
+                    .complete_splits::<_, N>(trav, fold_state.end_state.width().into())
+            })
             .unwrap_or_default()
     }
 }

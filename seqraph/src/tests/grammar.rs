@@ -9,10 +9,10 @@ use derive_more::Deref;
 use derive_new::new;
 
 use hypercontext_api::graph::getters::vertex::VertexSet;
-use crate::HashMap;
 use hypercontext_api::graph::vertex::{child::Child, has_vertex_index::HasVertexIndex, location::child::ChildLocation, pattern::Pattern, VertexIndex, wide::Wide};
 use hypercontext_api::graph::vertex::data::VertexData;
 use hypercontext_api::graph::vertex::pattern::id::PatternId;
+use hypercontext_api::HashMap;
 
 type BuildKey = RangeInclusive<usize>;
 

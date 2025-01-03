@@ -1,7 +1,8 @@
 use derivative::Derivative;
 use derive_more::derive::{Deref, DerefMut};
 
-use crate::{graph::vertex::pattern::id::PatternId, partition::{pattern::{AsPatternTraceContext, PatternTraceContext}, splits::SubSplits}};
+use crate::{graph::vertex::pattern::id::PatternId, partition::{pattern::{HasPatternTraceContext, PatternTraceContext}, splits::SubSplits}};
+
 
 
 #[derive(Debug, Deref, DerefMut, Derivative)]
@@ -13,10 +14,12 @@ pub struct PatternJoinContext<'p> {
     //pub graph: RwLockWriteGuard<'p, Hypergraph>,
     #[derivative(Hash = "ignore", PartialEq = "ignore")]
     pub sub_splits: &'p SubSplits,
+    //#[derivative(Hash = "ignore", PartialEq = "ignore")]
+    //pub split_cache: &'p SplitCache,
 }
 
-impl<'a> AsPatternTraceContext for PatternJoinContext<'a> {
-    fn as_pattern_trace_context<'b>(&'b self) -> PatternTraceContext<'b>
+impl<'a> HasPatternTraceContext for PatternJoinContext<'a> {
+    fn pattern_trace_context<'b>(&'b self) -> PatternTraceContext<'b>
         where Self: 'b
     {
         self.ctx

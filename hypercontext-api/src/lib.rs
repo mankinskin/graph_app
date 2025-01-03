@@ -22,20 +22,20 @@ pub mod split;
 pub mod partition;
 pub mod join;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-api"))]
 pub mod tests;
 
-#[cfg(not(any(test, feature = "test-hashing")))]
+#[cfg(not(any(test, feature = "test-api")))]
 pub use std::collections::{
     HashMap,
     HashSet,
 };
-#[cfg(any(test, feature = "test-hashing"))]
+#[cfg(any(test, feature = "test-api"))]
 use std::hash::{
     BuildHasherDefault,
     DefaultHasher,
 };
-#[cfg(any(test, feature = "test-hashing"))]
+#[cfg(any(test, feature = "test-api"))]
 pub type HashSet<T> = std::collections::HashSet<T, BuildHasherDefault<DefaultHasher>>;
-#[cfg(any(test, feature = "test-hashing"))]
+#[cfg(any(test, feature = "test-api"))]
 pub type HashMap<K, V> = std::collections::HashMap<K, V, BuildHasherDefault<DefaultHasher>>;

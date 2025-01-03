@@ -1,5 +1,16 @@
 use crate::{
-    graph::Hypergraph, join::partition::Join, partition::{info::range::role::{In, Post, Pre, RangeRole}, splits::HasPosSplits}, split::cache::vertex::SplitVertexCache, traversal::traversable::TraversableMut
+    graph::Hypergraph,
+    join::partition::Join,
+    partition::{
+        info::range::role::{
+            In,
+            Post,
+            Pre,
+            RangeRole,
+        }, splits::has_splits::HasPosSplits,
+    },
+    split::cache::vertex::SplitVertexCache,
+    traversal::traversable::TraversableMut,
 };
 use std::fmt::Debug;
 

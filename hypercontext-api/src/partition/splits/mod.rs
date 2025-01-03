@@ -1,86 +1,50 @@
 use std::{
-    borrow::Borrow,
     collections::BTreeMap,
     fmt::Debug,
     num::NonZeroUsize,
 };
 
+use derive_more::derive::{
+    Deref,
+    DerefMut,
+};
+use has_splits::HasPosSplits;
+use pos::{
+    PosSplitContext,
+    SplitKind,
+};
+
 use crate::{
-    split::{
-        cache::{
-            position::SplitPositionCache,
-            split::Split,
-            vertex::SplitVertexCache,
-        },
-        VertexSplitPos,
-    },
+    split::cache::split::Split,
+    traversal::cache::key::SplitKey,
     HashMap,
 };
-use crate::traversal::cache::key::SplitKey;
 
+pub mod has_splits;
 pub mod offset;
+pub mod pos;
 
-pub type PosSplits<S = SplitVertexCache> = BTreeMap<NonZeroUsize, <S as HasPosSplits>::Split>;
-pub type PosSplitRef<'p, S = SplitVertexCache> = (&'p NonZeroUsize, &'p <S as HasPosSplits>::Split);
-
-pub trait SplitKind: Borrow<VertexSplitPos> + Debug + Sized + Clone {}
-
-impl<S: Borrow<VertexSplitPos> + Debug + Sized + Clone> SplitKind for S {}
-
-pub trait HasPosSplits {
-    type Split: SplitKind;
-    fn pos_splits(&self) -> &PosSplits<Self>;
-}
-
-impl HasPosSplits for SplitVertexCache {
-    type Split = SplitPositionCache;
-    fn pos_splits(&self) -> &PosSplits<Self> {
-        &self.positions
-    }
-}
-
-impl<S: HasPosSplits> HasPosSplits for &S {
-    type Split = S::Split;
-    fn pos_splits(&self) -> &PosSplits<Self> {
-        (**self).pos_splits()
-    }
-}
-
-impl<S: HasPosSplits> HasPosSplits for &mut S {
-    type Split = S::Split;
-    fn pos_splits(&self) -> &PosSplits<Self> {
-        (**self).pos_splits()
-    }
-}
-
-impl HasPosSplits for PosSplits<SplitVertexCache> {
-    type Split = <SplitVertexCache as HasPosSplits>::Split;
-    fn pos_splits(&self) -> &PosSplits<Self> {
-        self
-    }
-}
+pub type PosSplitsOf<S> = PosSplits<PosSplitOf<S>>;
+pub type PosSplitOf<S> = <S as HasPosSplits>::Split;
 
 pub type SubSplits = HashMap<SplitKey, Split>;
 
-pub trait HasSubSplits {
-    fn sub_splits(&self) -> &SubSplits;
+#[derive(Debug, Default, Clone, PartialEq, Eq, Deref, DerefMut)]
+pub struct PosSplits<S: SplitKind> {
+    pub splits: BTreeMap<NonZeroUsize, S>,
 }
-
-impl HasSubSplits for SubSplits {
-    fn sub_splits(&self) -> &SubSplits {
-        self
+impl<'a, S: SplitKind> From<(&'a NonZeroUsize, &'a S)> for PosSplitContext<'a, S> {
+    fn from(item: (&'a NonZeroUsize, &'a S)) -> Self {
+        Self {
+            pos: item.0,
+            split: item.1,
+        }
     }
 }
-//pub trait HasSubSplitsMut: HasPosSplits {
-//    fn sub_splits_mut(&mut self) -> &mut PosSplits<Self>;
-//}
-//impl HasSubSplitsMut for SplitVertexCache {
-//    fn sub_splits_mut(&mut self) -> &mut PosSplits<Self> {
-//        &mut self.positions
-//    }
-//}
-//impl<'a, S: HasSubSplitsMut> HasSubSplitsMut for &'a mut S {
-//    fn sub_splits_mut(&mut self) -> &mut PosSplits<Self> {
-//        self.sub_splits_mut()
-//    }
-//}
+impl<S: SplitKind> FromIterator<(NonZeroUsize, S)> for PosSplits<S> {
+    fn from_iter<I: IntoIterator<Item = (NonZeroUsize, S)>>(iter: I) -> Self {
+        Self {
+            splits: BTreeMap::from_iter(iter),
+        }
+    }
+}

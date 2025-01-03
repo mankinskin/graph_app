@@ -7,7 +7,7 @@ pub mod policy;
 
 // Traversal Iterator Spec
 //
-// Traversable, Pattern -> RangePath -> TraversalIterator -> TraversalResult
+// Traversable, Pattern -> RangePath -> TraversalIterator -> FinishedState
 //                          search
 //                                       TraversalCache
 //                                       TraversalState

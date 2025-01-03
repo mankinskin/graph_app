@@ -6,13 +6,9 @@ use crate::{
     graph::{
         vertex::{
             child::Child,
-            has_vertex_index::HasVertexIndex, wide::Wide,
+            wide::Wide,
         },
-        Hypergraph, HypergraphRef,
-    },
-    partition::splits::{
-        HasSubSplits,
-        SubSplits,
+        HypergraphRef,
     },
     split::cache::{split::Split, SplitCache},
     traversal::{cache::key::SplitKey, fold::state::FoldState, traversable::TraversableMut}, HashMap,
@@ -25,71 +21,82 @@ pub mod pattern;
 #[derive(Debug)]
 pub struct JoinContext<'a> {
     pub graph: <HypergraphRef as TraversableMut>::GuardMut<'a>,
-    pub sub_splits: &'a SubSplits,
+    //pub sub_splits: &'a SubSplits,
+    pub split_cache: SplitCache,
+    pub root: Child,
 }
 
 impl<'a> JoinContext<'a> {
     //
-    pub fn new<SS: HasSubSplits>(
-        graph: <HypergraphRef as TraversableMut>::GuardMut<'a>,
-        sub_splits: &'a SS,
+    //pub fn new<SS: HasSubSplits>(
+    //    graph: <HypergraphRef as TraversableMut>::GuardMut<'a>,
+    //    sub_splits: &'a SS,
+    //) -> Self {
+    //    Self {
+    //        graph,
+    //        sub_splits: sub_splits.sub_splits(),
+    //    }
+    //}
+    pub fn new(
+        mut graph: <HypergraphRef as TraversableMut>::GuardMut<'a>,
+        fold_state: &mut FoldState,
     ) -> Self {
+        let root = fold_state.root;
+        let split_cache = SplitCache::new(&mut graph, fold_state);
         Self {
+            root,
             graph,
-            sub_splits: sub_splits.sub_splits(),
+            //sub_splits: sub_splits.sub_splits(),
+            split_cache
         }
+    }
+    pub fn join_subgraph(
+        &mut self,
+    ) -> Child {
+        let finished_splits = self.join_splits();
+        self.join_root(finished_splits)
+    }
+    pub fn join_root(
+        &mut self,
+        finished_splits: HashMap<SplitKey, Split>,
+    ) -> Child {
+        self.node(self.root, &finished_splits)
+            .join_root_partitions()
     }
     pub fn node<'b>(
         &'b mut self,
         index: Child,
-        split_cache: &'b SplitCache,
+        finished_splits: &'b HashMap<SplitKey, Split>
     ) -> NodeJoinContext<'a, 'b>
         where Self: 'a,
         'a: 'b,
     {
-        NodeJoinContext::new(
-            self,
+        NodeJoinContext {
             index,
-            split_cache.entries.get(&index.vertex_index()).unwrap(),
-        )
+            ctx: self,
+            finished_splits
+        }
     }
-    pub fn join_subgraph(
+    pub fn join_splits(
         &mut self,
-        fold_state: FoldState,
-    ) -> Child {
-        let root = fold_state.root;
-        let split_cache = SplitCache::new(self, fold_state);
-
-        let final_splits = self.join_final_splits(&split_cache);
-
-        let root_mode = split_cache.root_mode;
-        let x = self
-            //.join(&final_splits)
-            .node(root, &split_cache)
-            .join_root_partitions(root_mode);
-        x
-    }
-    pub fn join_final_splits(
-        &mut self,
-        split_cache: &SplitCache,
     ) -> HashMap<SplitKey, Split> {
-        let mut final_splits = HashMap::default();
-        let keys = split_cache.leaves.iter().cloned().rev();
+        let mut finished_splits = HashMap::default();
+        let keys = self.split_cache.leaves.iter().cloned().rev();
         let mut frontier: LinkedHashSet<SplitKey> = LinkedHashSet::from_iter(keys);
         while let Some(key) = {
             frontier.pop_front()
-                .and_then(|key| (key.index != split_cache.root).then_some(key))
+                .and_then(|key| (key.index != self.split_cache.root).then_some(key))
         } {
-            if !final_splits.contains_key(&key) {
-                let finals = self
-                    .node(key.index, split_cache)
+            if !finished_splits.contains_key(&key) {
+                let partitions = self
+                    .node(key.index, &finished_splits)
                     .join_partitions();
 
-                for (key, split) in finals {
-                    final_splits.insert(key, split);
+                for (key, split) in partitions {
+                    finished_splits.insert(key, split);
                 }
             }
-            let top = split_cache
+            let top = self.split_cache
                 .expect(&key)
                 .top
                 .iter()
@@ -97,7 +104,7 @@ impl<'a> JoinContext<'a> {
                 .cloned();
             frontier.extend(top);
         }
-        final_splits
+        finished_splits
     }
 
 }

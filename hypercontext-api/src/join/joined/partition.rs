@@ -1,9 +1,13 @@
 use std::borrow::Borrow;
 
 use crate::{
-    graph::vertex::{
-        child::Child,
-        pattern::Pattern,
+    graph::vertex::child::Child,
+    join::{
+        context::node::context::NodeJoinContext,
+        partition::{
+            borders::JoinBorders,
+            Join,
+        },
     },
     partition::{
         delta::PatternSubDeltas,
@@ -14,13 +18,6 @@ use crate::{
             },
             range::role::RangeRole,
             PartitionInfo,
-        },
-    },
-    join::{
-        context::node::context::NodeJoinContext,
-        partition::{
-            borders::JoinBorders,
-            Join,
         },
     },
 };
@@ -77,4 +74,3 @@ impl<K: RangeRole> Borrow<Child> for &JoinedPartition<K> {
         &self.index
     }
 }
-

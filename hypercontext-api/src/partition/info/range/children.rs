@@ -1,13 +1,17 @@
 use std::fmt::Debug;
 
-use crate::partition::info::range::role::{
-    In,
-    InVisitMode,
-    Post,
-    PostVisitMode,
-    Pre,
-    PreVisitMode,
-    RangeRole,
+use crate::partition::info::range::{
+    mode::{
+        InVisitMode,
+        PostVisitMode,
+        PreVisitMode,
+    },
+    role::{
+        In,
+        Post,
+        Pre,
+        RangeRole,
+    },
 };
 use crate::graph::vertex::{
     child::Child,

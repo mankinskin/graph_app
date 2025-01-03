@@ -4,7 +4,7 @@ use crate::{
         Right,
     },
     graph::{
-        getters::NoMatch,
+        getters::ErrorReason,
         vertex::pattern::{
             IntoPattern,
             Pattern,
@@ -61,7 +61,7 @@ BaseQuery
     fn new_directed<
         D: MatchDirection,
         P: IntoPattern,
-    >(query: P) -> Result<Self, (NoMatch, Self)>;
+    >(query: P) -> Result<Self, (ErrorReason, Self)>;
 }
 
 impl QueryPath for QueryRangePath {
@@ -70,14 +70,14 @@ impl QueryPath for QueryRangePath {
         let len = query.len();
         Self::new_range(query, 0, len - 1)
     }
-    fn new_directed<D: MatchDirection, P: IntoPattern>(query: P) -> Result<Self, (NoMatch, Self)> {
+    fn new_directed<D: MatchDirection, P: IntoPattern>(query: P) -> Result<Self, (ErrorReason, Self)> {
         let entry = D::head_index(&query.borrow());
         let query = query.into_pattern();
         let len = query.len();
         let query = Self::new_range(query, entry, entry);
         match len {
-            0 => Err((NoMatch::EmptyPatterns, query)),
-            1 => Err((NoMatch::SingleIndex(*query.root.first().unwrap()), query)),
+            0 => Err((ErrorReason::EmptyPatterns, query)),
+            1 => Err((ErrorReason::SingleIndex(*query.root.first().unwrap()), query)),
             _ => Ok(query),
         }
     }
@@ -92,7 +92,7 @@ impl QueryPath for PatternPrefixPath {
             root: pattern,
         }
     }
-    fn new_directed<D: MatchDirection, P: IntoPattern>(query: P) -> Result<Self, (NoMatch, Self)> {
+    fn new_directed<D: MatchDirection, P: IntoPattern>(query: P) -> Result<Self, (ErrorReason, Self)> {
         let pattern = query.into_pattern();
         let len = pattern.len();
         let p = Self {
@@ -102,8 +102,8 @@ impl QueryPath for PatternPrefixPath {
             root: pattern,
         };
         match len {
-            0 => Err((NoMatch::EmptyPatterns, p)),
-            1 => Err((NoMatch::SingleIndex(*p.root.first().unwrap()), p)),
+            0 => Err((ErrorReason::EmptyPatterns, p)),
+            1 => Err((ErrorReason::SingleIndex(*p.root.first().unwrap()), p)),
             _ => Ok(p),
         }
     }

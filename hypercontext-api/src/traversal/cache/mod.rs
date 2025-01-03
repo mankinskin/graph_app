@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use key::{DirectedKey, UpKey};
+use label_key::vkey::{labelled_key, VertexCacheKey};
 
 use crate::{
     traversal::{
@@ -11,17 +12,10 @@ use crate::{
                 vertex::VertexCache,
             },
             key::target::TargetKey,
-            labelled_key::vkey::{
-                labelled_key,
-                VertexCacheKey,
-            },
-        },
-        traversable::{
+        }, state::traversal::TraversalState, traversable::{
             TravToken, Traversable
-        },
-        state::traversal::TraversalState,
-    },
-    HashMap
+        }
+    }, HashMap
 };
 use crate::graph::vertex::{
     child::Child,
@@ -30,7 +24,7 @@ use crate::graph::vertex::{
 
 pub mod entry;
 pub mod key;
-pub mod labelled_key;
+pub mod label_key;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TraversalCache {

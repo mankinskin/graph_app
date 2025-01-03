@@ -3,18 +3,22 @@ use std::num::NonZeroUsize;
 use derive_new::new;
 
 use crate::partition::{
-    info::range::role::{
-        In,
-        InVisitMode,
-        Post,
-        PostVisitMode,
-        Pre,
-        PreVisitMode,
-        RangeRole,
+    info::range::{
+        mode::{
+            InVisitMode,
+            PostVisitMode,
+            PreVisitMode,
+        },
+        role::{
+            In,
+            Post,
+            Pre,
+            RangeRole,
+        }
     },
     splits::offset::{
-        ToOffsetSplits,
-        OffsetSplits,
+        ToOffsetSplit,
+        OffsetSplit,
     },
 };
 
@@ -25,11 +29,11 @@ pub mod context;
 pub mod delta;
 
 #[derive(new, Clone, Copy)]
-pub struct Infix<A: ToOffsetSplits, B: ToOffsetSplits> {
+pub struct Infix<A: ToOffsetSplit, B: ToOffsetSplit> {
     pub left: A,
     pub right: B,
 }
-impl<M: InVisitMode, A: ToOffsetSplits, B: ToOffsetSplits> ToPartition<In<M>> for Infix<A, B> {
+impl<M: InVisitMode, A: ToOffsetSplit, B: ToOffsetSplit> ToPartition<In<M>> for Infix<A, B> {
     fn to_partition(self) -> Partition<In<M>> {
         Partition {
             offsets: (self.left.to_offset_splits(), self.right.to_offset_splits()),
@@ -38,11 +42,11 @@ impl<M: InVisitMode, A: ToOffsetSplits, B: ToOffsetSplits> ToPartition<In<M>> fo
 }
 
 #[derive(new, Clone)]
-pub struct Prefix<O: ToOffsetSplits> {
+pub struct Prefix<O: ToOffsetSplit> {
     pub split: O,
 }
 
-impl<M: PreVisitMode, B: ToOffsetSplits> ToPartition<Pre<M>> for Prefix<B> {
+impl<M: PreVisitMode, B: ToOffsetSplit> ToPartition<Pre<M>> for Prefix<B> {
     fn to_partition(self) -> Partition<Pre<M>> {
         Partition {
             offsets: self.split.to_offset_splits(),
@@ -51,10 +55,10 @@ impl<M: PreVisitMode, B: ToOffsetSplits> ToPartition<Pre<M>> for Prefix<B> {
 }
 
 #[derive(new, Clone)]
-pub struct Postfix<O: ToOffsetSplits> {
+pub struct Postfix<O: ToOffsetSplit> {
     pub split: O,
 }
-impl<M: PostVisitMode, A: ToOffsetSplits> ToPartition<Post<M>> for Postfix<A> {
+impl<M: PostVisitMode, A: ToOffsetSplit> ToPartition<Post<M>> for Postfix<A> {
     fn to_partition(self) -> Partition<Post<M>> {
         Partition {
             offsets: self.split.to_offset_splits(),
@@ -84,7 +88,7 @@ impl<R: RangeRole> ToPartition<R> for Partition<R> {
 }
 
 
-impl<M: InVisitMode> ToPartition<In<M>> for (OffsetSplits, OffsetSplits) {
+impl<M: InVisitMode> ToPartition<In<M>> for (OffsetSplit, OffsetSplit) {
     fn to_partition(self) -> Partition<In<M>> {
         Partition {
             offsets: (self.0, self.1),
@@ -92,7 +96,7 @@ impl<M: InVisitMode> ToPartition<In<M>> for (OffsetSplits, OffsetSplits) {
     }
 }
 
-impl<M: InVisitMode> ToPartition<In<M>> for &(OffsetSplits, OffsetSplits) {
+impl<M: InVisitMode> ToPartition<In<M>> for &(OffsetSplit, OffsetSplit) {
     fn to_partition(self) -> Partition<In<M>> {
         Partition {
             offsets: (self.0.clone(), self.1.clone()),
@@ -100,7 +104,7 @@ impl<M: InVisitMode> ToPartition<In<M>> for &(OffsetSplits, OffsetSplits) {
     }
 }
 
-impl<M: PreVisitMode, A: ToOffsetSplits> ToPartition<Pre<M>> for A {
+impl<M: PreVisitMode, A: ToOffsetSplit> ToPartition<Pre<M>> for A {
     fn to_partition(self) -> Partition<Pre<M>> {
         Partition {
             offsets: self.to_offset_splits(),
@@ -108,7 +112,7 @@ impl<M: PreVisitMode, A: ToOffsetSplits> ToPartition<Pre<M>> for A {
     }
 }
 
-impl<M: PostVisitMode, A: ToOffsetSplits> ToPartition<Post<M>> for A {
+impl<M: PostVisitMode, A: ToOffsetSplit> ToPartition<Post<M>> for A {
     fn to_partition(self) -> Partition<Post<M>> {
         Partition {
             offsets: self.to_offset_splits(),

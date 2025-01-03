@@ -6,7 +6,7 @@ use std::{
 use itertools::Itertools;
 use lazy_static::lazy_static;
 
-use crate::graph::getters::NoMatch;
+use crate::graph::getters::ErrorReason;
 use crate::{
     graph::kind::GraphKind,
     HashSet,
@@ -292,7 +292,7 @@ where
         &mut self,
         location: impl IntoPatternLocation,
         range: impl PatternRangeIndex,
-    ) -> Result<Result<Child, Child>, NoMatch> {
+    ) -> Result<Result<Child, Child>, ErrorReason> {
         let location = location.into_pattern_location();
         let vertex = self.expect_vertex(location.parent);
         vertex
@@ -302,7 +302,7 @@ where
                 get_child_pattern_range(&location.id, pattern.borrow(), range.clone()).and_then(
                     |inner| {
                         if inner.is_empty() {
-                            Err(NoMatch::EmptyRange)
+                            Err(ErrorReason::EmptyRange)
                         } else if inner.len() == 1 {
                             Ok(Ok(*inner.first().unwrap()))
                         } else if pattern.len() > inner.len() {
@@ -321,16 +321,16 @@ where
         &mut self,
         location: impl IntoPatternLocation,
         range: impl PatternRangeIndex,
-    ) -> Result<Child, NoMatch> {
+    ) -> Result<Child, ErrorReason> {
         self.try_insert_range_in(location, range)
-            .and_then(|c| c.or(Err(NoMatch::Unnecessary)))
+            .and_then(|c| c.or(Err(ErrorReason::Unnecessary)))
     }
     #[track_caller]
     pub fn insert_range_in_or_default(
         &mut self,
         location: impl IntoPatternLocation,
         range: impl PatternRangeIndex,
-    ) -> Result<Child, NoMatch> {
+    ) -> Result<Child, ErrorReason> {
         self.try_insert_range_in(location, range).map(|c| match c {
             Ok(c) => c,
             Err(c) => c,

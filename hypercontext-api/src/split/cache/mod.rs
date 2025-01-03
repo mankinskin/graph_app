@@ -1,7 +1,6 @@
 use std::{
     borrow::Borrow,
     num::NonZeroUsize,
-    sync::RwLockWriteGuard,
 };
 
 use derive_more::{
@@ -22,24 +21,31 @@ use crate::{
             id::PatternId,
             Pattern,
         },
-    }, partition::splits::offset::OffsetSplits, split::{
+    },
+    partition::splits::offset::OffsetSplit,
+    split::{
         cache::vertex::SplitVertexCache,
         PatternSplitPos,
-    }, traversal::{
+    },
+    traversal::{
         cache::{
             entry::{
                 position::SubSplitLocation,
                 RootMode,
             },
             key::SplitKey,
-            labelled_key::vkey::VertexCacheKey,
+            label_key::vkey::VertexCacheKey,
         },
         fold::state::FoldState,
         traversable::TraversableMut,
-    }, HashMap
+    },
+    HashMap,
 };
 
-use super::side::{SplitBack, SplitSide};
+use super::side::{
+    SplitBack,
+    SplitSide,
+};
 
 pub mod vertex;
 
@@ -67,12 +73,9 @@ pub struct SplitCache {
 }
 
 impl SplitCache {
-    pub fn new<
-        'a,
-        Trav: TraversableMut + 'a,
-    >(
+    pub fn new<'a, Trav: TraversableMut + 'a>(
         trav: &'a mut Trav,
-        fold_state: FoldState,
+        fold_state: &mut FoldState,
     ) -> Self {
         SplitCacheBuilder::new(trav, fold_state).build()
     }
@@ -109,8 +112,8 @@ impl SplitCache {
 pub fn position_splits<'a>(
     patterns: impl IntoIterator<Item = (&'a PatternId, &'a Pattern)>,
     offset: NonZeroUsize,
-) -> OffsetSplits {
-    OffsetSplits {
+) -> OffsetSplit {
+    OffsetSplit {
         offset,
         splits: patterns
             .into_iter()
@@ -132,7 +135,7 @@ pub fn position_splits<'a>(
 pub fn range_splits<'a>(
     patterns: impl Iterator<Item = (&'a PatternId, &'a Pattern)>,
     parent_range: (NonZeroUsize, NonZeroUsize),
-) -> (OffsetSplits, OffsetSplits) {
+) -> (OffsetSplit, OffsetSplit) {
     let (ls, rs) = patterns
         .map(|(pid, pat)| {
             let (li, lo) = SplitBack::token_offset_split(pat.borrow(), parent_range.0).unwrap();
@@ -156,11 +159,11 @@ pub fn range_splits<'a>(
         })
         .unzip();
     (
-        OffsetSplits {
+        OffsetSplit {
             offset: parent_range.0,
             splits: ls,
         },
-        OffsetSplits {
+        OffsetSplit {
             offset: parent_range.1,
             splits: rs,
         },

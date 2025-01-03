@@ -7,11 +7,11 @@ use crate::graph::vertex::{
 };
 
 
-//pub trait AsPatternContext<'p> {
+//pub trait GetPatternContext<'p> {
 //    type PatternCtx<'t>;
-//    fn as_pattern_context<'t>(&'t self) -> Self::PatternCtx<'t> where Self: 't, 'p: 't;
+//    fn get_pattern_context<'t>(&'t self) -> Self::PatternCtx<'t> where Self: 't, 'p: 't;
 //}
-//impl<'p> AsPatternContext<'p> for PatternJoinContext<'p> {
+//impl<'p> GetPatternContext<'p> for PatternJoinContext<'p> {
 //    fn as_pattern_join_context<'t>(&'t self) -> PatternJoinContext<'t> where Self: 't, 'p: 't {
 //        *self
 //    }
@@ -31,33 +31,49 @@ impl<'p> From<PatternTraceContext<'p>> for PatternId {
     }
 }
 
-pub trait AsPatternTraceContext: {
-    fn as_pattern_trace_context<'a>(&'a self) -> PatternTraceContext<'a>
+pub trait HasPatternTraceContext {
+    fn pattern_trace_context<'a>(&'a self,
+    ) -> PatternTraceContext<'a>
         where Self: 'a;
 }
-
-impl<'a> AsPatternTraceContext for PatternTraceContext<'a> {
-    fn as_pattern_trace_context<'b>(&'b self) -> PatternTraceContext<'b>
-        where Self: 'b
-    {
+impl HasPatternTraceContext for PatternTraceContext<'_> {
+    fn pattern_trace_context<'a>(&'a self) -> PatternTraceContext<'a>
+        where Self: 'a {
         *self
     }
 }
-pub trait ToPatternContext {
-    type PatternCtx: AsPatternTraceContext;
-    fn to_pattern_context(
-        self,
+pub trait GetPatternTraceContext {
+    fn get_pattern_trace_context<'b>(
+        &'b self,
         pattern_id: &PatternId,
-    ) -> Self::PatternCtx;
+    ) -> PatternTraceContext<'b>
+        where Self: 'b;
 }
-
-
-
-pub trait AsPatternContext {
-    type PatternCtx<'b>: AsPatternTraceContext where Self: 'b;
-    fn as_pattern_context<'b>(
+pub trait GetPatternContext {
+    type PatternCtx<'b>: HasPatternTraceContext where Self: 'b;
+    fn get_pattern_context<'b>(
         &'b self,
         pattern_id: &PatternId,
     ) -> Self::PatternCtx<'b>
         where Self: 'b;
 }
+
+//impl<'b, T: GetPatternContext<PatternCtx<'b> = PatternTraceContext<'b>>> GetPatternTraceContext<'b> for T
+//{
+//    fn get_pattern_trace_context(&'b self,
+//        pattern_id: &PatternId,
+//    ) -> PatternTraceContext<'b>
+//        where Self: 'b
+//    {
+//        self.get_pattern_context(pattern_id)
+//    }
+//}
+
+//pub trait ToPatternContext {
+//    type PatternCtx: GetPatternTraceContext;
+//    fn to_pattern_context(
+//        self,
+//        pattern_id: &PatternId,
+//    ) -> Self::PatternCtx;
+//}
+

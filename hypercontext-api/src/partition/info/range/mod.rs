@@ -1,14 +1,15 @@
 use std::fmt::Debug;
 
-use mode::*;
-use role::*;
+
+use mode::{PatternInfoOf, Trace};
+use role::{BordersOf, ModePatternCtxOf, RangeRole};
 
 use crate::{
     graph::vertex::{
         child::Child,
         pattern::id::PatternId,
     },
-    partition::pattern::AsPatternTraceContext,
+    partition::pattern::HasPatternTraceContext,
 };
 
 use super::border::{
@@ -49,7 +50,7 @@ impl<R: RangeRole<Mode = Trace>> ModeRangeInfo<R> for TraceRangeInfo<R> {
         let range = borders.outer_range();
         let inner = borders.inner_info(ctx);
         let (pat, pid) = {
-            let ctx = ctx.as_pattern_trace_context();
+            let ctx = ctx.pattern_trace_context();
             let pat = ctx.pattern.get(range.clone()).unwrap();
             (pat, ctx.loc.id)
         };

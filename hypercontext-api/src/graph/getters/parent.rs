@@ -4,7 +4,7 @@ use crate::graph::kind::GraphKind;
 use crate::graph::vertex::has_vertex_index::HasVertexIndex;
 use crate::graph::vertex::parent::Parent;
 use crate::graph::vertex::VertexParents;
-use crate::graph::getters::NoMatch;
+use crate::graph::getters::ErrorReason;
 
 impl<G: GraphKind> Hypergraph<G> {
     #[track_caller]
@@ -41,7 +41,7 @@ impl<G: GraphKind> Hypergraph<G> {
         &self,
         pattern: impl IntoIterator<Item = impl HasVertexIndex>,
         parent: impl HasVertexIndex,
-    ) -> Result<Vec<Parent>, NoMatch> {
+    ) -> Result<Vec<Parent>, ErrorReason> {
         pattern
             .into_iter()
             .map(|index| {

@@ -9,19 +9,22 @@ use crate::{
     partition::{
         context::NodeTraceContext,
         info::{
-            InfoPartition,
             range::{
+                mode::Trace,
                 role::{
                     In,
-                    OffsetIndexRange,
                     Post,
                     Pre,
                     RangeRole,
-                    Trace,
                 },
-                splits::RangeOffsets,
+                splits::{
+                    OffsetIndexRange,
+                    RangeOffsets,
+                },
             },
+            InfoPartition,
         },
+        splits::PosSplits,
         Partition,
         ToPartition,
     },
@@ -39,7 +42,7 @@ use super::{
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct SplitVertexCache {
-    pub positions: BTreeMap<NonZeroUsize, SplitPositionCache>,
+    pub positions: PosSplits<SplitPositionCache>,
 }
 
 impl SplitVertexCache {
@@ -48,7 +51,9 @@ impl SplitVertexCache {
         entry: SplitPositionCache,
     ) -> Self {
         Self {
-            positions: BTreeMap::from_iter([(pos, entry)]),
+            positions: PosSplits {
+                splits: BTreeMap::from_iter([(pos, entry)]),
+            },
         }
     }
     pub fn pos_mut(

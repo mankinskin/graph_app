@@ -3,7 +3,7 @@ pub mod states;
 //
 // Traversal Iterator Spec
 //
-// Traversable, Pattern -> RangePath -> TraversalIterator -> TraversalResult
+// Traversable, Pattern -> RangePath -> TraversalIterator -> FinishedState
 //                          search
 //                                       TraversalCache
 //                                       TraversalState

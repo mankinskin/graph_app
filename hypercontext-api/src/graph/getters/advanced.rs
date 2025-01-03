@@ -11,14 +11,14 @@ use crate::graph::vertex::parent::PatternIndex;
 use crate::graph::vertex::pattern::pattern_range::PatternRangeIndex;
 use crate::graph::getters::vertex::VertexSet;
 use itertools::Itertools;
-use crate::graph::getters::NoMatch;
+use crate::graph::getters::ErrorReason;
 
 impl<G: GraphKind> Hypergraph<G> {
     pub fn get_common_pattern_in_parent(
         &self,
         pattern: impl IntoIterator<Item=impl HasVertexIndex>,
         parent: impl HasVertexIndex,
-    ) -> Result<PatternIndex, NoMatch> {
+    ) -> Result<PatternIndex, ErrorReason> {
         let mut parents = self
             .get_pattern_parents(pattern, parent)?
             .into_iter()
@@ -36,7 +36,7 @@ impl<G: GraphKind> Hypergraph<G> {
                     })
                     .cloned()
             })
-            .ok_or(NoMatch::NoChildPatterns)
+            .ok_or(ErrorReason::NoChildPatterns)
     }
     #[track_caller]
     pub fn expect_common_pattern_in_parent(
@@ -51,7 +51,7 @@ impl<G: GraphKind> Hypergraph<G> {
         &self,
         id: impl IntoPatternLocation,
         range: R,
-    ) -> Result<&<R as SliceIndex<[Child]>>::Output, NoMatch> {
+    ) -> Result<&<R as SliceIndex<[Child]>>::Output, ErrorReason> {
         let loc = id.into_pattern_location();
         self.get_vertex(loc.parent)?
             .get_child_pattern_range(&loc.id, range)
