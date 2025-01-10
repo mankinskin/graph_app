@@ -4,7 +4,7 @@
 //};
 use hypercontext_api::{
     graph::getters::ErrorReason, traversal::{
-        fold::TraversalContext, iterator::policy::DirectedTraversalPolicy, result::FinishedState, state::parent::ParentState, traversable::Traversable
+        fold::{ErrorState, FoldContext}, iterator::policy::DirectedTraversalPolicy, result::FinishedState, state::parent::ParentState, traversable::Traversable
     }
 };
 //use rayon::iter::{
@@ -14,12 +14,12 @@ use hypercontext_api::{
 use hypercontext_api::graph::vertex::pattern::IntoPattern;
 
 #[derive(Clone, Debug)]
-pub struct Searcher<T: Traversable> {
+pub struct SearchContext<T: Traversable> {
     pub graph: T,
 }
 
 pub trait SearchTraversalPolicy<T: Traversable>:
-    DirectedTraversalPolicy<Trav = Searcher<T>>
+    DirectedTraversalPolicy<Trav = SearchContext<T>>
 {
 }
 
@@ -27,7 +27,7 @@ impl<T: Traversable> SearchTraversalPolicy<T> for AncestorSearch<T> {}
 
 impl<T: Traversable> SearchTraversalPolicy<T> for ParentSearch<T> {}
 
-//impl<T: Traversable> TraversalFolder for Searcher<T> {
+//impl<T: Traversable> TraversalFolder for SearchContext<T> {
 //    type Iterator<'a> = Bft<'a, Self, (T, AncestorSearch)> where T: 'a;
 //}
 
@@ -35,14 +35,14 @@ impl<T: Traversable> SearchTraversalPolicy<T> for ParentSearch<T> {}
 pub struct AncestorSearch<T: Traversable>(std::marker::PhantomData<T>);
 
 impl<T: Traversable> DirectedTraversalPolicy for AncestorSearch<T> {
-    type Trav = Searcher<T>;
+    type Trav = SearchContext<T>;
 }
 
 #[derive(Debug)]
 pub struct ParentSearch<T: Traversable>(std::marker::PhantomData<T>);
 
 impl<T: Traversable> DirectedTraversalPolicy for ParentSearch<T> {
-    type Trav = Searcher<T>;
+    type Trav = SearchContext<T>;
     fn next_parents(
         _trav: &Self::Trav,
         _state: &ParentState,
@@ -51,9 +51,9 @@ impl<T: Traversable> DirectedTraversalPolicy for ParentSearch<T> {
     }
 }
 
-pub type SearchResult = Result<FinishedState, ErrorReason>;
+pub type SearchResult = Result<FinishedState, ErrorState>;
 
-impl<T: Traversable> Searcher<T> {
+impl<T: Traversable> SearchContext<T> {
     pub fn new(graph: T) -> Self {
         Self { graph }
     }
@@ -82,7 +82,7 @@ impl<T: Traversable> Searcher<T> {
         &self,
         query: P,
     ) -> SearchResult {
-        TraversalContext::fold_query(self, query).map_err(|(nm, _)| nm)
+        FoldContext::<AncestorSearch<T>>::fold_pattern(self, query)
     }
     //#[allow(unused)]
     //fn par_search<
@@ -135,7 +135,7 @@ impl<T: Traversable> Searcher<T> {
     //}
 }
 
-impl<T: Traversable> Traversable for Searcher<T> {
+impl<T: Traversable> Traversable for SearchContext<T> {
     type Kind = T::Kind;
     type Guard<'a> = T::Guard<'a> where T: 'a;
     fn graph(&self) -> Self::Guard<'_> {
@@ -143,7 +143,7 @@ impl<T: Traversable> Traversable for Searcher<T> {
     }
 }
 
-//impl<'g, T: Traversable> Traversable for &'g Searcher<T> {
+//impl<'g, T: Traversable> Traversable for &'g SearchContext<T> {
 //    type Kind = T::Kind;
 //    type Guard<'a> = T::Guard<'a> where T: 'a, 'g: 'a;
 //    fn graph(&self) -> Self::Guard<'_> {

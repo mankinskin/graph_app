@@ -1,44 +1,33 @@
-use std::{
-    ops::ControlFlow,
-    sync::{
-        RwLockReadGuard,
-        RwLockWriteGuard,
-    },
+use std::sync::{
+    RwLockReadGuard,
+    RwLockWriteGuard,
 };
 
 use hypercontext_api::{
     graph::{
-        getters::ErrorReason, vertex::{
+        getters::ErrorReason,
+        vertex::{
             child::Child,
             pattern::IntoPattern,
-        }, Hypergraph, HypergraphRef
+        },
+        Hypergraph,
+        HypergraphRef,
     },
-    join::context::JoinContext,
-    path::structs::query_range_path::{
-        QueryPath,
-        QueryRangePath,
-    },
-    split::cache::split::Split,
+    path::structs::query_range_path::QueryRangePath,
     traversal::{
-        cache::key::SplitKey,
-        container::bft::Bft,
-        fold::{state::FoldState, ErrorState, FoldContext},
-        iterator::policy::DirectedTraversalPolicy,
-        result::{kind::BaseResult, FoundRange},
-        traversable::{
+        container::bft::BftQueue, TraversalKind, fold::{
+            state::FoldState,
+            ErrorState,
+            FoldContext,
+        }, iterator::policy::DirectedTraversalPolicy, result::FoundRange, traversable::{
             impl_traversable,
             impl_traversable_mut,
             Traversable,
             TraversableMut,
-        },
+        }
     },
-    HashMap,
 };
-
-#[derive(Debug, Clone)]
-pub struct InsertContext {
-    pub graph: HypergraphRef,
-}
+use crate::join::context::JoinContext;
 
 #[derive(Debug)]
 pub struct InsertPolicy {}
@@ -56,31 +45,47 @@ impl InsertTraversalPolicy for InsertPolicy {}
 //    type Iterator<'a> = Bft<'a, Self, InsertPolicy>;
 //}
 
+#[derive(Debug)]
+pub struct InsertTraversal;
+
+impl TraversalKind for InsertTraversal {
+    type Trav = InsertContext;
+    type Container = BftQueue;
+    type Policy = InsertPolicy;
+}
+
+#[derive(Debug, Clone)]
+pub struct InsertContext {
+    pub graph: HypergraphRef,
+}
 impl InsertContext {
     pub fn new(graph: HypergraphRef) -> Self {
         Self { graph }
     }
     pub fn join(
-        &self,
+        mut self,
         fold_state: &mut FoldState,
     ) -> JoinContext {
-        JoinContext::new(self.clone().graph_mut(), fold_state)
+        JoinContext::new(self, fold_state)
     }
     pub fn insert_pattern(
         &mut self,
         query: impl IntoPattern,
     ) -> Result<(Child, QueryRangePath), ErrorReason> {
-        match FoldContext::fold_pattern(self, query) {
+        match FoldContext::<InsertTraversal>::fold_pattern(self, query) {
             Ok(result) => match result.result {
                 FoundRange::Complete(c) => Ok((c, result.query.path)),
-                FoundRange::Incomplete(fold_state) => Ok((self.join(&mut fold_state).join_subgraph(), result.query.path)),
+                FoundRange::Incomplete(mut fold_state) => Ok((
+                    self.join(&mut fold_state).join_subgraph(),
+                    result.query.path,
+                )),
             },
             Err(ErrorState {
                 reason: ErrorReason::SingleIndex(c),
                 query,
-                found: Some(FoundRange::Complete(found)),
-            }) => Ok((c, found)),
-            Err((err, _)) => Err(err),
+                found: Some(FoundRange::Complete(_)),
+            }) => Ok((c, query.path)),
+            Err(err) => Err(err.reason),
         }
     }
     //pub fn index_query<Q: QueryPath>(
@@ -141,23 +146,23 @@ impl_traversable! {
     self => self.graph.read().unwrap();
     <'a> RwLockReadGuard<'a, Hypergraph>
 }
-impl_traversable! {
-    impl for &'_ InsertContext,
-    self => self.graph.read().unwrap();
-    <'a> RwLockReadGuard<'a, Hypergraph>
-}
-impl_traversable! {
-    impl for &'_ mut InsertContext,
-    self => self.graph.read().unwrap();
-    <'a> RwLockReadGuard<'a, Hypergraph>
-}
+//impl_traversable! {
+//    impl for &'_ InsertContext,
+//    self => self.graph.read().unwrap();
+//    <'a> RwLockReadGuard<'a, Hypergraph>
+//}
+//impl_traversable! {
+//    impl for &'_ mut InsertContext,
+//    self => self.graph.read().unwrap();
+//    <'a> RwLockReadGuard<'a, Hypergraph>
+//}
 impl_traversable_mut! {
     impl for InsertContext,
     self => self.graph.write().unwrap();
     <'a> RwLockWriteGuard<'a, Hypergraph>
 }
-impl_traversable_mut! {
-    impl for &'_ mut InsertContext,
-    self => self.graph.write().unwrap();
-    <'a> RwLockWriteGuard<'a, Hypergraph>
-}
+//impl_traversable_mut! {
+//    impl for &'_ mut InsertContext,
+//    self => self.graph.write().unwrap();
+//    <'a> RwLockWriteGuard<'a, Hypergraph>
+//}

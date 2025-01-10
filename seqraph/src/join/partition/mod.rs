@@ -3,17 +3,18 @@ pub mod info;
 pub mod join;
 
 use borders::JoinBorders;
+use derive_into_owned::IntoOwned;
+use derive_more::derive::{Deref, DerefMut, From, Into};
 use info::JoinPatternInfo;
 
-use crate::{
-    join::{
+use crate::join::{
         context::node::context::NodeJoinContext,
         joined::{
             partition::JoinedPartition,
             patterns::JoinedPatterns,
         },
-    },
-    partition::info::{
+    };
+use hypercontext_api::partition::info::{
         range::{
             mode::{InVisitMode, ModeChildren, ModeContext, ModeInfo, PostVisitMode, PreVisitMode},
             role::{
@@ -22,7 +23,6 @@ use crate::{
             },
         },
         PartitionInfo,
-    },
 };
 
 use super::context::pattern::PatternJoinContext;
@@ -31,7 +31,7 @@ use super::context::pattern::PatternJoinContext;
 pub struct Join;
 
 impl ModeContext for Join {
-    type NodeContext<'a: 'b, 'b> = NodeJoinContext<'a, 'b>;
+    type NodeContext<'a: 'b, 'b> = NodeJoinContext<'a>;
     type PatternResult<'a> = PatternJoinContext<'a>;
 }
 
@@ -43,7 +43,13 @@ impl PreVisitMode for Join {}
 impl PostVisitMode for Join {}
 impl InVisitMode for Join {}
 
-impl<'a: 'b, 'b: 'c, 'c, R: RangeRole<Mode = Join>> PartitionInfo<R>
+#[derive(Debug, Deref, DerefMut, Into, From)]
+pub struct JoinPartitionInfo<R: RangeRole<Mode = Join>>(PartitionInfo<R>)
+where
+    R::Borders: JoinBorders<R>,
+;
+
+impl<'a: 'b, 'b: 'c, 'c, R: RangeRole<Mode = Join>> JoinPartitionInfo<R>
 where
     R::Borders: JoinBorders<R>,
     Self: 'a,

@@ -1,11 +1,8 @@
 use crate::traversal::{
-    container::extend::ExtendStates, fold::TraversalContext, state::traversal::TraversalState
+    container::extend::ExtendStates, state::traversal::TraversalState
 };
 
 use super::StateContainer;
-
-#[allow(unused)]
-pub type Dft<'a, K> = TraversalContext<'a, K>;
 
 #[derive(Debug, Default)]
 pub struct DftStack {

@@ -1,5 +1,6 @@
-use crate::{
-    join::context::pattern::PatternJoinContext, partition::info::{
+use crate::join::context::pattern::PatternJoinContext;
+use hypercontext_api::{
+    partition::info::{
         border::{
             trace::TraceBorders,
             BorderInfo,
@@ -10,7 +11,8 @@ use crate::{
                 ChildrenOf, In, ModeChildrenOf, ModePatternCtxOf, Post, Pre, RangeRole
             },
         },
-    }, traversal::cache::key::SplitKey
+    },
+    traversal::cache::key::SplitKey
 };
 
 use super::Join;

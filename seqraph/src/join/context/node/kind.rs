@@ -1,6 +1,6 @@
-use crate::{
+use crate::join::partition::Join;
+use hypercontext_api::{
     graph::Hypergraph,
-    join::partition::Join,
     partition::{
         info::range::role::{
             In,

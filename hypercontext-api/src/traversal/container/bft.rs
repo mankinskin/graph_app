@@ -1,17 +1,14 @@
-use crate::traversal::{
-    fold::TraversalContext, state::traversal::TraversalState
-};
 use std::{
     cmp::Ordering,
     collections::BinaryHeap,
 };
 
+use crate::traversal::state::traversal::TraversalState;
+
 use super::{
     StateContainer,
     extend::ExtendStates,
 };
-
-pub type Bft<'a, K> = TraversalContext<'a, K>;
 
 #[derive(Debug, Default)]
 pub struct BftQueue {

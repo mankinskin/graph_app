@@ -29,7 +29,7 @@ use crate::{
             key::{
                 pos::QueryPosition, prev::ToPrev, target::TargetKey, DirectedKey
             },
-        }, container::pruning::PruneStates, fold::{TraversalContext, TraversalKind}, result::kind::{
+        }, container::pruning::PruneStates, context::TraversalContext, result::kind::{
             Primer,
             RoleChildPath,
         }, state::{
@@ -42,7 +42,7 @@ use crate::{
         }, traversable::{
             DirectionOf,
             Traversable,
-        }
+        }, TraversalKind
     }
 };
 use itertools::Itertools;

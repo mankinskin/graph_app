@@ -8,13 +8,13 @@ use crate::{
         cache::key::{
             prev::ToPrev,
             UpKey,
-        }, fold::TraversalKind, iterator::policy::DirectedTraversalPolicy, state::{
+        }, iterator::policy::DirectedTraversalPolicy, state::{
             end::{
                 EndKind,
                 EndReason,
                 EndState,
             }, query::QueryState, NextStates, StateNext
-        }
+        }, TraversalKind
     }
 };
 use crate::graph::vertex::{

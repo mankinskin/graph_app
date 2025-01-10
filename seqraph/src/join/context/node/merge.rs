@@ -11,37 +11,32 @@ use derive_new::new;
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 
-use crate::{
-    join::partition::Join, partition::{
+use crate::join::partition::Join;
+use hypercontext_api::{
+    graph::vertex::{
+        child::Child,
+        pattern::Pattern,
+    }, partition::{
         info::{
             range::role::In, InfoPartition, PartitionInfo
         }, splits::{
             has_splits::HasPosSplits, pos::{PosSplitContext, SplitKind}, PosSplitsOf
-        }, Infix
-    },
-    split::{
+        }, Infix, ToPartition
+    }, split::{
         cache::split::Split,
         VertexSplitPos,
-    },
-    HashMap
-};
-use crate::{
-    traversal::cache::key::SplitKey,
-    graph::vertex::{
-        child::Child,
-        pattern::Pattern,
-    },
+    }, traversal::cache::key::SplitKey, HashMap
 };
 use std::fmt::Debug;
 use super::context::NodeJoinContext;
 
 
 #[derive(Debug, new)]
-pub struct NodeMergeContext<'a: 'b, 'b: 'c, 'c> {
-    pub ctx: &'c mut NodeJoinContext<'a, 'b>,
+pub struct NodeMergeContext<'a: 'b, 'b> {
+    pub ctx: &'b mut NodeJoinContext<'a>,
 }
 
-impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b, 'c> {
+impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b> {
     pub fn merge_node(
         &'c mut self,
         partitions: &Vec<Child>,
@@ -65,13 +60,13 @@ impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b, 'c> {
             let right = *merges.get(&rr).unwrap();
             if !lr.is_empty() || !lr.is_empty() {
                 if let Some((&pid, _)) = (v.borrow() as &VertexSplitPos).iter().find(|(_, s)| s.inner_offset.is_none()) {
-                    self.ctx.ctx.graph.replace_in_pattern(
+                    self.ctx.trav.replace_in_pattern(
                         index.to_pattern_location(pid),
                         0..,
                         [left, right],
                     );
                 } else {
-                    self.ctx.ctx.graph.add_pattern_with_update(index, [left, right]);
+                    self.ctx.trav.add_pattern_with_update(index, [left, right]);
                 }
             }
             finals.insert(SplitKey::new(index, *offset), Split::new(left, right));
@@ -100,8 +95,9 @@ impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b, 'c> {
                 let ro = offsets.iter().map(PosSplitContext::from).nth(start + len).unwrap();
 
                 // todo: could be read from cache
+                let infix = Infix::new(lo, ro);
                 let res: Result<PartitionInfo<In<Join>>, _> =
-                    Infix::new(lo, ro).info_partition(self.ctx);
+                    infix.info_partition(self.ctx);
 
                 let index = match res {
                     Ok(info) => {
@@ -114,7 +110,7 @@ impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b, 'c> {
                         });
                         // todo: insert into perfect context
                         let patterns = merges.into_iter().chain(joined).collect_vec();
-                        self.ctx.ctx.graph.insert_patterns(patterns)
+                        self.ctx.trav.insert_patterns(patterns)
                     }
                     Err(c) => c,
                 };

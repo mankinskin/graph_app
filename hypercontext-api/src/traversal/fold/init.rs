@@ -1,6 +1,4 @@
-use crate::{graph::vertex::child::Child, traversal::{cache::key::UpKey, container::extend::ExtendStates, state::{query::QueryState, start::StartState}}};
-
-use super::TraversalKind;
+use crate::{graph::vertex::child::Child, traversal::{cache::key::UpKey, container::extend::ExtendStates, state::{query::QueryState, start::StartState}, TraversalKind}};
 
 
 pub trait InitStates<K: TraversalKind> {

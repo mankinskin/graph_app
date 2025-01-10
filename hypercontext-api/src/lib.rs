@@ -16,11 +16,8 @@ pub mod graph;
 pub mod direction;
 pub mod traversal;
 pub mod path;
-pub mod mock;
-
 pub mod split;
 pub mod partition;
-pub mod join;
 
 #[cfg(any(test, feature = "test-api"))]
 pub mod tests;

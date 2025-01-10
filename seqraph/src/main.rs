@@ -1,4 +1,4 @@
 
 fn main() {
-    tests::grammar::test_grammar()
+    //tests::grammar::test_grammar()
 }

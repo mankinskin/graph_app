@@ -9,7 +9,7 @@ use crate::{
         SplitFront,
         SplitSide,
     },
-    mock,
+    tests::mock,
 };
 use crate::graph::vertex::{
     child::Child,

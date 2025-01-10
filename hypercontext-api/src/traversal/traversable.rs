@@ -67,10 +67,9 @@ macro_rules! impl_traversable_mut {
 pub use impl_traversable;
 pub use impl_traversable_mut;
 
-use crate::{graph::{kind::{BaseGraphKind, GraphKind}, Hypergraph, HypergraphRef}, join::context::JoinContext};
+use crate::graph::{kind::GraphKind, Hypergraph, HypergraphRef};
 
-use super::fold::{TraversalContext, TraversalKind};
-
+use super::{context::TraversalContext, TraversalKind};
 
 //impl_traversable! {
 //    impl for &'_ Hypergraph,
@@ -185,19 +184,6 @@ impl_traversable_mut! {
 //        self.guard
 //    }
 //}
-impl<'a> Traversable for JoinContext<'a> {
-    type Kind = TravKind<Hypergraph>;
-    type Guard<'g> = &'g Hypergraph where Self: 'g;
-    fn graph(&self) -> Self::Guard<'_> {
-        &self.graph
-    }
-}
-impl<'a> TraversableMut for JoinContext<'a> {
-    type GuardMut<'g> = &'g mut Hypergraph where Self: 'g;
-    fn graph_mut(&mut self) -> Self::GuardMut<'_> {
-        &mut self.graph
-    }
-}
 //impl<'a> Traversable for &'a mut JoinContext<'a> {
 //    type Kind = TravKind<Hypergraph>;
 //    type Guard<'g> = &'g <HypergraphRef as TraversableMut>::GuardMut<'g> where Self: 'g;

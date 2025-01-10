@@ -1,7 +1,7 @@
 use derivative::Derivative;
 use derive_more::derive::{Deref, DerefMut};
 
-use crate::{graph::vertex::pattern::id::PatternId, partition::{pattern::{HasPatternTraceContext, PatternTraceContext}, splits::SubSplits}};
+use hypercontext_api::{graph::vertex::pattern::id::PatternId, partition::{pattern::{HasPatternTraceContext, PatternTraceContext}, splits::SubSplits}};
 
 
 

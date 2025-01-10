@@ -21,13 +21,13 @@ use hypercontext_api::{
         Traversable,
     },
 };
-use searcher::{SearchResult, Searcher};
+use context::{SearchResult, SearchContext};
 
-pub mod searcher;
+pub mod context;
 
 pub trait Searchable: Traversable
 {
-    fn searcher(&self) -> Searcher<Self>;
+    fn ctx(&self) -> SearchContext<Self>;
     //pub fn expect_pattern(
     //    &self,
     //    pattern: impl IntoIterator<Item = impl AsToken<T>>,
@@ -42,7 +42,7 @@ pub trait Searchable: Traversable
     ) -> SearchResult
     {
         let pattern = self.graph().to_children(pattern);
-        self.searcher().find_pattern_ancestor(pattern)
+        self.ctx().find_pattern_ancestor(pattern)
     }
     fn find_parent(
         &self,
@@ -52,7 +52,7 @@ pub trait Searchable: Traversable
     ) -> SearchResult
     {
         let pattern = self.graph().to_children(pattern);
-        self.searcher().find_pattern_parent(pattern)
+        self.ctx().find_pattern_parent(pattern)
     }
     fn find_sequence(
         &self,
@@ -67,16 +67,16 @@ pub trait Searchable: Traversable
 
 impl Searchable for &Hypergraph
 {
-    fn searcher(&self) -> Searcher<Self>
+    fn ctx(&self) -> SearchContext<Self>
     {
-        Searcher::new(self)
+        SearchContext::new(self)
     }
 }
 
 impl Searchable for HypergraphRef
 {
-    fn searcher(&self) -> Searcher<Self>
+    fn ctx(&self) -> SearchContext<Self>
     {
-        Searcher::new(self.clone())
+        SearchContext::new(self.clone())
     }
 }

@@ -14,7 +14,7 @@ use crate::{
                 prev::PrevKey,
                 target::TargetKey,
             },
-        }, fold::{TraversalContext, TraversalKind}, result::kind::RoleChildPath
+        }, context::TraversalContext, result::kind::RoleChildPath, TraversalKind
     }
 };
 

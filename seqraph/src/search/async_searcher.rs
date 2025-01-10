@@ -17,18 +17,18 @@ use crate::{
     },
 };
 
-pub struct AsyncSearcher<T: Tokenize + Send, D: AsyncMatchDirection<T>> {
+pub struct AsyncSearchContext<T: Tokenize + Send, D: AsyncMatchDirection<T>> {
     graph: HypergraphHandle<T>,
     _ty: std::marker::PhantomData<D>,
 }
 
-impl<T: Tokenize + Send + 'static> AsyncSearcher<T, Right> {
+impl<T: Tokenize + Send + 'static> AsyncSearchContext<T, Right> {
     pub fn search_right(graph: HypergraphHandle<T>) -> Self {
         Self::new(graph)
     }
 }
 
-impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearcher<T, D> {
+impl<'a, T: Tokenize + Send + 'static, D: AsyncMatchDirection<T>> AsyncSearchContext<T, D> {
     pub fn new(graph: HypergraphHandle<T>) -> Self {
         Self {
             graph,

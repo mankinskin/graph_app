@@ -16,7 +16,7 @@ use crate::{
                 prev::ToPrev,
                 target::TargetKey,
             },
-        }, fold::TraversalKind, iterator::policy::DirectedTraversalPolicy, result::kind::Primer
+        }, iterator::policy::DirectedTraversalPolicy, result::kind::Primer, TraversalKind
     }
 };
 use std::cmp::Ordering;

@@ -9,16 +9,16 @@ use derive_more::{
 };
 use linked_hash_map::LinkedHashMap;
 
-use crate::{
+use crate::join::{
+        context::{
+            node::merge::NodeMergeContext, pattern::PatternJoinContext, LockedJoinContext
+        }, joined::partition::JoinedPartition, partition::{
+            join::JoinPartition, Join, JoinPartitionInfo
+        }
+    };
+use hypercontext_api::{
     graph::vertex::{
         child::Child, has_vertex_index::HasVertexIndex, location::SubLocation, pattern::id::PatternId, wide::Wide, ChildPatterns
-    },
-    join::{
-        context::{
-            node::merge::NodeMergeContext, pattern::PatternJoinContext, JoinContext
-        }, joined::partition::JoinedPartition, partition::{
-            join::JoinPartition, Join
-        }
     },
     partition::{
         context::{
@@ -49,16 +49,15 @@ use crate::{
 };
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct NodeJoinContext<'a: 'b, 'b> {
+pub struct NodeJoinContext<'a> {
     #[deref]
     #[deref_mut]
-    pub ctx: &'b mut JoinContext<'a>,
+    pub ctx: LockedJoinContext<'a>,
     pub index: Child,
-    //pub vertex_cache: SplitVertexCache,
-    pub finished_splits: &'b HashMap<SplitKey, Split>,
+    pub finished_splits: &'a HashMap<SplitKey, Split>,
 }
 
-impl<'a: 'b, 'b> AsNodeTraceContext for NodeJoinContext<'a, 'b> {
+impl<'a: 'b, 'b> AsNodeTraceContext for NodeJoinContext<'a> {
     fn as_trace_context<'t>(&'t self) -> NodeTraceContext<'t>
     where
         Self: 't,
@@ -70,7 +69,7 @@ impl<'a: 'b, 'b> AsNodeTraceContext for NodeJoinContext<'a, 'b> {
         }
     }
 }
-impl<'a: 'b, 'b> GetPatternTraceContext for NodeJoinContext<'a, 'b> {
+impl<'a: 'b, 'b> GetPatternTraceContext for NodeJoinContext<'a> {
     fn get_pattern_trace_context<'c>(
         &'c self,
         pattern_id: &PatternId,
@@ -84,7 +83,7 @@ impl<'a: 'b, 'b> GetPatternTraceContext for NodeJoinContext<'a, 'b> {
         }
     }
 }
-impl<'a: 'b, 'b> GetPatternContext for NodeJoinContext<'a, 'b> {
+impl<'a: 'b, 'b> GetPatternContext for NodeJoinContext<'a> {
     type PatternCtx<'c>
         = PatternJoinContext<'c>
     where
@@ -108,14 +107,14 @@ impl<'a: 'b, 'b> GetPatternContext for NodeJoinContext<'a, 'b> {
         }
     }
 }
-impl<'a: 'b, 'b> NodeJoinContext<'a, 'b> {
+impl<'a: 'b, 'b> NodeJoinContext<'a> {
     pub fn patterns(&self) -> &ChildPatterns
     {
-        self.ctx.graph.expect_child_patterns(self.index)
+        self.ctx.trav.expect_child_patterns(self.index)
     }
 }
 
-impl<'a: 'b, 'b> NodeJoinContext<'a, 'b> {
+impl<'a: 'b, 'b> NodeJoinContext<'a> {
     pub fn vertex_cache<'c>(&'c self) -> &'c SplitVertexCache {
         self.split_cache.entries.get(&self.index.vertex_index()).unwrap()
     }
@@ -167,7 +166,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a, 'b> {
                 .inspect(|part| {
                     if part.perfect.is_none() {
                         let post = Postfix::new(offset).join_partition(self).unwrap();
-                        self.graph
+                        self.ctx.trav
                             .add_pattern_with_update(index, [part.index, post.index]);
                     }
                 })
@@ -183,7 +182,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a, 'b> {
                             }
                             Err(c) => c,
                         };
-                        self.graph.add_pattern_with_update(index, [pre, part.index]);
+                        self.ctx.trav.add_pattern_with_update(index, [pre, part.index]);
                     }
                 })
                 .map(|part| part.index),
@@ -223,7 +222,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a, 'b> {
                 Err(ch) => (roffset, ch),
             };
             let post: Child = Postfix::new(offset).join_partition(self).into();
-            self.graph
+            self.trav
                 .add_pattern_with_update(index, [pre, part.index, post]);
         } else if part.perfect.0 == part.perfect.1 {
             // perfect borders in same pattern
@@ -232,7 +231,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a, 'b> {
             let (ll, rl) = (part.perfect.0.unwrap(), part.perfect.1.unwrap());
             let lpos = loffset.1.pattern_splits[&ll].sub_index;
             let rpos = roffset.1.pattern_splits[&rl].sub_index;
-            self.graph
+            self.ctx.trav
                 .replace_in_pattern(index.to_pattern_location(ll), lpos..rpos, [part.index])
         } else {
             // one or both are perfect in different patterns
@@ -248,7 +247,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a, 'b> {
                     let rp_brd = &pre_brds.borders[&rp];
                     let li = rp_brd.sub_index;
                     let lc = self
-                        .graph
+                        .trav
                         .expect_child_at(self.index.to_child_location(SubLocation::new(rp, li)));
                     let outer_offset =
                         NonZeroUsize::new(rp_brd.start_offset.unwrap().get() + lc.width()).unwrap();
@@ -258,19 +257,20 @@ impl<'a: 'b, 'b> NodeJoinContext<'a, 'b> {
 
                 //prev_offset.1 = prev_offset.1 - pre.delta;
 
-                let wrap_patterns = Infix::new(&wrap_offset, roffset)
+                let info = Infix::new(&wrap_offset, roffset)
                     .info_partition(self)
-                    .unwrap()
+                    .unwrap();
+                let wrap_patterns = JoinPartitionInfo::from(info)
                     .to_joined_patterns(self);
                 let wrap_pre = match Infix::new(wrap_offset, loffset).join_partition(self) {
                     Ok(p) => p.index,
                     Err(c) => c,
                 };
-                let wrapper = self.graph.insert_patterns(
+                let wrapper = self.trav.insert_patterns(
                     std::iter::once(vec![wrap_pre, part.index]).chain(wrap_patterns.patterns),
                 );
                 let loc = index.to_pattern_location(rp);
-                self.graph.replace_in_pattern(loc, li..ri, [wrapper]);
+                self.trav.replace_in_pattern(loc, li..ri, [wrapper]);
 
                 //let patterns = wrap_patterns.patterns.clone();
                 //offset.1 = offset.1 - wrap_patterns.delta;
@@ -298,7 +298,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a, 'b> {
                     let lp_brd = &post_brds.borders[&lp];
                     let ri = lp_brd.sub_index;
                     let rc = self
-                        .graph
+                        .trav
                         .expect_child_at(self.index.to_child_location(SubLocation::new(lp, ri)));
                     let outer_offset =
                         NonZeroUsize::new(lp_brd.start_offset.unwrap().get() + rc.width()).unwrap();
@@ -307,20 +307,21 @@ impl<'a: 'b, 'b> NodeJoinContext<'a, 'b> {
 
                 let li = loffset.1.pattern_splits[&lp].sub_index;
 
-                let wrap_patterns = Infix::new(loffset, &wrap_offset)
+                let info = Infix::new(loffset, &wrap_offset)
                     .info_partition(self)
-                    .unwrap()
+                    .unwrap();
+                let wrap_patterns = JoinPartitionInfo::from(info)
                     .to_joined_patterns(self);
                 let wrap_post = match Infix::new(roffset, wrap_offset).join_partition(self) {
                     Ok(p) => p.index,
                     Err(c) => c,
                 };
 
-                let wrapper = self.graph.insert_patterns(
+                let wrapper = self.trav.insert_patterns(
                     std::iter::once(vec![part.index, wrap_post]).chain(wrap_patterns.patterns),
                 );
                 let loc = index.to_pattern_location(lp);
-                self.graph.replace_in_pattern(loc, li..ri + 1, [wrapper]);
+                self.trav.replace_in_pattern(loc, li..ri + 1, [wrapper]);
             }
         }
         part.index

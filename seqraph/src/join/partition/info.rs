@@ -1,4 +1,7 @@
-use crate::{
+use crate::join::context::node::context::NodeJoinContext;
+use derive_into_owned::IntoOwned;
+use derive_more::derive::{Deref, DerefMut, From, Into};
+use hypercontext_api::{
     graph::vertex::{
         child::Child,
         pattern::{
@@ -7,7 +10,6 @@ use crate::{
             Pattern,
         },
     },
-    join::context::node::context::NodeJoinContext,
     partition::{
         context::AsNodeTraceContext, info::{
             border::{
@@ -18,10 +20,7 @@ use crate::{
             },
             range::{
                 children::RangeChildren, role::{
-                    BordersOf,
-                    ModeChildrenOf,
-                    ModePatternCtxOf,
-                    RangeRole,
+                    BordersOf, In, ModeChildrenOf, ModePatternCtxOf, RangeRole
                 }, splits::RangeOffsets, InnerRangeInfo, ModeRangeInfo, PatternRangeInfo
             },
         }, pattern::HasPatternTraceContext
@@ -47,17 +46,17 @@ where
 {
     pub fn join_pattern<'a: 'b, 'b: 'c, 'c>(
         self,
-        ctx: &'c mut NodeJoinContext<'a, 'b>,
+        ctx: &'c mut NodeJoinContext<'a>,
         pattern_id: &PatternId,
     ) -> Pattern
         where R: 'a
     {
         let index = ctx.index;
-        let inner = self.inner_range.map(|r| r.index_pattern_inner(ctx));
+        let inner = self.inner_range.map(|r| JoinInnerRangeInfo(r).index_pattern_inner(ctx));
         match (inner, self.children) {
             (inner, Some(children)) => children.insert_inner(inner).unwrap(),
             (None, None) => ctx
-                .graph
+                .trav
                 .expect_pattern_range(index.to_pattern_location(*pattern_id), self.range)
                 .into_pattern(),
             (Some(_), None) => panic!("inner range without children"),
@@ -108,14 +107,17 @@ where
         }
     }
 }
+#[derive(Debug, Clone, Deref, DerefMut, Into, From)]
+struct JoinInnerRangeInfo<R: RangeRole<Mode = Join>>(InnerRangeInfo<R>)
+    where R::Borders: JoinBorders<R>;
 
-impl<R: RangeRole<Mode = Join>> InnerRangeInfo<R>
+impl<R: RangeRole<Mode = Join>> JoinInnerRangeInfo<R>
 where
     R::Borders: JoinBorders<R>,
 {
     pub fn index_pattern_inner<'a: 'b, 'b: 'c, 'c>(
         &self,
-        ctx: &'c mut NodeJoinContext<'a, 'b>,
+        ctx: &'c mut NodeJoinContext<'a>,
     ) -> Child
         where Self: 'a
     {

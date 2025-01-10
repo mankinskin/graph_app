@@ -1,14 +1,14 @@
 use std::borrow::Borrow;
 
-use crate::{
-    graph::vertex::child::Child,
-    join::{
+use crate::join::{
         context::node::context::NodeJoinContext,
         partition::{
             borders::JoinBorders,
-            Join,
+            Join, JoinPartitionInfo,
         },
-    },
+    };
+use hypercontext_api::{
+    graph::vertex::child::Child,
     partition::{
         delta::PatternSubDeltas,
         info::{
@@ -37,14 +37,14 @@ where
 {
     pub fn from_joined_patterns(
         pats: JoinedPatterns<R>,
-        ctx: &'c mut NodeJoinContext<'a, 'b>,
+        ctx: &'c mut NodeJoinContext<'a>,
     ) -> Self {
         // collect infos about partition in each pattern
-        let index = ctx.graph.insert_patterns(pats.patterns);
+        let index = ctx.trav.insert_patterns(pats.patterns);
         // todo: replace if perfect
         if let SinglePerfect(Some(pid)) = pats.perfect.complete() {
             let loc = ctx.index.to_pattern_location(pid);
-            ctx.graph
+            ctx.trav
                 .replace_in_pattern(loc, pats.range.unwrap(), index);
         }
         Self {
@@ -54,8 +54,8 @@ where
         }
     }
     pub fn from_partition_info(
-        info: PartitionInfo<R>,
-        ctx: &'c mut NodeJoinContext<'a, 'b>,
+        info: JoinPartitionInfo<R>,
+        ctx: &'c mut NodeJoinContext<'a>,
     ) -> Self {
         // collect infos about partition in each pattern
         let pats = JoinedPatterns::from_partition_info(info, ctx);

@@ -1,12 +1,11 @@
-use crate::{
-    graph::vertex::pattern::Pattern,
-    join::{
-        context::node::context::NodeJoinContext,
-        partition::{
-            borders::JoinBorders,
-            Join,
-        },
+use crate::join::{
+    context::node::context::NodeJoinContext,
+    partition::{
+        borders::JoinBorders, info::JoinPatternInfo, Join, JoinPartitionInfo
     },
+};
+use hypercontext_api::{
+    graph::vertex::pattern::{id::PatternId, Pattern},
     partition::{
         delta::PatternSubDeltas,
         info::{
@@ -35,8 +34,8 @@ where
     R::Borders: JoinBorders<R>,
 {
     pub fn from_partition_info<'c>(
-        info: PartitionInfo<R>,
-        ctx: &'c mut NodeJoinContext<'a, 'b>,
+        info: JoinPartitionInfo<R>,
+        ctx: &'c mut NodeJoinContext<'a>,
     ) -> Self
         where 'b: 'c
     {
@@ -55,21 +54,22 @@ where
         } else {
             None
         };
-        let (delta, patterns) = info
+        let perfect = info.perfect.clone();
+        let (delta, patterns) = PartitionInfo::from(info)
             .patterns
             .into_iter()
-            .map(|(pid, pinfo)| ((pid, pinfo.delta), pinfo.join_pattern(ctx, &pid)))
+            .map(|(pid, pinfo): (PatternId, JoinPatternInfo<_>)| ((pid, pinfo.delta), pinfo.join_pattern(ctx, &pid)))
             .unzip();
         Self {
             patterns,
-            perfect: info.perfect,
+            perfect,
             range,
             delta,
         }
     }
     pub fn to_joined_partition(
         self,
-        ctx: &'b mut NodeJoinContext<'a, 'b>,
+        ctx: &'b mut NodeJoinContext<'a>,
     ) -> JoinedPartition<R> {
         JoinedPartition::from_joined_patterns(self, ctx)
     }
