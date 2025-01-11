@@ -1,17 +1,9 @@
 use hypercontext_api::{
     graph::{
         kind::TokenOf,
-        vertex::{
-            child::Child,
-            pattern::{
-                id::PatternId,
-                Pattern,
-            },
-            token::{
-                tokenizing_iter,
-                AsToken,
-            },
-            VertexIndex,
+        vertex::token::{
+            tokenizing_iter,
+            AsToken,
         },
         Hypergraph,
         HypergraphRef,

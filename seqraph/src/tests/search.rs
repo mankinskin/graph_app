@@ -3,8 +3,12 @@ use std::iter::FromIterator;
 use itertools::*;
 use pretty_assertions::assert_eq;
 
-use crate::{
-    search::Searchable,
+use crate::search::Searchable;
+
+#[cfg(test)]
+use hypercontext_api::tests::graph::{
+    context,
+    Context,
 };
 use hypercontext_api::{
     graph::{
@@ -28,10 +32,6 @@ use hypercontext_api::{
             RootedRolePath,
             SubPath,
         },
-    },
-    tests::graph::{
-        context,
-        Context,
     },
     traversal::{
         cache::{

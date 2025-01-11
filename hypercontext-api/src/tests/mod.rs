@@ -1,6 +1,7 @@
 pub mod mock;
 
 pub mod grammar;
+#[cfg(test)]
 pub mod split;
 pub mod partition;
 

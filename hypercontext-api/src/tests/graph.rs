@@ -2,10 +2,13 @@ use std::sync::{
     Arc, RwLock, RwLockReadGuard, RwLockWriteGuard
 };
 
-use itertools::Itertools;
+#[cfg(test)]
+use {
+    itertools::Itertools,
+    crate::graph::kind::BaseGraphKind,
+};
 
-
-use crate::graph::{kind::BaseGraphKind, vertex::{child::Child, pattern::id::PatternId, token::Token}, Hypergraph, HypergraphRef};
+use crate::graph::{vertex::{child::Child, pattern::id::PatternId, token::Token}, Hypergraph, HypergraphRef};
 
 pub struct Context {
     pub graph: HypergraphRef,

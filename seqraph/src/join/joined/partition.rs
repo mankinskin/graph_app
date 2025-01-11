@@ -17,7 +17,6 @@ use hypercontext_api::{
                 SinglePerfect,
             },
             range::role::RangeRole,
-            PartitionInfo,
         },
     },
 };

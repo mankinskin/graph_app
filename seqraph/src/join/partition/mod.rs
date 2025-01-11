@@ -3,7 +3,6 @@ pub mod info;
 pub mod join;
 
 use borders::JoinBorders;
-use derive_into_owned::IntoOwned;
 use derive_more::derive::{Deref, DerefMut, From, Into};
 use info::JoinPatternInfo;
 

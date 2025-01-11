@@ -1,5 +1,4 @@
 use crate::join::context::node::context::NodeJoinContext;
-use derive_into_owned::IntoOwned;
 use derive_more::derive::{Deref, DerefMut, From, Into};
 use hypercontext_api::{
     graph::vertex::{
@@ -20,7 +19,7 @@ use hypercontext_api::{
             },
             range::{
                 children::RangeChildren, role::{
-                    BordersOf, In, ModeChildrenOf, ModePatternCtxOf, RangeRole
+                    BordersOf, ModeChildrenOf, ModePatternCtxOf, RangeRole
                 }, splits::RangeOffsets, InnerRangeInfo, ModeRangeInfo, PatternRangeInfo
             },
         }, pattern::HasPatternTraceContext

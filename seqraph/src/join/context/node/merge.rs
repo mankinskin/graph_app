@@ -11,25 +11,37 @@ use derive_new::new;
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 
+use super::context::NodeJoinContext;
 use crate::join::partition::Join;
 use hypercontext_api::{
     graph::vertex::{
         child::Child,
         pattern::Pattern,
-    }, partition::{
+    },
+    partition::{
         info::{
-            range::role::In, InfoPartition, PartitionInfo
-        }, splits::{
-            has_splits::HasPosSplits, pos::{PosSplitContext, SplitKind}, PosSplitsOf
-        }, Infix, ToPartition
-    }, split::{
+            range::role::In,
+            InfoPartition,
+            PartitionInfo,
+        },
+        splits::{
+            has_splits::HasPosSplits,
+            pos::{
+                PosSplitContext,
+                SplitKind,
+            },
+            PosSplitsOf,
+        },
+        Infix,
+    },
+    split::{
         cache::split::Split,
         VertexSplitPos,
-    }, traversal::cache::key::SplitKey, HashMap
+    },
+    traversal::cache::key::SplitKey,
+    HashMap,
 };
 use std::fmt::Debug;
-use super::context::NodeJoinContext;
-
 
 #[derive(Debug, new)]
 pub struct NodeMergeContext<'a: 'b, 'b> {
@@ -41,7 +53,7 @@ impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b> {
         &'c mut self,
         partitions: &Vec<Child>,
     ) -> LinkedHashMap<SplitKey, Split>
-    //where
+//where
     //    for<'t> &'t S::Split: SplitKind,
     //    PosSplits<S>: HasPosSplits<Split = S::Split>,
     {
@@ -59,7 +71,10 @@ impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b> {
             let left = *merges.get(&lr).unwrap();
             let right = *merges.get(&rr).unwrap();
             if !lr.is_empty() || !lr.is_empty() {
-                if let Some((&pid, _)) = (v.borrow() as &VertexSplitPos).iter().find(|(_, s)| s.inner_offset.is_none()) {
+                if let Some((&pid, _)) = (v.borrow() as &VertexSplitPos)
+                    .iter()
+                    .find(|(_, s)| s.inner_offset.is_none())
+                {
                     self.ctx.trav.replace_in_pattern(
                         index.to_pattern_location(pid),
                         0..,
@@ -91,13 +106,20 @@ impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b> {
             for start in 0..num_offsets - len + 1 {
                 let range = start..start + len;
 
-                let lo = offsets.iter().map(PosSplitContext::from).nth(start).unwrap();
-                let ro = offsets.iter().map(PosSplitContext::from).nth(start + len).unwrap();
+                let lo = offsets
+                    .iter()
+                    .map(PosSplitContext::from)
+                    .nth(start)
+                    .unwrap();
+                let ro = offsets
+                    .iter()
+                    .map(PosSplitContext::from)
+                    .nth(start + len)
+                    .unwrap();
 
                 // todo: could be read from cache
                 let infix = Infix::new(lo, ro);
-                let res: Result<PartitionInfo<In<Join>>, _> =
-                    infix.info_partition(self.ctx);
+                let res: Result<PartitionInfo<In<Join>>, _> = infix.info_partition(self.ctx);
 
                 let index = match res {
                     Ok(info) => {

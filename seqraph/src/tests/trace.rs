@@ -1,15 +1,40 @@
 use std::iter::FromIterator;
 
-use hypercontext_api::{graph::vertex::{location::SubLocation, wide::Wide}, lab, tests::graph::{context_mut, Context}, traversal::{cache::{entry::{position::{Edges, PositionCache}, vertex::VertexCache}, key::DirectedKey}, fold::{state::FoldState, FoldContext}}, HashMap, HashSet};
+use hypercontext_api::{
+    graph::vertex::{
+        location::SubLocation,
+        wide::Wide,
+    },
+    lab,
+    tests::graph::{
+        context_mut,
+        Context,
+    },
+    traversal::{
+        cache::{
+            entry::{
+                position::{
+                    Edges,
+                    PositionCache,
+                },
+                vertex::VertexCache,
+            },
+            key::DirectedKey,
+        },
+        fold::state::FoldState,
+    },
+    HashMap,
+    HashSet,
+};
 
+use crate::search::context::SearchContext;
 
 pub fn build_trace1() -> FoldState {
     let Context {
         graph, a, d, e, bc, ..
     } = &*context_mut();
     let query = vec![*a, *bc, *d, *e];
-    FoldContext::fold_pattern(graph, query)
-        .unwrap()
+    SearchContext::new(graph)
         .find_pattern_ancestor(query)
         .unwrap()
         .result

@@ -1,20 +1,22 @@
-use std::{
-    borrow::Borrow,
-    num::NonZeroUsize,
+use {
+    std::{
+        borrow::Borrow,
+        num::NonZeroUsize,
+    },
+    crate::{
+        split::side::{
+            SplitBack,
+            SplitFront,
+            SplitSide,
+        },
+        tests::mock,
+    },
+    crate::graph::vertex::{
+        child::Child,
+        pattern::pattern_width,
+    },
 };
 
-use crate::{
-    split::side::{
-        SplitBack,
-        SplitFront,
-        SplitSide,
-    },
-    tests::mock,
-};
-use crate::graph::vertex::{
-    child::Child,
-    pattern::pattern_width,
-};
 
 #[test]
 fn token_offset_split() {

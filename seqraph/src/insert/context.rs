@@ -63,10 +63,10 @@ impl InsertContext {
         Self { graph }
     }
     pub fn join(
-        mut self,
+        &self,
         fold_state: &mut FoldState,
     ) -> JoinContext {
-        JoinContext::new(self, fold_state)
+        JoinContext::new(self.graph.clone(), fold_state)
     }
     pub fn insert_pattern(
         &mut self,
