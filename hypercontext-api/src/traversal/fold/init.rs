@@ -1,9 +1,9 @@
-use crate::{graph::vertex::child::Child, traversal::{cache::key::UpKey, container::extend::ExtendStates, state::{query::QueryState, start::StartState}, TraversalKind}};
+use crate::{graph::vertex::child::Child, traversal::{cache::{key::UpKey, TraversalCache}, container::extend::ExtendStates, state::{query::QueryState, start::StartState}, states::StatesContext, TraversalKind}};
 
 
 pub trait InitStates<K: TraversalKind> {
     fn start_index(&self) -> Child;
-    fn init_states(self) -> K::Container;
+    fn init_context(self) -> StatesContext<K>;
 }
 pub struct QueryStateInit<'a, K: TraversalKind> {
     pub trav: &'a K::Trav,
@@ -13,7 +13,7 @@ impl<K: TraversalKind> InitStates<K> for QueryStateInit<'_, K> {
     fn start_index(&self) -> Child {
         self.query.start_index(self.trav)
     }
-    fn init_states(self) -> <K as TraversalKind>::Container {
+    fn init_context(self) -> StatesContext<K> {
         let start_index = self.start_index();
 
         let mut start = StartState {
@@ -30,8 +30,12 @@ impl<K: TraversalKind> InitStates<K> for QueryStateInit<'_, K> {
             .into_iter()
             .map(|n| (1, n));
 
-        let mut states = K::Container::default();
-        states.extend(init);
-        states
+        let mut ctx = StatesContext {
+            cache: TraversalCache::new(self.trav, self.start_index()),
+            states: K::Container::default(),
+            pruning_map: Default::default(),
+        };
+        ctx.extend(init);
+        ctx
     }
 }

@@ -19,7 +19,7 @@ use crate::{graph::vertex::wide::Wide, traversal::{
     }, trace::TraceContext
 }};
 
-use super::{cache::key::root::RootKey, container::{extend::ExtendStates, pruning::PruneStates}, context::TraversalContext, trace::TraceInit, TraversalKind};
+use super::{cache::key::root::RootKey, container::{extend::ExtendStates, pruning::PruneStates}, TraversalContext, trace::TraceInit, TraversalKind};
 
 #[derive(Clone, Debug)]
 pub struct StateNext<T> {

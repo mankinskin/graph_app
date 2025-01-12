@@ -34,11 +34,12 @@ pub fn build_trace1() -> FoldState {
         graph, a, d, e, bc, ..
     } = &*context_mut();
     let query = vec![*a, *bc, *d, *e];
-    SearchContext::new(graph)
+    let res = SearchContext::new(graph)
         .find_pattern_ancestor(query)
         .unwrap()
         .result
-        .unwrap_incomplete()
+        .unwrap_incomplete();
+    res
 }
 
 #[test]

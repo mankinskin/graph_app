@@ -1,8 +1,6 @@
 use super::{
-    context::{
-        StatesContext,
-        TraversalContext,
-    },
+    states::StatesContext,
+    TraversalContext,
     result::FoundRange,
     state::{
         traversal::TraversalState,
@@ -103,11 +101,7 @@ impl<'a, K: TraversalKind> FoldContext<'a, K> {
         let start_index = init.start_index();
 
         let mut ctx = Self {
-            states: StatesContext {
-                cache: TraversalCache::new(trav, start_index),
-                states: init.init_states(),
-                pruning_map: Default::default(),
-            },
+            states: init.init_context(),
             trav,
             end_state: None,
             max_width: start_index.width(),

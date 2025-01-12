@@ -14,7 +14,7 @@ use crate::{
                 prev::PrevKey,
                 target::TargetKey,
             },
-        }, context::TraversalContext, result::kind::RoleChildPath, TraversalKind
+        }, TraversalContext, result::kind::RoleChildPath, TraversalKind
     }
 };
 

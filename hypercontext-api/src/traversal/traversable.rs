@@ -69,7 +69,7 @@ pub use impl_traversable_mut;
 
 use crate::graph::{kind::GraphKind, Hypergraph, HypergraphRef};
 
-use super::{context::TraversalContext, TraversalKind};
+use super::{TraversalContext, TraversalKind};
 
 //impl_traversable! {
 //    impl for &'_ Hypergraph,

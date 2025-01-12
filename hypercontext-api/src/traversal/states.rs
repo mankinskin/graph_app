@@ -18,26 +18,6 @@ use crate::traversal::cache::{
 use itertools::Itertools;
 use std::fmt::Debug;
 
-//  1. Input
-//      - Pattern
-//      - QueryState
-//  2. Init
-//      - Trav
-//      - start index
-//      - start states
-//  3. Fold
-//      - TraversalCache
-//      - FoldStepState
-
-/// context for generating next states
-#[derive(Debug)]
-pub struct TraversalContext<'a, K: TraversalKind> {
-    pub states: &'a mut StatesContext<K>,
-    pub trav: &'a K::Trav,
-}
-
-impl<K: TraversalKind> Unpin for TraversalContext<'_, K> {}
-
 #[derive(Debug)]
 pub struct StatesContext<K: TraversalKind> {
     pub cache: TraversalCache,

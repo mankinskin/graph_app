@@ -29,7 +29,7 @@ use crate::{
             key::{
                 pos::QueryPosition, prev::ToPrev, target::TargetKey, DirectedKey
             },
-        }, container::pruning::PruneStates, context::TraversalContext, result::kind::{
+        }, container::pruning::PruneStates, TraversalContext, result::kind::{
             Primer,
             RoleChildPath,
         }, state::{
