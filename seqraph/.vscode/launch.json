@@ -1,0 +1,30 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug",
+            "type": "lldb",
+            "request": "launch",
+            //"program": "${workspaceFolder}/../target/debug/deps/seqraph-bab301329ac7732f.exe",
+            //"args": [],
+            "cwd": "${workspaceFolder}",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                ],
+                "filter": {
+                    "name": "seqraph",
+                    "kind": "lib"
+                }
+            },
+            "args": [
+                "trace_graph1"
+                //"${selectedText}"
+            ],
+        }
+    ]
+}
