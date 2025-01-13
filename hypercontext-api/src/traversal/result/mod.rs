@@ -1,7 +1,7 @@
 use crate::{
     graph::vertex::{
         child::Child,
-        pattern::IntoPattern,
+        pattern::{pattern_width, IntoPattern},
     },
     path::structs::query_range_path::{
         QueryPath,
@@ -17,12 +17,12 @@ pub mod kind;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FoundRange {
-    Complete(Child),
+    Complete(Child, QueryState),
     Incomplete(FoldState),
 }
 
 impl FoundRange {
-    pub fn unwrap_complete(self) -> Child {
+    pub fn unwrap_complete(self) -> (Child, QueryState) {
         self.expect_complete("Unable to unwrap complete FoundRange")
     }
     pub fn unwrap_incomplete(self) -> FoldState {
@@ -31,9 +31,9 @@ impl FoundRange {
     pub fn expect_complete(
         self,
         msg: &str,
-    ) -> Child {
+    ) -> (Child, QueryState) {
         match self {
-            Self::Complete(c) => c,
+            Self::Complete(c, q) => (c, q),
             _ => panic!("{}", msg),
         }
     }
@@ -51,21 +51,21 @@ impl FoundRange {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FinishedState {
     pub result: FoundRange,
-    pub query: QueryState,
+    //pub query: QueryState,
 }
 
 impl FinishedState {
     pub fn new(
         result: impl Into<FoundRange>,
-        query: impl Into<QueryState>,
+        //query: impl Into<QueryState>,
     ) -> Self {
         Self {
             result: result.into(),
-            query: query.into(),
+            //query: query.into(),
         }
     }
     #[track_caller]
-    pub fn unwrap_complete(self) -> Child {
+    pub fn unwrap_complete(self) -> (Child, QueryState) {
         self.result.unwrap_complete()
     }
     #[allow(unused)]
@@ -73,7 +73,7 @@ impl FinishedState {
     pub fn expect_complete(
         self,
         msg: &str,
-    ) -> Child {
+    ) -> (Child, QueryState) {
         self.result.expect_complete(msg)
     }
 }
@@ -86,11 +86,10 @@ impl FinishedState {
     ) -> Self {
         let query = query.into_pattern();
         Self {
-            result: FoundRange::Complete(index.to_child()),
-            query: QueryState {
-                pos: query.len().into(),
+            result: FoundRange::Complete(index.to_child(), QueryState {
+                pos: pattern_width(&query).into(),
                 path: QueryRangePath::complete(query),
-            },
+            }),
         }
     }
 }

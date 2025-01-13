@@ -74,17 +74,16 @@ impl InsertContext {
     ) -> Result<(Child, QueryRangePath), ErrorReason> {
         match FoldContext::<InsertTraversal>::fold_pattern(self, query) {
             Ok(result) => match result.result {
-                FoundRange::Complete(c) => Ok((c, result.query.path)),
+                FoundRange::Complete(c, q) => Ok((c, q.path)),
                 FoundRange::Incomplete(mut fold_state) => Ok((
                     self.join(&mut fold_state).join_subgraph(),
-                    result.query.path,
+                    fold_state.end_state.query.path,
                 )),
             },
             Err(ErrorState {
                 reason: ErrorReason::SingleIndex(c),
-                query,
-                found: Some(FoundRange::Complete(_)),
-            }) => Ok((c, query.path)),
+                found: Some(FoundRange::Complete(_, q)),
+            }) => Ok((c, q.path)),
             Err(err) => Err(err.reason),
         }
     }

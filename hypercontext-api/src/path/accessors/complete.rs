@@ -32,7 +32,7 @@ impl PathComplete for FoundRange {
     /// returns child if reduced to single child
     fn as_complete(&self) -> Option<Child> {
         match self {
-            Self::Complete(c) => Some(*c),
+            Self::Complete(c, _) => Some(*c),
             _ => None,
         }
     }

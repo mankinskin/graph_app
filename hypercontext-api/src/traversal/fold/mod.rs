@@ -49,7 +49,6 @@ use init::{
 use std::{
     borrow::Borrow,
     fmt::Debug,
-    ops::ControlFlow,
 };
 
 pub mod init;
@@ -58,7 +57,7 @@ pub mod state;
 #[derive(Debug)]
 pub struct ErrorState {
     pub reason: ErrorReason,
-    pub query: QueryState,
+    //pub query: QueryState,
     pub found: Option<FoundRange>,
 }
 /// context for running fold traversal
@@ -116,17 +115,19 @@ impl<'a, K: TraversalKind> FoldContext<'a, K> {
                 trav: self.trav,
                 states: &mut self.states,
             };
-            if Some(ControlFlow::Break(()))
-                == tstate.next_states(&mut ctx).map(|next_states| {
-                    next_states.apply(ApplyStatesCtx {
-                        tctx: &mut ctx,
-                        max_width: &mut self.max_width,
-                        end_state: &mut self.end_state,
-                        depth,
-                    })
-                })
+            if let Some(next_states) = tstate.next_states(&mut ctx)
             {
-                break;
+                if (ApplyStatesCtx {
+                    tctx: &mut ctx,
+                    max_width: &mut self.max_width,
+                    end_state: &mut self.end_state,
+                    depth,
+                })
+                .apply_transition(next_states)
+                .is_break()
+                {
+                    break;
+                }
             }
         }
         Ok(())
@@ -146,8 +147,7 @@ impl<'a, K: TraversalKind> FoldContext<'a, K> {
         } else {
             Err(ErrorState {
                 reason: ErrorReason::NotFound,
-                query,
-                found: Some(FoundRange::Complete(self.start_index)),
+                found: Some(FoundRange::Complete(self.start_index, query)),
             })
         }
     }
@@ -170,7 +170,7 @@ impl FoldFinished {
         };
         let query = final_state.state.query.clone();
         let found_path = if let EndKind::Complete(c) = &final_state.state.kind {
-            FoundRange::Complete(*c)
+            FoundRange::Complete(*c, query)
         } else {
             // todo: complete bottom edges of root if
             // assert same root
@@ -187,7 +187,6 @@ impl FoldFinished {
             FoundRange::Incomplete(state)
         };
         FinishedState {
-            query: query,
             result: found_path,
         }
     }

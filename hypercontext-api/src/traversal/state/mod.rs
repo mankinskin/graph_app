@@ -44,25 +44,25 @@ pub struct ApplyStatesCtx<'a: 'b, 'b, K: TraversalKind> {
     pub max_width: &'a mut usize,
     pub end_state: &'a mut Option<EndState>,
 }
-impl NextStates {
-    pub fn apply<K: TraversalKind>(self, ctx: ApplyStatesCtx<'_, '_, K>) -> ControlFlow<()> {
-        match self {
+impl<'a: 'b, 'b, K: TraversalKind> ApplyStatesCtx<'a, 'b, K> {
+    pub fn apply_transition(self, next_states: NextStates) -> ControlFlow<()> {
+        match next_states {
             NextStates::Child(_) | NextStates::Prefixes(_) | NextStates::Parents(_) => {
-                ctx.tctx.states.extend(
-                    self
+                self.tctx.states.extend(
+                    next_states
                         .into_states()
                         .into_iter()
-                        .map(|nstate| (ctx.depth + 1, nstate)),
+                        .map(|nstate| (self.depth + 1, nstate)),
                 );
                 ControlFlow::Continue(())
             },
             NextStates::Empty => ControlFlow::Continue(()),
             NextStates::End(StateNext { inner: end, .. }) => {
                 //debug!("{:#?}", state);
-                if end.width() >= *ctx.max_width {
+                if end.width() >= *self.max_width {
                     end.trace(&mut TraceContext {
-                        cache: &mut ctx.tctx.states.cache,
-                        trav: ctx.tctx.trav,
+                        cache: &mut self.tctx.states.cache,
+                        trav: self.tctx.trav,
                     });
 
                     // note: not really needed with completion
@@ -73,13 +73,13 @@ impl NextStates {
                     //        cache.continue_waiting(&root_key)
                     //    );
                     //}
-                    if end.width() > *ctx.max_width {
-                        *ctx.max_width = end.width();
+                    if end.width() > *self.max_width {
+                        *self.max_width = end.width();
                         //end_states.clear();
                     }
                     let is_final = end.reason == EndReason::QueryEnd
                         && matches!(end.kind, EndKind::Complete(_));
-                    *ctx.end_state = Some(end);
+                    *self.end_state = Some(end);
                     if is_final {
                         ControlFlow::Break(())
                     } else {
@@ -88,12 +88,14 @@ impl NextStates {
                 } else {
                     // larger root already found
                     // stop other paths with this root
-                    ctx.tctx.states.prune_below(end.root_key());
+                    self.tctx.states.prune_below(end.root_key());
                     ControlFlow::Continue(())
                 }
             }
         }
     }
+}
+impl NextStates {
     pub fn into_states(self) -> Vec<TraversalState> {
         match self {
             Self::Parents(state) => state

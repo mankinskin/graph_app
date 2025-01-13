@@ -51,9 +51,8 @@ impl QueryState {
             1 => Err((ErrorReason::SingleIndex(first), query)),
             _ => Ok(query),
         }
-        .map_err(|(reason, query)| ErrorState {
+        .map_err(|(reason, _)| ErrorState {
             reason,
-            query,
             found: None,
         })
     }

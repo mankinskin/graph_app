@@ -19,12 +19,12 @@ use hypercontext_api::{
                 pattern::PatternLocation,
                 SubLocation,
             },
-            token::Token,
+            token::Token, wide::Wide,
         }, HypergraphRef
     },
     lab,
     path::structs::{
-        query_range_path::{QueryPath, QueryRangePath, RangePath},
+        query_range_path::{QueryRangePath, RangePath},
         role_path::RolePath,
         rooted_path::{
             IndexRoot,
@@ -56,7 +56,7 @@ use hypercontext_api::{
     }, HashMap, HashSet,
 };
 
-//#[test]
+#[test]
 #[allow(dead_code)]
 fn find_parent1() {
     let Context {
@@ -68,7 +68,6 @@ fn find_parent1() {
         ab,
         bc,
         abc,
-        abcd,
         ..
     } = &*context();
     let a_bc_pattern = vec![Child::new(a, 1), Child::new(bc, 2)];
@@ -105,24 +104,42 @@ fn find_parent1() {
     let query = a_bc_d_pattern;
     assert_eq!(
         graph.find_parent(&query),
-        Ok(FinishedState::new_complete(query, abcd)),
+        Ok(FinishedState {
+            result: FoundRange::Complete(
+                *abc,
+                QueryState {
+                    path: QueryRangePath::new_range(query.clone(), 0, query.len() - 1),
+                    pos: abc.width().into(),
+                },
+            )
+        }),
         "a_bc_d"
     );
     let query = a_b_c_pattern.clone();
     assert_eq!(
         graph.find_parent(&query),
-        Ok(FinishedState::new_complete(query, abc)),
+        Ok(FinishedState {
+            result: FoundRange::Complete(
+                *ab,
+                QueryState {
+                    path: QueryRangePath::new_range(query.clone(), 0, query.len() - 1),
+                    pos: ab.width().into(),
+                },
+            ),
+        }),
         "a_b_c"
     );
     let query = [&a_b_c_pattern[..], &[Child::new(c, 1)]].concat();
     assert_eq!(
         graph.find_parent(&query),
         Ok(FinishedState {
-            result: FoundRange::Complete(*abc),
-            query: QueryState {
-                path: QueryRangePath::new_range(query.clone(), 0, query.len() - 1),
-                pos: (query.len() - 1).into(),
-            },
+            result: FoundRange::Complete(
+                *ab,
+                QueryState {
+                    path: QueryRangePath::new_range(query.clone(), 0, query.len() - 2),
+                    pos: ab.width().into(),
+                },
+            )
         }),
         "a_b_c_c"
     );
@@ -201,11 +218,13 @@ fn find_ancestor1() {
     assert_eq!(
         graph.find_ancestor(&query),
         Ok(FinishedState {
-            result: FoundRange::Complete(*abc),
-            query: QueryState {
-                path: QueryRangePath::new_range(query.clone(), 0, query.len() - 2),
-                pos: (query.len() - 2).into(),
-            }
+            result: FoundRange::Complete(
+                *abc,
+                QueryState {
+                    path: QueryRangePath::new_range(query.clone(), 0, query.len() - 2),
+                    pos: (query.len() - 2).into(),
+                },
+            )
         }),
         "a_b_c_c"
     );
@@ -400,10 +419,6 @@ fn find_ancestor2() {
                     },
                 },
             }),
-            query: QueryState {
-                pos: (query.len() - 1).into(),
-                path: QueryRangePath::complete(query),
-            }
         }),
         "by_z"
     );
@@ -733,10 +748,6 @@ fn find_ancestor3() {
                 //    },
                 //},
             }),
-            query: QueryState {
-                pos: (query.len() - 1).into(),
-                path: QueryRangePath::complete(query),
-            }
         }),
         "ab_y"
     );

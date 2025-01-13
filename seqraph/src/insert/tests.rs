@@ -116,7 +116,7 @@ fn index_pattern2() {
     let ab = graph_ref
         .find_sequence("ab".chars())
         .unwrap()
-        .expect_complete("ab");
+        .expect_complete("ab").0;
 
     let graph = graph_ref.graph();
     let aby_vertex = graph.expect_vertex(aby);
@@ -134,11 +134,13 @@ fn index_pattern2() {
     assert_eq!(
         aby_found,
         Ok(FinishedState {
-            result: FoundRange::Complete(aby),
-            query: QueryState {
-                pos: (query.len() - 1).into(),
-                path: QueryRangePath::complete(query),
-            },
+            result: FoundRange::Complete(
+                aby,
+                QueryState {
+                    pos: query.width().into(),
+                    path: QueryRangePath::complete(query),
+                },
+            )
         }),
         "aby"
     );
@@ -169,7 +171,7 @@ fn index_infix1() {
     let ab = graph_ref
         .find_ancestor([a, b])
         .unwrap()
-        .expect_complete("ab");
+        .expect_complete("ab").0;
     let graph = graph_ref.graph();
     let aby_vertex = graph.expect_vertex(aby);
     assert_eq!(aby.width(), 3, "aby");
@@ -189,18 +191,20 @@ fn index_infix1() {
     assert_eq!(
         aby_found,
         Ok(FinishedState {
-            result: FoundRange::Complete(aby),
-            query: QueryState {
-                pos: (query.len() - 1).into(),
-                path: QueryRangePath::complete(query),
-            }
+            result: FoundRange::Complete(
+                aby,
+                QueryState {
+                    pos: query.width().into(),
+                    path: QueryRangePath::complete(query),
+                },
+            ),
         }),
         "aby"
     );
     let abyz = graph_ref
         .find_ancestor([ab, yz])
         .unwrap()
-        .expect_complete("abyz");
+        .expect_complete("abyz").0;
     let graph = graph_ref.graph();
     let abyz_vertex = graph.expect_vertex(abyz);
     assert_eq!(
