@@ -14,7 +14,7 @@ use crate::{
         accessors::role::End,
         mutators::{
             append::PathAppend,
-            move_path::root::MoveRootPos,
+            move_path::{key::TokenPosition, root::MoveRootPos},
             pop::PathPop,
         },
         structs::{
@@ -28,7 +28,7 @@ use crate::{
             },
         },
         BaseQuery
-    }
+    }, traversal::state::query::QueryState
 };
 
 
@@ -57,6 +57,7 @@ BaseQuery
 + PathPop
 + MoveRootPos<Right, End>
 {
+    fn to_query_state(self) -> QueryState;
     fn complete(pattern: impl IntoPattern) -> Self;
     fn new_directed<
         D: MatchDirection,
@@ -65,6 +66,12 @@ BaseQuery
 }
 
 impl QueryPath for QueryRangePath {
+    fn to_query_state(self) -> QueryState {
+        QueryState {
+            path: self,
+            pos: TokenPosition::default(),
+        }
+    }
     fn complete(query: impl IntoPattern) -> Self {
         let query = query.into_pattern();
         let len = query.len();
@@ -83,6 +90,12 @@ impl QueryPath for QueryRangePath {
     }
 }
 impl QueryPath for PatternPrefixPath {
+    fn to_query_state(self) -> QueryState {
+        QueryState {
+            path: self.into_range(0),
+            pos: TokenPosition::default(),
+        }
+    }
     fn complete(query: impl IntoPattern) -> Self {
         let pattern = query.into_pattern();
         Self {

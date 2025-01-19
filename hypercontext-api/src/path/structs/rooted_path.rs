@@ -100,6 +100,24 @@ impl<R: PathRoot> RootedRolePath<Start, R> {
         }
     }
 }
+impl<R: PathRoot> RootedRolePath<End, R> {
+    pub fn into_range(
+        self,
+        entry: usize,
+    ) -> RootedRangePath<R> {
+        RootedRangePath {
+            root: self.root,
+            start: RolePath {
+                sub_path: SubPath {
+                    root_entry: entry,
+                    path: vec![],
+                },
+                _ty: Default::default(),
+            },
+            end: self.role_path,
+        }
+    }
+}
 
 impl From<SearchPath> for RootedRolePath<Start, IndexRoot> {
     fn from(path: SearchPath) -> Self {

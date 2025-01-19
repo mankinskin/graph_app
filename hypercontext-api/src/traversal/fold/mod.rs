@@ -19,8 +19,7 @@ use crate::{
             },
             wide::Wide,
         },
-    },
-    traversal::{
+    }, path::structs::query_range_path::{PatternPrefixPath, QueryPath, QueryRangePath}, traversal::{
         cache::{
             key::{
                 root::RootKey,
@@ -40,7 +39,7 @@ use crate::{
             },
             query::QueryState,
         },
-    },
+    }
 };
 use init::{
     InitStates,
@@ -60,6 +59,27 @@ pub struct ErrorState {
     //pub query: QueryState,
     pub found: Option<FoundRange>,
 }
+
+pub type FoldResult = Result<FinishedState, ErrorState>;
+
+pub trait Foldable {
+    fn fold<'a, K: TraversalKind>(self, trav: &'a K::Trav) -> FoldResult;
+}
+
+macro_rules! impl_foldable {
+    ($t:ty, $f:ident) => {
+        impl Foldable for $t {
+            fn fold<'a, K: TraversalKind>(self, trav: &'a K::Trav) -> FoldResult {
+                FoldContext::<'a, K>::$f(trav, self)
+            }
+        }
+    };
+}
+impl_foldable!(QueryState, fold_query);
+impl_foldable!(QueryRangePath, fold_path);
+impl_foldable!(PatternPrefixPath, fold_path);
+impl_foldable!(Pattern, fold_pattern);
+
 /// context for running fold traversal
 #[derive(Debug)]
 pub struct FoldContext<'a, K: TraversalKind> {
@@ -81,13 +101,22 @@ impl<'a, K: TraversalKind> FoldContext<'a, K> {
     pub fn fold_pattern<P: IntoPattern>(
         trav: &'a K::Trav,
         query_pattern: P,
-    ) -> Result<FinishedState, ErrorState> {
+    ) -> FoldResult {
         let query_pattern = query_pattern.into_pattern();
 
         // build cursor path
         let query = QueryState::new::<TravKind<K::Trav>, _>(query_pattern.borrow())?;
 
         Self::fold_query(trav, query)
+    }
+    pub fn fold_path(
+        trav: &'a K::Trav,
+        query: impl QueryPath,
+    ) -> Result<FinishedState, ErrorState> {
+        Self::fold_query(
+            trav,
+            query.to_query_state(),
+        )
     }
     pub fn fold_query(
         trav: &'a K::Trav,
