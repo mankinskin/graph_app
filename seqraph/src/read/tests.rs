@@ -8,6 +8,7 @@ use std::{
 use maplit::hashset;
 use pretty_assertions::assert_eq;
 
+use crate::search::Searchable;
 use hypercontext_api::{
     graph::{
         vertex::{
@@ -23,9 +24,6 @@ use hypercontext_api::{
         HypergraphRef,
     },
     traversal::traversable::Traversable,
-};
-use crate::{
-    search::Searchable,
     HashMap,
 };
 

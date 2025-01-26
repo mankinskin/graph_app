@@ -20,12 +20,13 @@ use hypercontext_api::{
         },
     },
     path::{
-        accessors::role::End,
+        accessors::{has_path::HasRolePath, role::{End, Start}},
         mutators::append::PathAppend,
         structs::{
             overlap_primer::OverlapPrimer,
             query_range_path::PatternPrefixPath,
             role_path::RolePath,
+            rooted_path::{RootedRolePath, SubPath},
         },
     },
     traversal::{
@@ -41,11 +42,7 @@ use hypercontext_api::{
 };
 use crate::{
     insert::{
-        side::{
-            SplitBack,
-            SplitFront,
-        },
-        IndexSplitResult,
+        HasInsertContext, IndexSplitResult
     },
     read::{
         bands::{
@@ -63,9 +60,10 @@ use crate::{
         reader::context::ReadContext,
     },
 };
+
 pub mod overlap;
 
-impl<'p> ReadContext<'p> {
+impl ReadContext {
     #[instrument(skip(self, first, context))]
     pub fn read_overlaps(
         &mut self,
@@ -90,41 +88,23 @@ impl<'p> ReadContext<'p> {
         match self.find_next_overlap(cache, context) {
             Ok((start_bound, next_link, expansion, mut cache)) => {
                 //println!("found overlap at {}: {:?}", start_bound, expansion);
-                if let Some(ctx) = if let Some((past_end_bound, past_ctx)) =
-                    self.take_past_context_pattern(start_bound, &mut cache.chain)
-                {
+                let past_ctx = self.take_past_context_pattern(
+                    start_bound,
+                    &mut cache.chain,
+                );
+                let ctx = if let Some((past_end_bound, past_ctx)) = past_ctx {
                     println!("reusing back context {past_end_bound}: {:#?}", past_ctx);
                     if past_end_bound == start_bound {
                         Some(past_ctx)
                     } else {
                         assert!(past_end_bound < start_bound);
-                        let next = self.odd_overlap_next(
-                            &mut cache,
-                            past_end_bound,
-                            &next_link,
-                            expansion,
-                            past_ctx,
-                        );
-                        cache.append(self, start_bound, next);
-
-                        //OverlapBand {
-                        //    end: BandEnd::Chain(expansion),
-                        //    back_context: vec![inner_back_ctx],
-                        //}
-                        // use postfix_path of next to index inner context in previous
-                        // index overlap between previous and new coming index
-                        // create new bundle to start with
-
-                        // - remember to bundle latest bands
-                        // - until after band where odd overlap ocurred
-                        // - add extra band with postfix of previous band
-                        // - if overlap after previous band
-                        None
+                        panic!("Shouldn't this be impossible?!");
                     }
                 } else {
                     //println!("building back context from path");
                     Some(self.back_context_from_path(&mut cache.chain, &next_link))
-                } {
+                };
+                if let Some(ctx) = ctx {
                     cache.append(
                         self,
                         start_bound,
@@ -139,7 +119,7 @@ impl<'p> ReadContext<'p> {
                 }
 
                 self.read_next_overlap(cache, context)
-            }
+            },
             Err(cache) => {
                 //println!("No overlap found");
                 cache.chain.close(self)
@@ -147,43 +127,44 @@ impl<'p> ReadContext<'p> {
         }
     }
     /// find largest expandable postfix
-    #[instrument(skip(self, cache, prefix_query))]
+    #[instrument(skip(self, cache, prefix_path))]
     fn find_next_overlap(
         &mut self,
         mut cache: OverlapCache,
-        prefix_query: &mut PatternPrefixPath,
+        prefix_path: &mut PatternPrefixPath,
     ) -> Result<(usize, OverlapLink, Child, OverlapCache), OverlapCache> {
+
         let last = cache.last.take().expect("No last overlap to take!");
         let last_end = *last.band.end.index().unwrap();
+
         let mut acc = ControlFlow::Continue((
             None as Option<RolePath<End>>,
             OverlapBundle::from(last.band),
         ));
-        let mut indexer = self.indexer();
-        let mut iter = PostfixIterator::new(&mut indexer, last_end);
+
+        let mut insert_context = self.insert_context();
+        let mut iter = PostfixIterator::new(&mut insert_context.graph_mut(), last_end);
+
         while let Some((postfix_location, postfix)) = iter.next() {
             let (path, mut bundle) = acc.continue_value().unwrap();
             let start_bound = cache.end_bound - postfix.width();
 
             let postfix_path = if let Some(path) = path {
-                path.path_append(postfix_location)
+                path.path_append(postfix_location);
+                path
             } else {
-                RolePath::new(postfix, postfix_location)
+                RolePath::from(
+                    SubPath::new(postfix_location.sub_index),
+                )
             };
             // try expand
             match self
                 .graph
-                .index_query(OverlapPrimer::new(postfix, prefix_query.clone()))
+                .insert_context()
+                .insert(OverlapPrimer::new(postfix, prefix_path.clone()))
             {
-                Ok((
-                    //OriginPath {
-                    //    postfix: expansion,
-                    //    origin: prefix_path,
-                    //},
-                    advanced,
-                )) => {
-                    *prefix_query = advanced.into_prefix_path();
-
+                Ok((expansion, advanced)) => {
+                    *prefix_path = HasRolePath::role_path::<Start>(advanced);
                     acc = ControlFlow::Break((
                         start_bound,
                         OverlapLink {

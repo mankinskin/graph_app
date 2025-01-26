@@ -8,10 +8,7 @@ use itertools::{
 };
 use hypercontext_api::{
     graph::{
-        kind::{
-            BaseGraphKind,
-            DefaultToken,
-        },
+        kind::BaseGraphKind,
         vertex::{
             child::Child,
             pattern::Pattern,
@@ -23,7 +20,6 @@ use hypercontext_api::{
     },
     traversal::traversable::TraversableMut,
 };
-use crate::read::reader::context::ReadContext;
 
 use std::fmt::Debug;
 
@@ -60,7 +56,7 @@ impl<'it> SequenceIter<'it> {
     }
     pub fn next_block<'g>(
         &mut self,
-        ctx: &mut ReadContext<'g>,
+        //ctx: &mut ReadContext,
     ) -> Option<(Pattern, Pattern)> {
         let cache = self.take_while(|t| t.is_new());
         let known = self.take_while(|t| t.is_known());
@@ -81,14 +77,14 @@ impl<'it> SequenceIter<'it> {
     }
 }
 
-pub trait ToNewTokenIndices<N>: Debug {
+pub trait ToNewTokenIndices: Debug {
     fn to_new_token_indices<'a: 'g, 'g, Trav: TraversableMut<Kind = BaseGraphKind>>(
         self,
         graph: &'a mut Trav,
     ) -> NewTokenIndices;
 }
 
-impl ToNewTokenIndices<NewTokenIndex> for NewTokenIndices {
+impl ToNewTokenIndices for NewTokenIndices {
     fn to_new_token_indices<'a: 'g, 'g, Trav: TraversableMut<Kind = BaseGraphKind>>(
         self,
         _graph: &'a mut Trav,

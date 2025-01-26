@@ -1,7 +1,14 @@
 use std::ops::Deref;
 
+use derive_more::derive::From;
+
 use crate::{
-    path::{
+    graph::vertex::{
+        location::{
+            child::ChildLocation,
+            pattern::{IntoPatternLocation, PatternLocation},
+        }, pattern::Pattern
+    }, path::{
         accessors::role::{
             End,
             PathRole,
@@ -11,14 +18,7 @@ use crate::{
             query_range_path::QueryRangePath,
             role_path::RolePath,
         },
-    },
-    graph::vertex::{
-        location::{
-            child::ChildLocation,
-            pattern::PatternLocation,
-        },
-        pattern::Pattern,
-    },
+    }
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,7 +39,7 @@ impl<R: PathRoot> RootedRangePath<R> {
 
 pub type SearchPath = RootedRangePath<IndexRoot>;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, From)]
 pub struct IndexRoot {
     pub location: PatternLocation,
 }
@@ -82,6 +82,14 @@ pub struct RootedRolePath<R: PathRole, Root: PathRoot = IndexRoot> {
     pub role_path: RolePath<R>,
 }
 
+impl<R: PathRole> RootedRolePath<R> {
+    pub fn new(first: ChildLocation) -> Self {
+        Self {
+            role_path: RolePath::from(SubPath::new(first.sub_index)),
+            root: IndexRoot::from(first.into_pattern_location()),
+        }
+    }
+}
 impl<R: PathRoot> RootedRolePath<Start, R> {
     pub fn into_range(
         self,
@@ -119,17 +127,16 @@ impl<R: PathRoot> RootedRolePath<End, R> {
     }
 }
 
-impl From<SearchPath> for RootedRolePath<Start, IndexRoot> {
-    fn from(path: SearchPath) -> Self {
+impl<R: PathRoot> From<RootedRangePath<R>> for RootedRolePath<Start, R> {
+    fn from(path: RootedRangePath<R>) -> Self {
         Self {
             root: path.root,
             role_path: path.start,
         }
     }
 }
-
-impl From<SearchPath> for RootedRolePath<End, IndexRoot> {
-    fn from(path: SearchPath) -> Self {
+impl<R: PathRoot> From<RootedRangePath<R>> for RootedRolePath<End, R> {
+    fn from(path: RootedRangePath<R>) -> Self {
         Self {
             root: path.root,
             role_path: path.end,

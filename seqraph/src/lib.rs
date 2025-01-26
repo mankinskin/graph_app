@@ -1,6 +1,5 @@
 #![deny(clippy::disallowed_methods)]
 #![feature(test)]
-#![feature(async_closure)]
 #![feature(assert_matches)]
 #![feature(try_blocks)]
 //#![feature(hash_drain_filter)]
@@ -18,7 +17,8 @@ pub mod direction;
 pub mod search;
 pub mod join;
 pub mod insert;
-//pub mod read;
+//pub mod index;
+pub mod read;
 
 #[cfg(test)]
 pub mod tests;

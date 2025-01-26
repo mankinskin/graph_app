@@ -1,12 +1,11 @@
 use crate::{
-    path::{
+    graph::vertex::child::Child, path::{
         accessors::role::End,
         structs::{
             query_range_path::PatternPrefixPath,
             role_path::RolePath,
         },
-    },
-    graph::vertex::child::Child,
+    }, traversal::{fold::{FoldResult, Foldable}, TraversalKind}
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,6 +34,10 @@ impl OverlapPrimer {
     }
     pub fn into_prefix_path(self) -> PatternPrefixPath {
         self.context
+    }
+}
+impl Foldable for OverlapPrimer {
+    fn fold<'a, K: TraversalKind>(self, trav: &'a K::Trav) -> FoldResult {
     }
 }
 

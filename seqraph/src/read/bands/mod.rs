@@ -1,65 +1,20 @@
-use std::{
-    borrow::Borrow,
-    ops::{
-        Deref,
-        DerefMut,
-    },
-    sync::RwLockWriteGuard,
-};
-
-use tracing::{
-    debug,
-    instrument,
-};
+use tracing::instrument;
 
 use hypercontext_api::{
-    direction::Right,
-    graph::{
-        vertex::{
-            child::Child,
-            has_vertex_data::HasVertexDataMut,
-            has_vertex_index::{
-                HasVertexIndex,
-                ToChild,
-            },
-            pattern::{
-                IntoPattern,
-                Pattern,
-            },
-        },
-        Hypergraph, HypergraphRef,
-    },
+    graph::vertex::child::Child,
     path::{
         mutators::move_path::Advance,
-        structs::query_range_path::{
-            PatternPrefixPath,
-            QueryPath,
-        },
-    },
-    traversal::{
-        traversable::TraversableMut,
-    }
-};
-use crate::{
-    insert::context::InsertContext, read::sequence::{
-        SequenceIter,
-        ToNewTokenIndices,
+        structs::query_range_path::PatternPrefixPath,
     },
 };
+
+use super::reader::context::ReadContext;
 pub mod band;
 pub mod overlaps;
-pub struct BandsContext {
-    pub graph: HypergraphRef,
-}
-impl BandsContext {
-    pub fn new(graph: HypergraphRef) -> Self {
-        Self {
-            graph,
-        }
-    }
-    pub fn indexer(&self) -> InsertContext {
-        InsertContext::new(self.graph.clone())
-    }
+//pub struct BandsContext {
+//    pub graph: HypergraphRef,
+//}
+impl ReadContext {
     #[instrument(skip(self, sequence))]
     pub fn read(
         &mut self,
@@ -77,9 +32,9 @@ impl BandsContext {
         &mut self,
         context: &mut PatternPrefixPath,
     ) -> Option<Child> {
-        match self.indexer().index_query(context.clone()) {
+        match self.insert_context().insert(context.clone()) {
             Ok((index, advanced)) => {
-                *context = advanced;
+                *context = PatternPrefixPath::from(advanced);
                 Some(index)
             }
             Err(_) => {
@@ -88,5 +43,4 @@ impl BandsContext {
             }
         }
     }
-
 }

@@ -13,16 +13,14 @@ use tracing::{
 
 use crate::{
     insert::context::InsertContext,
-    read::{
-        bands::BandsContext,
-        sequence::{
-            SequenceIter,
-            ToNewTokenIndices,
-        },
+    read::sequence::{
+        SequenceIter,
+        ToNewTokenIndices,
     },
 };
 use hypercontext_api::{
-    direction::Right, graph::{
+    direction::Right,
+    graph::{
         getters::ErrorReason,
         vertex::{
             child::Child,
@@ -38,51 +36,51 @@ use hypercontext_api::{
         },
         Hypergraph,
         HypergraphRef,
-    }, path::structs::query_range_path::PatternPrefixPath, traversal::traversable::{
-            impl_traversable,
-            impl_traversable_mut,
-            Traversable,
-            TraversableMut,
-        }
+    },
+    path::structs::query_range_path::{
+        PatternPrefixPath,
+        QueryPath,
+    },
+    traversal::traversable::{
+        impl_traversable,
+        impl_traversable_mut,
+        Traversable,
+        TraversableMut,
+    },
 };
 
 #[derive(Debug)]
-pub struct ReadContext<'g> {
+pub struct ReadContext {
     //pub graph: RwLockWriteGuard<'g, Hypergraph>,
     pub graph: HypergraphRef,
     pub root: Option<Child>,
-    _ty: std::marker::PhantomData<&'g ()>,
 }
-//impl Deref for ReadContext<'_> {
+//impl Deref for ReadContext {
 //    type Target = Hypergraph;
 //    fn deref(&self) -> &Self::Target {
 //        self.graph.deref()
 //    }
 //}
-//impl DerefMut for ReadContext<'_> {
+//impl DerefMut for ReadContext {
 //    fn deref_mut(&mut self) -> &mut Self::Target {
 //        self.graph.deref_mut()
 //    }
 //}
 
-impl<'g> ReadContext<'g> {
+impl<'g> ReadContext {
     //pub fn new(graph: RwLockWriteGuard<'g, Hypergraph>) -> Self {
     pub fn new(graph: HypergraphRef) -> Self {
-        Self {
-            graph,
-            root: None,
-            _ty: Default::default(),
-        }
+        Self { graph, root: None }
     }
     #[instrument(skip(self))]
-    pub fn read_sequence<N, S: ToNewTokenIndices<N>>(
+    pub fn read_sequence<S: ToNewTokenIndices>(
         &mut self,
         sequence: S,
     ) -> Option<Child> {
         debug!("start reading: {:?}", sequence);
         let sequence = sequence.to_new_token_indices(self);
         let mut sequence = SequenceIter::new(&sequence);
-        while let Some((unknown, known)) = sequence.next_block(self) {
+        while let Some((unknown, known)) = sequence.next_block() {
             // todo: read to result type
             self.append_pattern(unknown);
             self.read_known(known)
@@ -103,7 +101,7 @@ impl<'g> ReadContext<'g> {
         known: Pattern,
     ) {
         match PatternPrefixPath::new_directed::<Right, _>(known.borrow()) {
-            Ok(path) => self.bands().read(path),
+            Ok(path) => self.band_context().read(path),
             Err((err, _)) => match err {
                 ErrorReason::SingleIndex(c) => {
                     self.append_index(c);
@@ -115,24 +113,14 @@ impl<'g> ReadContext<'g> {
             .unwrap(),
         }
     }
-    pub fn bands(&self) -> BandsContext {
-        BandsContext::new(self.graph.clone())
+    pub fn band_context(&self) -> ReadContext {
+        ReadContext::new(self.graph.clone())
     }
-    pub fn indexer(&self) -> InsertContext {
+    pub fn insert_context(&self) -> InsertContext {
         InsertContext::new(self.graph.clone())
     }
-    //pub fn contexter<Side: SplitSide<D>>(&self) -> Contexter<Side> {
-    //    Contexter::new(self.indexer())
-    //}
-    //pub fn splitter<Side: SplitSide<D>>(&self) -> Splitter<Side> {
-    //    Splitter::new(self.indexer())
-    //}
-    //fn append_next(&mut self, end_bound: usize, index: Child) -> usize {
-    //    self.append_index(index);
-    //    0
-    //}
     #[instrument(skip(self, index))]
-    fn append_index(
+    pub fn append_index(
         &mut self,
         index: impl ToChild,
     ) {
@@ -184,38 +172,48 @@ impl<'g> ReadContext<'g> {
             }
         }
     }
+    //pub fn contexter<Side: SplitSide<D>>(&self) -> Contexter<Side> {
+    //    Contexter::new(self.insert_context())
+    //}
+    //pub fn splitter<Side: SplitSide<D>>(&self) -> Splitter<Side> {
+    //    Splitter::new(self.insert_context())
+    //}
+    //fn append_next(&mut self, end_bound: usize, index: Child) -> usize {
+    //    self.append_index(index);
+    //    0
+    //}
 }
 
 impl_traversable! {
-    impl for ReadContext<'_>,
+    impl for ReadContext,
     //Self => self.graph.graph();
     //<'a> &'a Hypergraph
     self => self.graph.write().unwrap();
     <'a> RwLockWriteGuard<'a, Hypergraph>
 }
 impl_traversable! {
-    impl for &'_ ReadContext<'_>,
+    impl for &'_ ReadContext,
     //self => self.graph.graph();
     //<'a> &'a Hypergraph
     self => self.graph.read().unwrap();
     <'a> RwLockReadGuard<'a, Hypergraph>
 }
 impl_traversable! {
-    impl for &'_ mut ReadContext<'_>,
+    impl for &'_ mut ReadContext,
     //self => self.graph.graph();
     //<'a> &'a Hypergraph
     self => self.graph.read().unwrap();
     <'a> RwLockReadGuard<'a, Hypergraph>
 }
 impl_traversable_mut! {
-    impl for ReadContext<'_>,
+    impl for ReadContext,
     //self => self.graph.graph_mut();
     //<'a> &'a mut Hypergraph
     self => self.graph.write().unwrap();
     <'a> RwLockWriteGuard<'a, Hypergraph>
 }
 impl_traversable_mut! {
-    impl for &'_ mut ReadContext<'_>,
+    impl for &'_ mut ReadContext,
     //self => self.graph.graph_mut();
     //<'a> &'a mut Hypergraph
     self => self.graph.write().unwrap();

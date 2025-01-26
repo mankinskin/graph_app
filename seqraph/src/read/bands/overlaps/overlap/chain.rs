@@ -1,23 +1,22 @@
 use std::collections::BTreeMap;
 
+use derive_more::derive::{Deref, DerefMut};
 use itertools::Itertools;
 use tracing::instrument;
 
-use crate::{
-    insert::side::SplitFront,
-    read::{
-        bands::overlaps::overlap::Overlap,
-        reader::context::ReadContext,
-    },
+use crate::read::{
+    bands::overlaps::overlap::Overlap,
+    reader::context::ReadContext,
 };
 use hypercontext_api::{
     graph::vertex::child::Child,
+    split::side::SplitFront,
     traversal::traversable::TraversableMut,
 };
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, Deref, DerefMut)]
 pub struct OverlapChain {
-    pub path: BTreeMap<usize, Overlap>,
+    pub chain: BTreeMap<usize, Overlap>,
 }
 
 impl OverlapChain {
@@ -25,56 +24,64 @@ impl OverlapChain {
         &mut self,
         end_bound: usize,
         overlap: Overlap,
-    ) -> Result<(), Overlap> {
+    ) -> Result<(), ()> {
         // postfixes should always start at first end bounds in the chain
-        match self.path.insert(end_bound, overlap) {
-            Some(other) => Err(other),
-            None => Ok(()),
+        if self.chain.get(&end_bound).is_some() {
+            Err(())
+        } else {
+            self.chain.insert(end_bound, overlap);
+            Ok(())
         }
     }
     #[instrument(skip(self, reader))]
     pub fn close(
         self,
-        reader: &mut ReadContext<'_>,
+        reader: &mut ReadContext,
     ) -> Option<Child> {
         //println!("closing {:#?}", self);
-        let mut path = self.path.into_iter();
-        let first_band: Overlap = path.next()?.1;
+        let mut chain_iter = self.chain.into_iter();
+        let first_band: Overlap = chain_iter.next()?.1;
+        // this part should create the missing front contexts of each band.
+        // this should however start at the end of the chain and work backwards
+        // we need to get paths to the overlaps with each previous band
+        // then we can use each of these paths to create a partition for the front context of the overlap within the last index
+        // this can be appended to the back of the band
         let (mut bundle, prev_band, _) = {
-            //let reader = &reader.clone();
-            path.fold(
+            chain_iter.fold(
                 (vec![], first_band, None),
                 |(mut bundle, prev_band, prev_ctx), (_end_bound, overlap)| {
-                    //let mut reader = reader.clone();
                     // index context of prefix
-                    let ctx = if let Some(node) = overlap.link.as_ref() {
-                        reader
-                            .contexter::<SplitFront>()
-                            .try_context_path(
-                                node.prefix_path
-                                    .get_path()
-                                    .unwrap()
-                                    .clone()
-                                    .into_context_path(),
-                                //node.overlap,
-                            )
-                            .map(|(ctx, _)| ctx)
+                    let ctx_child = if let Some(link) = overlap.link.as_ref() {
+                        todo!("implement front context indexing");
+                        //reader
+                        //    .contexter::<SplitFront>()
+                        //    .try_context_path(
+                        //        link.prefix_path
+                        //            .get_path()
+                        //            .unwrap()
+                        //            .clone()
+                        //            .into_context_path(),
+                        //        //node.overlap,
+                        //    )
+                        //    .map(|(ctx, _)| ctx)
+                        None
                     } else {
                         None
                     };
+
                     bundle.push(prev_band);
                     (
                         bundle,
                         overlap,
                         // join previous and current context into
                         if let Some(prev) = prev_ctx {
-                            Some(if let Some(ctx) = ctx {
-                                reader.read_pattern(vec![prev, ctx]).unwrap()
+                            Some(if let Some(ctx_child) = ctx_child {
+                                reader.read_pattern(vec![prev, ctx_child]).unwrap()
                             } else {
                                 prev
                             })
                         } else {
-                            ctx
+                            ctx_child
                         },
                     )
                 },
@@ -94,8 +101,8 @@ impl OverlapChain {
         &mut self,
         end_bound: usize,
     ) -> OverlapChain {
-        let mut past = self.path.split_off(&end_bound);
-        std::mem::swap(&mut self.path, &mut past);
-        Self { path: past }
+        let mut past = self.chain.split_off(&end_bound);
+        std::mem::swap(&mut self.chain, &mut past);
+        Self { chain: past }
     }
 }

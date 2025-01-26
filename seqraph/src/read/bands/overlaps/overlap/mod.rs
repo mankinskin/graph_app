@@ -22,7 +22,7 @@ pub struct Overlap {
 impl Overlap {
     pub fn appended(
         mut self,
-        reader: &mut ReadContext<'_>,
+        reader: &mut ReadContext,
         end: BandEnd,
     ) -> Self {
         self.append(reader, end);
@@ -30,7 +30,7 @@ impl Overlap {
     }
     pub fn append(
         &mut self,
-        reader: &mut ReadContext<'_>,
+        reader: &mut ReadContext,
         end: BandEnd,
     ) {
         self.band.append(reader, end);

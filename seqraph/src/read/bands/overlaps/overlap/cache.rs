@@ -31,10 +31,10 @@ impl OverlapCache {
     }
     pub fn add_bundle(
         &mut self,
-        reader: &mut ReadContext<'_>,
+        reader: &mut ReadContext,
         bundle: OverlapBundle,
     ) {
-        self.chain.path.insert(
+        self.chain.insert(
             self.end_bound,
             Overlap {
                 link: None,
@@ -44,7 +44,7 @@ impl OverlapCache {
     }
     pub fn append(
         &mut self,
-        _reader: &mut ReadContext<'_>,
+        _reader: &mut ReadContext,
         start_bound: usize,
         overlap: Overlap,
     ) {

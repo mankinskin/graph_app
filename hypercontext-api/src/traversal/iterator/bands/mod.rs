@@ -56,7 +56,7 @@ where
 }
 
 pub type PostfixIterator<'a, Trav> =
-    BandExpandingIterator<'a, Trav, PostfixExpandingPolicy<DirectionOf<Trav>>>;
+    BandExpandingIterator<'a, Trav, PostfixExpandingPolicy<DirectionOf<<Trav as Traversable>::Kind>>>;
 
 impl<'a, Trav, P> BandIterator<'a, Trav> for BandExpandingIterator<'a, Trav, P>
 where

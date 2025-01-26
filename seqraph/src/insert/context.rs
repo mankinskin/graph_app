@@ -3,31 +3,33 @@ use std::sync::{
     RwLockWriteGuard,
 };
 
+use crate::join::context::JoinContext;
 use hypercontext_api::{
     graph::{
         getters::ErrorReason,
-        vertex::{
-            child::Child,
-            pattern::IntoPattern,
-        },
+        vertex::child::Child,
         Hypergraph,
         HypergraphRef,
     },
     path::structs::query_range_path::QueryRangePath,
     traversal::{
-        container::bft::BftQueue, TraversalKind, fold::{
+        container::bft::BftQueue,
+        fold::{
             state::FoldState,
             ErrorState,
-            FoldContext,
-        }, iterator::policy::DirectedTraversalPolicy, result::FoundRange, traversable::{
+            Foldable,
+        },
+        iterator::policy::DirectedTraversalPolicy,
+        result::FoundRange,
+        traversable::{
             impl_traversable,
             impl_traversable_mut,
             Traversable,
             TraversableMut,
-        }
+        },
+        TraversalKind,
     },
 };
-use crate::join::context::JoinContext;
 
 #[derive(Debug)]
 pub struct InsertPolicy {}
@@ -68,11 +70,11 @@ impl InsertContext {
     ) -> JoinContext {
         JoinContext::new(self.graph.clone(), fold_state)
     }
-    pub fn insert_pattern(
+    pub fn insert(
         &mut self,
-        query: impl IntoPattern,
+        query: impl Foldable,
     ) -> Result<(Child, QueryRangePath), ErrorReason> {
-        match FoldContext::<InsertTraversal>::fold_pattern(self, query) {
+        match query.fold::<InsertTraversal>(self) {
             Ok(result) => match result.result {
                 FoundRange::Complete(c, q) => Ok((c, q.path)),
                 FoundRange::Incomplete(mut fold_state) => Ok((
