@@ -1,27 +1,14 @@
 use crate::{
+    graph::vertex::location::child::ChildLocation,
+    path::structs::pair::PathPair,
     traversal::state::{
         child::ChildState,
         end::RangeEnd,
     },
-    path::structs::{
-        pair::PathPair,
-        rooted_path::SearchPath,
-    },
 };
-use crate::graph::vertex::location::child::ChildLocation;
 
 pub trait LeafKey {
     fn leaf_location(&self) -> ChildLocation;
-}
-
-impl LeafKey for SearchPath {
-    fn leaf_location(&self) -> ChildLocation {
-        self.end.path.last().cloned().unwrap_or(
-            self.root
-                .location
-                .to_child_location(self.end.sub_path.root_entry),
-        )
-    }
 }
 
 impl LeafKey for ChildState {

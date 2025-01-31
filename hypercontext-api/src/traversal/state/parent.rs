@@ -9,24 +9,28 @@ use crate::{
             adapters::into_advanced::IntoAdvanced,
             move_path::key::TokenPosition,
         },
-    }, traversal::{
+    },
+    traversal::{
         cache::{
             entry::new::NewEntry,
             key::{
                 prev::ToPrev,
                 target::TargetKey,
             },
-        }, iterator::policy::DirectedTraversalPolicy, result::kind::Primer, TraversalKind
-    }
+        },
+        iterator::policy::DirectedTraversalPolicy,
+        result::kind::Primer,
+        TraversalKind,
+    },
 };
 use std::cmp::Ordering;
 
 use super::{
+    cursor::RangeCursor,
     end::{
         EndReason,
         EndState,
     },
-    query::QueryState,
     NextStates,
     StateNext,
 };
@@ -36,7 +40,7 @@ pub struct ParentState {
     pub prev_pos: TokenPosition,
     pub root_pos: TokenPosition,
     pub path: Primer,
-    pub query: QueryState,
+    pub cursor: RangeCursor,
 }
 
 impl Ord for ParentState {
@@ -67,10 +71,8 @@ impl ParentState {
         match self.into_advanced(trav) {
             // first child state in this parent
             Ok(advanced) => {
-                let delta = <_ as GraphRootChild<Start>>::root_post_ctx_width(
-                    &advanced.paths.path,
-                    trav,
-                );
+                let delta =
+                    <_ as GraphRootChild<Start>>::root_post_ctx_width(&advanced.paths.path, trav);
                 NextStates::Child(StateNext {
                     prev: key.flipped().to_prev(delta),
                     new,
@@ -98,7 +100,7 @@ impl ParentState {
                     reason: EndReason::Mismatch,
                     root_pos: self.root_pos,
                     kind: self.path.simplify(trav),
-                    query: self.query,
+                    cursor: self.cursor,
                 },
             })
         } else {

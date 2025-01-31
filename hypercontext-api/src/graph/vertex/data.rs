@@ -16,7 +16,9 @@ use std::{
 
 use crate::{
     graph::{
-        getters::ErrorReason, kind::GraphKind, vertex::{
+        getters::ErrorReason,
+        kind::GraphKind,
+        vertex::{
             child::Child,
             has_vertex_index::{
                 HasVertexIndex,
@@ -42,25 +44,21 @@ use crate::{
             ChildPatterns,
             IndexPosition,
             PatternId,
-            TokenPosition,
             VertexIndex,
             VertexParents,
-        }, Hypergraph
+        },
+        Hypergraph,
     },
     HashSet,
 };
 
-pub fn clone_child_patterns(
-    children: &'_ ChildPatterns
-) -> impl Iterator<Item = Pattern> + '_
-{
+pub fn clone_child_patterns(children: &'_ ChildPatterns) -> impl Iterator<Item = Pattern> + '_ {
     children.iter().map(|(_, p)| p.clone())
 }
 pub fn localized_children_iter_for_index(
     parent: impl ToChild,
     children: &ChildPatterns,
-) -> impl IntoIterator<Item = (ChildLocation, &Child)>
-{
+) -> impl IntoIterator<Item = (ChildLocation, &Child)> {
     let parent = parent.to_child();
     children.iter().flat_map(move |(&pid, pat)| {
         pat.iter()
@@ -70,9 +68,8 @@ pub fn localized_children_iter_for_index(
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Builder, Serialize, Deserialize)]
-pub struct VertexData
-{
-    pub width: TokenPosition,
+pub struct VertexData {
+    pub width: usize,
     pub index: VertexIndex,
 
     #[builder(default)]
@@ -85,13 +82,11 @@ pub struct VertexData
     pub children: ChildPatterns,
 }
 
-impl VertexData
-{
+impl VertexData {
     pub fn new(
         index: VertexIndex,
-        width: TokenPosition,
-    ) -> Self
-    {
+        width: usize,
+    ) -> Self {
         Self {
             width,
             key: VertexKey::default(),
@@ -100,15 +95,13 @@ impl VertexData
             children: ChildPatterns::default(),
         }
     }
-    pub fn get_width(&self) -> TokenPosition
-    {
+    pub fn get_width(&self) -> usize {
         self.width
     }
     pub fn get_parent(
         &self,
         index: impl HasVertexIndex,
-    ) -> Result<&Parent, ErrorReason>
-    {
+    ) -> Result<&Parent, ErrorReason> {
         let index = index.vertex_index();
         self.parents
             .get(&index)
@@ -117,8 +110,7 @@ impl VertexData
     pub fn get_parent_mut(
         &mut self,
         index: impl HasVertexIndex,
-    ) -> Result<&mut Parent, ErrorReason>
-    {
+    ) -> Result<&mut Parent, ErrorReason> {
         let index = index.vertex_index();
         self.parents
             .get_mut(&index)
@@ -128,47 +120,36 @@ impl VertexData
     pub fn expect_parent(
         &self,
         index: impl HasVertexIndex,
-    ) -> &Parent
-    {
+    ) -> &Parent {
         self.get_parent(index).unwrap()
     }
     #[track_caller]
     pub fn expect_parent_mut(
         &mut self,
         index: impl HasVertexIndex,
-    ) -> &mut Parent
-    {
+    ) -> &mut Parent {
         self.get_parent_mut(index).unwrap()
     }
-    pub fn get_parents(&self) -> &VertexParents
-    {
+    pub fn get_parents(&self) -> &VertexParents {
         &self.parents
     }
-    pub fn get_parents_mut(&mut self) -> &mut VertexParents
-    {
+    pub fn get_parents_mut(&mut self) -> &mut VertexParents {
         &mut self.parents
     }
     pub fn get_child_pattern_range<R: PatternRangeIndex>(
         &self,
         id: &PatternId,
         range: R,
-    ) -> Result<&<R as SliceIndex<[Child]>>::Output, ErrorReason>
-    {
-        self.get_child_pattern(id).and_then(|p| {
-            pattern::pattern_range::get_child_pattern_range(
-                id,
-                p,
-                range.clone(),
-            )
-        })
+    ) -> Result<&<R as SliceIndex<[Child]>>::Output, ErrorReason> {
+        self.get_child_pattern(id)
+            .and_then(|p| pattern::pattern_range::get_child_pattern_range(id, p, range.clone()))
     }
     #[track_caller]
     pub fn expect_child_pattern_range<R: PatternRangeIndex>(
         &self,
         id: &PatternId,
         range: R,
-    ) -> &<R as SliceIndex<[Child]>>::Output
-    {
+    ) -> &<R as SliceIndex<[Child]>>::Output {
         let p = self.expect_child_pattern(id);
         pattern::pattern_range::get_child_pattern_range(id, p, range.clone())
             .expect("Range in pattern")
@@ -177,8 +158,7 @@ impl VertexData
         &self,
         id: &PatternId,
         pos: IndexPosition,
-    ) -> Result<&Child, ErrorReason>
-    {
+    ) -> Result<&Child, ErrorReason> {
         self.children
             .get(id)
             .and_then(|p| p.get(pos))
@@ -187,8 +167,7 @@ impl VertexData
     pub fn get_child_pattern_with_prefix_width(
         &self,
         width: NonZeroUsize,
-    ) -> Option<(&PatternId, &Pattern)>
-    {
+    ) -> Option<(&PatternId, &Pattern)> {
         self.children
             .iter()
             .find(|(_pid, pat)| pat[0].width() == width.get())
@@ -196,15 +175,15 @@ impl VertexData
     pub fn get_child_pattern(
         &self,
         id: &PatternId,
-    ) -> Result<&Pattern, ErrorReason>
-    {
-        self.children.get(id).ok_or(ErrorReason::InvalidPattern(*id))
+    ) -> Result<&Pattern, ErrorReason> {
+        self.children
+            .get(id)
+            .ok_or(ErrorReason::InvalidPattern(*id))
     }
     pub fn get_child_at(
         &self,
         location: &SubLocation,
-    ) -> Result<&Child, ErrorReason>
-    {
+    ) -> Result<&Child, ErrorReason> {
         self.children
             .get(&location.pattern_id)
             .ok_or(ErrorReason::InvalidPattern(location.pattern_id))?
@@ -214,15 +193,13 @@ impl VertexData
     pub fn expect_child_at(
         &self,
         location: &SubLocation,
-    ) -> &Child
-    {
+    ) -> &Child {
         self.get_child_at(location).unwrap()
     }
     pub fn get_child_mut_at(
         &mut self,
         location: &SubLocation,
-    ) -> Result<&mut Child, ErrorReason>
-    {
+    ) -> Result<&mut Child, ErrorReason> {
         self.children
             .get_mut(&location.pattern_id)
             .ok_or(ErrorReason::InvalidPattern(location.pattern_id))?
@@ -232,54 +209,48 @@ impl VertexData
     pub fn expect_child_mut_at(
         &mut self,
         location: &SubLocation,
-    ) -> &mut Child
-    {
+    ) -> &mut Child {
         self.get_child_mut_at(location).unwrap()
     }
     #[track_caller]
     pub fn expect_pattern_len(
         &self,
         id: &PatternId,
-    ) -> usize
-    {
+    ) -> usize {
         self.expect_child_pattern(id).len()
     }
     pub fn expect_child_offset(
         &self,
         loc: &SubLocation,
-    ) -> usize
-    {
-        pattern_width(
-            &self.expect_child_pattern(&loc.pattern_id)[0..loc.sub_index],
-        )
+    ) -> usize {
+        pattern_width(&self.expect_child_pattern(&loc.pattern_id)[0..loc.sub_index])
     }
     pub fn find_child_pattern_id(
         &self,
         f: impl FnMut(&(&PatternId, &Pattern)) -> bool,
-    ) -> Option<PatternId>
-    {
+    ) -> Option<PatternId> {
         self.children.iter().find(f).map(|r| *r.0)
     }
     pub fn get_child_pattern_mut(
         &mut self,
         id: &PatternId,
-    ) -> Result<&mut Pattern, ErrorReason>
-    {
-        self.children.get_mut(id).ok_or(ErrorReason::NoChildPatterns)
+    ) -> Result<&mut Pattern, ErrorReason> {
+        self.children
+            .get_mut(id)
+            .ok_or(ErrorReason::NoChildPatterns)
     }
     #[track_caller]
-    pub fn expect_any_child_pattern(&self) -> (&PatternId, &Pattern)
-    {
-        self.children.iter().next().unwrap_or_else(|| {
-            panic!("Pattern vertex has no children {:#?}", self,)
-        })
+    pub fn expect_any_child_pattern(&self) -> (&PatternId, &Pattern) {
+        self.children
+            .iter()
+            .next()
+            .unwrap_or_else(|| panic!("Pattern vertex has no children {:#?}", self,))
     }
     #[track_caller]
     pub fn expect_child_pattern(
         &self,
         id: &PatternId,
-    ) -> &Pattern
-    {
+    ) -> &Pattern {
         self.get_child_pattern(id).unwrap_or_else(|_| {
             panic!(
                 "Child pattern with id {} does not exist in in vertex {:#?}",
@@ -291,42 +262,31 @@ impl VertexData
     pub fn expect_child_pattern_mut(
         &mut self,
         id: &PatternId,
-    ) -> &mut Pattern
-    {
-        self.get_child_pattern_mut(id).unwrap_or_else(|_| {
-            panic!("Child pattern with id {} does not exist in in vertex", id,)
-        })
+    ) -> &mut Pattern {
+        self.get_child_pattern_mut(id)
+            .unwrap_or_else(|_| panic!("Child pattern with id {} does not exist in in vertex", id,))
     }
-    pub fn get_child_patterns(&self) -> &ChildPatterns
-    {
+    pub fn get_child_patterns(&self) -> &ChildPatterns {
         &self.children
     }
-    pub fn get_child_patterns_mut(&mut self) -> &mut ChildPatterns
-    {
+    pub fn get_child_patterns_mut(&mut self) -> &mut ChildPatterns {
         &mut self.children
     }
-    pub fn get_child_pattern_iter(
-        &'_ self
-    ) -> impl Iterator<Item = Pattern> + '_
-    {
+    pub fn get_child_pattern_iter(&'_ self) -> impl Iterator<Item = Pattern> + '_ {
         clone_child_patterns(&self.children)
     }
-    pub fn get_child_pattern_set(&self) -> HashSet<Pattern>
-    {
+    pub fn get_child_pattern_set(&self) -> HashSet<Pattern> {
         self.get_child_pattern_iter().collect()
     }
-    pub fn get_child_pattern_vec(&self) -> Vec<Pattern>
-    {
+    pub fn get_child_pattern_vec(&self) -> Vec<Pattern> {
         self.get_child_pattern_iter().collect()
     }
     pub fn add_pattern_no_update(
         &mut self,
         id: PatternId,
         pat: impl IntoPattern,
-    )
-    {
-        if pat.borrow().len() < 2
-        {
+    ) {
+        if pat.borrow().len() < 2 {
             assert!(pat.borrow().len() > 1);
         }
         self.children.insert(id, pat.into_pattern());
@@ -335,12 +295,9 @@ impl VertexData
     pub fn add_patterns_no_update(
         &mut self,
         patterns: impl IntoIterator<Item = (PatternId, impl IntoPattern)>,
-    )
-    {
-        for (id, pat) in patterns
-        {
-            if pat.borrow().len() < 2
-            {
+    ) {
+        for (id, pat) in patterns {
+            if pat.borrow().len() < 2 {
                 assert!(pat.borrow().len() > 1);
             }
             self.children.insert(id, pat.into_pattern());
@@ -348,16 +305,14 @@ impl VertexData
         self.validate();
     }
     #[track_caller]
-    pub fn validate_links(&self)
-    {
+    pub fn validate_links(&self) {
         assert!(self.children.len() != 1 || self.parents.len() != 1);
     }
     #[track_caller]
-    pub fn validate_patterns(&self)
-    {
-        self.children.iter().fold(
-            Vec::new(),
-            |mut acc: Vec<Vec<usize>>, (_pid, p)| {
+    pub fn validate_patterns(&self) {
+        self.children
+            .iter()
+            .fold(Vec::new(), |mut acc: Vec<Vec<usize>>, (_pid, p)| {
                 let mut offset = 0;
                 assert!(!p.is_empty());
                 let mut p = p.iter().fold(Vec::new(), |mut pa, c| {
@@ -374,29 +329,22 @@ impl VertexData
                 assert_eq!(offset, self.width);
                 acc.push(p);
                 acc
-            },
-        );
+            });
     }
     #[track_caller]
-    pub fn validate(&self)
-    {
+    pub fn validate(&self) {
         //self.validate_links();
-        if !self.children.is_empty()
-        {
+        if !self.children.is_empty() {
             self.validate_patterns();
         }
     }
     pub fn add_parent(
         &mut self,
         loc: ChildLocation,
-    )
-    {
-        if let Some(parent) = self.parents.get_mut(&loc.parent.vertex_index())
-        {
+    ) {
+        if let Some(parent) = self.parents.get_mut(&loc.parent.vertex_index()) {
             parent.add_pattern_index(loc.pattern_id, loc.sub_index);
-        }
-        else
-        {
+        } else {
             let mut parent_rel = Parent::new(loc.parent.width());
             parent_rel.add_pattern_index(loc.pattern_id, loc.sub_index);
             self.parents.insert(loc.parent.vertex_index(), parent_rel);
@@ -407,8 +355,7 @@ impl VertexData
     pub fn remove_parent(
         &mut self,
         vertex: impl HasVertexIndex,
-    )
-    {
+    ) {
         self.parents.remove(&vertex.vertex_index());
         // not while indexing
         //self.validate_links();
@@ -418,16 +365,11 @@ impl VertexData
         vertex: impl HasVertexIndex,
         pattern: PatternId,
         index: usize,
-    )
-    {
-        if let Some(parent) = self.parents.get_mut(&vertex.vertex_index())
-        {
-            if parent.pattern_indices.len() > 1
-            {
+    ) {
+        if let Some(parent) = self.parents.get_mut(&vertex.vertex_index()) {
+            if parent.pattern_indices.len() > 1 {
                 parent.remove_pattern_index(pattern, index);
-            }
-            else
-            {
+            } else {
                 self.parents.remove(&vertex.vertex_index());
             }
         }
@@ -436,21 +378,17 @@ impl VertexData
     }
     pub fn get_parents_below_width(
         &self,
-        width_ceiling: Option<TokenPosition>,
-    ) -> impl Iterator<Item = (&VertexIndex, &Parent)> + Clone
-    {
+        width_ceiling: Option<usize>,
+    ) -> impl Iterator<Item = (&VertexIndex, &Parent)> + Clone {
         let parents = self.get_parents();
         // optionally filter parents by width
-        if let Some(ceil) = width_ceiling
-        {
+        if let Some(ceil) = width_ceiling {
             Either::Left(
                 parents
                     .iter()
                     .filter(move |(_, parent)| parent.get_width() < ceil),
             )
-        }
-        else
-        {
+        } else {
             Either::Right(parents.iter())
         }
     }
@@ -525,8 +463,7 @@ impl VertexData
         &self,
         parent_index: impl HasVertexIndex,
         index_offset: usize,
-    ) -> Result<PatternIndex, ErrorReason>
-    {
+    ) -> Result<PatternIndex, ErrorReason> {
         let index = parent_index.vertex_index();
         self.get_parent(index)
             .ok()
@@ -536,15 +473,13 @@ impl VertexData
     pub fn get_parent_at_prefix_of(
         &self,
         index: impl HasVertexIndex,
-    ) -> Result<PatternIndex, ErrorReason>
-    {
+    ) -> Result<PatternIndex, ErrorReason> {
         self.get_parent_to_starting_at(index, 0)
     }
     pub fn get_parent_at_postfix_of(
         &self,
         vertex: &VertexData,
-    ) -> Result<PatternIndex, ErrorReason>
-    {
+    ) -> Result<PatternIndex, ErrorReason> {
         self.get_parent(vertex.vertex_index())
             .ok()
             .and_then(|parent| parent.get_index_at_postfix_of(vertex))
@@ -566,44 +501,32 @@ impl VertexData
     //        })
     //        .ok_or(ErrorReason::NoChildPatterns)
     //}
-    pub fn largest_postfix(&self) -> (PatternId, Child)
-    {
+    pub fn largest_postfix(&self) -> (PatternId, Child) {
         let (id, c) = self
             .children
             .iter()
             .fold(None, |acc: Option<(&PatternId, &Child)>, (pid, p)| {
-                if let Some(acc) = acc
-                {
+                if let Some(acc) = acc {
                     let c = p.last().unwrap();
-                    if c.width() > acc.1.width()
-                    {
+                    if c.width() > acc.1.width() {
                         Some((pid, c))
-                    }
-                    else
-                    {
+                    } else {
                         Some(acc)
                     }
-                }
-                else
-                {
+                } else {
                     Some((pid, p.last().unwrap()))
                 }
             })
             .unwrap();
         (*id, *c)
     }
-    pub fn all_children_iter(&self) -> impl IntoIterator<Item = &Child>
-    {
+    pub fn all_children_iter(&self) -> impl IntoIterator<Item = &Child> {
         self.children.iter().flat_map(|(_, pat)| pat.iter())
     }
-    pub fn all_localized_children_iter(
-        &self
-    ) -> impl IntoIterator<Item = (ChildLocation, &Child)>
-    {
+    pub fn all_localized_children_iter(&self) -> impl IntoIterator<Item = (ChildLocation, &Child)> {
         localized_children_iter_for_index(self.to_child(), &self.children)
     }
-    pub fn top_down_containment_nodes(&self) -> Vec<(usize, Child)>
-    {
+    pub fn top_down_containment_nodes(&self) -> Vec<(usize, Child)> {
         self.children
             .iter()
             .flat_map(|(_, pat)| {

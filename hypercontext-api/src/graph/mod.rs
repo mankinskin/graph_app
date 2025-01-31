@@ -3,6 +3,21 @@ use std::sync::{
     RwLock,
 };
 
+use crate::{
+    graph::{
+        child_strings::ChildStrings,
+        getters::vertex::VertexSet,
+        kind::{
+            BaseGraphKind,
+            GraphKind,
+        },
+        vertex::{
+            data::VertexData,
+            key::VertexKey,
+        },
+    },
+    HashMap,
+};
 use itertools::Itertools;
 use petgraph::graph::DiGraph;
 use serde::{
@@ -17,22 +32,8 @@ use vertex::{
     },
     pattern::IntoPattern,
     token::Token,
+    wide::Wide,
     VertexIndex,
-};
-use crate::{
-    graph::{
-        child_strings::ChildStrings,
-        kind::{
-            BaseGraphKind,
-            GraphKind,
-        },
-    },
-    HashMap,
-};
-use crate::graph::{
-    vertex::data::VertexData,
-    vertex::key::VertexKey,
-    getters::vertex::VertexSet,
 };
 
 pub mod child_strings;
@@ -40,7 +41,6 @@ pub mod getters;
 pub mod insert;
 pub mod kind;
 pub mod validation;
-
 
 pub mod vertex;
 
@@ -92,9 +92,7 @@ pub struct Hypergraph<G: GraphKind = BaseGraphKind> {
     _ty: std::marker::PhantomData<G>,
 }
 impl<G: GraphKind> Clone for Hypergraph<G> {
-    fn clone(
-        &self,
-    ) -> Self {
+    fn clone(&self) -> Self {
         Self {
             graph: self.graph.clone(),
             tokens: self.tokens.clone(),
@@ -224,9 +222,7 @@ impl<'a, G: GraphKind> Hypergraph<G>
 where
     G::Token: std::fmt::Display,
 {
-    pub fn to_petgraph(
-        &self
-    ) -> DiGraph<(VertexIndex, VertexData), Edge> {
+    pub fn to_petgraph(&self) -> DiGraph<(VertexIndex, VertexData), Edge> {
         let mut pg = DiGraph::new();
         // id refers to index in Hypergraph
         // idx refers to index in petgraph
@@ -308,10 +304,16 @@ where
             .map(|pattern| self.pattern_string_with_separator(pattern, ""))
             .collect()
     }
-    pub fn get_token_by_key(&self, key: &VertexKey) -> Option<&Token<G::Token>> {
+    pub fn get_token_by_key(
+        &self,
+        key: &VertexKey,
+    ) -> Option<&Token<G::Token>> {
         self.tokens.get(key)
     }
-    pub fn expect_token_by_key(&self, key: &VertexKey) -> &Token<G::Token> {
+    pub fn expect_token_by_key(
+        &self,
+        key: &VertexKey,
+    ) -> &Token<G::Token> {
         self.get_token_by_key(key)
             .expect("Key does not belong to a token!")
     }
@@ -328,7 +330,7 @@ where
         if let Some(token) = self.get_token_by_key(&data.key) {
             token.to_string()
         } else {
-            assert!(data.width > 1);
+            assert!(data.width() > 1);
             self.pattern_string(data.expect_any_child_pattern().1)
         }
     }

@@ -4,18 +4,6 @@ use crate::{
         location::child::ChildLocation,
         wide::Wide,
     },
-    traversal::{
-        cache::key::{
-            DirectedKey,
-            root::RootKey,
-            UpKey,
-        },
-        state::{
-            query::QueryState,
-            StateDirection,
-        },
-        result::kind::Primer,
-    },
     path::{
         accessors::{
             child::root::GraphRootChild,
@@ -25,13 +13,24 @@ use crate::{
             },
         },
         mutators::move_path::key::TokenPosition,
-        structs::rooted_path::{
-            RootedRolePath,
-            RootedSplitPathRef,
-            SearchPath,
+        structs::rooted::{
+            index_range::SearchPath,
+            role_path::RootedRolePath,
+            split_path::RootedSplitPathRef,
         },
     },
+    traversal::{
+        cache::key::{
+            root::RootKey,
+            DirectedKey,
+            UpKey,
+        },
+        result::kind::Primer,
+        state::StateDirection,
+    },
 };
+
+use super::cursor::RangeCursor;
 
 // End types:
 // - top down match-mismatch
@@ -60,7 +59,7 @@ pub struct EndState {
     pub reason: EndReason,
     pub root_pos: TokenPosition,
     pub kind: EndKind,
-    pub query: QueryState,
+    pub cursor: RangeCursor,
 }
 
 impl EndState {

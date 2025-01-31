@@ -11,7 +11,7 @@ use hypercontext_api::{
         Hypergraph,
         HypergraphRef,
     },
-    path::structs::query_range_path::QueryRangePath,
+    path::structs::query_range_path::PatternRangePath,
     traversal::{
         container::bft::BftQueue,
         fold::{
@@ -73,19 +73,19 @@ impl InsertContext {
     pub fn insert(
         &mut self,
         query: impl Foldable,
-    ) -> Result<(Child, QueryRangePath), ErrorReason> {
+    ) -> Result<(Child, PatternRangePath), ErrorReason> {
         match query.fold::<InsertTraversal>(self) {
             Ok(result) => match result.result {
-                FoundRange::Complete(c, q) => Ok((c, q.path)),
+                FoundRange::Complete(c, p) => Ok((c, p)),
                 FoundRange::Incomplete(mut fold_state) => Ok((
                     self.join(&mut fold_state).join_subgraph(),
-                    fold_state.end_state.query.path,
+                    fold_state.end_state.cursor.path,
                 )),
             },
             Err(ErrorState {
                 reason: ErrorReason::SingleIndex(c),
-                found: Some(FoundRange::Complete(_, q)),
-            }) => Ok((c, q.path)),
+                found: Some(FoundRange::Complete(_, p)),
+            }) => Ok((c, p)),
             Err(err) => Err(err.reason),
         }
     }

@@ -59,3 +59,23 @@ pub trait DirectedTraversalPolicy: Sized + Debug {
             .collect()
     }
 }
+
+#[derive(Debug)]
+pub struct AncestorPolicy<T: Traversable>(std::marker::PhantomData<T>);
+
+impl<T: Traversable> DirectedTraversalPolicy for AncestorPolicy<T> {
+    type Trav = T;
+}
+
+#[derive(Debug)]
+pub struct ParentPolicy<T: Traversable>(std::marker::PhantomData<T>);
+
+impl<T: Traversable> DirectedTraversalPolicy for ParentPolicy<T> {
+    type Trav = T;
+    fn next_parents(
+        _trav: &Self::Trav,
+        _state: &ParentState,
+    ) -> Vec<ParentState> {
+        vec![]
+    }
+}

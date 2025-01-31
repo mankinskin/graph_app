@@ -1,13 +1,26 @@
 use crate::{
-    direction::r#match::MatchDirection, graph::{
+    direction::r#match::MatchDirection,
+    graph::{
         kind::GraphKind,
         vertex::pattern::pattern_width,
-    }, traversal::{
+    },
+    path::structs::rooted::{
+        role_path::RootedRolePath,
+        root::IndexRoot,
+    },
+    traversal::{
         result::kind::{
             Primer,
             RoleChildPath,
-        }, state::end::{EndKind, PostfixEnd, PrefixEnd, RangeEnd}, traversable::Traversable
-    }
+        },
+        state::end::{
+            EndKind,
+            PostfixEnd,
+            PrefixEnd,
+            RangeEnd,
+        },
+        traversable::Traversable,
+    },
 };
 
 use super::super::{
@@ -26,10 +39,6 @@ use super::super::{
             MatchEndPath,
         },
         role_path::RolePath,
-        rooted_path::{
-            IndexRoot,
-            RootedRolePath,
-        },
     },
 };
 use std::borrow::Borrow;

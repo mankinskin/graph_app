@@ -27,9 +27,9 @@ use crate::{
                 MatchEndPath,
             },
             role_path::RolePath,
-            rooted_path::{
-                RootedRolePath,
-                SearchPath,
+            rooted::{
+                index_range::SearchPath,
+                role_path::RootedRolePath,
             },
         },
         BasePath,
@@ -219,7 +219,7 @@ impl<T> RoleChildPath for T {}
 pub struct BaseResult;
 
 //impl ResultKind for BaseResult {
-//    type Query = QueryRangePath;
+//    type Query = PatternRangePath;
 //    type Found = FoundPath;
 //    type Primer = RootedRolePath<Start>;
 //    type Advanced = SearchPath;
@@ -242,7 +242,7 @@ pub struct BaseResult;
 //pub struct OriginPathResult;
 //
 //impl ResultKind for OriginPathResult {
-//    type Found = OriginPath<FoundPath<Self, QueryRangePath>>;
+//    type Found = OriginPath<FoundPath<Self, PatternRangePath>>;
 //    type Primer = OriginPath<RolePath<Start>>;
 //    type Postfix = OriginPath<MatchEnd<RolePath<Start>>>;
 //    type Advanced = OriginPath<SearchPath>;

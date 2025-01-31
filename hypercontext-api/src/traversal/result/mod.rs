@@ -1,28 +1,28 @@
 use crate::{
     graph::vertex::{
         child::Child,
-        pattern::{pattern_width, IntoPattern},
+        pattern::IntoPattern,
     },
-    path::structs::query_range_path::{
-        QueryPath,
-        QueryRangePath,
+    path::structs::{
+        query_range_path::FoldablePath,
+        rooted::pattern_range::PatternRangePath,
     },
 };
 
 use super::{
     fold::state::FoldState,
-    state::query::QueryState,
+    //state::query::QueryState,
 };
 pub mod kind;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FoundRange {
-    Complete(Child, QueryState),
+    Complete(Child, PatternRangePath),
     Incomplete(FoldState),
 }
 
 impl FoundRange {
-    pub fn unwrap_complete(self) -> (Child, QueryState) {
+    pub fn unwrap_complete(self) -> (Child, PatternRangePath) {
         self.expect_complete("Unable to unwrap complete FoundRange")
     }
     pub fn unwrap_incomplete(self) -> FoldState {
@@ -31,7 +31,7 @@ impl FoundRange {
     pub fn expect_complete(
         self,
         msg: &str,
-    ) -> (Child, QueryState) {
+    ) -> (Child, PatternRangePath) {
         match self {
             Self::Complete(c, q) => (c, q),
             _ => panic!("{}", msg),
@@ -65,7 +65,7 @@ impl FinishedState {
         }
     }
     #[track_caller]
-    pub fn unwrap_complete(self) -> (Child, QueryState) {
+    pub fn unwrap_complete(self) -> (Child, PatternRangePath) {
         self.result.unwrap_complete()
     }
     #[allow(unused)]
@@ -73,7 +73,7 @@ impl FinishedState {
     pub fn expect_complete(
         self,
         msg: &str,
-    ) -> (Child, QueryState) {
+    ) -> (Child, PatternRangePath) {
         self.result.expect_complete(msg)
     }
 }
@@ -86,10 +86,7 @@ impl FinishedState {
     ) -> Self {
         let query = query.into_pattern();
         Self {
-            result: FoundRange::Complete(index.to_child(), QueryState {
-                pos: pattern_width(&query).into(),
-                path: QueryRangePath::complete(query),
-            }),
+            result: FoundRange::Complete(index.to_child(), PatternRangePath::complete(query)),
         }
     }
 }

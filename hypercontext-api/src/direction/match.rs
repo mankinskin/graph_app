@@ -16,33 +16,37 @@ use crate::{
         Left,
         Right,
     },
-    graph::{getters::ErrorReason, kind::GraphKind},
+    graph::{
+        getters::{
+            vertex::VertexSet,
+            ErrorReason,
+        },
+        kind::GraphKind,
+        vertex::{
+            child::Child,
+            data::VertexData,
+            has_vertex_index::{
+                HasVertexIndex,
+                ToChild,
+            },
+            parent::{
+                Parent,
+                PatternIndex,
+            },
+            pattern::{
+                id::PatternId,
+                pattern_range::PatternRangeIndex,
+                IntoPattern,
+                Pattern,
+            },
+        },
+        Hypergraph,
+    },
     HashMap,
     HashSet,
 };
-use crate::graph::Hypergraph;
-use crate::graph::vertex::{
-    child::Child,
-    has_vertex_index::ToChild,
-    parent::PatternIndex,
-    pattern::{
-        IntoPattern,
-        Pattern,
-        pattern_range::PatternRangeIndex,
-    },
-    TokenPosition,
-};
-use crate::graph::vertex::data::VertexData;
-use crate::graph::vertex::has_vertex_index::HasVertexIndex;
-use crate::graph::vertex::parent::Parent;
-use crate::graph::vertex::pattern::id::PatternId;
-use crate::graph::getters::vertex::VertexSet;
 
-fn to_matching_iterator<
-    'a,
-    I: HasVertexIndex + 'a,
-    J: HasVertexIndex + 'a,
->(
+fn to_matching_iterator<'a, I: HasVertexIndex + 'a, J: HasVertexIndex + 'a>(
     a: impl Iterator<Item = &'a I>,
     b: impl Iterator<Item = &'a J>,
 ) -> impl Iterator<Item = (usize, EitherOrBoth<&'a I, &'a J>)> {
@@ -63,14 +67,10 @@ pub trait MatchDirection: Clone + Debug + Send + Sync + 'static + Unpin {
         vertex: &VertexData,
         sup: impl HasVertexIndex,
     ) -> Result<PatternIndex, ErrorReason>;
-    fn skip_equal_indices<
-        'a,
-        I: HasVertexIndex,
-        J: HasVertexIndex,
-    >(
+    fn skip_equal_indices<'a, I: HasVertexIndex, J: HasVertexIndex>(
         a: impl DoubleEndedIterator<Item = &'a I>,
         b: impl DoubleEndedIterator<Item = &'a J>,
-    ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)>;
+    ) -> Option<(usize, EitherOrBoth<&'a I, &'a J>)>;
     /// get remaining pattern in matching direction including index
     fn pattern_tail<T: ToChild>(pattern: &'_ [T]) -> &'_ [T];
     fn pattern_head<T: ToChild>(pattern: &'_ [T]) -> Option<&'_ T>;
@@ -93,9 +93,7 @@ pub trait MatchDirection: Clone + Debug + Send + Sync + 'static + Unpin {
         parent: &Parent,
         child_patterns: &HashMap<PatternId, Pattern>,
     ) -> HashSet<PatternIndex>;
-    fn split_head_tail<T: ToChild + Clone>(
-        pattern: &'_ [T]
-    ) -> Option<(T, &'_ [T])> {
+    fn split_head_tail<T: ToChild + Clone>(pattern: &'_ [T]) -> Option<(T, &'_ [T])> {
         Self::pattern_head(pattern).map(|head| (head.clone(), Self::pattern_tail(pattern)))
     }
     fn front_context_range<T>(index: usize) -> Self::PostfixRange<T>;
@@ -109,18 +107,6 @@ pub trait MatchDirection: Clone + Debug + Send + Sync + 'static + Unpin {
             .unwrap_or(&[])
             .to_vec()
     }
-    //fn front_context_normalized<T: AsChild + Clone>(
-    //    pattern: &'_ [T],
-    //    index: PatternId,
-    //) -> Vec<T> {
-    //    Self::front_context(pattern, Self::normalize_index(pattern, index))
-    //}
-    //fn back_context_normalized<T: AsChild + Clone>(
-    //    pattern: &'_ [T],
-    //    index: PatternId,
-    //) -> Vec<T> {
-    //    Self::back_context(pattern, Self::normalize_index(pattern, index))
-    //}
     fn pattern_index_next(
         pattern: impl IntoPattern,
         index: usize,
@@ -137,12 +123,8 @@ pub trait MatchDirection: Clone + Debug + Send + Sync + 'static + Unpin {
         pattern: impl IntoPattern,
         sub_index: usize,
     ) -> Option<Child> {
-        Self::pattern_index_next(pattern.borrow(), sub_index).and_then(|i| {
-            pattern
-                .borrow()
-                .get(i)
-                .map(ToChild::to_child)
-        })
+        Self::pattern_index_next(pattern.borrow(), sub_index)
+            .and_then(|i| pattern.borrow().get(i).map(ToChild::to_child))
     }
     fn compare_next_index_in_child_pattern(
         child_pattern: impl IntoPattern,
@@ -168,14 +150,10 @@ impl MatchDirection for Right {
     ) -> Result<PatternIndex, ErrorReason> {
         vertex.get_parent_at_prefix_of(sup)
     }
-    fn skip_equal_indices<
-        'a,
-        I: HasVertexIndex,
-        J: HasVertexIndex,
-    >(
+    fn skip_equal_indices<'a, I: HasVertexIndex, J: HasVertexIndex>(
         a: impl DoubleEndedIterator<Item = &'a I>,
         b: impl DoubleEndedIterator<Item = &'a J>,
-    ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)> {
+    ) -> Option<(usize, EitherOrBoth<&'a I, &'a J>)> {
         to_matching_iterator(a, b).next()
     }
 
@@ -228,14 +206,10 @@ impl MatchDirection for Left {
         let sup = graph.expect_vertex(sup.vertex_index());
         vertex.get_parent_at_postfix_of(sup)
     }
-    fn skip_equal_indices<
-        'a,
-        I: HasVertexIndex,
-        J: HasVertexIndex,
-    >(
+    fn skip_equal_indices<'a, I: HasVertexIndex, J: HasVertexIndex>(
         a: impl DoubleEndedIterator<Item = &'a I>,
         b: impl DoubleEndedIterator<Item = &'a J>,
-    ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)> {
+    ) -> Option<(usize, EitherOrBoth<&'a I, &'a J>)> {
         to_matching_iterator(a.rev(), b.rev()).next()
     }
     fn front_context_range<T>(index: usize) -> Self::PostfixRange<T> {

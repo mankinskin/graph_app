@@ -7,7 +7,7 @@ use hypercontext_api::{
             location::child::ChildLocation,
             pattern::IntoPattern,
         }, HypergraphRef
-    }, path::structs::query_range_path::QueryRangePath
+    }, path::structs::query_range_path::PatternRangePath
 };
 
 pub mod context;
@@ -21,7 +21,7 @@ pub trait HasInsertContext {
     fn index_pattern(
         &self,
         pattern: impl IntoPattern,
-    ) -> Result<(Child, QueryRangePath), ErrorReason>;
+    ) -> Result<(Child, PatternRangePath), ErrorReason>;
 }
 impl HasInsertContext for HypergraphRef {
     fn insert_context(&self) -> InsertContext {
@@ -30,7 +30,7 @@ impl HasInsertContext for HypergraphRef {
     fn index_pattern(
         &self,
         pattern: impl IntoPattern,
-    ) -> Result<(Child, QueryRangePath), ErrorReason> {
+    ) -> Result<(Child, PatternRangePath), ErrorReason> {
         self.insert_context().insert(pattern.into_pattern())
     }
     //pub fn index_query_with_origin<

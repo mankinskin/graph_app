@@ -26,7 +26,7 @@ pub trait BandIterator<'a, Trav: Traversable + 'a>:
     Iterator<Item = (ChildLocation, Child)>
 {
     type Policy: BandExpandingPolicy<Trav>;
-    fn new(
+    fn band_iter(
         trav: &'a Trav,
         root: Child,
     ) -> Self;
@@ -64,7 +64,7 @@ where
     P: BandExpandingPolicy<Trav>,
 {
     type Policy = P;
-    fn new(
+    fn band_iter(
         trav: &'a Trav,
         root: Child,
     ) -> Self {

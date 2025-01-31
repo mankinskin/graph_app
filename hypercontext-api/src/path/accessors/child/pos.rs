@@ -10,18 +10,17 @@ use crate::{
                 MatchEnd,
                 MatchEndPath,
             },
-            query_range_path::QueryRangePath,
+            query_range_path::FoldablePath,
             role_path::RolePath,
-            rooted_path::{
-                PathRoot,
-                RootedRolePath,
-                RootedSplitPath,
-                RootedSplitPathRef,
-                SearchPath,
-                SubPath,
+            rooted::{
+                pattern_range::PatternRangePath,
+                role_path::RootedRolePath,
+                root::PathRoot,
             },
+            sub_path::SubPath,
         },
-    }, traversal::state::query::QueryState,
+    },
+    traversal::state::cursor::PathCursor,
 };
 use auto_impl::auto_impl;
 
@@ -36,6 +35,11 @@ impl<R: PathRole> RootChildPos<R> for RolePath<R> {
         self.sub_path.root_entry
     }
 }
+impl<R: PathRole, P: RootChildPos<R> + FoldablePath> RootChildPos<R> for PathCursor<P> {
+    fn root_child_pos(&self) -> usize {
+        RootChildPos::<R>::root_child_pos(&self.path)
+    }
+}
 
 impl<R: PathRole, Root: PathRoot> RootChildPos<R> for RootedRolePath<R, Root> {
     fn root_child_pos(&self) -> usize {
@@ -43,33 +47,9 @@ impl<R: PathRole, Root: PathRoot> RootChildPos<R> for RootedRolePath<R, Root> {
     }
 }
 
-impl<R: PathRole, Root: PathRoot> RootChildPos<R> for RootedSplitPath<Root> {
-    fn root_child_pos(&self) -> usize {
-        RootChildPos::<R>::root_child_pos(&self.sub_path)
-    }
-}
-
-impl<R: PathRole, Root: PathRoot> RootChildPos<R> for RootedSplitPathRef<'_, Root> {
-    fn root_child_pos(&self) -> usize {
-        RootChildPos::<R>::root_child_pos(self.sub_path)
-    }
-}
-
 impl<R: PathRole> RootChildPos<R> for SubPath {
     fn root_child_pos(&self) -> usize {
         self.root_entry
-    }
-}
-
-impl RootChildPos<Start> for SearchPath {
-    fn root_child_pos(&self) -> usize {
-        RootChildPos::<Start>::root_child_pos(&self.start)
-    }
-}
-
-impl RootChildPos<End> for SearchPath {
-    fn root_child_pos(&self) -> usize {
-        RootChildPos::<End>::root_child_pos(&self.end)
     }
 }
 
@@ -82,29 +62,17 @@ impl<P: MatchEndPath> RootChildPos<Start> for MatchEnd<P> {
     }
 }
 
-impl RootChildPos<Start> for QueryRangePath {
-    fn root_child_pos(&self) -> usize {
-        self.start.root_entry
-    }
-}
-
-impl RootChildPos<End> for QueryState {
-    fn root_child_pos(&self) -> usize {
-        self.path.end.root_entry
-    }
-}
-
-impl RootChildPos<Start> for QueryState {
-    fn root_child_pos(&self) -> usize {
-        self.path.start.root_entry
-    }
-}
-
-impl RootChildPos<End> for QueryRangePath {
-    fn root_child_pos(&self) -> usize {
-        self.end.root_entry
-    }
-}
+//impl RootChildPos<End> for RangeCursor {
+//    fn root_child_pos(&self) -> usize {
+//        self.path.end.root_entry
+//    }
+//}
+//
+//impl RootChildPos<Start> for RangeCursor {
+//    fn root_child_pos(&self) -> usize {
+//        self.path.start.root_entry
+//    }
+//}
 
 pub trait RootChildPosMut<R>: RootChildPos<R> {
     fn root_child_pos_mut(&mut self) -> &mut usize;
@@ -122,23 +90,17 @@ impl<R: PathRole, Root: PathRoot> RootChildPosMut<R> for RootedRolePath<R, Root>
     }
 }
 
-impl RootChildPosMut<End> for QueryRangePath {
+impl RootChildPosMut<End> for PatternRangePath {
     fn root_child_pos_mut(&mut self) -> &mut usize {
         &mut self.end.sub_path.root_entry
     }
 }
 
-impl RootChildPosMut<End> for SearchPath {
-    fn root_child_pos_mut(&mut self) -> &mut usize {
-        self.end.root_child_pos_mut()
-    }
-}
-
-impl RootChildPosMut<End> for QueryState {
-    fn root_child_pos_mut(&mut self) -> &mut usize {
-        &mut self.path.end.sub_path.root_entry
-    }
-}
+//impl RootChildPosMut<End> for RangeCursor {
+//    fn root_child_pos_mut(&mut self) -> &mut usize {
+//        &mut self.path.end.sub_path.root_entry
+//    }
+//}
 //impl<R, P: RootChildPos<R>> RootChildPos<R> for OriginPath<P> {
 //    fn root_child_pos(&self) -> usize {
 //        self.postfix.root_child_pos()

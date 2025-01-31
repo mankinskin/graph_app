@@ -1,21 +1,23 @@
-use crate::{
-    graph::vertex::location::child::ChildLocation, traversal::state::query::QueryState,
-};
 use super::super::{
     accessors::role::{
         End,
         PathRole,
     },
-    structs::{
-        query_range_path::QueryRangePath,
-        role_path::RolePath,
-        rooted_path::{
-            PathRoot,
-            RootedRolePath,
-            SearchPath,
-            SubPath,
+    structs::role_path::RolePath,
+};
+use crate::{
+    graph::vertex::location::child::ChildLocation,
+    path::structs::{
+        query_range_path::FoldablePath,
+        rooted::{
+            index_range::SearchPath,
+            pattern_range::PatternRangePath,
+            role_path::RootedRolePath,
+            root::PathRoot,
         },
+        sub_path::SubPath,
     },
+    traversal::state::cursor::PathCursor, //traversal::state::query::QueryState,
 };
 
 /// move path leaf position one level deeper
@@ -62,7 +64,7 @@ impl PathAppend for SearchPath {
     }
 }
 
-impl PathAppend for QueryRangePath {
+impl PathAppend for PatternRangePath {
     fn path_append(
         &mut self,
         parent_entry: ChildLocation,
@@ -70,15 +72,23 @@ impl PathAppend for QueryRangePath {
         self.end.sub_path.path.push(parent_entry);
     }
 }
-
-impl PathAppend for QueryState {
+impl<P: FoldablePath> PathAppend for PathCursor<P> {
     fn path_append(
         &mut self,
         parent_entry: ChildLocation,
     ) {
-        self.path.end.path_append(parent_entry)
+        self.path.path_append(parent_entry);
     }
 }
+
+//impl PathAppend for QueryState {
+//    fn path_append(
+//        &mut self,
+//        parent_entry: ChildLocation,
+//    ) {
+//        self.path.end.path_append(parent_entry)
+//    }
+//}
 //impl PathAppend for SubPath {
 //    fn path_append<
 //        Trav: Traversable,

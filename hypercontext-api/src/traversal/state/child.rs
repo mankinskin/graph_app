@@ -1,6 +1,14 @@
 use crate::{
     direction::r#match::MatchDirection,
-    graph::vertex::pattern::Pattern,
+    graph::{
+        getters::vertex::VertexSet,
+        vertex::{
+            child::Child,
+            location::child::ChildLocation,
+            pattern::Pattern,
+            wide::Wide,
+        },
+    },
     path::{
         accessors::{
             role::{
@@ -15,7 +23,9 @@ use crate::{
                 key::{
                     AdvanceKey,
                     TokenPosition,
-                }, Advance, Retract
+                },
+                Advance,
+                Retract,
             },
         },
         structs::pair::{
@@ -27,33 +37,39 @@ use crate::{
         cache::{
             entry::new::NewEntry,
             key::{
-                pos::QueryPosition, prev::ToPrev, target::TargetKey, DirectedKey
+                pos::CursorPosition,
+                prev::ToPrev,
+                target::TargetKey,
+                DirectedKey,
             },
-        }, container::pruning::PruneStates, TraversalContext, result::kind::{
+        },
+        container::pruning::PruneStates,
+        result::kind::{
             Primer,
             RoleChildPath,
-        }, state::{
+        },
+        state::{
             end::{
                 EndKind,
                 EndReason,
                 EndState,
                 RangeEnd,
-            }, parent::ParentState, NextStates, StateNext
-        }, traversable::{
+            },
+            parent::ParentState,
+            NextStates,
+            StateNext,
+        },
+        traversable::{
             DirectionOf,
             Traversable,
-        }, TraversalKind
-    }
+        },
+        TraversalContext,
+        TraversalKind,
+    },
 };
 use itertools::Itertools;
 use std::cmp::Ordering;
 use tap::Tap;
-use crate::graph::vertex::{
-    child::Child,
-    location::child::ChildLocation,
-    wide::Wide,
-};
-use crate::graph::getters::vertex::VertexSet;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChildState {
@@ -101,7 +117,7 @@ impl ChildState {
     ) -> NextStates {
         let key = self.target_key();
         let path_leaf = self.paths.path.role_leaf_child::<End, _>(ctx.trav);
-        let query_leaf = self.paths.query.role_leaf_child::<End, _>(ctx.trav);
+        let query_leaf = self.paths.cursor.role_leaf_child::<End, _>(ctx.trav);
 
         // compare next child
         match path_leaf.width.cmp(&query_leaf.width) {
@@ -165,7 +181,7 @@ impl ChildState {
         //    false,
         //);
         let path = &mut self.paths.path;
-        let qres = self.paths.query.advance(ctx.trav);
+        let qres = self.paths.cursor.advance(ctx.trav);
         if qres.is_continue() {
             if path.advance(ctx.trav).is_continue() {
                 // gen next child
@@ -177,7 +193,7 @@ impl ChildState {
                         root_pos: self.root_pos,
                         target: DirectedKey::down(
                             path.role_leaf_child::<End, _>(ctx.trav),
-                            *self.paths.query.query_pos(),
+                            *self.cursor_pos(),
                         ),
                         paths: self.paths,
                     },
@@ -187,7 +203,7 @@ impl ChildState {
                     prev_pos: self.prev_pos,
                     root_pos: self.root_pos,
                     path: Primer::from(self.paths.path),
-                    query: self.paths.query,
+                    cursor: self.paths.cursor,
                 }
                 .next_parents::<K>(ctx.trav, vec![])
             }
@@ -202,18 +218,15 @@ impl ChildState {
     ) -> NextStates {
         let key = self.target_key();
         let PathPair {
-            mut query,
+            mut cursor,
             mut path,
             ..
         } = self.paths;
-        query.retract(trav);
+        cursor.retract(trav);
         path.retract(trav);
         if let Some(index) = loop {
             if path.role_root_child_pos::<Start>() == path.role_root_child_pos::<End>() {
-                if (&mut self.root_pos, &mut path)
-                    .path_lower(trav)
-                    .is_break()
-                {
+                if (&mut self.root_pos, &mut path).path_lower(trav).is_break() {
                     let graph = trav.graph();
                     let pattern = graph.expect_pattern_at(path.root.location);
                     let entry = path.start.sub_path.root_entry;
@@ -229,7 +242,7 @@ impl ChildState {
                 new,
                 inner: EndState {
                     root_pos: self.root_pos,
-                    query: query.clone(),
+                    cursor: cursor.clone(),
                     reason: EndReason::Mismatch,
                     kind: EndKind::Complete(index),
                 },
@@ -244,12 +257,12 @@ impl ChildState {
                     kind: RangeEnd {
                         target: DirectedKey::down(
                             path.role_leaf_child::<End, _>(trav),
-                            query.pos,
+                            cursor.relative_pos,
                         ),
                         path,
                     }
                     .simplify(trav),
-                    query: query.clone(),
+                    cursor: cursor.clone(),
                 },
             })
         }
@@ -261,17 +274,17 @@ impl ChildState {
     ) -> NextStates {
         let key = self.target_key();
         let PathPair {
-            mut query, path, ..
+            mut cursor, path, ..
         } = self.paths;
         let target_index = path.role_leaf_child::<End, _>(trav);
-        let pos = query.pos;
-        query.advance_key(target_index.width());
+        let pos = cursor.relative_pos;
+        cursor.advance_key(target_index.width());
         NextStates::End(StateNext {
             prev: key.to_prev(0),
             new,
             inner: EndState {
                 root_pos: self.root_pos,
-                query,
+                cursor,
                 reason: EndReason::QueryEnd,
                 kind: RangeEnd {
                     path,
@@ -287,8 +300,7 @@ impl ChildState {
         trav: &Trav,
         index: Child,
     ) -> Vec<ChildState> {
-        trav
-            .graph()
+        trav.graph()
             .expect_vertex(index)
             .get_child_patterns()
             .iter()
@@ -304,7 +316,7 @@ impl ChildState {
                     root_pos: self.root_pos,
                     target: DirectedKey::down(
                         paths.path.role_leaf_child::<End, _>(trav),
-                        *paths.query.query_pos(),
+                        *paths.cursor.cursor_pos(),
                     ),
                     paths,
                 }

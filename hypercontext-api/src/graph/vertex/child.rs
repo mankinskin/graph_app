@@ -1,7 +1,9 @@
-use std::fmt::Display;
 use std::{
     borrow::Borrow,
-    fmt::Debug,
+    fmt::{
+        Debug,
+        Display,
+    },
 };
 
 use derive_more::From;
@@ -10,26 +12,27 @@ use serde::{
     Serialize,
 };
 
-use crate::traversal::cache::key::{
-    DownKey,
-    DownPosition,
-    UpKey,
-    UpPosition,
-};
-use crate::graph::vertex::{
-    has_vertex_index::HasVertexIndex,
-    location::{
-        child::ChildLocation,
-        pattern::PatternLocation,
-        SubLocation,
+use crate::{
+    graph::vertex::{
+        has_vertex_index::HasVertexIndex,
+        location::{
+            child::ChildLocation,
+            pattern::PatternLocation,
+            SubLocation,
+        },
+        token::NewTokenIndex,
+        wide::{
+            Wide,
+            WideMut,
+        },
+        PatternId,
+        VertexIndex,
     },
-    PatternId,
-    token::NewTokenIndex,
-    TokenPosition,
-    VertexIndex,
-    wide::{
-        Wide,
-        WideMut,
+    traversal::cache::key::{
+        DownKey,
+        DownPosition,
+        UpKey,
+        UpPosition,
     },
 };
 
@@ -51,14 +54,14 @@ pub struct Child {
 impl Child {
     pub fn new(
         index: impl HasVertexIndex,
-        width: TokenPosition,
+        width: usize,
     ) -> Self {
         Self {
             index: index.vertex_index(),
             width: ChildWidth(width),
         }
     }
-    pub fn get_width(&self) -> TokenPosition {
+    pub fn get_width(&self) -> usize {
         self.width.0
     }
     pub fn to_pattern_location(
@@ -208,7 +211,10 @@ impl AsRef<[Child]> for Child {
     }
 }
 impl Display for Child {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }
 }

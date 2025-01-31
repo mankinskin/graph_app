@@ -19,11 +19,10 @@ use crate::graph::vertex::{
 use super::{
     child::Child,
     has_vertex_index::ToChild,
-    TokenPosition,
 };
 
-pub mod pattern_range;
 pub mod id;
+pub mod pattern_range;
 
 pub type Pattern = Vec<Child>;
 pub type PatternView<'a> = &'a [Child];
@@ -59,21 +58,21 @@ pub trait AsPatternMut: BorrowMut<Vec<Child>> + Debug {}
 
 impl<T> AsPatternMut for T where T: BorrowMut<Vec<Child>> + Debug {}
 
-pub fn pattern_width<T: Borrow<Child>>(pat: impl IntoIterator<Item = T>) -> TokenPosition {
+pub fn pattern_width<T: Borrow<Child>>(pat: impl IntoIterator<Item = T>) -> usize {
     pat.into_iter().map(|c| c.borrow().width()).sum()
 }
 
 pub fn pattern_pre_ctx_width<T: Borrow<Child>>(
     pat: impl IntoIterator<Item = T>,
     sub_index: usize,
-) -> TokenPosition {
+) -> usize {
     pattern_width(pat.into_iter().take(sub_index))
 }
 
 pub fn pattern_post_ctx_width<T: Borrow<Child>>(
     pat: impl IntoIterator<Item = T>,
     sub_index: usize,
-) -> TokenPosition {
+) -> usize {
     pattern_width(pat.into_iter().skip(sub_index + 1))
 }
 

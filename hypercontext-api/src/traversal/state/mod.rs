@@ -1,25 +1,45 @@
-pub mod end;
 pub mod child;
-pub mod query;
+pub mod cursor;
+pub mod end;
 pub mod parent;
 pub mod start;
 pub mod traversal;
 
 use child::ChildState;
-use end::{EndKind, EndReason, EndState};
+use end::{
+    EndKind,
+    EndReason,
+    EndState,
+};
 use itertools::Itertools;
 use parent::ParentState;
+use std::{
+    cmp::Ordering,
+    ops::ControlFlow,
+};
 use traversal::TraversalState;
-use std::{cmp::Ordering, ops::ControlFlow};
 
-use crate::{graph::vertex::wide::Wide, traversal::{
-    cache::{
-        entry::new::NewEntry,
-        key::prev::PrevKey,
-    }, trace::TraceContext
-}};
+use crate::{
+    graph::vertex::wide::Wide,
+    traversal::{
+        cache::{
+            entry::new::NewEntry,
+            key::prev::PrevKey,
+        },
+        trace::TraceContext,
+    },
+};
 
-use super::{cache::key::root::RootKey, container::{extend::ExtendStates, pruning::PruneStates}, TraversalContext, trace::TraceInit, TraversalKind};
+use super::{
+    cache::key::root::RootKey,
+    container::{
+        extend::ExtendStates,
+        pruning::PruneStates,
+    },
+    trace::TraceInit,
+    TraversalContext,
+    TraversalKind,
+};
 
 #[derive(Clone, Debug)]
 pub struct StateNext<T> {
@@ -45,7 +65,10 @@ pub struct ApplyStatesCtx<'a: 'b, 'b, K: TraversalKind> {
     pub end_state: &'a mut Option<EndState>,
 }
 impl<'a: 'b, 'b, K: TraversalKind> ApplyStatesCtx<'a, 'b, K> {
-    pub fn apply_transition(self, next_states: NextStates) -> ControlFlow<()> {
+    pub fn apply_transition(
+        self,
+        next_states: NextStates,
+    ) -> ControlFlow<()> {
         match next_states {
             NextStates::Child(_) | NextStates::Prefixes(_) | NextStates::Parents(_) => {
                 self.tctx.states.extend(
@@ -55,7 +78,7 @@ impl<'a: 'b, 'b, K: TraversalKind> ApplyStatesCtx<'a, 'b, K> {
                         .map(|nstate| (self.depth + 1, nstate)),
                 );
                 ControlFlow::Continue(())
-            },
+            }
             NextStates::Empty => ControlFlow::Continue(()),
             NextStates::End(StateNext { inner: end, .. }) => {
                 //debug!("{:#?}", state);

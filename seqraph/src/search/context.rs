@@ -6,9 +6,8 @@ use hypercontext_api::{
     traversal::{
         container::bft::BftQueue,
         fold::FoldContext,
-        iterator::policy::DirectedTraversalPolicy,
+        iterator::policy::{AncestorPolicy, DirectedTraversalPolicy, ParentPolicy},
         result::FinishedState,
-        state::parent::ParentState,
         traversable::Traversable,
         TraversalKind,
     },
@@ -19,38 +18,14 @@ pub struct SearchContext<T: Traversable> {
     pub graph: T,
 }
 
-pub trait SearchTraversalPolicy<T: Traversable>:
-    DirectedTraversalPolicy<Trav = SearchContext<T>>
-{
-}
-
-impl<T: Traversable> SearchTraversalPolicy<T> for AncestorSearch<T> {}
-
-impl<T: Traversable> SearchTraversalPolicy<T> for ParentSearch<T> {}
-
-//impl<T: Traversable> TraversalFolder for SearchContext<T> {
-//    type Iterator<'a> = Bft<'a, Self, (T, AncestorSearch)> where T: 'a;
+//pub trait SearchTraversalPolicy<T: Traversable>:
+//    DirectedTraversalPolicy<Trav = T>
+//{
 //}
-
-#[derive(Debug)]
-pub struct AncestorSearch<T: Traversable>(std::marker::PhantomData<T>);
-
-impl<T: Traversable> DirectedTraversalPolicy for AncestorSearch<T> {
-    type Trav = SearchContext<T>;
-}
-
-#[derive(Debug)]
-pub struct ParentSearch<T: Traversable>(std::marker::PhantomData<T>);
-
-impl<T: Traversable> DirectedTraversalPolicy for ParentSearch<T> {
-    type Trav = SearchContext<T>;
-    fn next_parents(
-        _trav: &Self::Trav,
-        _state: &ParentState,
-    ) -> Vec<ParentState> {
-        vec![]
-    }
-}
+//
+//impl<T: Traversable> SearchTraversalPolicy<T> for AncestorPolicy<T> {}
+//
+//impl<T: Traversable> SearchTraversalPolicy<T> for ParentPolicy<T> {}
 
 pub type SearchResult = Result<FinishedState, ErrorReason>;
 #[derive(Debug, Default)]
@@ -59,7 +34,7 @@ pub struct AncestorSearchTraversal<T: Traversable>(std::marker::PhantomData<T>);
 impl<T: Traversable> TraversalKind for AncestorSearchTraversal<T> {
     type Trav = SearchContext<T>;
     type Container = BftQueue;
-    type Policy = AncestorSearch<T>;
+    type Policy = AncestorPolicy<Self::Trav>;
 }
 #[derive(Debug, Default)]
 pub struct ParentSearchTraversal<T: Traversable>(std::marker::PhantomData<T>);
@@ -67,7 +42,7 @@ pub struct ParentSearchTraversal<T: Traversable>(std::marker::PhantomData<T>);
 impl<T: Traversable> TraversalKind for ParentSearchTraversal<T> {
     type Trav = SearchContext<T>;
     type Container = BftQueue;
-    type Policy = ParentSearch<T>;
+    type Policy = ParentPolicy<Self::Trav>;
 }
 impl<T: Traversable> SearchContext<T> {
     pub fn new(graph: T) -> Self {
@@ -94,55 +69,6 @@ impl<T: Traversable> SearchContext<T> {
     ) -> SearchResult {
         FoldContext::<K>::fold_pattern(self, query).map_err(|err| err.reason)
     }
-    //#[allow(unused)]
-    //fn par_search<
-    //    Ti: TraversalIterator<T, D, Self, QueryRangePath, S, BaseResult> + Send,
-    //    S: SearchTraversalPolicy<T, D>,
-    //    P: IntoPattern,
-    //>(
-    //    &'a self,
-    //    query: P,
-    //) -> SearchResult {
-    //    let query_path = QueryRangePath::new_directed::<D, _>(query.borrow())
-    //        .map_err(|(err, _)| err)?;
-    //    match ParallelIterator::simplify(
-    //        Ti::new(self, TraversalState::query_node(query_path))
-    //            .par_bridge()
-    //            .try_fold_with(None, |acc, (_depth, node)|
-    //                tokio::runtime::Handle::current().block_on(
-    //                    <S::Folder as TraversalFolder<_, _, _, BaseResult>>::fold_found(self, acc, node)
-    //                )
-    //            ),
-    //            || ControlFlow::Continue(None), |a, b|
-    //                match (a, b) {
-    //                    (ControlFlow::Break(b), ControlFlow::Continue(_)) |
-    //                    (ControlFlow::Continue(_), ControlFlow::Break(b)) =>
-    //                        ControlFlow::Break(b),
-    //                    (ControlFlow::Break(a), ControlFlow::Break(b)) =>
-    //                        ControlFlow::Break(
-    //                            std::cmp::max_by(
-    //                                a,
-    //                                b,
-    //                                |a, b|
-    //                                    a.found.cmp(&b.found)
-    //                            )
-    //                        ),
-    //                    (ControlFlow::Continue(a), ControlFlow::Continue(b)) =>
-    //                        ControlFlow::Continue(match (a, b) {
-    //                            (None, None) => None,
-    //                            (None, Some(found)) |
-    //                            (Some(found), None) => Some(found),
-    //                            (Some(a), Some(b)) =>
-    //                                Some(std::cmp::max_by(a, b, |a, b| a.found.cmp(&b.found)))
-    //                        })
-    //                }
-    //        )
-    //    {
-    //        ControlFlow::Continue(None) => Err(ErrorReason::NotFound),
-    //        ControlFlow::Continue(Some(found)) |
-    //        ControlFlow::Break(found) => Ok(found)
-    //    }
-    //}
 }
 
 impl<T: Traversable> Traversable for SearchContext<T> {

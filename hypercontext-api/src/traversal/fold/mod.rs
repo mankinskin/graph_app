@@ -1,12 +1,16 @@
 use super::{
-    states::StatesContext,
-    TraversalContext,
     result::FoundRange,
     state::{
+        cursor::{
+            RangeCursor,
+            ToCursor,
+        },
         traversal::TraversalState,
         ApplyStatesCtx,
     },
-    traversable::TravKind, TraversalKind,
+    states::StatesContext,
+    TraversalContext,
+    TraversalKind,
 };
 use crate::{
     graph::{
@@ -19,7 +23,15 @@ use crate::{
             },
             wide::Wide,
         },
-    }, path::structs::query_range_path::{PatternPrefixPath, QueryPath, QueryRangePath}, traversal::{
+    },
+    path::structs::{
+        query_range_path::FoldablePath,
+        rooted::{
+            pattern_prefix::PatternPrefixPath,
+            pattern_range::PatternRangePath,
+        },
+    },
+    traversal::{
         cache::{
             key::{
                 root::RootKey,
@@ -32,18 +44,15 @@ use crate::{
             FoldState,
         },
         result::FinishedState,
-        state::{
-            end::{
-                EndKind,
-                EndState,
-            },
-            query::QueryState,
+        state::end::{
+            EndKind,
+            EndState,
         },
-    }
+    },
 };
 use init::{
+    CursorInit,
     InitStates,
-    QueryStateInit,
 };
 use std::{
     borrow::Borrow,
@@ -63,20 +72,27 @@ pub struct ErrorState {
 pub type FoldResult = Result<FinishedState, ErrorState>;
 
 pub trait Foldable {
-    fn fold<'a, K: TraversalKind>(self, trav: &'a K::Trav) -> FoldResult;
+    fn fold<'a, K: TraversalKind>(
+        self,
+        trav: &'a K::Trav,
+    ) -> FoldResult;
 }
 
+#[macro_export]
 macro_rules! impl_foldable {
     ($t:ty, $f:ident) => {
         impl Foldable for $t {
-            fn fold<'a, K: TraversalKind>(self, trav: &'a K::Trav) -> FoldResult {
+            fn fold<'a, K: TraversalKind>(
+                self,
+                trav: &'a K::Trav,
+            ) -> FoldResult {
                 FoldContext::<'a, K>::$f(trav, self)
             }
         }
     };
 }
-impl_foldable!(QueryState, fold_query);
-impl_foldable!(QueryRangePath, fold_path);
+//impl_foldable!(QueryState, fold_query);
+impl_foldable!(PatternRangePath, fold_path);
 impl_foldable!(PatternPrefixPath, fold_path);
 impl_foldable!(Pattern, fold_pattern);
 
@@ -100,33 +116,30 @@ impl<K: TraversalKind> Iterator for FoldContext<'_, K> {
 impl<'a, K: TraversalKind> FoldContext<'a, K> {
     pub fn fold_pattern<P: IntoPattern>(
         trav: &'a K::Trav,
-        query_pattern: P,
+        pattern: P,
     ) -> FoldResult {
-        let query_pattern = query_pattern.into_pattern();
+        let pattern = pattern.into_pattern();
 
         // build cursor path
-        let query = QueryState::new::<TravKind<K::Trav>, _>(query_pattern.borrow())?;
+        let path = PatternRangePath::from(pattern.borrow());
 
-        Self::fold_query(trav, query)
+        Self::fold_path(trav, path)
     }
     pub fn fold_path(
         trav: &'a K::Trav,
-        query: impl QueryPath,
+        query: impl FoldablePath,
     ) -> Result<FinishedState, ErrorState> {
-        Self::fold_query(
-            trav,
-            query.to_query_state(),
-        )
+        Self::fold_cursor(trav, query.to_range_path().to_cursor())
     }
-    pub fn fold_query(
+    pub fn fold_cursor(
         trav: &'a K::Trav,
-        query: QueryState,
+        cursor: RangeCursor,
     ) -> Result<FinishedState, ErrorState> {
-        let init = QueryStateInit::<K> {
+        let init = CursorInit::<K> {
             trav,
-            query: &query,
+            cursor: &cursor,
         };
-        let start_index = init.start_index();
+        let start_index = init.cursor.path.start_index(trav);
 
         let mut ctx = Self {
             states: init.init_context(),
@@ -136,7 +149,7 @@ impl<'a, K: TraversalKind> FoldContext<'a, K> {
             start_index,
         };
         ctx.fold_states()?;
-        ctx.finish_fold(query)
+        ctx.finish_fold(cursor.path)
     }
     fn fold_states(&mut self) -> Result<(), ErrorState> {
         while let Some((depth, tstate)) = self.next() {
@@ -144,8 +157,7 @@ impl<'a, K: TraversalKind> FoldContext<'a, K> {
                 trav: self.trav,
                 states: &mut self.states,
             };
-            if let Some(next_states) = tstate.next_states(&mut ctx)
-            {
+            if let Some(next_states) = tstate.next_states(&mut ctx) {
                 if (ApplyStatesCtx {
                     tctx: &mut ctx,
                     max_width: &mut self.max_width,
@@ -163,20 +175,20 @@ impl<'a, K: TraversalKind> FoldContext<'a, K> {
     }
     fn finish_fold(
         self,
-        query: QueryState,
+        path: PatternRangePath,
     ) -> Result<FinishedState, ErrorState> {
         if let Some(state) = self.end_state {
             Ok(FoldFinished {
                 end_state: state,
                 cache: self.states.cache,
                 start_index: self.start_index,
-                query_root: query.path.root,
+                query_root: path.root,
             }
             .to_traversal_result())
         } else {
             Err(ErrorState {
                 reason: ErrorReason::NotFound,
-                found: Some(FoundRange::Complete(self.start_index, query)),
+                found: Some(FoundRange::Complete(self.start_index, path)),
             })
         }
     }
@@ -197,9 +209,9 @@ impl FoldFinished {
                 .num_parents(),
             state: &self.end_state,
         };
-        let query = final_state.state.query.clone();
+        let cursor = final_state.state.cursor.clone();
         let found_path = if let EndKind::Complete(c) = &final_state.state.kind {
-            FoundRange::Complete(*c, query)
+            FoundRange::Complete(*c, cursor.path)
         } else {
             // todo: complete bottom edges of root if
             // assert same root
@@ -215,8 +227,6 @@ impl FoldFinished {
             };
             FoundRange::Incomplete(state)
         };
-        FinishedState {
-            result: found_path,
-        }
+        FinishedState { result: found_path }
     }
 }

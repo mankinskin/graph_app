@@ -1,16 +1,18 @@
 use crate::{
-    graph::vertex::child::Child, path::{
+    graph::vertex::child::Child,
+    path::{
         accessors::role::End,
-        structs::{
-            query_range_path::PatternPrefixPath,
-            role_path::RolePath,
-        },
-    }, traversal::{fold::{FoldResult, Foldable}, TraversalKind}
+        structs::role_path::RolePath,
+    },
 };
+
+use super::rooted::pattern_prefix::PatternPrefixPath;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OverlapPrimer {
-    pub start: Child,
+    /// postfix of the previous block
+    pub postfix: Child,
+    /// the path up until postfix
     pub context: PatternPrefixPath,
     //pub context_offset: usize,
     pub width: usize,
@@ -20,11 +22,11 @@ pub struct OverlapPrimer {
 
 impl OverlapPrimer {
     pub fn new(
-        start: Child,
+        postfix: Child,
         context: PatternPrefixPath,
     ) -> Self {
         Self {
-            start,
+            postfix,
             //context_offset: context.root_child_pos(),
             context,
             width: 0,
@@ -35,11 +37,14 @@ impl OverlapPrimer {
     pub fn into_prefix_path(self) -> PatternPrefixPath {
         self.context
     }
+    //pub fn into_query_state(self) -> QueryState {
+    //}
 }
-impl Foldable for OverlapPrimer {
-    fn fold<'a, K: TraversalKind>(self, trav: &'a K::Trav) -> FoldResult {
-    }
-}
+//impl Foldable for OverlapPrimer {
+//    fn fold<'a, K: TraversalKind>(self, trav: &'a K::Trav) -> FoldResult {
+//        FoldContext::<K>::fold_query(trav, self)
+//    }
+//}
 
 //impl TraversalPath for OverlapPrimer {
 //    fn prev_exit_pos<

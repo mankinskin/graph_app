@@ -1,29 +1,20 @@
 use crate::{
-    path::{
-        accessors::role::PathRole,
-        structs::{
-            match_end::{
-                MatchEnd,
-                MatchEndPath,
-            },
-            query_range_path::QueryRangePath,
-            rooted_path::{
-                IndexRoot,
-                RootedRolePath,
-                RootedSplitPath,
-                RootedSplitPathRef,
-                SearchPath,
-            },
+    graph::vertex::{
+        child::Child,
+        location::pattern::PatternLocation,
+        pattern::Pattern,
+    },
+    path::structs::match_end::{
+        MatchEnd,
+        MatchEndPath,
+    },
+    traversal::{
+        state::end::{
+            EndKind,
+            EndState,
         },
-    }, traversal::{
-        state::{end::{EndKind, EndState}, query::QueryState}, traversable::Traversable
-    }
-};
-use std::borrow::Borrow;
-use crate::graph::vertex::{
-    child::Child,
-    location::pattern::PatternLocation,
-    pattern::Pattern,
+        traversable::Traversable,
+    },
 };
 
 pub trait GraphRootPattern: GraphRoot + RootPattern {
@@ -75,17 +66,18 @@ pub trait RootPattern {
 //        self.root().parent
 //    }
 //}
+#[macro_export]
 macro_rules! impl_root {
     {
         RootPattern for $target:ty, $self_:ident, $trav:ident => $func:expr
     } => {
-        impl RootPattern for $target {
+        impl $crate::path::accessors::root::RootPattern for $target {
             fn root_pattern<
                 'a: 'g,
                 'b: 'g,
                 'g,
-                Trav: Traversable + 'a
-            >(&'b $self_, $trav: &'g Trav::Guard<'a>) -> &'g Pattern {
+                Trav: $crate::traversal::traversable::Traversable + 'a
+            >(&'b $self_, $trav: &'g Trav::Guard<'a>) -> &'g $crate::graph::vertex::pattern::Pattern {
                 $func
             }
         }
@@ -93,7 +85,7 @@ macro_rules! impl_root {
     {
         PatternRoot for $target:ty, $self_:ident => $func:expr
     } => {
-        impl PatternRoot for $target {
+        impl $crate::path::accessors::root::PatternRoot for $target {
             fn pattern_root_pattern(& $self_) -> &Pattern {
                 $func
             }
@@ -103,7 +95,7 @@ macro_rules! impl_root {
         GraphRootPattern for $target:ty, $self_:ident => $func:expr
     } => {
         impl GraphRootPattern for $target {
-            fn root_pattern_location(& $self_) -> PatternLocation {
+            fn root_pattern_location(& $self_) -> $crate::graph::vertex::location::pattern::PatternLocation {
                 $func
             }
         }
@@ -111,8 +103,8 @@ macro_rules! impl_root {
     {
         GraphRoot for $target:ty, $self_:ident => $func:expr
     } => {
-        impl GraphRoot for $target {
-            fn root_parent(& $self_) -> Child {
+        impl $crate::path::accessors::root::GraphRoot for $target {
+            fn root_parent(& $self_) -> $crate::graph::vertex::child::Child {
                 $func
             }
         }
@@ -127,14 +119,14 @@ macro_rules! impl_root {
     //    }
     //}
 }
-impl_root! { PatternRoot for QueryRangePath, self => self.root.borrow() }
-//impl_root! { PatternRoot for PatternPrefixPath, self => self.pattern.borrow() }
+
 //impl_root! { PatternRoot for OverlapPrimer, self => PatternRoot::pattern_root_pattern(&self.context) }
-impl PatternRoot for QueryState {
-    fn pattern_root_pattern(&self) -> &Pattern {
-        &self.path.root
-    }
-}
+//impl_root! { PatternRoot for QueryState, self => self.path.root.borrow() }
+//impl PatternRoot for QueryState {
+//    fn pattern_root_pattern(&self) -> &Pattern {
+//        &self.path.root
+//    }
+//}
 //impl_root! { RootChild for FoundPath, self =>
 //    match self {
 //        Self::Path(path) => path.root_child(),
@@ -156,14 +148,8 @@ impl PatternRoot for QueryState {
 //impl_root! { RootChild for RolePath, self => self.child_location().parent }
 //impl_root! { RootChild for PathLeaf, self => self.child_location().parent }
 
-impl_root! { GraphRootPattern for SearchPath, self => self.root.location }
-impl_root! { GraphRootPattern for RootedSplitPath<IndexRoot>, self => self.root.location }
-impl_root! { GraphRootPattern for RootedSplitPathRef<'_, IndexRoot>, self => self.root.location }
 //impl_root! { GraphRootPattern for RolePath, self => self.child_location().into_pattern_location() }
 //impl_root! { GraphRootPattern for PathLeaf, self => self.child_location().into_pattern_location() }
-impl_root! { GraphRoot for SearchPath, self => self.root_pattern_location().parent }
-impl_root! { GraphRoot for RootedSplitPath<IndexRoot>, self => self.root.location.parent }
-impl_root! { GraphRoot for RootedSplitPathRef<'_, IndexRoot>, self => self.root.location.parent }
 impl_root! { GraphRoot for EndState, self =>
     match &self.kind {
         EndKind::Complete(c) => *c,
@@ -201,17 +187,6 @@ impl<P: MatchEndPath + GraphRoot> GraphRoot for MatchEnd<P> {
     }
 }
 
-impl<R: PathRole> GraphRoot for RootedRolePath<R, IndexRoot> {
-    fn root_parent(&self) -> Child {
-        self.root.location.parent
-    }
-}
-
-impl<R: PathRole> GraphRootPattern for RootedRolePath<R, IndexRoot> {
-    fn root_pattern_location(&self) -> PatternLocation {
-        self.root.location
-    }
-}
 //impl<P: GraphRootPattern> GraphRootPattern for OriginPath<P> {
 //    fn root_pattern_location(&self) -> PatternLocation {
 //        self.postfix.root_pattern_location()
@@ -220,21 +195,9 @@ impl<R: PathRole> GraphRootPattern for RootedRolePath<R, IndexRoot> {
 
 //impl_root! { RootPattern for OverlapPrimer, self, _trav => PatternRoot::pattern_root_pattern(self) }
 //impl_root! { RootPattern for PatternPrefixPath, self, _trav => PatternRoot::pattern_root_pattern(self) }
-impl_root! { RootPattern for QueryRangePath, self, _trav => PatternRoot::pattern_root_pattern(self) }
 
-impl_root! { RootPattern for SearchPath, self, trav => GraphRootPattern::graph_root_pattern::<Trav>(self, trav) }
-impl_root! { RootPattern for RootedSplitPath<IndexRoot>, self, trav => GraphRootPattern::graph_root_pattern::<Trav>(self, trav) }
-impl_root! { RootPattern for RootedSplitPathRef<'_, IndexRoot>, self, trav => GraphRootPattern::graph_root_pattern::<Trav>(self, trav) }
 //impl_root! { RootPattern for RolePath, self, trav => GraphRoot::graph_root_pattern(self, trav).borrow() }
 //impl_root! { RootPattern for PathLeaf, self, trav => GraphRoot::graph_root_pattern(self, trav).borrow() }
-impl<R: PathRole> RootPattern for RootedRolePath<R> {
-    fn root_pattern<'a: 'g, 'b: 'g, 'g, Trav: Traversable + 'a>(
-        &'b self,
-        trav: &'g Trav::Guard<'a>,
-    ) -> &'g Pattern {
-        GraphRootPattern::graph_root_pattern::<Trav>(self, trav)
-    }
-}
 
 //impl<P: RootPattern> RootPattern for OriginPath<P> {
 //    fn root_pattern<

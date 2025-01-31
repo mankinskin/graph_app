@@ -7,7 +7,6 @@ use crate::traversal::{
         },
         key::{
             DirectedKey,
-            QueryPosition,
             RootKey,
         },
     },
@@ -18,10 +17,12 @@ use crate::traversal::{
             EndState,
         },
         parent::ParentState,
-        InnerKind,
         traversal::TraversalState,
+        InnerKind,
     },
 };
+
+use super::pos::CursorPosition;
 
 pub trait TargetKey {
     fn target_key(&self) -> DirectedKey;
@@ -54,7 +55,7 @@ impl TargetKey for EndState {
             EndKind::Range(p) => p.target,
             EndKind::Postfix(_) => self.root_key().into(),
             EndKind::Prefix(p) => p.target,
-            EndKind::Complete(c) => DirectedKey::up(*c, *self.query_pos()),
+            EndKind::Complete(c) => DirectedKey::up(*c, *self.cursor_pos()),
         }
     }
 }

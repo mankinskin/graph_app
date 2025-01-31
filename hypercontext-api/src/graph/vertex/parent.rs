@@ -1,5 +1,10 @@
-use crate::graph::vertex::wide::Wide;
 use crate::{
+    graph::vertex::{
+        data::VertexData,
+        pattern::Pattern,
+        wide::Wide,
+        PatternId,
+    },
     HashMap,
     HashSet,
 };
@@ -7,12 +12,6 @@ use serde::{
     Deserialize,
     Serialize,
 };
-use crate::graph::vertex::{
-    pattern::Pattern,
-    PatternId,
-    TokenPosition,
-};
-use crate::graph::vertex::data::VertexData;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Serialize, Deserialize)]
 pub struct PatternIndex {
@@ -36,7 +35,7 @@ impl PatternIndex {
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Parent {
     /// width of the parent
-    pub width: TokenPosition,
+    pub width: usize,
     /// positions of child in parent patterns
     pub pattern_indices: HashSet<PatternIndex>,
 }
@@ -46,13 +45,13 @@ impl Wide for Parent {
     }
 }
 impl Parent {
-    pub fn new(width: TokenPosition) -> Self {
+    pub fn new(width: usize) -> Self {
         Self {
             width,
             pattern_indices: Default::default(),
         }
     }
-    pub fn get_width(&self) -> TokenPosition {
+    pub fn get_width(&self) -> usize {
         self.width
     }
     pub fn any_pattern_index(&self) -> PatternIndex {

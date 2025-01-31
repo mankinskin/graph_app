@@ -1,17 +1,18 @@
-
-use crate::{
-    graph::vertex::{location::child::ChildLocation, pattern::Pattern}, path::structs::rooted_path::RootedRangePath, traversal::state::query::QueryState
-};
 use super::super::{
     accessors::role::PathRole,
-    structs::{
-        role_path::RolePath,
-        rooted_path::{
-            PathRoot,
-            RootedRolePath,
-            SearchPath,
+    structs::role_path::RolePath,
+};
+use crate::{
+    graph::vertex::location::child::ChildLocation,
+    path::structs::{
+        query_range_path::FoldablePath,
+        rooted::{
+            role_path::RootedRolePath,
+            root::PathRoot,
         },
     },
+    traversal::state::cursor::PathCursor,
+    //traversal::state::query::QueryState,
 };
 
 // pop path segments
@@ -31,23 +32,23 @@ impl<R: PathRole> PathPop for RolePath<R> {
     }
 }
 
-impl PathPop for SearchPath {
-    fn path_pop(&mut self) -> Option<ChildLocation> {
-        self.end.path_pop()
-    }
-}
+//impl PathPop for SearchPath {
+//    fn path_pop(&mut self) -> Option<ChildLocation> {
+//        self.end.path_pop()
+//    }
+//}
 
-impl PathPop for RootedRangePath<Pattern> {
-    fn path_pop(&mut self) -> Option<ChildLocation> {
-        self.end.path_pop()
-    }
-}
-
-impl PathPop for QueryState {
+impl<P: FoldablePath> PathPop for PathCursor<P> {
     fn path_pop(&mut self) -> Option<ChildLocation> {
         self.path.path_pop()
     }
 }
+
+//impl PathPop for QueryState {
+//    fn path_pop(&mut self) -> Option<ChildLocation> {
+//        self.path.path_pop()
+//    }
+//}
 //impl<P: MatchEndPath + PathPop<Result=Self>> PathPop for MatchEnd<P> {
 //    type Result = Result<Self, Child>;
 //    fn path_pop<

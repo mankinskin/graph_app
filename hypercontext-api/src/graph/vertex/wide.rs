@@ -1,16 +1,17 @@
-use crate::traversal::cache::key::{
-    DirectedKey,
-    DownKey,
-    UpKey,
-};
-use crate::graph::vertex::data::VertexData;
 use super::{
     child::Child,
     pattern::{
         pattern_width,
         Pattern,
     },
-    TokenPosition,
+};
+use crate::{
+    graph::vertex::data::VertexData,
+    traversal::cache::key::{
+        DirectedKey,
+        DownKey,
+        UpKey,
+    },
 };
 
 pub trait Wide {
@@ -18,13 +19,13 @@ pub trait Wide {
 }
 
 impl Wide for Pattern {
-    fn width(&self) -> TokenPosition {
+    fn width(&self) -> usize {
         pattern_width(self)
     }
 }
 
 impl Wide for [Child] {
-    fn width(&self) -> TokenPosition {
+    fn width(&self) -> usize {
         pattern_width(self)
     }
 }

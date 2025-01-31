@@ -1,12 +1,23 @@
 use crate::{
-    graph::vertex::child::Child, path::{
+    graph::vertex::child::Child,
+    path::{
         accessors::{
-            child::root::GraphRootChild,
+            child::root::{
+                GraphRootChild,
+                RootChild,
+            },
             has_path::HasSinglePath,
             role::Start,
-        }, structs::rooted_path::RootedRolePath, BasePath
-    }, traversal::iterator::policy::NodePath
+        },
+        BasePath,
+    },
+    traversal::{
+        iterator::policy::NodePath,
+        traversable::Traversable,
+    },
 };
+
+use super::rooted::role_path::RootedRolePath;
 //pub trait NotStartPath {}
 //impl NotStartPath for PathLeaf {}
 
@@ -74,6 +85,18 @@ impl<P: MatchEndPath + From<Q>, Q: Into<RootedRolePath<Start>>> From<Q> for Matc
     fn from(start: Q) -> Self {
         // todo: handle complete
         MatchEnd::Path(P::from(start))
+    }
+}
+
+impl<P: MatchEndPath> RootChild<Start> for MatchEnd<P> {
+    fn root_child<Trav: Traversable>(
+        &self,
+        trav: &Trav,
+    ) -> Child {
+        match self {
+            Self::Complete(c) => *c,
+            Self::Path(path) => path.root_child(trav),
+        }
     }
 }
 

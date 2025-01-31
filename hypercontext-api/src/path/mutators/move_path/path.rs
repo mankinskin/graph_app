@@ -4,34 +4,31 @@ use crate::{
         Left,
         Right,
     },
-    traversal::{
-        state::query::QueryState, traversable::Traversable
-    },
-};
-use super::super::super::{
-    accessors::role::{
-        End,
-        PathRole,
-    },
-    mutators::{
-        append::PathAppend,
-        move_path::{
-            leaf::{
-                AdvanceLeaf,
-                KeyedLeaf,
-                RetractLeaf,
-            },
-            root::MoveRootPos,
+    graph::vertex::location::child::ChildLocation,
+    path::{
+        accessors::role::{
+            End,
+            PathRole,
         },
-        pop::PathPop,
+        mutators::{
+            append::PathAppend,
+            move_path::{
+                leaf::{
+                    AdvanceLeaf,
+                    KeyedLeaf,
+                    RetractLeaf,
+                },
+                root::MoveRootPos,
+            },
+            pop::PathPop,
+        },
     },
-    structs::{
-        query_range_path::PatternPrefixPath,
-        rooted_path::SearchPath,
+    traversal::{
+        state::cursor::RangeCursor,
+        traversable::Traversable,
     },
 };
 use std::ops::ControlFlow;
-use crate::graph::vertex::location::child::ChildLocation;
 
 pub trait MovePath<D: Direction, R: PathRole = End>:
     PathPop + PathAppend + MoveRootPos<D, R>
@@ -64,7 +61,7 @@ pub trait MovePath<D: Direction, R: PathRole = End>:
     }
 }
 
-impl MovePath<Right, End> for QueryState {
+impl MovePath<Right, End> for RangeCursor {
     fn move_leaf<Trav: Traversable>(
         &mut self,
         location: &mut ChildLocation,
@@ -74,42 +71,12 @@ impl MovePath<Right, End> for QueryState {
     }
 }
 
-impl MovePath<Left, End> for QueryState {
+impl MovePath<Left, End> for RangeCursor {
     fn move_leaf<Trav: Traversable>(
         &mut self,
         location: &mut ChildLocation,
         trav: &Trav::Guard<'_>,
     ) -> ControlFlow<()> {
         KeyedLeaf::new(self, location).retract_leaf(trav)
-    }
-}
-
-impl MovePath<Right, End> for SearchPath {
-    fn move_leaf<Trav: Traversable>(
-        &mut self,
-        location: &mut ChildLocation,
-        trav: &Trav::Guard<'_>,
-    ) -> ControlFlow<()> {
-        location.advance_leaf(trav)
-    }
-}
-
-impl MovePath<Left, End> for SearchPath {
-    fn move_leaf<Trav: Traversable>(
-        &mut self,
-        location: &mut ChildLocation,
-        trav: &Trav::Guard<'_>,
-    ) -> ControlFlow<()> {
-        location.retract_leaf(trav)
-    }
-}
-
-impl MovePath<Right, End> for PatternPrefixPath {
-    fn move_leaf<Trav: Traversable>(
-        &mut self,
-        location: &mut ChildLocation,
-        trav: &Trav::Guard<'_>,
-    ) -> ControlFlow<()> {
-        location.advance_leaf(trav)
     }
 }

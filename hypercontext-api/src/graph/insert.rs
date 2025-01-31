@@ -6,43 +6,49 @@ use std::{
 use itertools::Itertools;
 use lazy_static::lazy_static;
 
-use crate::graph::getters::ErrorReason;
 use crate::{
-    graph::kind::GraphKind,
+    graph::{
+        getters::{
+            vertex::VertexSet,
+            ErrorReason,
+        },
+        kind::GraphKind,
+        vertex::{
+            child::Child,
+            data::{
+                VertexData,
+                VertexDataBuilder,
+            },
+            has_vertex_index::{
+                HasVertexIndex,
+                ToChild,
+            },
+            key::VertexKey,
+            location::{
+                child::ChildLocation,
+                pattern::IntoPatternLocation,
+            },
+            parent::PatternIndex,
+            pattern::{
+                id::PatternId,
+                pattern_range::{
+                    get_child_pattern_range,
+                    PatternRangeIndex,
+                },
+                pattern_width,
+                replace_in_pattern,
+                IntoPattern,
+                Pattern,
+            },
+            token::{
+                NewTokenIndex,
+                NewTokenIndices,
+                Token,
+            },
+        },
+    },
     HashSet,
 };
-use crate::graph::vertex::{
-    child::Child,
-    has_vertex_index::{
-        HasVertexIndex,
-        ToChild,
-    },
-    location::{
-        child::ChildLocation,
-        pattern::IntoPatternLocation,
-    },
-    parent::PatternIndex,
-    pattern::{
-        IntoPattern,
-        Pattern,
-        pattern_range::{
-            get_child_pattern_range,
-            PatternRangeIndex,
-        },
-        pattern_width,
-        replace_in_pattern,
-    },
-    token::{
-        NewTokenIndex,
-        NewTokenIndices,
-        Token,
-    },
-    TokenPosition,
-};
-use crate::graph::vertex::data::{VertexData, VertexDataBuilder};
-use crate::graph::vertex::key::VertexKey;
-use crate::graph::vertex::pattern::id::PatternId;
-use crate::graph::getters::vertex::VertexSet;
 
 lazy_static! {
     static ref VERTEX_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
@@ -62,10 +68,7 @@ where
         &mut self,
         mut builder: VertexDataBuilder,
     ) -> VertexData {
-        builder
-            .index(self.next_vertex_index())
-            .build()
-            .unwrap()
+        builder.index(self.next_vertex_index()).build().unwrap()
     }
     /// insert raw vertex data
     pub fn insert_vertex_data(
@@ -123,7 +126,7 @@ where
     fn to_width_indices_children(
         &self,
         indices: impl IntoIterator<Item = impl HasVertexIndex>,
-    ) -> (TokenPosition, Vec<crate::graph::vertex::VertexIndex>, Vec<Child>) {
+    ) -> (usize, Vec<crate::graph::vertex::VertexIndex>, Vec<Child>) {
         let mut width = 0;
         let (a, b) = indices
             .into_iter()
@@ -361,13 +364,10 @@ where
             (replaced, width, start, new_end, rem)
         };
         let old_end = start + replaced.len();
-        range
-            .clone()
-            .zip(replaced)
-            .for_each(|(pos, c)| {
-                let c = self.expect_vertex_mut(c);
-                c.remove_parent_index(parent_index, pat, pos);
-            });
+        range.clone().zip(replaced).for_each(|(pos, c)| {
+            let c = self.expect_vertex_mut(c);
+            c.remove_parent_index(parent_index, pat, pos);
+        });
         for c in rem.into_iter().unique() {
             let c = self.expect_vertex_mut(c);
             let indices = &mut c.expect_parent_mut(parent_index).pattern_indices;

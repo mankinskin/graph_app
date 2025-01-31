@@ -13,10 +13,10 @@ use crate::{
             location::SubLocation,
             pattern::id::PatternId,
             wide::Wide,
-            TokenPosition,
         },
     },
     partition::splits::offset::OffsetSplit,
+    path::mutators::move_path::key::TokenPosition,
     traversal::{
         cache::entry::{
             position::SubSplitLocation,
@@ -111,7 +111,7 @@ impl SplitContext<'_> {
             }
         }
         for (pretext_pos, cache) in &self.top_down {
-            let inner_offset = Offset::new(end_pos - pretext_pos.0).unwrap();
+            let inner_offset = Offset::new(end_pos.0 - pretext_pos.0).unwrap();
             for location in cache.edges.bottom.values() {
                 let child = node.expect_child_at(location);
                 let inner_offset = Offset::new(inner_offset.get() % child.width());

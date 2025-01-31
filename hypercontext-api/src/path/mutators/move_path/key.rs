@@ -13,11 +13,12 @@ use crate::{
     },
     traversal::{
         cache::key::{
-                DirectedKey,
-                DirectedPosition,
-                DownPosition,
-                UpPosition,
-            }, state::query::QueryState,
+            DirectedKey,
+            DirectedPosition,
+            DownPosition,
+            UpPosition,
+        },
+        state::cursor::RangeCursor,
     },
 };
 
@@ -76,6 +77,16 @@ pub trait MoveKey<D: Direction> {
         &mut self,
         delta: Self::Delta,
     );
+}
+
+impl<D: Direction, T: MoveKey<D>> MoveKey<D> for &'_ mut T {
+    type Delta = <T as MoveKey<D>>::Delta;
+    fn move_key(
+        &mut self,
+        delta: Self::Delta,
+    ) {
+        (*self).move_key(delta)
+    }
 }
 
 pub trait AdvanceKey: MoveKey<Right> {
@@ -137,13 +148,13 @@ impl MoveKey<Right> for TokenPosition {
     }
 }
 
-impl MoveKey<Right> for QueryState {
+impl MoveKey<Right> for RangeCursor {
     type Delta = usize;
     fn move_key(
         &mut self,
         delta: Self::Delta,
     ) {
-        self.pos.advance_key(delta)
+        self.relative_pos.advance_key(delta)
     }
 }
 
@@ -157,12 +168,12 @@ impl MoveKey<Left> for TokenPosition {
     }
 }
 
-impl MoveKey<Left> for QueryState {
+impl MoveKey<Left> for RangeCursor {
     type Delta = usize;
     fn move_key(
         &mut self,
         delta: Self::Delta,
     ) {
-        self.pos.retract_key(delta)
+        self.relative_pos.retract_key(delta)
     }
 }

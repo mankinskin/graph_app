@@ -1,21 +1,27 @@
-use crate::traversal::{
-    state::{parent::ParentState, query::QueryState}, traversable::Traversable
-};
-use super::super::super::structs::{
-    role_path::RolePath,
-    rooted_path::{
-        IndexRoot,
-        RootedRolePath,
-        SubPath,
+use crate::{
+    graph::vertex::{
+        child::Child,
+        location::{
+            child::ChildLocation,
+            pattern::IntoPatternLocation,
+        },
+        wide::Wide,
     },
-};
-use crate::graph::vertex::{
-    child::Child,
-    location::{
-        child::ChildLocation,
-        pattern::IntoPatternLocation,
+    path::structs::{
+        role_path::RolePath,
+        rooted::{
+            role_path::RootedRolePath,
+            root::IndexRoot,
+        },
+        sub_path::SubPath,
     },
-    wide::Wide,
+    traversal::{
+        state::{
+            cursor::RangeCursor,
+            parent::ParentState,
+        },
+        traversable::Traversable,
+    },
 };
 
 pub trait IntoPrimer: Sized {
@@ -26,13 +32,13 @@ pub trait IntoPrimer: Sized {
     ) -> ParentState;
 }
 
-impl IntoPrimer for (Child, QueryState) {
+impl IntoPrimer for (Child, RangeCursor) {
     fn into_primer<Trav: Traversable>(
         self,
         _trav: &Trav,
         parent_entry: ChildLocation,
     ) -> ParentState {
-        let (c, query) = self;
+        let (c, cursor) = self;
         let width = c.width().into();
         ParentState {
             prev_pos: width,
@@ -49,7 +55,7 @@ impl IntoPrimer for (Child, QueryState) {
                     _ty: Default::default(),
                 },
             },
-            query,
+            cursor,
         }
     }
 }

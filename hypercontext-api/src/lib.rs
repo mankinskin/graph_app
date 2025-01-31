@@ -1,6 +1,5 @@
 #![deny(clippy::disallowed_methods)]
 #![feature(test)]
-#![feature(async_closure)]
 #![feature(assert_matches)]
 #![feature(try_blocks)]
 //#![feature(hash_drain_filter)]
@@ -12,12 +11,12 @@
 
 extern crate test;
 
-pub mod graph;
 pub mod direction;
-pub mod traversal;
+pub mod graph;
+pub mod partition;
 pub mod path;
 pub mod split;
-pub mod partition;
+pub mod traversal;
 
 #[cfg(any(test, feature = "test-api"))]
 pub mod tests;

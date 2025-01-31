@@ -16,17 +16,16 @@ use std::{
     },
 };
 
-use leaf::*;
-use pos::*;
-use root::*;
 use crate::{
-    path::mutators::move_path::key::TokenPosition,
-    traversal::state::child::ChildState,
     graph::vertex::{
         child::Child,
         wide::Wide,
     },
+    path::mutators::move_path::key::TokenPosition,
+    traversal::state::child::ChildState,
 };
+use leaf::*;
+use root::*;
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, From)]
 pub struct UpPosition(pub TokenPosition);

@@ -6,31 +6,29 @@ use pos::*;
 pub mod root;
 
 use crate::{
+    graph::vertex::{
+        child::Child,
+        location::child::ChildLocation,
+    },
     path::{
         accessors::{
-            has_path::{
-                HasPath,
-                HasRolePath,
-            },
+            has_path::HasPath,
             role::{
                 End,
                 PathRole,
             },
         },
         structs::{
-            query_range_path::QueryRangePath,
+            query_range_path::FoldablePath,
             role_path::RolePath,
-            rooted_path::SearchPath,
         },
-    }, traversal::{
-        state::query::QueryState, traversable::Traversable
-    }
+    },
+    traversal::{
+        state::cursor::PathCursor,
+        traversable::Traversable,
+    },
 };
 use root::*;
-use crate::graph::vertex::{
-    child::Child,
-    location::child::ChildLocation,
-};
 
 pub trait LeafChild<R>: RootChildPos<R> {
     fn leaf_child_location(&self) -> Option<ChildLocation>;
@@ -56,21 +54,6 @@ impl<R: PathRole, P: RootChild<R> + PathChild<R>> LeafChild<R> for P {
 pub trait LeafChildPosMut<R>: RootChildPosMut<R> {
     fn leaf_child_pos_mut(&mut self) -> &mut usize;
 }
-
-//impl<R: PathRole, P: PathChild<R> + RootChildPosMut<R>> LeafChildPosMut<R> for P {
-//    fn leaf_child_pos_mut(&mut self) -> &mut usize {
-//        if let Some(loc) = self.path_child_location_mut() {
-//            &mut loc.sub_index
-//        } else {
-//            self.root_child_pos_mut()
-//        }
-//    }
-//}
-//impl LeafChildPosMut<End> for QueryState {
-//    fn leaf_child_pos_mut(&mut self) -> &mut usize {
-//        self.end.leaf_child_pos_mut()
-//    }
-//}
 
 impl LeafChildPosMut<End> for RolePath<End> {
     fn leaf_child_pos_mut(&mut self) -> &mut usize {
@@ -108,65 +91,17 @@ pub trait PathChild<R: PathRole>: HasPath<R> {
 //    where Self: HasPath<R> + PatternRootChild<R>
 //{
 //}
-impl<R: PathRole> PathChild<R> for QueryRangePath where Self: HasPath<R> + PatternRootChild<R> {}
 
-impl<R: PathRole> PathChild<R> for QueryState where Self: HasPath<R> + PatternRootChild<R>
-{}
+//impl<R: PathRole> PathChild<R> for RangeCursor where Self: HasPath<R> + PatternRootChild<R> {}
 
-impl<R: PathRole> PathChild<R> for RolePath<R> {}
-
-impl<R: PathRole> PathChild<R> for SearchPath
-where
-    SearchPath: HasRolePath<R>,
-{
+impl<R: PathRole, P: FoldablePath + PathChild<R>> PathChild<R> for PathCursor<P> {
     fn path_child_location(&self) -> Option<ChildLocation> {
-        Some(
-            R::bottom_up_iter(self.path().iter())
-                .next()
-                .cloned()
-                .unwrap_or(
-                    self.root
-                        .location
-                        .to_child_location(self.role_path().root_entry),
-                ),
-        )
+        self.path.path_child_location()
     }
     fn path_child<Trav: Traversable>(
         &self,
         trav: &Trav,
     ) -> Option<Child> {
-        PathChild::<R>::path_child(self.role_path(), trav)
+        self.path.path_child(trav)
     }
 }
-//impl PathChild<End> for OverlapPrimer {
-//    fn path_child<
-//        'a: 'g,
-//        'g,
-//        T: Tokenize,
-//        Trav: Traversable<T>,
-//    >(&self, trav: &'a Trav) -> Option<Child> {
-//        self.context.path_child(trav)
-//    }
-//}
-//impl PathChild<End> for PatternPrefixPath {
-//    fn path_child<
-//        'a: 'g,
-//        'g,
-//        T: Tokenize,
-//        Trav: Traversable<T>,
-//    >(&self, trav: &'a Trav) -> Option<Child> {
-//        if let Some(end) = &self.end {
-//            PathChild::<End>::path_child(end, trav)
-//        } else {
-//            Some(RootChild::<End>::root_child(self, trav))
-//        }
-//    }
-//}
-//impl<R: PathRole, P: PathChild<R>> PathChild<R> for OriginPath<P> {
-//    fn path_child<
-//        T: Tokenize,
-//        Trav: Traversable<T>,
-//    >(&self, trav: &Trav) -> Option<Child> {
-//        self.postfix.path_child(trav)
-//    }
-//}

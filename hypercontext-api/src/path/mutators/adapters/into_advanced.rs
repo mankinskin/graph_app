@@ -3,10 +3,15 @@ use std::borrow::Borrow;
 use crate::{
     direction::r#match::MatchDirection,
     traversal::{
-        cache::key::DirectedKey, state::{child::ChildState, parent::ParentState}, traversable::{
+        cache::key::DirectedKey,
+        state::{
+            child::ChildState,
+            parent::ParentState,
+        },
+        traversable::{
             TravDir,
             Traversable,
-        }
+        },
     },
 };
 
@@ -77,7 +82,7 @@ impl IntoAdvanced for ParentState {
                 root_pos: self.root_pos,
                 paths: PathPair::new(
                     self.path.into_range(next),
-                    self.query,
+                    self.cursor,
                     PathPairMode::GraphMajor,
                 ),
                 target: DirectedKey::down(index, self.root_pos),

@@ -12,19 +12,26 @@ use hypercontext_api::tests::graph::{
 };
 use hypercontext_api::{
     graph::{
-        getters::ErrorReason, kind::BaseGraphKind, vertex::{
+        getters::ErrorReason,
+        kind::BaseGraphKind,
+        vertex::{
             child::Child,
             location::{
                 child::ChildLocation,
                 pattern::PatternLocation,
                 SubLocation,
             },
-            token::Token, wide::Wide,
-        }, HypergraphRef
+            token::Token,
+            wide::Wide,
+        },
+        HypergraphRef,
     },
     lab,
     path::structs::{
-        query_range_path::{QueryRangePath, RangePath},
+        query_range_path::{
+            PatternRangePath,
+            RangePath,
+        },
         role_path::RolePath,
         rooted_path::{
             IndexRoot,
@@ -44,16 +51,25 @@ use hypercontext_api::{
             },
             key::DirectedKey,
             TraversalCache,
-        }, fold::state::FoldState, result::{FinishedState, FoundRange}, state::{
+        },
+        fold::state::FoldState,
+        result::{
+            FinishedState,
+            FoundRange,
+        },
+        state::{
+            cursor::RangeCursor,
             end::{
                 EndKind,
                 EndReason,
                 EndState,
                 PostfixEnd,
             },
-            query::QueryState,
-        }, traversable::Traversable
-    }, HashMap, HashSet,
+        },
+        traversable::Traversable,
+    },
+    HashMap,
+    HashSet,
 };
 
 #[test]
@@ -107,10 +123,7 @@ fn find_parent1() {
         Ok(FinishedState {
             result: FoundRange::Complete(
                 *abc,
-                QueryState {
-                    path: QueryRangePath::new_range(query.clone(), 0, query.len() - 1),
-                    pos: abc.width().into(),
-                },
+                PatternRangePath::new_range(query.clone(), 0, query.len() - 1),
             )
         }),
         "a_bc_d"
@@ -121,10 +134,7 @@ fn find_parent1() {
         Ok(FinishedState {
             result: FoundRange::Complete(
                 *ab,
-                QueryState {
-                    path: QueryRangePath::new_range(query.clone(), 0, query.len() - 1),
-                    pos: ab.width().into(),
-                },
+                PatternRangePath::new_range(query.clone(), 0, query.len() - 1),
             ),
         }),
         "a_b_c"
@@ -135,10 +145,7 @@ fn find_parent1() {
         Ok(FinishedState {
             result: FoundRange::Complete(
                 *ab,
-                QueryState {
-                    path: QueryRangePath::new_range(query.clone(), 0, query.len() - 2),
-                    pos: ab.width().into(),
-                },
+                PatternRangePath::new_range(query.clone(), 0, query.len() - 2),
             )
         }),
         "a_b_c_c"
@@ -220,10 +227,7 @@ fn find_ancestor1() {
         Ok(FinishedState {
             result: FoundRange::Complete(
                 *abc,
-                QueryState {
-                    path: QueryRangePath::new_range(query.clone(), 0, query.len() - 2),
-                    pos: (query.len() - 2).into(),
-                },
+                PatternRangePath::new_range(query.clone(), 0, query.len() - 2),
             )
         }),
         "a_b_c_c"
@@ -397,7 +401,7 @@ fn find_ancestor2() {
                             },
                         },
                     }),
-                    query: QueryState {
+                    cursor: RangeCursor {
                         path: RootedRangePath {
                             root: query.clone(),
                             start: RolePath {
@@ -415,7 +419,7 @@ fn find_ancestor2() {
                                 _ty: Default::default(),
                             },
                         },
-                        pos: 3.into(),
+                        relative_pos: 3.into(),
                     },
                 },
             }),
@@ -664,7 +668,7 @@ fn find_ancestor3() {
                             },
                         },
                     }),
-                    query: QueryState {
+                    cursor: RangeCursor {
                         path: RootedRangePath {
                             root: query.clone(),
                             start: RolePath {
@@ -682,7 +686,7 @@ fn find_ancestor3() {
                                 _ty: Default::default(),
                             },
                         },
-                        pos: 3.into(),
+                        relative_pos: 3.into(),
                     },
                 },
                 //EndState {
@@ -729,7 +733,7 @@ fn find_ancestor3() {
                 //            },
                 //        },
                 //    ),
-                //    query: QueryState {
+                //    query: RangeCursor {
                 //        start: RolePath {
                 //            sub_path: SubPath {
                 //                root_entry: 0,

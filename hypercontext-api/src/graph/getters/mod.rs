@@ -1,25 +1,27 @@
 pub mod advanced;
-pub mod vertex;
-pub mod pattern;
-pub mod token;
 pub mod child;
 pub mod parent;
+pub mod pattern;
+pub mod token;
+pub mod vertex;
 
-use crate::graph::vertex::child::Child;
-use crate::graph::vertex::pattern::id::PatternId;
-use crate::graph::vertex::pattern::Pattern;
-use crate::graph::vertex::VertexIndex;
 use crate::graph::{
-    getters::vertex::VertexSet, kind::GraphKind, Hypergraph
-};
-use crate::graph::vertex::{
-    has_vertex_index::HasVertexIndex,
-    TokenPosition,
+    getters::vertex::VertexSet,
+    kind::GraphKind,
+    vertex::{
+        child::Child,
+        has_vertex_index::HasVertexIndex,
+        pattern::{
+            id::PatternId,
+            Pattern,
+        },
+        VertexIndex,
+    },
+    Hypergraph,
 };
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum ErrorReason
-{
+pub enum ErrorReason {
     EmptyPatterns,
     NoParents,
     NoChildPatterns,
@@ -41,7 +43,7 @@ impl<G: GraphKind> Hypergraph<G> {
     pub fn expect_index_width(
         &self,
         index: &impl HasVertexIndex,
-    ) -> TokenPosition {
+    ) -> usize {
         self.expect_vertex(index.vertex_index()).width
     }
 }

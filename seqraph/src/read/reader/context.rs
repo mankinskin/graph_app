@@ -13,9 +13,12 @@ use tracing::{
 
 use crate::{
     insert::context::InsertContext,
-    read::sequence::{
-        SequenceIter,
-        ToNewTokenIndices,
+    read::{
+        bands::overlaps::overlap::cache::OverlapCache,
+        sequence::{
+            SequenceIter,
+            ToNewTokenIndices,
+        },
     },
 };
 use hypercontext_api::{
@@ -33,13 +36,14 @@ use hypercontext_api::{
                 IntoPattern,
                 Pattern,
             },
+            wide::Wide,
         },
         Hypergraph,
         HypergraphRef,
     },
     path::structs::query_range_path::{
+        FoldablePath,
         PatternPrefixPath,
-        QueryPath,
     },
     traversal::traversable::{
         impl_traversable,
@@ -68,6 +72,18 @@ pub struct ReadContext {
 //}
 
 impl<'g> ReadContext {
+    #[instrument(skip(self, first, cursor))]
+    pub fn read_overlaps(
+        &mut self,
+        first: Child,
+        cursor: &mut PatternPrefixPath,
+    ) -> Option<Child> {
+        if first.width() > 1 {
+            OverlapCache::new(first).read_next_overlap(self, cursor)
+        } else {
+            None
+        }
+    }
     //pub fn new(graph: RwLockWriteGuard<'g, Hypergraph>) -> Self {
     pub fn new(graph: HypergraphRef) -> Self {
         Self { graph, root: None }

@@ -14,7 +14,7 @@ use crate::{
         folder::state::FoldResult,
         path::structs::query_range_path::{
             QueryPath,
-            QueryRangePath,
+            PatternRangePath,
         },
         result::TraversalResult,
         traversable::Traversable,
@@ -132,7 +132,7 @@ fn index_pattern2() {
         aby_found,
         Ok(TraversalResult {
             result: FoldResult::Complete(aby),
-            query: QueryRangePath::complete(query),
+            query: PatternRangePath::complete(query),
         }),
         "aby"
     );
@@ -184,7 +184,7 @@ fn index_infix1() {
         aby_found,
         Ok(TraversalResult {
             result: FoldResult::Complete(aby),
-            query: QueryRangePath::complete(query),
+            query: PatternRangePath::complete(query),
         }),
         "aby"
     );
