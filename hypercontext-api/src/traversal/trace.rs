@@ -46,7 +46,7 @@ pub struct TraceContext<'a, Trav: Traversable> {
     pub trav: &'a Trav,
     pub cache: &'a mut TraversalCache
 }
-impl<'a, Trav: Traversable> TraceContext<'a, Trav> {
+impl<Trav: Traversable> TraceContext<'_, Trav> {
     pub fn trace_path<
         P: RoleChildPath + GraphRootChild<End> + HasRolePath<End>,
     >(

@@ -72,9 +72,9 @@ pub struct ErrorState {
 pub type FoldResult = Result<FinishedState, ErrorState>;
 
 pub trait Foldable {
-    fn fold<'a, K: TraversalKind>(
+    fn fold<K: TraversalKind>(
         self,
-        trav: &'a K::Trav,
+        trav: &K::Trav,
     ) -> FoldResult;
 }
 

@@ -30,7 +30,7 @@ impl<'p> NodeTraceContext<'p> {
     }
 }
 
-impl<'a> GetPatternContext for NodeTraceContext<'a> {
+impl GetPatternContext for NodeTraceContext<'_> {
     type PatternCtx<'b>
         = PatternTraceContext<'b>
     where
@@ -45,7 +45,7 @@ impl<'a> GetPatternContext for NodeTraceContext<'a> {
         self.get_pattern_trace_context(pattern_id)
     }
 }
-impl<'a> GetPatternTraceContext for NodeTraceContext<'a> {
+impl GetPatternTraceContext for NodeTraceContext<'_> {
     fn get_pattern_trace_context<'b>(
         &'b self,
         pattern_id: &PatternId,
@@ -66,7 +66,7 @@ pub trait AsNodeTraceContext {
         Self: 'a;
 }
 
-impl<'a> AsNodeTraceContext for NodeTraceContext<'a> {
+impl AsNodeTraceContext for NodeTraceContext<'_> {
     fn as_trace_context<'b>(&'b self) -> NodeTraceContext<'b>
     where
         Self: 'b,

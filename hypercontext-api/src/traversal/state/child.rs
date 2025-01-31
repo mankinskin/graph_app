@@ -110,9 +110,9 @@ impl PartialOrd for ChildState {
 }
 
 impl ChildState {
-    pub fn next_states<'a, K: TraversalKind>(
+    pub fn next_states<K: TraversalKind>(
         self,
-        ctx: &mut TraversalContext<'a, K>,
+        ctx: &mut TraversalContext<'_, K>,
         new: Vec<NewEntry>,
     ) -> NextStates {
         let key = self.target_key();
@@ -164,9 +164,9 @@ impl ChildState {
             }),
         }
     }
-    fn on_match<'a, K: TraversalKind>(
+    fn on_match<K: TraversalKind>(
         mut self,
-        ctx: &mut TraversalContext<'a, K>,
+        ctx: &mut TraversalContext<'_, K>,
         new: Vec<NewEntry>,
     ) -> NextStates {
         let key = self.target_key();

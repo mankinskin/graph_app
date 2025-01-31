@@ -64,11 +64,11 @@ pub struct SplitCacheBuilder(pub SplitCache);
 impl SplitCacheBuilder {
     pub fn new<'a, Trav: TraversableMut + 'a>(
         trav: &'a mut Trav,
-        mut fold_state: &mut FoldState,
+        fold_state: &mut FoldState,
     ) -> Self {
         let mut entries = HashMap::default();
 
-        let (root_vertex, root_mode, states, leaves) = Self::new_root_vertex(trav, &fold_state);
+        let (root_vertex, root_mode, states, leaves) = Self::new_root_vertex(trav, fold_state);
         entries.insert(labelled_key(trav, fold_state.root), root_vertex);
         let mut cache = Self(SplitCache {
             entries,
@@ -87,7 +87,7 @@ impl SplitCacheBuilder {
             // trace offset splits top down by width
             // complete past states larger than current state
             // store offsets and filter leaves
-            cache.trace(&graph, &mut fold_state, &state);
+            cache.trace(&graph, fold_state, &state);
             incomplete.insert(state.index);
             let complete = incomplete.split_off(&ChildWidth(state.index.width() + 1));
             cache.augment_nodes(&*graph, complete);

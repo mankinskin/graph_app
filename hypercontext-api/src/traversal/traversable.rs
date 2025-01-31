@@ -16,14 +16,14 @@ pub trait Traversable: Sized + std::fmt::Debug {
         Self: 'a;
     fn graph(&self) -> Self::Guard<'_>;
 }
-impl<'a, T: Traversable> Traversable for &'a T {
+impl<T: Traversable> Traversable for &T {
     type Kind = TravKind<T>;
     type Guard<'g> = <T as Traversable>::Guard<'g> where Self: 'g;
     fn graph(&self) -> Self::Guard<'_> {
         (**self).graph()
     }
 }
-impl<'a, T: Traversable> Traversable for &'a mut T {
+impl<T: Traversable> Traversable for &mut T {
     type Kind = TravKind<T>;
     type Guard<'g> = <T as Traversable>::Guard<'g> where Self: 'g;
     fn graph(&self) -> Self::Guard<'_> {
@@ -135,7 +135,7 @@ pub trait TraversableMut: Traversable {
         Self: 'a;
     fn graph_mut(&mut self) -> Self::GuardMut<'_>;
 }
-impl<'a, T: TraversableMut> TraversableMut for &'a mut T {
+impl<T: TraversableMut> TraversableMut for &mut T {
     type GuardMut<'g> = <T as TraversableMut>::GuardMut<'g> where Self: 'g;
     fn graph_mut(&mut self) -> Self::GuardMut<'_> {
         (**self).graph_mut()

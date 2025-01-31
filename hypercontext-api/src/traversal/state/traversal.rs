@@ -77,9 +77,9 @@ impl TraversalState {
         }
     }
     /// Retrieves next unvisited states and adds edges to cache
-    pub fn next_states<'a, K: TraversalKind>(
+    pub fn next_states<K: TraversalKind>(
         mut self,
-        ctx: &mut TraversalContext<'a, K>,
+        ctx: &mut TraversalContext<'_, K>,
     ) -> Option<NextStates> {
         let key = self.target_key();
         let exists = ctx.states.cache.exists(&key);

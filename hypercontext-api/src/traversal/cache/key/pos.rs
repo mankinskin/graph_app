@@ -65,8 +65,8 @@ impl_cursor_pos! {
 impl CursorPosition for TraversalState {
     fn cursor_pos(&self) -> &TokenPosition {
         match &self.kind {
-            InnerKind::Parent(state) => &state.cursor_pos(),
-            InnerKind::Child(state) => &state.cursor_pos(),
+            InnerKind::Parent(state) => state.cursor_pos(),
+            InnerKind::Child(state) => state.cursor_pos(),
             //InnerKind::End(state)
             //    => &state.query.pos,
         }

@@ -32,8 +32,8 @@ pub struct TraversalCache {
 }
 
 impl TraversalCache {
-    pub fn new<'a, Trav: Traversable>(
-        trav: &'a Trav,
+    pub fn new<Trav: Traversable>(
+        trav: &Trav,
         start_index: Child,
     ) -> Self
     where

@@ -34,7 +34,7 @@ impl ToOffsetSplit for &OffsetSplit {
     }
 }
 
-impl<'a, S: SplitKind> ToOffsetSplit for PosSplitContext<'a, S> {
+impl<S: SplitKind> ToOffsetSplit for PosSplitContext<'_, S> {
     fn to_offset_splits(self) -> OffsetSplit {
         OffsetSplit {
             offset: *self.pos,
