@@ -84,9 +84,9 @@ use super::{
     RootedRangePath,
 };
 
-pub type SearchPath = RootedRangePath<IndexRoot>;
+pub type IndexRangePath = RootedRangePath<IndexRoot>;
 
-impl RangePath for SearchPath {
+impl RangePath for IndexRangePath {
     fn new_range(
         root: Self::Root,
         entry: usize,
@@ -99,11 +99,11 @@ impl RangePath for SearchPath {
         }
     }
 }
-impl_root! { GraphRootPattern for SearchPath, self => self.root.location }
-impl_root! { GraphRoot for SearchPath, self => self.root_pattern_location().parent }
-impl_root! { RootPattern for SearchPath, self, trav => GraphRootPattern::graph_root_pattern::<Trav>(self, trav) }
+impl_root! { GraphRootPattern for IndexRangePath, self => self.root.location }
+impl_root! { GraphRoot for IndexRangePath, self => self.root_pattern_location().parent }
+impl_root! { RootPattern for IndexRangePath, self, trav => GraphRootPattern::graph_root_pattern::<Trav>(self, trav) }
 
-impl<R: 'static> HasPath<R> for SearchPath
+impl<R: PathRole + 'static> HasPath<R> for IndexRangePath
 where
     Self: HasRolePath<R>,
 {
@@ -115,7 +115,7 @@ where
     }
 }
 
-impl HasRolePath<Start> for SearchPath {
+impl HasRolePath<Start> for IndexRangePath {
     fn role_path(&self) -> &RolePath<Start> {
         &self.start
     }
@@ -124,9 +124,9 @@ impl HasRolePath<Start> for SearchPath {
     }
 }
 
-impl<R: PathRole> PathChild<R> for SearchPath
+impl<R: PathRole> PathChild<R> for IndexRangePath
 where
-    SearchPath: HasRolePath<R>,
+    IndexRangePath: HasRolePath<R>,
 {
     fn path_child_location(&self) -> Option<ChildLocation> {
         Some(
@@ -148,7 +148,7 @@ where
     }
 }
 
-impl HasRolePath<End> for SearchPath {
+impl HasRolePath<End> for IndexRangePath {
     fn role_path(&self) -> &RolePath<End> {
         &self.end
     }
@@ -157,13 +157,13 @@ impl HasRolePath<End> for SearchPath {
     }
 }
 
-impl HasMatchPaths for SearchPath {
+impl HasMatchPaths for IndexRangePath {
     fn into_paths(self) -> (RolePath<Start>, RolePath<End>) {
         (self.start, self.end)
     }
 }
 
-impl MoveRootPos<Right, End> for SearchPath {
+impl MoveRootPos<Right, End> for IndexRangePath {
     fn move_root_pos<Trav: Traversable>(
         &mut self,
         trav: &Trav,
@@ -182,7 +182,7 @@ impl MoveRootPos<Right, End> for SearchPath {
     }
 }
 
-impl MoveRootPos<Left, End> for SearchPath {
+impl MoveRootPos<Left, End> for IndexRangePath {
     fn move_root_pos<Trav: Traversable>(
         &mut self,
         trav: &Trav,
@@ -200,7 +200,7 @@ impl MoveRootPos<Left, End> for SearchPath {
         }
     }
 }
-impl MovePath<Right, End> for SearchPath {
+impl MovePath<Right, End> for IndexRangePath {
     fn move_leaf<Trav: Traversable>(
         &mut self,
         location: &mut ChildLocation,
@@ -210,7 +210,7 @@ impl MovePath<Right, End> for SearchPath {
     }
 }
 
-impl MovePath<Left, End> for SearchPath {
+impl MovePath<Left, End> for IndexRangePath {
     fn move_leaf<Trav: Traversable>(
         &mut self,
         location: &mut ChildLocation,
@@ -220,7 +220,7 @@ impl MovePath<Left, End> for SearchPath {
     }
 }
 
-impl RootChild<Start> for SearchPath {
+impl RootChild<Start> for IndexRangePath {
     fn root_child<Trav: Traversable>(
         &self,
         trav: &Trav,
@@ -233,7 +233,7 @@ impl RootChild<Start> for SearchPath {
     }
 }
 
-impl RootChild<End> for SearchPath {
+impl RootChild<End> for IndexRangePath {
     fn root_child<Trav: Traversable>(
         &self,
         trav: &Trav,
@@ -245,13 +245,13 @@ impl RootChild<End> for SearchPath {
         )
     }
 }
-impl GraphRootChild<Start> for SearchPath {
+impl GraphRootChild<Start> for IndexRangePath {
     fn root_child_location(&self) -> ChildLocation {
         self.root.location.to_child_location(self.start.root_entry)
     }
 }
 
-impl LeafKey for SearchPath {
+impl LeafKey for IndexRangePath {
     fn leaf_location(&self) -> ChildLocation {
         self.end.path.last().cloned().unwrap_or(
             self.root
@@ -261,31 +261,31 @@ impl LeafKey for SearchPath {
     }
 }
 
-impl GraphRootChild<End> for SearchPath {
+impl GraphRootChild<End> for IndexRangePath {
     fn root_child_location(&self) -> ChildLocation {
         self.root.location.to_child_location(self.end.root_entry)
     }
 }
 
-impl RootChildPos<Start> for SearchPath {
+impl RootChildPos<Start> for IndexRangePath {
     fn root_child_pos(&self) -> usize {
         RootChildPos::<Start>::root_child_pos(&self.start)
     }
 }
 
-impl RootChildPos<End> for SearchPath {
+impl RootChildPos<End> for IndexRangePath {
     fn root_child_pos(&self) -> usize {
         RootChildPos::<End>::root_child_pos(&self.end)
     }
 }
 
-impl RootChildPosMut<End> for SearchPath {
+impl RootChildPosMut<End> for IndexRangePath {
     fn root_child_pos_mut(&mut self) -> &mut usize {
         self.end.root_child_pos_mut()
     }
 }
 
-impl PathLower for (&mut TokenPosition, &mut SearchPath) {
+impl PathLower for (&mut TokenPosition, &mut IndexRangePath) {
     fn path_lower<Trav: Traversable>(
         &mut self,
         trav: &Trav,

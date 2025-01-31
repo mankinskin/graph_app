@@ -17,7 +17,10 @@ use crate::{
     },
 };
 
-use super::rooted::role_path::RootedRolePath;
+use super::rooted::{
+    role_path::RootedRolePath,
+    root::IndexRoot,
+};
 //pub trait NotStartPath {}
 //impl NotStartPath for PathLeaf {}
 
@@ -25,8 +28,8 @@ pub trait MatchEndPath:
 NodePath<Start>
 //+ PathComplete
 //+ PathAppend
-+ Into<RootedRolePath<Start>>
-+ From<RootedRolePath<Start>>
++ Into<RootedRolePath<Start, IndexRoot>>
++ From<RootedRolePath<Start, IndexRoot>>
 + HasSinglePath
 + GraphRootChild<Start>
 //+ From<PathLeaf>
@@ -39,8 +42,8 @@ impl<
         T: NodePath<Start>
             //+ PathComplete
             //+ PathAppend
-            + Into<RootedRolePath<Start>>
-            + From<RootedRolePath<Start>>
+            + Into<RootedRolePath<Start, IndexRoot>>
+            + From<RootedRolePath<Start, IndexRoot>>
             + HasSinglePath
             + GraphRootChild<Start>
             //+ From<PathLeaf>
@@ -59,11 +62,11 @@ pub enum MatchEnd<P: MatchEndPath> {
 }
 
 pub trait IntoMatchEndStartPath {
-    fn into_mesp(self) -> MatchEnd<RootedRolePath<Start>>;
+    fn into_mesp(self) -> MatchEnd<RootedRolePath<Start, IndexRoot>>;
 }
 
 impl<P: MatchEndPath> IntoMatchEndStartPath for MatchEnd<P> {
-    fn into_mesp(self) -> MatchEnd<RootedRolePath<Start>> {
+    fn into_mesp(self) -> MatchEnd<RootedRolePath<Start, IndexRoot>> {
         match self {
             MatchEnd::Path(p) => MatchEnd::Path(p.into()),
             MatchEnd::Complete(c) => MatchEnd::Complete(c),
@@ -81,7 +84,7 @@ impl<P: MatchEndPath> IntoMatchEndStartPath for MatchEnd<P> {
 //        start.postfix
 //    }
 //}
-impl<P: MatchEndPath + From<Q>, Q: Into<RootedRolePath<Start>>> From<Q> for MatchEnd<P> {
+impl<P: MatchEndPath + From<Q>, Q: Into<RootedRolePath<Start, IndexRoot>>> From<Q> for MatchEnd<P> {
     fn from(start: Q) -> Self {
         // todo: handle complete
         MatchEnd::Path(P::from(start))

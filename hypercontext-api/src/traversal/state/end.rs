@@ -14,8 +14,9 @@ use crate::{
         },
         mutators::move_path::key::TokenPosition,
         structs::rooted::{
-            index_range::SearchPath,
+            index_range::IndexRangePath,
             role_path::RootedRolePath,
+            root::IndexRoot,
             split_path::RootedSplitPathRef,
         },
     },
@@ -38,13 +39,13 @@ use super::cursor::RangeCursor;
 // - bottom up-no matching parents
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RangeEnd {
-    pub path: SearchPath,
+    pub path: IndexRangePath,
     pub target: DirectedKey,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrefixEnd {
-    pub path: RootedRolePath<End>,
+    pub path: RootedRolePath<End, IndexRoot>,
     pub target: DirectedKey,
 }
 

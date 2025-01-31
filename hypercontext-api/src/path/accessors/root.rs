@@ -144,7 +144,7 @@ macro_rules! impl_root {
 //        MatchEnd::Complete(c) => *c,
 //    }
 //}
-//impl_root! { RootChild for SearchPath, self => self.start.root_child() }
+//impl_root! { RootChild for IndexRangePath, self => self.start.root_child() }
 //impl_root! { RootChild for RolePath, self => self.child_location().parent }
 //impl_root! { RootChild for PathLeaf, self => self.child_location().parent }
 

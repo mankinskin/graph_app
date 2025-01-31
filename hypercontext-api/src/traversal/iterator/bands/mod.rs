@@ -14,6 +14,7 @@ use crate::{
 use policy::{
     BandExpandingPolicy,
     PostfixExpandingPolicy,
+    PrefixExpandingPolicy,
 };
 use std::{
     borrow::Borrow,
@@ -55,8 +56,17 @@ where
     _ty: std::marker::PhantomData<&'a P>,
 }
 
-pub type PostfixIterator<'a, Trav> =
-    BandExpandingIterator<'a, Trav, PostfixExpandingPolicy<DirectionOf<<Trav as Traversable>::Kind>>>;
+pub type PostfixIterator<'a, Trav> = BandExpandingIterator<
+    'a,
+    Trav,
+    PostfixExpandingPolicy<DirectionOf<<Trav as Traversable>::Kind>>,
+>;
+
+pub type PrefixIterator<'a, Trav> = BandExpandingIterator<
+    'a,
+    Trav,
+    PrefixExpandingPolicy<DirectionOf<<Trav as Traversable>::Kind>>,
+>;
 
 impl<'a, Trav, P> BandIterator<'a, Trav> for BandExpandingIterator<'a, Trav, P>
 where

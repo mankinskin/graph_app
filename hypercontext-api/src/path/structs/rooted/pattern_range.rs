@@ -37,6 +37,7 @@ use crate::{
             has_path::{
                 HasPath,
                 HasRolePath,
+                IntoRootedRolePath,
             },
             role::{
                 End,
@@ -54,6 +55,7 @@ use crate::{
                 FoldablePath,
                 RangePath,
             },
+            role_path::RolePath,
             sub_path::SubPath,
         },
     },
@@ -64,6 +66,7 @@ use crate::{
 };
 
 use super::{
+    role_path::RootedRolePath,
     root::{
         PathRoot,
         RootedPath,
@@ -72,6 +75,41 @@ use super::{
 };
 
 pub type PatternRangePath = RootedRangePath<Pattern>;
+
+impl<R: PathRoot> RootedPath for RootedRangePath<R> {
+    type Root = R;
+    fn path_root(&self) -> &Self::Root {
+        &self.root
+    }
+}
+
+impl<P: IntoPattern> From<P> for PatternRangePath {
+    fn from(p: P) -> Self {
+        let p = p.into_pattern();
+        let entry = <BaseGraphKind as GraphKind>::Direction::head_index(&p.borrow());
+        RootedRangePath {
+            root: p,
+            start: SubPath::new(entry).into(),
+            end: SubPath::new(entry).into(),
+        }
+    }
+}
+impl RangePath for PatternRangePath {
+    fn new_range(
+        root: Self::Root,
+        entry: usize,
+        exit: usize,
+    ) -> Self {
+        Self {
+            root,
+            start: SubPath::new(entry).into(),
+            end: SubPath::new(exit).into(),
+        }
+    }
+}
+
+impl_root! { RootPattern for PatternRangePath, self, _trav => PatternRoot::pattern_root_pattern(self) }
+impl_root! { PatternRoot for PatternRangePath, self => self.root.borrow() }
 
 impl RootChildPos<Start> for PatternRangePath {
     fn root_child_pos(&self) -> usize {
@@ -84,8 +122,6 @@ impl RootChildPos<End> for PatternRangePath {
     }
 }
 
-impl_root! { RootPattern for PatternRangePath, self, _trav => PatternRoot::pattern_root_pattern(self) }
-impl_root! { PatternRoot for PatternRangePath, self => self.root.borrow() }
 impl MoveRootPos<Right, End> for PatternRangePath {
     fn move_root_pos<Trav: Traversable>(
         &mut self,
@@ -99,19 +135,10 @@ impl MoveRootPos<Right, End> for PatternRangePath {
         }
     }
 }
+
 impl<R: PathRole> PathChild<R> for PatternRangePath where Self: HasPath<R> + PatternRootChild<R> {}
-impl<P: IntoPattern> From<P> for PatternRangePath {
-    fn from(p: P) -> Self {
-        let p = p.into_pattern();
-        let entry = <BaseGraphKind as GraphKind>::Direction::head_index(&p.borrow());
-        RootedRangePath {
-            root: p,
-            start: SubPath::new(entry).into(),
-            end: SubPath::new(entry).into(),
-        }
-    }
-}
-impl<R: 'static> HasPath<R> for PatternRangePath
+
+impl<R: PathRole> HasPath<R> for PatternRangePath
 where
     Self: HasRolePath<R>,
 {
@@ -122,21 +149,30 @@ where
         HasRolePath::<R>::role_path_mut(self).path_mut()
     }
 }
-impl HasPath<End> for PatternRangePath {
-    fn path(&self) -> &Vec<ChildLocation> {
-        &self.end.path
-    }
-    fn path_mut(&mut self) -> &mut Vec<ChildLocation> {
-        &mut self.end.sub_path.path
+impl<R: PathRole> IntoRootedRolePath<R> for PatternRangePath
+where
+    Self: HasRolePath<R> + RootedPath,
+{
+    fn into_rooted_role_path(&self) -> RootedRolePath<R, Self::Root> {
+        self.role_path()
+            .clone()
+            .into_rooted(self.path_root().clone())
     }
 }
-
-impl HasPath<Start> for PatternRangePath {
-    fn path(&self) -> &Vec<ChildLocation> {
-        &self.start.path
+impl HasRolePath<Start> for PatternRangePath {
+    fn role_path(&self) -> &RolePath<Start> {
+        &self.start
     }
-    fn path_mut(&mut self) -> &mut Vec<ChildLocation> {
-        &mut self.start.sub_path.path
+    fn role_path_mut(&mut self) -> &mut RolePath<Start> {
+        &mut self.start
+    }
+}
+impl HasRolePath<End> for PatternRangePath {
+    fn role_path(&self) -> &RolePath<End> {
+        &self.end
+    }
+    fn role_path_mut(&mut self) -> &mut RolePath<End> {
+        &mut self.end
     }
 }
 
@@ -170,28 +206,8 @@ impl FoldablePath for PatternRangePath {
         }
     }
 }
-impl RangePath for PatternRangePath {
-    fn new_range(
-        root: Self::Root,
-        entry: usize,
-        exit: usize,
-    ) -> Self {
-        Self {
-            root,
-            start: SubPath::new(entry).into(),
-            end: SubPath::new(exit).into(),
-        }
-    }
-}
 impl<R: PathRoot> PathPop for RootedRangePath<R> {
     fn path_pop(&mut self) -> Option<ChildLocation> {
         self.end.path_pop()
-    }
-}
-
-impl<R: PathRoot> RootedPath for RootedRangePath<R> {
-    type Root = R;
-    fn path_root(&self) -> &Self::Root {
-        &self.root
     }
 }

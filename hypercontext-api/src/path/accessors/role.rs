@@ -1,9 +1,4 @@
-use std::{
-    borrow::Borrow,
-    fmt::Debug,
-};
 use crate::{
-    path::accessors::border::PathBorder,
     graph::vertex::{
         has_vertex_index::ToChild,
         location::child::ChildLocation,
@@ -12,6 +7,11 @@ use crate::{
             prefix,
         },
     },
+    path::accessors::border::PathBorder,
+};
+use std::{
+    borrow::Borrow,
+    fmt::Debug,
 };
 
 #[derive(Hash, Debug, Clone, Eq, PartialEq, Default)]
@@ -20,7 +20,7 @@ pub struct Start;
 #[derive(Hash, Debug, Clone, Eq, PartialEq, Default)]
 pub struct End;
 
-pub trait PathRole: 'static + Debug + PathBorder + Default {
+pub trait PathRole: 'static + Debug + PathBorder + Default + Clone {
     type TopDownPathIter<I: Borrow<ChildLocation>, T: DoubleEndedIterator<Item=I> + ExactSizeIterator>: DoubleEndedIterator<Item=I> + ExactSizeIterator;
     fn top_down_iter<
         I: Borrow<ChildLocation>,

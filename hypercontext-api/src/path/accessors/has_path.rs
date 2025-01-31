@@ -4,7 +4,10 @@ use crate::{
         query_range_path::FoldablePath,
         rooted::{
             role_path::RootedRolePath,
-            root::PathRoot,
+            root::{
+                PathRoot,
+                RootedPath,
+            },
         },
     },
     traversal::state::cursor::PathCursor,
@@ -55,7 +58,7 @@ impl<R: PathRole, P: FoldablePath + HasPath<R>> HasPath<R> for PathCursor<P> {
 //        }
 //    }
 //}
-impl<R> HasPath<R> for RolePath<R> {
+impl<R: PathRole> HasPath<R> for RolePath<R> {
     fn path(&self) -> &Vec<ChildLocation> {
         &self.path
     }
@@ -65,7 +68,12 @@ impl<R> HasPath<R> for RolePath<R> {
 }
 
 /// access to a rooted path pointing to a descendant
-pub trait HasRolePath<R> {
+pub trait IntoRootedRolePath<R: PathRole>: HasRolePath<R> + RootedPath {
+    fn into_rooted_role_path(&self) -> RootedRolePath<R, Self::Root>;
+}
+
+/// access to a rooted path pointing to a descendant
+pub trait HasRolePath<R: PathRole> {
     fn role_path(&self) -> &RolePath<R>;
     fn role_path_mut(&mut self) -> &mut RolePath<R>;
     fn num_path_segments(&self) -> usize {
@@ -73,7 +81,7 @@ pub trait HasRolePath<R> {
     }
 }
 
-impl<R> HasRolePath<R> for RolePath<R> {
+impl<R: PathRole> HasRolePath<R> for RolePath<R> {
     fn role_path(&self) -> &RolePath<R> {
         self
     }
@@ -108,7 +116,7 @@ pub trait HasSinglePath {
     fn single_path(&self) -> &[ChildLocation];
 }
 
-impl<R> HasSinglePath for RolePath<R> {
+impl<R: PathRole> HasSinglePath for RolePath<R> {
     fn single_path(&self) -> &[ChildLocation] {
         self.path().borrow()
     }

@@ -1,21 +1,17 @@
-
-use hypercontext_api::{
-    graph::{
-        kind::DefaultToken,
-        vertex::{
-            child::Child,
-            pattern::IntoPattern,
-        },
-        HypergraphRef,
+use crate::read::reader::context::ReadContext;
+use hypercontext_api::graph::{
+    vertex::{
+        child::Child,
+        pattern::IntoPattern,
     },
-    traversal::traversable::TraversableMut,
+    HypergraphRef,
 };
 use sequence::ToNewTokenIndices;
-use crate::read::reader::context::ReadContext;
 
+pub mod bundle;
+pub mod overlap;
 pub mod reader;
 pub mod sequence;
-pub mod bands;
 //#[cfg(test)]
 //mod tests;
 

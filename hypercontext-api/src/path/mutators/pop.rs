@@ -32,7 +32,7 @@ impl<R: PathRole> PathPop for RolePath<R> {
     }
 }
 
-//impl PathPop for SearchPath {
+//impl PathPop for IndexRangePath {
 //    fn path_pop(&mut self) -> Option<ChildLocation> {
 //        self.end.path_pop()
 //    }
@@ -63,8 +63,8 @@ impl<P: FoldablePath> PathPop for PathCursor<P> {
 //    }
 //}
 
-//impl PathPop for OriginPath<SearchPath> {
-//    type Result = OriginPath<<SearchPath as PathPop>::Result>;
+//impl PathPop for OriginPath<IndexRangePath> {
+//    type Result = OriginPath<<IndexRangePath as PathPop>::Result>;
 //    fn path_pop<
 //        T: Tokenize,
 //        D: MatchDirection,

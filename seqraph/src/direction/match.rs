@@ -18,7 +18,8 @@ use hypercontext_api::{
     },
     graph::{
         getters::{
-            vertex::VertexSet, ErrorReason,
+            vertex::VertexSet,
+            ErrorReason,
         },
         kind::GraphKind,
         vertex::{
@@ -33,9 +34,11 @@ use hypercontext_api::{
                 PatternIndex,
             },
             pattern::{
-                id::PatternId, pattern_range::PatternRangeIndex, IntoPattern, Pattern
+                id::PatternId,
+                pattern_range::PatternRangeIndex,
+                IntoPattern,
+                Pattern,
             },
-            TokenPosition,
         },
         Hypergraph,
     },
@@ -67,7 +70,7 @@ pub trait MatchDirection: Clone + Debug + Send + Sync + 'static + Unpin {
     fn skip_equal_indices<'a, I: HasVertexIndex, J: HasVertexIndex>(
         a: impl DoubleEndedIterator<Item = &'a I>,
         b: impl DoubleEndedIterator<Item = &'a J>,
-    ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)>;
+    ) -> Option<(usize, EitherOrBoth<&'a I, &'a J>)>;
     /// get remaining pattern in matching direction including index
     fn pattern_tail<T: ToChild>(pattern: &'_ [T]) -> &'_ [T];
     fn pattern_head<T: ToChild>(pattern: &'_ [T]) -> Option<&'_ T>;
@@ -162,7 +165,7 @@ impl MatchDirection for Right {
     fn skip_equal_indices<'a, I: HasVertexIndex, J: HasVertexIndex>(
         a: impl DoubleEndedIterator<Item = &'a I>,
         b: impl DoubleEndedIterator<Item = &'a J>,
-    ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)> {
+    ) -> Option<(usize, EitherOrBoth<&'a I, &'a J>)> {
         to_matching_iterator(a, b).next()
     }
 
@@ -218,7 +221,7 @@ impl MatchDirection for Left {
     fn skip_equal_indices<'a, I: HasVertexIndex, J: HasVertexIndex>(
         a: impl DoubleEndedIterator<Item = &'a I>,
         b: impl DoubleEndedIterator<Item = &'a J>,
-    ) -> Option<(TokenPosition, EitherOrBoth<&'a I, &'a J>)> {
+    ) -> Option<(usize, EitherOrBoth<&'a I, &'a J>)> {
         to_matching_iterator(a.rev(), b.rev()).next()
     }
     fn front_context_range<T>(index: usize) -> Self::PostfixRange<T> {

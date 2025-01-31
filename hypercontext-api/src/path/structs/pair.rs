@@ -4,11 +4,11 @@ use crate::{
     traversal::state::cursor::RangeCursor,
 };
 
-use super::rooted::index_range::SearchPath;
+use super::rooted::index_range::IndexRangePath;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PathPair {
-    pub path: SearchPath,
+    pub path: IndexRangePath,
     pub cursor: RangeCursor,
     pub mode: PathPairMode,
 }
@@ -21,7 +21,7 @@ pub enum PathPairMode {
 
 impl PathPair {
     pub fn new(
-        path: SearchPath,
+        path: IndexRangePath,
         cursor: RangeCursor,
         mode: PathPairMode,
     ) -> Self {

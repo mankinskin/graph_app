@@ -45,3 +45,23 @@ impl<Trav: Traversable, D: MatchDirection> BandExpandingPolicy<Trav> for Postfix
             .collect_vec()
     }
 }
+
+pub struct PrefixExpandingPolicy<D: MatchDirection> {
+    _ty: std::marker::PhantomData<D>,
+}
+impl<Trav: Traversable, D: MatchDirection> BandExpandingPolicy<Trav> for PrefixExpandingPolicy<D> {
+    fn map_band(
+        location: PatternLocation,
+        pattern: impl IntoPattern,
+    ) -> (ChildLocation, Child) {
+        (location.to_child_location(0), pattern.borrow()[0])
+    }
+    fn map_batch(
+        batch: impl IntoIterator<Item = (ChildLocation, Child)>
+    ) -> Vec<(ChildLocation, Child)> {
+        batch
+            .into_iter()
+            .sorted_by(|a, b| b.1.width().cmp(&a.1.width()))
+            .collect_vec()
+    }
+}

@@ -49,6 +49,14 @@ use crate::{
         },
         Hypergraph,
     },
+    traversal::{
+        iterator::bands::{
+            BandIterator,
+            PostfixIterator,
+            PrefixIterator,
+        },
+        traversable::Traversable,
+    },
     HashSet,
 };
 
@@ -97,6 +105,18 @@ impl VertexData {
     }
     pub fn get_width(&self) -> usize {
         self.width
+    }
+    pub fn postfix_iter<'a, Trav: Traversable>(
+        &self,
+        trav: &'a Trav,
+    ) -> PostfixIterator<'a, Trav> {
+        PostfixIterator::band_iter(trav, self.to_child())
+    }
+    pub fn prefix_iter<'a, Trav: Traversable>(
+        &self,
+        trav: &'a Trav,
+    ) -> PrefixIterator<'a, Trav> {
+        PrefixIterator::band_iter(trav, self.to_child())
     }
     pub fn get_parent(
         &self,

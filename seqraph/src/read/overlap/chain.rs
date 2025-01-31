@@ -1,16 +1,18 @@
 use std::collections::BTreeMap;
 
-use derive_more::derive::{Deref, DerefMut};
+use derive_more::derive::{
+    Deref,
+    DerefMut,
+};
 use itertools::Itertools;
 use tracing::instrument;
 
 use crate::read::{
-    bands::overlaps::overlap::Overlap,
+    overlap::Overlap,
     reader::context::ReadContext,
 };
 use hypercontext_api::{
     graph::vertex::child::Child,
-    split::side::SplitFront,
     traversal::traversable::TraversableMut,
 };
 

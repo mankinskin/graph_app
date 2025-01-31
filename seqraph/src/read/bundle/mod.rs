@@ -4,13 +4,12 @@ use hypercontext_api::{
     graph::vertex::child::Child,
     path::{
         mutators::move_path::Advance,
-        structs::query_range_path::PatternPrefixPath,
+        structs::rooted::pattern_prefix::PatternPrefixPath,
     },
 };
 
 use super::reader::context::ReadContext;
 pub mod band;
-pub mod overlaps;
 //pub struct BandsContext {
 //    pub graph: HypergraphRef,
 //}

@@ -1,11 +1,15 @@
 use crate::{
+    graph::vertex::child::Child,
     path::structs::match_end::{
         MatchEnd,
         MatchEndPath,
-    }, traversal::{result::FoundRange, state::end::EndKind}
+    },
+    traversal::{
+        result::FoundRange,
+        state::end::EndKind,
+    },
 };
 use std::fmt::Debug;
-use crate::graph::vertex::child::Child;
 
 pub trait PathComplete: Sized + Debug {
     fn as_complete(&self) -> Option<Child>;
@@ -69,7 +73,7 @@ impl PathComplete for EndKind {
 //    }
 //}
 
-//impl PathComplete for SearchPath {
+//impl PathComplete for IndexRangePath {
 //    fn is_complete<
 //        T: Tokenize,
 //        D: MatchDirection,

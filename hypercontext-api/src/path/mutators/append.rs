@@ -10,7 +10,7 @@ use crate::{
     path::structs::{
         query_range_path::FoldablePath,
         rooted::{
-            index_range::SearchPath,
+            index_range::IndexRangePath,
             pattern_range::PatternRangePath,
             role_path::RootedRolePath,
             root::PathRoot,
@@ -55,7 +55,7 @@ impl PathAppend for RolePath<End> {
     }
 }
 
-impl PathAppend for SearchPath {
+impl PathAppend for IndexRangePath {
     fn path_append(
         &mut self,
         parent_entry: ChildLocation,

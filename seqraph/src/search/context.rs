@@ -6,7 +6,10 @@ use hypercontext_api::{
     traversal::{
         container::bft::BftQueue,
         fold::FoldContext,
-        iterator::policy::{AncestorPolicy, DirectedTraversalPolicy, ParentPolicy},
+        iterator::policy::{
+            AncestorPolicy,
+            ParentPolicy,
+        },
         result::FinishedState,
         traversable::Traversable,
         TraversalKind,

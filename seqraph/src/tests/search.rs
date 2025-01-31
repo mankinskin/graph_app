@@ -22,23 +22,20 @@ use hypercontext_api::{
                 SubLocation,
             },
             token::Token,
-            wide::Wide,
         },
         HypergraphRef,
     },
     lab,
     path::structs::{
-        query_range_path::{
-            PatternRangePath,
-            RangePath,
-        },
+        query_range_path::RangePath,
         role_path::RolePath,
-        rooted_path::{
-            IndexRoot,
+        rooted::{
+            pattern_range::PatternRangePath,
+            role_path::RootedRolePath,
+            root::IndexRoot,
             RootedRangePath,
-            RootedRolePath,
-            SubPath,
         },
+        sub_path::SubPath,
     },
     traversal::{
         cache::{

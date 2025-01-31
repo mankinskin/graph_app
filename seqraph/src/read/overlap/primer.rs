@@ -1,12 +1,13 @@
-use crate::{
+use hypercontext_api::{
     graph::vertex::child::Child,
     path::{
         accessors::role::End,
-        structs::role_path::RolePath,
+        structs::{
+            role_path::RolePath,
+            rooted::pattern_prefix::PatternPrefixPath,
+        },
     },
 };
-
-use super::rooted::pattern_prefix::PatternPrefixPath;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OverlapPrimer {

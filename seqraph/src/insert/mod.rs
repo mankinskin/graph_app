@@ -2,12 +2,15 @@ use context::*;
 
 use hypercontext_api::{
     graph::{
-        getters::ErrorReason, vertex::{
+        getters::ErrorReason,
+        vertex::{
             child::Child,
             location::child::ChildLocation,
             pattern::IntoPattern,
-        }, HypergraphRef
-    }, path::structs::query_range_path::PatternRangePath
+        },
+        HypergraphRef,
+    },
+    path::structs::rooted::pattern_range::PatternRangePath,
 };
 
 pub mod context;

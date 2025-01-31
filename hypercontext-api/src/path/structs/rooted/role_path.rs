@@ -47,12 +47,12 @@ use super::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RootedRolePath<R: PathRole, Root: PathRoot = IndexRoot> {
+pub struct RootedRolePath<R: PathRole, Root: PathRoot> {
     pub root: Root,
     pub role_path: RolePath<R>,
 }
 
-impl<R: PathRole> RootedRolePath<R> {
+impl<R: PathRole> RootedRolePath<R, IndexRoot> {
     pub fn new(first: ChildLocation) -> Self {
         Self {
             role_path: RolePath::from(SubPath::new(first.sub_index)),
@@ -123,8 +123,9 @@ impl<R: PathRole, Root: PathRoot> RootedPath for RootedRolePath<R, Root> {
 
 impl<R: PathRole> PathChild<R> for RolePath<R> {}
 
-impl_child! { RootChild for RootedRolePath<R>, self, trav =>
-    trav.graph().expect_child_at(self.path_root().location.to_child_location(RootChildPos::<R>::root_child_pos(&self.role_path)))
+impl_child! {
+    RootChild for RootedRolePath<R, IndexRoot>, self,
+    trav => trav.graph().expect_child_at(self.path_root().location.to_child_location(RootChildPos::<R>::root_child_pos(&self.role_path)))
 }
 impl<R: PathRole> GraphRootChild<R> for RootedRolePath<R, IndexRoot> {
     fn root_child_location(&self) -> ChildLocation {
@@ -145,7 +146,7 @@ impl<R: PathRole> GraphRootPattern for RootedRolePath<R, IndexRoot> {
         self.root.location
     }
 }
-impl<R: PathRole> RootPattern for RootedRolePath<R> {
+impl<R: PathRole> RootPattern for RootedRolePath<R, IndexRoot> {
     fn root_pattern<'a: 'g, 'b: 'g, 'g, Trav: Traversable + 'a>(
         &'b self,
         trav: &'g Trav::Guard<'a>,

@@ -31,7 +31,7 @@ pub trait IntoAdvanced: Sized + Clone {
         trav: &Trav,
     ) -> Result<ChildState, Self>;
     //{
-    //    let mut new: SearchPath = self.clone().into();
+    //    let mut new: IndexRangePath = self.clone().into();
     //    match new.advance_exit_pos::<_, D, _>(trav) {
     //        Ok(()) => Ok(new),
     //        Err(()) => Err(self)
@@ -41,7 +41,7 @@ pub trait IntoAdvanced: Sized + Clone {
 
 //impl<
 //    R: ResultKind,
-//    T: Sized + Clone + Into<SearchPath>
+//    T: Sized + Clone + Into<IndexRangePath>
 //> IntoAdvanced for T {
 //}
 //impl<

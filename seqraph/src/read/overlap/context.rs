@@ -4,8 +4,8 @@ use tracing::instrument;
 
 use crate::{
     insert::HasInsertContext,
-    read::bands::{
-        overlaps::overlap::{
+    read::{
+        overlap::{
             chain::OverlapChain,
             OverlapLink,
         },

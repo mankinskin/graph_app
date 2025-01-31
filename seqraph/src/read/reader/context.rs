@@ -14,7 +14,7 @@ use tracing::{
 use crate::{
     insert::context::InsertContext,
     read::{
-        bands::overlaps::overlap::cache::OverlapCache,
+        overlap::cache::OverlapCache,
         sequence::{
             SequenceIter,
             ToNewTokenIndices,
@@ -41,9 +41,9 @@ use hypercontext_api::{
         Hypergraph,
         HypergraphRef,
     },
-    path::structs::query_range_path::{
-        FoldablePath,
-        PatternPrefixPath,
+    path::structs::{
+        query_range_path::FoldablePath,
+        rooted::pattern_prefix::PatternPrefixPath,
     },
     traversal::traversable::{
         impl_traversable,

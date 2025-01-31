@@ -11,7 +11,7 @@ use hypercontext_api::{
         Hypergraph,
         HypergraphRef,
     },
-    path::structs::query_range_path::PatternRangePath,
+    path::structs::rooted::pattern_range::PatternRangePath,
     traversal::{
         container::bft::BftQueue,
         fold::{

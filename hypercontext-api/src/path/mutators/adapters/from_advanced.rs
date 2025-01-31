@@ -9,38 +9,38 @@ pub trait FromAdvanced<A: Advanced> {
     ) -> Self;
 }
 
-//impl FromAdvanced<SearchPath> for FoundPath {
+//impl FromAdvanced<IndexRangePath> for FoundPath {
 //    fn from_advanced<
 //        T: Tokenize,
 //        D: MatchDirection,
 //        Trav: Traversable<T>
-//    >(path: SearchPath, trav: &Trav) -> Self {
+//    >(path: IndexRangePath, trav: &Trav) -> Self {
 //        if path.is_complete::<_, D, _>(trav) {
-//            Self::Complete(<SearchPath as GraphRootChild<Start>>::root_child_location(&path).parent)
+//            Self::Complete(<IndexRangePath as GraphRootChild<Start>>::root_child_location(&path).parent)
 //        } else {
 //            Self::Path(path)
 //        }
 //
 //    }
 //}
-//impl FromAdvanced<OriginPath<SearchPath>> for OriginPath<FoundPath> {
+//impl FromAdvanced<OriginPath<IndexRangePath>> for OriginPath<FoundPath> {
 //    fn from_advanced<
 //        T: Tokenize,
 //        D: MatchDirection,
 //        Trav: Traversable<T>
-//    >(path: OriginPath<SearchPath>, trav: &Trav) -> Self {
+//    >(path: OriginPath<IndexRangePath>, trav: &Trav) -> Self {
 //        Self {
 //            postfix: FoundPath::from_advanced::<_, D, _>(path.postfix, trav),
 //            origin: path.origin,
 //        }
 //    }
 //}
-//impl FromAdvanced<OriginPath<SearchPath>> for OriginPath<RolePath<Start>> {
+//impl FromAdvanced<OriginPath<IndexRangePath>> for OriginPath<RolePath<Start>> {
 //    fn from_advanced<
 //        T: Tokenize,
 //        D: MatchDirection,
 //        Trav: Traversable<T>
-//    >(path: OriginPath<SearchPath>, trav: &Trav) -> Self {
+//    >(path: OriginPath<IndexRangePath>, trav: &Trav) -> Self {
 //        Self {
 //            postfix: RolePath::from_advanced::<_, D, _>(path.postfix, trav),
 //            origin: path.origin,

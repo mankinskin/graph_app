@@ -23,16 +23,15 @@ use hypercontext_api::{
         Hypergraph,
         HypergraphRef,
     },
-    path::structs::query_range_path::{
-        FoldablePath,
-        PatternRangePath,
+    path::structs::{
+        query_range_path::FoldablePath,
+        rooted::pattern_range::PatternRangePath,
     },
     traversal::{
         result::{
             FinishedState,
             FoundRange,
         },
-        state::cursor::RangeCursor,
         traversable::Traversable,
     },
 };

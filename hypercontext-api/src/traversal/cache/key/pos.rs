@@ -54,7 +54,7 @@ impl_cursor_pos! {
 //impl_cursor_pos! {
 //    CursorPosition for IndexRoot, self => self.pos
 //}
-//impl CursorPosition for SearchPath {
+//impl CursorPosition for IndexRangePath {
 //    fn cursor_pos(&self) -> &TokenLocation {
 //        &self.root.pos
 //    }

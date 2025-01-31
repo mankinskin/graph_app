@@ -28,8 +28,9 @@ use crate::{
             },
             role_path::RolePath,
             rooted::{
-                index_range::SearchPath,
+                index_range::IndexRangePath,
                 role_path::RootedRolePath,
+                root::IndexRoot,
             },
         },
         BasePath,
@@ -51,7 +52,7 @@ use std::hash::Hash;
 //    type Indexed: Send + Sync;
 //    fn into_postfix(primer: Self::Primer, match_end: MatchEnd<RootedRolePath<Start>>) -> Self::Postfix;
 //}
-pub type Primer = RootedRolePath<Start>;
+pub type Primer = RootedRolePath<Start, IndexRoot>;
 pub(crate) type Postfix = MatchEnd<Primer>;
 
 pub trait Found: BasePath + PathComplete
@@ -82,8 +83,8 @@ RoleChildPath
 + NodePath<Start>
 //+ HasRolePath<Start>
 + GraphRootChild<Start>
-+ From<RootedRolePath<Start>>
-+ From<SearchPath>
++ From<RootedRolePath<Start, IndexRoot>>
++ From<IndexRangePath>
 + Into<Postfix>
 + IntoAdvanced
 //+ Wide
@@ -101,8 +102,8 @@ impl<
             + RoleChildPath
             //+ HasRolePath<Start>
             + GraphRootChild<Start>
-            + From<RootedRolePath<Start>>
-            + From<SearchPath>
+            + From<RootedRolePath<Start, IndexRoot>>
+            + From<IndexRangePath>
             + IntoAdvanced
             + Into<Postfix>
             //+ Wide
@@ -215,14 +216,14 @@ impl<T> RoleChildPath for T {}
 //    }
 //}
 
-#[derive(Eq, PartialEq, Clone, Debug)]
-pub struct BaseResult;
+//#[derive(Eq, PartialEq, Clone, Debug)]
+//pub struct BaseResult;
 
 //impl ResultKind for BaseResult {
 //    type Query = PatternRangePath;
 //    type Found = FoundPath;
 //    type Primer = RootedRolePath<Start>;
-//    type Advanced = SearchPath;
+//    type Advanced = IndexRangePath;
 //    type Postfix = MatchEnd<RootedRolePath<Start>>;
 //    type Indexed = Child;
 //
@@ -245,7 +246,7 @@ pub struct BaseResult;
 //    type Found = OriginPath<FoundPath<Self, PatternRangePath>>;
 //    type Primer = OriginPath<RolePath<Start>>;
 //    type Postfix = OriginPath<MatchEnd<RolePath<Start>>>;
-//    type Advanced = OriginPath<SearchPath>;
+//    type Advanced = OriginPath<IndexRangePath>;
 //    type Indexed = OriginPath<Child>;
 //    fn into_postfix(primer: Self::Primer, match_end: MatchEnd<RolePath<Start>>) -> Self::Postfix {
 //        OriginPath {

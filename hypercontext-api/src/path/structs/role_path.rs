@@ -18,12 +18,12 @@ use crate::{
 };
 
 use super::rooted::{
-    index_range::SearchPath,
+    index_range::IndexRangePath,
     role_path::RootedRolePath,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
-pub struct RolePath<R> {
+pub struct RolePath<R: PathRole> {
     pub sub_path: SubPath,
     pub _ty: std::marker::PhantomData<R>,
 }
@@ -49,15 +49,15 @@ impl<R: PathRole> RolePath<R> {
     }
 }
 
-impl<R> Deref for RolePath<R> {
+impl<R: PathRole> Deref for RolePath<R> {
     type Target = SubPath;
     fn deref(&self) -> &Self::Target {
         &self.sub_path
     }
 }
 
-impl From<SearchPath> for RolePath<Start> {
-    fn from(p: SearchPath) -> Self {
+impl From<IndexRangePath> for RolePath<Start> {
+    fn from(p: IndexRangePath) -> Self {
         p.start
     }
 }
@@ -71,8 +71,8 @@ impl<R: PathRole> From<SubPath> for RolePath<R> {
     }
 }
 
-impl From<SearchPath> for RolePath<End> {
-    fn from(p: SearchPath) -> Self {
+impl From<IndexRangePath> for RolePath<End> {
+    fn from(p: IndexRangePath) -> Self {
         p.end
     }
 }
@@ -82,9 +82,9 @@ impl From<SearchPath> for RolePath<End> {
 //    }
 //}
 
-impl FromAdvanced<SearchPath> for RolePath<Start> {
+impl FromAdvanced<IndexRangePath> for RolePath<Start> {
     fn from_advanced<Trav: Traversable>(
-        path: SearchPath,
+        path: IndexRangePath,
         _trav: &Trav,
     ) -> Self {
         path.start

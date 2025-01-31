@@ -1,16 +1,68 @@
 use std::ops::ControlFlow;
 
-use hypercontext_api::{graph::vertex::{
-    child::Child, location::pattern::PatternLocation, wide::Wide
-}, path::{accessors::{has_path::HasRolePath, role::{End, Start}}, mutators::append::PathAppend, structs::{match_end::MatchEnd, overlap_primer::OverlapPrimer, query_range_path::PatternPrefixPath, role_path::RolePath, rooted_path::{IndexRoot, RootedRolePath, SubPath}}}, traversal::{iterator::bands::{BandIterator, PostfixIterator}, traversable::TraversableMut}};
-use tracing::instrument;
-use crate::{insert::HasInsertContext, read::{
-    bands::{
-        band::{BandEnd, OverlapBand, OverlapBundle},
-        overlaps::overlap::{chain::OverlapChain, Overlap}
+use crate::{
+    insert::HasInsertContext,
+    read::{
+        bundle::band::{
+            BandEnd,
+            OverlapBand,
+            OverlapBundle,
+        },
+        overlap::{
+            chain::OverlapChain,
+            Overlap,
+        },
+        reader::context::ReadContext,
     },
-    reader::context::ReadContext,
-}};
+};
+use hypercontext_api::{
+    graph::{
+        getters::vertex::VertexSet,
+        vertex::{
+            child::Child,
+            location::pattern::PatternLocation,
+            wide::Wide,
+        },
+    },
+    path::{
+        accessors::{
+            child::root::PatternRootChild,
+            has_path::{
+                HasRolePath,
+                IntoRootedRolePath,
+            },
+            role::{
+                End,
+                Start,
+            },
+        },
+        mutators::append::PathAppend,
+        structs::{
+            match_end::MatchEnd,
+            query_range_path::FoldablePath,
+            role_path::RolePath,
+            rooted::{
+                pattern_prefix::PatternPrefixPath,
+                role_path::RootedRolePath,
+                root::IndexRoot,
+            },
+            sub_path::SubPath,
+        },
+    },
+    traversal::{
+        iterator::bands::{
+            BandIterator,
+            PostfixIterator,
+            PrefixIterator,
+        },
+        traversable::TraversableMut,
+    },
+};
+use itertools::{
+    FoldWhile,
+    Itertools,
+};
+use tracing::instrument;
 
 use super::OverlapLink;
 
@@ -69,10 +121,7 @@ impl OverlapCache {
         match self.find_next_overlap(ctx, cursor) {
             Some((start_bound, next_link, expansion)) => {
                 //println!("found overlap at {}: {:?}", start_bound, expansion);
-                let past_ctx = ctx.take_past_context_pattern(
-                    start_bound,
-                    &mut self.chain,
-                );
+                let past_ctx = ctx.take_past_context_pattern(start_bound, &mut self.chain);
                 let pat = if let Some((past_end_bound, past_ctx)) = past_ctx {
                     println!("reusing back context {past_end_bound}: {:#?}", past_ctx);
                     if past_end_bound == start_bound {
@@ -100,7 +149,7 @@ impl OverlapCache {
                 }
 
                 self.read_next_overlap(ctx, cursor)
-            },
+            }
             None => {
                 //println!("No overlap found");
                 self.chain.close(ctx)
@@ -114,7 +163,6 @@ impl OverlapCache {
         ctx: &mut ReadContext,
         cursor: &mut PatternPrefixPath,
     ) -> Option<(usize, OverlapLink, Child)> {
-
         let last = self.last.take().expect("No last overlap to take!");
         let last_end = *last.band.end.index().unwrap();
 
@@ -134,33 +182,40 @@ impl OverlapCache {
                 path.path_append(postfix_location);
                 path
             } else {
-                RolePath::from(
-                    SubPath::new(postfix_location.sub_index),
-                )
+                RolePath::from(SubPath::new(postfix_location.sub_index))
             };
             // try expand
-            let primer = OverlapPrimer::new(postfix, cursor.clone());
-            match ctx
-                .graph
-                .insert_context()
-                .insert(primer)
-            {
+            //let primer = OverlapPrimer::new(postfix, cursor.clone());
+            let primer = cursor.clone().to_range_path();
+            match ctx.graph.insert_context().insert(primer) {
                 Ok((expansion, advanced)) => {
-                    //*cursor = ;
-                    acc = ControlFlow::Break((
-                        start_bound,
-                        OverlapLink {
-                            postfix_path,
-                            prefix_path: MatchEnd::Path(
-                                RootedRolePath {
-                                    root: IndexRoot::from(PatternLocation::new(expansion, advanced.)),
-                                    role_path: advanced.start.role_path() as RolePath<Start>
-                                },
-                            ),
-                        },
-                        expansion,
-                        bundle,
-                    ));
+                    let adv_prefix = PatternRootChild::<Start>::pattern_root_child(&advanced);
+                    // find prefix from advanced path in expansion index
+                    let prefix_iter = PrefixIterator::band_iter(&ctx.graph, expansion);
+                    let entry = prefix_iter.next().unwrap().0;
+                    let mut prefix_path = prefix_iter
+                        .fold_while(
+                            RootedRolePath::new(entry),
+                            |acc, (prefix_location, prefix)| {
+                                acc.path_append(prefix_location);
+                                if prefix == adv_prefix {
+                                    FoldWhile::Done(acc)
+                                } else {
+                                    FoldWhile::Continue(acc)
+                                }
+                            },
+                        )
+                        .into_inner();
+                    // append path <expansion to adv_prefix> to <adv_prefix to overlap>
+                    prefix_path
+                        .role_path
+                        .sub_path
+                        .extend(advanced.role_path().sub_path.path);
+                    let link = OverlapLink {
+                        postfix_path,
+                        prefix_path: MatchEnd::Path(prefix_path),
+                    };
+                    acc = ControlFlow::Break((start_bound, link, expansion, bundle));
                     break;
                 }
                 Err(_) => {
@@ -189,7 +244,7 @@ impl OverlapCache {
     }
 
     //// TODO: Is this really needed? (possible?)
-    ///// next bands generated when next overlap starts strictly behind the end (with a gap) of a past bundle 
+    ///// next bands generated when next overlap starts strictly behind the end (with a gap) of a past bundle
     //#[instrument(skip(self, cache, past_end_bound, next_link, expansion, past_ctx))]
     //pub fn odd_overlap_next(
     //    &mut self,
