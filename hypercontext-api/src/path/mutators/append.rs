@@ -143,7 +143,7 @@ impl<P: FoldablePath> PathAppend for PathCursor<P> {
 //        'a: 'g,
 //        'g,
 //        T: Tokenize,
-//        D: MatchDirection,
+//        D: ,
 //        Trav: Traversable<T>
 //    >(self, trav: &'a Trav, parent_entry: ChildLocation) -> Self::Result {
 //        let graph = trav.graph();
@@ -171,7 +171,7 @@ impl<P: FoldablePath> PathAppend for PathCursor<P> {
 //    type Result = Self;
 //    fn path_append<
 //        T: Tokenize,
-//        D: MatchDirection,
+//        D: ,
 //        Trav: Traversable<T>
 //    >(mut self, trav: &Trav, parent_entry: ChildLocation) -> Self::Result {
 //        //println!("path {} -> {}, {}", entry.parent.index, parent_entry.parent.index, width);

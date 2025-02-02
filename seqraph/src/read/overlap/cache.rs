@@ -16,21 +16,18 @@ use crate::{
     },
 };
 use hypercontext_api::{
-    graph::{
-        getters::vertex::VertexSet,
-        vertex::{
-            child::Child,
-            location::pattern::PatternLocation,
-            wide::Wide,
-        },
+    direction::{
+        pattern::PatternDirection,
+        Direction,
+    },
+    graph::vertex::{
+        child::Child,
+        wide::Wide,
     },
     path::{
         accessors::{
             child::root::PatternRootChild,
-            has_path::{
-                HasRolePath,
-                IntoRootedRolePath,
-            },
+            has_path::HasRolePath,
             role::{
                 End,
                 Start,
@@ -43,8 +40,8 @@ use hypercontext_api::{
             role_path::RolePath,
             rooted::{
                 pattern_prefix::PatternPrefixPath,
+                pattern_range::PatternRangePath,
                 role_path::RootedRolePath,
-                root::IndexRoot,
             },
             sub_path::SubPath,
         },
@@ -55,7 +52,11 @@ use hypercontext_api::{
             PostfixIterator,
             PrefixIterator,
         },
-        traversable::TraversableMut,
+        traversable::{
+            TravDir,
+            Traversable,
+            TraversableMut,
+        },
     },
 };
 use itertools::{
@@ -85,22 +86,8 @@ impl OverlapCache {
             chain: OverlapChain::default(),
         }
     }
-    pub fn add_bundle(
-        &mut self,
-        reader: &mut ReadContext,
-        bundle: OverlapBundle,
-    ) {
-        self.chain.insert(
-            self.end_bound,
-            Overlap {
-                link: None,
-                band: bundle.into_band(reader),
-            },
-        );
-    }
     pub fn append(
         &mut self,
-        _reader: &mut ReadContext,
         start_bound: usize,
         overlap: Overlap,
     ) {
@@ -110,139 +97,156 @@ impl OverlapCache {
         }
         self.end_bound = start_bound + width;
     }
-    #[instrument(skip(self, ctx, cursor))]
-    pub fn read_next_overlap(
+    #[instrument(skip(self, trav, cursor))]
+    pub fn read_next_overlap<Trav: TraversableMut>(
         mut self,
-        ctx: &mut ReadContext,
+        mut trav: Trav,
         cursor: &mut PatternPrefixPath,
-    ) -> Option<Child> {
+    ) -> Option<Child>
+    where
+        <TravDir<Trav> as Direction>::Opposite: PatternDirection,
+    {
         // find expandable postfix, may append postfixes in overlap chain
         //println!("read next overlap with {:#?}", cache.last);
-        match self.find_next_overlap(ctx, cursor) {
-            Some((start_bound, next_link, expansion)) => {
+        match self.find_next_overlap(&mut trav, cursor) {
+            (Some((start_bound, next_link, expansion)), bundle) => {
                 //println!("found overlap at {}: {:?}", start_bound, expansion);
-                let past_ctx = ctx.take_past_context_pattern(start_bound, &mut self.chain);
-                let pat = if let Some((past_end_bound, past_ctx)) = past_ctx {
-                    println!("reusing back context {past_end_bound}: {:#?}", past_ctx);
-                    if past_end_bound == start_bound {
-                        Some(past_ctx)
-                    } else {
-                        assert!(past_end_bound < start_bound);
-                        panic!("Shouldn't this be impossible?!");
-                    }
-                } else {
-                    //println!("building back context from path");
-                    Some(ctx.back_context_from_path(&mut self.chain, &next_link))
-                };
-                if let Some(pat) = pat {
-                    self.append(
-                        ctx,
-                        start_bound,
-                        Overlap {
-                            band: OverlapBand {
-                                end: BandEnd::Index(expansion),
-                                back_context: pat,
-                            },
-                            link: Some(next_link), // todo
-                        },
-                    );
-                }
+                //
+                self.chain.add_bundle(&mut trav, self.end_bound, bundle);
+                let back = self
+                    .chain
+                    .back_context_for_link(&mut trav, start_bound, &next_link);
 
-                self.read_next_overlap(ctx, cursor)
+                self.append(
+                    start_bound,
+                    Overlap {
+                        band: OverlapBand {
+                            end: BandEnd::Index(expansion),
+                            back_context: back,
+                        },
+                        link: Some(next_link), // todo
+                    },
+                );
+
+                self.read_next_overlap(trav, cursor)
             }
-            None => {
+            (None, bundle) => {
+                self.chain.add_bundle(&mut trav, self.end_bound, bundle);
                 //println!("No overlap found");
-                self.chain.close(ctx)
+                self.chain.close(trav)
             }
         }
     }
+
     /// find largest expandable postfix
-    #[instrument(skip(self, ctx, cursor))]
-    fn find_next_overlap(
+    #[instrument(skip(self, trav, cursor))]
+    fn find_next_overlap<Trav: TraversableMut>(
         &mut self,
-        ctx: &mut ReadContext,
+        trav: Trav,
         cursor: &mut PatternPrefixPath,
-    ) -> Option<(usize, OverlapLink, Child)> {
+    ) -> (Option<(usize, OverlapLink, Child)>, OverlapBundle)
+    where
+        <TravDir<Trav> as Direction>::Opposite: PatternDirection,
+    {
         let last = self.last.take().expect("No last overlap to take!");
         let last_end = *last.band.end.index().unwrap();
+        let mut postfix_iter = PostfixIterator::band_iter(&trav, last_end);
 
         let mut acc = ControlFlow::Continue((
             None as Option<RolePath<End>>,
             OverlapBundle::from(last.band),
         ));
-
-        let mut insert_context = ctx.insert_context();
-        let mut iter = PostfixIterator::band_iter(&mut insert_context.graph_mut(), last_end);
-
-        while let Some((postfix_location, postfix)) = iter.next() {
-            let (path, mut bundle) = acc.continue_value().unwrap();
+        while let (true, Some((postfix_location, postfix))) =
+            (acc.is_continue(), postfix_iter.next())
+        {
+            let (path, bundle) = acc.continue_value().unwrap();
             let start_bound = self.end_bound - postfix.width();
-
-            let postfix_path = if let Some(path) = path {
+            let postfix_path = if let Some(mut path) = path {
                 path.path_append(postfix_location);
                 path
             } else {
                 RolePath::from(SubPath::new(postfix_location.sub_index))
             };
-            // try expand
-            //let primer = OverlapPrimer::new(postfix, cursor.clone());
+
             let primer = cursor.clone().to_range_path();
-            match ctx.graph.insert_context().insert(primer) {
-                Ok((expansion, advanced)) => {
-                    let adv_prefix = PatternRootChild::<Start>::pattern_root_child(&advanced);
-                    // find prefix from advanced path in expansion index
-                    let prefix_iter = PrefixIterator::band_iter(&ctx.graph, expansion);
-                    let entry = prefix_iter.next().unwrap().0;
-                    let mut prefix_path = prefix_iter
-                        .fold_while(
-                            RootedRolePath::new(entry),
-                            |acc, (prefix_location, prefix)| {
-                                acc.path_append(prefix_location);
-                                if prefix == adv_prefix {
-                                    FoldWhile::Done(acc)
-                                } else {
-                                    FoldWhile::Continue(acc)
-                                }
-                            },
-                        )
-                        .into_inner();
-                    // append path <expansion to adv_prefix> to <adv_prefix to overlap>
-                    prefix_path
-                        .role_path
-                        .sub_path
-                        .extend(advanced.role_path().sub_path.path);
-                    let link = OverlapLink {
-                        postfix_path,
-                        prefix_path: MatchEnd::Path(prefix_path),
-                    };
-                    acc = ControlFlow::Break((start_bound, link, expansion, bundle));
-                    break;
+            acc = match self.expand_postfix(
+                postfix_iter.trav(),
+                postfix,
+                start_bound,
+                bundle,
+                postfix_path,
+                primer,
+            ) {
+                ControlFlow::Break((start_bound, next, expansion, bundle)) => {
+                    ControlFlow::Break((Some((start_bound, next, expansion)), bundle))
                 }
-                Err(_) => {
-                    // if not expandable, at band boundary -> add to bundle
-                    // postfixes should always be first in the chain
-                    if let Some(overlap) = self.chain.remove(&start_bound).map(|band| {
-                        // might want to pass postfix_path
-                        band.appended(ctx, BandEnd::Index(postfix))
-                    }) {
-                        bundle.add_band(overlap.band)
-                    }
-                    acc = ControlFlow::Continue((Some(postfix_path), bundle));
-                }
-            }
+                ControlFlow::Continue((_, bundle)) => ControlFlow::Continue((None, bundle)),
+            };
         }
         match acc {
-            ControlFlow::Break((start_bound, next, expansion, bundle)) => {
-                self.add_bundle(ctx, bundle);
-                Some((start_bound, next, expansion))
+            ControlFlow::Break(val) => val,
+            ControlFlow::Continue((_, b)) => (None, b),
+        }
+    }
+    fn expand_postfix(
+        &mut self,
+        trav: impl Traversable,
+        postfix: Child,
+        start_bound: usize,
+        mut bundle: OverlapBundle,
+        postfix_path: RolePath<End>,
+        primer: PatternRangePath,
+    ) -> ControlFlow<
+        (usize, OverlapLink, Child, OverlapBundle),
+        (Option<RolePath<End>>, OverlapBundle),
+    > {
+        // try expand
+        //let primer = OverlapPrimer::new(postfix, cursor.clone());
+        match trav.insert_context().insert(primer) {
+            Ok((expansion, advanced)) => {
+                let adv_prefix = PatternRootChild::<Start>::pattern_root_child(&advanced);
+                // find prefix from advanced path in expansion index
+                let mut prefix_iter = PrefixIterator::band_iter(&trav, expansion);
+                let entry = prefix_iter.next().unwrap().0;
+                let mut prefix_path = prefix_iter
+                    .fold_while(
+                        RootedRolePath::new(entry),
+                        |mut acc, (prefix_location, prefix)| {
+                            acc.path_append(prefix_location);
+                            if prefix == adv_prefix {
+                                FoldWhile::Done(acc)
+                            } else {
+                                FoldWhile::Continue(acc)
+                            }
+                        },
+                    )
+                    .into_inner();
+                // append path <expansion to adv_prefix> to <adv_prefix to overlap>
+                prefix_path.role_path.sub_path.path.extend(
+                    (advanced.role_path().clone() as RolePath<End>)
+                        .sub_path
+                        .path,
+                );
+
+                let link = OverlapLink {
+                    postfix_path,
+                    prefix_path: MatchEnd::Path(prefix_path),
+                };
+                ControlFlow::Break((start_bound, link, expansion, bundle))
             }
-            ControlFlow::Continue((_, bundle)) => {
-                self.add_bundle(ctx, bundle);
-                None
+            Err(_) => {
+                // if not expandable, at band boundary -> add to bundle
+                // postfixes should always be first in the chain
+                if let Some(overlap) = self.chain.remove(&start_bound).map(|band| {
+                    // might want to pass postfix_path
+                    band.appended(BandEnd::Index(postfix))
+                }) {
+                    bundle.add_band(overlap.band)
+                }
+                ControlFlow::Continue((Some(postfix_path), bundle))
             }
         }
     }
-
     //// TODO: Is this really needed? (possible?)
     ///// next bands generated when next overlap starts strictly behind the end (with a gap) of a past bundle
     //#[instrument(skip(self, cache, past_end_bound, next_link, expansion, past_ctx))]

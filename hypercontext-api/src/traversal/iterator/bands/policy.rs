@@ -1,5 +1,8 @@
 use crate::{
-    direction::r#match::MatchDirection,
+    direction::{
+        pattern::PatternDirection,
+        Direction,
+    },
     graph::vertex::{
         child::Child,
         location::{
@@ -24,10 +27,13 @@ pub trait BandExpandingPolicy<Trav: Traversable> {
         batch.into_iter().collect_vec()
     }
 }
-pub struct PostfixExpandingPolicy<D: MatchDirection> {
+pub struct PostfixExpandingPolicy<D: PatternDirection> {
     _ty: std::marker::PhantomData<D>,
 }
-impl<Trav: Traversable, D: MatchDirection> BandExpandingPolicy<Trav> for PostfixExpandingPolicy<D> {
+impl<Trav: Traversable, D: PatternDirection> BandExpandingPolicy<Trav> for PostfixExpandingPolicy<D>
+where
+    <D as Direction>::Opposite: PatternDirection,
+{
     //
     fn map_band(
         location: PatternLocation,
@@ -46,10 +52,10 @@ impl<Trav: Traversable, D: MatchDirection> BandExpandingPolicy<Trav> for Postfix
     }
 }
 
-pub struct PrefixExpandingPolicy<D: MatchDirection> {
+pub struct PrefixExpandingPolicy<D: Direction> {
     _ty: std::marker::PhantomData<D>,
 }
-impl<Trav: Traversable, D: MatchDirection> BandExpandingPolicy<Trav> for PrefixExpandingPolicy<D> {
+impl<Trav: Traversable, D: Direction> BandExpandingPolicy<Trav> for PrefixExpandingPolicy<D> {
     fn map_band(
         location: PatternLocation,
         pattern: impl IntoPattern,

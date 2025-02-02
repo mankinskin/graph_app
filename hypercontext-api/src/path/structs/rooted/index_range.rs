@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     direction::{
-        r#match::MatchDirection,
+        pattern::PatternDirection,
         Left,
         Right,
     },

@@ -1,6 +1,6 @@
 use crate::{
     direction::{
-        r#match::MatchDirection,
+        pattern::PatternDirection,
         Right,
     },
     graph::{
@@ -43,7 +43,7 @@ BaseQuery
     fn to_range_path(self) -> PatternRangePath;
     fn complete(pattern: impl IntoPattern) -> Self;
     fn new_directed<
-        D: MatchDirection,
+        D: PatternDirection,
         P: IntoPattern,
     >(query: P) -> Result<Self, (ErrorReason, Self)>;
     fn start_index<Trav: Traversable>(
@@ -69,7 +69,7 @@ pub trait RangePath: RootedPath {
 //        'a: 'g,
 //        'g,
 //        T: Tokenize,
-//        D: MatchDirection,
+//        D: ,
 //        Trav: Traversable<T>,
 //    >(&self, trav: Trav) -> Option<usize> {
 //        if self.end.is_empty() {

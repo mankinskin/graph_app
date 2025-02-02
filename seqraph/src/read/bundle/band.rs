@@ -1,9 +1,12 @@
 use itertools::Itertools;
 
 use crate::read::reader::context::ReadContext;
-use hypercontext_api::graph::vertex::{
-    child::Child,
-    pattern::Pattern,
+use hypercontext_api::{
+    graph::vertex::{
+        child::Child,
+        pattern::Pattern,
+    },
+    traversal::traversable::TraversableMut,
 };
 
 #[derive(Clone, Debug)]
@@ -13,10 +16,7 @@ pub enum BandEnd {
 }
 
 impl<'p> BandEnd {
-    pub fn into_index(
-        self,
-        _reader: &mut ReadContext,
-    ) -> Child {
+    pub fn into_index(self) -> Child {
         match self {
             Self::Index(c) => c,
             //Self::Chain(c) => c.close(reader).expect("Empty chain in BandEnd!"),
@@ -39,19 +39,15 @@ pub struct OverlapBand {
 impl<'p> OverlapBand {
     pub fn append(
         &mut self,
-        reader: &mut ReadContext,
         end: BandEnd,
     ) {
-        self.back_context.push(self.end.clone().into_index(reader));
+        self.back_context.push(self.end.clone().into_index());
         self.end = end;
     }
-    pub fn into_pattern(
-        self,
-        reader: &mut ReadContext,
-    ) -> Pattern {
+    pub fn into_pattern(self) -> Pattern {
         self.back_context
             .into_iter()
-            .chain(std::iter::once(self.end.into_index(reader)))
+            .chain(std::iter::once(self.end.into_index()))
             .collect()
     }
     //pub fn appended<
@@ -100,19 +96,19 @@ impl<'p> OverlapBundle {
     ) {
         self.bundle.push(overlap)
     }
-    pub fn into_band(
+    pub fn write_band(
         self,
-        reader: &mut ReadContext,
+        mut trav: impl TraversableMut,
     ) -> OverlapBand {
         assert!(!self.bundle.is_empty());
 
         let bundle = self
             .bundle
             .into_iter()
-            .map(|band| band.into_pattern(reader))
+            .map(|band| band.into_pattern())
             .collect_vec();
         OverlapBand {
-            end: BandEnd::Index(reader.graph.write().unwrap().insert_patterns(bundle)),
+            end: BandEnd::Index(trav.graph_mut().insert_patterns(bundle)),
             back_context: vec![],
         }
     }

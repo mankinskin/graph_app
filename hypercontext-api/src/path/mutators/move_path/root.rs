@@ -1,6 +1,6 @@
 use crate::{
     direction::{
-        r#match::MatchDirection,
+        pattern::PatternDirection,
         Direction,
         Left,
         Right,

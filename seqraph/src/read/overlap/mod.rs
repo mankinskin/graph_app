@@ -23,7 +23,6 @@ use hypercontext_api::path::{
 };
 pub mod cache;
 pub mod chain;
-pub mod context;
 pub mod primer;
 
 #[derive(Clone, Debug)]
@@ -41,18 +40,16 @@ pub struct Overlap {
 impl Overlap {
     pub fn appended(
         mut self,
-        reader: &mut ReadContext,
         end: BandEnd,
     ) -> Self {
-        self.append(reader, end);
+        self.append(end);
         self
     }
     pub fn append(
         &mut self,
-        reader: &mut ReadContext,
         end: BandEnd,
     ) {
-        self.band.append(reader, end);
+        self.band.append(end);
         self.link = None;
     }
 }

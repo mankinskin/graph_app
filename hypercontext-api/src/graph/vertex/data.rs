@@ -15,6 +15,10 @@ use std::{
 };
 
 use crate::{
+    direction::{
+        pattern::PatternDirection,
+        Direction,
+    },
     graph::{
         getters::ErrorReason,
         kind::GraphKind,
@@ -55,7 +59,10 @@ use crate::{
             PostfixIterator,
             PrefixIterator,
         },
-        traversable::Traversable,
+        traversable::{
+            TravDir,
+            Traversable,
+        },
     },
     HashSet,
 };
@@ -106,15 +113,18 @@ impl VertexData {
     pub fn get_width(&self) -> usize {
         self.width
     }
-    pub fn postfix_iter<'a, Trav: Traversable>(
+    pub fn postfix_iter<'a, Trav: Traversable + 'a>(
         &self,
-        trav: &'a Trav,
-    ) -> PostfixIterator<'a, Trav> {
+        trav: Trav,
+    ) -> PostfixIterator<'a, Trav>
+    where
+        <TravDir<Trav> as Direction>::Opposite: PatternDirection,
+    {
         PostfixIterator::band_iter(trav, self.to_child())
     }
-    pub fn prefix_iter<'a, Trav: Traversable>(
+    pub fn prefix_iter<'a, Trav: Traversable + 'a>(
         &self,
-        trav: &'a Trav,
+        trav: Trav,
     ) -> PrefixIterator<'a, Trav> {
         PrefixIterator::band_iter(trav, self.to_child())
     }

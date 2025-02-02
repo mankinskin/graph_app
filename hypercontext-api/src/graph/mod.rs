@@ -36,11 +36,11 @@ use vertex::{
     VertexIndex,
 };
 
-pub mod child_strings;
+pub(crate) mod child_strings;
 pub mod getters;
-pub mod insert;
+pub(crate) mod insert;
 pub mod kind;
-pub mod validation;
+pub(crate) mod validation;
 
 pub mod vertex;
 

@@ -13,7 +13,7 @@ use super::{
     fold::state::FoldState,
     //state::query::QueryState,
 };
-pub mod kind;
+pub(crate) mod kind;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FoundRange {

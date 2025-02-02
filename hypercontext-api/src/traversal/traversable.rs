@@ -18,21 +18,24 @@ pub trait Traversable: Sized + std::fmt::Debug {
 }
 impl<T: Traversable> Traversable for &T {
     type Kind = TravKind<T>;
-    type Guard<'g> = <T as Traversable>::Guard<'g> where Self: 'g;
+    type Guard<'g>
+        = <T as Traversable>::Guard<'g>
+    where
+        Self: 'g;
     fn graph(&self) -> Self::Guard<'_> {
         (**self).graph()
     }
 }
 impl<T: Traversable> Traversable for &mut T {
     type Kind = TravKind<T>;
-    type Guard<'g> = <T as Traversable>::Guard<'g> where Self: 'g;
+    type Guard<'g>
+        = <T as Traversable>::Guard<'g>
+    where
+        Self: 'g;
     fn graph(&self) -> Self::Guard<'_> {
         (**self).graph()
     }
 }
-pub type GraphKindOf<T> = <T as Traversable>::Kind;
-pub(crate) type DirectionOf<T> = <GraphKindOf<T> as GraphKind>::Direction;
-
 pub type TravKind<Trav> = <Trav as Traversable>::Kind;
 pub type TravDir<Trav> = <TravKind<Trav> as GraphKind>::Direction;
 pub type TravToken<Trav> = <TravKind<Trav> as GraphKind>::Token;
@@ -67,9 +70,16 @@ macro_rules! impl_traversable_mut {
 pub use impl_traversable;
 pub use impl_traversable_mut;
 
-use crate::graph::{kind::GraphKind, Hypergraph, HypergraphRef};
+use crate::graph::{
+    kind::GraphKind,
+    Hypergraph,
+    HypergraphRef,
+};
 
-use super::{TraversalContext, TraversalKind};
+use super::{
+    TraversalContext,
+    TraversalKind,
+};
 
 //impl_traversable! {
 //    impl for &'_ Hypergraph,
@@ -92,10 +102,12 @@ impl_traversable! {
     <'a> RwLockReadGuard<'a, Hypergraph>
 }
 
-
 impl<'a, K: TraversalKind> Traversable for &'a TraversalContext<'a, K> {
     type Kind = TravKind<K::Trav>;
-    type Guard<'g> = <K::Trav as Traversable>::Guard<'g> where Self: 'g;
+    type Guard<'g>
+        = <K::Trav as Traversable>::Guard<'g>
+    where
+        Self: 'g;
     fn graph(&self) -> Self::Guard<'_> {
         self.trav.graph()
     }
@@ -103,7 +115,10 @@ impl<'a, K: TraversalKind> Traversable for &'a TraversalContext<'a, K> {
 
 impl<'a, K: TraversalKind> Traversable for &'a mut TraversalContext<'a, K> {
     type Kind = TravKind<K::Trav>;
-    type Guard<'g> = <K::Trav as Traversable>::Guard<'g> where Self: 'g;
+    type Guard<'g>
+        = <K::Trav as Traversable>::Guard<'g>
+    where
+        Self: 'g;
     fn graph(&self) -> Self::Guard<'_> {
         self.trav.graph()
     }
@@ -136,7 +151,10 @@ pub trait TraversableMut: Traversable {
     fn graph_mut(&mut self) -> Self::GuardMut<'_>;
 }
 impl<T: TraversableMut> TraversableMut for &mut T {
-    type GuardMut<'g> = <T as TraversableMut>::GuardMut<'g> where Self: 'g;
+    type GuardMut<'g>
+        = <T as TraversableMut>::GuardMut<'g>
+    where
+        Self: 'g;
     fn graph_mut(&mut self) -> Self::GuardMut<'_> {
         (**self).graph_mut()
     }
@@ -154,7 +172,6 @@ impl_traversable_mut! {
 impl_traversable_mut! {
     impl for HypergraphRef, self => self.write().unwrap(); <'a> RwLockWriteGuard<'a, Hypergraph>
 }
-
 
 //impl_traversable! {
 //    impl for &'_ mut JoinContext<'_>,

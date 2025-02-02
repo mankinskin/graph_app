@@ -1,9 +1,9 @@
-pub mod child;
+pub(crate) mod child;
 pub mod cursor;
 pub mod end;
-pub mod parent;
-pub mod start;
-pub mod traversal;
+pub(crate) mod parent;
+pub(crate) mod start;
+pub(crate) mod traversal;
 
 use child::ChildState;
 use end::{

@@ -1,35 +1,66 @@
 use crate::{
-    direction::r#match::MatchDirection,
-    graph::kind::GraphKind,
-    traversal::traversable::Traversable,
+    direction::{
+        pattern::PatternDirection,
+        Direction,
+        Left,
+        Right,
+    },
+    graph::vertex::{
+        location::child::ChildLocation,
+        pattern::IntoPattern,
+    },
     path::accessors::role::{
         End,
         Start,
     },
+    traversal::traversable::Traversable,
 };
 use std::borrow::Borrow;
-use crate::graph::vertex::location::child::ChildLocation;
 
-pub trait RelativeDirection<D: MatchDirection> {
-    type Direction: MatchDirection;
-}
+pub trait RelativeDirection: PatternDirection {}
 
-#[derive(Default)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Front;
 
-impl<D: MatchDirection> RelativeDirection<D> for Front {
-    type Direction = D;
+impl Direction for Front {
+    type Opposite = Back;
+}
+impl RelativeDirection for Front {}
+impl PatternDirection for Front {
+    fn head_index(pattern: &impl IntoPattern) -> usize {
+        <Right as PatternDirection>::head_index(pattern)
+    }
+    fn index_next(index: usize) -> Option<usize> {
+        <Right as PatternDirection>::index_next(index)
+    }
+    fn index_prev(index: usize) -> Option<usize> {
+        <Right as PatternDirection>::index_prev(index)
+    }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Back;
 
-impl<D: MatchDirection> RelativeDirection<D> for Back {
-    type Direction = <D as MatchDirection>::Opposite;
+impl RelativeDirection for Back {}
+
+impl Direction for Back {
+    type Opposite = Front;
+}
+
+impl PatternDirection for Back {
+    fn head_index(pattern: &impl IntoPattern) -> usize {
+        <Left as PatternDirection>::head_index(pattern)
+    }
+    fn index_next(index: usize) -> Option<usize> {
+        <Left as PatternDirection>::index_next(index)
+    }
+    fn index_prev(index: usize) -> Option<usize> {
+        <Left as PatternDirection>::index_prev(index)
+    }
 }
 
 pub trait PathBorder {
-    type BorderDirection<D: MatchDirection>: RelativeDirection<D>;
+    type BorderDirection: PatternDirection;
 
     //fn pattern_entry_outer_pos<P: IntoPattern>(pattern: P, entry: usize) -> Option<usize> {
     //    <Self::BorderDirection as RelativeDirection<D>>::Direction::pattern_index_next(pattern, entry)
@@ -43,10 +74,11 @@ pub trait PathBorder {
     ) -> bool {
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(location);
-        <Self::BorderDirection<<Trav::Kind as GraphKind>::Direction> as RelativeDirection<_>>::Direction::pattern_index_next(
+        <Self::BorderDirection as PatternDirection>::pattern_index_next(
             pattern.borrow(),
             location.sub_index,
-        ).is_none()
+        )
+        .is_none()
     }
     //fn is_complete_in_pattern<P: IntoPattern>(&self, pattern: P) -> bool {
     //    self.single_path().is_empty() && self.is_at_pattern_border(pattern)
@@ -54,12 +86,12 @@ pub trait PathBorder {
 }
 
 impl PathBorder for Start {
-    type BorderDirection<D: MatchDirection> = Back;
+    type BorderDirection = Back;
 }
 
 impl PathBorder for End {
-    type BorderDirection<D: MatchDirection> = Front;
+    type BorderDirection = Front;
 }
-//impl<D: MatchDirection> PathBorder<D> for EndPath {
+//impl<D: > PathBorder<D> for EndPath {
 //    type BorderDirection = Front;
 //}

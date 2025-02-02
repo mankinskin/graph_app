@@ -3,10 +3,10 @@ use extend::ExtendStates;
 use std::fmt::Debug;
 
 pub mod bft;
-pub mod dft;
-pub mod extend;
-pub mod order;
-pub mod pruning;
+pub(crate) mod dft;
+pub(crate) mod extend;
+pub(crate) mod order;
+pub(crate) mod pruning;
 
 pub trait StateContainer:
     ExtendStates + Iterator<Item = (usize, TraversalState)> + Default + Debug

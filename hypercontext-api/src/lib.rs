@@ -12,10 +12,11 @@
 extern crate test;
 
 pub mod direction;
-pub mod graph;
 pub mod partition;
 pub mod path;
 pub mod split;
+
+pub mod graph;
 pub mod traversal;
 
 #[cfg(any(test, feature = "test-api"))]
@@ -27,7 +28,7 @@ pub use std::collections::{
     HashSet,
 };
 #[cfg(any(test, feature = "test-api"))]
-use std::hash::{
+pub use std::hash::{
     BuildHasherDefault,
     DefaultHasher,
 };

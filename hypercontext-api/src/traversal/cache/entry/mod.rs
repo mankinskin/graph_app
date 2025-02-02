@@ -8,10 +8,10 @@ pub mod vertex;
 pub mod position;
 
 use crate::{
+    graph::vertex::location::SubLocation,
     HashMap,
 };
 use position::*;
-use crate::graph::vertex::location::SubLocation;
 
 pub type StateDepth = usize;
 pub type Offset = NonZeroUsize;
@@ -53,7 +53,6 @@ pub trait NodeType {
         f: impl Fn(OffsetLocations) -> CompleteLocations,
     ) -> Self::CompleteSplitOutput;
 }
-
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum RootMode {

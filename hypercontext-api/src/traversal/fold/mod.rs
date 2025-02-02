@@ -59,7 +59,7 @@ use std::{
     fmt::Debug,
 };
 
-pub mod init;
+pub(crate) mod init;
 pub mod state;
 
 #[derive(Debug)]

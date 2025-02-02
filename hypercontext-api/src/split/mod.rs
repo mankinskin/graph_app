@@ -33,7 +33,7 @@ use crate::{
 };
 
 pub mod cache;
-pub mod side;
+pub(crate) mod side;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct PatternSplitPos {

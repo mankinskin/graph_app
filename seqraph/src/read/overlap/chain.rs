@@ -1,4 +1,7 @@
-use std::collections::BTreeMap;
+use std::{
+    borrow::Borrow,
+    collections::BTreeMap,
+};
 
 use derive_more::derive::{
     Deref,
@@ -7,14 +10,31 @@ use derive_more::derive::{
 use itertools::Itertools;
 use tracing::instrument;
 
-use crate::read::{
-    overlap::Overlap,
-    reader::context::ReadContext,
+use crate::{
+    insert::{
+        direction::InsertDirection,
+        HasInsertContext,
+    },
+    read::{
+        bundle::band::OverlapBundle,
+        overlap::Overlap,
+        reader::context::ReadContext,
+    },
 };
 use hypercontext_api::{
-    graph::vertex::child::Child,
+    graph::{
+        kind::DefaultDirection,
+        vertex::{
+            child::Child,
+            pattern::Pattern,
+        },
+    },
+    split::cache::ctx,
+    tests::graph::context_mut,
     traversal::traversable::TraversableMut,
 };
+
+use super::OverlapLink;
 
 #[derive(Default, Clone, Debug, Deref, DerefMut)]
 pub struct OverlapChain {
@@ -22,6 +42,84 @@ pub struct OverlapChain {
 }
 
 impl OverlapChain {
+    pub fn back_context_for_link(
+        &mut self,
+        mut trav: impl TraversableMut,
+        start_bound: usize,
+        next_link: &OverlapLink,
+    ) -> Pattern {
+        let past_ctx = self.take_past_context_pattern(&mut trav, start_bound);
+
+        if let Some((past_end_bound, past_ctx)) = past_ctx {
+            //println!("reusing back context {past_end_bound}: {:#?}", past_ctx);
+            if past_end_bound == start_bound {
+                past_ctx
+            } else {
+                assert!(past_end_bound < start_bound);
+                panic!("Shouldn't this be impossible?!");
+            }
+        } else {
+            //println!("building back context from path");
+            //let (inner_back_ctx, _loc) = ctx
+            //    .contexter::<SplitBack>()
+            //    .try_context_path(
+            //        //link.postfix_path.clone().into_context_path(),
+            //        // FIXME: maybe mising root!!!
+            //        link.postfix_path.clone().sub_path,
+            //        //link.overlap,
+            //    )
+            //    .unwrap();
+
+            let back_ctx = if let Some((_, last)) = self.chain.iter_mut().last() {
+                trav.graph_mut()
+                    .index_pattern(last.band.back_context.borrow())
+                    .ok()
+                    //Some(self.graph.read_pattern(last.band.back_context.borrow()))
+                    .map(move |(back_ctx, _)| {
+                        last.band.back_context = vec![back_ctx];
+                        last.band.back_context.borrow()
+                    })
+            } else {
+                None
+            }
+            .unwrap_or_default();
+            DefaultDirection::context_then_inner(back_ctx, Child::new(0, 0)) //inner_back_ctx)
+        }
+    }
+    //#[instrument(skip(self, start_bound, ctx))]
+    pub fn take_past_context_pattern(
+        &mut self,
+        trav: impl TraversableMut,
+        start_bound: usize,
+    ) -> Option<(usize, Pattern)> {
+        let mut past = self.take_past(start_bound);
+        match past.chain.len() {
+            0 => None,
+            1 => {
+                let (end_bound, past) = past.chain.pop_last().unwrap();
+                Some((end_bound, past.band.into_pattern()))
+            }
+            _ => {
+                let past_key = *past.chain.keys().last().unwrap();
+                let past_index = past.close(trav).unwrap();
+                Some((past_key, vec![past_index]))
+            }
+        }
+    }
+    pub fn add_bundle(
+        &mut self,
+        trav: impl TraversableMut,
+        end_bound: usize,
+        bundle: OverlapBundle,
+    ) {
+        self.insert(
+            end_bound,
+            Overlap {
+                link: None,
+                band: bundle.write_band(trav),
+            },
+        );
+    }
     pub fn add_overlap(
         &mut self,
         end_bound: usize,
@@ -35,10 +133,10 @@ impl OverlapChain {
             Ok(())
         }
     }
-    #[instrument(skip(self, reader))]
+    #[instrument(skip(self, trav))]
     pub fn close(
         self,
-        reader: &mut ReadContext,
+        trav: impl TraversableMut,
     ) -> Option<Child> {
         //println!("closing {:#?}", self);
         let mut chain_iter = self.chain.into_iter();
@@ -76,15 +174,15 @@ impl OverlapChain {
                         bundle,
                         overlap,
                         // join previous and current context into
-                        if let Some(prev) = prev_ctx {
-                            Some(if let Some(ctx_child) = ctx_child {
-                                reader.read_pattern(vec![prev, ctx_child]).unwrap()
-                            } else {
-                                prev
+                        prev_ctx
+                            .map(|prev| {
+                                ctx_child
+                                    .map(|ctx_child| {
+                                        trav.read_pattern(vec![prev, ctx_child]).unwrap()
+                                    })
+                                    .or(prev)
                             })
-                        } else {
-                            ctx_child
-                        },
+                            .or(ctx_child),
                     )
                 },
             )
@@ -92,9 +190,9 @@ impl OverlapChain {
         bundle.push(prev_band);
         let bundle = bundle
             .into_iter()
-            .map(|overlap| overlap.band.into_pattern(reader))
+            .map(|overlap| overlap.band.into_pattern())
             .collect_vec();
-        let index = reader.graph_mut().insert_patterns(bundle);
+        let index = trav.graph_mut().insert_patterns(bundle);
         //println!("close result: {:?}", index);
         Some(index)
     }

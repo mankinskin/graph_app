@@ -4,10 +4,13 @@ use std::{
     slice::SliceIndex,
 };
 
-use crate::graph::{getters::ErrorReason, vertex::PatternId};
 use super::{
-    Pattern,
     super::child::Child,
+    Pattern,
+};
+use crate::graph::{
+    getters::ErrorReason,
+    vertex::PatternId,
 };
 
 pub fn get_child_pattern_range<'a, R: PatternRangeIndex>(
@@ -42,44 +45,44 @@ impl<
     > PatternRangeIndex<T> for R
 {
 }
-//pub trait StartInclusive {
-//    fn start(&self) -> usize;
-//}
-//impl StartInclusive for std::ops::RangeInclusive<usize> {
-//    fn start(&self) -> usize {
-//        *self.start()
-//    }
-//}
-//impl StartInclusive for std::ops::RangeTo<usize> {
-//    fn start(&self) -> usize {
-//        0
-//    }
-//}
-//impl StartInclusive for std::ops::RangeFrom<usize> {
-//    fn start(&self) -> usize {
-//        self.start
-//    }
-//}
-//impl StartInclusive for std::ops::Range<usize> {
-//    fn start(&self) -> usize {
-//        self.start
-//    }
-//}
-//pub trait EndInclusive {
-//    fn end(&self) -> usize;
-//}
-//impl EndInclusive for std::ops::RangeInclusive<usize> {
-//    fn end(&self) -> usize {
-//        *self.end()
-//    }
-//}
-//impl EndInclusive for std::ops::RangeToInclusive<usize> {
-//    fn end(&self) -> usize {
-//        self.end
-//    }
-//}
-//impl EndInclusive for std::ops::Range<usize> {
-//    fn end(&self) -> usize {
-//        self.end
-//    }
-//}
+pub trait StartInclusive {
+    fn start(&self) -> usize;
+}
+impl StartInclusive for std::ops::RangeInclusive<usize> {
+    fn start(&self) -> usize {
+        *self.start()
+    }
+}
+impl StartInclusive for std::ops::RangeTo<usize> {
+    fn start(&self) -> usize {
+        0
+    }
+}
+impl StartInclusive for std::ops::RangeFrom<usize> {
+    fn start(&self) -> usize {
+        self.start
+    }
+}
+impl StartInclusive for std::ops::Range<usize> {
+    fn start(&self) -> usize {
+        self.start
+    }
+}
+pub trait EndInclusive {
+    fn end(&self) -> usize;
+}
+impl EndInclusive for std::ops::RangeInclusive<usize> {
+    fn end(&self) -> usize {
+        *self.end()
+    }
+}
+impl EndInclusive for std::ops::RangeToInclusive<usize> {
+    fn end(&self) -> usize {
+        self.end
+    }
+}
+impl EndInclusive for std::ops::Range<usize> {
+    fn end(&self) -> usize {
+        self.end
+    }
+}

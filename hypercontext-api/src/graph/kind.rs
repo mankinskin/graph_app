@@ -1,3 +1,10 @@
+use crate::{
+    direction::{
+        pattern::PatternDirection,
+        Right,
+    },
+    graph::vertex::token::Tokenize,
+};
 use serde::{
     de::DeserializeOwned,
     Deserialize,
@@ -7,15 +14,10 @@ use std::fmt::{
     Debug,
     Display,
 };
-use crate::direction::insert::InsertDirection;
-use crate::{
-    direction::Right,
-};
-use crate::graph::vertex::token::Tokenize;
 
 pub trait GraphKind: Debug + Clone + Default + PartialEq + Eq {
     type Token: Tokenize + Display + DeserializeOwned;
-    type Direction: InsertDirection;
+    type Direction: PatternDirection;
 }
 
 pub type TokenOf<K> = <K as GraphKind>::Token;

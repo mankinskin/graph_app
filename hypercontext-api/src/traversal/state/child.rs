@@ -1,5 +1,5 @@
 use crate::{
-    direction::r#match::MatchDirection,
+    direction::pattern::PatternDirection,
     graph::{
         getters::vertex::VertexSet,
         vertex::{
@@ -60,7 +60,7 @@ use crate::{
             StateNext,
         },
         traversable::{
-            DirectionOf,
+            TravDir,
             Traversable,
         },
         TraversalContext,
@@ -308,7 +308,7 @@ impl ChildState {
                 b.first().unwrap().width.cmp(&a.first().unwrap().width)
             })
             .map(|(&pid, child_pattern): (_, &Pattern)| {
-                let sub_index = DirectionOf::<Trav>::head_index(child_pattern);
+                let sub_index = TravDir::<Trav>::head_index(child_pattern);
                 let mut paths = self.paths.clone();
                 paths.push_major(ChildLocation::new(index, pid, sub_index));
                 ChildState {

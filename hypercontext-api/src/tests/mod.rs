@@ -1,12 +1,12 @@
-pub mod mock;
+pub(crate) mod mock;
 
-pub mod grammar;
+pub(crate) mod grammar;
+pub(crate) mod partition;
 #[cfg(test)]
-pub mod split;
-pub mod partition;
+pub(crate) mod split;
 
 #[macro_use]
 pub mod graph;
 
 #[macro_use]
-pub mod label_key;
+pub(crate) mod label_key;

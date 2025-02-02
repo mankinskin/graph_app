@@ -1,4 +1,4 @@
-//pub mod gen_graph;
+//pub(crate) mod gen_graph;
 //use gen_graph::*;
 
 use crate::graph::vertex::{

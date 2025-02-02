@@ -3,23 +3,23 @@ use std::{
     ops::ControlFlow,
 };
 
+use super::super::super::mutators::move_path::key::MoveKey;
 use crate::{
     direction::{
+        pattern::PatternDirection,
         Direction,
         Left,
         Right,
-        r#match::MatchDirection,
-    },
-    traversal::traversable::{
-        TravDir,
-        Traversable,
     },
     graph::vertex::{
         location::child::ChildLocation,
         wide::Wide,
     },
+    traversal::traversable::{
+        TravDir,
+        Traversable,
+    },
 };
-use super::super::super::mutators::move_path::key::MoveKey;
 
 pub struct KeyedLeaf<'k, D: Direction, K: MoveKey<D> + 'k> {
     path: &'k mut K,

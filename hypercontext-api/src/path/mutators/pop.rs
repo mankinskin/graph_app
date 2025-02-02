@@ -1,14 +1,14 @@
-use super::super::{
-    accessors::role::PathRole,
-    structs::role_path::RolePath,
-};
 use crate::{
     graph::vertex::location::child::ChildLocation,
-    path::structs::{
-        query_range_path::FoldablePath,
-        rooted::{
-            role_path::RootedRolePath,
-            root::PathRoot,
+    path::{
+        accessors::role::PathRole,
+        structs::{
+            query_range_path::FoldablePath,
+            role_path::RolePath,
+            rooted::{
+                role_path::RootedRolePath,
+                root::PathRoot,
+            },
         },
     },
     traversal::state::cursor::PathCursor,
@@ -53,7 +53,7 @@ impl<P: FoldablePath> PathPop for PathCursor<P> {
 //    type Result = Result<Self, Child>;
 //    fn path_pop<
 //        T: Tokenize,
-//        D: MatchDirection,
+//        D: ,
 //        Trav: Traversable<T>
 //    >(self, trav: &Trav) -> (ChildLocation, Self::Result) {
 //        match self {
@@ -67,7 +67,7 @@ impl<P: FoldablePath> PathPop for PathCursor<P> {
 //    type Result = OriginPath<<IndexRangePath as PathPop>::Result>;
 //    fn path_pop<
 //        T: Tokenize,
-//        D: MatchDirection,
+//        D: ,
 //        Trav: Traversable<T>
 //    >(self, trav: &Trav) -> Self::Result {
 //        OriginPath {

@@ -10,38 +10,22 @@ use crate::{
                 root::GraphRootChild,
                 LeafChild,
             },
-            complete::PathComplete,
-            has_path::{
-                HasRolePath,
-                HasSinglePath,
-            },
+            has_path::HasRolePath,
             role::{
                 PathRole,
                 Start,
             },
         },
-        mutators::adapters::into_advanced::IntoAdvanced,
         structs::{
-            match_end::{
-                MatchEnd,
-                MatchEndPath,
-            },
             role_path::RolePath,
             rooted::{
-                index_range::IndexRangePath,
                 role_path::RootedRolePath,
                 root::IndexRoot,
             },
         },
-        BasePath,
     },
-    traversal::{
-        cache::key::root::RootKey,
-        iterator::policy::NodePath,
-        traversable::Traversable,
-    },
+    traversal::traversable::Traversable,
 };
-use std::hash::Hash;
 
 //pub trait ResultKind: Eq + Clone + Debug + Send + Sync + Unpin {
 //    type Query: QueryPath;
@@ -53,9 +37,10 @@ use std::hash::Hash;
 //    fn into_postfix(primer: Self::Primer, match_end: MatchEnd<RootedRolePath<Start>>) -> Self::Postfix;
 //}
 pub type Primer = RootedRolePath<Start, IndexRoot>;
-pub(crate) type Postfix = MatchEnd<Primer>;
+//pub(crate) type Postfix = MatchEnd<Primer>;
 
-pub trait Found: BasePath + PathComplete
+//pub trait Found: BasePath + PathComplete
+//
 //+ RoleChildPath
 //+ FromAdvanced<<R as ResultKind>::Advanced>
 //+ From<<R as ResultKind>::Postfix>
@@ -63,58 +48,59 @@ pub trait Found: BasePath + PathComplete
 //+ GetCacheKey
 //+ GraphRoot
 //+ Ord
-{
-}
+//
+//{
+//}
 
-impl<
-        T: BasePath + PathComplete, //+ RoleChildPath
-                                    //+ FromAdvanced<<R as ResultKind>::Advanced>
-                                    //+ From<<R as ResultKind>::Postfix>
-                                    //+ Wide
-                                    //+ GetCacheKey
-                                    //+ GraphRoot
-                                    //+ Ord
-    > Found for T
-{
-}
+//impl<
+//        T: BasePath + PathComplete, //+ RoleChildPath
+//                                    //+ FromAdvanced<<R as ResultKind>::Advanced>
+//                                    //+ From<<R as ResultKind>::Postfix>
+//                                    //+ Wide
+//                                    //+ GetCacheKey
+//                                    //+ GraphRoot
+//                                    //+ Ord
+//    > Found for T
+//{
+//}
 
-pub trait PathPrimer:
-RoleChildPath
-+ NodePath<Start>
-//+ HasRolePath<Start>
-+ GraphRootChild<Start>
-+ From<RootedRolePath<Start, IndexRoot>>
-+ From<IndexRangePath>
-+ Into<Postfix>
-+ IntoAdvanced
-//+ Wide
-+ RootKey
-+ Send
-+ Sync
-+ Unpin
-+ Hash
-+ HasSinglePath
-+ MatchEndPath
-{}
-
-impl<
-        T: NodePath<Start>
-            + RoleChildPath
-            //+ HasRolePath<Start>
-            + GraphRootChild<Start>
-            + From<RootedRolePath<Start, IndexRoot>>
-            + From<IndexRangePath>
-            + IntoAdvanced
-            + Into<Postfix>
-            //+ Wide
-            + RootKey
-            + BasePath
-            + Hash
-            + HasSinglePath
-            + MatchEndPath,
-    > PathPrimer for T
-{
-}
+//pub trait PathPrimer:
+//    RoleChildPath
+//    + NodePath<Start>
+//    //+ HasRolePath<Start>
+//    + GraphRootChild<Start>
+//    + From<RootedRolePath<Start, IndexRoot>>
+//    + From<IndexRangePath>
+//    + Into<Postfix>
+//    + IntoAdvanced
+//    //+ Wide
+//    + RootKey
+//    + Send
+//    + Sync
+//    + Unpin
+//    + Hash
+//    + HasSinglePath
+//    + MatchEndPath
+//{}
+//
+//impl<
+//        T: NodePath<Start>
+//            + RoleChildPath
+//            //+ HasRolePath<Start>
+//            + GraphRootChild<Start>
+//            + From<RootedRolePath<Start, IndexRoot>>
+//            + From<IndexRangePath>
+//            + IntoAdvanced
+//            + Into<Postfix>
+//            //+ Wide
+//            + RootKey
+//            + BasePath
+//            + Hash
+//            + HasSinglePath
+//            + MatchEndPath,
+//    > PathPrimer for T
+//{
+//}
 
 pub trait RoleChildPath {
     fn role_leaf_child_location<R: PathRole>(&self) -> Option<ChildLocation>

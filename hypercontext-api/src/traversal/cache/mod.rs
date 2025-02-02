@@ -1,9 +1,19 @@
 use std::fmt::Display;
 
-use key::{DirectedKey, UpKey};
-use label_key::vkey::{labelled_key, VertexCacheKey};
+use key::{
+    DirectedKey,
+    UpKey,
+};
+use label_key::vkey::{
+    labelled_key,
+    VertexCacheKey,
+};
 
 use crate::{
+    graph::vertex::{
+        child::Child,
+        has_vertex_index::HasVertexIndex,
+    },
     traversal::{
         cache::{
             entry::{
@@ -12,14 +22,14 @@ use crate::{
                 vertex::VertexCache,
             },
             key::target::TargetKey,
-        }, state::traversal::TraversalState, traversable::{
-            TravToken, Traversable
-        }
-    }, HashMap
-};
-use crate::graph::vertex::{
-    child::Child,
-    has_vertex_index::HasVertexIndex,
+        },
+        state::traversal::TraversalState,
+        traversable::{
+            TravToken,
+            Traversable,
+        },
+    },
+    HashMap,
 };
 
 pub mod entry;
@@ -72,7 +82,7 @@ impl TraversalCache {
             (key, true)
         }
     }
-    
+
     fn new_vertex<Trav: Traversable>(
         &mut self,
         trav: &Trav,

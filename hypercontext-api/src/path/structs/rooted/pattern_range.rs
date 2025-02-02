@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     direction::{
-        r#match::MatchDirection,
+        pattern::PatternDirection,
         Right,
     },
     graph::{
@@ -189,7 +189,7 @@ impl FoldablePath for PatternRangePath {
         let len = query.len();
         Self::new_range(query, 0, len - 1)
     }
-    fn new_directed<D: MatchDirection, P: IntoPattern>(
+    fn new_directed<D: PatternDirection, P: IntoPattern>(
         query: P
     ) -> Result<Self, (ErrorReason, Self)> {
         let entry = D::head_index(&query.borrow());

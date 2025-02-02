@@ -1,4 +1,7 @@
-use crate::read::reader::context::ReadContext;
+use crate::{
+    insert::HasInsertContext,
+    read::reader::context::ReadContext,
+};
 use hypercontext_api::graph::{
     vertex::{
         child::Child,
@@ -15,7 +18,7 @@ pub mod sequence;
 //#[cfg(test)]
 //mod tests;
 
-pub trait HasReadContext {
+pub trait HasReadContext: HasInsertContext {
     fn read_context<'g>(&'g mut self) -> ReadContext;
     fn read_sequence(
         &mut self,

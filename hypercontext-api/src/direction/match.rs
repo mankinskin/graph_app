@@ -1,9 +1,6 @@
-use std::{
-    fmt::Debug,
-    ops::{
-        Range,
-        RangeFrom,
-    },
+use std::ops::{
+    Range,
+    RangeFrom,
 };
 
 use itertools::{
@@ -46,6 +43,8 @@ use crate::{
     HashSet,
 };
 
+use super::Direction;
+
 fn to_matching_iterator<'a, I: HasVertexIndex + 'a, J: HasVertexIndex + 'a>(
     a: impl Iterator<Item = &'a I>,
     b: impl Iterator<Item = &'a J>,
@@ -58,8 +57,7 @@ fn to_matching_iterator<'a, I: HasVertexIndex + 'a, J: HasVertexIndex + 'a>(
         })
 }
 
-pub trait MatchDirection: Clone + Debug + Send + Sync + 'static + Unpin {
-    type Opposite: MatchDirection;
+pub trait MatchDirection: Direction {
     type PostfixRange<T>: PatternRangeIndex<T>;
     /// get the parent where vertex is at the relevant position
     fn get_match_parent_to<G: GraphKind>(
@@ -75,7 +73,10 @@ pub trait MatchDirection: Clone + Debug + Send + Sync + 'static + Unpin {
     fn pattern_tail<T: ToChild>(pattern: &'_ [T]) -> &'_ [T];
     fn pattern_head<T: ToChild>(pattern: &'_ [T]) -> Option<&'_ T>;
     fn head_index(pattern: &impl IntoPattern) -> usize;
-    fn last_index(pattern: &impl IntoPattern) -> usize {
+    fn last_index(pattern: &impl IntoPattern) -> usize
+    where
+        <Self as Direction>::Opposite: MatchDirection,
+    {
         Self::Opposite::head_index(pattern)
     }
     fn merge_remainder_with_context<A: IntoPattern, B: IntoPattern>(
@@ -141,7 +142,6 @@ pub trait MatchDirection: Clone + Debug + Send + Sync + 'static + Unpin {
 }
 
 impl MatchDirection for Right {
-    type Opposite = Left;
     type PostfixRange<T> = RangeFrom<usize>;
     fn get_match_parent_to<G: GraphKind>(
         _graph: &Hypergraph<G>,
@@ -196,7 +196,6 @@ impl MatchDirection for Right {
 }
 
 impl MatchDirection for Left {
-    type Opposite = Left;
     type PostfixRange<T> = Range<usize>;
     fn get_match_parent_to<G: GraphKind>(
         graph: &Hypergraph<G>,

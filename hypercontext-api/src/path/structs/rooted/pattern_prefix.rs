@@ -4,10 +4,7 @@ use std::{
 };
 
 use crate::{
-    direction::{
-        r#match::MatchDirection,
-        Right,
-    },
+    direction::Right,
     graph::{
         getters::ErrorReason,
         vertex::{
@@ -105,9 +102,7 @@ impl FoldablePath for PatternPrefixPath {
             root: pattern,
         }
     }
-    fn new_directed<D: MatchDirection, P: IntoPattern>(
-        query: P
-    ) -> Result<Self, (ErrorReason, Self)> {
+    fn new_directed<D, P: IntoPattern>(query: P) -> Result<Self, (ErrorReason, Self)> {
         let pattern = query.into_pattern();
         let len = pattern.len();
         let p = Self {

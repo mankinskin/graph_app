@@ -1,12 +1,13 @@
 use std::borrow::Borrow;
 
 use crate::join::{
-        context::node::context::NodeJoinContext,
-        partition::{
-            borders::JoinBorders,
-            Join, JoinPartitionInfo,
-        },
-    };
+    context::node::context::NodeJoinContext,
+    partition::{
+        borders::JoinBorders,
+        Join,
+        JoinPartitionInfo,
+    },
+};
 use hypercontext_api::{
     graph::vertex::child::Child,
     partition::{
@@ -43,8 +44,7 @@ where
         // todo: replace if perfect
         if let SinglePerfect(Some(pid)) = pats.perfect.complete() {
             let loc = ctx.index.to_pattern_location(pid);
-            ctx.trav
-                .replace_in_pattern(loc, pats.range.unwrap(), index);
+            ctx.trav.replace_in_pattern(loc, pats.range.unwrap(), index);
         }
         Self {
             index,

@@ -1,9 +1,6 @@
 use std::{
     borrow::Borrow,
-    sync::{
-        RwLockReadGuard,
-        RwLockWriteGuard,
-    },
+    sync::RwLockWriteGuard,
 };
 
 use tracing::{
@@ -207,20 +204,20 @@ impl_traversable! {
     self => self.graph.write().unwrap();
     <'a> RwLockWriteGuard<'a, Hypergraph>
 }
-impl_traversable! {
-    impl for &'_ ReadContext,
-    //self => self.graph.graph();
-    //<'a> &'a Hypergraph
-    self => self.graph.read().unwrap();
-    <'a> RwLockReadGuard<'a, Hypergraph>
-}
-impl_traversable! {
-    impl for &'_ mut ReadContext,
-    //self => self.graph.graph();
-    //<'a> &'a Hypergraph
-    self => self.graph.read().unwrap();
-    <'a> RwLockReadGuard<'a, Hypergraph>
-}
+//impl_traversable! {
+//    impl for &'_ ReadContext,
+//    //self => self.graph.graph();
+//    //<'a> &'a Hypergraph
+//    self => self.graph.read().unwrap();
+//    <'a> RwLockReadGuard<'a, Hypergraph>
+//}
+//impl_traversable! {
+//    impl for &'_ mut ReadContext,
+//    //self => self.graph.graph();
+//    //<'a> &'a Hypergraph
+//    self => self.graph.read().unwrap();
+//    <'a> RwLockReadGuard<'a, Hypergraph>
+//}
 impl_traversable_mut! {
     impl for ReadContext,
     //self => self.graph.graph_mut();
@@ -228,10 +225,10 @@ impl_traversable_mut! {
     self => self.graph.write().unwrap();
     <'a> RwLockWriteGuard<'a, Hypergraph>
 }
-impl_traversable_mut! {
-    impl for &'_ mut ReadContext,
-    //self => self.graph.graph_mut();
-    //<'a> &'a mut Hypergraph
-    self => self.graph.write().unwrap();
-    <'a> RwLockWriteGuard<'a, Hypergraph>
-}
+//impl_traversable_mut! {
+//    impl for &'_ mut ReadContext,
+//    //self => self.graph.graph_mut();
+//    //<'a> &'a mut Hypergraph
+//    self => self.graph.write().unwrap();
+//    <'a> RwLockWriteGuard<'a, Hypergraph>
+//}

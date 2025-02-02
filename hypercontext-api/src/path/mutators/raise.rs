@@ -1,20 +1,24 @@
 use std::borrow::Borrow;
 
 use crate::{
-    direction::r#match::MatchDirection, graph::vertex::{
+    direction::pattern::PatternDirection,
+    graph::vertex::{
         location::{
             child::ChildLocation,
             pattern::IntoPatternLocation,
         },
         pattern::pattern_width,
-    }, traversal::{
-        state::parent::ParentState, traversable::{
+    },
+    traversal::{
+        state::parent::ParentState,
+        traversable::{
             TravDir,
             Traversable,
-        }
-    }
+        },
+    },
 };
-use super::super::mutators::move_path::key::AdvanceKey;
+
+use super::move_path::key::AdvanceKey;
 
 pub trait PathRaise {
     fn path_raise<Trav: Traversable>(

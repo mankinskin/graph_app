@@ -4,10 +4,17 @@
 use std::{
     cmp::Ordering,
     num::NonZeroUsize,
+    ops::Range,
 };
 
 use hypercontext_api::graph::vertex::{
-    pattern::IntoPattern,
+    pattern::{
+        pattern_range::{
+            PatternRangeIndex,
+            StartInclusive,
+        },
+        IntoPattern,
+    },
     wide::Wide,
 };
 
@@ -15,6 +22,8 @@ pub mod relative;
 
 /// Side refers to border (front is indexing before front border, back is indexing after back border)
 pub trait IndexSide: std::fmt::Debug + Sync + Send + Unpin + Clone + 'static {
+    type ContextRange: PatternRangeIndex + StartInclusive;
+    type InnerRange: PatternRangeIndex + StartInclusive;
     fn token_offset_split(
         pattern: impl IntoPattern,
         offset: NonZeroUsize,
@@ -25,6 +34,8 @@ pub trait IndexSide: std::fmt::Debug + Sync + Send + Unpin + Clone + 'static {
 pub struct IndexBack;
 
 impl IndexSide for IndexBack {
+    type InnerRange = Range<usize>;
+    type ContextRange = Range<usize>;
     fn token_offset_split(
         pattern: impl IntoPattern,
         offset: NonZeroUsize,
@@ -50,6 +61,8 @@ impl IndexSide for IndexBack {
 pub struct IndexFront;
 
 impl IndexSide for IndexFront {
+    type InnerRange = Range<usize>;
+    type ContextRange = Range<usize>;
     fn token_offset_split(
         pattern: impl IntoPattern,
         offset: NonZeroUsize,

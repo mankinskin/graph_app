@@ -13,12 +13,11 @@ extern crate hypercontext_api;
 
 extern crate test;
 
-pub mod direction;
-pub mod search;
-pub mod join;
-pub mod insert;
-//pub mod index;
-pub mod read;
+//mod index;
+mod insert;
+mod join;
+mod read;
+mod search;
 
 #[cfg(test)]
-pub mod tests;
+mod tests;

@@ -76,7 +76,7 @@ impl PathComplete for EndKind {
 //impl PathComplete for IndexRangePath {
 //    fn is_complete<
 //        T: Tokenize,
-//        D: MatchDirection,
+//        D: ,
 //        Trav: Traversable<T>,
 //    >(&self, trav: &Trav) -> bool {
 //        let graph = trav.graph();
@@ -86,7 +86,7 @@ impl PathComplete for EndKind {
 //    }
 //    fn into_complete<
 //        T: Tokenize,
-//        D: MatchDirection,
+//        D: ,
 //        Trav: Traversable<T>,
 //    >(&self, trav: &Trav) -> Option<Child> {
 //        self.is_complete::<_, D, _>(trav).then(||
@@ -101,7 +101,7 @@ impl PathComplete for EndKind {
 //        'a: 'g,
 //        'g,
 //        T: Tokenize,
-//        D: MatchDirection,
+//        D: ,
 //        Trav: Traversable<T>,
 //    >(&self, trav: &'a Trav) -> Option<Child> {
 //        let graph = trav.graph();

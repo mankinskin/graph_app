@@ -1,7 +1,7 @@
 use std::borrow::Borrow;
 
 use crate::{
-    direction::r#match::MatchDirection,
+    direction::pattern::PatternDirection,
     traversal::{
         cache::key::DirectedKey,
         state::{
@@ -49,7 +49,7 @@ pub trait IntoAdvanced: Sized + Clone {
 //> IntoAdvanced<OriginPathResult> for OriginPath<P> {
 //    fn into_advanced<
 //        T: Tokenize,
-//        D: MatchDirection,
+//        D: ,
 //        Trav: Traversable<T>,
 //    >(
 //        self,

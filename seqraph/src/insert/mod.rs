@@ -11,20 +11,33 @@ use hypercontext_api::{
         HypergraphRef,
     },
     path::structs::rooted::pattern_range::PatternRangePath,
+    traversal::traversable::TraversableMut,
 };
 
 pub mod context;
+pub mod direction;
 
 #[cfg(test)]
 #[macro_use]
 pub mod tests;
 
-pub trait HasInsertContext {
+pub trait HasInsertContext: TraversableMut {
     fn insert_context(&self) -> InsertContext;
     fn index_pattern(
         &self,
         pattern: impl IntoPattern,
     ) -> Result<(Child, PatternRangePath), ErrorReason>;
+}
+impl<T: HasInsertContext> HasInsertContext for &'_ mut T {
+    fn insert_context(&self) -> InsertContext {
+        (**self).insert_context()
+    }
+    fn index_pattern(
+        &self,
+        pattern: impl IntoPattern,
+    ) -> Result<(Child, PatternRangePath), ErrorReason> {
+        (**self).index_pattern(pattern)
+    }
 }
 impl HasInsertContext for HypergraphRef {
     fn insert_context(&self) -> InsertContext {

@@ -1,5 +1,5 @@
 use crate::{
-    direction::r#match::MatchDirection,
+    direction::pattern::PatternDirection,
     graph::{
         kind::GraphKind,
         vertex::pattern::pattern_width,
@@ -184,7 +184,7 @@ impl RangeEnd {
 //impl<P: PathSimplify> PathSimplify for OriginPath<P> {
 //    fn into_simplified<
 //        T: Tokenize,
-//        D: MatchDirection,
+//        D: ,
 //        Trav: Traversable<T>,
 //    >(mut self, trav: &Trav) -> Self {
 //        self.postfix.simplify::<_, D, _>(trav);

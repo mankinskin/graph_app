@@ -12,7 +12,7 @@ pub trait FromAdvanced<A: Advanced> {
 //impl FromAdvanced<IndexRangePath> for FoundPath {
 //    fn from_advanced<
 //        T: Tokenize,
-//        D: MatchDirection,
+//        D: ,
 //        Trav: Traversable<T>
 //    >(path: IndexRangePath, trav: &Trav) -> Self {
 //        if path.is_complete::<_, D, _>(trav) {
@@ -26,7 +26,7 @@ pub trait FromAdvanced<A: Advanced> {
 //impl FromAdvanced<OriginPath<IndexRangePath>> for OriginPath<FoundPath> {
 //    fn from_advanced<
 //        T: Tokenize,
-//        D: MatchDirection,
+//        D: ,
 //        Trav: Traversable<T>
 //    >(path: OriginPath<IndexRangePath>, trav: &Trav) -> Self {
 //        Self {
@@ -38,7 +38,7 @@ pub trait FromAdvanced<A: Advanced> {
 //impl FromAdvanced<OriginPath<IndexRangePath>> for OriginPath<RolePath<Start>> {
 //    fn from_advanced<
 //        T: Tokenize,
-//        D: MatchDirection,
+//        D: ,
 //        Trav: Traversable<T>
 //    >(path: OriginPath<IndexRangePath>, trav: &Trav) -> Self {
 //        Self {
@@ -51,7 +51,7 @@ pub trait FromAdvanced<A: Advanced> {
 //impl<A: Advanced, F: FromAdvanced<A>> FromAdvanced<A> for OriginPath<F> {
 //    fn from_advanced<
 //        T: Tokenize,
-//        D: MatchDirection,
+//        D: ,
 //        Trav: Traversable<T>
 //    >(path: A, trav: &Trav) -> Self {
 //        Self {

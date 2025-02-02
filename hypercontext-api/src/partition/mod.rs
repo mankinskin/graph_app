@@ -14,19 +14,19 @@ use crate::partition::{
             Post,
             Pre,
             RangeRole,
-        }
+        },
     },
     splits::offset::{
-        ToOffsetSplit,
         OffsetSplit,
+        ToOffsetSplit,
     },
 };
 
-pub mod info;
-pub mod splits;
-pub mod pattern;
 pub mod context;
 pub mod delta;
+pub mod info;
+pub mod pattern;
+pub mod splits;
 
 #[derive(new, Clone, Copy)]
 pub struct Infix<A: ToOffsetSplit, B: ToOffsetSplit> {
@@ -66,7 +66,6 @@ impl<M: PostVisitMode, A: ToOffsetSplit> ToPartition<Post<M>> for Postfix<A> {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub struct Partition<R: RangeRole> {
     pub offsets: R::Splits,
@@ -86,7 +85,6 @@ impl<R: RangeRole> ToPartition<R> for Partition<R> {
         self
     }
 }
-
 
 impl<M: InVisitMode> ToPartition<In<M>> for (OffsetSplit, OffsetSplit) {
     fn to_partition(self) -> Partition<In<M>> {

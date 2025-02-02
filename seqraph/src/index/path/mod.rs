@@ -1,21 +1,51 @@
-use std::{borrow::Borrow, fmt::Debug, num::NonZeroUsize, ops::ControlFlow};
+use std::{
+    borrow::Borrow,
+    fmt::Debug,
+    num::NonZeroUsize,
+    ops::ControlFlow,
+};
 
-use hypercontext_api::{graph::vertex::{child::Child, location::{child::ChildLocation, SubLocation}, pattern::{IntoPattern, Pattern}, ChildPatterns}, path::accessors::role::Start, HashSet};
+use hypercontext_api::{
+    graph::vertex::{
+        child::Child,
+        location::{
+            child::ChildLocation,
+            SubLocation,
+        },
+        pattern::{
+            IntoPattern,
+            Pattern,
+        },
+        wide::Wide,
+        ChildPatterns,
+    },
+    path::accessors::role::Start,
+    HashSet,
+};
 
-use crate::insert::IndexSplitResult;
+use crate::insert::{
+    context::InsertContext,
+    IndexSplitResult,
+};
 
-use super::{context::ContextPath, side::{relative::RelativeSide, IndexSide}};
+use super::{
+    context::ContextPath,
+    side::{
+        relative::RelativeSide,
+        IndexSide,
+    },
+};
 
 #[derive(Debug, Clone)]
 pub struct Pather<Side: IndexSide> {
-    pub(crate) indexer: Indexer,
+    pub(crate) ctx: InsertContext,
     _ty: std::marker::PhantomData<Side>,
 }
 
 impl<Side: IndexSide> Pather<Side> {
-    pub fn new(indexer: Indexer) -> Self {
+    pub fn new(ctx: InsertContext) -> Self {
         Self {
-            indexer,
+            ctx,
             _ty: Default::default(),
         }
     }
@@ -29,43 +59,35 @@ pub struct IndexPathComponents {
     location: ChildLocation,
     prev_location: ChildLocation,
 }
-//#[derive(Debug, Clone)]
-//struct PathFeatures {
-//    len: usize,
-//    has_primary_exclusive: bool,
-//}
-//#[derive(Debug, Clone)]
-//enum IndexingMode {
-//    /// create new index wrapping primary part and residual secondary parts
-//    Wrapping,
-//    /// postpone indexing until it is needed and more information is available
-//    Postpone,
-//    /// insert local pattern with indexed primary and secondary halves
-//    Local,
-//}
-//impl PathFeatures {
-//    fn is_full_primary(&self) -> bool {
-//        !self.has_primary_exclusive && self.len == 1
-//    }
-//    pub fn new<
-//        D: IndexDirection,
-//        Side: IndexSide<D>,
-//        S: RelativeSide<D, Side>,
-//    >(
-//        path: &Vec<ChildLocation>,
-//    ) -> Self {
-//        assert!(!path.is_empty());
-//        let len = path.len();
-//        let path = Side::bottom_up_path_iter(path.iter());
-//        let last = path.last().unwrap();
-//        PathFeatures {
-//            has_primary_exclusive: <S as RelativeSide<D, Side>>::exclusive_primary_location(last).is_some(),
-//            len,
-//        }
-//    }
-//}
 
 impl<Side: IndexSide> Pather<Side> {
+    // primary range, depending on S
+    fn index_primary_exclusive<S: RelativeSide<Side>, L: Borrow<ChildLocation> + Debug>(
+        &mut self,
+        location: L,
+    ) -> Option<(Pattern, IndexSplitResult)> {
+        self.index_primary_entry::<S, _>(<S as RelativeSide<Side>>::exclusive_primary_location(
+            *location.borrow(),
+        )?)
+    }
+    pub fn index_primary_path<S: RelativeSide<Side>, P: ContextPath>(
+        &mut self,
+        path: P,
+    ) -> Option<IndexSplitResult> {
+        let mut iter = Side::bottom_up_path_iter(path);
+        let entry = iter.next()?;
+        let (_, mut prev) = self.index_primary_entry::<S, _>(entry)?;
+        while let Some(location) = iter.next() {
+            prev = self.path_segment::<S>(prev, location);
+        }
+        Some(prev)
+    }
+    pub fn index_secondary_path<S: RelativeSide<Side>, P: ContextPath>(
+        &mut self,
+        path: P,
+    ) -> Option<IndexSplitResult> {
+        self.index_primary_path::<<S as RelativeSide<Side>>::Opposite, _>(path)
+    }
     pub fn index_primary_entry<S: RelativeSide<Side>, L: Borrow<ChildLocation> + Debug>(
         &mut self,
         entry: L,
@@ -73,67 +95,51 @@ impl<Side: IndexSide> Pather<Side> {
         let pattern = self.graph().expect_pattern_at(entry.borrow()).clone();
         self.pattern_perfect_split::<S, _, _>(pattern, entry)
     }
-    //pub fn index_primary_path_bundle<
-    //    S: RelativeSide<D, Side>,
-    //>(
-    //    &mut self,
-    //    bundle: Vec<Vec<ChildLocation>>,
-    //) -> Option<IndexSplitResult> {
-    //    let features = bundle.iter()
-    //        .map(|path| PathFeatures::new::<_, _, S>(path))
-    //        .collect_vec();
-    //    let zip = bundle.iter().zip(features.iter());
-    //    if let Some(path) = zip.clone().find_map(|(p, f)| f.is_full_primary().then(|| p)) {
-    //        // some path to full primary
-    //        self.index_primary_path(path)
-    //        // might still need to use other paths for indexing prev_secondary in consequtive indexing
-    //    } else {
-    //        if let Some(path) = zip.find_map(|(p, f)| (!f.has_primary_exclusive).then(|| p)) {
-    //            // primary given by prev_primary
-    //            Some(IndexSplitResult {
-    //                inner: prev_primary,
-    //                location: location,
-    //                path: vec![prev_location],
-    //            })
-    //        } else {
-    //            // none full primary, need to create new index
-    //            let components = bundle.into_iter()
-    //                .map(|path| self.path_components(path).unwrap())
-    //                .collect_vec();
-    //            let primary = self.graph_mut().insert_patterns(
-    //                components.iter().map(|components| {
-    //                    let (back, front) = S::outer_inner_order(components.primary_exclusive.unwrap(), components.prev_primary);
-    //                    [back, front]
-    //                })
-    //            );
-    //            let secondary = self.graph_mut().insert_patterns(
-    //                components.iter().map(|components| {
-    //                    let (back, front) = S::outer_inner_order(components.primary_exclusive.unwrap(), components.prev_primary);
-    //                    [back, front]
-    //                })
-    //            );
-    //            None
-    //        }
-    //    }
-    //}
-
-    pub fn path_components<S: RelativeSide<Side>, P: ContextPath>(
+    /// index inner half of pattern
+    ///
+    /// Creates an index for the inner half of a pattern if needed and returns the new index
+    /// along with its location
+    fn pattern_perfect_split<
+        S: RelativeSide<Side>,
+        P: IntoPattern,
+        L: Borrow<ChildLocation> + Debug,
+    >(
         &mut self,
-        path: P,
-    ) -> Option<IndexPathComponents> {
-        let mut iter = Side::bottom_up_path_iter(path);
-        let entry = iter.next()?;
-        let (_, mut prev) = self.index_primary_entry::<S, _>(entry)?;
-        let last = if !iter.is_empty() {
-            while iter.len() > 1 {
-                let location = iter.next().unwrap();
-                prev = self.path_segment::<S>(prev, location);
-            }
-            iter.next().unwrap()
+        pattern: P,
+        location: L,
+    ) -> Option<(Pattern, IndexSplitResult)> {
+        let location = location.borrow();
+        let secondary = S::split_secondary(&pattern, location.sub_index);
+        if secondary.is_empty() {
+            None
         } else {
-            entry
-        };
-        Some(self.path_entry_components::<S>(prev, last))
+            let range = S::primary_range(location.sub_index);
+            let primary = &pattern.borrow()[range.clone()];
+            let primary = if primary.len() < 2 {
+                *primary.iter().next()?
+            } else {
+                let mut graph = self.graph_mut();
+                let primary = graph.insert_pattern(primary);
+                graph.replace_in_pattern(location, range.clone(), [primary]);
+                primary
+            };
+            Some((
+                secondary.to_vec(),
+                IndexSplitResult {
+                    location: location.to_child_location(S::primary_indexed_pos(range.start())),
+                    path: vec![],
+                    inner: primary,
+                },
+            ))
+        }
+    }
+    pub fn path_segment<S: RelativeSide<Side>>(
+        &mut self,
+        prev: IndexSplitResult,
+        location: ChildLocation,
+    ) -> IndexSplitResult {
+        let components = self.path_entry_components::<S>(prev, location);
+        self.index_components::<S>(components)
     }
     pub fn path_entry_components<S: RelativeSide<Side>>(
         &mut self,
@@ -236,79 +242,23 @@ impl<Side: IndexSide> Pather<Side> {
             }
         }
     }
-    pub fn path_segment<S: RelativeSide<Side>>(
-        &mut self,
-        prev: IndexSplitResult,
-        location: ChildLocation,
-    ) -> IndexSplitResult {
-        let components = self.path_entry_components::<S>(prev, location);
-        self.index_components::<S>(components)
-    }
-    //#[async_recursion]
-    pub fn index_primary_path<S: RelativeSide<Side>, P: ContextPath>(
+    pub fn path_components<S: RelativeSide<Side>, P: ContextPath>(
         &mut self,
         path: P,
-    ) -> Option<IndexSplitResult> {
+    ) -> Option<IndexPathComponents> {
         let mut iter = Side::bottom_up_path_iter(path);
         let entry = iter.next()?;
         let (_, mut prev) = self.index_primary_entry::<S, _>(entry)?;
-        while let Some(location) = iter.next() {
-            prev = self.path_segment::<S>(prev, location);
-        }
-        Some(prev)
-    }
-    // primary range, depending on S
-    fn index_primary_exclusive<S: RelativeSide<Side>, L: Borrow<ChildLocation> + Debug>(
-        &mut self,
-        location: L,
-    ) -> Option<(Pattern, IndexSplitResult)> {
-        self.index_primary_entry::<S, _>(<S as RelativeSide<Side>>::exclusive_primary_location(
-            *location.borrow(),
-        )?)
-    }
-    pub fn index_secondary_path<S: RelativeSide<Side>, P: ContextPath>(
-        &mut self,
-        path: P,
-    ) -> Option<IndexSplitResult> {
-        self.index_primary_path::<<S as RelativeSide<Side>>::Opposite, _>(path)
-    }
-    /// index inner half of pattern
-    ///
-    /// Creates an index for the inner half of a pattern if needed and returns the new index
-    /// along with its location
-    fn pattern_perfect_split<
-        S: RelativeSide<Side>,
-        P: IntoPattern,
-        L: Borrow<ChildLocation> + Debug,
-    >(
-        &mut self,
-        pattern: P,
-        location: L,
-    ) -> Option<(Pattern, IndexSplitResult)> {
-        let location = location.borrow();
-        let secondary = S::split_secondary(&pattern, location.sub_index);
-        if secondary.is_empty() {
-            None
+        let last = if !iter.is_empty() {
+            while iter.len() > 1 {
+                let location = iter.next().unwrap();
+                prev = self.path_segment::<S>(prev, location);
+            }
+            iter.next().unwrap()
         } else {
-            let range = S::primary_range(location.sub_index);
-            let primary = &pattern.borrow()[range.clone()];
-            let primary = if primary.len() < 2 {
-                *primary.iter().next()?
-            } else {
-                let mut graph = self.graph_mut();
-                let primary = graph.insert_pattern(primary);
-                graph.replace_in_pattern(location, range.clone(), [primary]);
-                primary
-            };
-            Some((
-                secondary.to_vec(),
-                IndexSplitResult {
-                    location: location.to_child_location(S::primary_indexed_pos(range.start())),
-                    path: vec![],
-                    inner: primary,
-                },
-            ))
-        }
+            entry
+        };
+        Some(self.path_entry_components::<S>(prev, last))
     }
     //#[async_recursion]
     fn child_pattern_offset_splits<S: RelativeSide<Side>>(
@@ -404,7 +354,7 @@ impl<Side: IndexSide> Pather<Side> {
             // split_inner + split inner context
             let full_inner = graph.insert_pattern(
                 // context on opposite side than usual (inner side)
-                <Side as IndexSide<_>>::Opposite::concat_inner_and_context(inner, parent_inner),
+                <Side as IndexSide>::Opposite::concat_inner_and_context(inner, parent_inner),
             );
             // ||    |     ||      |
             //       ^^^^^^^^^^^^^^
@@ -483,4 +433,47 @@ impl<Side: IndexSide> Pather<Side> {
             }
         }
     }
+    //pub fn index_primary_path_bundle<
+    //    S: RelativeSide<D, Side>,
+    //>(
+    //    &mut self,
+    //    bundle: Vec<Vec<ChildLocation>>,
+    //) -> Option<IndexSplitResult> {
+    //    let features = bundle.iter()
+    //        .map(|path| PathFeatures::new::<_, _, S>(path))
+    //        .collect_vec();
+    //    let zip = bundle.iter().zip(features.iter());
+    //    if let Some(path) = zip.clone().find_map(|(p, f)| f.is_full_primary().then(|| p)) {
+    //        // some path to full primary
+    //        self.index_primary_path(path)
+    //        // might still need to use other paths for indexing prev_secondary in consequtive indexing
+    //    } else {
+    //        if let Some(path) = zip.find_map(|(p, f)| (!f.has_primary_exclusive).then(|| p)) {
+    //            // primary given by prev_primary
+    //            Some(IndexSplitResult {
+    //                inner: prev_primary,
+    //                location: location,
+    //                path: vec![prev_location],
+    //            })
+    //        } else {
+    //            // none full primary, need to create new index
+    //            let components = bundle.into_iter()
+    //                .map(|path| self.path_components(path).unwrap())
+    //                .collect_vec();
+    //            let primary = self.graph_mut().insert_patterns(
+    //                components.iter().map(|components| {
+    //                    let (back, front) = S::outer_inner_order(components.primary_exclusive.unwrap(), components.prev_primary);
+    //                    [back, front]
+    //                })
+    //            );
+    //            let secondary = self.graph_mut().insert_patterns(
+    //                components.iter().map(|components| {
+    //                    let (back, front) = S::outer_inner_order(components.primary_exclusive.unwrap(), components.prev_primary);
+    //                    [back, front]
+    //                })
+    //            );
+    //            None
+    //        }
+    //    }
+    //}
 }

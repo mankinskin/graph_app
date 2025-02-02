@@ -10,29 +10,55 @@ use derive_more::{
 use linked_hash_map::LinkedHashMap;
 
 use crate::join::{
-        context::{
-            node::merge::NodeMergeContext, pattern::PatternJoinContext, LockedJoinContext
-        }, joined::partition::JoinedPartition, partition::{
-            join::JoinPartition, Join, JoinPartitionInfo
-        }
-    };
+    context::{
+        node::merge::NodeMergeContext,
+        pattern::PatternJoinContext,
+        LockedJoinContext,
+    },
+    joined::partition::JoinedPartition,
+    partition::{
+        join::JoinPartition,
+        Join,
+        JoinPartitionInfo,
+    },
+};
 use hypercontext_api::{
     graph::vertex::{
-        child::Child, has_vertex_index::HasVertexIndex, location::SubLocation, pattern::id::PatternId, wide::Wide, ChildPatterns
+        child::Child,
+        has_vertex_index::HasVertexIndex,
+        location::SubLocation,
+        pattern::id::PatternId,
+        wide::Wide,
+        ChildPatterns,
     },
     partition::{
         context::{
             AsNodeTraceContext,
             NodeTraceContext,
-        }, info::{range::role::{
+        },
+        info::{
+            range::role::{
                 In,
                 Post,
                 Pre,
-            }, InfoPartition, PartitionBorders}, pattern::{
-            GetPatternContext, GetPatternTraceContext, PatternTraceContext
-        }, splits::{
-            has_splits::HasPosSplits, offset::OffsetSplit, pos::PosSplitContext, PosSplitOf,
-        }, Infix, Postfix, Prefix
+            },
+            InfoPartition,
+            PartitionBorders,
+        },
+        pattern::{
+            GetPatternContext,
+            GetPatternTraceContext,
+            PatternTraceContext,
+        },
+        splits::{
+            has_splits::HasPosSplits,
+            offset::OffsetSplit,
+            pos::PosSplitContext,
+            PosSplitOf,
+        },
+        Infix,
+        Postfix,
+        Prefix,
     },
     split::{
         cache::{
@@ -45,7 +71,8 @@ use hypercontext_api::{
     traversal::cache::{
         entry::RootMode,
         key::SplitKey,
-    }, HashMap,
+    },
+    HashMap,
 };
 
 #[derive(Debug, Deref, DerefMut)]
@@ -93,33 +120,34 @@ impl<'a: 'b, 'b> GetPatternContext for NodeJoinContext<'a> {
         &'c self,
         pattern_id: &PatternId,
     ) -> Self::PatternCtx<'c>
-        where Self: 'c,
+    where
+        Self: 'c,
     {
         let ctx = self.get_pattern_trace_context(pattern_id);
         //let pos_splits = self.vertex_cache().pos_splits();
         PatternJoinContext {
             ctx,
-            sub_splits: &self.finished_splits
-            //pos_splits
-            //    .iter()
-            //    .map(|pos| PosSplitContext::from(pos).fetch_split(&self.ctx.split_cache))
-            //    .collect(),
+            sub_splits: &self.finished_splits, //pos_splits
+                                               //    .iter()
+                                               //    .map(|pos| PosSplitContext::from(pos).fetch_split(&self.ctx.split_cache))
+                                               //    .collect(),
         }
     }
 }
 impl<'a: 'b, 'b> NodeJoinContext<'a> {
-    pub fn patterns(&self) -> &ChildPatterns
-    {
+    pub fn patterns(&self) -> &ChildPatterns {
         self.ctx.trav.expect_child_patterns(self.index)
     }
 }
 
 impl<'a: 'b, 'b> NodeJoinContext<'a> {
     pub fn vertex_cache<'c>(&'c self) -> &'c SplitVertexCache {
-        self.split_cache.entries.get(&self.index.vertex_index()).unwrap()
+        self.split_cache
+            .entries
+            .get(&self.index.vertex_index())
+            .unwrap()
     }
-    pub fn join_partitions(&mut self) -> LinkedHashMap<SplitKey, Split>
-    {
+    pub fn join_partitions(&mut self) -> LinkedHashMap<SplitKey, Split> {
         let partitions = self.index_partitions();
         assert_eq!(
             self.index.width(),
@@ -129,8 +157,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
         assert_eq!(partitions.len(), pos_splits.len() + 1,);
         NodeMergeContext::new(self).merge_node(&partitions)
     }
-    pub fn index_partitions(&mut self) -> Vec<Child>
-    {
+    pub fn index_partitions(&mut self) -> Vec<Child> {
         let offset_splits = self.vertex_cache().pos_splits().clone();
         let len = offset_splits.len();
         assert!(len > 0);
@@ -150,10 +177,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
         println!("{:#?}", parts);
         parts
     }
-    pub fn join_root_partitions(
-        &mut self,
-    ) -> Child
-    {
+    pub fn join_root_partitions(&mut self) -> Child {
         let root_mode = self.split_cache.root_mode;
         let index = self.index;
         let offsets = self.vertex_cache().pos_splits().clone();
@@ -166,7 +190,8 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
                 .inspect(|part| {
                     if part.perfect.is_none() {
                         let post = Postfix::new(offset).join_partition(self).unwrap();
-                        self.ctx.trav
+                        self.ctx
+                            .trav
                             .add_pattern_with_update(index, [part.index, post.index]);
                     }
                 })
@@ -182,7 +207,9 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
                             }
                             Err(c) => c,
                         };
-                        self.ctx.trav.add_pattern_with_update(index, [pre, part.index]);
+                        self.ctx
+                            .trav
+                            .add_pattern_with_update(index, [pre, part.index]);
                     }
                 })
                 .map(|part| part.index),
@@ -191,12 +218,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
                 let roffset = offset_iter.next().unwrap();
                 Infix::new(loffset, roffset)
                     .join_partition(self)
-                    .map(|part| self.join_incomplete_infix(
-                        part,
-                        loffset,
-                        roffset,
-                        index,
-                    ))
+                    .map(|part| self.join_incomplete_infix(part, loffset, roffset, index))
             }
         }
         .unwrap_or_else(|c| c);
@@ -231,8 +253,11 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
             let (ll, rl) = (part.perfect.0.unwrap(), part.perfect.1.unwrap());
             let lpos = loffset.1.pattern_splits[&ll].sub_index;
             let rpos = roffset.1.pattern_splits[&rl].sub_index;
-            self.ctx.trav
-                .replace_in_pattern(index.to_pattern_location(ll), lpos..rpos, [part.index])
+            self.ctx.trav.replace_in_pattern(
+                index.to_pattern_location(ll),
+                lpos..rpos,
+                [part.index],
+            )
         } else {
             // one or both are perfect in different patterns
             let loffset = (loffset.0, &loffset.1);
@@ -260,8 +285,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
                 let info = Infix::new(&wrap_offset, roffset)
                     .info_partition(self)
                     .unwrap();
-                let wrap_patterns = JoinPartitionInfo::from(info)
-                    .to_joined_patterns(self);
+                let wrap_patterns = JoinPartitionInfo::from(info).to_joined_patterns(self);
                 let wrap_pre = match Infix::new(wrap_offset, loffset).join_partition(self) {
                     Ok(p) => p.index,
                     Err(c) => c,
@@ -310,8 +334,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
                 let info = Infix::new(loffset, &wrap_offset)
                     .info_partition(self)
                     .unwrap();
-                let wrap_patterns = JoinPartitionInfo::from(info)
-                    .to_joined_patterns(self);
+                let wrap_patterns = JoinPartitionInfo::from(info).to_joined_patterns(self);
                 let wrap_post = match Infix::new(roffset, wrap_offset).join_partition(self) {
                     Ok(p) => p.index,
                     Err(c) => c,

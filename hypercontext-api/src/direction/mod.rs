@@ -1,6 +1,8 @@
-pub mod insert;
+use std::fmt::Debug;
+
 pub mod r#match;
-pub mod merge;
+pub mod pattern;
+//pub(crate) mod merge;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Left;
@@ -8,7 +10,7 @@ pub struct Left;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Right;
 
-pub trait Direction {
+pub trait Direction: Clone + Debug + Send + Sync + 'static + Unpin {
     type Opposite: Direction;
 }
 

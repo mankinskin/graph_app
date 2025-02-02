@@ -28,10 +28,10 @@ pub trait BandIterator<'a, Trav: Traversable + 'a>:
 {
     type Policy: BandExpandingPolicy<Trav>;
     fn band_iter(
-        trav: &'a Trav,
+        trav: Trav,
         root: Child,
     ) -> Self;
-    fn trav(&self) -> &'a Trav;
+    fn trav(&self) -> &Trav;
     /// get all postfixes of index with their locations
     fn next_children(
         &self,
@@ -47,10 +47,10 @@ pub trait BandIterator<'a, Trav: Traversable + 'a>:
 
 pub struct BandExpandingIterator<'a, Trav, P>
 where
-    Trav: Traversable,
+    Trav: Traversable + 'a,
     P: BandExpandingPolicy<Trav>,
 {
-    trav: &'a Trav,
+    trav: Trav,
     queue: VecDeque<(ChildLocation, Child)>,
     last: (Option<ChildLocation>, Child),
     _ty: std::marker::PhantomData<&'a P>,
@@ -70,12 +70,12 @@ pub type PrefixIterator<'a, Trav> = BandExpandingIterator<
 
 impl<'a, Trav, P> BandIterator<'a, Trav> for BandExpandingIterator<'a, Trav, P>
 where
-    Trav: Traversable,
+    Trav: Traversable + 'a,
     P: BandExpandingPolicy<Trav>,
 {
     type Policy = P;
     fn band_iter(
-        trav: &'a Trav,
+        trav: Trav,
         root: Child,
     ) -> Self {
         Self {
@@ -85,12 +85,12 @@ where
             _ty: Default::default(),
         }
     }
-    fn trav(&self) -> &'a Trav {
-        self.trav
+    fn trav(&self) -> &Trav {
+        &self.trav
     }
 }
 
-impl<Trav, P> Iterator for BandExpandingIterator<'_, Trav, P>
+impl<'a, Trav, P> Iterator for BandExpandingIterator<'a, Trav, P>
 where
     Trav: Traversable,
     P: BandExpandingPolicy<Trav>,
