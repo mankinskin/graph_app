@@ -12,7 +12,6 @@ use crate::{
             chain::OverlapChain,
             Overlap,
         },
-        reader::context::ReadContext,
     },
 };
 use hypercontext_api::{
@@ -52,11 +51,7 @@ use hypercontext_api::{
             PostfixIterator,
             PrefixIterator,
         },
-        traversable::{
-            TravDir,
-            Traversable,
-            TraversableMut,
-        },
+        traversable::TravDir,
     },
 };
 use itertools::{
@@ -98,7 +93,7 @@ impl OverlapCache {
         self.end_bound = start_bound + width;
     }
     #[instrument(skip(self, trav, cursor))]
-    pub fn read_next_overlap<Trav: TraversableMut>(
+    pub fn read_next_overlap<Trav: HasInsertContext>(
         mut self,
         mut trav: Trav,
         cursor: &mut PatternPrefixPath,
@@ -140,9 +135,9 @@ impl OverlapCache {
 
     /// find largest expandable postfix
     #[instrument(skip(self, trav, cursor))]
-    fn find_next_overlap<Trav: TraversableMut>(
+    fn find_next_overlap<Trav: HasInsertContext>(
         &mut self,
-        trav: Trav,
+        mut trav: Trav,
         cursor: &mut PatternPrefixPath,
     ) -> (Option<(usize, OverlapLink, Child)>, OverlapBundle)
     where
@@ -150,7 +145,7 @@ impl OverlapCache {
     {
         let last = self.last.take().expect("No last overlap to take!");
         let last_end = *last.band.end.index().unwrap();
-        let mut postfix_iter = PostfixIterator::band_iter(&trav, last_end);
+        let mut postfix_iter = PostfixIterator::band_iter(&mut trav, last_end);
 
         let mut acc = ControlFlow::Continue((
             None as Option<RolePath<End>>,
@@ -170,7 +165,7 @@ impl OverlapCache {
 
             let primer = cursor.clone().to_range_path();
             acc = match self.expand_postfix(
-                postfix_iter.trav(),
+                postfix_iter.trav_mut(),
                 postfix,
                 start_bound,
                 bundle,
@@ -190,7 +185,7 @@ impl OverlapCache {
     }
     fn expand_postfix(
         &mut self,
-        trav: impl Traversable,
+        trav: impl HasInsertContext,
         postfix: Child,
         start_bound: usize,
         mut bundle: OverlapBundle,

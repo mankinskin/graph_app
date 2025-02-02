@@ -26,7 +26,9 @@ pub trait HasInsertContext: TraversableMut {
     fn index_pattern(
         &self,
         pattern: impl IntoPattern,
-    ) -> Result<(Child, PatternRangePath), ErrorReason>;
+    ) -> Result<(Child, PatternRangePath), ErrorReason> {
+        self.insert_context().insert(pattern.into_pattern())
+    }
 }
 impl<T: HasInsertContext> HasInsertContext for &'_ mut T {
     fn insert_context(&self) -> InsertContext {

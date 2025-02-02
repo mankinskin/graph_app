@@ -9,7 +9,10 @@ use tracing::{
 };
 
 use crate::{
-    insert::context::InsertContext,
+    insert::{
+        context::InsertContext,
+        HasInsertContext,
+    },
     read::{
         overlap::cache::OverlapCache,
         sequence::{
@@ -68,6 +71,11 @@ pub struct ReadContext {
 //    }
 //}
 
+impl HasInsertContext for ReadContext {
+    fn insert_context(&self) -> InsertContext {
+        InsertContext::new(self.graph.clone())
+    }
+}
 impl<'g> ReadContext {
     #[instrument(skip(self, first, cursor))]
     pub fn read_overlaps(

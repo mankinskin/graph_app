@@ -3,10 +3,7 @@ use band::{
     OverlapBand,
 };
 
-use crate::read::{
-    bundle::band,
-    reader::context::ReadContext,
-};
+use crate::read::bundle::band;
 use hypercontext_api::path::{
     accessors::role::{
         End,

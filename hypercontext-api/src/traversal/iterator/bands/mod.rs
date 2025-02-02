@@ -32,6 +32,7 @@ pub trait BandIterator<'a, Trav: Traversable + 'a>:
         root: Child,
     ) -> Self;
     fn trav(&self) -> &Trav;
+    fn trav_mut(&mut self) -> &mut Trav;
     /// get all postfixes of index with their locations
     fn next_children(
         &self,
@@ -87,6 +88,9 @@ where
     }
     fn trav(&self) -> &Trav {
         &self.trav
+    }
+    fn trav_mut(&mut self) -> &mut Trav {
+        &mut self.trav
     }
 }
 
