@@ -22,11 +22,9 @@ use crate::{
         },
         structs::rooted::root::RootedPath,
         BaseQuery,
+        RoleChildPath,
     },
-    traversal::{
-        result::kind::RoleChildPath,
-        traversable::Traversable,
-    },
+    traversal::traversable::Traversable,
     //traversal::state::query::QueryState
 };
 

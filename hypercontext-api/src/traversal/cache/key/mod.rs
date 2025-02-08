@@ -1,8 +1,5 @@
-pub mod leaf;
-pub mod pos;
 pub mod prev;
-pub mod root;
-pub mod target;
+pub mod props;
 
 use derive_more::From;
 use derive_new::new;
@@ -22,10 +19,7 @@ use crate::{
         wide::Wide,
     },
     path::mutators::move_path::key::TokenPosition,
-    traversal::state::child::ChildState,
 };
-use leaf::*;
-use root::*;
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, From)]
 pub struct UpPosition(pub TokenPosition);
@@ -225,16 +219,6 @@ impl From<DownKey> for DirectedKey {
             index: key.index,
             pos: DirectedPosition::TopDown(key.pos),
         }
-    }
-}
-
-pub trait GetCacheKey: RootKey + LeafKey {
-    fn leaf_key(&self) -> DirectedKey;
-}
-
-impl GetCacheKey for ChildState {
-    fn leaf_key(&self) -> DirectedKey {
-        self.target
     }
 }
 

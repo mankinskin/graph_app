@@ -1,30 +1,23 @@
 use crate::{
     graph::vertex::location::child::ChildLocation,
-    path::structs::{
-        query_range_path::FoldablePath,
-        rooted::{
-            role_path::RootedRolePath,
-            root::{
-                PathRoot,
-                RootedPath,
-            },
-        },
-    },
-    traversal::state::cursor::PathCursor,
-};
-use crate::{
     path::{
         accessors::role::{
             End,
             PathRole,
             Start,
         },
-        structs::role_path::RolePath,
+        structs::{
+            query_range_path::FoldablePath,
+            role_path::RolePath,
+            rooted::{
+                role_path::RootedRolePath,
+                root::RootedPath,
+            },
+        },
     },
-    //traversal::state::query::RangeCursor,
+    traversal::state::cursor::PathCursor,
 };
 use auto_impl::auto_impl;
-use std::borrow::Borrow;
 
 /// access to a rooted path pointing to a descendant
 #[auto_impl(& mut)]
@@ -58,15 +51,6 @@ impl<R: PathRole, P: FoldablePath + HasPath<R>> HasPath<R> for PathCursor<P> {
 //        }
 //    }
 //}
-impl<R: PathRole> HasPath<R> for RolePath<R> {
-    fn path(&self) -> &Vec<ChildLocation> {
-        &self.path
-    }
-    fn path_mut(&mut self) -> &mut Vec<ChildLocation> {
-        &mut self.sub_path.path
-    }
-}
-
 /// access to a rooted path pointing to a descendant
 pub trait IntoRootedRolePath<R: PathRole>: HasRolePath<R> + RootedPath {
     fn into_rooted_role_path(&self) -> RootedRolePath<R, Self::Root>;
@@ -78,24 +62,6 @@ pub trait HasRolePath<R: PathRole> {
     fn role_path_mut(&mut self) -> &mut RolePath<R>;
     fn num_path_segments(&self) -> usize {
         self.role_path().num_path_segments()
-    }
-}
-
-impl<R: PathRole> HasRolePath<R> for RolePath<R> {
-    fn role_path(&self) -> &RolePath<R> {
-        self
-    }
-    fn role_path_mut(&mut self) -> &mut RolePath<R> {
-        self
-    }
-}
-
-impl<R: PathRole, Root: PathRoot> HasRolePath<R> for RootedRolePath<R, Root> {
-    fn role_path(&self) -> &RolePath<R> {
-        &self.role_path
-    }
-    fn role_path_mut(&mut self) -> &mut RolePath<R> {
-        &mut self.role_path
     }
 }
 
@@ -114,16 +80,4 @@ pub trait HasMatchPaths: HasRolePath<Start> + HasRolePath<End> {
 
 pub trait HasSinglePath {
     fn single_path(&self) -> &[ChildLocation];
-}
-
-impl<R: PathRole> HasSinglePath for RolePath<R> {
-    fn single_path(&self) -> &[ChildLocation] {
-        self.path().borrow()
-    }
-}
-
-impl<R: PathRole, Root: PathRoot> HasSinglePath for RootedRolePath<R, Root> {
-    fn single_path(&self) -> &[ChildLocation] {
-        self.role_path.sub_path.path.borrow()
-    }
 }

@@ -10,7 +10,10 @@ use tracing::{
 
 use crate::{
     insert::{
-        context::InsertContext,
+        context::{
+            InsertContext,
+            InsertTraversal,
+        },
         HasInsertContext,
     },
     read::{
@@ -43,17 +46,60 @@ use hypercontext_api::{
     },
     path::structs::{
         query_range_path::FoldablePath,
-        rooted::pattern_prefix::PatternPrefixPath,
+        rooted::{
+            pattern_prefix::PatternPrefixPath,
+            pattern_range::PatternRangePath,
+        },
     },
-    traversal::traversable::{
-        impl_traversable,
-        impl_traversable_mut,
-        Traversable,
-        TraversableMut,
+    traversal::{
+        fold::{
+            ErrorState,
+            Foldable,
+        },
+        result::FoundRange,
+        traversable::{
+            impl_traversable,
+            impl_traversable_mut,
+            Traversable,
+            TraversableMut,
+        },
     },
 };
+pub trait HasReadContext: HasInsertContext {
+    fn read_context<'g>(&'g mut self) -> ReadContext;
+    fn read_sequence(
+        &mut self,
+        //sequence: impl IntoIterator<Item = DefaultToken> + std::fmt::Debug + Send + Sync,
+        sequence: impl ToNewTokenIndices,
+    ) -> Option<Child> {
+        self.read_context().read_sequence(sequence)
+    }
+    fn read_pattern(
+        &mut self,
+        pattern: impl IntoPattern,
+    ) -> Option<Child> {
+        self.read_context().read_pattern(pattern)
+    }
+}
 
-#[derive(Debug)]
+impl HasReadContext for ReadContext {
+    fn read_context(&mut self) -> ReadContext {
+        self.clone()
+    }
+}
+impl<T: HasReadContext> HasReadContext for &'_ mut T {
+    fn read_context(&mut self) -> ReadContext {
+        (**self).read_context()
+    }
+}
+impl HasReadContext for HypergraphRef {
+    fn read_context(&mut self) -> ReadContext {
+        //ReadContext::new(self.graph_mut())
+        ReadContext::new(self.clone())
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct ReadContext {
     //pub graph: RwLockWriteGuard<'g, Hypergraph>,
     pub graph: HypergraphRef,
@@ -77,6 +123,23 @@ impl HasInsertContext for ReadContext {
     }
 }
 impl<'g> ReadContext {
+    pub fn read_one(
+        &mut self,
+        query: impl Foldable,
+    ) -> Result<(Child, PatternRangePath), ErrorReason> {
+        let mut ctx = self.insert_context();
+        match query.fold::<InsertTraversal>(&ctx) {
+            Ok(result) => match result.result {
+                FoundRange::Complete(c, p) => Ok((c, p)),
+                FoundRange::Incomplete(fold_state) => Ok(ctx.insert(fold_state)),
+            },
+            Err(ErrorState {
+                reason: ErrorReason::SingleIndex(c),
+                found: Some(FoundRange::Complete(_, p)),
+            }) => Ok((c, p)),
+            Err(err) => Err(err.reason),
+        }
+    }
     #[instrument(skip(self, first, cursor))]
     pub fn read_overlaps(
         &mut self,

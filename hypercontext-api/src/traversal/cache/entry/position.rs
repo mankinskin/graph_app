@@ -1,26 +1,22 @@
 use crate::{
-    HashMap,
-    HashSet,
+    graph::vertex::{
+        child::Child,
+        location::SubLocation,
+    },
     traversal::{
         cache::{
             entry::{
                 NewEntry,
                 Offset,
-                StateDepth,
             },
             key::DirectedKey,
             TraversalCache,
         },
-        state::{
-            StateDirection,
-            WaitingState,
-        },
+        state::StateDirection,
         traversable::Traversable,
     },
-};
-use crate::graph::vertex::{
-    child::Child,
-    location::SubLocation,
+    HashMap,
+    HashSet,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -58,7 +54,7 @@ pub struct Edges {
 pub struct PositionCache {
     pub edges: Edges,
     pub index: Child,
-    pub waiting: Vec<(StateDepth, WaitingState)>,
+    //pub waiting: Vec<(StateDepth, WaitingState)>,
 }
 
 impl PositionCache {
@@ -66,7 +62,7 @@ impl PositionCache {
         Self {
             index,
             edges: Default::default(),
-            waiting: Default::default(),
+            //waiting: Default::default(),
         }
     }
     pub fn new<Trav: Traversable>(
@@ -92,16 +88,16 @@ impl PositionCache {
         Self {
             index: key.index,
             edges,
-            waiting: Default::default(),
+            //waiting: Default::default(),
         }
     }
-    pub fn add_waiting(
-        &mut self,
-        depth: StateDepth,
-        state: WaitingState,
-    ) {
-        self.waiting.push((depth, state));
-    }
+    //pub fn add_waiting(
+    //    &mut self,
+    //    depth: StateDepth,
+    //    state: WaitingState,
+    //) {
+    //    self.waiting.push((depth, state));
+    //}
     pub fn num_parents(&self) -> usize {
         self.edges.top.len()
     }

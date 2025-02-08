@@ -4,8 +4,8 @@ use crate::{
     path::{
         accessors::{
             child::{
-                pos::RootChildPos,
                 root::GraphRootChild,
+                RootChildPos,
             },
             role::PathRole,
             root::GraphRootPattern,

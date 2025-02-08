@@ -1,10 +1,15 @@
 use crate::{
     graph::vertex::location::child::ChildLocation,
-    path::mutators::append::PathAppend,
-    traversal::state::cursor::RangeCursor,
+    impl_cursor_pos,
+    path::{
+        mutators::append::PathAppend,
+        structs::rooted::index_range::IndexRangePath,
+    },
+    traversal::{
+        cache::key::props::LeafKey,
+        state::cursor::RangeCursor,
+    },
 };
-
-use super::rooted::index_range::IndexRangePath;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PathPair {
@@ -19,6 +24,9 @@ pub enum PathPairMode {
     QueryMajor,
 }
 
+impl_cursor_pos! {
+    CursorPosition for PathPair, self => self.cursor.relative_pos
+}
 impl PathPair {
     pub fn new(
         path: IndexRangePath,
@@ -35,5 +43,10 @@ impl PathPair {
             PathPairMode::GraphMajor => self.path.path_append(location),
             PathPairMode::QueryMajor => self.cursor.path_append(location),
         }
+    }
+}
+impl LeafKey for PathPair {
+    fn leaf_location(&self) -> ChildLocation {
+        self.path.leaf_location()
     }
 }

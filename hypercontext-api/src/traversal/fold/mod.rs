@@ -1,14 +1,17 @@
 use super::{
+    cache::key::props::RootKey,
     result::FoundRange,
     state::{
         cursor::{
             RangeCursor,
             ToCursor,
         },
-        traversal::TraversalState,
-        ApplyStatesCtx,
+        next_states::NextStates,
+        top_down::end::{
+            EndKind,
+            EndState,
+        },
     },
-    states::StatesContext,
     TraversalContext,
     TraversalKind,
 };
@@ -33,21 +36,17 @@ use crate::{
     },
     traversal::{
         cache::{
-            key::{
-                root::RootKey,
-                DirectedKey,
-            },
+            key::DirectedKey,
             TraversalCache,
         },
-        fold::state::{
-            FinalState,
-            FoldState,
+        fold::{
+            apply::ApplyStatesCtx,
+            state::{
+                FinalState,
+                FoldState,
+            },
         },
         result::FinishedState,
-        state::end::{
-            EndKind,
-            EndState,
-        },
     },
 };
 use init::{
@@ -59,6 +58,7 @@ use std::{
     fmt::Debug,
 };
 
+pub(crate) mod apply;
 pub(crate) mod init;
 pub mod state;
 
@@ -74,7 +74,7 @@ pub type FoldResult = Result<FinishedState, ErrorState>;
 pub trait Foldable {
     fn fold<K: TraversalKind>(
         self,
-        trav: &K::Trav,
+        trav: K::Trav,
     ) -> FoldResult;
 }
 
@@ -82,11 +82,11 @@ pub trait Foldable {
 macro_rules! impl_foldable {
     ($t:ty, $f:ident) => {
         impl Foldable for $t {
-            fn fold<'a, K: TraversalKind>(
+            fn fold<K: TraversalKind>(
                 self,
-                trav: &'a K::Trav,
+                trav: K::Trav,
             ) -> FoldResult {
-                FoldContext::<'a, K>::$f(trav, self)
+                FoldContext::<K>::$f(trav, self)
             }
         }
     };
@@ -98,24 +98,28 @@ impl_foldable!(Pattern, fold_pattern);
 
 /// context for running fold traversal
 #[derive(Debug)]
-pub struct FoldContext<'a, K: TraversalKind> {
-    pub trav: &'a K::Trav,
+pub struct FoldContext<K: TraversalKind> {
+    pub tctx: TraversalContext<K>,
     pub start_index: Child,
 
     pub max_width: usize,
     pub end_state: Option<EndState>,
-    pub states: StatesContext<K>,
 }
-impl<K: TraversalKind> Iterator for FoldContext<'_, K> {
-    type Item = (usize, TraversalState);
+impl<K: TraversalKind> Iterator for TraversalContext<K> {
+    type Item = (usize, NextStates);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.states.next()
+        if let Some((depth, tstate)) = self.states.next() {
+            self.traversal_next_states(tstate)
+                .map(|states| (depth, states))
+        } else {
+            None
+        }
     }
 }
-impl<'a, K: TraversalKind> FoldContext<'a, K> {
+impl<'a, K: TraversalKind> FoldContext<K> {
     pub fn fold_pattern<P: IntoPattern>(
-        trav: &'a K::Trav,
+        trav: K::Trav,
         pattern: P,
     ) -> FoldResult {
         let pattern = pattern.into_pattern();
@@ -126,52 +130,35 @@ impl<'a, K: TraversalKind> FoldContext<'a, K> {
         Self::fold_path(trav, path)
     }
     pub fn fold_path(
-        trav: &'a K::Trav,
+        trav: K::Trav,
         query: impl FoldablePath,
     ) -> Result<FinishedState, ErrorState> {
         Self::fold_cursor(trav, query.to_range_path().to_cursor())
     }
     pub fn fold_cursor(
-        trav: &'a K::Trav,
+        trav: K::Trav,
         cursor: RangeCursor,
     ) -> Result<FinishedState, ErrorState> {
         let init = CursorInit::<K> {
-            trav,
+            trav: &trav,
             cursor: &cursor,
         };
-        let start_index = init.cursor.path.start_index(trav);
+        let start_index = init.cursor.path.start_index(&trav);
 
         let mut ctx = Self {
-            states: init.init_context(),
-            trav,
+            tctx: TraversalContext {
+                states: init.init_context(),
+                trav,
+            },
             end_state: None,
             max_width: start_index.width(),
             start_index,
         };
-        ctx.fold_states()?;
+        ctx.fold_states();
         ctx.finish_fold(cursor.path)
     }
-    fn fold_states(&mut self) -> Result<(), ErrorState> {
-        while let Some((depth, tstate)) = self.next() {
-            let mut ctx = TraversalContext::<K> {
-                trav: self.trav,
-                states: &mut self.states,
-            };
-            if let Some(next_states) = tstate.next_states(&mut ctx) {
-                if (ApplyStatesCtx {
-                    tctx: &mut ctx,
-                    max_width: &mut self.max_width,
-                    end_state: &mut self.end_state,
-                    depth,
-                })
-                .apply_transition(next_states)
-                .is_break()
-                {
-                    break;
-                }
-            }
-        }
-        Ok(())
+    fn fold_states(&mut self) {
+        ApplyStatesCtx { fctx: self }.for_each(|_| {})
     }
     fn finish_fold(
         self,
@@ -180,7 +167,7 @@ impl<'a, K: TraversalKind> FoldContext<'a, K> {
         if let Some(state) = self.end_state {
             Ok(FoldFinished {
                 end_state: state,
-                cache: self.states.cache,
+                cache: self.tctx.states.cache,
                 start_index: self.start_index,
                 query_root: path.root,
             }

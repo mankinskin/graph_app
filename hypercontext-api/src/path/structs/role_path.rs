@@ -1,14 +1,34 @@
-use std::ops::Deref;
+use std::{
+    borrow::Borrow,
+    ops::Deref,
+};
 
 use crate::{
     graph::vertex::location::child::ChildLocation,
     path::{
-        accessors::role::{
-            End,
-            PathRole,
-            Start,
+        accessors::{
+            border::PathBorder,
+            child::{
+                LeafChildPosMut,
+                PathChild,
+                RootChildPos,
+                RootChildPosMut,
+            },
+            has_path::{
+                HasPath,
+                HasRolePath,
+                HasSinglePath,
+            },
+            role::{
+                End,
+                PathRole,
+                Start,
+            },
         },
-        mutators::adapters::from_advanced::FromAdvanced,
+        mutators::{
+            adapters::FromAdvanced,
+            simplify::PathSimplify,
+        },
         structs::{
             rooted::root::PathRoot,
             sub_path::SubPath,
@@ -46,6 +66,65 @@ impl<R: PathRole> RolePath<R> {
             root,
             role_path: self,
         }
+    }
+}
+impl<R: PathRole> RootChildPos<R> for RolePath<R> {
+    fn root_child_pos(&self) -> usize {
+        self.sub_path.root_entry
+    }
+}
+impl LeafChildPosMut<End> for RolePath<End> {
+    fn leaf_child_pos_mut(&mut self) -> &mut usize {
+        if !self.path().is_empty() {
+            &mut self.path_child_location_mut().unwrap().sub_index
+        } else {
+            self.root_child_pos_mut()
+        }
+    }
+}
+impl<R: PathRole> RootChildPosMut<R> for RolePath<R> {
+    fn root_child_pos_mut(&mut self) -> &mut usize {
+        &mut self.sub_path.root_entry
+    }
+}
+
+impl<R: PathRole> HasSinglePath for RolePath<R> {
+    fn single_path(&self) -> &[ChildLocation] {
+        self.path().borrow()
+    }
+}
+
+impl<R: PathRole> HasPath<R> for RolePath<R> {
+    fn path(&self) -> &Vec<ChildLocation> {
+        &self.path
+    }
+    fn path_mut(&mut self) -> &mut Vec<ChildLocation> {
+        &mut self.sub_path.path
+    }
+}
+
+impl<R: PathRole> HasRolePath<R> for RolePath<R> {
+    fn role_path(&self) -> &RolePath<R> {
+        self
+    }
+    fn role_path_mut(&mut self) -> &mut RolePath<R> {
+        self
+    }
+}
+
+impl<R: PathRole> PathSimplify for RolePath<R> {
+    fn into_simplified<Trav: Traversable>(
+        mut self,
+        trav: &Trav,
+    ) -> Self {
+        let graph = trav.graph();
+        while let Some(loc) = self.path_mut().pop() {
+            if !<R as PathBorder>::is_at_border(graph.graph(), loc) {
+                self.path_mut().push(loc);
+                break;
+            }
+        }
+        self
     }
 }
 

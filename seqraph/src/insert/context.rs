@@ -72,22 +72,12 @@ impl InsertContext {
     }
     pub fn insert(
         &mut self,
-        query: impl Foldable,
-    ) -> Result<(Child, PatternRangePath), ErrorReason> {
-        match query.fold::<InsertTraversal>(self) {
-            Ok(result) => match result.result {
-                FoundRange::Complete(c, p) => Ok((c, p)),
-                FoundRange::Incomplete(mut fold_state) => Ok((
-                    self.join(&mut fold_state).join_subgraph(),
-                    fold_state.end_state.cursor.path,
-                )),
-            },
-            Err(ErrorState {
-                reason: ErrorReason::SingleIndex(c),
-                found: Some(FoundRange::Complete(_, p)),
-            }) => Ok((c, p)),
-            Err(err) => Err(err.reason),
-        }
+        mut fold_state: FoldState,
+    ) -> (Child, PatternRangePath) {
+        (
+            self.join(&mut fold_state).join_subgraph(),
+            fold_state.end_state.cursor.path,
+        )
     }
     //pub fn index_query<Q: QueryPath>(
     //    &mut self,

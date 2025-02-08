@@ -5,7 +5,10 @@ pub mod role_path;
 pub mod root;
 pub mod split_path;
 
-use root::PathRoot;
+use root::{
+    PathRoot,
+    RootedPath,
+};
 use split_path::RootedSplitPathRef;
 
 use crate::path::{
@@ -21,6 +24,12 @@ pub struct RootedRangePath<Root: PathRoot> {
     pub root: Root,
     pub start: RolePath<Start>,
     pub end: RolePath<End>,
+}
+impl<R: PathRoot> RootedPath for RootedRangePath<R> {
+    type Root = R;
+    fn path_root(&self) -> &Self::Root {
+        &self.root
+    }
 }
 
 impl<R: PathRoot> RootedRangePath<R> {

@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use crate::{
     graph::vertex::{
         child::Child,
@@ -8,15 +10,24 @@ use crate::{
                 PatternLocation,
             },
         },
-        pattern::Pattern,
+        pattern::{
+            pattern_width,
+            Pattern,
+        },
     },
     impl_child,
     path::{
         accessors::{
+            border::PathBorder,
             child::{
-                pos::RootChildPos,
                 root::GraphRootChild,
                 PathChild,
+                RootChildPos,
+                RootChildPosMut,
+            },
+            has_path::{
+                HasRolePath,
+                HasSinglePath,
             },
             role::{
                 End,
@@ -29,12 +40,20 @@ use crate::{
                 RootPattern,
             },
         },
+        mutators::simplify::PathSimplify,
         structs::{
             role_path::RolePath,
             sub_path::SubPath,
         },
+        RoleChildPath,
     },
-    traversal::traversable::Traversable,
+    traversal::{
+        state::top_down::end::{
+            EndKind,
+            PostfixEnd,
+        },
+        traversable::Traversable,
+    },
 };
 
 use super::{
@@ -46,12 +65,37 @@ use super::{
     RootedRangePath,
 };
 
+pub type Primer = RootedRolePath<Start, IndexRoot>;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RootedRolePath<R: PathRole, Root: PathRoot> {
     pub root: Root,
     pub role_path: RolePath<R>,
 }
 
+impl RootedRolePath<Start, IndexRoot> {
+    pub fn simplify_to_end<Trav: Traversable>(
+        mut self,
+        trav: &Trav,
+    ) -> EndKind {
+        self.role_path.simplify(trav);
+        match (
+            Start::is_at_border(trav.graph(), self.role_root_child_location::<Start>()),
+            self.role_path.raw_child_path::<Start>().is_empty(),
+        ) {
+            (true, true) => EndKind::Complete(self.root_parent()),
+            _ => {
+                let graph = trav.graph();
+                let root = self.role_root_child_location();
+                let pattern = graph.expect_pattern_at(root);
+                EndKind::Postfix(PostfixEnd {
+                    path: self,
+                    inner_width: pattern_width(&pattern[root.sub_index + 1..]),
+                })
+            }
+        }
+    }
+}
 impl<R: PathRole> RootedRolePath<R, IndexRoot> {
     pub fn new(first: ChildLocation) -> Self {
         Self {
@@ -97,6 +141,12 @@ impl<R: PathRoot> RootedRolePath<End, R> {
     }
 }
 
+impl<R: PathRole, Root: PathRoot> RootChildPosMut<R> for RootedRolePath<R, Root> {
+    fn root_child_pos_mut(&mut self) -> &mut usize {
+        self.role_path.root_child_pos_mut()
+    }
+}
+
 impl<R: PathRoot> From<RootedRangePath<R>> for RootedRolePath<Start, R> {
     fn from(path: RootedRangePath<R>) -> Self {
         Self {
@@ -134,6 +184,11 @@ impl<R: PathRole> GraphRootChild<R> for RootedRolePath<R, IndexRoot> {
             .to_child_location(self.role_path.sub_path.root_entry)
     }
 }
+impl<R: PathRole, Root: PathRoot> RootChildPos<R> for RootedRolePath<R, Root> {
+    fn root_child_pos(&self) -> usize {
+        RootChildPos::<R>::root_child_pos(&self.role_path)
+    }
+}
 
 impl<R: PathRole> GraphRoot for RootedRolePath<R, IndexRoot> {
     fn root_parent(&self) -> Child {
@@ -146,6 +201,21 @@ impl<R: PathRole> GraphRootPattern for RootedRolePath<R, IndexRoot> {
         self.root.location
     }
 }
+
+impl<R: PathRole, Root: PathRoot> HasSinglePath for RootedRolePath<R, Root> {
+    fn single_path(&self) -> &[ChildLocation] {
+        self.role_path.sub_path.path.borrow()
+    }
+}
+impl<R: PathRole, Root: PathRoot> HasRolePath<R> for RootedRolePath<R, Root> {
+    fn role_path(&self) -> &RolePath<R> {
+        &self.role_path
+    }
+    fn role_path_mut(&mut self) -> &mut RolePath<R> {
+        &mut self.role_path
+    }
+}
+
 impl<R: PathRole> RootPattern for RootedRolePath<R, IndexRoot> {
     fn root_pattern<'a: 'g, 'b: 'g, 'g, Trav: Traversable + 'a>(
         &'b self,

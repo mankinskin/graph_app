@@ -1,11 +1,12 @@
 use crate::{
     direction::Right,
+    graph::vertex::location::child::ChildLocation,
     path::{
         accessors::{
             child::{
-                pos::RootChildPosMut,
                 root::GraphRootChild,
                 LeafChild,
+                RootChildPosMut,
             },
             has_path::HasRolePath,
             role::{
@@ -15,10 +16,15 @@ use crate::{
             root::GraphRoot,
         },
         BasePath,
+        RoleChildPath,
     },
     traversal::{
         iterator::policy::NodePath,
-        result::kind::RoleChildPath,
+        state::{
+            bottom_up::parent::ParentState,
+            top_down::child::ChildState,
+        },
+        traversable::Traversable,
     },
 };
 
@@ -26,10 +32,6 @@ use super::{
     append::PathAppend,
     move_path::root::MoveRootPos,
 };
-
-pub mod from_advanced;
-pub mod into_advanced;
-pub mod into_primer;
 
 pub trait Advanced:
     RoleChildPath
@@ -63,4 +65,24 @@ impl<
             + PathAppend,
     > Advanced for T
 {
+}
+pub trait FromAdvanced<A: Advanced> {
+    fn from_advanced<Trav: Traversable>(
+        path: A,
+        trav: &Trav,
+    ) -> Self;
+}
+pub trait IntoAdvanced: Sized + Clone {
+    fn into_advanced<Trav: Traversable>(
+        self,
+        trav: &Trav,
+    ) -> Result<ChildState, Self>;
+}
+
+pub trait IntoPrimer: Sized {
+    fn into_primer<Trav: Traversable>(
+        self,
+        trav: &Trav,
+        parent_entry: ChildLocation,
+    ) -> ParentState;
 }

@@ -1,9 +1,6 @@
 use std::fmt::Display;
 
-use key::{
-    DirectedKey,
-    UpKey,
-};
+use key::DirectedKey;
 use label_key::vkey::{
     labelled_key,
     VertexCacheKey,
@@ -21,9 +18,8 @@ use crate::{
                 position::PositionCache,
                 vertex::VertexCache,
             },
-            key::target::TargetKey,
+            key::props::TargetKey,
         },
-        state::traversal::TraversalState,
         traversable::{
             TravToken,
             Traversable,
@@ -97,17 +93,17 @@ impl TraversalCache {
         ve.insert(&key.pos, pe);
         self.entries.insert(labelled_key(trav, key.index), ve);
     }
-    pub fn continue_waiting(
-        &mut self,
-        key: &UpKey,
-    ) -> Vec<(usize, TraversalState)> {
-        self.get_mut(&(DirectedKey::from(*key)))
-            .unwrap()
-            .waiting
-            .drain(..)
-            .map(|(d, s)| (d, s.into()))
-            .collect()
-    }
+    //pub fn continue_waiting(
+    //    &mut self,
+    //    key: &UpKey,
+    //) -> Vec<(usize, TraversalState)> {
+    //    self.get_mut(&(DirectedKey::from(*key)))
+    //        .unwrap()
+    //        .waiting
+    //        .drain(..)
+    //        .map(|(d, s)| (d, s.into()))
+    //        .collect()
+    //}
     pub fn force_mut<Trav: Traversable>(
         &mut self,
         trav: &Trav,

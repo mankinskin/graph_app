@@ -21,15 +21,13 @@ use crate::{
     path::{
         accessors::{
             child::{
-                pos::{
-                    RootChildPos,
-                    RootChildPosMut,
-                },
                 root::{
                     GraphRootChild,
                     RootChild,
                 },
                 PathChild,
+                RootChildPos,
+                RootChildPosMut,
             },
             has_path::{
                 HasMatchPaths,
@@ -68,7 +66,7 @@ use crate::{
         },
     },
     traversal::{
-        cache::key::leaf::LeafKey,
+        cache::key::props::LeafKey,
         traversable::{
             TravDir,
             Traversable,

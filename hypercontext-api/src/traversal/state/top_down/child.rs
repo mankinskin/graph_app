@@ -9,6 +9,7 @@ use crate::{
             wide::Wide,
         },
     },
+    impl_cursor_pos,
     path::{
         accessors::{
             role::{
@@ -28,36 +29,33 @@ use crate::{
                 Retract,
             },
         },
-        structs::pair::{
-            PathPair,
-            PathPairMode,
-        },
+        structs::rooted::role_path::Primer,
+        RoleChildPath,
     },
     traversal::{
         cache::{
             entry::new::NewEntry,
             key::{
-                pos::CursorPosition,
                 prev::ToPrev,
-                target::TargetKey,
+                props::{
+                    CursorPosition,
+                    LeafKey,
+                    RootKey,
+                    TargetKey,
+                },
                 DirectedKey,
+                UpKey,
             },
         },
         container::pruning::PruneStates,
-        result::kind::{
-            Primer,
-            RoleChildPath,
-        },
         state::{
-            end::{
+            bottom_up::parent::ParentState,
+            top_down::end::{
                 EndKind,
                 EndReason,
                 EndState,
                 RangeEnd,
             },
-            parent::ParentState,
-            NextStates,
-            StateNext,
         },
         traversable::{
             TravDir,
@@ -70,6 +68,17 @@ use crate::{
 use itertools::Itertools;
 use std::cmp::Ordering;
 use tap::Tap;
+
+use super::{
+    super::next_states::{
+        NextStates,
+        StateNext,
+    },
+    pair::{
+        PathPair,
+        PathPairMode,
+    },
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChildState {
@@ -108,16 +117,44 @@ impl PartialOrd for ChildState {
         Some(self.cmp(other))
     }
 }
+impl RootKey for ChildState {
+    fn root_key(&self) -> UpKey {
+        UpKey::new(self.paths.path.root_parent(), self.root_pos.into())
+    }
+}
 
+impl_cursor_pos! {
+    CursorPosition for ChildState, self => self.paths.cursor.relative_pos
+}
+impl LeafKey for ChildState {
+    fn leaf_location(&self) -> ChildLocation {
+        self.paths.leaf_location()
+    }
+}
+impl TargetKey for ChildState {
+    fn target_key(&self) -> DirectedKey {
+        self.target
+    }
+}
+
+//pub trait GetCacheKey: RootKey + LeafKey {
+//    fn leaf_key(&self) -> DirectedKey;
+//}
+//
+//impl GetCacheKey for ChildState {
+//    fn leaf_key(&self) -> DirectedKey {
+//        self.target
+//    }
+//}
 impl ChildState {
-    pub fn next_states<K: TraversalKind>(
+    pub fn child_next_states<K: TraversalKind>(
         self,
-        ctx: &mut TraversalContext<'_, K>,
+        ctx: &mut TraversalContext<K>,
         new: Vec<NewEntry>,
     ) -> NextStates {
         let key = self.target_key();
-        let path_leaf = self.paths.path.role_leaf_child::<End, _>(ctx.trav);
-        let query_leaf = self.paths.cursor.role_leaf_child::<End, _>(ctx.trav);
+        let path_leaf = self.paths.path.role_leaf_child::<End, _>(&ctx.trav);
+        let query_leaf = self.paths.cursor.role_leaf_child::<End, _>(&ctx.trav);
 
         // compare next child
         match path_leaf.width.cmp(&query_leaf.width) {
@@ -125,7 +162,7 @@ impl ChildState {
                 if path_leaf == query_leaf {
                     self.on_match(ctx, new)
                 } else if path_leaf.width() == 1 {
-                    self.on_mismatch(ctx.trav, new)
+                    self.on_mismatch(&ctx.trav, new)
                 } else {
                     // expand states to find matching prefix
                     NextStates::Prefixes(StateNext {
@@ -134,11 +171,11 @@ impl ChildState {
                         inner: self
                             .clone()
                             .tap_mut(|s| s.paths.mode = PathPairMode::GraphMajor)
-                            .prefix_states(ctx.trav, path_leaf)
+                            .prefix_states(&ctx.trav, path_leaf)
                             .into_iter()
                             .chain(
                                 self.tap_mut(|s| s.paths.mode = PathPairMode::QueryMajor)
-                                    .prefix_states(ctx.trav, query_leaf),
+                                    .prefix_states(&ctx.trav, query_leaf),
                             )
                             .collect_vec(),
                     })
@@ -152,7 +189,7 @@ impl ChildState {
                     new,
                     inner: self
                         .tap_mut(|s| s.paths.mode = PathPairMode::GraphMajor)
-                        .prefix_states(ctx.trav, path_leaf),
+                        .prefix_states(&ctx.trav, path_leaf),
                 })
             }
             Ordering::Less => NextStates::Prefixes(StateNext {
@@ -160,19 +197,19 @@ impl ChildState {
                 new,
                 inner: self
                     .tap_mut(|s| s.paths.mode = PathPairMode::QueryMajor)
-                    .prefix_states(ctx.trav, query_leaf),
+                    .prefix_states(&ctx.trav, query_leaf),
             }),
         }
     }
     fn on_match<K: TraversalKind>(
         mut self,
-        ctx: &mut TraversalContext<'_, K>,
+        ctx: &mut TraversalContext<K>,
         new: Vec<NewEntry>,
     ) -> NextStates {
         let key = self.target_key();
         ctx.states.clear();
         for entry in new {
-            ctx.states.cache.add_state(ctx.trav, entry, true);
+            ctx.states.cache.add_state(&ctx.trav, entry, true);
         }
         //query.cache.add_path(
         //    self.trav(),
@@ -181,9 +218,9 @@ impl ChildState {
         //    false,
         //);
         let path = &mut self.paths.path;
-        let qres = self.paths.cursor.advance(ctx.trav);
+        let qres = self.paths.cursor.advance(&ctx.trav);
         if qres.is_continue() {
-            if path.advance(ctx.trav).is_continue() {
+            if path.advance(&ctx.trav).is_continue() {
                 // gen next child
                 NextStates::Child(StateNext {
                     prev: key.to_prev(0),
@@ -192,7 +229,7 @@ impl ChildState {
                         prev_pos: self.prev_pos,
                         root_pos: self.root_pos,
                         target: DirectedKey::down(
-                            path.role_leaf_child::<End, _>(ctx.trav),
+                            path.role_leaf_child::<End, _>(&ctx.trav),
                             *self.cursor_pos(),
                         ),
                         paths: self.paths,
@@ -205,10 +242,10 @@ impl ChildState {
                     path: Primer::from(self.paths.path),
                     cursor: self.paths.cursor,
                 }
-                .next_parents::<K>(ctx.trav, vec![])
+                .next_parents::<K>(&ctx.trav, vec![])
             }
         } else {
-            self.on_query_end(ctx.trav, vec![])
+            self.on_query_end(&ctx.trav, vec![])
         }
     }
     fn on_mismatch<'a, Trav: Traversable>(
@@ -261,7 +298,7 @@ impl ChildState {
                         ),
                         path,
                     }
-                    .simplify(trav),
+                    .simplify_to_end(trav),
                     cursor: cursor.clone(),
                 },
             })
@@ -290,7 +327,7 @@ impl ChildState {
                     path,
                     target: DirectedKey::down(target_index, pos),
                 }
-                .simplify(trav),
+                .simplify_to_end(trav),
             },
         })
     }

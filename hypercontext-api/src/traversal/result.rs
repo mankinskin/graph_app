@@ -3,9 +3,12 @@ use crate::{
         child::Child,
         pattern::IntoPattern,
     },
-    path::structs::{
-        query_range_path::FoldablePath,
-        rooted::pattern_range::PatternRangePath,
+    path::{
+        accessors::complete::PathComplete,
+        structs::{
+            query_range_path::FoldablePath,
+            rooted::pattern_range::PatternRangePath,
+        },
     },
 };
 
@@ -13,7 +16,6 @@ use super::{
     fold::state::FoldState,
     //state::query::QueryState,
 };
-pub(crate) mod kind;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FoundRange {
@@ -44,6 +46,15 @@ impl FoundRange {
         match self {
             Self::Incomplete(s) => s,
             _ => panic!("{}", msg),
+        }
+    }
+}
+impl PathComplete for FoundRange {
+    /// returns child if reduced to single child
+    fn as_complete(&self) -> Option<Child> {
+        match self {
+            Self::Complete(c, _) => Some(*c),
+            _ => None,
         }
     }
 }

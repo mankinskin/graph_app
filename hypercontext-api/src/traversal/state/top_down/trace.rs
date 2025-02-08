@@ -2,35 +2,31 @@ use std::fmt::Display;
 
 use crate::{
     graph::vertex::pattern::pattern_width,
-    traversal::{
-        cache::{
-            key::{
-                prev::ToPrev, DirectedKey, DownKey, UpKey
-            },
-            TraversalCache,
-        },
-        result::kind::RoleChildPath,
-        traversable::{
-            TravToken,
-            Traversable,
-        },
-        state::end::{
-            EndKind,
-            EndState,
-        },
-    },
     path::{
         accessors::{
             child::root::GraphRootChild,
             has_path::HasRolePath,
-            role::{
-                End,
-                Start,
-            },
+            role::End,
         },
         mutators::move_path::key::{
             AdvanceKey,
             TokenPosition,
+        },
+        RoleChildPath,
+    },
+    traversal::{
+        cache::{
+            key::{
+                prev::ToPrev,
+                DirectedKey,
+                DownKey,
+                UpKey,
+            },
+            TraversalCache,
+        },
+        traversable::{
+            TravToken,
+            Traversable,
         },
     },
 };
@@ -44,12 +40,10 @@ use crate::traversal::cache::entry::new::{
 #[derive(Debug)]
 pub struct TraceContext<'a, Trav: Traversable> {
     pub trav: &'a Trav,
-    pub cache: &'a mut TraversalCache
+    pub cache: &'a mut TraversalCache,
 }
 impl<Trav: Traversable> TraceContext<'_, Trav> {
-    pub fn trace_path<
-        P: RoleChildPath + GraphRootChild<End> + HasRolePath<End>,
-    >(
+    pub fn trace_path<P: RoleChildPath + GraphRootChild<End> + HasRolePath<End>>(
         &mut self,
         root_entry: usize,
         path: &P,
@@ -119,20 +113,4 @@ pub trait TraceInit {
         &self,
         ctx: &mut TraceContext<'_, Trav>,
     );
-}
-
-impl TraceInit for EndState {
-    fn trace<Trav: Traversable>(
-        &self,
-        ctx: &mut TraceContext<'_, Trav>,
-    ) {
-        match &self.kind {
-            EndKind::Range(p) => {
-                let root_entry = p.path.role_root_child_location::<Start>().sub_index;
-                ctx.trace_path(root_entry, &p.path, self.root_pos, true)
-            }
-            EndKind::Prefix(p) => ctx.trace_path(0, &p.path, self.root_pos, true),
-            _ => {}
-        }
-    }
 }

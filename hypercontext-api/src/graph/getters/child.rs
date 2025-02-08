@@ -1,12 +1,20 @@
-use crate::graph::getters::vertex::VertexSet;
-use crate::graph::Hypergraph;
-use crate::graph::kind::GraphKind;
-use crate::graph::vertex::child::Child;
-use crate::graph::vertex::has_vertex_index::HasVertexIndex;
-use crate::graph::vertex::location::child::ChildLocation;
-use crate::graph::vertex::location::IntoChildLocation;
-use crate::graph::vertex::pattern::Pattern;
-use crate::graph::getters::ErrorReason;
+use crate::graph::{
+    getters::{
+        vertex::VertexSet,
+        ErrorReason,
+    },
+    kind::GraphKind,
+    vertex::{
+        child::Child,
+        has_vertex_index::HasVertexIndex,
+        location::child::{
+            ChildLocation,
+            IntoChildLocation,
+        },
+        pattern::Pattern,
+    },
+    Hypergraph,
+};
 
 impl<G: GraphKind> Hypergraph<G> {
     pub fn get_child_at(

@@ -1,10 +1,40 @@
-use crate::path::{
-    mutators::move_path::key::TokenPosition,
-    structs::{
-        query_range_path::FoldablePath,
-        rooted::pattern_range::PatternRangePath,
+use crate::{
+    graph::vertex::{
+        child::Child,
+        location::{
+            child::ChildLocation,
+            pattern::IntoPatternLocation,
+        },
+        wide::Wide,
     },
+    impl_cursor_pos,
+    path::{
+        accessors::{
+            child::{
+                PathChild,
+                RootChildPos,
+            },
+            role::PathRole,
+        },
+        mutators::{
+            adapters::IntoPrimer,
+            move_path::key::TokenPosition,
+        },
+        structs::{
+            query_range_path::FoldablePath,
+            role_path::RolePath,
+            rooted::{
+                pattern_range::PatternRangePath,
+                role_path::RootedRolePath,
+                root::IndexRoot,
+            },
+            sub_path::SubPath,
+        },
+    },
+    traversal::traversable::Traversable,
 };
+
+use super::bottom_up::parent::ParentState;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PathCursor<P: FoldablePath> {
@@ -12,9 +42,55 @@ pub struct PathCursor<P: FoldablePath> {
     /// position relative to start of path
     pub relative_pos: TokenPosition,
 }
+impl<R: PathRole, P: FoldablePath + PathChild<R>> PathChild<R> for PathCursor<P> {
+    fn path_child_location(&self) -> Option<ChildLocation> {
+        self.path.path_child_location()
+    }
+    fn path_child<Trav: Traversable>(
+        &self,
+        trav: &Trav,
+    ) -> Option<Child> {
+        self.path.path_child(trav)
+    }
+}
+impl<R: PathRole, P: RootChildPos<R> + FoldablePath> RootChildPos<R> for PathCursor<P> {
+    fn root_child_pos(&self) -> usize {
+        RootChildPos::<R>::root_child_pos(&self.path)
+    }
+}
 
 pub type RangeCursor = PathCursor<PatternRangePath>;
+impl_cursor_pos! {
+    CursorPosition for RangeCursor, self => self.relative_pos
+}
 
+impl IntoPrimer for (Child, RangeCursor) {
+    fn into_primer<Trav: Traversable>(
+        self,
+        _trav: &Trav,
+        parent_entry: ChildLocation,
+    ) -> ParentState {
+        let (c, cursor) = self;
+        let width = c.width().into();
+        ParentState {
+            prev_pos: width,
+            root_pos: width,
+            path: RootedRolePath {
+                root: IndexRoot {
+                    location: parent_entry.into_pattern_location(),
+                },
+                role_path: RolePath {
+                    sub_path: SubPath {
+                        root_entry: parent_entry.sub_index,
+                        path: vec![],
+                    },
+                    _ty: Default::default(),
+                },
+            },
+            cursor,
+        }
+    }
+}
 pub trait ToCursor: FoldablePath {
     fn to_cursor(self) -> PathCursor<Self>;
 }

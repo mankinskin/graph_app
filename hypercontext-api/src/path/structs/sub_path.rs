@@ -1,6 +1,12 @@
 use std::ops::Deref;
 
-use crate::graph::vertex::location::child::ChildLocation;
+use crate::{
+    graph::vertex::location::child::ChildLocation,
+    path::accessors::{
+        child::RootChildPos,
+        role::PathRole,
+    },
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SubPath {
@@ -21,5 +27,10 @@ impl SubPath {
             root_entry,
             path: vec![],
         }
+    }
+}
+impl<R: PathRole> RootChildPos<R> for SubPath {
+    fn root_child_pos(&self) -> usize {
+        self.root_entry
     }
 }

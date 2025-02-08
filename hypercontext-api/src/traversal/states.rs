@@ -1,4 +1,5 @@
 use super::{
+    cache::key::props::RootKey,
     container::{
         extend::ExtendStates,
         pruning::{
@@ -11,10 +12,7 @@ use super::{
     state::traversal::TraversalState,
     TraversalKind,
 };
-use crate::traversal::cache::{
-    key::root::RootKey,
-    TraversalCache,
-};
+use crate::traversal::cache::TraversalCache;
 use itertools::Itertools;
 use std::fmt::Debug;
 

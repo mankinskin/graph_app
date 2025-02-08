@@ -8,6 +8,7 @@ use crate::{
             OverlapBand,
             OverlapBundle,
         },
+        context::HasReadContext,
         overlap::{
             chain::OverlapChain,
             Overlap,
@@ -93,7 +94,7 @@ impl OverlapCache {
         self.end_bound = start_bound + width;
     }
     #[instrument(skip(self, trav, cursor))]
-    pub fn read_next_overlap<Trav: HasInsertContext>(
+    pub fn read_next_overlap<Trav: HasReadContext>(
         mut self,
         mut trav: Trav,
         cursor: &mut PatternPrefixPath,
@@ -135,7 +136,7 @@ impl OverlapCache {
 
     /// find largest expandable postfix
     #[instrument(skip(self, trav, cursor))]
-    fn find_next_overlap<Trav: HasInsertContext>(
+    fn find_next_overlap<Trav: HasReadContext>(
         &mut self,
         mut trav: Trav,
         cursor: &mut PatternPrefixPath,
@@ -185,7 +186,7 @@ impl OverlapCache {
     }
     fn expand_postfix(
         &mut self,
-        trav: impl HasInsertContext,
+        mut trav: impl HasReadContext,
         postfix: Child,
         start_bound: usize,
         mut bundle: OverlapBundle,
@@ -197,7 +198,7 @@ impl OverlapCache {
     > {
         // try expand
         //let primer = OverlapPrimer::new(postfix, cursor.clone());
-        match trav.insert_context().insert(primer) {
+        match trav.read_context().read_one(primer) {
             Ok((expansion, advanced)) => {
                 let adv_prefix = PatternRootChild::<Start>::pattern_root_child(&advanced);
                 // find prefix from advanced path in expansion index

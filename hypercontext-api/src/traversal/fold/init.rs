@@ -7,8 +7,8 @@ use crate::{
         },
         container::extend::ExtendStates,
         state::{
+            bottom_up::start::StartState,
             cursor::RangeCursor,
-            start::StartState,
         },
         states::StatesContext,
         TraversalKind,

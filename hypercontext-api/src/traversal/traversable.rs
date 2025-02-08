@@ -102,7 +102,7 @@ impl_traversable! {
     <'a> RwLockReadGuard<'a, Hypergraph>
 }
 
-impl<'a, K: TraversalKind> Traversable for &'a TraversalContext<'a, K> {
+impl<'a, K: TraversalKind> Traversable for &'a TraversalContext<K> {
     type Kind = TravKind<K::Trav>;
     type Guard<'g>
         = <K::Trav as Traversable>::Guard<'g>
@@ -113,7 +113,7 @@ impl<'a, K: TraversalKind> Traversable for &'a TraversalContext<'a, K> {
     }
 }
 
-impl<'a, K: TraversalKind> Traversable for &'a mut TraversalContext<'a, K> {
+impl<'a, K: TraversalKind> Traversable for &'a mut TraversalContext<K> {
     type Kind = TravKind<K::Trav>;
     type Guard<'g>
         = <K::Trav as Traversable>::Guard<'g>

@@ -8,7 +8,7 @@ use hypercontext_api::{
     },
 };
 
-use super::reader::context::ReadContext;
+use super::context::ReadContext;
 pub mod band;
 //pub struct BandsContext {
 //    pub graph: HypergraphRef,
@@ -31,7 +31,7 @@ impl ReadContext {
         &mut self,
         context: &mut PatternPrefixPath,
     ) -> Option<Child> {
-        match self.insert_context().insert(context.clone()) {
+        match self.read_one(context.clone()) {
             Ok((index, advanced)) => {
                 *context = PatternPrefixPath::from(advanced);
                 Some(index)

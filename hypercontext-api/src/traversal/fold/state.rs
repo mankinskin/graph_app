@@ -1,21 +1,27 @@
 use std::cmp::Ordering;
 
-use crate::traversal::{
-    cache::{
-        entry::vertex::VertexCache,
-        key::{
-            root::RootKey, target::TargetKey, DirectedKey
+use crate::{
+    graph::vertex::{
+        child::Child,
+        has_vertex_index::HasVertexIndex,
+        wide::Wide,
+    },
+    traversal::{
+        cache::{
+            entry::vertex::VertexCache,
+            key::{
+                props::{
+                    RootKey,
+                    TargetKey,
+                },
+                DirectedKey,
+            },
+            TraversalCache,
         },
-        TraversalCache,
-    }, result::FoundRange, state::end::EndState
+        result::FoundRange,
+        state::top_down::end::EndState,
+    },
 };
-use crate::graph::vertex::{
-    child::Child,
-    has_vertex_index::HasVertexIndex,
-    wide::Wide,
-};
-
-
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct FinalState<'a> {

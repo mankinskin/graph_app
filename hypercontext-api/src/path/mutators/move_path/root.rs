@@ -8,7 +8,7 @@ use crate::{
     graph::vertex::wide::Wide,
     path::{
         accessors::{
-            child::pos::{
+            child::{
                 RootChildPos,
                 RootChildPosMut,
             },

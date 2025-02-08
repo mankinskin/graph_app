@@ -20,9 +20,9 @@ use crate::{
     path::{
         accessors::{
             child::{
-                pos::RootChildPos,
                 root::PatternRootChild,
                 PathChild,
+                RootChildPos,
             },
             has_path::HasPath,
             role::{

@@ -2,20 +2,27 @@ use itertools::Itertools;
 use std::fmt::Debug;
 
 use crate::{
+    graph::{
+        getters::vertex::VertexSet,
+        vertex::{
+            child::Child,
+            location::child::ChildLocation,
+        },
+    },
     path::{
         accessors::{
-            child::root::RootChild, role::PathRole, root::GraphRoot
+            child::root::RootChild,
+            role::PathRole,
+            root::GraphRoot,
         },
         mutators::raise::PathRaise,
-    }, traversal::{
-        container::order::TraversalOrder, state::parent::ParentState, traversable::Traversable
-    }
+    },
+    traversal::{
+        container::order::TraversalOrder,
+        state::bottom_up::parent::ParentState,
+        traversable::Traversable,
+    },
 };
-use crate::graph::vertex::{
-    child::Child,
-    location::child::ChildLocation,
-};
-use crate::graph::getters::vertex::VertexSet;
 
 pub trait NodePath<R: PathRole>: RootChild<R> + Send + Clone + Eq + Debug {}
 

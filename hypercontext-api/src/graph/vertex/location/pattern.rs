@@ -92,14 +92,13 @@ pub trait IntoPatternLocation {
     fn into_pattern_location(self) -> PatternLocation;
 }
 
+impl<P: IntoPatternLocation + Copy> IntoPatternLocation for &'_ P {
+    fn into_pattern_location(self) -> PatternLocation {
+        (*self).into_pattern_location()
+    }
+}
 impl IntoPatternLocation for PatternLocation {
     fn into_pattern_location(self) -> PatternLocation {
         self
-    }
-}
-
-impl IntoPatternLocation for &PatternLocation {
-    fn into_pattern_location(self) -> PatternLocation {
-        *self
     }
 }

@@ -89,22 +89,6 @@ impl<K: MoveKey<Right, Delta = usize>> MoveLeaf<Right> for KeyedLeaf<'_, Right, 
     }
 }
 
-impl MoveLeaf<Right> for ChildLocation {
-    fn move_leaf<Trav: Traversable>(
-        &mut self,
-        trav: &Trav,
-    ) -> ControlFlow<()> {
-        let graph = trav.graph();
-        let pattern = graph.expect_pattern_at(*self);
-        if let Some(next) = TravDir::<Trav>::pattern_index_next(pattern.borrow(), self.sub_index) {
-            self.sub_index = next;
-            ControlFlow::Continue(())
-        } else {
-            ControlFlow::Break(())
-        }
-    }
-}
-
 impl<K: MoveKey<Left, Delta = usize>> MoveLeaf<Left> for KeyedLeaf<'_, Left, K> {
     fn move_leaf<Trav: Traversable>(
         &mut self,
@@ -118,22 +102,6 @@ impl<K: MoveKey<Left, Delta = usize>> MoveLeaf<Left> for KeyedLeaf<'_, Left, K> 
             let c = &pattern[self.location.sub_index];
             self.path.move_key(c.width());
             self.location.sub_index = prev;
-            ControlFlow::Continue(())
-        } else {
-            ControlFlow::Break(())
-        }
-    }
-}
-
-impl MoveLeaf<Left> for ChildLocation {
-    fn move_leaf<Trav: Traversable>(
-        &mut self,
-        trav: &Trav,
-    ) -> ControlFlow<()> {
-        let graph = trav.graph();
-        let pattern = graph.expect_pattern_at(*self);
-        if let Some(prev) = TravDir::<Trav>::pattern_index_prev(pattern.borrow(), self.sub_index) {
-            self.sub_index = prev;
             ControlFlow::Continue(())
         } else {
             ControlFlow::Break(())

@@ -1,37 +1,41 @@
 use crate::{
-    traversal::{
-        cache::{
-            key::{
-                DirectedKey,
-                prev::PrevKey,
-                root::RootKey,
-                target::TargetKey,
-                UpKey,
+    graph::vertex::location::child::ChildLocation,
+    path::{
+        accessors::{
+            child::root::GraphRootChild,
+            role::{
+                End,
+                Start,
             },
         },
-        result::kind::RoleChildPath,
-        state::{
-            child::ChildState,
-            end::{
-                EndKind,
-                EndState,
-                RangeEnd,
-            },
-            InnerKind,
-            parent::ParentState,
-            StateDirection,
-            traversal::TraversalState,
-        },
+        RoleChildPath,
     },
-    path::accessors::{
-        child::root::GraphRootChild,
-        role::{
-            End,
-            Start,
+    traversal::{
+        cache::key::{
+            prev::PrevKey,
+            props::{
+                RootKey,
+                TargetKey,
+            },
+            DirectedKey,
+            UpKey,
+        },
+        state::{
+            bottom_up::parent::ParentState,
+            top_down::{
+                child::ChildState,
+                end::{
+                    EndKind,
+                    EndState,
+                    RangeEnd,
+                },
+            },
+            traversal::TraversalState,
+            InnerKind,
+            StateDirection,
         },
     },
 };
-use crate::graph::vertex::location::child::ChildLocation;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NewEntry {
@@ -53,6 +57,14 @@ impl NewEntry {
         match &self.kind {
             NewKind::Parent(_) => StateDirection::BottomUp,
             NewKind::Child(_) => StateDirection::TopDown,
+        }
+    }
+}
+impl TargetKey for NewEntry {
+    fn target_key(&self) -> DirectedKey {
+        match &self.kind {
+            NewKind::Parent(state) => state.root.into(),
+            NewKind::Child(state) => state.target,
         }
     }
 }
@@ -126,6 +138,16 @@ pub enum NewEnd {
     Postfix(UpKey),
     Prefix(DirectedKey),
     Complete(DirectedKey),
+}
+
+impl TargetKey for NewEnd {
+    fn target_key(&self) -> DirectedKey {
+        match &self {
+            Self::Range(state) => state.target,
+            Self::Postfix(root) => (*root).into(),
+            Self::Prefix(target) | Self::Complete(target) => *target,
+        }
+    }
 }
 
 impl From<&EndState> for NewEnd {

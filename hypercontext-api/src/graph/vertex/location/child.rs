@@ -1,3 +1,24 @@
+use std::{
+    borrow::Borrow,
+    ops::ControlFlow,
+};
+
+use crate::{
+    direction::{
+        Left,
+        Right,
+    },
+    graph::vertex::{
+        has_vertex_index::HasVertexIndex,
+        wide::Wide,
+    },
+    path::mutators::move_path::leaf::MoveLeaf,
+    traversal::traversable::{
+        TravDir,
+        Traversable,
+    },
+};
+
 use super::{
     super::{
         child::Child,
@@ -5,16 +26,48 @@ use super::{
         pattern::Pattern,
         ChildPatterns,
     },
+    pattern::IntoPatternLocation,
     PatternId,
     PatternLocation,
     SubLocation,
 };
+use crate::direction::pattern::PatternDirection;
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy, Hash)]
 pub struct ChildLocation {
     pub parent: Child,
     pub pattern_id: PatternId,
     pub sub_index: usize,
+}
+impl MoveLeaf<Right> for ChildLocation {
+    fn move_leaf<Trav: Traversable>(
+        &mut self,
+        trav: &Trav,
+    ) -> ControlFlow<()> {
+        let graph = trav.graph();
+        let pattern = graph.expect_pattern_at(*self);
+        if let Some(next) = TravDir::<Trav>::pattern_index_next(pattern.borrow(), self.sub_index) {
+            self.sub_index = next;
+            ControlFlow::Continue(())
+        } else {
+            ControlFlow::Break(())
+        }
+    }
+}
+impl MoveLeaf<Left> for ChildLocation {
+    fn move_leaf<Trav: Traversable>(
+        &mut self,
+        trav: &Trav,
+    ) -> ControlFlow<()> {
+        let graph = trav.graph();
+        let pattern = graph.expect_pattern_at(*self);
+        if let Some(prev) = TravDir::<Trav>::pattern_index_prev(pattern.borrow(), self.sub_index) {
+            self.sub_index = prev;
+            ControlFlow::Continue(())
+        } else {
+            ControlFlow::Break(())
+        }
+    }
 }
 
 impl ChildLocation {
@@ -89,5 +142,42 @@ impl ChildLocation {
             pattern_id: self.pattern_id,
             sub_index: self.sub_index,
         }
+    }
+}
+
+pub trait IntoChildLocation {
+    fn into_child_location(self) -> ChildLocation;
+}
+
+impl IntoChildLocation for ChildLocation {
+    fn into_child_location(self) -> ChildLocation {
+        self
+    }
+}
+
+impl IntoChildLocation for &ChildLocation {
+    fn into_child_location(self) -> ChildLocation {
+        *self
+    }
+}
+
+impl IntoPatternLocation for ChildLocation {
+    fn into_pattern_location(self) -> PatternLocation {
+        PatternLocation {
+            parent: self.parent,
+            id: self.pattern_id,
+        }
+    }
+}
+
+impl HasVertexIndex for ChildLocation {
+    fn vertex_index(&self) -> crate::graph::vertex::VertexIndex {
+        self.parent.index
+    }
+}
+
+impl Wide for ChildLocation {
+    fn width(&self) -> usize {
+        self.parent.width()
     }
 }

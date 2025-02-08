@@ -11,14 +11,11 @@ use itertools::Itertools;
 use tracing::instrument;
 
 use crate::{
-    insert::{
-        direction::InsertDirection,
-        HasInsertContext,
-    },
+    insert::direction::InsertDirection,
     read::{
         bundle::band::OverlapBundle,
+        context::HasReadContext,
         overlap::Overlap,
-        reader::context::ReadContext,
     },
 };
 use hypercontext_api::{
@@ -29,8 +26,6 @@ use hypercontext_api::{
             pattern::Pattern,
         },
     },
-    split::cache::ctx,
-    tests::graph::context_mut,
     traversal::traversable::TraversableMut,
 };
 
@@ -71,8 +66,7 @@ impl OverlapChain {
             //    .unwrap();
 
             let back_ctx = if let Some((_, last)) = self.chain.iter_mut().last() {
-                trav.graph_mut()
-                    .index_pattern(last.band.back_context.borrow())
+                trav.read_pattern(last.band.back_context.borrow())
                     .ok()
                     //Some(self.graph.read_pattern(last.band.back_context.borrow()))
                     .map(move |(back_ctx, _)| {

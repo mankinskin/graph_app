@@ -27,12 +27,10 @@ use crate::{
     path::{
         accessors::{
             child::{
-                pos::{
-                    RootChildPos,
-                    RootChildPosMut,
-                },
                 root::PatternRootChild,
                 PathChild,
+                RootChildPos,
+                RootChildPosMut,
             },
             has_path::{
                 HasPath,
@@ -76,10 +74,9 @@ use super::{
 
 pub type PatternRangePath = RootedRangePath<Pattern>;
 
-impl<R: PathRoot> RootedPath for RootedRangePath<R> {
-    type Root = R;
-    fn path_root(&self) -> &Self::Root {
-        &self.root
+impl RootChildPosMut<End> for PatternRangePath {
+    fn root_child_pos_mut(&mut self) -> &mut usize {
+        &mut self.end.sub_path.root_entry
     }
 }
 

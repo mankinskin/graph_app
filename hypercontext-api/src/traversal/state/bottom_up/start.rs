@@ -1,36 +1,41 @@
-use crate::graph::vertex::{
-    child::Child,
-    wide::Wide,
-};
 use crate::{
+    graph::vertex::{
+        child::Child,
+        wide::Wide,
+    },
+    impl_cursor_pos,
     path::mutators::{
-        adapters::into_primer::IntoPrimer,
+        adapters::IntoPrimer,
         move_path::{
-            key::RetractKey,
+            key::{
+                RetractKey,
+                TokenPosition,
+            },
             Advance,
         },
     },
     traversal::{
         cache::key::{
             prev::ToPrev,
+            props::RootKey,
             UpKey,
         },
         iterator::policy::DirectedTraversalPolicy,
         state::{
-            end::{
+            cursor::RangeCursor,
+            next_states::{
+                NextStates,
+                StateNext,
+            },
+            top_down::end::{
                 EndKind,
                 EndReason,
                 EndState,
             },
-            //query::QueryState,
-            NextStates,
-            StateNext,
         },
         TraversalKind,
     },
 };
-
-use super::cursor::RangeCursor;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StartState {
@@ -39,6 +44,9 @@ pub struct StartState {
     pub cursor: RangeCursor,
 }
 
+impl_cursor_pos! {
+    CursorPosition for StartState, self => self.cursor.relative_pos
+}
 impl StartState {
     pub fn next_states<'a, K: TraversalKind>(
         &mut self,
@@ -70,5 +78,11 @@ impl StartState {
                 },
             })
         }
+    }
+}
+
+impl RootKey for StartState {
+    fn root_key(&self) -> UpKey {
+        UpKey::new(self.index, TokenPosition(self.index.width()).into())
     }
 }

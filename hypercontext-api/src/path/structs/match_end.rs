@@ -8,6 +8,7 @@ use crate::{
             },
             has_path::HasSinglePath,
             role::Start,
+            root::GraphRoot,
         },
         BasePath,
     },
@@ -59,6 +60,62 @@ impl<
 pub enum MatchEnd<P: MatchEndPath> {
     Path(P),
     Complete(Child),
+}
+impl<P: MatchEndPath + GraphRoot> GraphRoot for MatchEnd<P> {
+    fn root_parent(&self) -> Child {
+        match self {
+            Self::Complete(c) => *c,
+            Self::Path(path) => path.root_parent(),
+        }
+    }
+}
+
+impl<P: MatchEndPath> RootChildPos<Start> for MatchEnd<P> {
+    fn root_child_pos(&self) -> usize {
+        match self {
+            Self::Complete(_) => 0,
+            Self::Path(path) => path.root_child_pos(),
+        }
+    }
+}
+impl<P: MatchEndPath> PathComplete for MatchEnd<P> {
+    fn as_complete(&self) -> Option<Child> {
+        match self {
+            Self::Complete(c) => Some(*c),
+            _ => None,
+        }
+    }
+}
+
+impl<P: MatchEndPath> PathSimplify for MatchEnd<P> {
+    fn into_simplified<Trav: Traversable>(
+        self,
+        trav: &Trav,
+    ) -> Self {
+        if let Some(c) = match self.get_path() {
+            Some(p) => {
+                if p.single_path().is_empty() && {
+                    let location = p.root_child_location();
+                    let graph = trav.graph();
+                    let pattern = graph.expect_pattern_at(location);
+                    <Trav::Kind as GraphKind>::Direction::pattern_index_prev(
+                        pattern.borrow(),
+                        location.sub_index,
+                    )
+                    .is_none()
+                } {
+                    Some(p.root_parent())
+                } else {
+                    None
+                }
+            }
+            None => None,
+        } {
+            MatchEnd::Complete(c)
+        } else {
+            self
+        }
+    }
 }
 
 pub trait IntoMatchEndStartPath {

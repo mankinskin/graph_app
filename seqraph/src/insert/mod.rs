@@ -11,7 +11,10 @@ use hypercontext_api::{
         HypergraphRef,
     },
     path::structs::rooted::pattern_range::PatternRangePath,
-    traversal::traversable::TraversableMut,
+    traversal::{
+        fold::state::FoldState,
+        traversable::TraversableMut,
+    },
 };
 
 pub mod context;
@@ -23,33 +26,27 @@ pub mod tests;
 
 pub trait HasInsertContext: TraversableMut {
     fn insert_context(&self) -> InsertContext;
-    fn index_pattern(
+    fn insert_fold_state(
         &self,
-        pattern: impl IntoPattern,
-    ) -> Result<(Child, PatternRangePath), ErrorReason> {
-        self.insert_context().insert(pattern.into_pattern())
+        fold_state: FoldState,
+    ) -> (Child, PatternRangePath) {
+        self.insert_context().insert(fold_state)
     }
 }
 impl<T: HasInsertContext> HasInsertContext for &'_ mut T {
     fn insert_context(&self) -> InsertContext {
         (**self).insert_context()
     }
-    fn index_pattern(
+    fn insert_fold_state(
         &self,
-        pattern: impl IntoPattern,
-    ) -> Result<(Child, PatternRangePath), ErrorReason> {
-        (**self).index_pattern(pattern)
+        fold_state: FoldState,
+    ) -> (Child, PatternRangePath) {
+        (**self).insert_fold_state(fold_state)
     }
 }
 impl HasInsertContext for HypergraphRef {
     fn insert_context(&self) -> InsertContext {
         InsertContext::new(self.clone())
-    }
-    fn index_pattern(
-        &self,
-        pattern: impl IntoPattern,
-    ) -> Result<(Child, PatternRangePath), ErrorReason> {
-        self.insert_context().insert(pattern.into_pattern())
     }
     //pub fn index_query_with_origin<
     //    Q: QueryPath
