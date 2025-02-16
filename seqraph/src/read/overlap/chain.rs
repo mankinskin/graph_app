@@ -6,21 +6,122 @@ use derive_more::derive::{
 };
 
 use crate::read::{
-    bundle::OverlapBundle,
-    overlap::Overlap,
+    bundle::{
+        band::OverlapBand,
+        OverlapBundle,
+    },
+    overlap::{
+        MatchEnd,
+        Overlap,
+    },
 };
 use hypercontext_api::{
-    graph::vertex::wide::Wide,
+    graph::vertex::{
+        pattern::Pattern,
+        wide::Wide,
+    },
+    path::{
+        accessors::role::{
+            End,
+            Start,
+        },
+        structs::{
+            role_path::RolePath,
+            rooted::{
+                role_path::RootedRolePath,
+                root::IndexRoot,
+            },
+        },
+    },
     traversal::traversable::TraversableMut,
 };
 
+/// IMPORTANT:
+/// - Use OverlapLinks to build SplitVertices
+/// - yield postfixes when joining partition for front context of each band
+/// - Every new overlap:
+///     - complete back context with interval graph from postfix paths
+/// - every time a band is "surpassed" (next.start_bound >= band.end_bound)
+///     - complete front context with interval graph from prefix paths
+///
+/// BandChain (building bundle)
+///
+/// - list of OverlapBand (Pattern with extra information about last index)
+///     - start_bound, end_bound of last index
+/// - each band is completed up to its end_bound
+/// - bands ordered by start_bound (end_bound required to be at least previous start_bound)
+///
+/// - list of OverlapLink
+///     - path to overlap from two bands
+///         - postfix_path: location of postfix/overlap in prev band
+///         - prefix_path: location of prefix/overlap in next band
+///
+/// - append new band
+///     - if start_bound < some previous end_bound
+///         1. describe back context partition between first band and new index with IntervalGraph
+///             1. get overlap paths from each band to new index
+///             2. build IntervalGraph
+///             3. join partition
+///             4. find front context postfix for each band
+///
+///     - if start_bound = some previous end_bound
+///         1. bundle chain up to end_bound
+///         2. reduce bundle to band
+///         3. append index at start_bound
+///         4. append band to end of chain
+///
+/// - get info about latest band
+///
+/// - bundle chain (take a chain and bake it into a bundle)
+///     - describe postfix partition of latest band with IntervalGraph
+///         1. get overlap paths from each band to new index
+///         2. build IntervalGraph
+///         3. join partition
+///         4. find front context postfix for each band
+///     - join and merge postfix partition
+///     - complete each band with front context
+///     - if multiple bands, insert new bundle
+///     
+/// IntervalBuilder
+/// - build from list of OverlapLink
+/// - build from list of RolePath<R>
+/// - build from FoldState
+/// - build complete IntervalGraph
+///
+/// PatternBundle (completed bundle)
+/// - list of Pattern
+/// - reduce to one pattern by inserting into graph if necessary
+///
+/// OverlapBand
+/// - Pattern
+/// - PostfixInfo
+///
+/// - append new postfix
+///
+/// PostfixInfo
+/// - start_bound, end_bound
+///
+/// OverlapLink
+/// - postfix_path
+/// - prefix_path
+///
+#[derive(Clone, Debug)]
+pub struct OverlapBand {
+    pub pattern: Pattern,
+}
+
+#[derive(Clone, Debug)]
+pub struct OverlapLink {
+    pub postfix_path: RolePath<End>, // location of postfix/overlap in first index
+    pub prefix_path: MatchEnd<RootedRolePath<Start, IndexRoot>>, // location of prefix/overlap in second index
+}
 #[derive(Default, Clone, Debug, Deref, DerefMut)]
 pub struct OverlapChain {
     #[deref_mut]
     #[deref]
-    pub chain: BTreeMap<usize, Overlap>,
-    pub end_bound: usize,
-    pub last: Option<Overlap>,
+    pub chain: BTreeMap<usize, Pattern>,
+    //pub end_bound: usize,
+    //pub last: Option<Overlap>,
 }
 
 impl OverlapChain {
@@ -35,16 +136,7 @@ impl OverlapChain {
         }
         self.end_bound = start_bound + width;
     }
-    pub fn append_bundle(
-        &mut self,
-        trav: impl TraversableMut,
-        bundle: OverlapBundle,
-    ) -> Result<(), ()> {
-        self.append_overlap(Overlap {
-            link: None,
-            band: bundle.wrap_into_band(trav),
-        })
-    }
+
     pub fn append_overlap(
         &mut self,
         overlap: Overlap,

@@ -1,9 +1,8 @@
-use band::OverlapBand;
 use itertools::Itertools;
 
 use hypercontext_api::traversal::traversable::TraversableMut;
 
-pub mod band;
+//pub mod band;
 //pub struct BandsContext {
 //    pub graph: HypergraphRef,
 //}
@@ -61,16 +60,16 @@ impl<'p> OverlapBundle {
     //}
 }
 
-impl From<OverlapBand> for OverlapBundle {
-    fn from(overlap: OverlapBand) -> Self {
-        Self {
-            bundle: vec![overlap],
-        }
-    }
-}
-
-impl From<Vec<OverlapBand>> for OverlapBundle {
-    fn from(bundle: Vec<OverlapBand>) -> Self {
-        Self { bundle }
-    }
-}
+//impl From<OverlapBand> for OverlapBundle {
+//    fn from(overlap: OverlapBand) -> Self {
+//        Self {
+//            bundle: vec![overlap],
+//        }
+//    }
+//}
+//
+//impl From<Vec<OverlapBand>> for OverlapBundle {
+//    fn from(bundle: Vec<OverlapBand>) -> Self {
+//        Self { bundle }
+//    }
+//}

@@ -26,24 +26,23 @@ use hypercontext_api::graph::vertex::{
 
 #[derive(Clone, Debug)]
 pub struct OverlapBand {
-    pub end: Child,
-    pub back_context: Pattern,
+    pub pattern: Pattern,
 }
 
 impl<'p> OverlapBand {
-    pub fn append(
-        &mut self,
-        end: Child,
-    ) {
-        self.back_context.push(self.end.clone());
-        self.end = end;
-    }
-    pub fn into_pattern(self) -> Pattern {
-        self.back_context
-            .into_iter()
-            .chain(std::iter::once(self.end))
-            .collect()
-    }
+    //pub fn append(
+    //    &mut self,
+    //    end: Child,
+    //) {
+    //    self.pattern.push(self.end.clone());
+    //    self.end = end;
+    //}
+    //pub fn into_pattern(self) -> Pattern {
+    //    self.back_context
+    //        .into_iter()
+    //        .chain(std::iter::once(self.end))
+    //        .collect()
+    //}
     //pub fn appended<
     //    'a: 'g,
     //    'g,
