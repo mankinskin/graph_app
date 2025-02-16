@@ -1,45 +1,76 @@
-use tracing::instrument;
+use band::OverlapBand;
+use itertools::Itertools;
 
-use hypercontext_api::{
-    graph::vertex::child::Child,
-    path::{
-        mutators::move_path::Advance,
-        structs::rooted::pattern_prefix::PatternPrefixPath,
-    },
-};
+use hypercontext_api::traversal::traversable::TraversableMut;
 
-use super::context::ReadContext;
 pub mod band;
 //pub struct BandsContext {
 //    pub graph: HypergraphRef,
 //}
-impl ReadContext {
-    #[instrument(skip(self, sequence))]
-    pub fn read(
+
+#[derive(Default, Clone, Debug)]
+pub struct OverlapBundle {
+    bundle: Vec<OverlapBand>,
+}
+
+impl<'p> OverlapBundle {
+    pub fn add_band(
         &mut self,
-        mut sequence: PatternPrefixPath,
+        overlap: OverlapBand,
     ) {
-        //println!("reading known bands");
-        while let Some(next) = self.next_known_index(&mut sequence) {
-            //println!("found next {:?}", next);
-            let next = self.read_overlaps(next, &mut sequence).unwrap_or(next);
-            self.append_index(next);
+        self.bundle.push(overlap)
+    }
+    pub fn wrap_into_band(
+        self,
+        mut trav: impl TraversableMut,
+    ) -> OverlapBand {
+        assert!(!self.bundle.is_empty());
+
+        let bundle = self
+            .bundle
+            .into_iter()
+            .map(|band| band.into_pattern())
+            .collect_vec();
+        OverlapBand {
+            end: trav.graph_mut().insert_patterns(bundle),
+            back_context: vec![],
         }
     }
-    #[instrument(skip(self, context))]
-    fn next_known_index(
-        &mut self,
-        context: &mut PatternPrefixPath,
-    ) -> Option<Child> {
-        match self.read_one(context.clone()) {
-            Ok((index, advanced)) => {
-                *context = PatternPrefixPath::from(advanced);
-                Some(index)
-            }
-            Err(_) => {
-                context.advance(self);
-                None
-            }
+    //pub fn append<
+    //    'a: 'g,
+    //    'g,
+    //    T: Tokenize,
+    //    D: IndexDirection,
+    //>(&mut self, reader: &mut ReadContext<T, D>, end: BandEnd) {
+    //    if self.bundle.len() > 1 {
+    //        self.bundle.first_mut()
+    //            .expect("Empty bundle in overlap chain!")
+    //            .append(reader, end);
+    //    } else {
+    //        self.bundle = vec![self.clone().into_band(reader).appended(reader, end)];
+    //    }
+    //}
+    //pub fn appended<
+    //    'a: 'g,
+    //    'g,
+    //    T: Tokenize,
+    //    D: IndexDirection,
+    //>(mut self, reader: &mut ReadContext<T, D>, end: BandEnd) -> OverlapBundle {
+    //    self.append(reader, end);
+    //    self
+    //}
+}
+
+impl From<OverlapBand> for OverlapBundle {
+    fn from(overlap: OverlapBand) -> Self {
+        Self {
+            bundle: vec![overlap],
         }
+    }
+}
+
+impl From<Vec<OverlapBand>> for OverlapBundle {
+    fn from(bundle: Vec<OverlapBand>) -> Self {
+        Self { bundle }
     }
 }

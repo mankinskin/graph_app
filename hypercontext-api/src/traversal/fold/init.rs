@@ -2,7 +2,7 @@ use crate::{
     path::structs::query_range_path::FoldablePath,
     traversal::{
         cache::{
-            key::UpKey,
+            key::directed::up::UpKey,
             TraversalCache,
         },
         container::extend::ExtendStates,

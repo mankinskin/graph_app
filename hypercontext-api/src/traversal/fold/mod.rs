@@ -1,5 +1,8 @@
 use super::{
-    cache::key::props::RootKey,
+    cache::key::{
+        directed::DirectedKey,
+        props::RootKey,
+    },
     result::FoundRange,
     state::{
         cursor::{
@@ -35,10 +38,7 @@ use crate::{
         },
     },
     traversal::{
-        cache::{
-            key::DirectedKey,
-            TraversalCache,
-        },
+        cache::TraversalCache,
         fold::{
             apply::ApplyStatesCtx,
             state::{

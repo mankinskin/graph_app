@@ -1,25 +1,26 @@
-use band::{
-    BandEnd,
-    OverlapBand,
-};
+use band::OverlapBand;
+use match_end::MatchEnd;
 
 use crate::read::bundle::band;
-use hypercontext_api::path::{
-    accessors::role::{
-        End,
-        Start,
-    },
-    structs::{
-        match_end::MatchEnd,
-        role_path::RolePath,
-        rooted::{
-            role_path::RootedRolePath,
-            root::IndexRoot,
+use hypercontext_api::{
+    graph::vertex::child::Child,
+    path::{
+        accessors::role::{
+            End,
+            Start,
+        },
+        structs::{
+            role_path::RolePath,
+            rooted::{
+                role_path::RootedRolePath,
+                root::IndexRoot,
+            },
         },
     },
 };
 pub mod cache;
 pub mod chain;
+pub mod match_end;
 pub mod primer;
 
 #[derive(Clone, Debug)]
@@ -37,14 +38,14 @@ pub struct Overlap {
 impl Overlap {
     pub fn appended(
         mut self,
-        end: BandEnd,
+        end: Child,
     ) -> Self {
         self.append(end);
         self
     }
     pub fn append(
         &mut self,
-        end: BandEnd,
+        end: Child,
     ) {
         self.band.append(end);
         self.link = None;

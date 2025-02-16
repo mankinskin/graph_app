@@ -1,11 +1,8 @@
 use hypercontext_api::{
-    graph::{
-        getters::ErrorReason,
-        vertex::pattern::IntoPattern,
-    },
+    graph::getters::ErrorReason,
     traversal::{
         container::bft::BftQueue,
-        fold::FoldContext,
+        fold::Foldable,
         iterator::policy::{
             AncestorPolicy,
             ParentPolicy,
@@ -53,24 +50,24 @@ impl<T: Traversable> SearchContext<T> {
     }
     // find largest matching direct parent
     pub fn find_pattern_parent(
-        &self,
-        pattern: impl IntoPattern,
+        self,
+        foldable: impl Foldable,
     ) -> SearchResult {
-        self.search::<_, ParentSearchTraversal<T>>(pattern)
+        self.search::<_, ParentSearchTraversal<T>>(foldable)
     }
     /// find largest matching ancestor for pattern
     pub fn find_pattern_ancestor(
-        &self,
-        pattern: impl IntoPattern,
+        self,
+        foldable: impl Foldable,
     ) -> SearchResult {
-        self.search::<_, AncestorSearchTraversal<T>>(pattern)
+        self.search::<_, AncestorSearchTraversal<T>>(foldable)
     }
     //, Ti: TraversalIterator<'a, Trav = Self>
-    fn search<P: IntoPattern, K: TraversalKind<Trav = Self>>(
-        &self,
-        query: P,
+    fn search<F: Foldable, K: TraversalKind<Trav = Self>>(
+        self,
+        foldable: F,
     ) -> SearchResult {
-        FoldContext::<K>::fold_pattern(self, query).map_err(|err| err.reason)
+        foldable.fold::<K>(self).map_err(|err| err.reason)
     }
 }
 

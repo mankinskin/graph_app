@@ -10,11 +10,11 @@ use crate::{
         cache::{
             entry::vertex::VertexCache,
             key::{
+                directed::DirectedKey,
                 props::{
                     RootKey,
                     TargetKey,
                 },
-                DirectedKey,
             },
             TraversalCache,
         },
@@ -93,10 +93,6 @@ impl FoldState {
     }
     pub fn leaf(&self) -> DirectedKey {
         self.end_state.target_key()
-        //.iter()
-        //.filter(|s| s.root_key().index == *root)
-        //.map(|s| s.target_key())
-        //.collect()
     }
 }
 

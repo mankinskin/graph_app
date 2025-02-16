@@ -9,7 +9,7 @@ use crate::{
                 NewEntry,
                 Offset,
             },
-            key::DirectedKey,
+            key::directed::DirectedKey,
             TraversalCache,
         },
         state::StateDirection,
@@ -54,7 +54,6 @@ pub struct Edges {
 pub struct PositionCache {
     pub edges: Edges,
     pub index: Child,
-    //pub waiting: Vec<(StateDepth, WaitingState)>,
 }
 
 impl PositionCache {
@@ -62,7 +61,6 @@ impl PositionCache {
         Self {
             index,
             edges: Default::default(),
-            //waiting: Default::default(),
         }
     }
     pub fn new<Trav: Traversable>(
@@ -88,16 +86,8 @@ impl PositionCache {
         Self {
             index: key.index,
             edges,
-            //waiting: Default::default(),
         }
     }
-    //pub fn add_waiting(
-    //    &mut self,
-    //    depth: StateDepth,
-    //    state: WaitingState,
-    //) {
-    //    self.waiting.push((depth, state));
-    //}
     pub fn num_parents(&self) -> usize {
         self.edges.top.len()
     }

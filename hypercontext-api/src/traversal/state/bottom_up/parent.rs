@@ -31,13 +31,15 @@ use crate::{
         cache::{
             entry::new::NewEntry,
             key::{
+                directed::{
+                    up::UpKey,
+                    DirectedKey,
+                },
                 prev::ToPrev,
                 props::{
                     RootKey,
                     TargetKey,
                 },
-                DirectedKey,
-                UpKey,
             },
         },
         iterator::policy::DirectedTraversalPolicy,

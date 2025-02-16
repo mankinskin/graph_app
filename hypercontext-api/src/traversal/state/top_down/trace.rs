@@ -17,10 +17,12 @@ use crate::{
     traversal::{
         cache::{
             key::{
+                directed::{
+                    down::DownKey,
+                    up::UpKey,
+                    DirectedKey,
+                },
                 prev::ToPrev,
-                DirectedKey,
-                DownKey,
-                UpKey,
             },
             TraversalCache,
         },

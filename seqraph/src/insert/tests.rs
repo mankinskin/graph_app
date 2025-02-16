@@ -1,7 +1,4 @@
-use std::{
-    borrow::Borrow,
-    collections::HashSet,
-};
+use std::collections::HashSet;
 
 use itertools::*;
 use maplit::hashset;
@@ -62,9 +59,7 @@ fn index_pattern1() {
     // todo: split sub patterns not caught by query search
     let graph = HypergraphRef::from(graph);
     let query = vec![by, z];
-    let (byz, _) = graph
-        .index_pattern(query.borrow())
-        .expect("Indexing failed");
+    let (byz, _) = graph.insert(query.clone()).expect("Indexing failed");
     assert_eq!(
         byz,
         Child {
@@ -80,9 +75,7 @@ fn index_pattern1() {
         "byz"
     );
     let query = vec![ab, y];
-    let (aby, _) = graph
-        .index_pattern(query.borrow())
-        .expect("Indexing failed");
+    let (aby, _) = graph.insert(query.clone()).expect("Indexing failed");
     let aby_found = graph.find_parent(&query);
     assert_eq!(
         aby_found,
@@ -116,9 +109,7 @@ fn index_pattern2() {
     let graph_ref = HypergraphRef::from(graph);
 
     let query = vec![a, b, y, x];
-    let (aby, _) = graph_ref
-        .index_pattern(query.borrow())
-        .expect("Indexing failed");
+    let (aby, _) = graph_ref.insert(query.clone()).expect("Indexing failed");
     assert_eq!(aby.width(), 3);
     let ab = graph_ref
         .find_sequence("ab".chars())
@@ -169,7 +160,7 @@ fn index_infix1() {
 
     let graph_ref = HypergraphRef::from(graph);
 
-    let (aby, _) = graph_ref.index_pattern([a, b, y]).expect("Indexing failed");
+    let (aby, _) = graph_ref.insert(vec![a, b, y]).expect("Indexing failed");
     let ab = graph_ref
         .find_ancestor([a, b])
         .unwrap()
@@ -252,9 +243,7 @@ fn index_infix2() {
 
     let graph_ref = HypergraphRef::from(graph);
 
-    let (abcd, _) = graph_ref
-        .index_pattern([a, b, c, d])
-        .expect("Indexing failed");
+    let (abcd, _) = graph_ref.insert(vec![a, b, c, d]).expect("Indexing failed");
     let graph = graph_ref.graph();
     let abcd_vertex = graph.expect_vertex(abcd);
     assert_eq!(abcd.width(), 4, "abcd");

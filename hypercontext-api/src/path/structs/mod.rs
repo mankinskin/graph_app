@@ -1,4 +1,3 @@
-//pub mod match_end;
 pub mod query_range_path;
 pub mod role_path;
 pub mod rooted;

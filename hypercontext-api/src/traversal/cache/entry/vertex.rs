@@ -2,9 +2,9 @@ use crate::{
     graph::vertex::child::Child,
     path::mutators::move_path::key::TokenPosition,
     traversal::cache::{
-            entry::PositionCache,
-            key::DirectedPosition,
-        },
+        entry::PositionCache,
+        key::directed::DirectedPosition,
+    },
     HashMap,
 };
 

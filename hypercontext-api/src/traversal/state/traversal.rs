@@ -17,14 +17,16 @@ use crate::{
     traversal::cache::{
         entry::new::NewEntry,
         key::{
+            directed::{
+                up::UpKey,
+                DirectedKey,
+            },
             prev::PrevKey,
             props::{
                 CursorPosition,
                 RootKey,
                 TargetKey,
             },
-            DirectedKey,
-            UpKey,
         },
     },
 };

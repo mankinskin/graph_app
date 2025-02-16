@@ -1,18 +1,14 @@
 use std::ops::ControlFlow;
 
-use crate::{
-    insert::HasInsertContext,
-    read::{
-        bundle::band::{
-            BandEnd,
-            OverlapBand,
-            OverlapBundle,
-        },
-        context::HasReadContext,
-        overlap::{
-            chain::OverlapChain,
-            Overlap,
-        },
+use crate::read::{
+    bundle::{
+        band::OverlapBand,
+        OverlapBundle,
+    },
+    context::HasReadContext,
+    overlap::{
+        chain::OverlapChain,
+        Overlap,
     },
 };
 use hypercontext_api::{
@@ -35,7 +31,6 @@ use hypercontext_api::{
         },
         mutators::append::PathAppend,
         structs::{
-            match_end::MatchEnd,
             query_range_path::FoldablePath,
             role_path::RolePath,
             rooted::{
@@ -61,37 +56,29 @@ use itertools::{
 };
 use tracing::instrument;
 
-use super::OverlapLink;
+use super::{
+    match_end::MatchEnd,
+    OverlapLink,
+};
 
 #[derive(Default, Clone, Debug)]
 pub struct OverlapCache {
     pub chain: OverlapChain,
-    pub end_bound: usize,
-    pub last: Option<Overlap>,
 }
 
 impl OverlapCache {
     pub fn new(first: Child) -> Self {
         Self {
-            end_bound: first.width(),
-            last: Overlap {
-                link: None,
-                band: OverlapBand::from(first),
-            }
-            .into(),
-            chain: OverlapChain::default(),
+            chain: OverlapChain {
+                last: Overlap {
+                    link: None,
+                    band: OverlapBand::from(first),
+                }
+                .into(),
+                end_bound: first.width(),
+                chain: Default::default(),
+            },
         }
-    }
-    pub fn append(
-        &mut self,
-        start_bound: usize,
-        overlap: Overlap,
-    ) {
-        let width = overlap.band.end.index().unwrap().width();
-        if let Some(last) = self.last.replace(overlap) {
-            self.chain.add_overlap(self.end_bound, last).unwrap()
-        }
-        self.end_bound = start_bound + width;
     }
     #[instrument(skip(self, trav, cursor))]
     pub fn read_next_overlap<Trav: HasReadContext>(
@@ -108,17 +95,18 @@ impl OverlapCache {
             (Some((start_bound, next_link, expansion)), bundle) => {
                 //println!("found overlap at {}: {:?}", start_bound, expansion);
                 //
-                self.chain.add_bundle(&mut trav, self.end_bound, bundle);
-                let back = self
-                    .chain
-                    .back_context_for_link(&mut trav, start_bound, &next_link);
+                self.chain.append_bundle(&mut trav, bundle);
 
-                self.append(
+                let back_pattern =
+                    self.chain
+                        .back_context_for_link(&mut trav, start_bound, &next_link);
+
+                self.chain.append(
                     start_bound,
                     Overlap {
                         band: OverlapBand {
-                            end: BandEnd::Index(expansion),
-                            back_context: back,
+                            end: expansion,
+                            back_context: back_pattern,
                         },
                         link: Some(next_link), // todo
                     },
@@ -127,7 +115,7 @@ impl OverlapCache {
                 self.read_next_overlap(trav, cursor)
             }
             (None, bundle) => {
-                self.chain.add_bundle(&mut trav, self.end_bound, bundle);
+                self.chain.append_bundle(&mut trav, bundle);
                 //println!("No overlap found");
                 self.chain.close(trav)
             }
@@ -144,8 +132,8 @@ impl OverlapCache {
     where
         <TravDir<Trav> as Direction>::Opposite: PatternDirection,
     {
-        let last = self.last.take().expect("No last overlap to take!");
-        let last_end = *last.band.end.index().unwrap();
+        let last = self.chain.last.take().expect("No last overlap to take!");
+        let last_end = last.band.end;
         let mut postfix_iter = PostfixIterator::band_iter(&mut trav, last_end);
 
         let mut acc = ControlFlow::Continue((
@@ -156,7 +144,7 @@ impl OverlapCache {
             (acc.is_continue(), postfix_iter.next())
         {
             let (path, bundle) = acc.continue_value().unwrap();
-            let start_bound = self.end_bound - postfix.width();
+            let start_bound = self.chain.end_bound - postfix.width();
             let postfix_path = if let Some(mut path) = path {
                 path.path_append(postfix_location);
                 path
@@ -235,7 +223,7 @@ impl OverlapCache {
                 // postfixes should always be first in the chain
                 if let Some(overlap) = self.chain.remove(&start_bound).map(|band| {
                     // might want to pass postfix_path
-                    band.appended(BandEnd::Index(postfix))
+                    band.appended(postfix)
                 }) {
                     bundle.add_band(overlap.band)
                 }

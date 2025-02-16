@@ -1,4 +1,4 @@
 pub mod grammar;
-pub mod splits;
+pub mod interval;
 pub mod search;
 pub mod trace;

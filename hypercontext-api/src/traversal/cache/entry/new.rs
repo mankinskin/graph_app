@@ -12,13 +12,15 @@ use crate::{
     },
     traversal::{
         cache::key::{
+            directed::{
+                up::UpKey,
+                DirectedKey,
+            },
             prev::PrevKey,
             props::{
                 RootKey,
                 TargetKey,
             },
-            DirectedKey,
-            UpKey,
         },
         state::{
             bottom_up::parent::ParentState,

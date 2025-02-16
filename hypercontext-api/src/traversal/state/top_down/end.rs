@@ -35,14 +35,16 @@ use crate::{
     },
     traversal::{
         cache::key::{
+            directed::{
+                up::UpKey,
+                DirectedKey,
+            },
             props::{
                 CursorPosition,
                 LeafKey,
                 RootKey,
                 TargetKey,
             },
-            DirectedKey,
-            UpKey,
         },
         state::{
             cursor::RangeCursor,

@@ -1,52 +1,47 @@
-use itertools::Itertools;
-
-use hypercontext_api::{
-    graph::vertex::{
-        child::Child,
-        pattern::Pattern,
-    },
-    traversal::traversable::TraversableMut,
+use hypercontext_api::graph::vertex::{
+    child::Child,
+    pattern::Pattern,
 };
 
-#[derive(Clone, Debug)]
-pub enum BandEnd {
-    Index(Child),
-    //Chain(OverlapChain),
-}
+//#[derive(Clone, Debug)]
+//pub enum BandEnd {
+//    Index(Child),
+//    //Chain(OverlapChain),
+//}
 
-impl<'p> BandEnd {
-    pub fn into_index(self) -> Child {
-        match self {
-            Self::Index(c) => c,
-            //Self::Chain(c) => c.close(reader).expect("Empty chain in BandEnd!"),
-        }
-    }
-    pub fn index(&self) -> Option<&Child> {
-        match self {
-            Self::Index(c) => Some(c),
-            //_ => None,
-        }
-    }
-}
+//impl<'p> BandEnd {
+//    pub fn into_index(self) -> Child {
+//        match self {
+//            Self::Index(c) => c,
+//            //Self::Chain(c) => c.close(reader).expect("Empty chain in BandEnd!"),
+//        }
+//    }
+//    pub fn index(&self) -> Option<&Child> {
+//        match self {
+//            Self::Index(c) => Some(c),
+//            //_ => None,
+//        }
+//    }
+//}
 
 #[derive(Clone, Debug)]
 pub struct OverlapBand {
-    pub end: BandEnd,
+    pub end: Child,
     pub back_context: Pattern,
 }
 
 impl<'p> OverlapBand {
     pub fn append(
         &mut self,
-        end: BandEnd,
+        end: Child,
     ) {
-        self.back_context.push(self.end.clone().into_index());
+        self.back_context.push(self.end.clone());
         self.end = end;
     }
     pub fn into_pattern(self) -> Pattern {
         self.back_context
             .into_iter()
-            .chain(std::iter::once(self.end.into_index()))
+            .chain(std::iter::once(self.end))
             .collect()
     }
     //pub fn appended<
@@ -63,7 +58,7 @@ impl<'p> OverlapBand {
 impl From<Child> for OverlapBand {
     fn from(next: Child) -> Self {
         OverlapBand {
-            end: BandEnd::Index(next),
+            end: next,
             back_context: vec![],
         }
     }
@@ -82,70 +77,3 @@ impl From<Child> for OverlapBand {
 //        self.back_context.iter().chain(std::iter::once(&self.index))
 //    }
 //}
-
-#[derive(Default, Clone, Debug)]
-pub struct OverlapBundle {
-    bundle: Vec<OverlapBand>,
-}
-
-impl<'p> OverlapBundle {
-    pub fn add_band(
-        &mut self,
-        overlap: OverlapBand,
-    ) {
-        self.bundle.push(overlap)
-    }
-    pub fn write_band(
-        self,
-        mut trav: impl TraversableMut,
-    ) -> OverlapBand {
-        assert!(!self.bundle.is_empty());
-
-        let bundle = self
-            .bundle
-            .into_iter()
-            .map(|band| band.into_pattern())
-            .collect_vec();
-        OverlapBand {
-            end: BandEnd::Index(trav.graph_mut().insert_patterns(bundle)),
-            back_context: vec![],
-        }
-    }
-    //pub fn append<
-    //    'a: 'g,
-    //    'g,
-    //    T: Tokenize,
-    //    D: IndexDirection,
-    //>(&mut self, reader: &mut ReadContext<T, D>, end: BandEnd) {
-    //    if self.bundle.len() > 1 {
-    //        self.bundle.first_mut()
-    //            .expect("Empty bundle in overlap chain!")
-    //            .append(reader, end);
-    //    } else {
-    //        self.bundle = vec![self.clone().into_band(reader).appended(reader, end)];
-    //    }
-    //}
-    //pub fn appended<
-    //    'a: 'g,
-    //    'g,
-    //    T: Tokenize,
-    //    D: IndexDirection,
-    //>(mut self, reader: &mut ReadContext<T, D>, end: BandEnd) -> OverlapBundle {
-    //    self.append(reader, end);
-    //    self
-    //}
-}
-
-impl From<OverlapBand> for OverlapBundle {
-    fn from(overlap: OverlapBand) -> Self {
-        Self {
-            bundle: vec![overlap],
-        }
-    }
-}
-
-impl From<Vec<OverlapBand>> for OverlapBundle {
-    fn from(bundle: Vec<OverlapBand>) -> Self {
-        Self { bundle }
-    }
-}

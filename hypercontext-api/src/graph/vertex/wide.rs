@@ -7,10 +7,9 @@ use super::{
 };
 use crate::{
     graph::vertex::data::VertexData,
-    traversal::cache::key::{
-        DirectedKey,
-        DownKey,
-        UpKey,
+    traversal::cache::key::directed::{
+        down::DownKey,
+        up::UpKey,
     },
 };
 
@@ -61,12 +60,6 @@ impl<T: Wide> Wide for &'_ mut T {
 impl Wide for VertexData {
     fn width(&self) -> usize {
         self.width
-    }
-}
-
-impl Wide for DirectedKey {
-    fn width(&self) -> usize {
-        self.index.width()
     }
 }
 

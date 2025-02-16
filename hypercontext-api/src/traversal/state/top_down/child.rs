@@ -36,6 +36,10 @@ use crate::{
         cache::{
             entry::new::NewEntry,
             key::{
+                directed::{
+                    up::UpKey,
+                    DirectedKey,
+                },
                 prev::ToPrev,
                 props::{
                     CursorPosition,
@@ -43,8 +47,6 @@ use crate::{
                     RootKey,
                     TargetKey,
                 },
-                DirectedKey,
-                UpKey,
             },
         },
         container::pruning::PruneStates,

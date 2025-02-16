@@ -19,7 +19,7 @@ use hypercontext_api::{
                 },
                 vertex::VertexCache,
             },
-            key::DirectedKey,
+            key::directed::DirectedKey,
         },
         fold::state::FoldState,
     },
@@ -87,7 +87,7 @@ fn trace_graph1() {
                         )]),
                     },
                     index: *abcd,
-                    waiting: Default::default(),
+                    //waiting: Default::default(),
                 }
             )]),
             top_down: HashMap::from_iter([]),
@@ -109,7 +109,7 @@ fn trace_graph1() {
                         )]),
                     },
                     index: *ef,
-                    waiting: Default::default(),
+                    //waiting: Default::default(),
                 }
             )]),
         }
@@ -123,7 +123,7 @@ fn trace_graph1() {
                 PositionCache {
                     edges: Default::default(),
                     index: *e,
-                    waiting: Default::default(),
+                    //waiting: Default::default(),
                 }
             )]),
             bottom_up: HashMap::from_iter([]),
@@ -144,7 +144,7 @@ fn trace_graph1() {
                         )]),
                     },
                     index: *abc,
-                    waiting: Default::default(),
+                    //waiting: Default::default(),
                 }
             )]),
             top_down: HashMap::from_iter([]),
@@ -165,7 +165,7 @@ fn trace_graph1() {
                         ),]),
                     },
                     index: *abcdef,
-                    waiting: Default::default(),
+                    //waiting: Default::default(),
                 }
             )]),
             top_down: HashMap::from_iter([(
@@ -179,7 +179,7 @@ fn trace_graph1() {
                         )]),
                     },
                     index: *abcdef,
-                    waiting: Default::default(),
+                    //waiting: Default::default(),
                 }
             )]),
         },

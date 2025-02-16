@@ -12,9 +12,9 @@
 extern crate test;
 
 pub mod direction;
-pub mod partition;
+pub mod interval;
+pub mod join;
 pub mod path;
-pub mod split;
 
 pub mod graph;
 pub mod traversal;

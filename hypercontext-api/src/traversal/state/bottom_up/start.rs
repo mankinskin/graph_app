@@ -16,9 +16,9 @@ use crate::{
     },
     traversal::{
         cache::key::{
+            directed::up::UpKey,
             prev::ToPrev,
             props::RootKey,
-            UpKey,
         },
         iterator::policy::DirectedTraversalPolicy,
         state::{

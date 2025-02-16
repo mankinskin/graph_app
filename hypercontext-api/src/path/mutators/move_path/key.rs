@@ -11,15 +11,7 @@ use crate::{
         Left,
         Right,
     },
-    traversal::{
-        cache::key::{
-            DirectedKey,
-            DirectedPosition,
-            DownPosition,
-            UpPosition,
-        },
-        state::cursor::RangeCursor,
-    },
+    traversal::state::cursor::RangeCursor,
 };
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, Add, Sub, Deref, DerefMut, Default)]
@@ -110,33 +102,6 @@ pub trait RetractKey: MoveKey<Left> {
 }
 
 impl<T: MoveKey<Left>> RetractKey for T {}
-
-impl MoveKey<Right> for DirectedPosition {
-    type Delta = usize;
-    fn move_key(
-        &mut self,
-        delta: Self::Delta,
-    ) {
-        match self {
-            DirectedPosition::BottomUp(UpPosition(p)) => {
-                <TokenPosition as MoveKey<Right>>::move_key(p, delta)
-            }
-            DirectedPosition::TopDown(DownPosition(p)) => {
-                <TokenPosition as MoveKey<Right>>::move_key(p, delta)
-            }
-        }
-    }
-}
-
-impl MoveKey<Right> for DirectedKey {
-    type Delta = usize;
-    fn move_key(
-        &mut self,
-        delta: Self::Delta,
-    ) {
-        self.pos.move_key(delta)
-    }
-}
 
 impl MoveKey<Right> for TokenPosition {
     type Delta = usize;

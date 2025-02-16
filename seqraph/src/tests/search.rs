@@ -46,7 +46,7 @@ use hypercontext_api::{
                 },
                 vertex::VertexCache,
             },
-            key::DirectedKey,
+            key::directed::DirectedKey,
             TraversalCache,
         },
         fold::state::FoldState,
@@ -56,7 +56,7 @@ use hypercontext_api::{
         },
         state::{
             cursor::RangeCursor,
-            end::{
+            top_down::end::{
                 EndKind,
                 EndReason,
                 EndState,
@@ -298,7 +298,7 @@ fn find_ancestor2() {
                                             top: Default::default(),
                                         },
                                         index: xabyz,
-                                        waiting: Default::default(),
+                                        //waiting: Default::default(),
                                     }
                                 )]),
                             }
@@ -324,7 +324,7 @@ fn find_ancestor2() {
                                             ]),
                                         },
                                         index: xaby,
-                                        waiting: Default::default(),
+                                        //waiting: Default::default(),
                                     }
                                 )]),
                             }
@@ -530,7 +530,7 @@ fn find_ancestor3() {
                                             top: Default::default(),
                                         },
                                         index: xaby,
-                                        waiting: Default::default(),
+                                        //waiting: Default::default(),
                                     }
                                 )]),
                             }
@@ -560,7 +560,7 @@ fn find_ancestor3() {
                                             ]),
                                         },
                                         index: xab,
-                                        waiting: vec![],
+                                        //waiting: vec![],
                                     }
                                 )]),
                             }

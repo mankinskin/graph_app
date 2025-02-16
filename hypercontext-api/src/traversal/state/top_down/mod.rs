@@ -1,4 +1,4 @@
 pub(crate) mod child;
 pub mod end;
-pub mod pair;
-pub mod trace;
+pub(crate) mod pair;
+pub(crate) mod trace;

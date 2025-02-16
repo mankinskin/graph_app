@@ -1,10 +1,9 @@
-
 #[test]
 fn first_partition() {}
 
 #[test]
 fn inner_partition() {
-    //let cache = SplitCache {
+    //let cache = IntervalGraph {
     //    entries: HashMap::from([]),
     //    leaves: vec![],
     //};

@@ -28,11 +28,15 @@ use crate::{
         PatternId,
         VertexIndex,
     },
-    traversal::cache::key::{
-        DownKey,
-        DownPosition,
-        UpKey,
-        UpPosition,
+    traversal::cache::key::directed::{
+        down::{
+            DownKey,
+            DownPosition,
+        },
+        up::{
+            UpKey,
+            UpPosition,
+        },
     },
 };
 

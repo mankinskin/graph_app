@@ -10,10 +10,7 @@ use tracing::{
 
 use crate::{
     insert::{
-        context::{
-            InsertContext,
-            InsertTraversal,
-        },
+        context::InsertContext,
         HasInsertContext,
     },
     read::{
@@ -44,11 +41,14 @@ use hypercontext_api::{
         Hypergraph,
         HypergraphRef,
     },
-    path::structs::{
-        query_range_path::FoldablePath,
-        rooted::{
-            pattern_prefix::PatternPrefixPath,
-            pattern_range::PatternRangePath,
+    path::{
+        mutators::move_path::Advance,
+        structs::{
+            query_range_path::FoldablePath,
+            rooted::{
+                pattern_prefix::PatternPrefixPath,
+                pattern_range::PatternRangePath,
+            },
         },
     },
     traversal::{
@@ -122,22 +122,47 @@ impl HasInsertContext for ReadContext {
         InsertContext::new(self.graph.clone())
     }
 }
-impl<'g> ReadContext {
+impl ReadContext {
+    #[instrument(skip(self, sequence))]
+    pub fn read(
+        &mut self,
+        mut sequence: PatternPrefixPath,
+    ) {
+        //println!("reading known bands");
+        while let Some(next) = self.next_known_index(&mut sequence) {
+            //println!("found next {:?}", next);
+            let next = self.read_overlaps(next, &mut sequence).unwrap_or(next);
+            self.append_index(next);
+        }
+    }
+    #[instrument(skip(self, context))]
+    fn next_known_index(
+        &mut self,
+        context: &mut PatternPrefixPath,
+    ) -> Option<Child> {
+        match self.read_one(context.clone()) {
+            Ok((index, advanced)) => {
+                *context = PatternPrefixPath::from(advanced);
+                Some(index)
+            }
+            Err(_) => {
+                context.advance(self);
+                None
+            }
+        }
+    }
     pub fn read_one(
         &mut self,
         query: impl Foldable,
     ) -> Result<(Child, PatternRangePath), ErrorReason> {
         let mut ctx = self.insert_context();
-        match query.fold::<InsertTraversal>(&ctx) {
-            Ok(result) => match result.result {
-                FoundRange::Complete(c, p) => Ok((c, p)),
-                FoundRange::Incomplete(fold_state) => Ok(ctx.insert(fold_state)),
-            },
+        match ctx.insert(query) {
             Err(ErrorState {
                 reason: ErrorReason::SingleIndex(c),
                 found: Some(FoundRange::Complete(_, p)),
             }) => Ok((c, p)),
             Err(err) => Err(err.reason),
+            Ok(v) => Ok(v),
         }
     }
     #[instrument(skip(self, first, cursor))]

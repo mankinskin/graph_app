@@ -1,5 +1,5 @@
 use crate::{
-    traversal::cache::key::UpKey,
+    traversal::cache::key::directed::up::UpKey,
     HashMap,
 };
 

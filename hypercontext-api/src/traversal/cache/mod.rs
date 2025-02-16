@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use key::DirectedKey;
+use key::directed::DirectedKey;
 use label_key::vkey::{
     labelled_key,
     VertexCacheKey,
