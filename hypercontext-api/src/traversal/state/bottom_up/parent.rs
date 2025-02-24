@@ -25,7 +25,7 @@ use crate::{
             },
             raise::PathRaise,
         },
-        structs::rooted::role_path::Primer,
+        structs::rooted::role_path::IndexStartPath,
     },
     traversal::{
         cache::{
@@ -76,7 +76,7 @@ use std::{
 pub struct ParentState {
     pub prev_pos: TokenPosition,
     pub root_pos: TokenPosition,
-    pub path: Primer,
+    pub path: IndexStartPath,
     pub cursor: RangeCursor,
 }
 impl TargetKey for ParentState {

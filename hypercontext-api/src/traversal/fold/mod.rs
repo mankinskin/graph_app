@@ -33,8 +33,8 @@ use crate::{
     path::structs::{
         query_range_path::FoldablePath,
         rooted::{
-            pattern_prefix::PatternPrefixPath,
             pattern_range::PatternRangePath,
+            role_path::PatternEndPath,
         },
     },
     traversal::{
@@ -53,10 +53,7 @@ use init::{
     CursorInit,
     InitStates,
 };
-use std::{
-    borrow::Borrow,
-    fmt::Debug,
-};
+use std::fmt::Debug;
 
 pub(crate) mod apply;
 pub(crate) mod init;
@@ -93,8 +90,8 @@ macro_rules! impl_foldable {
 }
 //impl_foldable!(QueryState, fold_query);
 impl_foldable!(PatternRangePath, fold_path);
-impl_foldable!(PatternPrefixPath, fold_path);
 impl_foldable!(Pattern, fold_pattern);
+impl_foldable!(PatternEndPath, fold_path);
 
 /// context for running fold traversal
 #[derive(Debug)]
@@ -122,11 +119,8 @@ impl<'a, K: TraversalKind> FoldContext<K> {
         trav: K::Trav,
         pattern: P,
     ) -> FoldResult {
-        let pattern = pattern.into_pattern();
-
         // build cursor path
-        let path = PatternRangePath::from(pattern.borrow());
-
+        let path = PatternRangePath::from(pattern);
         Self::fold_path(trav, path)
     }
     pub fn fold_path(

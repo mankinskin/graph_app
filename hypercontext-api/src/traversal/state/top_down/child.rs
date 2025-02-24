@@ -29,7 +29,7 @@ use crate::{
                 Retract,
             },
         },
-        structs::rooted::role_path::Primer,
+        structs::rooted::role_path::IndexStartPath,
         RoleChildPath,
     },
     traversal::{
@@ -241,7 +241,7 @@ impl ChildState {
                 ParentState {
                     prev_pos: self.prev_pos,
                     root_pos: self.root_pos,
-                    path: Primer::from(self.paths.path),
+                    path: IndexStartPath::from(self.paths.path),
                     cursor: self.paths.cursor,
                 }
                 .next_parents::<K>(&ctx.trav, vec![])

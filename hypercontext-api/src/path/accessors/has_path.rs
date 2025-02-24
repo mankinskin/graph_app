@@ -52,8 +52,8 @@ impl<R: PathRole, P: FoldablePath + HasPath<R>> HasPath<R> for PathCursor<P> {
 //    }
 //}
 /// access to a rooted path pointing to a descendant
-pub trait IntoRootedRolePath<R: PathRole>: HasRolePath<R> + RootedPath {
-    fn into_rooted_role_path(&self) -> RootedRolePath<R, Self::Root>;
+pub trait HasRootedRolePath<R: PathRole>: HasRolePath<R> + RootedPath {
+    fn rooted_role_path(&self) -> RootedRolePath<R, Self::Root>;
 }
 
 /// access to a rooted path pointing to a descendant

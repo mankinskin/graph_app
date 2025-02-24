@@ -35,7 +35,7 @@ use crate::{
             has_path::{
                 HasPath,
                 HasRolePath,
-                IntoRootedRolePath,
+                HasRootedRolePath,
             },
             role::{
                 End,
@@ -146,11 +146,11 @@ where
         HasRolePath::<R>::role_path_mut(self).path_mut()
     }
 }
-impl<R: PathRole> IntoRootedRolePath<R> for PatternRangePath
+impl<R: PathRole> HasRootedRolePath<R> for PatternRangePath
 where
     Self: HasRolePath<R> + RootedPath,
 {
-    fn into_rooted_role_path(&self) -> RootedRolePath<R, Self::Root> {
+    fn rooted_role_path(&self) -> RootedRolePath<R, Self::Root> {
         self.role_path()
             .clone()
             .into_rooted(self.path_root().clone())

@@ -13,12 +13,9 @@ use crate::{
         context::InsertContext,
         HasInsertContext,
     },
-    read::{
-        overlap::cache::OverlapCache,
-        sequence::{
-            SequenceIter,
-            ToNewTokenIndices,
-        },
+    read::sequence::{
+        SequenceIter,
+        ToNewTokenIndices,
     },
 };
 use hypercontext_api::{
@@ -46,8 +43,8 @@ use hypercontext_api::{
         structs::{
             query_range_path::FoldablePath,
             rooted::{
-                pattern_prefix::PatternPrefixPath,
                 pattern_range::PatternRangePath,
+                role_path::PatternEndPath,
             },
         },
     },
@@ -64,6 +61,11 @@ use hypercontext_api::{
             TraversableMut,
         },
     },
+};
+
+use super::overlap::{
+    chain::OverlapChain,
+    iterator::ExpansionIterator,
 };
 pub trait HasReadContext: HasInsertContext {
     fn read_context<'g>(&'g mut self) -> ReadContext;
@@ -98,51 +100,45 @@ impl HasReadContext for HypergraphRef {
         ReadContext::new(self.clone())
     }
 }
-
 #[derive(Debug, Clone)]
 pub struct ReadContext {
     //pub graph: RwLockWriteGuard<'g, Hypergraph>,
     pub graph: HypergraphRef,
     pub root: Option<Child>,
 }
-//impl Deref for ReadContext {
-//    type Target = Hypergraph;
-//    fn deref(&self) -> &Self::Target {
-//        self.graph.deref()
-//    }
-//}
-//impl DerefMut for ReadContext {
-//    fn deref_mut(&mut self) -> &mut Self::Target {
-//        self.graph.deref_mut()
-//    }
-//}
 
-impl HasInsertContext for ReadContext {
-    fn insert_context(&self) -> InsertContext {
-        InsertContext::new(self.graph.clone())
-    }
-}
 impl ReadContext {
+    pub fn new(graph: HypergraphRef) -> Self {
+        Self { graph, root: None }
+    }
+    #[instrument(skip(self, first, cursor))]
+    pub fn expand_block(
+        &mut self,
+        first: Child,
+        cursor: &mut PatternEndPath,
+    ) -> Child {
+        ExpansionIterator::new(self.clone(), cursor, OverlapChain::new(first)).collect()
+    }
     #[instrument(skip(self, sequence))]
     pub fn read(
         &mut self,
-        mut sequence: PatternPrefixPath,
+        mut sequence: PatternEndPath,
     ) {
         //println!("reading known bands");
         while let Some(next) = self.next_known_index(&mut sequence) {
             //println!("found next {:?}", next);
-            let next = self.read_overlaps(next, &mut sequence).unwrap_or(next);
+            let next = self.expand_block(next, &mut sequence);
             self.append_index(next);
         }
     }
     #[instrument(skip(self, context))]
     fn next_known_index(
         &mut self,
-        context: &mut PatternPrefixPath,
+        context: &mut PatternEndPath,
     ) -> Option<Child> {
         match self.read_one(context.clone()) {
             Ok((index, advanced)) => {
-                *context = PatternPrefixPath::from(advanced);
+                *context = PatternEndPath::from(advanced);
                 Some(index)
             }
             Err(_) => {
@@ -164,22 +160,6 @@ impl ReadContext {
             Err(err) => Err(err.reason),
             Ok(v) => Ok(v),
         }
-    }
-    #[instrument(skip(self, first, cursor))]
-    pub fn read_overlaps(
-        &mut self,
-        first: Child,
-        cursor: &mut PatternPrefixPath,
-    ) -> Option<Child> {
-        if first.width() > 1 {
-            OverlapCache::new(first).read_next_overlap(self, cursor)
-        } else {
-            None
-        }
-    }
-    //pub fn new(graph: RwLockWriteGuard<'g, Hypergraph>) -> Self {
-    pub fn new(graph: HypergraphRef) -> Self {
-        Self { graph, root: None }
     }
     #[instrument(skip(self))]
     pub fn read_sequence<S: ToNewTokenIndices>(
@@ -209,7 +189,7 @@ impl ReadContext {
         &mut self,
         known: Pattern,
     ) {
-        match PatternPrefixPath::new_directed::<Right, _>(known.borrow()) {
+        match PatternEndPath::new_directed::<Right, _>(known.borrow()) {
             Ok(path) => self.band_context().read(path),
             Err((err, _)) => match err {
                 ErrorReason::SingleIndex(c) => {
@@ -291,6 +271,12 @@ impl ReadContext {
     //    self.append_index(index);
     //    0
     //}
+}
+
+impl HasInsertContext for ReadContext {
+    fn insert_context(&self) -> InsertContext {
+        InsertContext::new(self.graph.clone())
+    }
 }
 
 impl_traversable! {

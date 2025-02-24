@@ -1,22 +1,21 @@
-use std::collections::BTreeMap;
+use std::{
+    borrow::Borrow,
+    collections::{
+        BTreeMap,
+        BTreeSet,
+        VecDeque,
+    },
+};
 
+use derivative::Derivative;
 use derive_more::derive::{
     Deref,
     DerefMut,
 };
 
-use crate::read::{
-    bundle::{
-        band::OverlapBand,
-        OverlapBundle,
-    },
-    overlap::{
-        MatchEnd,
-        Overlap,
-    },
-};
 use hypercontext_api::{
     graph::vertex::{
+        child::Child,
         pattern::Pattern,
         wide::Wide,
     },
@@ -35,6 +34,15 @@ use hypercontext_api::{
     },
     traversal::traversable::TraversableMut,
 };
+
+use band::{
+    Band,
+    BandCtx,
+    Overlap,
+};
+
+use super::bundle::Bundle;
+pub mod band;
 
 /// IMPORTANT:
 /// - Use OverlapLinks to build SplitVertices
@@ -105,62 +113,98 @@ use hypercontext_api::{
 /// - postfix_path
 /// - prefix_path
 ///
-#[derive(Clone, Debug)]
-pub struct OverlapBand {
-    pub pattern: Pattern,
+pub trait ChainAppendage {
+    fn append_to_chain(
+        self,
+        chain: &mut OverlapChain,
+    );
+}
+impl<T: Into<Band>> ChainAppendage for T {
+    fn append_to_chain(
+        self,
+        chain: &mut OverlapChain,
+    ) {
+        chain.bands.insert(self.into());
+    }
+}
+impl<Trav: TraversableMut> ChainAppendage for (Trav, Bundle) {
+    fn append_to_chain(
+        self,
+        chain: &mut OverlapChain,
+    ) {
+        chain.bands.insert(self.1.wrap_into_band(self.0));
+    }
 }
 
 #[derive(Clone, Debug)]
 pub struct OverlapLink {
     pub postfix_path: RolePath<End>, // location of postfix/overlap in first index
-    pub prefix_path: MatchEnd<RootedRolePath<Start, IndexRoot>>, // location of prefix/overlap in second index
+    pub prefix_path: RolePath<Start>, // location of prefix/overlap in second index
 }
-#[derive(Default, Clone, Debug, Deref, DerefMut)]
+#[derive(Default, Clone, Debug)]
 pub struct OverlapChain {
-    #[deref_mut]
-    #[deref]
-    pub chain: BTreeMap<usize, Pattern>,
-    //pub end_bound: usize,
-    //pub last: Option<Overlap>,
+    pub bands: BTreeSet<Band>,
+    pub links: VecDeque<OverlapLink>,
 }
-
 impl OverlapChain {
+    pub fn new(index: Child) -> Self {
+        Self {
+            bands: Some(Band {
+                pattern: vec![index],
+                start_bound: 0,
+                end_bound: index.width(),
+            })
+            .into_iter()
+            .collect(),
+            links: Default::default(),
+        }
+    }
+    pub fn ends_at(
+        &self,
+        bound: usize,
+    ) -> Option<BandCtx<'_>> {
+        let band = self.bands.get(&bound)?;
+
+        Some(BandCtx {
+            band,
+            back_link: self.links.iter().last(),
+            front_link: None,
+        })
+    }
+    pub fn last(&self) -> BandCtx<'_> {
+        let band = self.bands.iter().last().unwrap();
+        BandCtx {
+            band,
+            back_link: self.links.iter().last(),
+            front_link: None,
+        }
+    }
     pub fn append(
         &mut self,
-        start_bound: usize,
-        overlap: Overlap,
+        band: impl ChainAppendage,
     ) {
-        let width = overlap.band.end.width();
-        if let Some(last) = self.last.replace(overlap) {
-            self.append_overlap(last).unwrap()
-        }
-        self.end_bound = start_bound + width;
+        band.append_to_chain(self);
     }
-
-    pub fn append_overlap(
-        &mut self,
-        overlap: Overlap,
-    ) -> Result<(), ()> {
-        // postfixes should always start at first end bounds in the chain
-        if self.chain.get(&self.end_bound).is_some() {
-            Err(())
-        } else {
-            self.chain.insert(self.end_bound, overlap);
-            Ok(())
-        }
+    pub fn pop_first(&mut self) -> Option<Band> {
+        self.links.pop_front();
+        self.bands.pop_first()
     }
-    pub fn take_past(
-        &mut self,
-        bound: usize,
-    ) -> OverlapChain {
-        let mut past = self.chain.split_off(&bound);
-        std::mem::swap(&mut self.chain, &mut past);
-        Self {
-            end_bound: bound,
-            chain: past,
-            last: None,
-        }
-    }
+    //pub fn append_overlap(
+    //    &mut self,
+    //    overlap: OverlapBand,
+    //) -> Result<(), ()> {
+    //}
+    //pub fn take_past(
+    //    &mut self,
+    //    bound: usize,
+    //) -> OverlapChain {
+    //    let mut past = self.chain.split_off(&bound);
+    //    std::mem::swap(&mut self.chain, &mut past);
+    //    Self {
+    //        chain: past,
+    //        end_bound: bound,
+    //    }
+    //}
 
     //#[instrument(skip(self, trav))]
     //pub fn close(

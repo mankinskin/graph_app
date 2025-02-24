@@ -1,5 +1,4 @@
 pub mod index_range;
-pub mod pattern_prefix;
 pub mod pattern_range;
 pub mod role_path;
 pub mod root;

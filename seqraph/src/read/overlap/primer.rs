@@ -4,7 +4,7 @@ use hypercontext_api::{
         accessors::role::End,
         structs::{
             role_path::RolePath,
-            rooted::pattern_prefix::PatternPrefixPath,
+            rooted::role_path::PatternEndPath,
         },
     },
 };
@@ -14,7 +14,7 @@ pub struct OverlapPrimer {
     /// postfix of the previous block
     pub postfix: Child,
     /// the path up until postfix
-    pub context: PatternPrefixPath,
+    pub context: PatternEndPath,
     //pub context_offset: usize,
     pub width: usize,
     pub exit: usize,
@@ -24,7 +24,7 @@ pub struct OverlapPrimer {
 impl OverlapPrimer {
     pub fn new(
         postfix: Child,
-        context: PatternPrefixPath,
+        context: PatternEndPath,
     ) -> Self {
         Self {
             postfix,
@@ -35,7 +35,7 @@ impl OverlapPrimer {
             end: RolePath::default(),
         }
     }
-    pub fn into_prefix_path(self) -> PatternPrefixPath {
+    pub fn into_prefix_path(self) -> PatternEndPath {
         self.context
     }
     //pub fn into_query_state(self) -> QueryState {

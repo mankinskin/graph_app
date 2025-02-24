@@ -1,31 +1,44 @@
-use std::borrow::Borrow;
+use std::{
+    borrow::Borrow,
+    ops::ControlFlow,
+};
 
 use crate::{
-    graph::vertex::{
-        child::Child,
-        location::{
-            child::ChildLocation,
-            pattern::{
-                IntoPatternLocation,
-                PatternLocation,
+    direction::Right,
+    graph::{
+        getters::ErrorReason,
+        vertex::{
+            child::Child,
+            location::{
+                child::ChildLocation,
+                pattern::{
+                    IntoPatternLocation,
+                    PatternLocation,
+                },
             },
-        },
-        pattern::{
-            pattern_width,
-            Pattern,
+            pattern::{
+                pattern_width,
+                IntoPattern,
+                Pattern,
+            },
         },
     },
     impl_child,
+    impl_root,
     path::{
         accessors::{
             border::PathBorder,
             child::{
-                root::GraphRootChild,
+                root::{
+                    GraphRootChild,
+                    PatternRootChild,
+                },
                 PathChild,
                 RootChildPos,
                 RootChildPosMut,
             },
             has_path::{
+                HasPath,
                 HasRolePath,
                 HasSinglePath,
             },
@@ -40,8 +53,12 @@ use crate::{
                 RootPattern,
             },
         },
-        mutators::simplify::PathSimplify,
+        mutators::{
+            move_path::path::MovePath,
+            simplify::PathSimplify,
+        },
         structs::{
+            query_range_path::FoldablePath,
             role_path::RolePath,
             sub_path::SubPath,
         },
@@ -57,6 +74,7 @@ use crate::{
 };
 
 use super::{
+    pattern_range::PatternRangePath,
     root::{
         IndexRoot,
         PathRoot,
@@ -64,8 +82,15 @@ use super::{
     },
     RootedRangePath,
 };
+use crate::path::mutators::move_path::leaf::AdvanceLeaf;
 
-pub type Primer = RootedRolePath<Start, IndexRoot>;
+pub type IndexRolePath<R> = RootedRolePath<R, IndexRoot>;
+pub type PatternRolePath<R> = RootedRolePath<R, Pattern>;
+
+pub type IndexStartPath = IndexRolePath<Start>;
+pub type IndexEndPath = IndexRolePath<End>;
+pub type PatternStartPath = PatternRolePath<Start>;
+pub type PatternEndPath = PatternRolePath<End>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RootedRolePath<R: PathRole, Root: PathRoot> {
@@ -222,5 +247,71 @@ impl<R: PathRole> RootPattern for RootedRolePath<R, IndexRoot> {
         trav: &'g Trav::Guard<'a>,
     ) -> &'g Pattern {
         GraphRootPattern::graph_root_pattern::<Trav>(self, trav)
+    }
+}
+
+impl MovePath<Right, End> for PatternEndPath {
+    fn move_leaf<Trav: Traversable>(
+        &mut self,
+        location: &mut ChildLocation,
+        trav: &Trav::Guard<'_>,
+    ) -> ControlFlow<()> {
+        location.advance_leaf(trav)
+    }
+}
+impl_root! { PatternRoot for PatternEndPath, self => self.root.borrow() }
+impl RootChildPos<Start> for PatternEndPath {
+    fn root_child_pos(&self) -> usize {
+        0
+    }
+}
+impl<R: PathRole> PathChild<R> for PatternEndPath where Self: HasPath<R> + PatternRootChild<R> {}
+
+impl<R> PatternRootChild<R> for PatternEndPath where PatternEndPath: RootChildPos<R> {}
+
+impl HasPath<End> for PatternEndPath {
+    fn path(&self) -> &Vec<ChildLocation> {
+        self.role_path.path()
+    }
+    fn path_mut(&mut self) -> &mut Vec<ChildLocation> {
+        self.role_path.path_mut()
+    }
+}
+//impl PathChild<Start> for PatternEndPath {
+//    fn path_child_location(&self) -> Option<ChildLocation> {
+//        None
+//    }
+//    fn path_child<Trav: Traversable>(
+//        &self,
+//        trav: &Trav,
+//    ) -> Option<Child> {
+//        Some(self.root_child())
+//    }
+//}
+impl_child! { RootChild for PatternEndPath, self, _trav => self.pattern_root_child() }
+
+impl FoldablePath for PatternEndPath {
+    fn to_range_path(self) -> PatternRangePath {
+        self.into_range(0)
+    }
+    fn complete(query: impl IntoPattern) -> Self {
+        let pattern = query.into_pattern();
+        Self {
+            role_path: RolePath::from(SubPath::new(pattern.len() - 1)),
+            root: pattern,
+        }
+    }
+    fn new_directed<D, P: IntoPattern>(query: P) -> Result<Self, (ErrorReason, Self)> {
+        let pattern = query.into_pattern();
+        let len = pattern.len();
+        let p = Self {
+            role_path: RolePath::from(SubPath::new(0)),
+            root: pattern,
+        };
+        match len {
+            0 => Err((ErrorReason::EmptyPatterns, p)),
+            1 => Err((ErrorReason::SingleIndex(*p.root.first().unwrap()), p)),
+            _ => Ok(p),
+        }
     }
 }

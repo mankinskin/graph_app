@@ -25,10 +25,9 @@ use crate::{
         structs::rooted::{
             index_range::IndexRangePath,
             role_path::{
-                Primer,
-                RootedRolePath,
+                IndexEndPath,
+                IndexStartPath,
             },
-            root::IndexRoot,
             split_path::RootedSplitPathRef,
         },
         RoleChildPath,
@@ -116,7 +115,7 @@ impl RangeEnd {
             }),
             (false, _, true, true) | (true, false, true, true) => {
                 let graph = trav.graph();
-                let path: Primer = self.path.into();
+                let path: IndexStartPath = self.path.into();
                 let root = path.role_root_child_location();
                 let pattern = graph.expect_pattern_at(root);
                 EndKind::Postfix(PostfixEnd {
@@ -131,13 +130,13 @@ impl RangeEnd {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrefixEnd {
-    pub path: RootedRolePath<End, IndexRoot>,
+    pub path: IndexEndPath,
     pub target: DirectedKey,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PostfixEnd {
-    pub path: Primer,
+    pub path: IndexStartPath,
     pub inner_width: usize,
 }
 
