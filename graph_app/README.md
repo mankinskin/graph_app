@@ -1,2 +1,3 @@
 
-![ReadingPhases](https://github.com/user-attachments/assets/4b395639-8b09-4583-a4f8-90b71c95fd15)
+
+![ReadingPhases](https://github.com/user-attachments/assets/02c95963-91b4-4337-bb99-5e3afd213c6d)
