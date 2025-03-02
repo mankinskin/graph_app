@@ -77,8 +77,8 @@ pub trait Foldable {
 
 #[macro_export]
 macro_rules! impl_foldable {
-    ($t:ty, $f:ident) => {
-        impl Foldable for $t {
+    ($(< $( $lt:tt )+>)? $t:ty, $f:ident) => {
+        impl $(< $lt >)? Foldable for $t {
             fn fold<K: TraversalKind>(
                 self,
                 trav: K::Trav,
@@ -91,6 +91,8 @@ macro_rules! impl_foldable {
 //impl_foldable!(QueryState, fold_query);
 impl_foldable!(PatternRangePath, fold_path);
 impl_foldable!(Pattern, fold_pattern);
+impl_foldable!(&'_ Pattern, fold_pattern);
+//impl_foldable!([Child; 2], fold_pattern);
 impl_foldable!(PatternEndPath, fold_path);
 
 /// context for running fold traversal
@@ -120,7 +122,7 @@ impl<'a, K: TraversalKind> FoldContext<K> {
         pattern: P,
     ) -> FoldResult {
         // build cursor path
-        let path = PatternRangePath::from(pattern);
+        let path = PatternRangePath::from(pattern.into_pattern());
         Self::fold_path(trav, path)
     }
     pub fn fold_path(

@@ -35,10 +35,7 @@ use crate::{
         },
     },
 };
-use std::{
-    borrow::Borrow,
-    ops::ControlFlow,
-};
+use std::ops::ControlFlow;
 
 pub trait MoveRootPos<D: Direction, R: PathRole = End> {
     fn move_root_pos<Trav: Traversable>(
@@ -68,7 +65,7 @@ impl MoveRootPos<Right, End> for RangeCursor {
     ) -> ControlFlow<()> {
         let pattern = &self.path.root;
         if let Some(next) =
-            TravDir::<Trav>::pattern_index_next(pattern.borrow(), self.path.end.root_child_pos())
+            TravDir::<Trav>::pattern_index_next(pattern, self.path.end.root_child_pos())
         {
             self.advance_key(pattern[self.path.end.root_child_pos()].width());
             *self.path.end.root_child_pos_mut() = next;
@@ -86,7 +83,7 @@ impl MoveRootPos<Left, End> for RangeCursor {
     ) -> ControlFlow<()> {
         let pattern = &self.path.root;
         if let Some(prev) =
-            TravDir::<Trav>::pattern_index_prev(pattern.borrow(), self.path.end.root_child_pos())
+            TravDir::<Trav>::pattern_index_prev(pattern, self.path.end.root_child_pos())
         {
             self.retract_key(pattern[self.path.end.root_child_pos()].width());
             *self.path.end.root_child_pos_mut() = prev;

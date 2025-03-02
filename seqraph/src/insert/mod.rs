@@ -2,10 +2,7 @@ use context::*;
 
 use hypercontext_api::{
     graph::{
-        vertex::{
-            child::Child,
-            location::child::ChildLocation,
-        },
+        vertex::child::Child,
         HypergraphRef,
     },
     path::structs::rooted::pattern_range::PatternRangePath,
@@ -26,8 +23,16 @@ pub mod direction;
 #[macro_use]
 pub mod tests;
 
-pub trait HasInsertContext: TraversableMut {
+//#[derive(Debug, Clone)]
+//pub struct IndexSplitResult {
+//    pub inner: Child,
+//    pub location: ChildLocation,
+//    pub path: Vec<ChildLocation>,
+//}
+
+pub trait Inserting: TraversableMut {
     fn insert_context(&self) -> InsertContext;
+
     fn insert(
         &self,
         foldable: impl Foldable,
@@ -41,7 +46,12 @@ pub trait HasInsertContext: TraversableMut {
         self.insert_context().insert_state(fold_state)
     }
 }
-impl<T: HasInsertContext> HasInsertContext for &'_ mut T {
+impl Inserting for HypergraphRef {
+    fn insert_context(&self) -> InsertContext {
+        InsertContext::new(self.clone())
+    }
+}
+impl<T: Inserting> Inserting for &'_ mut T {
     fn insert_context(&self) -> InsertContext {
         (**self).insert_context()
     }
@@ -57,16 +67,4 @@ impl<T: HasInsertContext> HasInsertContext for &'_ mut T {
     ) -> (Child, PatternRangePath) {
         (**self).insert_state(fold_state)
     }
-}
-impl HasInsertContext for HypergraphRef {
-    fn insert_context(&self) -> InsertContext {
-        InsertContext::new(self.clone())
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct IndexSplitResult {
-    pub inner: Child,
-    pub location: ChildLocation,
-    pub path: Vec<ChildLocation>,
 }

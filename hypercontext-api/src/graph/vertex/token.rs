@@ -217,7 +217,7 @@ pub fn groups_to_string<T: Tokenize, E: ContextLink, C: TokenContext<T, E> + Dis
 
 /// Type for storing elements of a sequence
 #[derive(Copy, Debug, PartialEq, Clone, Eq, Hash, Serialize, Deserialize)]
-pub enum Token<T: Tokenize> {
+pub enum Token<T: Tokenize = char> {
     Element(T),
     Start,
     End,

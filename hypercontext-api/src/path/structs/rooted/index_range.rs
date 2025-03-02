@@ -1,7 +1,4 @@
-use std::{
-    borrow::Borrow,
-    ops::ControlFlow,
-};
+use std::ops::ControlFlow;
 
 use crate::{
     direction::{
@@ -168,10 +165,9 @@ impl MoveRootPos<Right, End> for IndexRangePath {
     ) -> ControlFlow<()> {
         let graph = trav.graph();
         let pattern = self.root_pattern::<Trav>(&graph);
-        if let Some(next) = TravDir::<Trav>::pattern_index_next(
-            pattern.borrow(),
-            RootChildPos::<End>::root_child_pos(self),
-        ) {
+        if let Some(next) =
+            TravDir::<Trav>::pattern_index_next(pattern, RootChildPos::<End>::root_child_pos(self))
+        {
             *self.root_child_pos_mut() = next;
             ControlFlow::Continue(())
         } else {
@@ -187,10 +183,9 @@ impl MoveRootPos<Left, End> for IndexRangePath {
     ) -> ControlFlow<()> {
         let graph = trav.graph();
         let pattern = self.root_pattern::<Trav>(&graph);
-        if let Some(prev) = TravDir::<Trav>::pattern_index_prev(
-            pattern.borrow(),
-            RootChildPos::<End>::root_child_pos(self),
-        ) {
+        if let Some(prev) =
+            TravDir::<Trav>::pattern_index_prev(pattern, RootChildPos::<End>::root_child_pos(self))
+        {
             *self.root_child_pos_mut() = prev;
             ControlFlow::Continue(())
         } else {

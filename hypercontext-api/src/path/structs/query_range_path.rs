@@ -7,7 +7,10 @@ use crate::{
         getters::ErrorReason,
         vertex::{
             child::Child,
-            pattern::IntoPattern,
+            pattern::{
+                IntoPattern,
+                Pattern,
+            },
         },
     },
     path::{
@@ -42,8 +45,7 @@ BaseQuery
     fn complete(pattern: impl IntoPattern) -> Self;
     fn new_directed<
         D: PatternDirection,
-        P: IntoPattern,
-    >(query: P) -> Result<Self, (ErrorReason, Self)>;
+    >(query: Pattern) -> Result<Self, (ErrorReason, Self)>;
     fn start_index<Trav: Traversable>(
         &self,
         trav: Trav,

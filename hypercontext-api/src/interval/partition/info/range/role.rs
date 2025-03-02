@@ -32,7 +32,7 @@ use crate::{
                 },
             },
         },
-        location::VertexSplits,
+        split::VertexSplits,
         Partition,
         ToPartition,
     },

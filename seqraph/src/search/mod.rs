@@ -1,4 +1,6 @@
 use context::{
+    AncestorSearchTraversal,
+    ParentSearchTraversal,
     SearchContext,
     SearchResult,
 };
@@ -12,40 +14,19 @@ use hypercontext_api::{
         Hypergraph,
         HypergraphRef,
     },
-    traversal::traversable::{
-        TravKind,
-        Traversable,
+    traversal::{
+        fold::Foldable,
+        traversable::{
+            TravKind,
+            Traversable,
+        },
     },
 };
-
 pub mod context;
 
+#[allow(dead_code)]
 pub trait Searchable: Traversable {
     fn ctx(&self) -> SearchContext<Self>;
-    //pub fn expect_pattern(
-    //    &self,
-    //    pattern: impl IntoIterator<Item = impl AsToken<T>>,
-    //) -> Child {
-    //    self.find_sequence(pattern).unwrap().unwrap_complete()
-    //}
-    fn find_ancestor(
-        &self,
-        pattern: impl IntoIterator<
-            Item = impl hypercontext_api::graph::vertex::has_vertex_index::HasVertexIndex,
-        >,
-    ) -> SearchResult {
-        let pattern = self.graph().to_children(pattern);
-        self.ctx().find_pattern_ancestor(pattern)
-    }
-    fn find_parent(
-        &self,
-        pattern: impl IntoIterator<
-            Item = impl hypercontext_api::graph::vertex::has_vertex_index::HasVertexIndex,
-        >,
-    ) -> SearchResult {
-        let pattern = self.graph().to_children(pattern);
-        self.ctx().find_pattern_parent(pattern)
-    }
     fn find_sequence(
         &self,
         pattern: impl IntoIterator<Item = impl AsToken<TokenOf<TravKind<Self>>>>,
@@ -53,6 +34,24 @@ pub trait Searchable: Traversable {
         let iter = tokenizing_iter(pattern.into_iter());
         let pattern = self.graph().get_token_children(iter)?;
         self.find_ancestor(pattern)
+    }
+    // find largest matching direct parent
+    fn find_parent(
+        &self,
+        foldable: impl Foldable,
+    ) -> SearchResult {
+        foldable
+            .fold::<ParentSearchTraversal<Self>>(self.ctx())
+            .map_err(|err| err.reason)
+    }
+    /// find largest matching ancestor for pattern
+    fn find_ancestor(
+        &self,
+        foldable: impl Foldable,
+    ) -> SearchResult {
+        foldable
+            .fold::<AncestorSearchTraversal<Self>>(self.ctx())
+            .map_err(|err| err.reason)
     }
 }
 

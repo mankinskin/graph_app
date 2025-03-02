@@ -6,9 +6,9 @@ use hypercontext_api::{
         wide::Wide,
     },
     lab,
-    tests::graph::{
-        context_mut,
-        Context,
+    tests::env::{
+        Env1,
+        TestEnv,
     },
     traversal::{
         cache::{
@@ -27,15 +27,15 @@ use hypercontext_api::{
     HashSet,
 };
 
-use crate::search::context::SearchContext;
+use crate::search::Searchable;
 
 pub fn build_trace1() -> FoldState {
-    let Context {
+    let Env1 {
         graph, a, d, e, bc, ..
-    } = &*context_mut();
+    } = &Env1::build_expected();
     let query = vec![*a, *bc, *d, *e];
-    let res = SearchContext::new(graph)
-        .find_pattern_ancestor(query)
+    let res = graph
+        .find_ancestor(query)
         .unwrap()
         .result
         .unwrap_incomplete();
@@ -45,7 +45,7 @@ pub fn build_trace1() -> FoldState {
 #[test]
 fn trace_graph1() {
     let res = build_trace1();
-    let Context {
+    let Env1 {
         a,
         e,
         abc,
@@ -59,7 +59,7 @@ fn trace_graph1() {
         ef,
         e_f_id,
         ..
-    } = &*context_mut();
+    } = &Env1::build_expected();
 
     assert_eq!(res.start, *a);
     assert_eq!(res.end_state.width(), 5);

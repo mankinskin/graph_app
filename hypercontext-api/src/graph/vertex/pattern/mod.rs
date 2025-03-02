@@ -4,11 +4,7 @@ use std::{
         BorrowMut,
     },
     fmt::Debug,
-    iter::{
-        DoubleEndedIterator,
-        ExactSizeIterator,
-        IntoIterator,
-    },
+    iter::IntoIterator,
 };
 
 use crate::graph::vertex::{
@@ -29,29 +25,68 @@ pub type PatternView<'a> = &'a [Child];
 pub type Patterns = Vec<Pattern>;
 
 /// trait for types which can be converted to a pattern with a known size
-pub trait IntoPattern:
-    IntoIterator<Item = Self::Elem, IntoIter = Self::Iter> + Sized + Borrow<[Child]> + Debug
+pub trait IntoPattern: Sized
+//IntoIterator<Item = Self::Elem, IntoIter = Self::Iter> + Sized + Borrow<[Child]> + Debug
 {
-    type Iter: ExactSizeIterator + DoubleEndedIterator<Item = Self::Elem>;
-    type Elem: ToChild;
+    //type Iter: ExactSizeIterator + DoubleEndedIterator<Item = Self::Elem>;
+    //type Elem: ToChild;
 
+    //fn into_pattern(self) -> Pattern {
+    //    self.into_iter().map(|x| x.to_child()).collect()
+    //}
+    fn into_pattern(self) -> Pattern;
+    fn is_empty(&self) -> bool;
+}
+impl IntoPattern for Child {
     fn into_pattern(self) -> Pattern {
-        self.into_iter().map(|x| x.to_child()).collect()
+        Some(self).into_iter().collect()
     }
     fn is_empty(&self) -> bool {
-        self.borrow().is_empty()
+        false
+    }
+}
+//impl<It: IntoIterator<Item = Child> + Borrow<[Child]>> IntoPattern for It {
+//    fn into_pattern(self) -> Pattern {
+//        self.into_iter().collect()
+//    }
+//    fn is_empty(&self) -> bool {
+//        (*self).borrow().is_empty()
+//    }
+//}
+impl IntoPattern for &'_ [Child] {
+    fn into_pattern(self) -> Pattern {
+        self.into_iter().map(Clone::clone).collect()
+    }
+    fn is_empty(&self) -> bool {
+        (*self).is_empty()
+    }
+}
+impl IntoPattern for Pattern {
+    fn into_pattern(self) -> Pattern {
+        self
+    }
+    fn is_empty(&self) -> bool {
+        (*self).is_empty()
+    }
+}
+impl<T: IntoPattern + Clone> IntoPattern for &'_ T {
+    fn into_pattern(self) -> Pattern {
+        self.clone().into_pattern()
+    }
+    fn is_empty(&self) -> bool {
+        (*self).is_empty()
     }
 }
 
-impl<C, It, T> IntoPattern for T
-where
-    C: ToChild,
-    It: DoubleEndedIterator<Item = C> + ExactSizeIterator,
-    T: IntoIterator<Item = C, IntoIter = It> + Borrow<[Child]> + Debug,
-{
-    type Iter = It;
-    type Elem = C;
-}
+//impl<C, It, T> IntoPattern for T
+//where
+//    C: ToChild,
+//    It: DoubleEndedIterator<Item = C> + ExactSizeIterator,
+//    T: IntoIterator<Item = C, IntoIter = It> + Borrow<[Child]> + Debug,
+//{
+//    type Iter = It;
+//    type Elem = C;
+//}
 
 /// trait for types which can be converted to a pattern with a known size
 pub trait AsPatternMut: BorrowMut<Vec<Child>> + Debug {}

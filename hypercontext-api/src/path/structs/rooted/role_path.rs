@@ -301,7 +301,7 @@ impl FoldablePath for PatternEndPath {
             root: pattern,
         }
     }
-    fn new_directed<D, P: IntoPattern>(query: P) -> Result<Self, (ErrorReason, Self)> {
+    fn new_directed<D>(query: Pattern) -> Result<Self, (ErrorReason, Self)> {
         let pattern = query.into_pattern();
         let len = pattern.len();
         let p = Self {

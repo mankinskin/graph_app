@@ -2,7 +2,7 @@ pub mod cursor;
 pub(crate) mod next_states;
 pub(crate) mod traversal;
 
-pub(crate) mod bottom_up;
+pub mod bottom_up;
 pub mod top_down;
 
 use bottom_up::parent::ParentState;

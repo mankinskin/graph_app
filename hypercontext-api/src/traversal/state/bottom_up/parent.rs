@@ -143,7 +143,7 @@ impl PathRaise for ParentState {
         self.root_pos
             .advance_key(pattern_width(&pattern[root.sub_index + 1..]));
         if !path.is_empty()
-            || TravDir::<Trav>::pattern_index_prev(pattern.borrow(), root.sub_index).is_some()
+            || TravDir::<Trav>::pattern_index_prev(pattern, root.sub_index).is_some()
         {
             path.path.push(root);
         }

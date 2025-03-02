@@ -1,7 +1,4 @@
-use std::{
-    borrow::Borrow,
-    ops::ControlFlow,
-};
+use std::ops::ControlFlow;
 
 use crate::{
     direction::{
@@ -46,7 +43,7 @@ impl MoveLeaf<Right> for ChildLocation {
     ) -> ControlFlow<()> {
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(*self);
-        if let Some(next) = TravDir::<Trav>::pattern_index_next(pattern.borrow(), self.sub_index) {
+        if let Some(next) = TravDir::<Trav>::pattern_index_next(pattern, self.sub_index) {
             self.sub_index = next;
             ControlFlow::Continue(())
         } else {
@@ -61,7 +58,7 @@ impl MoveLeaf<Left> for ChildLocation {
     ) -> ControlFlow<()> {
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(*self);
-        if let Some(prev) = TravDir::<Trav>::pattern_index_prev(pattern.borrow(), self.sub_index) {
+        if let Some(prev) = TravDir::<Trav>::pattern_index_prev(pattern, self.sub_index) {
             self.sub_index = prev;
             ControlFlow::Continue(())
         } else {

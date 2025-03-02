@@ -30,6 +30,31 @@ use super::SplitMap;
 pub mod node;
 pub mod pattern;
 
+//pub trait VertexJoin: TraversableMut {
+//    fn join_prefix(
+//        &mut self,
+//        vertex: impl HasVertexDataMut,
+//        end_bound: usize,
+//    ) {
+//        JoinContext {
+//            self,
+//        }
+//    }
+//    fn join_infix(
+//        &mut self,
+//        vertex: impl HasVertexDataMut,
+//        start_bound: usize,
+//        end_bound: usize,
+//    ) {
+//    }
+//    fn join_postfix(
+//        &mut self,
+//        vertex: impl HasVertexDataMut,
+//        start_bound: usize,
+//    ) {
+//    }
+//}
+
 #[derive(Debug)]
 pub struct JoinContext {
     pub trav: HypergraphRef,

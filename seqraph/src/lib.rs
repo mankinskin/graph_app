@@ -15,7 +15,7 @@ extern crate test;
 
 //mod index;
 mod insert;
-mod read;
+//mod read;
 mod search;
 
 #[cfg(test)]

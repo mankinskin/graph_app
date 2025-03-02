@@ -33,7 +33,6 @@ use crate::{
             pattern::{
                 id::PatternId,
                 pattern_range::PatternRangeIndex,
-                IntoPattern,
                 Pattern,
             },
         },
@@ -72,16 +71,16 @@ pub trait MatchDirection: Direction {
     /// get remaining pattern in matching direction including index
     fn pattern_tail<T: ToChild>(pattern: &'_ [T]) -> &'_ [T];
     fn pattern_head<T: ToChild>(pattern: &'_ [T]) -> Option<&'_ T>;
-    fn head_index(pattern: &impl IntoPattern) -> usize;
-    fn last_index(pattern: &impl IntoPattern) -> usize
+    fn head_index(pattern: &Pattern) -> usize;
+    fn last_index(pattern: &Pattern) -> usize
     where
         <Self as Direction>::Opposite: MatchDirection,
     {
         Self::Opposite::head_index(pattern)
     }
-    fn merge_remainder_with_context<A: IntoPattern, B: IntoPattern>(
-        rem: A,
-        context: B,
+    fn merge_remainder_with_context(
+        rem: &Pattern,
+        context: &Pattern,
     ) -> Pattern;
     fn index_next(index: usize) -> Option<usize>;
     fn index_prev(index: usize) -> Option<usize>;
@@ -109,30 +108,30 @@ pub trait MatchDirection: Direction {
             .to_vec()
     }
     fn pattern_index_next(
-        pattern: impl IntoPattern,
+        pattern: &Pattern,
         index: usize,
     ) -> Option<usize> {
-        Self::index_next(index).and_then(|i| (i < pattern.borrow().len()).then_some(i))
+        Self::index_next(index).and_then(|i| (i < pattern.len()).then_some(i))
     }
     fn pattern_index_prev(
-        pattern: impl IntoPattern,
+        pattern: &Pattern,
         index: usize,
     ) -> Option<usize> {
-        Self::index_prev(index).and_then(|i| (i < pattern.borrow().len()).then_some(i))
+        Self::index_prev(index).and_then(|i| (i < pattern.len()).then_some(i))
     }
     fn next_child(
-        pattern: impl IntoPattern,
+        pattern: &Pattern,
         sub_index: usize,
     ) -> Option<Child> {
-        Self::pattern_index_next(pattern.borrow(), sub_index)
-            .and_then(|i| pattern.borrow().get(i).map(ToChild::to_child))
+        Self::pattern_index_next(pattern, sub_index)
+            .and_then(|i| pattern.get(i).map(ToChild::to_child))
     }
     fn compare_next_index_in_child_pattern(
-        child_pattern: impl IntoPattern,
-        context: impl IntoPattern,
+        child_pattern: &Pattern,
+        context: &Pattern,
         sub_index: usize,
     ) -> bool {
-        Self::pattern_head(context.borrow())
+        Self::pattern_head(context)
             .and_then(|context_next| {
                 let context_next: Child = context_next.to_child();
                 Self::next_child(child_pattern, sub_index).map(|next| context_next == next)
@@ -166,7 +165,7 @@ impl MatchDirection for Right {
     fn pattern_head<T: ToChild>(pattern: &'_ [T]) -> Option<&'_ T> {
         pattern.first()
     }
-    fn head_index(_pattern: &impl IntoPattern) -> usize {
+    fn head_index(_pattern: &Pattern) -> usize {
         0
     }
     fn tail_index<T: ToChild>(
@@ -181,11 +180,11 @@ impl MatchDirection for Right {
     fn index_prev(index: usize) -> Option<usize> {
         index.checked_sub(1)
     }
-    fn merge_remainder_with_context<A: IntoPattern, B: IntoPattern>(
-        rem: A,
-        context: B,
+    fn merge_remainder_with_context(
+        rem: &Pattern,
+        context: &Pattern,
     ) -> Pattern {
-        [rem.borrow(), context.borrow()].concat()
+        [rem.clone(), context.clone()].concat()
     }
     fn filter_parent_pattern_indices(
         parent: &Parent,
@@ -220,8 +219,8 @@ impl MatchDirection for Left {
     fn pattern_head<T: ToChild>(pattern: &'_ [T]) -> Option<&'_ T> {
         pattern.last()
     }
-    fn head_index(pattern: &impl IntoPattern) -> usize {
-        pattern.borrow().len() - 1
+    fn head_index(pattern: &Pattern) -> usize {
+        pattern.len() - 1
     }
     fn tail_index<T: ToChild>(
         _pattern: &'_ [T],
@@ -235,11 +234,11 @@ impl MatchDirection for Left {
     fn index_prev(index: usize) -> Option<usize> {
         index.checked_add(1)
     }
-    fn merge_remainder_with_context<A: IntoPattern, B: IntoPattern>(
-        rem: A,
-        context: B,
+    fn merge_remainder_with_context(
+        rem: &Pattern,
+        context: &Pattern,
     ) -> Pattern {
-        [context.borrow(), rem.borrow()].concat()
+        [context.clone(), rem.clone()].concat()
     }
     fn filter_parent_pattern_indices(
         parent: &Parent,

@@ -50,7 +50,7 @@ use itertools::{
 
 #[derive(Debug, From)]
 pub enum ChainOp {
-    Expand(ExpansionLink),
+    Expansion(ExpansionLink),
     Cap(BandCap),
 }
 #[derive(Debug)]
@@ -115,7 +115,7 @@ impl<'a> ChainGenerator<'a> {
             self.trav
                 .read_one(primer)
                 .map(|(expansion, advanced)| {
-                    Some(ChainOp::Expand(self.link_expansion(
+                    Some(ChainOp::Expansion(self.link_expansion(
                         start_bound,
                         expansion,
                         advanced,

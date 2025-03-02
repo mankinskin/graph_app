@@ -9,7 +9,7 @@ use crate::{
             child::ChildLocation,
             pattern::PatternLocation,
         },
-        pattern::IntoPattern,
+        pattern::Pattern,
         wide::Wide,
     },
     traversal::traversable::Traversable,
@@ -19,7 +19,7 @@ use itertools::Itertools;
 pub trait BandExpandingPolicy<Trav: Traversable> {
     fn map_band(
         location: PatternLocation,
-        pattern: impl IntoPattern,
+        pattern: &Pattern,
     ) -> (ChildLocation, Child);
     fn map_batch(
         batch: impl IntoIterator<Item = (ChildLocation, Child)>
@@ -37,10 +37,10 @@ where
     //
     fn map_band(
         location: PatternLocation,
-        pattern: impl IntoPattern,
+        pattern: &Pattern,
     ) -> (ChildLocation, Child) {
-        let last = D::last_index(&pattern.borrow());
-        (location.to_child_location(last), pattern.borrow()[last])
+        let last = D::last_index(&pattern);
+        (location.to_child_location(last), pattern[last])
     }
     fn map_batch(
         batch: impl IntoIterator<Item = (ChildLocation, Child)>
@@ -58,9 +58,9 @@ pub struct PrefixExpandingPolicy<D: Direction> {
 impl<Trav: Traversable, D: Direction> BandExpandingPolicy<Trav> for PrefixExpandingPolicy<D> {
     fn map_band(
         location: PatternLocation,
-        pattern: impl IntoPattern,
+        pattern: &Pattern,
     ) -> (ChildLocation, Child) {
-        (location.to_child_location(0), pattern.borrow()[0])
+        (location.to_child_location(0), pattern[0])
     }
     fn map_batch(
         batch: impl IntoIterator<Item = (ChildLocation, Child)>

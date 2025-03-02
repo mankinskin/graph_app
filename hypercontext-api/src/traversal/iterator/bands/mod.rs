@@ -16,10 +16,7 @@ use policy::{
     PostfixExpandingPolicy,
     PrefixExpandingPolicy,
 };
-use std::{
-    borrow::Borrow,
-    collections::VecDeque,
-};
+use std::collections::VecDeque;
 
 pub mod policy;
 
@@ -39,9 +36,7 @@ pub trait BandIterator<'a, Trav: Traversable + 'a>:
         index: Child,
     ) -> Vec<(ChildLocation, Child)> {
         Self::Policy::map_batch(self.trav().graph().expect_child_patterns(index).iter().map(
-            |(pid, pattern)| {
-                Self::Policy::map_band(PatternLocation::new(index, *pid), pattern.borrow())
-            },
+            |(pid, pattern)| Self::Policy::map_band(PatternLocation::new(index, *pid), &pattern),
         ))
     }
 }

@@ -6,16 +6,13 @@ use hypercontext_api::{
     },
     graph::vertex::{
         child::Child,
-        pattern::{
-            IntoPattern,
-            Pattern,
-        },
+        pattern::Pattern,
     },
 };
 
 pub trait InsertDirection: Direction + Clone + PartialEq + Eq {
     fn context_then_inner(
-        context: impl IntoPattern,
+        context: Pattern,
         inner: Child,
     ) -> Pattern
     where
@@ -26,7 +23,7 @@ pub trait InsertDirection: Direction + Clone + PartialEq + Eq {
 
     fn inner_then_context(
         inner: Child,
-        context: impl IntoPattern,
+        context: Pattern,
     ) -> Pattern;
 
     //fn split_context_head(context: impl Merge) -> Option<(Child, Pattern)>;
@@ -61,9 +58,9 @@ pub trait InsertDirection: Direction + Clone + PartialEq + Eq {
 impl InsertDirection for Left {
     fn inner_then_context(
         inner: Child,
-        context: impl IntoPattern,
+        context: Pattern,
     ) -> Pattern {
-        context.borrow().iter().copied().chain(inner).collect()
+        context.iter().copied().chain(inner).collect()
     }
 
     //fn split_context_head(context: impl Merge) -> Option<(Child, Pattern)> {
@@ -102,11 +99,9 @@ impl InsertDirection for Left {
 impl InsertDirection for Right {
     fn inner_then_context(
         inner: Child,
-        context: impl IntoPattern,
+        context: Pattern,
     ) -> Pattern {
-        std::iter::once(inner)
-            .chain(context.borrow().to_owned())
-            .collect()
+        std::iter::once(inner).chain(context.to_owned()).collect()
     }
 
     //fn split_context_head(context: impl Merge) -> Option<(Child, Pattern)> {

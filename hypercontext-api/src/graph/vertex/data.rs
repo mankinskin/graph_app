@@ -314,21 +314,21 @@ impl VertexData {
     pub fn add_pattern_no_update(
         &mut self,
         id: PatternId,
-        pat: impl IntoPattern,
+        pat: Pattern,
     ) {
-        if pat.borrow().len() < 2 {
-            assert!(pat.borrow().len() > 1);
+        if pat.len() < 2 {
+            assert!(pat.len() > 1);
         }
         self.children.insert(id, pat.into_pattern());
         self.validate();
     }
     pub fn add_patterns_no_update(
         &mut self,
-        patterns: impl IntoIterator<Item = (PatternId, impl IntoPattern)>,
+        patterns: impl IntoIterator<Item = (PatternId, Pattern)>,
     ) {
         for (id, pat) in patterns {
-            if pat.borrow().len() < 2 {
-                assert!(pat.borrow().len() > 1);
+            if pat.len() < 2 {
+                assert!(pat.len() > 1);
             }
             self.children.insert(id, pat.into_pattern());
         }

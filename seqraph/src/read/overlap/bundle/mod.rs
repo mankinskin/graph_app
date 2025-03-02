@@ -5,6 +5,8 @@ use hypercontext_api::{
 
 use super::chain::band::Band;
 
+pub mod iterator;
+
 #[derive(Default, Clone, Debug)]
 pub struct Bundle {
     bundle: Vec<Pattern>,

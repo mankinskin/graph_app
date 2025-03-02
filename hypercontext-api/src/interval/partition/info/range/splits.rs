@@ -33,7 +33,7 @@ use crate::{
                     RangeRole,
                 },
             },
-            location::{
+            split::{
                 PosSplitContext,
                 ToVertexSplits,
                 VertexSplits,

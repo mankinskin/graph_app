@@ -19,7 +19,6 @@ use hypercontext_api::{
             ErrorState,
             Foldable,
         },
-        iterator::policy::DirectedTraversalPolicy,
         result::FoundRange,
         traversable::{
             impl_traversable,
@@ -31,25 +30,12 @@ use hypercontext_api::{
     },
 };
 
-#[derive(Debug)]
-pub struct InsertPolicy {}
+use crate::search::context::ParentPolicy;
 
-// <'a: 'g, 'g>
-impl DirectedTraversalPolicy for InsertPolicy {
-    type Trav = InsertContext;
-}
-
-pub trait InsertTraversalPolicy: DirectedTraversalPolicy<Trav = InsertContext> {}
-
-impl InsertTraversalPolicy for InsertPolicy {}
-
-#[derive(Debug)]
-pub struct InsertTraversal;
-
-impl TraversalKind for InsertTraversal {
+impl TraversalKind for InsertContext {
     type Trav = InsertContext;
     type Container = BftQueue;
-    type Policy = InsertPolicy;
+    type Policy = ParentPolicy<Self::Trav>;
 }
 
 #[derive(Debug, Clone)]
@@ -64,7 +50,7 @@ impl InsertContext {
         &mut self,
         foldable: impl Foldable,
     ) -> Result<(Child, PatternRangePath), ErrorState> {
-        match foldable.fold::<InsertTraversal>(self.clone()) {
+        match foldable.fold::<Self>(self.clone()) {
             Ok(result) => match result.result {
                 FoundRange::Complete(c, p) => Ok((c, p)),
                 FoundRange::Incomplete(fold_state) => Ok(self.insert_state(fold_state)),

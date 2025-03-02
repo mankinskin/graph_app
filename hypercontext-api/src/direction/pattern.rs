@@ -1,4 +1,4 @@
-use crate::graph::vertex::pattern::IntoPattern;
+use crate::graph::vertex::pattern::Pattern;
 
 use super::{
     Direction,
@@ -9,8 +9,8 @@ use super::{
 pub trait PatternDirection: Direction {
     //fn pattern_tail<T: ToChild>(pattern: &'_ [T]) -> &'_ [T];
     //fn pattern_head<T: ToChild>(pattern: &'_ [T]) -> Option<&'_ T>;
-    fn head_index(pattern: &impl IntoPattern) -> usize;
-    fn last_index(pattern: &impl IntoPattern) -> usize
+    fn head_index(pattern: &Pattern) -> usize;
+    fn last_index(pattern: &Pattern) -> usize
     where
         <Self as Direction>::Opposite: PatternDirection,
     {
@@ -19,21 +19,21 @@ pub trait PatternDirection: Direction {
     fn index_next(index: usize) -> Option<usize>;
     fn index_prev(index: usize) -> Option<usize>;
     fn pattern_index_next(
-        pattern: impl IntoPattern,
+        pattern: &Pattern,
         index: usize,
     ) -> Option<usize> {
-        Self::index_next(index).and_then(|i| (i < pattern.borrow().len()).then_some(i))
+        Self::index_next(index).and_then(|i| (i < pattern.len()).then_some(i))
     }
     fn pattern_index_prev(
-        pattern: impl IntoPattern,
+        pattern: &Pattern,
         index: usize,
     ) -> Option<usize> {
-        Self::index_prev(index).and_then(|i| (i < pattern.borrow().len()).then_some(i))
+        Self::index_prev(index).and_then(|i| (i < pattern.len()).then_some(i))
     }
 }
 
 impl PatternDirection for Right {
-    fn head_index(_pattern: &impl IntoPattern) -> usize {
+    fn head_index(_pattern: &Pattern) -> usize {
         0
     }
     fn index_next(index: usize) -> Option<usize> {
@@ -45,8 +45,8 @@ impl PatternDirection for Right {
 }
 
 impl PatternDirection for Left {
-    fn head_index(pattern: &impl IntoPattern) -> usize {
-        pattern.borrow().len() - 1
+    fn head_index(pattern: &Pattern) -> usize {
+        pattern.len() - 1
     }
     fn index_next(index: usize) -> Option<usize> {
         index.checked_sub(1)

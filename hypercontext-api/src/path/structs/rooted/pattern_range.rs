@@ -186,10 +186,8 @@ impl FoldablePath for PatternRangePath {
         let len = query.len();
         Self::new_range(query, 0, len - 1)
     }
-    fn new_directed<D: PatternDirection, P: IntoPattern>(
-        query: P
-    ) -> Result<Self, (ErrorReason, Self)> {
-        let entry = D::head_index(&query.borrow());
+    fn new_directed<D: PatternDirection>(query: Pattern) -> Result<Self, (ErrorReason, Self)> {
+        let entry = D::head_index(&query);
         let query = query.into_pattern();
         let len = query.len();
         let query = Self::new_range(query, entry, entry);

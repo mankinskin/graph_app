@@ -7,7 +7,7 @@ use crate::{
     },
     graph::vertex::{
         location::child::ChildLocation,
-        pattern::IntoPattern,
+        pattern::Pattern,
     },
     path::accessors::role::{
         End,
@@ -15,7 +15,6 @@ use crate::{
     },
     traversal::traversable::Traversable,
 };
-use std::borrow::Borrow;
 
 pub trait RelativeDirection: PatternDirection {}
 
@@ -27,7 +26,7 @@ impl Direction for Front {
 }
 impl RelativeDirection for Front {}
 impl PatternDirection for Front {
-    fn head_index(pattern: &impl IntoPattern) -> usize {
+    fn head_index(pattern: &Pattern) -> usize {
         <Right as PatternDirection>::head_index(pattern)
     }
     fn index_next(index: usize) -> Option<usize> {
@@ -48,7 +47,7 @@ impl Direction for Back {
 }
 
 impl PatternDirection for Back {
-    fn head_index(pattern: &impl IntoPattern) -> usize {
+    fn head_index(pattern: &Pattern) -> usize {
         <Left as PatternDirection>::head_index(pattern)
     }
     fn index_next(index: usize) -> Option<usize> {
@@ -74,11 +73,8 @@ pub trait PathBorder {
     ) -> bool {
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(location);
-        <Self::BorderDirection as PatternDirection>::pattern_index_next(
-            pattern.borrow(),
-            location.sub_index,
-        )
-        .is_none()
+        <Self::BorderDirection as PatternDirection>::pattern_index_next(pattern, location.sub_index)
+            .is_none()
     }
     //fn is_complete_in_pattern<P: IntoPattern>(&self, pattern: P) -> bool {
     //    self.single_path().is_empty() && self.is_at_pattern_border(pattern)

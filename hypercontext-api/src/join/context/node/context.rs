@@ -38,15 +38,15 @@ use crate::{
                 },
                 InfoPartition,
             },
-            location::{
-                PatternSplitPositions,
-                PosSplitContext,
-                VertexSplits,
-            },
             pattern::{
                 GetPatternContext,
                 GetPatternTraceContext,
                 PatternTraceContext,
+            },
+            split::{
+                PatternSplitPositions,
+                PosSplitContext,
+                VertexSplits,
             },
             Infix,
             Postfix,
@@ -188,7 +188,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
                         let post = Postfix::new(offset).join_partition(self).unwrap();
                         self.ctx
                             .trav
-                            .add_pattern_with_update(index, [part.index, post.index]);
+                            .add_pattern_with_update(index, vec![part.index, post.index]);
                     }
                 })
                 .map(|part| part.index),
@@ -205,7 +205,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
                         };
                         self.ctx
                             .trav
-                            .add_pattern_with_update(index, [pre, part.index]);
+                            .add_pattern_with_update(index, vec![pre, part.index]);
                     }
                 })
                 .map(|part| part.index),
@@ -241,7 +241,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
             };
             let post: Child = Postfix::new(offset).join_partition(self).into();
             self.trav
-                .add_pattern_with_update(index, [pre, part.index, post]);
+                .add_pattern_with_update(index, vec![pre, part.index, post]);
         } else if part.perfect.0 == part.perfect.1 {
             // perfect borders in same pattern
             //       [               ]
@@ -252,7 +252,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
             self.ctx.trav.replace_in_pattern(
                 index.to_pattern_location(ll),
                 lpos..rpos,
-                [part.index],
+                vec![part.index],
             )
         } else {
             // one or both are perfect in different patterns
@@ -290,7 +290,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
                     std::iter::once(vec![wrap_pre, part.index]).chain(wrap_patterns.patterns),
                 );
                 let loc = index.to_pattern_location(rp);
-                self.trav.replace_in_pattern(loc, li..ri, [wrapper]);
+                self.trav.replace_in_pattern(loc, li..ri, vec![wrapper]);
 
                 //let patterns = wrap_patterns.patterns.clone();
                 //offset.1 = offset.1 - wrap_patterns.delta;
@@ -340,7 +340,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
                     std::iter::once(vec![part.index, wrap_post]).chain(wrap_patterns.patterns),
                 );
                 let loc = index.to_pattern_location(lp);
-                self.trav.replace_in_pattern(loc, li..ri + 1, [wrapper]);
+                self.trav.replace_in_pattern(loc, li..ri + 1, vec![wrapper]);
             }
         }
         part.index

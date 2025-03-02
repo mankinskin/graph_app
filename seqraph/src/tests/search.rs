@@ -6,10 +6,7 @@ use pretty_assertions::assert_eq;
 use crate::search::Searchable;
 
 #[cfg(test)]
-use hypercontext_api::tests::graph::{
-    context,
-    Context,
-};
+use hypercontext_api::tests::env::Env1;
 use hypercontext_api::{
     graph::{
         getters::ErrorReason,
@@ -37,6 +34,7 @@ use hypercontext_api::{
         },
         sub_path::SubPath,
     },
+    tests::env::TestEnv,
     traversal::{
         cache::{
             entry::{
@@ -70,9 +68,39 @@ use hypercontext_api::{
 };
 
 #[test]
-#[allow(dead_code)]
+fn find_sequence() {
+    let Env1 {
+        graph,
+        abc,
+        ababababcdefghi,
+        a,
+        ..
+    } = &Env1::build_expected();
+    assert_eq!(
+        graph.find_sequence("a".chars()),
+        Err(ErrorReason::SingleIndex(*a)),
+    );
+    let query = graph.graph().expect_token_children("abc".chars());
+    let abc_found = graph.find_ancestor(&query);
+    assert_eq!(
+        abc_found,
+        Ok(FinishedState::new_complete(query, abc)),
+        "abc"
+    );
+    let query = graph
+        .graph()
+        .expect_token_children("ababababcdefghi".chars());
+    let ababababcdefghi_found = graph.find_ancestor(&query);
+    assert_eq!(
+        ababababcdefghi_found,
+        Ok(FinishedState::new_complete(query, ababababcdefghi)),
+        "ababababcdefghi"
+    );
+}
+
+#[test]
 fn find_parent1() {
-    let Context {
+    let Env1 {
         graph,
         a,
         b,
@@ -82,7 +110,7 @@ fn find_parent1() {
         bc,
         abc,
         ..
-    } = &*context();
+    } = &Env1::build_expected();
     let a_bc_pattern = vec![Child::new(a, 1), Child::new(bc, 2)];
     let ab_c_pattern = vec![Child::new(ab, 2), Child::new(c, 1)];
     let a_bc_d_pattern = vec![Child::new(a, 1), Child::new(bc, 2), Child::new(d, 1)];
@@ -92,7 +120,7 @@ fn find_parent1() {
 
     let query = bc_pattern;
     assert_eq!(
-        graph.find_parent(query),
+        graph.find_parent(&query),
         Err(ErrorReason::SingleIndex(*bc)),
         "bc"
     );
@@ -151,7 +179,7 @@ fn find_parent1() {
 
 #[test]
 fn find_ancestor1() {
-    let Context {
+    let Env1 {
         graph,
         a,
         b,
@@ -168,7 +196,7 @@ fn find_ancestor1() {
         abcd,
         ababababcdefghi,
         ..
-    } = &*context();
+    } = &Env1::build_expected();
     let a_bc_pattern = vec![Child::new(a, 1), Child::new(bc, 2)];
     let ab_c_pattern = vec![Child::new(ab, 2), Child::new(c, 1)];
     let a_bc_d_pattern = vec![Child::new(a, 1), Child::new(bc, 2), Child::new(d, 1)];
@@ -246,11 +274,11 @@ fn find_ancestor2() {
         .into_iter()
         .next_tuple()
         .unwrap();
-    let ab = graph.insert_pattern([a, b]); // 6
-    let by = graph.insert_pattern([b, y]); // 7
-    let yz = graph.insert_pattern([y, z]); // 8
-    let xa = graph.insert_pattern([x, a]); // 9
-    let xab = graph.insert_patterns([[x, ab], [xa, b]]); // 10
+    let ab = graph.insert_pattern(vec![a, b]); // 6
+    let by = graph.insert_pattern(vec![b, y]); // 7
+    let yz = graph.insert_pattern(vec![y, z]); // 8
+    let xa = graph.insert_pattern(vec![x, a]); // 9
+    let xab = graph.insert_patterns([vec![x, ab], vec![xa, b]]); // 10
     let (xaby, xaby_ids) = graph.insert_patterns_with_ids([vec![xab, y], vec![xa, by]]); // 11
     let xa_by_id = xaby_ids[1];
     //assert_eq!(xa_by_id, 7);
@@ -441,20 +469,20 @@ fn find_ancestor3() {
         .next_tuple()
         .unwrap();
     // 6
-    let ab = graph.insert_pattern([a, b]);
-    let by = graph.insert_pattern([b, y]);
-    let yz = graph.insert_pattern([y, z]);
-    let xa = graph.insert_pattern([x, a]);
+    let ab = graph.insert_pattern(vec![a, b]);
+    let by = graph.insert_pattern(vec![b, y]);
+    let yz = graph.insert_pattern(vec![y, z]);
+    let xa = graph.insert_pattern(vec![x, a]);
     // 10
-    let (xab, xab_ids) = graph.insert_patterns_with_ids([[x, ab], [xa, b]]);
+    let (xab, xab_ids) = graph.insert_patterns_with_ids([vec![x, ab], vec![xa, b]]);
     let x_ab_id = xab_ids[0];
     //assert_eq!(x_ab_id, 4);
     // 11
-    let (xaby, xaby_ids) = graph.insert_patterns_with_ids([[xab, y], [xa, by]]);
+    let (xaby, xaby_ids) = graph.insert_patterns_with_ids([vec![xab, y], vec![xa, by]]);
     let xab_y_id = xaby_ids[0];
     //assert_eq!(xab_y_id, 6);
     // 12
-    let _xabyz = graph.insert_patterns([[xaby, z], [xab, yz]]);
+    let _xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
     let gr = HypergraphRef::from(graph);
 
     let query = vec![ab, y];
@@ -751,36 +779,5 @@ fn find_ancestor3() {
             }),
         }),
         "ab_y"
-    );
-}
-
-#[test]
-fn find_sequence() {
-    let Context {
-        graph,
-        abc,
-        ababababcdefghi,
-        a,
-        ..
-    } = &*context();
-    assert_eq!(
-        graph.find_sequence("a".chars()),
-        Err(ErrorReason::SingleIndex(*a)),
-    );
-    let query = graph.graph().expect_token_children("abc".chars());
-    let abc_found = graph.find_ancestor(&query);
-    assert_eq!(
-        abc_found,
-        Ok(FinishedState::new_complete(query, abc)),
-        "abc"
-    );
-    let query = graph
-        .graph()
-        .expect_token_children("ababababcdefghi".chars());
-    let ababababcdefghi_found = graph.find_ancestor(&query);
-    assert_eq!(
-        ababababcdefghi_found,
-        Ok(FinishedState::new_complete(query, ababababcdefghi)),
-        "ababababcdefghi"
     );
 }

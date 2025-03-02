@@ -34,23 +34,6 @@ impl<R: PathRole, P: FoldablePath + HasPath<R>> HasPath<R> for PathCursor<P> {
         self.path.path_mut()
     }
 }
-
-//impl HasPath<End> for OverlapPrimer {
-//    fn path(&self) -> &Vec<ChildLocation> {
-//        if self.exit == 0 {
-//            self.end.borrow()
-//        } else {
-//            self.context.end.borrow()
-//        }
-//    }
-//    fn path_mut(&mut self) -> &mut Vec<ChildLocation> {
-//        if self.exit == 0 {
-//            self.end.borrow_mut()
-//        } else {
-//            self.context.end.borrow_mut()
-//        }
-//    }
-//}
 /// access to a rooted path pointing to a descendant
 pub trait HasRootedRolePath<R: PathRole>: HasRolePath<R> + RootedPath {
     fn rooted_role_path(&self) -> RootedRolePath<R, Self::Root>;
@@ -60,22 +43,10 @@ pub trait HasRootedRolePath<R: PathRole>: HasRolePath<R> + RootedPath {
 pub trait HasRolePath<R: PathRole> {
     fn role_path(&self) -> &RolePath<R>;
     fn role_path_mut(&mut self) -> &mut RolePath<R>;
-    fn num_path_segments(&self) -> usize {
-        self.role_path().num_path_segments()
-    }
 }
 
 pub trait HasMatchPaths: HasRolePath<Start> + HasRolePath<End> {
     fn into_paths(self) -> (RolePath<Start>, RolePath<End>);
-    fn num_path_segments(&self) -> usize {
-        HasRolePath::<Start>::role_path(self).num_path_segments()
-            + HasRolePath::<End>::role_path(self).num_path_segments()
-    }
-    fn min_path_segments(&self) -> usize {
-        HasRolePath::<Start>::role_path(self)
-            .num_path_segments()
-            .min(HasRolePath::<End>::role_path(self).num_path_segments())
-    }
 }
 
 pub trait HasSinglePath {

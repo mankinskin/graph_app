@@ -263,7 +263,7 @@ where
         &self,
         pattern: impl IntoPattern,
     ) -> ChildStrings {
-        let nodes = pattern.into_iter().map(|child| {
+        let nodes = pattern.into_pattern().into_iter().map(|child| {
             (
                 self.index_string(child.vertex_index()),
                 self.expect_vertex(child.vertex_index())

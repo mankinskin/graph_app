@@ -1,7 +1,4 @@
-use std::{
-    borrow::Borrow,
-    ops::ControlFlow,
-};
+use std::ops::ControlFlow;
 
 use super::super::super::mutators::move_path::key::MoveKey;
 use crate::{
@@ -76,9 +73,7 @@ impl<K: MoveKey<Right, Delta = usize>> MoveLeaf<Right> for KeyedLeaf<'_, Right, 
     ) -> ControlFlow<()> {
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(*self.location);
-        if let Some(next) =
-            TravDir::<Trav>::pattern_index_next(pattern.borrow(), self.location.sub_index)
-        {
+        if let Some(next) = TravDir::<Trav>::pattern_index_next(pattern, self.location.sub_index) {
             let prev = &pattern[self.location.sub_index];
             self.path.move_key(prev.width());
             self.location.sub_index = next;
@@ -96,9 +91,7 @@ impl<K: MoveKey<Left, Delta = usize>> MoveLeaf<Left> for KeyedLeaf<'_, Left, K> 
     ) -> ControlFlow<()> {
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(*self.location);
-        if let Some(prev) =
-            TravDir::<Trav>::pattern_index_prev(pattern.borrow(), self.location.sub_index)
-        {
+        if let Some(prev) = TravDir::<Trav>::pattern_index_prev(pattern, self.location.sub_index) {
             let c = &pattern[self.location.sub_index];
             self.path.move_key(c.width());
             self.location.sub_index = prev;

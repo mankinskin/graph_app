@@ -162,9 +162,10 @@ where
     pub fn add_pattern_with_update(
         &mut self,
         index: impl HasVertexIndex,
-        indices: impl IntoPattern,
+        pattern: Pattern,
     ) -> PatternId {
         // todo handle token nodes
+        let indices = pattern.into_pattern();
         let (width, indices, children) = self.to_width_indices_children(indices);
         let pattern_id = PatternId::default();
         let data = self.expect_vertex_mut(index.vertex_index());
@@ -177,7 +178,7 @@ where
     pub fn add_patterns_with_update(
         &mut self,
         index: impl HasVertexIndex,
-        patterns: impl IntoIterator<Item = impl IntoPattern>,
+        patterns: impl IntoIterator<Item = Pattern>,
     ) -> Vec<PatternId> {
         let index = index.vertex_index();
         patterns
@@ -189,9 +190,9 @@ where
     #[track_caller]
     pub fn insert_pattern_with_id(
         &mut self,
-        indices: impl IntoPattern,
+        pattern: impl IntoPattern,
     ) -> (Child, Option<PatternId>) {
-        let indices = indices.into_pattern();
+        let indices = pattern.into_pattern();
         let (c, id) = match indices.len() {
             0 => (None, None),
             1 => (
@@ -209,8 +210,9 @@ where
     //#[track_caller]
     pub fn force_insert_pattern_with_id(
         &mut self,
-        indices: impl IntoPattern,
+        pattern: impl IntoPattern,
     ) -> (Child, PatternId) {
+        let indices = pattern.into_pattern();
         let (width, indices, children) = self.to_width_indices_children(indices);
         let index = self.next_vertex_index();
         let mut new_data = VertexData::new(index, width);
@@ -223,8 +225,9 @@ where
     /// create new node from a pattern
     pub fn insert_pattern(
         &mut self,
-        indices: impl IntoPattern,
+        pattern: impl IntoPattern,
     ) -> Child {
+        let indices = pattern.into_pattern();
         self.insert_pattern_with_id(indices).0
     }
     /// create new node from a pattern
@@ -236,7 +239,7 @@ where
     }
     pub fn insert_patterns_with_ids(
         &mut self,
-        patterns: impl IntoIterator<Item = impl IntoPattern>,
+        patterns: impl IntoIterator<Item = Pattern>,
     ) -> (Child, Vec<PatternId>) {
         // todo handle token nodes
         let patterns = patterns.into_iter().collect_vec();
@@ -278,7 +281,7 @@ where
     #[track_caller]
     pub fn try_insert_patterns(
         &mut self,
-        patterns: impl IntoIterator<Item = impl IntoPattern>,
+        patterns: impl IntoIterator<Item = Pattern>,
     ) -> Option<Child> {
         let patterns = patterns
             .into_iter()
@@ -309,7 +312,7 @@ where
                         } else if inner.len() == 1 {
                             Ok(Ok(*inner.first().unwrap()))
                         } else if pattern.len() > inner.len() {
-                            let c = self.insert_pattern(inner);
+                            let c = self.insert_pattern(inner.into_pattern());
                             self.replace_in_pattern(location, range, c);
                             Ok(Ok(c))
                         } else {
@@ -344,8 +347,9 @@ where
         &mut self,
         location: impl IntoPatternLocation,
         range: impl PatternRangeIndex,
-        replace: impl IntoPattern + Clone,
+        replace: impl IntoPattern,
     ) {
+        let replace = replace.into_pattern();
         let location = location.into_pattern_location();
         let parent = location.parent;
         let parent_index = parent.vertex_index();
@@ -356,7 +360,7 @@ where
             let pattern = vertex.expect_child_pattern_mut(&pat);
             let _backup = pattern.clone();
             let start = range.clone().next().unwrap();
-            let new_end = start + replace.borrow().len();
+            let new_end = start + replace.len();
             let _old = pattern.clone();
             let replaced = replace_in_pattern(&mut *pattern, range.clone(), replace.clone());
             let rem = pattern.iter().skip(new_end).cloned().collect::<Pattern>();
@@ -396,11 +400,15 @@ where
         pattern_id: PatternId,
         start: usize,
     ) {
-        pattern.into_iter().enumerate().for_each(|(pos, c)| {
-            let pos = start + pos;
-            let c = self.expect_vertex_mut(c.to_child());
-            c.add_parent(ChildLocation::new(parent.to_child(), pattern_id, pos));
-        });
+        pattern
+            .into_pattern()
+            .into_iter()
+            .enumerate()
+            .for_each(|(pos, c)| {
+                let pos = start + pos;
+                let c = self.expect_vertex_mut(c.to_child());
+                c.add_parent(ChildLocation::new(parent.to_child(), pattern_id, pos));
+            });
     }
     pub fn append_to_pattern(
         &mut self,

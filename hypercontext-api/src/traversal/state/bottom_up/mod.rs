@@ -1,2 +1,2 @@
-pub(crate) mod parent;
+pub mod parent;
 pub(crate) mod start;

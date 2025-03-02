@@ -49,9 +49,6 @@ pub struct RolePath<R: PathRole> {
 }
 
 impl<R: PathRole> RolePath<R> {
-    pub fn num_path_segments(&self) -> usize {
-        self.path().len()
-    }
     pub fn path(&self) -> &Vec<ChildLocation> {
         &self.sub_path.path
     }

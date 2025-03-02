@@ -11,7 +11,7 @@ use tracing::{
 use crate::{
     insert::{
         context::InsertContext,
-        HasInsertContext,
+        Inserting,
     },
     read::sequence::{
         SequenceIter,
@@ -33,7 +33,6 @@ use hypercontext_api::{
                 IntoPattern,
                 Pattern,
             },
-            wide::Wide,
         },
         Hypergraph,
         HypergraphRef,
@@ -67,7 +66,7 @@ use super::overlap::{
     chain::OverlapChain,
     iterator::ExpansionIterator,
 };
-pub trait HasReadContext: HasInsertContext {
+pub trait HasReadContext: Inserting {
     fn read_context<'g>(&'g mut self) -> ReadContext;
     fn read_sequence(
         &mut self,
@@ -273,7 +272,7 @@ impl ReadContext {
     //}
 }
 
-impl HasInsertContext for ReadContext {
+impl Inserting for ReadContext {
     fn insert_context(&self) -> InsertContext {
         InsertContext::new(self.graph.clone())
     }

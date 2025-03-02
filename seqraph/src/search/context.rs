@@ -2,16 +2,33 @@ use hypercontext_api::{
     graph::getters::ErrorReason,
     traversal::{
         container::bft::BftQueue,
-        fold::Foldable,
-        iterator::policy::{
-            AncestorPolicy,
-            ParentPolicy,
-        },
+        iterator::policy::DirectedTraversalPolicy,
         result::FinishedState,
+        state::bottom_up::parent::ParentState,
         traversable::Traversable,
         TraversalKind,
     },
 };
+
+#[derive(Debug)]
+pub struct AncestorPolicy<T: Traversable>(std::marker::PhantomData<T>);
+
+impl<T: Traversable> DirectedTraversalPolicy for AncestorPolicy<T> {
+    type Trav = T;
+}
+
+#[derive(Debug)]
+pub struct ParentPolicy<T: Traversable>(std::marker::PhantomData<T>);
+
+impl<T: Traversable> DirectedTraversalPolicy for ParentPolicy<T> {
+    type Trav = T;
+    fn next_parents(
+        _trav: &Self::Trav,
+        _state: &ParentState,
+    ) -> Vec<ParentState> {
+        vec![]
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct SearchContext<T: Traversable> {
@@ -47,27 +64,6 @@ impl<T: Traversable> TraversalKind for ParentSearchTraversal<T> {
 impl<T: Traversable> SearchContext<T> {
     pub fn new(graph: T) -> Self {
         Self { graph }
-    }
-    // find largest matching direct parent
-    pub fn find_pattern_parent(
-        self,
-        foldable: impl Foldable,
-    ) -> SearchResult {
-        self.search::<_, ParentSearchTraversal<T>>(foldable)
-    }
-    /// find largest matching ancestor for pattern
-    pub fn find_pattern_ancestor(
-        self,
-        foldable: impl Foldable,
-    ) -> SearchResult {
-        self.search::<_, AncestorSearchTraversal<T>>(foldable)
-    }
-    //, Ti: TraversalIterator<'a, Trav = Self>
-    fn search<F: Foldable, K: TraversalKind<Trav = Self>>(
-        self,
-        foldable: F,
-    ) -> SearchResult {
-        foldable.fold::<K>(self).map_err(|err| err.reason)
     }
 }
 

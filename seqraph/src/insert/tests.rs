@@ -5,7 +5,7 @@ use maplit::hashset;
 use pretty_assertions::assert_eq;
 
 use crate::{
-    insert::HasInsertContext,
+    insert::Inserting,
     search::Searchable,
 };
 use hypercontext_api::{
@@ -49,13 +49,13 @@ fn index_pattern1() {
         .next_tuple()
         .unwrap();
     // index 6
-    let ab = graph.insert_pattern([a, b]);
-    let by = graph.insert_pattern([b, y]);
-    let yz = graph.insert_pattern([y, z]);
-    let xa = graph.insert_pattern([x, a]);
-    let xab = graph.insert_patterns([[x, ab], [xa, b]]);
-    let xaby = graph.insert_patterns([[xab, y], [xa, by]]);
-    let _xabyz = graph.insert_patterns([[xaby, z], [xab, yz]]);
+    let ab = graph.insert_pattern(vec![a, b]);
+    let by = graph.insert_pattern(vec![b, y]);
+    let yz = graph.insert_pattern(vec![y, z]);
+    let xa = graph.insert_pattern(vec![x, a]);
+    let xab = graph.insert_patterns([vec![x, ab], vec![xa, b]]);
+    let xaby = graph.insert_patterns([vec![xab, y], vec![xa, by]]);
+    let _xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
     // todo: split sub patterns not caught by query search
     let graph = HypergraphRef::from(graph);
     let query = vec![by, z];
@@ -100,11 +100,11 @@ fn index_pattern2() {
         .next_tuple()
         .unwrap();
     // index 6
-    let yz = graph.insert_pattern([y, z]);
-    let xab = graph.insert_pattern([x, a, b]);
-    let _xyz = graph.insert_pattern([x, yz]);
-    let _xabz = graph.insert_pattern([xab, z]);
-    let _xabyz = graph.insert_pattern([xab, yz]);
+    let yz = graph.insert_pattern(vec![y, z]);
+    let xab = graph.insert_pattern(vec![x, a, b]);
+    let _xyz = graph.insert_pattern(vec![x, yz]);
+    let _xabz = graph.insert_pattern(vec![xab, z]);
+    let _xabyz = graph.insert_pattern(vec![xab, yz]);
 
     let graph_ref = HypergraphRef::from(graph);
 
@@ -155,14 +155,14 @@ fn index_infix1() {
         .next_tuple()
         .unwrap();
     // index 6
-    let yz = graph.insert_pattern([y, z]);
-    let xxabyzw = graph.insert_pattern([x, x, a, b, yz, w]);
+    let yz = graph.insert_pattern(vec![y, z]);
+    let xxabyzw = graph.insert_pattern(vec![x, x, a, b, yz, w]);
 
     let graph_ref = HypergraphRef::from(graph);
 
     let (aby, _) = graph_ref.insert(vec![a, b, y]).expect("Indexing failed");
     let ab = graph_ref
-        .find_ancestor([a, b])
+        .find_ancestor(vec![a, b])
         .unwrap()
         .expect_complete("ab")
         .0;
@@ -190,7 +190,7 @@ fn index_infix1() {
         "aby"
     );
     let abyz = graph_ref
-        .find_ancestor([ab, yz])
+        .find_ancestor(vec![ab, yz])
         .unwrap()
         .expect_complete("abyz")
         .0;
@@ -232,14 +232,14 @@ fn index_infix2() {
         .next_tuple()
         .unwrap();
     // index 6
-    let yy = graph.insert_pattern([y, y]);
-    let xx = graph.insert_pattern([x, x]);
-    let xy = graph.insert_pattern([x, y]);
-    let xxy = graph.insert_patterns([[xx, y], [x, xy]]);
-    let abcdx = graph.insert_pattern([a, b, c, d, x]);
-    let yabcdx = graph.insert_pattern([y, abcdx]);
-    let abcdxx = graph.insert_pattern([abcdx, x]);
-    let _xxyyabcdxxyy = graph.insert_patterns([[xx, yy, abcdxx, yy], [xxy, yabcdx, xy, y]]);
+    let yy = graph.insert_pattern(vec![y, y]);
+    let xx = graph.insert_pattern(vec![x, x]);
+    let xy = graph.insert_pattern(vec![x, y]);
+    let xxy = graph.insert_patterns([vec![xx, y], vec![x, xy]]);
+    let abcdx = graph.insert_pattern(vec![a, b, c, d, x]);
+    let yabcdx = graph.insert_pattern(vec![y, abcdx]);
+    let abcdxx = graph.insert_pattern(vec![abcdx, x]);
+    let _xxyyabcdxxyy = graph.insert_patterns([vec![xx, yy, abcdxx, yy], vec![xxy, yabcdx, xy, y]]);
 
     let graph_ref = HypergraphRef::from(graph);
 

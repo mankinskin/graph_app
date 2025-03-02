@@ -41,7 +41,10 @@ use band::{
     Overlap,
 };
 
-use super::bundle::Bundle;
+use super::{
+    bundle::Bundle,
+    generator::ExpansionLink,
+};
 pub mod band;
 
 /// IMPORTANT:
@@ -113,29 +116,25 @@ pub mod band;
 /// - postfix_path
 /// - prefix_path
 ///
-pub trait ChainAppendage {
-    fn append_to_chain(
-        self,
-        chain: &mut OverlapChain,
-    );
-}
-impl<T: Into<Band>> ChainAppendage for T {
+pub trait ChainAppendage: Sized {
     fn append_to_chain(
         self,
         chain: &mut OverlapChain,
     ) {
-        chain.bands.insert(self.into());
+        chain.bands.insert(self.into_band());
+    }
+    fn into_band(self) -> Band;
+}
+impl ChainAppendage for Band {
+    fn into_band(self) -> Band {
+        self
     }
 }
-impl<Trav: TraversableMut> ChainAppendage for (Trav, Bundle) {
-    fn append_to_chain(
-        self,
-        chain: &mut OverlapChain,
-    ) {
-        chain.bands.insert(self.1.wrap_into_band(self.0));
+impl ChainAppendage for (usize, Band) {
+    fn into_band(self) -> Band {
+        self.1
     }
 }
-
 #[derive(Clone, Debug)]
 pub struct OverlapLink {
     pub postfix_path: RolePath<End>, // location of postfix/overlap in first index
@@ -189,6 +188,7 @@ impl OverlapChain {
         self.links.pop_front();
         self.bands.pop_first()
     }
+
     //pub fn append_overlap(
     //    &mut self,
     //    overlap: OverlapBand,
@@ -271,49 +271,6 @@ impl OverlapChain {
     //    Some(index)
     //}
 
-    //    pub fn back_context_for_link(
-    //        &mut self,
-    //        mut trav: impl TraversableMut,
-    //        start_bound: usize,
-    //        next_link: &OverlapLink,
-    //    ) -> Pattern {
-    //        let past_ctx = self.take_past_context_pattern(&mut trav, start_bound);
-    //
-    //        if let Some((past_end_bound, past_ctx)) = past_ctx {
-    //            //println!("reusing back context {past_end_bound}: {:#?}", past_ctx);
-    //            if past_end_bound == start_bound {
-    //                past_ctx
-    //            } else {
-    //                assert!(past_end_bound < start_bound);
-    //                panic!("Shouldn't this be impossible?!");
-    //            }
-    //        } else {
-    //            //println!("building back context from path");
-    //            //let (inner_back_ctx, _loc) = ctx
-    //            //    .contexter::<SplitBack>()
-    //            //    .try_context_path(
-    //            //        //link.postfix_path.clone().into_context_path(),
-    //            //        // FIXME: maybe mising root!!!
-    //            //        link.postfix_path.clone().sub_path,
-    //            //        //link.overlap,
-    //            //    )
-    //            //    .unwrap();
-    //
-    //            let back_ctx = if let Some((_, last)) = self.chain.iter_mut().last() {
-    //                trav.read_pattern(last.band.back_context.borrow())
-    //                    .ok()
-    //                    //Some(self.graph.read_pattern(last.band.back_context.borrow()))
-    //                    .map(move |(back_ctx, _)| {
-    //                        last.band.back_context = vec![back_ctx];
-    //                        last.band.back_context.borrow()
-    //                    })
-    //            } else {
-    //                None
-    //            }
-    //            .unwrap_or_default();
-    //            DefaultDirection::context_then_inner(back_ctx, Child::new(0, 0)) //inner_back_ctx)
-    //        }
-    //    }
     //pub fn take_past_context_pattern(
     //    &mut self,
     //    trav: impl TraversableMut,

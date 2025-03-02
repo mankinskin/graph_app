@@ -5,7 +5,10 @@ use derivative::Derivative;
 use derive_more::Deref;
 use hypercontext_api::graph::vertex::{
     child::Child,
-    pattern::Pattern,
+    pattern::{
+        pattern_width,
+        Pattern,
+    },
     wide::Wide,
 };
 
@@ -53,9 +56,19 @@ impl Band {
         self.pattern.push(postfix);
     }
 }
-impl From<(usize, Band)> for Band {
-    fn from((_, band): (usize, Band)) -> Self {
-        band
+//impl From<(usize, Band)> for Band {
+//    fn from((_, band): (usize, Band)) -> Self {
+//        band
+//    }
+//}
+impl From<(usize, Pattern)> for Band {
+    fn from((start_bound, pattern): (usize, Pattern)) -> Self {
+        let end_bound = start_bound + pattern_width(&pattern);
+        Self {
+            pattern,
+            start_bound,
+            end_bound,
+        }
     }
 }
 

@@ -1,7 +1,4 @@
-use std::{
-    borrow::Borrow,
-    num::NonZeroUsize,
-};
+use std::num::NonZeroUsize;
 
 use builder::*;
 use ctx::*;
@@ -25,7 +22,7 @@ use crate::{
     },
     interval::{
         cache::vertex::SplitVertexCache,
-        partition::location::VertexSplits,
+        partition::split::VertexSplits,
     },
     traversal::{
         cache::{
@@ -149,7 +146,7 @@ pub fn position_splits<'a>(
         splits: patterns
             .into_iter()
             .map(|(pid, pat)| {
-                let pos = SplitBack::token_pos_split(pat.borrow(), pos).unwrap();
+                let pos = SplitBack::token_pos_split(pat, pos).unwrap();
                 (*pid, pos)
             })
             .collect(),
@@ -162,8 +159,8 @@ pub(crate) fn range_splits<'a>(
 ) -> (VertexSplits, VertexSplits) {
     let (ls, rs) = patterns
         .map(|(pid, pat)| {
-            let lpos = SplitBack::token_pos_split(pat.borrow(), parent_range.0).unwrap();
-            let rpos = SplitBack::token_pos_split(pat.borrow(), parent_range.1).unwrap();
+            let lpos = SplitBack::token_pos_split(pat, parent_range.0).unwrap();
+            let rpos = SplitBack::token_pos_split(pat, parent_range.1).unwrap();
             ((*pid, lpos), (*pid, rpos))
         })
         .unzip();
@@ -185,7 +182,7 @@ pub(crate) fn cleaned_position_splits<'a>(
 ) -> Result<Vec<SubSplitLocation>, SubLocation> {
     patterns
         .map(|(pid, pat)| {
-            let pos = SplitBack::token_pos_split(pat.borrow(), parent_offset).unwrap();
+            let pos = SplitBack::token_pos_split(pat, parent_offset).unwrap();
             let location = SubLocation::new(*pid, pos.sub_index);
             if pos.inner_offset.is_some() || pat.len() > 2 {
                 // can't be clean

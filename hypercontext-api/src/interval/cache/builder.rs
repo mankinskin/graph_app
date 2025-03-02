@@ -31,7 +31,7 @@ use crate::{
             TraceState,
         },
         partition::context::NodeTraceContext,
-        SplitContext,
+        split::SplitContext,
     },
     traversal::{
         cache::{

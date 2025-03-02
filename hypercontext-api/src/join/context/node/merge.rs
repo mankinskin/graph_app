@@ -17,10 +17,6 @@ use crate::{
         child::Child,
         pattern::Pattern,
     },
-    join::{
-        partition::Join,
-        Split,
-    },
     interval::{
         cache::{
             vertex::SplitVertexCache,
@@ -32,12 +28,16 @@ use crate::{
                 InfoPartition,
                 PartitionInfo,
             },
-            location::{
+            split::{
                 PatternSplitPositions,
                 PosSplitContext,
             },
             Infix,
         },
+    },
+    join::{
+        partition::Join,
+        Split,
     },
     HashMap,
 };
@@ -74,10 +74,12 @@ impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b> {
                     self.ctx.trav.replace_in_pattern(
                         index.to_pattern_location(pid),
                         0..,
-                        [left, right],
+                        vec![left, right],
                     );
                 } else {
-                    self.ctx.trav.add_pattern_with_update(index, [left, right]);
+                    self.ctx
+                        .trav
+                        .add_pattern_with_update(index, vec![left, right]);
                 }
             }
             finals.insert(PosKey::new(index, *offset), Split::new(left, right));

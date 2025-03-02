@@ -17,9 +17,9 @@ use hypercontext_api::{
         PatternSplitPos,
     },
     lab,
-    tests::graph::{
-        context_mut,
-        Context,
+    tests::env::{
+        Env1,
+        TestEnv,
     },
     HashMap,
     HashSet,
@@ -33,7 +33,7 @@ macro_rules! nz {
 #[test]
 fn interval_graph1() {
     let mut res = build_trace1();
-    let Context {
+    let Env1 {
         graph,
         def,
         d_ef_id,
@@ -46,7 +46,7 @@ fn interval_graph1() {
         ef,
         e_f_id,
         ..
-    } = &mut *context_mut();
+    } = &mut Env1::build_expected();
     let interval = IntervalGraph::new(&mut *graph, &mut res);
     assert_eq!(
         interval.vertices[&lab!(ef)],

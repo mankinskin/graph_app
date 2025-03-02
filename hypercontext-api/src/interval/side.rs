@@ -28,6 +28,7 @@ impl SplitSide for SplitBack {
     ) -> Option<PatternSplitPos> {
         let mut offset = offset.get();
         pattern
+            .into_pattern()
             .into_iter()
             .enumerate()
             .find_map(|(i, c)|
@@ -57,6 +58,7 @@ impl SplitSide for SplitFront {
     ) -> Option<PatternSplitPos> {
         let mut offset = offset.get();
         pattern
+            .into_pattern()
             .into_iter()
             .enumerate()
             .find_map(|(i, c)|
