@@ -25,13 +25,12 @@ use crate::{
             cleaned_position_splits,
             leaves::Leaves,
             vertex::SplitVertexCache,
-            IntervalGraph,
-            SplitPositionCache,
-            TraceContext,
+            PosKey,
             TraceState,
         },
         partition::context::NodeTraceContext,
         split::SplitContext,
+        SplitPositionCache,
     },
     traversal::{
         cache::{
@@ -58,7 +57,8 @@ use derive_more::{
 };
 
 use super::{
-    PosKey,
+    cache::ctx::TraceContext,
+    IntervalGraph,
     SplitVertices,
 };
 

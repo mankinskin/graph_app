@@ -13,9 +13,9 @@ use crate::{
         Hypergraph,
         HypergraphRef,
     },
-    interval::cache::{
+    interval::{
+        cache::PosKey,
         IntervalGraph,
-        PosKey,
     },
     traversal::traversable::{
         TravKind,

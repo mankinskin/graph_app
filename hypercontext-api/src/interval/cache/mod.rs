@@ -1,18 +1,8 @@
 use std::num::NonZeroUsize;
 
-use builder::*;
-use ctx::*;
-use derive_more::derive::{
-    Deref,
-    DerefMut,
-};
-use leaves::Leaves;
-use position::*;
-
 use crate::{
     graph::vertex::{
         child::Child,
-        has_vertex_index::HasVertexIndex,
         location::SubLocation,
         pattern::{
             id::PatternId,
@@ -20,22 +10,8 @@ use crate::{
         },
         wide::Wide,
     },
-    interval::{
-        cache::vertex::SplitVertexCache,
-        partition::split::VertexSplits,
-    },
-    traversal::{
-        cache::{
-            entry::{
-                position::SubSplitLocation,
-                RootMode,
-            },
-            label_key::vkey::VertexCacheKey,
-        },
-        fold::state::FoldState,
-        traversable::TraversableMut,
-    },
-    HashMap,
+    interval::partition::split::VertexSplits,
+    traversal::cache::entry::position::SubSplitLocation,
 };
 
 use super::side::{
@@ -46,7 +22,6 @@ use std::fmt::Debug;
 
 pub mod vertex;
 
-pub mod builder;
 pub mod ctx;
 pub mod leaves;
 pub mod position;
@@ -86,55 +61,6 @@ pub struct TraceState {
     pub index: Child,
     pub offset: NonZeroUsize,
     pub prev: PosKey,
-}
-
-#[derive(Debug, Deref, DerefMut)]
-pub struct SplitVertices {
-    pub entries: HashMap<VertexCacheKey, SplitVertexCache>,
-}
-#[derive(Debug)]
-pub struct IntervalGraph {
-    pub vertices: SplitVertices,
-    pub root_mode: RootMode,
-    pub root: Child,
-    pub leaves: Leaves,
-}
-impl IntervalGraph {
-    pub fn new<'a, Trav: TraversableMut + 'a>(
-        trav: &'a mut Trav,
-        fold_state: &mut FoldState,
-    ) -> Self {
-        IntervalGraphBuilder::new(trav, fold_state).build()
-    }
-
-    pub fn get(
-        &self,
-        key: &PosKey,
-    ) -> Option<&SplitPositionCache> {
-        self.vertices
-            .get(&key.index.vertex_index())
-            .and_then(|ve| ve.positions.get(&key.pos))
-    }
-    pub fn get_mut(
-        &mut self,
-        key: &PosKey,
-    ) -> Option<&mut SplitPositionCache> {
-        self.vertices
-            .get_mut(&key.index.vertex_index())
-            .and_then(|ve| ve.positions.get_mut(&key.pos))
-    }
-    pub fn expect(
-        &self,
-        key: &PosKey,
-    ) -> &SplitPositionCache {
-        self.get(key).unwrap()
-    }
-    pub fn expect_mut(
-        &mut self,
-        key: &PosKey,
-    ) -> &mut SplitPositionCache {
-        self.get_mut(key).unwrap()
-    }
 }
 
 pub fn position_splits<'a>(
