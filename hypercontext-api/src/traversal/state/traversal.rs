@@ -38,15 +38,6 @@ pub struct TraversalState {
     pub kind: InnerKind,
 }
 
-//impl From<WaitingState> for TraversalState {
-//    fn from(state: WaitingState) -> Self {
-//        Self {
-//            prev: state.prev,
-//            new: vec![],
-//            kind: InnerKind::Parent(state.state),
-//        }
-//    }
-//}
 impl TargetKey for TraversalState {
     fn target_key(&self) -> DirectedKey {
         match &self.kind {
@@ -104,7 +95,7 @@ impl TraversalState {
     pub fn entry_location(&self) -> Option<ChildLocation> {
         match &self.kind {
             InnerKind::Parent(state) => Some(state.path.root_child_location()),
-            InnerKind::Child(state) => state.paths.path.role_leaf_child_location::<End>(),
+            InnerKind::Child(state) => state.path.role_leaf_child_location::<End>(),
         }
     }
     pub fn prev_key(&self) -> PrevKey {

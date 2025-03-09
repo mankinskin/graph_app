@@ -1,12 +1,15 @@
-use cache::key::props::TargetKey;
+use cache::{
+    key::props::TargetKey,
+    TraversalCache,
+};
 use container::StateContainer;
+use fold::states::StatesContext;
 use iterator::policy::DirectedTraversalPolicy;
 use state::{
     next_states::NextStates,
     traversal::TraversalState,
     InnerKind,
 };
-use states::StatesContext;
 use std::fmt::Debug;
 use traversable::Traversable;
 
@@ -16,10 +19,9 @@ pub mod fold;
 pub mod iterator;
 pub mod result;
 pub mod state;
-mod states;
 pub mod traversable;
 
-pub trait TraversalKind: Debug {
+pub trait TraversalKind: Debug + Default {
     type Trav: Traversable;
     type Container: StateContainer;
     type Policy: DirectedTraversalPolicy<Trav = Self::Trav>;
@@ -40,9 +42,22 @@ pub trait TraversalKind: Debug {
 #[derive(Debug)]
 pub struct TraversalContext<K: TraversalKind> {
     pub states: StatesContext<K>,
+    pub cache: TraversalCache,
     pub trav: K::Trav,
 }
 
+impl<K: TraversalKind> Iterator for TraversalContext<K> {
+    type Item = (usize, NextStates);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some((depth, tstate)) = self.states.next() {
+            self.traversal_next_states(tstate)
+                .map(|states| (depth, states))
+        } else {
+            None
+        }
+    }
+}
 impl<K: TraversalKind> TraversalContext<K> {
     /// Retrieves next unvisited states and adds edges to cache
     pub fn traversal_next_states(
@@ -50,7 +65,7 @@ impl<K: TraversalKind> TraversalContext<K> {
         mut tstate: TraversalState,
     ) -> Option<NextStates> {
         let key = tstate.target_key();
-        let exists = self.states.cache.exists(&key);
+        let exists = self.cache.exists(&key);
 
         //let prev = tstate.prev_key();
         //if !exists {
@@ -67,7 +82,7 @@ impl<K: TraversalKind> TraversalContext<K> {
                 } else {
                     // add other edges leading to this parent
                     for entry in tstate.new {
-                        self.states.cache.add_state(&self.trav, entry, true);
+                        self.cache.add_state(&self.trav, entry, true);
                     }
                     NextStates::Empty
                 }

@@ -15,7 +15,7 @@ use hypercontext_api::{
         HypergraphRef,
     },
     traversal::{
-        fold::Foldable,
+        fold::foldable::Foldable,
         traversable::{
             TravKind,
             Traversable,

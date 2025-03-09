@@ -19,6 +19,7 @@ use crate::{
             root::GraphRoot,
         },
         mutators::{
+            append::PathAppend,
             lower::PathLower,
             move_path::{
                 key::{
@@ -29,7 +30,10 @@ use crate::{
                 Retract,
             },
         },
-        structs::rooted::role_path::IndexStartPath,
+        structs::rooted::{
+            index_range::IndexRangePath,
+            role_path::IndexStartPath,
+        },
         RoleChildPath,
     },
     traversal::{
@@ -52,6 +56,7 @@ use crate::{
         container::pruning::PruneStates,
         state::{
             bottom_up::parent::ParentState,
+            cursor::PatternRangeCursor,
             top_down::end::{
                 EndKind,
                 EndReason,
@@ -71,23 +76,33 @@ use itertools::Itertools;
 use std::cmp::Ordering;
 use tap::Tap;
 
-use super::{
-    super::next_states::{
-        NextStates,
-        StateNext,
-    },
-    pair::{
-        PathPair,
-        PathPairMode,
-    },
+use super::super::next_states::{
+    NextStates,
+    StateNext,
 };
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PathPairMode {
+    GraphMajor,
+    QueryMajor,
+}
+
+impl_cursor_pos! {
+    CursorPosition for ChildState, self => self.cursor.relative_pos
+}
+//impl LeafKey for PathPair {
+//    fn leaf_location(&self) -> ChildLocation {
+//        self.path.leaf_location()
+//    }
+//}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChildState {
     pub prev_pos: TokenPosition,
     pub root_pos: TokenPosition,
     pub target: DirectedKey,
-    pub paths: PathPair,
+    pub path: IndexRangePath,
+    pub mode: PathPairMode,
+    pub cursor: PatternRangeCursor,
 }
 
 impl Ord for Child {
@@ -104,10 +119,7 @@ impl Ord for ChildState {
         &self,
         other: &Self,
     ) -> Ordering {
-        self.paths
-            .path
-            .root_parent()
-            .cmp(&other.paths.path.root_parent())
+        self.path.root_parent().cmp(&other.path.root_parent())
     }
 }
 
@@ -121,16 +133,13 @@ impl PartialOrd for ChildState {
 }
 impl RootKey for ChildState {
     fn root_key(&self) -> UpKey {
-        UpKey::new(self.paths.path.root_parent(), self.root_pos.into())
+        UpKey::new(self.path.root_parent(), self.root_pos.into())
     }
 }
 
-impl_cursor_pos! {
-    CursorPosition for ChildState, self => self.paths.cursor.relative_pos
-}
 impl LeafKey for ChildState {
     fn leaf_location(&self) -> ChildLocation {
-        self.paths.leaf_location()
+        self.path.leaf_location()
     }
 }
 impl TargetKey for ChildState {
@@ -139,24 +148,24 @@ impl TargetKey for ChildState {
     }
 }
 
-//pub trait GetCacheKey: RootKey + LeafKey {
-//    fn leaf_key(&self) -> DirectedKey;
-//}
-//
-//impl GetCacheKey for ChildState {
-//    fn leaf_key(&self) -> DirectedKey {
-//        self.target
-//    }
-//}
 impl ChildState {
+    pub fn push_major(
+        &mut self,
+        location: ChildLocation,
+    ) {
+        match self.mode {
+            PathPairMode::GraphMajor => self.path.path_append(location),
+            PathPairMode::QueryMajor => self.cursor.path_append(location),
+        }
+    }
     pub fn child_next_states<K: TraversalKind>(
         self,
         ctx: &mut TraversalContext<K>,
         new: Vec<NewEntry>,
     ) -> NextStates {
         let key = self.target_key();
-        let path_leaf = self.paths.path.role_leaf_child::<End, _>(&ctx.trav);
-        let query_leaf = self.paths.cursor.role_leaf_child::<End, _>(&ctx.trav);
+        let path_leaf = self.path.role_leaf_child::<End, _>(&ctx.trav);
+        let query_leaf = self.cursor.role_leaf_child::<End, _>(&ctx.trav);
 
         // compare next child
         match path_leaf.width.cmp(&query_leaf.width) {
@@ -172,11 +181,11 @@ impl ChildState {
                         new,
                         inner: self
                             .clone()
-                            .tap_mut(|s| s.paths.mode = PathPairMode::GraphMajor)
+                            .tap_mut(|s| s.mode = PathPairMode::GraphMajor)
                             .prefix_states(&ctx.trav, path_leaf)
                             .into_iter()
                             .chain(
-                                self.tap_mut(|s| s.paths.mode = PathPairMode::QueryMajor)
+                                self.tap_mut(|s| s.mode = PathPairMode::QueryMajor)
                                     .prefix_states(&ctx.trav, query_leaf),
                             )
                             .collect_vec(),
@@ -190,7 +199,7 @@ impl ChildState {
                     prev: key.to_prev(0),
                     new,
                     inner: self
-                        .tap_mut(|s| s.paths.mode = PathPairMode::GraphMajor)
+                        .tap_mut(|s| s.mode = PathPairMode::GraphMajor)
                         .prefix_states(&ctx.trav, path_leaf),
                 })
             }
@@ -198,7 +207,7 @@ impl ChildState {
                 prev: key.to_prev(0),
                 new,
                 inner: self
-                    .tap_mut(|s| s.paths.mode = PathPairMode::QueryMajor)
+                    .tap_mut(|s| s.mode = PathPairMode::QueryMajor)
                     .prefix_states(&ctx.trav, query_leaf),
             }),
         }
@@ -211,7 +220,7 @@ impl ChildState {
         let key = self.target_key();
         ctx.states.clear();
         for entry in new {
-            ctx.states.cache.add_state(&ctx.trav, entry, true);
+            ctx.cache.add_state(&ctx.trav, entry, true);
         }
         //query.cache.add_path(
         //    self.trav(),
@@ -219,8 +228,8 @@ impl ChildState {
         //    root_pos,
         //    false,
         //);
-        let path = &mut self.paths.path;
-        let qres = self.paths.cursor.advance(&ctx.trav);
+        let path = &mut self.path;
+        let qres = self.cursor.advance(&ctx.trav);
         if qres.is_continue() {
             if path.advance(&ctx.trav).is_continue() {
                 // gen next child
@@ -228,21 +237,19 @@ impl ChildState {
                     prev: key.to_prev(0),
                     new: vec![],
                     inner: ChildState {
-                        prev_pos: self.prev_pos,
-                        root_pos: self.root_pos,
                         target: DirectedKey::down(
                             path.role_leaf_child::<End, _>(&ctx.trav),
                             *self.cursor_pos(),
                         ),
-                        paths: self.paths,
+                        ..self
                     },
                 })
             } else {
                 ParentState {
                     prev_pos: self.prev_pos,
                     root_pos: self.root_pos,
-                    path: IndexStartPath::from(self.paths.path),
-                    cursor: self.paths.cursor,
+                    path: IndexStartPath::from(self.path),
+                    cursor: self.cursor,
                 }
                 .next_parents::<K>(&ctx.trav, vec![])
             }
@@ -256,11 +263,7 @@ impl ChildState {
         new: Vec<NewEntry>,
     ) -> NextStates {
         let key = self.target_key();
-        let PathPair {
-            mut cursor,
-            mut path,
-            ..
-        } = self.paths;
+        let (mut cursor, mut path) = (self.cursor, self.path);
         cursor.retract(trav);
         path.retract(trav);
         if let Some(index) = loop {
@@ -312,9 +315,7 @@ impl ChildState {
         new: Vec<NewEntry>,
     ) -> NextStates {
         let key = self.target_key();
-        let PathPair {
-            mut cursor, path, ..
-        } = self.paths;
+        let (mut cursor, path) = (self.cursor, self.path);
         let target_index = path.role_leaf_child::<End, _>(trav);
         let pos = cursor.relative_pos;
         cursor.advance_key(target_index.width());
@@ -348,16 +349,14 @@ impl ChildState {
             })
             .map(|(&pid, child_pattern): (_, &Pattern)| {
                 let sub_index = TravDir::<Trav>::head_index(child_pattern);
-                let mut paths = self.paths.clone();
-                paths.push_major(ChildLocation::new(index, pid, sub_index));
+                let mut state = self.clone();
+                state.push_major(ChildLocation::new(index, pid, sub_index));
                 ChildState {
-                    prev_pos: self.prev_pos,
-                    root_pos: self.root_pos,
                     target: DirectedKey::down(
-                        paths.path.role_leaf_child::<End, _>(trav),
-                        *paths.cursor.cursor_pos(),
+                        state.path.role_leaf_child::<End, _>(trav),
+                        *state.cursor.cursor_pos(),
                     ),
-                    paths,
+                    ..state
                 }
             })
             .collect_vec()

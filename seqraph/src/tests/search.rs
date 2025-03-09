@@ -53,7 +53,7 @@ use hypercontext_api::{
             FoundRange,
         },
         state::{
-            cursor::RangeCursor,
+            cursor::PatternRangeCursor,
             top_down::end::{
                 EndKind,
                 EndReason,
@@ -148,7 +148,7 @@ fn find_parent1() {
         Ok(FinishedState {
             result: FoundRange::Complete(
                 *abc,
-                PatternRangePath::new_range(query.clone(), 0, query.len() - 1),
+                //PatternRangePath::new_range(query.clone(), 0, query.len() - 1),
             )
         }),
         "a_bc_d"
@@ -159,7 +159,7 @@ fn find_parent1() {
         Ok(FinishedState {
             result: FoundRange::Complete(
                 *ab,
-                PatternRangePath::new_range(query.clone(), 0, query.len() - 1),
+                //PatternRangePath::new_range(query.clone(), 0, query.len() - 1),
             ),
         }),
         "a_b_c"
@@ -170,7 +170,7 @@ fn find_parent1() {
         Ok(FinishedState {
             result: FoundRange::Complete(
                 *ab,
-                PatternRangePath::new_range(query.clone(), 0, query.len() - 2),
+                //PatternRangePath::new_range(query.clone(), 0, query.len() - 2),
             )
         }),
         "a_b_c_c"
@@ -252,7 +252,7 @@ fn find_ancestor1() {
         Ok(FinishedState {
             result: FoundRange::Complete(
                 *abc,
-                PatternRangePath::new_range(query.clone(), 0, query.len() - 2),
+                //PatternRangePath::new_range(query.clone(), 0, query.len() - 2),
             )
         }),
         "a_b_c_c"
@@ -426,7 +426,7 @@ fn find_ancestor2() {
                             },
                         },
                     }),
-                    cursor: RangeCursor {
+                    cursor: PatternRangeCursor {
                         path: RootedRangePath {
                             root: query.clone(),
                             start: RolePath {
@@ -693,7 +693,7 @@ fn find_ancestor3() {
                             },
                         },
                     }),
-                    cursor: RangeCursor {
+                    cursor: PatternRangeCursor {
                         path: RootedRangePath {
                             root: query.clone(),
                             start: RolePath {

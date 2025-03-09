@@ -1,6 +1,5 @@
 use std::ops::ControlFlow;
 
-
 use path::MovePath;
 
 use crate::{
@@ -8,8 +7,8 @@ use crate::{
         Left,
         Right,
     },
-    traversal::traversable::Traversable,
     path::accessors::role::End,
+    traversal::traversable::Traversable,
 };
 
 pub mod key;
@@ -28,6 +27,15 @@ pub trait Retract: MovePath<Left, End> {
 
 impl<T: MovePath<Left, End>> Retract for T {}
 
+pub trait CanAdvance: Advance + Clone {
+    fn can_advance<Trav: Traversable>(
+        &mut self,
+        trav: &Trav,
+    ) -> bool {
+        self.clone().move_path(trav).is_continue()
+    }
+}
+impl<T: Advance + Clone> CanAdvance for T {}
 pub trait Advance: MovePath<Right, End> {
     fn advance<Trav: Traversable>(
         &mut self,

@@ -28,7 +28,7 @@ use crate::{
     },
     traversal::{
         //state::query::QueryState,
-        state::cursor::RangeCursor,
+        state::cursor::PatternRangeCursor,
         traversable::{
             TravDir,
             Traversable,
@@ -58,7 +58,7 @@ impl<Root: PathRoot> MoveRootPos<Right, End> for RootedRolePath<End, Root> {
     }
 }
 
-impl MoveRootPos<Right, End> for RangeCursor {
+impl MoveRootPos<Right, End> for PatternRangeCursor {
     fn move_root_pos<Trav: Traversable>(
         &mut self,
         _trav: &Trav,
@@ -76,7 +76,7 @@ impl MoveRootPos<Right, End> for RangeCursor {
     }
 }
 
-impl MoveRootPos<Left, End> for RangeCursor {
+impl MoveRootPos<Left, End> for PatternRangeCursor {
     fn move_root_pos<Trav: Traversable>(
         &mut self,
         _trav: &Trav,

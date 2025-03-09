@@ -1,4 +1,4 @@
-use super::{
+use crate::traversal::{
     cache::key::props::RootKey,
     container::{
         extend::ExtendStates,
@@ -12,13 +12,13 @@ use super::{
     state::traversal::TraversalState,
     TraversalKind,
 };
-use crate::traversal::cache::TraversalCache;
 use itertools::Itertools;
 use std::fmt::Debug;
+pub(crate) mod init;
+pub mod start;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct StatesContext<K: TraversalKind> {
-    pub cache: TraversalCache,
     pub pruning_map: PruningMap,
     pub states: K::Container,
 }

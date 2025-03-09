@@ -3,21 +3,31 @@ use std::sync::{
     RwLockWriteGuard,
 };
 
+use derive_more::From;
 use hypercontext_api::{
     graph::{
-        vertex::child::Child,
+        getters::ErrorReason,
+        vertex::{
+            child::Child,
+            wide::Wide,
+        },
         Hypergraph,
         HypergraphRef,
     },
-    interval::cache::IntervalGraph,
+    interval::{
+        InitInterval,
+        IntervalGraph,
+    },
     join::context::JoinContext,
     path::structs::rooted::pattern_range::PatternRangePath,
     traversal::{
         container::bft::BftQueue,
         fold::{
+            foldable::{
+                ErrorState,
+                Foldable,
+            },
             state::FoldState,
-            ErrorState,
-            Foldable,
         },
         result::FoundRange,
         traversable::{
@@ -32,43 +42,57 @@ use hypercontext_api::{
 
 use crate::search::context::ParentPolicy;
 
-impl TraversalKind for InsertContext {
+#[derive(Debug, Clone, Default)]
+pub struct InsertTraversal;
+
+impl TraversalKind for InsertTraversal {
     type Trav = InsertContext;
     type Container = BftQueue;
     type Policy = ParentPolicy<Self::Trav>;
 }
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, From)]
 pub struct InsertContext {
-    pub graph: HypergraphRef,
+    graph: HypergraphRef,
 }
+
 impl InsertContext {
-    pub fn new(graph: HypergraphRef) -> Self {
-        Self { graph }
-    }
     pub fn insert(
         &mut self,
         foldable: impl Foldable,
-    ) -> Result<(Child, PatternRangePath), ErrorState> {
-        match foldable.fold::<Self>(self.clone()) {
+    ) -> Result<Child, ErrorState> {
+        match foldable.fold::<InsertTraversal>(self.clone()) {
             Ok(result) => match result.result {
-                FoundRange::Complete(c, p) => Ok((c, p)),
-                FoundRange::Incomplete(fold_state) => Ok(self.insert_state(fold_state)),
+                FoundRange::Complete(c) => Ok(c),
+                FoundRange::Incomplete(fold_state) => {
+                    Ok(self.insert_init(InitInterval::from(fold_state)))
+                }
             },
             Err(err) => Err(err),
         }
     }
-    pub fn insert_state(
+    pub fn insert_or_get_complete(
         &mut self,
-        mut fold_state: FoldState,
-    ) -> (Child, PatternRangePath) {
-        let interval = IntervalGraph::new(&mut self.graph_mut(), &mut fold_state);
+        query: impl Foldable,
+    ) -> Result<Child, ErrorReason> {
+        match self.insert(query) {
+            Err(ErrorState {
+                reason: ErrorReason::SingleIndex(c),
+                found: Some(FoundRange::Complete(_)),
+            }) => Ok(c),
+            Err(err) => Err(err.reason),
+            Ok(v) => Ok(v),
+        }
+    }
+    pub fn insert_init(
+        &mut self,
+        init: InitInterval,
+    ) -> Child {
+        let interval = IntervalGraph::from((&mut self.graph_mut(), init));
         let mut ctx = JoinContext {
             trav: self.graph.clone(),
             interval,
         };
-        let new_index = ctx.join_subgraph();
-        (new_index, fold_state.end_state.cursor.path)
+        ctx.join_subgraph()
     }
 }
 

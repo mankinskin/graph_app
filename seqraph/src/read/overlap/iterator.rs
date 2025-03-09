@@ -1,4 +1,5 @@
 use crate::read::{
+    complement::ComplementBuilder,
     context::ReadContext,
     overlap::chain::OverlapChain,
 };
@@ -53,11 +54,32 @@ impl<'a> Iterator for ExpansionIterator<'a> {
 
                     // BACK CONTEXT FROM CACHE
                     // finish back context
-                    let mut back_pattern = self.back_context_for_link(&next);
+                    let expansion = next.expansion;
+                    let start_bound = next.start_bound;
 
-                    back_pattern.push(next.expansion);
+                    // TODO:
+                    // 1. walk overlaps at position
+                    // 2. get furthest back facing overlap with position
+                    // 3.
+
+                    // earliest overlap
+                    //
+                    let &root = self
+                        .chain
+                        .bands
+                        .first()
+                        .expect("no overlaps in chain")
+                        .pattern
+                        .last()
+                        .expect("empty pattern");
+
+                    let complement =
+                        ComplementBuilder::new(root, next).build_context_index(&self.trav);
+                    //let mut back_pattern = self.back_context_for_link(&next);
+
+                    let back_pattern = vec![complement, expansion];
                     let next_band = Band::from((0, back_pattern));
-                    let end_bound = next.start_bound + next.expansion.width();
+                    let end_bound = start_bound + expansion.width();
                     self.chain.append((end_bound, next_band));
                     Some(None)
                 }
@@ -90,38 +112,5 @@ impl<'a> ExpansionIterator<'a> {
             chain: ChainGenerator::new(trav, cursor, chain),
             bundle: None,
         }
-    }
-    pub fn back_context_for_link(
-        &mut self,
-        next_link: &ExpansionLink,
-    ) -> Pattern {
-        //println!("building back context from path");
-        //let (inner_back_ctx, _loc) = ctx
-        //    .contexter::<SplitBack>()
-        //    .try_context_path(
-        //        //link.postfix_path.clone().into_context_path(),
-        //        // FIXME: maybe mising root!!!
-        //        link.postfix_path.clone().sub_path,
-        //        //link.overlap,
-        //    )
-        //    .unwrap();
-
-        let back_ctx = if let Some(last) = self.chain.bands.last() {
-            let postfix_path = last.next_link.start_bound;
-            //self.trav
-            //    .read_pattern(last.back_context.borrow())
-            //    .ok()
-            //    //Some(self.graph.read_pattern(last.band.back_context.borrow()))
-            //    .map(move |(back_ctx, _)| {
-            //        last.back_context = vec![back_ctx];
-            //        last.back_context.borrow()
-            //    })
-            Some(())
-        } else {
-            None
-        }
-        .unwrap_or_default();
-
-        //DefaultDirection::context_then_inner(back_ctx, Child::new(0, 0)) //inner_back_ctx)
     }
 }

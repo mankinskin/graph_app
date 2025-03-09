@@ -86,7 +86,7 @@ impl<R: PathRole, P: RootChild<R> + FoldablePath> RootChild<R> for PathCursor<P>
 }
 //impl_child! { RootChild for PathLeaf, self, trav => self.root_child(trav) }
 
-//impl<R: PathRole> RootChild<R> for RangeCursor
+//impl<R: PathRole> RootChild<R> for PatternRangeCursor
 //where
 //    Self: RootChildPos<R>,
 //{
@@ -146,6 +146,6 @@ pub trait PatternRootChild<R>: RootChildPos<R> + PatternRoot {
     }
 }
 
-//impl<R> PatternRootChild<R> for RangeCursor where Self: RootChildPos<R> {}
+//impl<R> PatternRootChild<R> for PatternRangeCursor where Self: RootChildPos<R> {}
 //impl PatternRootChild<End> for OverlapPrimer {
 //}

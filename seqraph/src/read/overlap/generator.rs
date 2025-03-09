@@ -1,6 +1,9 @@
-use crate::read::{
-    context::ReadContext,
-    overlap::chain::OverlapChain,
+use crate::{
+    insert::ToInsertContext,
+    read::{
+        context::ReadContext,
+        overlap::chain::OverlapChain,
+    },
 };
 use derive_more::{
     Deref,
@@ -15,10 +18,7 @@ use hypercontext_api::{
     path::{
         accessors::{
             child::root::PatternRootChild,
-            has_path::{
-                HasRolePath,
-                HasRootedRolePath,
-            },
+            has_path::HasRolePath,
             role::{
                 End,
                 Start,
@@ -113,7 +113,7 @@ impl<'a> ChainGenerator<'a> {
             // build path to this location
             //postfix_path.path_append(postfix_location);
             self.trav
-                .read_one(primer)
+                .insert_or_get_complete(primer)
                 .map(|(expansion, advanced)| {
                     Some(ChainOp::Expansion(self.link_expansion(
                         start_bound,

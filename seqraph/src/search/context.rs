@@ -45,16 +45,26 @@ pub struct SearchContext<T: Traversable> {
 //impl<T: Traversable> SearchTraversalPolicy<T> for ParentPolicy<T> {}
 
 pub type SearchResult = Result<FinishedState, ErrorReason>;
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct AncestorSearchTraversal<T: Traversable>(std::marker::PhantomData<T>);
+impl<T: Traversable> Default for AncestorSearchTraversal<T> {
+    fn default() -> Self {
+        Self(Default::default())
+    }
+}
 
 impl<T: Traversable> TraversalKind for AncestorSearchTraversal<T> {
     type Trav = SearchContext<T>;
     type Container = BftQueue;
     type Policy = AncestorPolicy<Self::Trav>;
 }
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ParentSearchTraversal<T: Traversable>(std::marker::PhantomData<T>);
+impl<T: Traversable> Default for ParentSearchTraversal<T> {
+    fn default() -> Self {
+        Self(Default::default())
+    }
+}
 
 impl<T: Traversable> TraversalKind for ParentSearchTraversal<T> {
     type Trav = SearchContext<T>;

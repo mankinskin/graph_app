@@ -1,16 +1,22 @@
+use std::ops::Deref;
+
 use context::*;
 
 use hypercontext_api::{
     graph::{
+        getters::ErrorReason,
         vertex::child::Child,
         HypergraphRef,
     },
+    interval::InitInterval,
     path::structs::rooted::pattern_range::PatternRangePath,
     traversal::{
         fold::{
+            foldable::{
+                ErrorState,
+                Foldable,
+            },
             state::FoldState,
-            ErrorState,
-            Foldable,
         },
         traversable::TraversableMut,
     },
@@ -30,41 +36,35 @@ pub mod tests;
 //    pub path: Vec<ChildLocation>,
 //}
 
-pub trait Inserting: TraversableMut {
+pub trait ToInsertContext: TraversableMut {
     fn insert_context(&self) -> InsertContext;
 
     fn insert(
         &self,
         foldable: impl Foldable,
-    ) -> Result<(Child, PatternRangePath), ErrorState> {
+    ) -> Result<Child, ErrorState> {
         self.insert_context().insert(foldable)
     }
-    fn insert_state(
+    fn insert_init(
         &self,
-        fold_state: FoldState,
-    ) -> (Child, PatternRangePath) {
-        self.insert_context().insert_state(fold_state)
+        init: InitInterval,
+    ) -> Child {
+        self.insert_context().insert_init(init)
     }
-}
-impl Inserting for HypergraphRef {
-    fn insert_context(&self) -> InsertContext {
-        InsertContext::new(self.clone())
-    }
-}
-impl<T: Inserting> Inserting for &'_ mut T {
-    fn insert_context(&self) -> InsertContext {
-        (**self).insert_context()
-    }
-    fn insert(
+    fn insert_or_get_complete(
         &self,
         foldable: impl Foldable,
-    ) -> Result<(Child, PatternRangePath), ErrorState> {
-        (**self).insert(foldable)
+    ) -> Result<Child, ErrorReason> {
+        self.insert_context().insert_or_get_complete(foldable)
     }
-    fn insert_state(
-        &self,
-        fold_state: FoldState,
-    ) -> (Child, PatternRangePath) {
-        (**self).insert_state(fold_state)
+}
+impl ToInsertContext for HypergraphRef {
+    fn insert_context(&self) -> InsertContext {
+        InsertContext::from(self.clone())
+    }
+}
+impl<T: ToInsertContext> ToInsertContext for &'_ mut T {
+    fn insert_context(&self) -> InsertContext {
+        (**self).insert_context()
     }
 }

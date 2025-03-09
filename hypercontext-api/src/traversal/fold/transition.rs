@@ -8,32 +8,26 @@ use crate::{
     traversal::{
         cache::key::props::RootKey,
         fold::FoldContext,
-        state::{
-            next_states::{
-                NextStates,
-                StateNext,
-            },
-            top_down::trace::TraceInit,
+        state::next_states::{
+            NextStates,
+            StateNext,
         },
     },
 };
 use std::ops::ControlFlow;
 
 use super::TraversalKind;
-use crate::traversal::{
-    container::{
-        extend::ExtendStates,
-        pruning::PruneStates,
-    },
-    state::top_down::trace::TraceContext,
+use crate::traversal::container::{
+    extend::ExtendStates,
+    pruning::PruneStates,
 };
 #[derive(Debug, Deref, DerefMut)]
-pub struct ApplyStatesCtx<'a, K: TraversalKind> {
+pub struct StateTransitionIter<'a, K: TraversalKind> {
     #[deref_mut]
     #[deref]
     pub fctx: &'a mut FoldContext<K>,
 }
-impl<K: TraversalKind> Iterator for ApplyStatesCtx<'_, K> {
+impl<K: TraversalKind> Iterator for StateTransitionIter<'_, K> {
     type Item = ();
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -42,7 +36,7 @@ impl<K: TraversalKind> Iterator for ApplyStatesCtx<'_, K> {
         })
     }
 }
-impl<'a, K: TraversalKind> ApplyStatesCtx<'a, K> {
+impl<'a, K: TraversalKind> StateTransitionIter<'a, K> {
     pub fn apply_transition(
         &mut self,
         depth: usize,
@@ -62,12 +56,6 @@ impl<'a, K: TraversalKind> ApplyStatesCtx<'a, K> {
             NextStates::End(StateNext { inner: end, .. }) => {
                 if end.width() >= self.max_width {
                     self.max_width = end.width();
-
-                    end.trace(&mut TraceContext {
-                        cache: &mut self.fctx.tctx.states.cache,
-                        trav: &self.fctx.tctx.trav,
-                    });
-
                     let is_final = end.is_final();
                     self.fctx.end_state = Some(end);
                     if is_final {

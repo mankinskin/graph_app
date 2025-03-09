@@ -42,8 +42,8 @@ use crate::{
                 RootNode,
             },
             label_key::vkey::labelled_key,
+            TraversalCache,
         },
-        fold::state::FoldState,
         traversable::{
             Traversable,
             TraversableMut,
@@ -58,6 +58,7 @@ use derive_more::{
 
 use super::{
     cache::ctx::TraceContext,
+    InitInterval,
     IntervalGraph,
     SplitVertices,
 };
@@ -67,86 +68,92 @@ pub struct IntervalGraphBuilder {
     vertices: SplitVertices,
     root_mode: RootMode,
     root: Child,
+    end_bound: usize,
     #[deref]
     #[deref_mut]
     ctx: TraceContext,
+    cache: TraversalCache,
 }
 
 impl IntervalGraphBuilder {
     pub fn new<'a, Trav: TraversableMut + 'a>(
         trav: &'a mut Trav,
-        fold_state: &mut FoldState,
+        init: InitInterval,
     ) -> Self {
+        let InitInterval {
+            cache,
+            root,
+            end_bound,
+        } = init;
         let mut entries = HashMap::default();
+        let mut states = VecDeque::default();
+        let mut leaves = Leaves::default();
+        // create root vertex
+        let (offsets, root_mode) =
+            Self::completed_splits::<_, RootNode>(trav, &cache, &root, end_bound);
+        let pos_splits = leaves.filter_leaves(&root, offsets.clone());
+        states.extend(leaves.filter_trace_states(trav, &root, pos_splits));
 
-        let (root_vertex, root_mode, states, leaves) = Self::new_root_vertex(trav, fold_state);
-        entries.insert(labelled_key(trav, fold_state.root), root_vertex);
-        let mut cache = Self {
+        let root_vertex = SplitVertexCache {
+            positions: offsets
+                .into_iter()
+                .map(|(offset, res)| {
+                    (
+                        offset,
+                        SplitPositionCache::root(res.unwrap_or_else(|location| {
+                            vec![SubSplitLocation {
+                                location,
+                                inner_offset: None,
+                            }]
+                        })),
+                    )
+                })
+                .collect(),
+        };
+
+        entries.insert(labelled_key(trav, root), root_vertex);
+        Self {
             vertices: SplitVertices { entries },
             root_mode,
-            root: fold_state.root,
+            end_bound,
+            root,
             ctx: TraceContext { leaves, states },
-        };
+            cache,
+        }
+        .init(trav)
+    }
+    fn init<'a, Trav: TraversableMut + 'a>(
+        mut self,
+        trav: &'a mut Trav,
+    ) -> Self {
         let graph = trav.graph_mut();
-        cache.augment_root(NodeTraceContext::new(&*graph, fold_state.root), root_mode);
+        self.augment_root(NodeTraceContext::new(&*graph, self.root), self.root_mode);
         // stores past states
         let mut incomplete = BTreeSet::<Child>::default();
         // traverse top down by width
         // cache indices without range infos
         // calc range infos for larger indices when smaller index is traversed
-        while let Some(state) = cache.states.pop_front() {
+        while let Some(state) = self.states.pop_front() {
             // trace offset splits top down by width
             // complete past states larger than current state
             // store offsets and filter leaves
-            cache.trace(&graph, fold_state, &state);
+            self.trace(&graph, &state);
             incomplete.insert(state.index);
             let complete = incomplete.split_off(&ChildWidth(state.index.width() + 1));
-            cache.augment_nodes(&*graph, complete);
+            self.augment_nodes(&*graph, complete);
         }
-        cache.augment_nodes(&*graph, incomplete);
-        cache
-    }
-    pub fn new_root_vertex<Trav: Traversable>(
-        trav: &Trav,
-        fold_state: &FoldState,
-    ) -> (SplitVertexCache, RootMode, VecDeque<TraceState>, Leaves) {
-        let mut states = VecDeque::default();
-        let mut leaves = Leaves::default();
-        let (offsets, root_mode) =
-            Self::completed_splits::<_, RootNode>(trav, fold_state, &fold_state.root);
-        let pos_splits = leaves.filter_leaves(&fold_state.root, offsets.clone());
-        states.extend(leaves.filter_trace_states(trav, &fold_state.root, pos_splits));
-        (
-            SplitVertexCache {
-                positions: offsets
-                    .into_iter()
-                    .map(|(offset, res)| {
-                        (
-                            offset,
-                            SplitPositionCache::root(res.unwrap_or_else(|location| {
-                                vec![SubSplitLocation {
-                                    location,
-                                    inner_offset: None,
-                                }]
-                            })),
-                        )
-                    })
-                    .collect(),
-            },
-            root_mode,
-            states,
-            leaves,
-        )
+        self.augment_nodes(&*graph, incomplete);
+        self
     }
     pub fn new_split_vertex<Trav: Traversable>(
         &mut self,
         trav: &Trav,
-        fold_state: &mut FoldState,
         index: Child,
         offset: NonZeroUsize,
         prev: PosKey,
     ) -> SplitVertexCache {
-        let mut subs = Self::completed_splits::<_, InnerNode>(trav, fold_state, &index);
+        let mut subs =
+            Self::completed_splits::<_, InnerNode>(trav, &self.cache, &index, self.end_bound);
         subs.entry(offset).or_insert_with(|| {
             let graph = trav.graph();
             let node = graph.expect_vertex(index);
@@ -180,7 +187,6 @@ impl IntervalGraphBuilder {
     pub fn trace<Trav: Traversable>(
         &mut self,
         trav: &Trav,
-        fold_state: &mut FoldState,
         state: &TraceState,
     ) {
         let &TraceState {
@@ -197,17 +203,18 @@ impl IntervalGraphBuilder {
                 })
                 .or_insert_with(|| ctx.new_split_position(trav, index, offset, prev));
         } else {
-            let vertex = self.new_split_vertex(trav, fold_state, index, offset, prev);
+            let vertex = self.new_split_vertex(trav, index, offset, prev);
             self.vertices.insert(labelled_key(trav, index), vertex);
         }
     }
     pub fn child_trace_states<Trav: Traversable>(
         &mut self,
         trav: &Trav,
-        fold_state: &FoldState,
+        cache: &TraversalCache,
+        end_bound: usize,
         index: &Child,
     ) -> Vec<TraceState> {
-        let subs = Self::completed_splits::<_, InnerNode>(trav, fold_state, index)
+        let subs = Self::completed_splits::<_, InnerNode>(trav, cache, index, end_bound)
             .into_iter()
             .filter_map(|(parent_offset, res)| res.ok().map(|locs| (parent_offset, locs)));
         self.leaves.filter_trace_states(trav, index, subs)
@@ -255,17 +262,14 @@ impl IntervalGraphBuilder {
     }
     pub fn completed_splits<Trav: Traversable, N: NodeType>(
         trav: &Trav,
-        fold_state: &FoldState,
+        cache: &TraversalCache,
         index: &Child,
+        end_bound: usize,
     ) -> N::CompleteSplitOutput {
-        fold_state
-            .cache
+        cache
             .entries
             .get(&index.vertex_index())
-            .map(|e| {
-                SplitContext::new(e)
-                    .complete_splits::<_, N>(trav, fold_state.end_state.width().into())
-            })
+            .map(|e| SplitContext::new(e).complete_splits::<_, N>(trav, end_bound.into()))
             .unwrap_or_default()
     }
 }

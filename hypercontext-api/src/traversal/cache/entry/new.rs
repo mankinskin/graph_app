@@ -123,7 +123,7 @@ impl From<&ChildState> for NewChild {
         Self {
             root: state.root_key(),
             target: state.target_key(),
-            end_leaf: state.paths.path.role_leaf_child_location::<End>(),
+            end_leaf: state.path.role_leaf_child_location::<End>(),
         }
     }
 }

@@ -12,19 +12,16 @@ use crate::{
     },
 };
 
-use super::{
-    fold::state::FoldState,
-    //state::query::QueryState,
-};
+use super::fold::state::FoldState;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FoundRange {
-    Complete(Child, PatternRangePath),
+    Complete(Child),
     Incomplete(FoldState),
 }
 
 impl FoundRange {
-    pub fn unwrap_complete(self) -> (Child, PatternRangePath) {
+    pub fn unwrap_complete(self) -> Child {
         self.expect_complete("Unable to unwrap complete FoundRange")
     }
     pub fn unwrap_incomplete(self) -> FoldState {
@@ -33,9 +30,9 @@ impl FoundRange {
     pub fn expect_complete(
         self,
         msg: &str,
-    ) -> (Child, PatternRangePath) {
+    ) -> Child {
         match self {
-            Self::Complete(c, q) => (c, q),
+            Self::Complete(c) => c,
             _ => panic!("{}", msg),
         }
     }
@@ -53,7 +50,7 @@ impl PathComplete for FoundRange {
     /// returns child if reduced to single child
     fn as_complete(&self) -> Option<Child> {
         match self {
-            Self::Complete(c, _) => Some(*c),
+            Self::Complete(c) => Some(*c),
             _ => None,
         }
     }
@@ -76,7 +73,7 @@ impl FinishedState {
         }
     }
     #[track_caller]
-    pub fn unwrap_complete(self) -> (Child, PatternRangePath) {
+    pub fn unwrap_complete(self) -> Child {
         self.result.unwrap_complete()
     }
     #[allow(unused)]
@@ -84,7 +81,7 @@ impl FinishedState {
     pub fn expect_complete(
         self,
         msg: &str,
-    ) -> (Child, PatternRangePath) {
+    ) -> Child {
         self.result.expect_complete(msg)
     }
 }
@@ -97,7 +94,7 @@ impl FinishedState {
     ) -> Self {
         let query = query.into_pattern();
         Self {
-            result: FoundRange::Complete(index.to_child(), PatternRangePath::complete(query)),
+            result: FoundRange::Complete(index.to_child()),
         }
     }
 }

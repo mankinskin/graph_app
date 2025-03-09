@@ -11,9 +11,10 @@ use hypercontext_api::{
         cache::{
             position::SplitPositionCache,
             vertex::SplitVertexCache,
-            IntervalGraph,
             PosKey,
         },
+        InitInterval,
+        IntervalGraph,
         PatternSplitPos,
     },
     lab,
@@ -32,7 +33,7 @@ macro_rules! nz {
 }
 #[test]
 fn interval_graph1() {
-    let mut res = build_trace1();
+    let res = build_trace1();
     let Env1 {
         graph,
         def,
@@ -47,7 +48,8 @@ fn interval_graph1() {
         e_f_id,
         ..
     } = &mut Env1::build_expected();
-    let interval = IntervalGraph::new(&mut *graph, &mut res);
+    let init = InitInterval::from(res);
+    let interval = IntervalGraph::from((&mut *graph, init));
     assert_eq!(
         interval.vertices[&lab!(ef)],
         SplitVertexCache {

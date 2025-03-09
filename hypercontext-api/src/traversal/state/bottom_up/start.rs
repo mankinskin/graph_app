@@ -7,11 +7,8 @@ use crate::{
     path::mutators::{
         adapters::IntoPrimer,
         move_path::{
-            key::{
-                RetractKey,
-                TokenPosition,
-            },
-            Advance,
+            key::TokenPosition,
+            CanAdvance,
         },
     },
     traversal::{
@@ -22,7 +19,7 @@ use crate::{
         },
         iterator::policy::DirectedTraversalPolicy,
         state::{
-            cursor::RangeCursor,
+            cursor::PatternRangeCursor,
             next_states::{
                 NextStates,
                 StateNext,
@@ -41,7 +38,7 @@ use crate::{
 pub struct StartState {
     pub index: Child,
     pub key: UpKey,
-    pub cursor: RangeCursor,
+    pub cursor: PatternRangeCursor,
 }
 
 impl_cursor_pos! {
@@ -56,9 +53,7 @@ impl StartState {
         Self: 'a,
     {
         let delta = self.index.width();
-        if self.cursor.advance(trav).is_continue() {
-            // undo extra key advance
-            self.cursor.retract_key(self.index.width());
+        if self.cursor.can_advance(trav) {
             NextStates::Parents(StateNext {
                 prev: self.key.to_prev(delta),
                 new: vec![],

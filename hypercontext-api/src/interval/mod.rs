@@ -23,6 +23,7 @@ use crate::{
     graph::vertex::{
         child::Child,
         has_vertex_index::HasVertexIndex,
+        wide::Wide,
     },
     interval::cache::vertex::SplitVertexCache,
     traversal::{
@@ -32,6 +33,7 @@ use crate::{
                 RootMode,
             },
             label_key::vkey::VertexCacheKey,
+            TraversalCache,
         },
         fold::state::FoldState,
         traversable::TraversableMut,
@@ -56,14 +58,27 @@ pub struct IntervalGraph {
     pub root: Child,
     pub leaves: Leaves,
 }
-impl IntervalGraph {
-    pub fn new<'a, Trav: TraversableMut + 'a>(
-        trav: &'a mut Trav,
-        fold_state: &mut FoldState,
-    ) -> Self {
-        IntervalGraphBuilder::new(trav, fold_state).build()
+#[derive(Debug)]
+pub struct InitInterval {
+    pub root: Child,
+    pub cache: TraversalCache,
+    pub end_bound: usize,
+}
+impl From<FoldState> for InitInterval {
+    fn from(fold_state: FoldState) -> Self {
+        Self {
+            cache: fold_state.cache,
+            root: fold_state.root,
+            end_bound: fold_state.end_state.width(),
+        }
     }
-
+}
+impl<'a, Trav: TraversableMut + 'a> From<(&'a mut Trav, InitInterval)> for IntervalGraph {
+    fn from((trav, init): (&'a mut Trav, InitInterval)) -> Self {
+        IntervalGraphBuilder::new(trav, init).build()
+    }
+}
+impl IntervalGraph {
     pub fn get(
         &self,
         key: &PosKey,

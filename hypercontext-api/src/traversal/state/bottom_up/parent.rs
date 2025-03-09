@@ -44,20 +44,19 @@ use crate::{
         },
         iterator::policy::DirectedTraversalPolicy,
         state::{
-            cursor::RangeCursor,
+            cursor::PatternRangeCursor,
             next_states::{
                 NextStates,
                 StateNext,
             },
             top_down::{
-                child::ChildState,
+                child::{
+                    ChildState,
+                    PathPairMode,
+                },
                 end::{
                     EndReason,
                     EndState,
-                },
-                pair::{
-                    PathPair,
-                    PathPairMode,
                 },
             },
         },
@@ -77,7 +76,7 @@ pub struct ParentState {
     pub prev_pos: TokenPosition,
     pub root_pos: TokenPosition,
     pub path: IndexStartPath,
-    pub cursor: RangeCursor,
+    pub cursor: PatternRangeCursor,
 }
 impl TargetKey for ParentState {
     fn target_key(&self) -> DirectedKey {
@@ -106,11 +105,9 @@ impl IntoAdvanced for ParentState {
             Ok(ChildState {
                 prev_pos: self.prev_pos,
                 root_pos: self.root_pos,
-                paths: PathPair::new(
-                    self.path.into_range(next),
-                    self.cursor,
-                    PathPairMode::GraphMajor,
-                ),
+                path: self.path.into_range(next),
+                cursor: self.cursor,
+                mode: PathPairMode::GraphMajor,
                 target: DirectedKey::down(index, self.root_pos),
             })
         } else {
@@ -168,8 +165,7 @@ impl ParentState {
         match self.into_advanced(trav) {
             // first child state in this parent
             Ok(advanced) => {
-                let delta =
-                    <_ as GraphRootChild<Start>>::root_post_ctx_width(&advanced.paths.path, trav);
+                let delta = <_ as GraphRootChild<Start>>::root_post_ctx_width(&advanced.path, trav);
                 NextStates::Child(StateNext {
                     prev: key.flipped().to_prev(delta),
                     new,

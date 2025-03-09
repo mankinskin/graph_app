@@ -28,6 +28,13 @@ pub enum NextStates {
     Child(StateNext<ChildState>),
     Empty,
 }
+impl IntoIterator for NextStates {
+    type Item = TraversalState;
+    type IntoIter = <Vec<Self::Item> as IntoIterator>::IntoIter;
+    fn into_iter(self) -> Self::IntoIter {
+        self.into_states().into_iter()
+    }
+}
 
 impl NextStates {
     pub fn into_states(self) -> Vec<TraversalState> {

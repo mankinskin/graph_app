@@ -24,7 +24,7 @@ use crate::{
         },
     },
     traversal::{
-        state::cursor::RangeCursor,
+        state::cursor::PatternRangeCursor,
         traversable::Traversable,
     },
 };
@@ -61,7 +61,7 @@ pub trait MovePath<D: Direction, R: PathRole = End>:
     }
 }
 
-impl MovePath<Right, End> for RangeCursor {
+impl MovePath<Right, End> for PatternRangeCursor {
     fn move_leaf<Trav: Traversable>(
         &mut self,
         location: &mut ChildLocation,
@@ -71,7 +71,7 @@ impl MovePath<Right, End> for RangeCursor {
     }
 }
 
-impl MovePath<Left, End> for RangeCursor {
+impl MovePath<Left, End> for PatternRangeCursor {
     fn move_leaf<Trav: Traversable>(
         &mut self,
         location: &mut ChildLocation,

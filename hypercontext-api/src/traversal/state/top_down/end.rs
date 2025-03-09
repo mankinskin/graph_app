@@ -46,7 +46,7 @@ use crate::{
             },
         },
         state::{
-            cursor::RangeCursor,
+            cursor::PatternRangeCursor,
             StateDirection,
         },
         traversable::Traversable,
@@ -145,7 +145,7 @@ pub struct EndState {
     pub reason: EndReason,
     pub root_pos: TokenPosition,
     pub kind: EndKind,
-    pub cursor: RangeCursor,
+    pub cursor: PatternRangeCursor,
 }
 impl_cursor_pos! {
     CursorPosition for EndState, self => self.cursor.relative_pos

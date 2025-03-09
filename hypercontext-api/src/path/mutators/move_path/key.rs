@@ -11,7 +11,7 @@ use crate::{
         Left,
         Right,
     },
-    traversal::state::cursor::RangeCursor,
+    traversal::state::cursor::PatternRangeCursor,
 };
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, Add, Sub, Deref, DerefMut, Default)]
@@ -113,7 +113,7 @@ impl MoveKey<Right> for TokenPosition {
     }
 }
 
-impl MoveKey<Right> for RangeCursor {
+impl MoveKey<Right> for PatternRangeCursor {
     type Delta = usize;
     fn move_key(
         &mut self,
@@ -133,7 +133,7 @@ impl MoveKey<Left> for TokenPosition {
     }
 }
 
-impl MoveKey<Left> for RangeCursor {
+impl MoveKey<Left> for PatternRangeCursor {
     type Delta = usize;
     fn move_key(
         &mut self,

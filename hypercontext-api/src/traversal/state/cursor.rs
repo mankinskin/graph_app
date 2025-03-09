@@ -59,12 +59,12 @@ impl<R: PathRole, P: RootChildPos<R> + FoldablePath> RootChildPos<R> for PathCur
     }
 }
 
-pub type RangeCursor = PathCursor<PatternRangePath>;
+pub type PatternRangeCursor = PathCursor<PatternRangePath>;
 impl_cursor_pos! {
-    CursorPosition for RangeCursor, self => self.relative_pos
+    CursorPosition for PatternRangeCursor, self => self.relative_pos
 }
 
-impl IntoPrimer for (Child, RangeCursor) {
+impl IntoPrimer for (Child, PatternRangeCursor) {
     fn into_primer<Trav: Traversable>(
         self,
         _trav: &Trav,
@@ -102,7 +102,7 @@ impl<P: FoldablePath> ToCursor for P {
         }
     }
 }
-//impl RangeCursor {
+//impl PatternRangeCursor {
 //pub fn new<G: GraphKind, P: IntoPattern>(query: P) -> Result<Self, ErrorState> {
 //    let entry = G::Direction::head_index(&query.borrow());
 //    let query = query.into_pattern();

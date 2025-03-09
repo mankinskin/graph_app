@@ -13,7 +13,6 @@ extern crate hypercontext_api;
 
 extern crate test;
 
-//mod index;
 mod insert;
 //mod read;
 mod search;
