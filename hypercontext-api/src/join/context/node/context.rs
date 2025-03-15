@@ -18,40 +18,19 @@ use crate::{
         wide::Wide,
         ChildPatterns,
     },
-    interval::{
-        cache::{
-            position_splits,
-            vertex::SplitVertexCache,
-            PosKey,
+    interval::partition::{
+        info::{
+            borders::PartitionBorders,
+            range::role::{
+                In,
+                Post,
+                Pre,
+            },
+            InfoPartition,
         },
-        partition::{
-            context::{
-                AsNodeTraceContext,
-                NodeTraceContext,
-            },
-            info::{
-                borders::PartitionBorders,
-                range::role::{
-                    In,
-                    Post,
-                    Pre,
-                },
-                InfoPartition,
-            },
-            pattern::{
-                GetPatternContext,
-                GetPatternTraceContext,
-                PatternTraceContext,
-            },
-            split::{
-                PatternSplitPositions,
-                PosSplitContext,
-                VertexSplits,
-            },
-            Infix,
-            Postfix,
-            Prefix,
-        },
+        Infix,
+        Postfix,
+        Prefix,
     },
     join::{
         context::{
@@ -66,9 +45,34 @@ use crate::{
             Join,
             JoinPartition,
         },
-        Split,
     },
-    traversal::cache::entry::RootMode,
+    traversal::{
+        split::{
+            cache::{
+                vertex::SplitVertexCache,
+                PosKey,
+            },
+            node::RootMode,
+            position_splits,
+            vertex::{
+                PatternSplitPositions,
+                PosSplitContext,
+                VertexSplits,
+            },
+            Split,
+        },
+        trace::context::{
+            node::{
+                AsNodeTraceContext,
+                NodeTraceContext,
+            },
+            pattern::{
+                GetPatternContext,
+                GetPatternTraceContext,
+                PatternTraceContext,
+            },
+        },
+    },
 };
 
 #[derive(Debug, Deref, DerefMut)]
@@ -138,10 +142,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
 
 impl<'a: 'b, 'b> NodeJoinContext<'a> {
     pub fn vertex_cache<'c>(&'c self) -> &'c SplitVertexCache {
-        self.interval
-            .vertices
-            .get(&self.index.vertex_index())
-            .unwrap()
+        self.interval.cache.get(&self.index.vertex_index()).unwrap()
     }
     pub fn join_partitions(&mut self) -> LinkedHashMap<PosKey, Split> {
         let partitions = self.index_partitions();
@@ -174,7 +175,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
         parts
     }
     pub fn join_root_partitions(&mut self) -> Child {
-        let root_mode = self.interval.root_mode;
+        let root_mode = self.interval.cache.root_mode;
         let index = self.index;
         let offsets = self.vertex_cache().clone();
         let mut offset_iter = offsets.iter().map(PosSplitContext::from);

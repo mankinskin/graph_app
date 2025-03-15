@@ -7,28 +7,25 @@ use crate::{
             Pattern,
         },
     },
-    interval::partition::{
-        info::{
-            border::{
-                perfect::BoolPerfect,
-                trace::TraceBorders,
-                visit::VisitBorders,
-                PartitionBorder,
-            },
-            range::{
-                children::RangeChildren,
-                role::{
-                    BordersOf,
-                    ModeChildrenOf,
-                    ModePatternCtxOf,
-                    RangeRole,
-                },
-                InnerRangeInfo,
-                ModeRangeInfo,
-                PatternRangeInfo,
-            },
+    interval::partition::info::{
+        border::{
+            perfect::BoolPerfect,
+            trace::TraceBorders,
+            visit::VisitBorders,
+            PartitionBorder,
         },
-        pattern::HasPatternTraceContext,
+        range::{
+            children::RangeChildren,
+            role::{
+                BordersOf,
+                ModeChildrenOf,
+                ModePatternCtxOf,
+                RangeRole,
+            },
+            InnerRangeInfo,
+            ModeRangeInfo,
+            PatternRangeInfo,
+        },
     },
     join::{
         context::{
@@ -37,6 +34,7 @@ use crate::{
         },
         partition::Join,
     },
+    traversal::trace::context::pattern::HasPatternTraceContext,
 };
 
 use super::inner_range::JoinInnerRangeInfo;

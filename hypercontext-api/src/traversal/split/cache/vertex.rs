@@ -10,37 +10,41 @@ use std::{
 };
 
 use crate::{
-    interval::{
-        cache::position::SplitPositionCache,
-        partition::{
-            context::NodeTraceContext,
-            info::{
-                range::{
-                    mode::Trace,
-                    role::{
-                        In,
-                        Post,
-                        Pre,
-                        RangeRole,
-                    },
-                    splits::{
-                        OffsetIndexRange,
-                        RangeOffsets,
-                    },
+    interval::partition::{
+        info::{
+            range::{
+                mode::Trace,
+                role::{
+                    In,
+                    Post,
+                    Pre,
+                    RangeRole,
                 },
-                InfoPartition,
+                splits::{
+                    OffsetIndexRange,
+                    RangeOffsets,
+                },
             },
-            Partition,
-            ToPartition,
+            InfoPartition,
+        },
+        Partition,
+        ToPartition,
+    },
+    traversal::{
+        split::{
+            node::RootMode,
+            position_splits,
+        },
+        trace::{
+            context::node::NodeTraceContext,
+            TraceState,
         },
     },
-    traversal::cache::entry::RootMode,
 };
 
 use super::{
-    position_splits,
+    position::SplitPositionCache,
     PosKey,
-    TraceState,
 };
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Deref, DerefMut)]
@@ -56,6 +60,44 @@ impl SplitVertexCache {
         Self {
             positions: BTreeMap::from_iter([(pos, entry)]),
         }
+    }
+    pub fn augment_node(
+        &mut self,
+        ctx: NodeTraceContext,
+    ) -> Vec<TraceState> {
+        let num_offsets = self.positions.len();
+        let mut states = Vec::new();
+        for len in 1..num_offsets {
+            for start in 0..num_offsets - len + 1 {
+                let part = self.offset_range_partition::<In<Trace>>(start..start + len);
+                let (splits, next) = Self::add_inner_offsets(ctx, part);
+                self.positions.extend(splits);
+                states.extend(next);
+            }
+        }
+        states
+    }
+    pub fn augment_root(
+        &mut self,
+        ctx: NodeTraceContext,
+        root_mode: RootMode,
+    ) -> Vec<TraceState> {
+        let (splits, next) = match root_mode {
+            RootMode::Infix => Self::add_inner_offsets(
+                ctx,
+                OffsetIndexRange::<In<Trace>>::get_splits(&(0..1), self),
+            ),
+            RootMode::Prefix => Self::add_inner_offsets::<Pre<Trace>, _>(
+                ctx,
+                OffsetIndexRange::<Pre<Trace>>::get_splits(&(0..0), self),
+            ),
+            RootMode::Postfix => Self::add_inner_offsets::<Post<Trace>, _>(
+                ctx,
+                OffsetIndexRange::<Post<Trace>>::get_splits(&(0..), self),
+            ),
+        };
+        self.positions.extend(splits);
+        next
     }
     pub fn pos_mut(
         &mut self,
@@ -126,43 +168,5 @@ impl SplitVertexCache {
             })
             .collect();
         (splits, states)
-    }
-    pub fn augment_node(
-        &mut self,
-        ctx: NodeTraceContext,
-    ) -> Vec<TraceState> {
-        let num_offsets = self.positions.len();
-        let mut states = Vec::new();
-        for len in 1..num_offsets {
-            for start in 0..num_offsets - len + 1 {
-                let part = self.offset_range_partition::<In<Trace>>(start..start + len);
-                let (splits, next) = Self::add_inner_offsets(ctx, part);
-                self.positions.extend(splits);
-                states.extend(next);
-            }
-        }
-        states
-    }
-    pub fn augment_root(
-        &mut self,
-        ctx: NodeTraceContext,
-        root_mode: RootMode,
-    ) -> Vec<TraceState> {
-        let (splits, next) = match root_mode {
-            RootMode::Infix => Self::add_inner_offsets(
-                ctx,
-                OffsetIndexRange::<In<Trace>>::get_splits(&(0..1), self),
-            ),
-            RootMode::Prefix => Self::add_inner_offsets::<Pre<Trace>, _>(
-                ctx,
-                OffsetIndexRange::<Pre<Trace>>::get_splits(&(0..0), self),
-            ),
-            RootMode::Postfix => Self::add_inner_offsets::<Post<Trace>, _>(
-                ctx,
-                OffsetIndexRange::<Post<Trace>>::get_splits(&(0..), self),
-            ),
-        };
-        self.positions.extend(splits);
-        next
     }
 }

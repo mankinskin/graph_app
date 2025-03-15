@@ -24,10 +24,8 @@ use hypercontext_api::{
     },
     lab,
     path::structs::{
-        query_range_path::RangePath,
         role_path::RolePath,
         rooted::{
-            pattern_range::PatternRangePath,
             role_path::RootedRolePath,
             root::IndexRoot,
             RootedRangePath,

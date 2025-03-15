@@ -2,8 +2,8 @@ use std::num::NonZeroUsize;
 
 use derive_new::new;
 
-use crate::interval::partition::{
-    info::range::{
+use crate::{
+    interval::partition::info::range::{
         mode::{
             InVisitMode,
             PostVisitMode,
@@ -16,17 +16,14 @@ use crate::interval::partition::{
             RangeRole,
         },
     },
-    split::{
+    traversal::split::vertex::{
         ToVertexSplits,
         VertexSplits,
     },
 };
 
-pub mod context;
 pub mod delta;
 pub mod info;
-pub mod pattern;
-pub mod split;
 
 #[derive(Debug, Clone)]
 pub struct Partition<R: RangeRole> {

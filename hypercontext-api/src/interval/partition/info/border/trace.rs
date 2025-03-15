@@ -1,5 +1,5 @@
-use crate::interval::partition::{
-    info::{
+use crate::{
+    interval::partition::info::{
         border::visit::VisitBorders,
         range::{
             role::{
@@ -9,7 +9,7 @@ use crate::interval::partition::{
             InnerRangeInfo,
         },
     },
-    pattern::HasPatternTraceContext,
+    traversal::trace::context::pattern::HasPatternTraceContext,
 };
 
 pub trait TraceBorders<R: RangeRole>: VisitBorders<R> {

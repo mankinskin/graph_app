@@ -1,8 +1,5 @@
 use super::{
-    cache::key::{
-        directed::DirectedKey,
-        props::RootKey,
-    },
+    cache::key::props::RootKey,
     result::FoundRange,
     state::top_down::end::{
         EndKind,
@@ -19,19 +16,16 @@ use crate::{
     traversal::result::FinishedState,
 };
 use foldable::ErrorState;
-use state::{
-    FinalState,
-    FoldState,
-};
+use state::FoldState;
 use std::fmt::Debug;
 
 pub mod foldable;
 pub mod state;
 pub mod states;
 pub(crate) mod transition;
-use crate::traversal::state::top_down::trace::{
-    TraceContext,
-    TraceInit,
+use crate::traversal::trace::{
+    context::TraceContext,
+    traceable::Traceable,
 };
 
 /// context for running fold traversal
@@ -45,12 +39,13 @@ pub struct FoldContext<K: TraversalKind> {
 }
 
 impl<'a, K: TraversalKind> FoldContext<K> {
-    fn finish_fold(mut self) -> Result<FinishedState, ErrorState> {
+    fn finish_fold(self) -> Result<FinishedState, ErrorState> {
         if let Some(state) = self.end_state {
-            state.trace(&mut TraceContext {
-                cache: &mut self.tctx.cache,
-                trav: &self.tctx.trav,
-            });
+            let mut ctx = TraceContext {
+                cache: self.tctx.cache,
+                trav: self.tctx.trav,
+            };
+            state.trace(&mut ctx);
             //let cursor = final_state.state.cursor.clone();
             let found_path = if let EndKind::Complete(c) = &state.kind {
                 FoundRange::Complete(*c) // cursor.path
@@ -62,7 +57,7 @@ impl<'a, K: TraversalKind> FoldContext<K> {
                 //    .unwrap();
                 let root = state.root_key().index;
                 FoundRange::Incomplete(FoldState {
-                    cache: self.tctx.cache,
+                    cache: ctx.cache,
                     root,
                     end_state: state,
                     start: self.start_index,

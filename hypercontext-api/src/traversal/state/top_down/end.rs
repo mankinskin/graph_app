@@ -53,11 +53,6 @@ use crate::{
     },
 };
 
-use super::trace::{
-    TraceContext,
-    TraceInit,
-};
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EndKind {
     Range(RangeEnd),
@@ -173,14 +168,6 @@ impl EndState {
             EndKind::Complete(_) => StateDirection::BottomUp,
         }
     }
-    //pub fn waiting_root_key(&self) -> Option<UpKey> {
-    //    match &self.kind {
-    //        EndKind::Range(_) => Some(self.root_key()),
-    //        EndKind::Postfix(_) => None,
-    //        EndKind::Prefix(_) => None,
-    //        EndKind::Complete(_) => None,
-    //    }
-    //}
     pub fn end_path(&self) -> Option<RootedSplitPathRef<'_>> {
         match &self.kind {
             EndKind::Range(e) => Some(e.path.end_path()),
@@ -201,22 +188,6 @@ impl TargetKey for EndState {
             EndKind::Postfix(_) => self.root_key().into(),
             EndKind::Prefix(p) => p.target,
             EndKind::Complete(c) => DirectedKey::up(*c, *self.cursor_pos()),
-        }
-    }
-}
-
-impl TraceInit for EndState {
-    fn trace<Trav: Traversable>(
-        &self,
-        ctx: &mut TraceContext<'_, Trav>,
-    ) {
-        match &self.kind {
-            EndKind::Range(p) => {
-                let root_entry = p.path.role_root_child_location::<Start>().sub_index;
-                ctx.trace_path(root_entry, &p.path, self.root_pos, true)
-            }
-            EndKind::Prefix(p) => ctx.trace_path(0, &p.path, self.root_pos, true),
-            _ => {}
         }
     }
 }

@@ -1,12 +1,9 @@
 use crate::{
     graph::vertex::child::Child,
-    interval::partition::{
-        context::AsNodeTraceContext,
-        info::range::{
-            role::RangeRole,
-            splits::RangeOffsets,
-            InnerRangeInfo,
-        },
+    interval::partition::info::range::{
+        role::RangeRole,
+        splits::RangeOffsets,
+        InnerRangeInfo,
     },
     join::{
         context::{
@@ -18,6 +15,7 @@ use crate::{
             JoinPartition,
         },
     },
+    traversal::trace::context::node::AsNodeTraceContext,
 };
 use derive_more::derive::{
     Deref,

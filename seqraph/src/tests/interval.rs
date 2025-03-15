@@ -8,11 +8,6 @@ use pretty_assertions::assert_eq;
 use crate::tests::trace::build_trace1;
 use hypercontext_api::{
     interval::{
-        cache::{
-            position::SplitPositionCache,
-            vertex::SplitVertexCache,
-            PosKey,
-        },
         InitInterval,
         IntervalGraph,
         PatternSplitPos,
@@ -22,10 +17,14 @@ use hypercontext_api::{
         Env1,
         TestEnv,
     },
+    traversal::split::cache::{
+        position::SplitPositionCache,
+        vertex::SplitVertexCache,
+        PosKey,
+    },
     HashMap,
     HashSet,
 };
-
 macro_rules! nz {
     ($x:expr) => {
         std::num::NonZeroUsize::new($x).unwrap()
@@ -51,7 +50,7 @@ fn interval_graph1() {
     let init = InitInterval::from(res);
     let interval = IntervalGraph::from((&mut *graph, init));
     assert_eq!(
-        interval.vertices[&lab!(ef)],
+        interval.cache[&lab!(ef)],
         SplitVertexCache {
             positions: BTreeMap::from_iter([(
                 nz!(1),
@@ -78,7 +77,7 @@ fn interval_graph1() {
         },
     );
     assert_eq!(
-        interval.vertices[&lab!(def)],
+        interval.cache[&lab!(def)],
         SplitVertexCache {
             positions: BTreeMap::from_iter([(
                 nz!(2),
@@ -105,7 +104,7 @@ fn interval_graph1() {
         },
     );
     assert_eq!(
-        interval.vertices[&lab!(cdef)],
+        interval.cache[&lab!(cdef)],
         SplitVertexCache {
             positions: BTreeMap::from_iter([(
                 nz!(3),
@@ -126,7 +125,7 @@ fn interval_graph1() {
         },
     );
     assert_eq!(
-        interval.vertices[&lab!(abcdef)],
+        interval.cache[&lab!(abcdef)],
         SplitVertexCache {
             positions: BTreeMap::from_iter([(
                 nz!(5),
@@ -159,5 +158,5 @@ fn interval_graph1() {
             )])
         },
     );
-    assert_eq!(interval.vertices.len(), 4);
+    assert_eq!(interval.cache.len(), 4);
 }

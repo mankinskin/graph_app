@@ -1,3 +1,6 @@
+pub mod node;
+pub mod pattern;
+
 use std::fmt::Display;
 
 use crate::{
@@ -16,6 +19,11 @@ use crate::{
     },
     traversal::{
         cache::{
+            entry::new::{
+                NewChild,
+                NewEntry,
+                NewKind,
+            },
             key::{
                 directed::{
                     down::DownKey,
@@ -33,18 +41,12 @@ use crate::{
     },
 };
 
-use crate::traversal::cache::entry::new::{
-    NewChild,
-    NewEntry,
-    NewKind,
-};
-
 #[derive(Debug)]
-pub struct TraceContext<'a, Trav: Traversable> {
-    pub trav: &'a Trav,
-    pub cache: &'a mut TraversalCache,
+pub struct TraceContext<Trav: Traversable> {
+    pub trav: Trav,
+    pub cache: TraversalCache,
 }
-impl<Trav: Traversable> TraceContext<'_, Trav> {
+impl<Trav: Traversable> TraceContext<Trav> {
     pub fn trace_path<P: RoleChildPath + GraphRootChild<End> + HasRolePath<End>>(
         &mut self,
         root_entry: usize,
@@ -78,7 +80,7 @@ impl<Trav: Traversable> TraceContext<'_, Trav> {
         let mut prev_key: DirectedKey = root_down_key.into();
         let mut target_key = exit_down_key.into();
         self.cache.add_state(
-            self.trav,
+            &self.trav,
             NewEntry {
                 prev: prev_key.to_prev(0),
                 kind: NewKind::Child(NewChild {
@@ -95,7 +97,7 @@ impl<Trav: Traversable> TraceContext<'_, Trav> {
             prev_key.advance_key(delta);
             target_key = DirectedKey::down(graph.expect_child_at(loc), *prev_key.pos.pos());
             self.cache.add_state(
-                self.trav,
+                &self.trav,
                 NewEntry {
                     //root_pos: root_up_pos,
                     prev: prev_key.to_prev(0),
@@ -109,10 +111,4 @@ impl<Trav: Traversable> TraceContext<'_, Trav> {
             );
         }
     }
-}
-pub trait TraceInit {
-    fn trace<Trav: Traversable>(
-        &self,
-        ctx: &mut TraceContext<'_, Trav>,
-    );
 }

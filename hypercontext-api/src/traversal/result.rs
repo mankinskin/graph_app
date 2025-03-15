@@ -3,13 +3,7 @@ use crate::{
         child::Child,
         pattern::IntoPattern,
     },
-    path::{
-        accessors::complete::PathComplete,
-        structs::{
-            query_range_path::FoldablePath,
-            rooted::pattern_range::PatternRangePath,
-        },
-    },
+    path::accessors::complete::PathComplete,
 };
 
 use super::fold::state::FoldState;

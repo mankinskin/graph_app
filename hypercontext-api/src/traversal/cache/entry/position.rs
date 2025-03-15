@@ -1,3 +1,6 @@
+use std::num::NonZeroUsize;
+
+use super::new::NewEntry;
 use crate::{
     graph::vertex::{
         child::Child,
@@ -5,10 +8,6 @@ use crate::{
     },
     traversal::{
         cache::{
-            entry::{
-                NewEntry,
-                Offset,
-            },
             key::directed::DirectedKey,
             TraversalCache,
         },
@@ -18,6 +17,8 @@ use crate::{
     HashMap,
     HashSet,
 };
+
+pub type Offset = NonZeroUsize;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BottomUp;

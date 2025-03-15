@@ -7,10 +7,7 @@ use derive_more::From;
 use hypercontext_api::{
     graph::{
         getters::ErrorReason,
-        vertex::{
-            child::Child,
-            wide::Wide,
-        },
+        vertex::child::Child,
         Hypergraph,
         HypergraphRef,
     },
@@ -19,15 +16,11 @@ use hypercontext_api::{
         IntervalGraph,
     },
     join::context::JoinContext,
-    path::structs::rooted::pattern_range::PatternRangePath,
     traversal::{
         container::bft::BftQueue,
-        fold::{
-            foldable::{
-                ErrorState,
-                Foldable,
-            },
-            state::FoldState,
+        fold::foldable::{
+            ErrorState,
+            Foldable,
         },
         result::FoundRange,
         traversable::{

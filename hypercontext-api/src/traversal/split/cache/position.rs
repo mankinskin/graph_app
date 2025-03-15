@@ -14,10 +14,14 @@ use crate::{
     interval::{
         partition::delta::PatternSubDeltas,
         PatternSplitPos,
-        PatternSplitPositions,
-        ToVertexSplitPos,
     },
-    traversal::cache::entry::position::SubSplitLocation,
+    traversal::{
+        cache::entry::position::SubSplitLocation,
+        split::vertex::{
+            PatternSplitPositions,
+            ToVertexSplitPos,
+        },
+    },
     HashSet,
 };
 
@@ -77,7 +81,6 @@ impl SplitPositionCache {
         Self {
             top: HashSet::default(),
             pattern_splits: subs.to_vertex_split_pos(),
-            //final_split: None,
         }
     }
     pub fn new(
@@ -87,7 +90,6 @@ impl SplitPositionCache {
         Self {
             top: HashSet::from_iter(Some(prev)),
             pattern_splits: subs.into_iter().map(Into::into).collect(),
-            //final_split: None,
         }
     }
     pub fn find_clean_split(&self) -> Option<SubLocation> {

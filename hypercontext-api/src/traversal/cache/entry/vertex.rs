@@ -1,12 +1,11 @@
 use crate::{
     graph::vertex::child::Child,
     path::mutators::move_path::key::TokenPosition,
-    traversal::cache::{
-        entry::PositionCache,
-        key::directed::DirectedPosition,
-    },
+    traversal::cache::key::directed::DirectedPosition,
     HashMap,
 };
+
+use super::position::PositionCache;
 
 pub type DirectedPositions = HashMap<TokenPosition, PositionCache>;
 

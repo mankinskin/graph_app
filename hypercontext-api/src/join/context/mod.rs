@@ -13,19 +13,20 @@ use crate::{
         Hypergraph,
         HypergraphRef,
     },
-    interval::{
-        cache::PosKey,
-        IntervalGraph,
-    },
-    traversal::traversable::{
-        TravKind,
-        Traversable,
-        TraversableMut,
+    interval::IntervalGraph,
+    traversal::{
+        split::{
+            cache::PosKey,
+            SplitMap,
+        },
+        traversable::{
+            TravKind,
+            Traversable,
+            TraversableMut,
+        },
     },
     HashMap,
 };
-
-use super::SplitMap;
 
 pub mod node;
 pub mod pattern;
@@ -77,7 +78,7 @@ impl JoinContext {
     }
     pub fn join_subgraph(&mut self) -> Child {
         let mut splits = HashMap::default();
-        let leaves = self.interval.leaves.iter().cloned().rev();
+        let leaves = self.interval.states.leaves.iter().cloned().rev();
         let mut frontier: LinkedHashSet<PosKey> = LinkedHashSet::from_iter(leaves);
         while let Some(key) = {
             frontier

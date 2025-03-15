@@ -3,7 +3,7 @@ use cache::{
     TraversalCache,
 };
 use container::StateContainer;
-use fold::states::StatesContext;
+use fold::states::PrunedStates;
 use iterator::policy::DirectedTraversalPolicy;
 use state::{
     next_states::NextStates,
@@ -18,7 +18,9 @@ pub mod container;
 pub mod fold;
 pub mod iterator;
 pub mod result;
+pub mod split;
 pub mod state;
+pub mod trace;
 pub mod traversable;
 
 pub trait TraversalKind: Debug + Default {
@@ -41,7 +43,7 @@ pub trait TraversalKind: Debug + Default {
 /// context for generating next states
 #[derive(Debug)]
 pub struct TraversalContext<K: TraversalKind> {
-    pub states: StatesContext<K>,
+    pub states: PrunedStates<K>,
     pub cache: TraversalCache,
     pub trav: K::Trav,
 }

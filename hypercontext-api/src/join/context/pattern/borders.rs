@@ -1,10 +1,5 @@
-use crate::join::{
-    context::pattern::PatternJoinContext,
-    partition::Join,
-};
-use crate::interval::{
-    cache::PosKey,
-    partition::info::{
+use crate::{
+    interval::partition::info::{
         border::{
             trace::TraceBorders,
             BorderInfo,
@@ -22,6 +17,11 @@ use crate::interval::{
             },
         },
     },
+    join::{
+        context::pattern::PatternJoinContext,
+        partition::Join,
+    },
+    traversal::split::cache::PosKey,
 };
 
 pub trait JoinBorders<R: RangeRole<Mode = Join>>: TraceBorders<R> {

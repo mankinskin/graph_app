@@ -26,15 +26,15 @@ use crate::{
                     RangeChildren,
                 },
                 mode::ModeInfo,
-                splits::{
-                    PatternSplits,
-                    RangeOffsets,
-                },
+                splits::RangeOffsets,
             },
         },
-        split::VertexSplits,
         Partition,
         ToPartition,
+    },
+    traversal::split::{
+        pattern::PatternSplits,
+        vertex::VertexSplits,
     },
 };
 

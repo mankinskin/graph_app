@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use context::*;
 
 use hypercontext_api::{
@@ -9,14 +7,10 @@ use hypercontext_api::{
         HypergraphRef,
     },
     interval::InitInterval,
-    path::structs::rooted::pattern_range::PatternRangePath,
     traversal::{
-        fold::{
-            foldable::{
-                ErrorState,
-                Foldable,
-            },
-            state::FoldState,
+        fold::foldable::{
+            ErrorState,
+            Foldable,
         },
         traversable::TraversableMut,
     },

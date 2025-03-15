@@ -15,12 +15,6 @@ pub enum StateDirection {
     TopDown,
 }
 
-//#[derive(Clone, Debug, PartialEq, Eq)]
-//pub(crate) struct WaitingState {
-//    pub prev: PrevKey,
-//    pub state: ParentState,
-//}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InnerKind {
     Parent(ParentState),

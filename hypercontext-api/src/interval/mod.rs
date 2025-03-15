@@ -3,21 +3,11 @@ use std::{
     num::NonZeroUsize,
 };
 
-use builder::IntervalGraphBuilder;
-use partition::split::{
-    PatternSplitPositions,
-    VertexSplits,
-};
-
-use cache::{
-    leaves::Leaves,
-    position::SplitPositionCache,
-    PosKey,
-};
 use derive_more::derive::{
     Deref,
     DerefMut,
 };
+use derive_new::new;
 
 use crate::{
     graph::vertex::{
@@ -25,38 +15,47 @@ use crate::{
         has_vertex_index::HasVertexIndex,
         wide::Wide,
     },
-    interval::cache::vertex::SplitVertexCache,
     traversal::{
         cache::{
-            entry::{
-                position::SubSplitLocation,
-                RootMode,
-            },
             label_key::vkey::VertexCacheKey,
             TraversalCache,
         },
         fold::state::FoldState,
+        split::{
+            cache::{
+                position::SplitPositionCache,
+                vertex::SplitVertexCache,
+                PosKey,
+            },
+            context::{
+                SplitCacheContext,
+                SplitTraceStateContext,
+            },
+            node::RootMode,
+            SplitStates,
+        },
+        trace::context::TraceContext,
         traversable::TraversableMut,
     },
     HashMap,
 };
 
-pub mod builder;
-pub mod cache;
 pub mod partition;
 pub(crate) mod side;
-pub mod split;
 
-#[derive(Debug, Deref, DerefMut)]
-pub struct SplitVertices {
-    pub entries: HashMap<VertexCacheKey, SplitVertexCache>,
+#[derive(Debug, Deref, DerefMut, new)]
+pub struct SplitCache {
+    pub root_mode: RootMode,
+
+    #[deref]
+    #[deref_mut]
+    entries: HashMap<VertexCacheKey, SplitVertexCache>,
 }
 #[derive(Debug)]
 pub struct IntervalGraph {
-    pub vertices: SplitVertices,
-    pub root_mode: RootMode,
+    pub states: SplitStates,
+    pub cache: SplitCache,
     pub root: Child,
-    pub leaves: Leaves,
 }
 #[derive(Debug)]
 pub struct InitInterval {
@@ -75,7 +74,14 @@ impl From<FoldState> for InitInterval {
 }
 impl<'a, Trav: TraversableMut + 'a> From<(&'a mut Trav, InitInterval)> for IntervalGraph {
     fn from((trav, init): (&'a mut Trav, InitInterval)) -> Self {
-        IntervalGraphBuilder::new(trav, init).build()
+        let InitInterval {
+            root,
+            cache,
+            end_bound,
+        } = init;
+        let ctx = TraceContext { trav, cache };
+        let iter = SplitTraceStateContext::new(ctx, root, end_bound);
+        Self::from(SplitCacheContext::init(iter))
     }
 }
 impl IntervalGraph {
@@ -83,7 +89,7 @@ impl IntervalGraph {
         &self,
         key: &PosKey,
     ) -> Option<&SplitPositionCache> {
-        self.vertices
+        self.cache
             .get(&key.index.vertex_index())
             .and_then(|ve| ve.positions.get(&key.pos))
     }
@@ -91,7 +97,7 @@ impl IntervalGraph {
         &mut self,
         key: &PosKey,
     ) -> Option<&mut SplitPositionCache> {
-        self.vertices
+        self.cache
             .get_mut(&key.index.vertex_index())
             .and_then(|ve| ve.positions.get_mut(&key.pos))
     }
@@ -120,37 +126,5 @@ impl From<(usize, Option<NonZeroUsize>)> for PatternSplitPos {
             sub_index,
             inner_offset,
         }
-    }
-}
-
-pub trait ToVertexSplitPos {
-    fn to_vertex_split_pos(self) -> PatternSplitPositions;
-}
-
-impl ToVertexSplitPos for PatternSplitPositions {
-    fn to_vertex_split_pos(self) -> PatternSplitPositions {
-        self
-    }
-}
-
-impl ToVertexSplitPos for Vec<SubSplitLocation> {
-    fn to_vertex_split_pos(self) -> PatternSplitPositions {
-        self.into_iter()
-            .map(|loc| {
-                (
-                    loc.location.pattern_id,
-                    PatternSplitPos {
-                        inner_offset: loc.inner_offset,
-                        sub_index: loc.location.sub_index,
-                    },
-                )
-            })
-            .collect()
-    }
-}
-
-impl ToVertexSplitPos for VertexSplits {
-    fn to_vertex_split_pos(self) -> PatternSplitPositions {
-        self.splits
     }
 }

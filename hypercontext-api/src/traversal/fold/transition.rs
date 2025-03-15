@@ -22,12 +22,12 @@ use crate::traversal::container::{
     pruning::PruneStates,
 };
 #[derive(Debug, Deref, DerefMut)]
-pub struct StateTransitionIter<'a, K: TraversalKind> {
+pub struct TransitionIter<'a, K: TraversalKind> {
     #[deref_mut]
     #[deref]
     pub fctx: &'a mut FoldContext<K>,
 }
-impl<K: TraversalKind> Iterator for StateTransitionIter<'_, K> {
+impl<K: TraversalKind> Iterator for TransitionIter<'_, K> {
     type Item = ();
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -36,7 +36,7 @@ impl<K: TraversalKind> Iterator for StateTransitionIter<'_, K> {
         })
     }
 }
-impl<'a, K: TraversalKind> StateTransitionIter<'a, K> {
+impl<'a, K: TraversalKind> TransitionIter<'a, K> {
     pub fn apply_transition(
         &mut self,
         depth: usize,

@@ -17,25 +17,24 @@ use crate::{
         child::Child,
         pattern::id::PatternId,
     },
+    interval::partition::{
+        info::{
+            border::visit::VisitBorders,
+            range::role::ModeNodeCtxOf,
+        },
+        ToPartition,
+    },
+    traversal::{
+        split::pattern::PatternSplits,
+        trace::context::pattern::{
+            GetPatternContext,
+            HasPatternTraceContext,
+            PatternTraceContext,
+        },
+    },
     HashMap,
 };
 use std::hash::Hash;
-
-use crate::interval::partition::{
-    info::{
-        border::visit::VisitBorders,
-        range::{
-            role::ModeNodeCtxOf,
-            splits::PatternSplits,
-        },
-    },
-    pattern::{
-        GetPatternContext,
-        HasPatternTraceContext,
-        PatternTraceContext,
-    },
-    ToPartition,
-};
 
 pub mod border;
 pub mod borders;
@@ -52,7 +51,6 @@ pub type PatternCtxs<'t, R> = HashMap<PatternId, ModePatternCtxOf<'t, R>>;
 pub trait PartitionBorderKey: Hash + Eq {}
 
 impl<T: Hash + Eq> PartitionBorderKey for T {}
-
 pub trait InfoPartition<R: RangeRole>: Sized + Clone + ToPartition<R> {
     fn info_borders(
         &self,

@@ -105,49 +105,6 @@ pub struct ChildState {
     pub cursor: PatternRangeCursor,
 }
 
-impl Ord for Child {
-    fn cmp(
-        &self,
-        other: &Self,
-    ) -> Ordering {
-        self.width().cmp(&other.width())
-    }
-}
-
-impl Ord for ChildState {
-    fn cmp(
-        &self,
-        other: &Self,
-    ) -> Ordering {
-        self.path.root_parent().cmp(&other.path.root_parent())
-    }
-}
-
-impl PartialOrd for ChildState {
-    fn partial_cmp(
-        &self,
-        other: &Self,
-    ) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl RootKey for ChildState {
-    fn root_key(&self) -> UpKey {
-        UpKey::new(self.path.root_parent(), self.root_pos.into())
-    }
-}
-
-impl LeafKey for ChildState {
-    fn leaf_location(&self) -> ChildLocation {
-        self.path.leaf_location()
-    }
-}
-impl TargetKey for ChildState {
-    fn target_key(&self) -> DirectedKey {
-        self.target
-    }
-}
-
 impl ChildState {
     pub fn push_major(
         &mut self,
@@ -360,5 +317,48 @@ impl ChildState {
                 }
             })
             .collect_vec()
+    }
+}
+
+impl Ord for Child {
+    fn cmp(
+        &self,
+        other: &Self,
+    ) -> Ordering {
+        self.width().cmp(&other.width())
+    }
+}
+
+impl Ord for ChildState {
+    fn cmp(
+        &self,
+        other: &Self,
+    ) -> Ordering {
+        self.path.root_parent().cmp(&other.path.root_parent())
+    }
+}
+
+impl PartialOrd for ChildState {
+    fn partial_cmp(
+        &self,
+        other: &Self,
+    ) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl RootKey for ChildState {
+    fn root_key(&self) -> UpKey {
+        UpKey::new(self.path.root_parent(), self.root_pos.into())
+    }
+}
+
+impl LeafKey for ChildState {
+    fn leaf_location(&self) -> ChildLocation {
+        self.path.leaf_location()
+    }
+}
+impl TargetKey for ChildState {
+    fn target_key(&self) -> DirectedKey {
+        self.target
     }
 }

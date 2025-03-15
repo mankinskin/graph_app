@@ -15,14 +15,13 @@ use crate::traversal::{
 use itertools::Itertools;
 use std::fmt::Debug;
 pub(crate) mod init;
-pub mod start;
 
 #[derive(Debug, Default)]
-pub struct StatesContext<K: TraversalKind> {
+pub struct PrunedStates<K: TraversalKind> {
     pub pruning_map: PruningMap,
     pub states: K::Container,
 }
-impl<K: TraversalKind> PruneStates for StatesContext<K> {
+impl<K: TraversalKind> PruneStates for PrunedStates<K> {
     fn clear(&mut self) {
         self.states.clear();
     }
@@ -30,7 +29,7 @@ impl<K: TraversalKind> PruneStates for StatesContext<K> {
         &mut self.pruning_map
     }
 }
-impl<K: TraversalKind> ExtendStates for StatesContext<K> {
+impl<K: TraversalKind> ExtendStates for PrunedStates<K> {
     fn extend<
         It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
         In: IntoIterator<Item = (usize, TraversalState), IntoIter = It>,
@@ -55,7 +54,7 @@ impl<K: TraversalKind> ExtendStates for StatesContext<K> {
         self.states.extend(states)
     }
 }
-impl<K: TraversalKind> Iterator for StatesContext<K> {
+impl<K: TraversalKind> Iterator for PrunedStates<K> {
     type Item = (usize, TraversalState);
 
     fn next(&mut self) -> Option<Self::Item> {

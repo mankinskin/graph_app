@@ -17,26 +17,24 @@ use crate::{
         child::Child,
         pattern::Pattern,
     },
-    interval::{
+    interval::partition::{
+        info::{
+            range::role::In,
+            InfoPartition,
+            PartitionInfo,
+        },
+        Infix,
+    },
+    join::partition::Join,
+    traversal::split::{
         cache::{
             vertex::SplitVertexCache,
             PosKey,
         },
-        partition::{
-            info::{
-                range::role::In,
-                InfoPartition,
-                PartitionInfo,
-            },
-            split::{
-                PatternSplitPositions,
-                PosSplitContext,
-            },
-            Infix,
+        vertex::{
+            PatternSplitPositions,
+            PosSplitContext,
         },
-    },
-    join::{
-        partition::Join,
         Split,
     },
     HashMap,

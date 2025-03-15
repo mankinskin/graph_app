@@ -3,12 +3,8 @@ use std::{
     hash::Hash,
 };
 
-use crate::interval::partition::{
-    context::{
-        AsNodeTraceContext,
-        NodeTraceContext,
-    },
-    info::range::{
+use crate::{
+    interval::partition::info::range::{
         role::{
             ModeOf,
             RangeRole,
@@ -16,11 +12,17 @@ use crate::interval::partition::{
         ModeRangeInfo,
         TraceRangeInfo,
     },
-    pattern::{
-        GetPatternContext,
-        GetPatternTraceContext,
-        HasPatternTraceContext,
-        PatternTraceContext,
+    traversal::trace::context::{
+        node::{
+            AsNodeTraceContext,
+            NodeTraceContext,
+        },
+        pattern::{
+            GetPatternContext,
+            GetPatternTraceContext,
+            HasPatternTraceContext,
+            PatternTraceContext,
+        },
     },
 };
 

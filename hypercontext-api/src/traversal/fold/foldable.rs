@@ -31,7 +31,7 @@ use crate::{
 use std::fmt::Debug;
 
 use super::{
-    transition::StateTransitionIter,
+    transition::TransitionIter,
     FoldContext,
 };
 
@@ -49,12 +49,13 @@ pub trait Foldable: Sized {
         self,
         trav: K::Trav,
     ) -> FoldContext<K>;
+
     fn fold<K: TraversalKind>(
         self,
         trav: K::Trav,
     ) -> Result<FinishedState, ErrorState> {
         let mut ctx = self.to_fold_context::<K>(trav);
-        StateTransitionIter { fctx: &mut ctx }.for_each(|_| {});
+        TransitionIter { fctx: &mut ctx }.for_each(|_| {});
         ctx.finish_fold()
     }
 }

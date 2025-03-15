@@ -52,16 +52,12 @@ impl CursorPosition for TraversalState {
         match &self.kind {
             InnerKind::Parent(state) => state.cursor_pos(),
             InnerKind::Child(state) => state.cursor_pos(),
-            //InnerKind::End(state)
-            //    => &state.query.pos,
         }
     }
     fn cursor_pos_mut(&mut self) -> &mut TokenPosition {
         match &mut self.kind {
             InnerKind::Parent(state) => state.cursor_pos_mut(),
             InnerKind::Child(state) => state.cursor_pos_mut(),
-            //InnerKind::End(state)
-            //    => &mut state.query.pos,
         }
     }
 }

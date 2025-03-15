@@ -9,6 +9,7 @@ use crate::{
     search::Searchable,
 };
 use hypercontext_api::{
+    self,
     graph::{
         getters::vertex::VertexSet,
         kind::BaseGraphKind,
@@ -19,10 +20,6 @@ use hypercontext_api::{
         },
         Hypergraph,
         HypergraphRef,
-    },
-    path::structs::{
-        query_range_path::FoldablePath,
-        rooted::pattern_range::PatternRangePath,
     },
     traversal::{
         result::{

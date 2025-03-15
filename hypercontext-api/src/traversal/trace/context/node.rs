@@ -9,7 +9,9 @@ use crate::graph::{
 };
 
 use super::pattern::{
-    GetPatternContext, GetPatternTraceContext, PatternTraceContext
+    GetPatternContext,
+    GetPatternTraceContext,
+    PatternTraceContext,
 };
 
 #[derive(Debug, Clone, Copy)]

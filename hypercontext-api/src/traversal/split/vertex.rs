@@ -5,12 +5,12 @@ use std::{
 
 use crate::{
     graph::vertex::pattern::id::PatternId,
-    interval::{
-        cache::position::SplitPositionCache,
-        PatternSplitPos,
-    },
+    interval::PatternSplitPos,
+    traversal::cache::entry::position::SubSplitLocation,
     HashMap,
 };
+
+use super::cache::position::SplitPositionCache;
 
 #[derive(Debug, Clone, Copy)]
 pub struct PosSplitContext<'a> {
@@ -70,5 +70,37 @@ impl<'a, N: Borrow<NonZeroUsize>, S: Borrow<SplitPositionCache>> From<(N, S)> fo
             pos: *item.0.borrow(),
             splits: item.1.borrow().pattern_splits.clone(),
         }
+    }
+}
+
+pub trait ToVertexSplitPos {
+    fn to_vertex_split_pos(self) -> PatternSplitPositions;
+}
+
+impl ToVertexSplitPos for PatternSplitPositions {
+    fn to_vertex_split_pos(self) -> PatternSplitPositions {
+        self
+    }
+}
+
+impl ToVertexSplitPos for Vec<SubSplitLocation> {
+    fn to_vertex_split_pos(self) -> PatternSplitPositions {
+        self.into_iter()
+            .map(|loc| {
+                (
+                    loc.location.pattern_id,
+                    PatternSplitPos {
+                        inner_offset: loc.inner_offset,
+                        sub_index: loc.location.sub_index,
+                    },
+                )
+            })
+            .collect()
+    }
+}
+
+impl ToVertexSplitPos for VertexSplits {
+    fn to_vertex_split_pos(self) -> PatternSplitPositions {
+        self.splits
     }
 }
