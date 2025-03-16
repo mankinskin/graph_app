@@ -16,7 +16,7 @@ use crate::{
     interval::IntervalGraph,
     traversal::{
         split::{
-            cache::PosKey,
+            cache::position::PosKey,
             SplitMap,
         },
         traversable::{

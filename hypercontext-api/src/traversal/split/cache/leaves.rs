@@ -5,7 +5,7 @@ use crate::{
             Offset,
             SubSplitLocation,
         },
-        split::node::CompleteLocations,
+        split::vertex::output::CompleteLocations,
     },
     HashMap,
 };
@@ -15,7 +15,7 @@ use derive_more::{
     From,
 };
 
-use super::PosKey;
+use super::position::PosKey;
 
 #[derive(Default, Debug, Deref, DerefMut, From)]
 pub struct Leaves(Vec<PosKey>);

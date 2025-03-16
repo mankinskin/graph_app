@@ -28,8 +28,8 @@ use crate::{
     join::partition::Join,
     traversal::split::{
         cache::{
+            position::PosKey,
             vertex::SplitVertexCache,
-            PosKey,
         },
         vertex::{
             PatternSplitPositions,

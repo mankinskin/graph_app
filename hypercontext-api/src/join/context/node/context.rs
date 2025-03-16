@@ -49,12 +49,12 @@ use crate::{
     traversal::{
         split::{
             cache::{
+                position::PosKey,
                 vertex::SplitVertexCache,
-                PosKey,
             },
-            node::RootMode,
             position_splits,
             vertex::{
+                output::RootMode,
                 PatternSplitPositions,
                 PosSplitContext,
                 VertexSplits,

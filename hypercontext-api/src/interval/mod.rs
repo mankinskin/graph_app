@@ -23,19 +23,30 @@ use crate::{
         fold::state::FoldState,
         split::{
             cache::{
-                position::SplitPositionCache,
+                position::{
+                    PosKey,
+                    SplitPositionCache,
+                },
                 vertex::SplitVertexCache,
-                PosKey,
             },
-            context::{
-                SplitCacheContext,
+            context::SplitCacheContext,
+            trace::states::{
+                SplitStates,
                 SplitTraceStateContext,
             },
-            node::RootMode,
-            SplitStates,
+            vertex::output::RootMode,
         },
-        trace::context::TraceContext,
-        traversable::TraversableMut,
+        trace::{
+            context::{
+                node::NodeTraceContext,
+                TraceContext,
+            },
+            TraceState,
+        },
+        traversable::{
+            Traversable,
+            TraversableMut,
+        },
     },
     HashMap,
 };
@@ -50,6 +61,42 @@ pub struct SplitCache {
     #[deref]
     #[deref_mut]
     entries: HashMap<VertexCacheKey, SplitVertexCache>,
+}
+impl SplitCache {
+    pub fn augment_node(
+        &mut self,
+        trav: impl Traversable,
+        index: Child,
+    ) -> Vec<TraceState> {
+        let graph = trav.graph();
+        let ctx = NodeTraceContext::new(&graph, index);
+        self.get_mut(&index.vertex_index())
+            .unwrap()
+            .augment_node(ctx)
+    }
+    /// complete inner range offsets for root
+    pub fn augment_root(
+        &mut self,
+        trav: impl Traversable,
+        root: Child,
+    ) -> Vec<TraceState> {
+        let graph = trav.graph();
+        let ctx = NodeTraceContext::new(&graph, root);
+        let index = root.vertex_index();
+        let root_mode = self.root_mode;
+        self.get_mut(&index).unwrap().augment_root(ctx, root_mode)
+    }
+    pub fn augment_nodes<Trav: Traversable, I: IntoIterator<Item = Child>>(
+        &mut self,
+        ctx: &mut SplitTraceStateContext<Trav>,
+        nodes: I,
+    ) {
+        for c in nodes {
+            let new = self.augment_node(&ctx.trav, c);
+            // todo: force order
+            ctx.states.queue.extend(new.into_iter());
+        }
+    }
 }
 #[derive(Debug)]
 pub struct IntervalGraph {

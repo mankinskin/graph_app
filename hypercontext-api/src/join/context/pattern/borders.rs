@@ -21,7 +21,7 @@ use crate::{
         context::pattern::PatternJoinContext,
         partition::Join,
     },
-    traversal::split::cache::PosKey,
+    traversal::split::cache::position::PosKey,
 };
 
 pub trait JoinBorders<R: RangeRole<Mode = Join>>: TraceBorders<R> {

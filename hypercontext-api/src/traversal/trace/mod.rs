@@ -2,7 +2,7 @@ use crate::graph::vertex::child::Child;
 
 use super::{
     cache::entry::position::Offset,
-    split::cache::PosKey,
+    split::cache::position::PosKey,
 };
 
 pub(crate) mod context;

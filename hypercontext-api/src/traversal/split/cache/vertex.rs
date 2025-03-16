@@ -1,14 +1,7 @@
-use derive_more::derive::{
-    Deref,
-    DerefMut,
+use super::position::{
+    PosKey,
+    SplitPositionCache,
 };
-use itertools::Itertools;
-use std::{
-    collections::BTreeMap,
-    iter::FromIterator,
-    num::NonZeroUsize,
-};
-
 use crate::{
     interval::partition::{
         info::{
@@ -32,8 +25,8 @@ use crate::{
     },
     traversal::{
         split::{
-            node::RootMode,
             position_splits,
+            vertex::output::RootMode,
         },
         trace::{
             context::node::NodeTraceContext,
@@ -41,10 +34,15 @@ use crate::{
         },
     },
 };
-
-use super::{
-    position::SplitPositionCache,
-    PosKey,
+use derive_more::derive::{
+    Deref,
+    DerefMut,
+};
+use itertools::Itertools;
+use std::{
+    collections::BTreeMap,
+    iter::FromIterator,
+    num::NonZeroUsize,
 };
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Deref, DerefMut)]
