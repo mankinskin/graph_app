@@ -59,12 +59,9 @@ impl<K: TraversalKind> Iterator for TraversalContext<K> {
                         NextStates::Empty
                     } else {
                         ps.parent_next_states::<K>(&self.trav, ts.prev)
-                        //, self.new)
                     }
                 }
-                InnerKind::Child(cs) => {
-                    cs.child_next_states(self) //, self.new)
-                }
+                InnerKind::Child(cs) => cs.child_next_states(self),
             };
             Some((depth, next))
         } else {

@@ -33,7 +33,6 @@ use crate::{
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TraversalState {
     pub prev: PrevKey,
-    //pub new: Vec<NewEntry>,
     pub kind: InnerKind,
 }
 impl TraversalState {

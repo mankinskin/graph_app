@@ -124,7 +124,6 @@ impl ChildState {
     pub fn child_next_states<K: TraversalKind>(
         self,
         ctx: &mut TraversalContext<K>,
-        //new: Vec<NewEntry>,
     ) -> NextStates {
         let key = self.target_key();
         let path_leaf = self.path.role_leaf_child::<End, _>(&ctx.trav);
@@ -132,13 +131,12 @@ impl ChildState {
 
         // compare next child
         if path_leaf == query_leaf {
-            self.on_match(ctx) //, new)
+            self.on_match(ctx)
         } else if path_leaf.width() == 1 && path_leaf.width() == 1 {
-            self.on_mismatch(&ctx.trav) //, new)
+            self.on_mismatch(&ctx.trav)
         } else {
             NextStates::Prefixes(StateNext {
                 prev: key.to_prev(0),
-                //new,
                 inner: match path_leaf.width.cmp(&query_leaf.width) {
                     Ordering::Equal => self
                         .clone()
@@ -190,7 +188,6 @@ impl ChildState {
     fn on_match<K: TraversalKind>(
         mut self,
         ctx: &mut TraversalContext<K>,
-        //new: Vec<NewEntry>,
     ) -> NextStates {
         let key = self.target_key();
         ctx.states.clear();
@@ -214,7 +211,6 @@ impl ChildState {
                 // gen next child
                 NextStates::Child(StateNext {
                     prev: key.to_prev(0),
-                    //new: vec![],
                     inner: ChildState {
                         target: DirectedKey::down(
                             path.role_leaf_child::<End, _>(&ctx.trav),
@@ -228,16 +224,15 @@ impl ChildState {
                     path: IndexStartPath::from(self.base.path),
                     ..self.base
                 }
-                .next_parents::<K>(&ctx.trav) //, vec![])
+                .next_parents::<K>(&ctx.trav)
             }
         } else {
-            self.on_query_end(&ctx.trav) //, vec![])
+            self.on_query_end(&ctx.trav)
         }
     }
     fn on_mismatch<'a, Trav: Traversable>(
         self,
         trav: &Trav,
-        //new: Vec<NewEntry>,
     ) -> NextStates {
         let key = self.target_key();
         let BaseState {
@@ -263,7 +258,6 @@ impl ChildState {
         } {
             NextStates::End(StateNext {
                 prev: key.to_prev(0),
-                //new,
                 inner: EndState {
                     root_pos,
                     cursor: cursor.clone(),
@@ -274,7 +268,6 @@ impl ChildState {
         } else {
             NextStates::End(StateNext {
                 prev: key.to_prev(0),
-                //new,
                 inner: EndState {
                     root_pos,
                     reason: EndReason::Mismatch,
@@ -294,7 +287,6 @@ impl ChildState {
     fn on_query_end<'a, Trav: Traversable>(
         self,
         trav: &Trav,
-        //new: Vec<NewEntry>,
     ) -> NextStates {
         let key = self.target_key();
         let BaseState {
@@ -308,7 +300,6 @@ impl ChildState {
         cursor.advance_key(target_index.width());
         NextStates::End(StateNext {
             prev: key.to_prev(0),
-            //new,
             inner: EndState {
                 root_pos,
                 cursor,

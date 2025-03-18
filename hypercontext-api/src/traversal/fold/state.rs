@@ -11,10 +11,7 @@ use crate::{
             entry::vertex::VertexCache,
             key::{
                 directed::DirectedKey,
-                props::{
-                    RootKey,
-                    TargetKey,
-                },
+                props::RootKey,
             },
             TraversalCache,
         },
@@ -71,6 +68,15 @@ impl FoldState {
     pub fn root_entry(&self) -> &VertexCache {
         self.cache.entries.get(&self.root().vertex_index()).unwrap()
     }
+    pub fn start_key(&self) -> DirectedKey {
+        DirectedKey::new(self.start, self.start.width())
+    }
+    pub fn root(&self) -> Child {
+        self.root
+    }
+    pub fn into_fold_result(self) -> FoundRange {
+        FoundRange::Incomplete(self)
+    }
     //pub fn root_mode(&self) -> RootMode {
     //    let e = self.root_entry();
     //    if e.bottom_up.is_empty() {
@@ -82,18 +88,9 @@ impl FoldState {
     //        RootMode::Infix
     //    }
     //}
-    pub fn start_key(&self) -> DirectedKey {
-        DirectedKey::new(self.start, self.start.width())
-    }
-    pub fn root(&self) -> Child {
-        self.root
-    }
-    pub fn into_fold_result(self) -> FoundRange {
-        FoundRange::Incomplete(self)
-    }
-    pub fn leaf(&self) -> DirectedKey {
-        self.end_state.target_key()
-    }
+    //pub fn leaf_key(&self) -> DirectedKey {
+    //    self.end_state.target_key()
+    //}
 }
 
 // get bottom up edge iterators

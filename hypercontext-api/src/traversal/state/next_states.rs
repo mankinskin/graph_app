@@ -41,7 +41,6 @@ impl NextStates {
                 .iter()
                 .map(|s| TraversalState {
                     prev: state.prev,
-                    //new: state.new.clone(),
                     kind: InnerKind::Parent(s.clone()),
                 })
                 .collect_vec(),
@@ -50,13 +49,11 @@ impl NextStates {
                 .iter()
                 .map(|s| TraversalState {
                     prev: state.prev,
-                    //new: state.new.clone(),
                     kind: InnerKind::Child(s.clone()),
                 })
                 .collect_vec(),
             Self::Child(state) => vec![TraversalState {
                 prev: state.prev,
-                //new: state.new,
                 kind: InnerKind::Child(state.inner),
             }],
             Self::End(_) => vec![],
