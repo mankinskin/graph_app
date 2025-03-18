@@ -18,9 +18,11 @@ use hypercontext_api::{
         TestEnv,
     },
     traversal::split::cache::{
-        position::SplitPositionCache,
+        position::{
+            PosKey,
+            SplitPositionCache,
+        },
         vertex::SplitVertexCache,
-        PosKey,
     },
     HashMap,
     HashSet,

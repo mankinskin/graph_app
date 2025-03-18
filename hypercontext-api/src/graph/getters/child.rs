@@ -20,12 +20,11 @@ impl<G: GraphKind> Hypergraph<G> {
     pub fn get_child_at(
         &self,
         location: impl IntoChildLocation,
-    ) -> Result<Child, ErrorReason> {
+    ) -> Result<&Child, ErrorReason> {
         let location = location.into_child_location();
         let pattern = self.get_pattern_at(location)?;
         pattern
             .get(location.sub_index)
-            .cloned()
             .ok_or(ErrorReason::NoChildPatterns) // todo: better error
     }
     pub fn get_child_mut_at(
@@ -42,7 +41,7 @@ impl<G: GraphKind> Hypergraph<G> {
     pub fn expect_child_at(
         &self,
         location: impl IntoChildLocation,
-    ) -> Child {
+    ) -> &Child {
         let location = location.into_child_location();
         self.get_child_at(location)
             .unwrap_or_else(|_| panic!("Child not found at location {:#?}", location))

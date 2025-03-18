@@ -52,15 +52,16 @@ impl TraversalCache {
         );
         Self { entries }
     }
-    pub fn add_state<Trav: Traversable>(
+    pub fn add_state<Trav: Traversable, E: Into<NewEntry>>(
         &mut self,
         trav: &Trav,
-        state: NewEntry,
+        state: E,
         add_edges: bool,
     ) -> (DirectedKey, bool)
     where
         TravToken<Trav>: Display,
     {
+        let state = state.into();
         let key = state.target_key();
         if let Some(ve) = self.entries.get_mut(&key.index.vertex_index()) {
             if ve.get_mut(&key.pos).is_some() {

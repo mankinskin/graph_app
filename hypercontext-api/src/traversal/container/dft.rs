@@ -1,5 +1,6 @@
 use crate::traversal::{
-    container::extend::ExtendStates, state::traversal::TraversalState
+    container::ExtendStates,
+    state::traversal::TraversalState,
 };
 
 use super::StateContainer;

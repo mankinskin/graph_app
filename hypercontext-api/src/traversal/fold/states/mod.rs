@@ -29,6 +29,7 @@ impl<K: TraversalKind> PruneStates for PrunedStates<K> {
         &mut self.pruning_map
     }
 }
+
 impl<K: TraversalKind> ExtendStates for PrunedStates<K> {
     fn extend<
         It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,

@@ -56,7 +56,7 @@ impl StartState {
         if self.cursor.can_advance(trav) {
             NextStates::Parents(StateNext {
                 prev: self.key.to_prev(delta),
-                new: vec![],
+                //new: vec![],
                 inner: K::Policy::gen_parent_states(trav, self.index, |trav, p| {
                     (self.index, self.cursor.clone()).into_primer(trav, p)
                 }),
@@ -64,7 +64,7 @@ impl StartState {
         } else {
             NextStates::End(StateNext {
                 prev: self.key.to_prev(delta),
-                new: vec![],
+                //new: vec![],
                 inner: EndState {
                     reason: EndReason::QueryEnd,
                     root_pos: self.index.width().into(),

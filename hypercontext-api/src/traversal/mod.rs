@@ -7,7 +7,6 @@ use fold::states::PrunedStates;
 use iterator::policy::DirectedTraversalPolicy;
 use state::{
     next_states::NextStates,
-    traversal::TraversalState,
     InnerKind,
 };
 use std::fmt::Debug;
@@ -52,54 +51,25 @@ impl<K: TraversalKind> Iterator for TraversalContext<K> {
     type Item = (usize, NextStates);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some((depth, tstate)) = self.states.next() {
-            self.traversal_next_states(tstate)
-                .map(|states| (depth, states))
+        if let Some((depth, ts)) = self.states.next() {
+            let next = match ts.kind.clone() {
+                InnerKind::Parent(ps) => {
+                    if self.cache.exists(&ps.target_key()) {
+                        self.cache.add_state(&self.trav, ts, true);
+                        NextStates::Empty
+                    } else {
+                        ps.parent_next_states::<K>(&self.trav, ts.prev)
+                        //, self.new)
+                    }
+                }
+                InnerKind::Child(cs) => {
+                    cs.child_next_states(self) //, self.new)
+                }
+            };
+            Some((depth, next))
         } else {
             None
         }
-    }
-}
-impl<K: TraversalKind> TraversalContext<K> {
-    /// Retrieves next unvisited states and adds edges to cache
-    pub fn traversal_next_states(
-        &mut self,
-        mut tstate: TraversalState,
-    ) -> Option<NextStates> {
-        let key = tstate.target_key();
-        let exists = self.cache.exists(&key);
-
-        //let prev = tstate.prev_key();
-        //if !exists {
-        //    cache.add_state((&tstate).into());
-        //}
-        if !exists && matches!(tstate.kind, InnerKind::Parent(_)) {
-            tstate.new.push((&tstate).into());
-        }
-        let next_states = match tstate.kind {
-            InnerKind::Parent(ps) => {
-                //debug!("Parent({}, {})", key.index.index(), key.index.width());
-                if !exists {
-                    ps.parent_next_states::<K>(&self.trav, tstate.new)
-                } else {
-                    // add other edges leading to this parent
-                    for entry in tstate.new {
-                        self.cache.add_state(&self.trav, entry, true);
-                    }
-                    NextStates::Empty
-                }
-            }
-            InnerKind::Child(cs) => {
-                if !exists {
-                    cs.child_next_states(self, tstate.new)
-                } else {
-                    // add bottom up path
-                    //state.trace(ctx.trav(), ctx.cache);
-                    NextStates::Empty
-                }
-            }
-        };
-        Some(next_states)
     }
 }
 

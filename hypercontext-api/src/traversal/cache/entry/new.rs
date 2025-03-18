@@ -71,18 +71,18 @@ impl TargetKey for NewEntry {
     }
 }
 
-impl From<&TraversalState> for NewEntry {
-    fn from(state: &TraversalState) -> Self {
+impl From<TraversalState> for NewEntry {
+    fn from(state: TraversalState) -> Self {
         Self {
             prev: state.prev_key(),
             //root_pos: state.root_pos(),
-            kind: (&state.kind).into(),
+            kind: state.kind.into(),
         }
     }
 }
 
-impl From<&InnerKind> for NewKind {
-    fn from(state: &InnerKind) -> Self {
+impl From<InnerKind> for NewKind {
+    fn from(state: InnerKind) -> Self {
         match state {
             InnerKind::Parent(state) => Self::Parent(state.into()),
             InnerKind::Child(state) => Self::Child(state.into()),
@@ -102,8 +102,8 @@ pub struct NewParent {
     pub entry: ChildLocation,
 }
 
-impl From<&ParentState> for NewParent {
-    fn from(state: &ParentState) -> Self {
+impl From<ParentState> for NewParent {
+    fn from(state: ParentState) -> Self {
         Self {
             root: state.root_key(),
             entry: state.path.role_root_child_location(),
@@ -118,8 +118,8 @@ pub struct NewChild {
     pub end_leaf: Option<ChildLocation>,
 }
 
-impl From<&ChildState> for NewChild {
-    fn from(state: &ChildState) -> Self {
+impl From<ChildState> for NewChild {
+    fn from(state: ChildState) -> Self {
         Self {
             root: state.root_key(),
             target: state.target_key(),

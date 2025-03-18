@@ -8,6 +8,7 @@
 #![feature(exact_size_is_empty)]
 #![feature(associated_type_defaults)]
 //#![feature(return_position_impl_trait_in_trait)]
+#![feature(type_changing_struct_update)]
 
 extern crate test;
 

@@ -76,7 +76,7 @@ impl<Trav: Traversable> TraceContext<Trav> {
                 .unwrap_or_default();
 
         let root_down_key = DownKey::new(path.root_parent(), root_down_pos.into());
-        let exit_down_key = DownKey::new(graph.expect_child_at(root_exit), root_down_pos.into());
+        let exit_down_key = DownKey::new(*graph.expect_child_at(root_exit), root_down_pos.into());
         let mut prev_key: DirectedKey = root_down_key.into();
         let mut target_key = exit_down_key.into();
         self.cache.add_state(
@@ -95,7 +95,7 @@ impl<Trav: Traversable> TraceContext<Trav> {
             prev_key = target_key;
             let delta = graph.expect_child_offset(loc);
             prev_key.advance_key(delta);
-            target_key = DirectedKey::down(graph.expect_child_at(loc), *prev_key.pos.pos());
+            target_key = DirectedKey::down(*graph.expect_child_at(loc), *prev_key.pos.pos());
             self.cache.add_state(
                 &self.trav,
                 NewEntry {

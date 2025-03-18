@@ -144,55 +144,71 @@ pub struct VertexSplitContext<'a> {
     pub cache: &'a VertexCache,
 }
 impl VertexSplitContext<'_> {
-    pub fn global_splits<N: NodeType>(
+    pub fn bottom_up_splits<N: NodeType>(
         &self,
-        end_pos: TokenPosition,
         node: &VertexData,
-    ) -> N::GlobalSplitOutput {
-        let mut output = N::GlobalSplitOutput::default();
-        let (mut front, mut back) = (false, false);
-        for (inner_width, cache) in &self.bottom_up {
-            for location in cache.edges.bottom.values() {
+        output: &mut N::GlobalSplitOutput,
+    ) -> bool {
+        let mut front = false;
+        // uses inner width of sub split position to calculate node offset
+        for (inner_width, pos_cache) in &self.bottom_up {
+            // bottom up incoming edge
+            for location in pos_cache.edges.bottom.values() {
+                // pattern location
                 let child = node.expect_child_at(location);
+
                 let inner_offset = Offset::new(child.width() - inner_width.0);
-                let bottom = SubSplitLocation {
-                    location: *location,
-                    inner_offset,
-                };
-                let offset = node.expect_child_offset(location);
-                if let Some(parent_offset) = inner_offset
-                    .and_then(|o| o.checked_add(offset))
-                    .or(NonZeroUsize::new(offset))
+                let outer_offset = node.expect_child_offset(location);
+                if let Some(node_offset) = inner_offset
+                    .and_then(|o| o.checked_add(outer_offset))
+                    .or(NonZeroUsize::new(outer_offset))
                 {
+                    let split_loc = SubSplitLocation {
+                        location: *location,
+                        inner_offset,
+                    };
                     output
                         .splits_mut()
-                        .entry(parent_offset)
-                        .and_modify(|e: &mut Vec<_>| e.push(bottom.clone()))
-                        .or_insert_with(|| vec![bottom]);
+                        .entry(node_offset)
+                        .and_modify(|e: &mut Vec<_>| e.push(split_loc.clone()))
+                        .or_insert_with(|| vec![split_loc]);
                     front = true;
                 } else {
                     break;
                 }
             }
         }
-        for (pretext_pos, cache) in &self.top_down {
-            let inner_offset = Offset::new(end_pos.0 - pretext_pos.0).unwrap();
-            for location in cache.edges.bottom.values() {
+        front
+    }
+    pub fn top_down_splits<N: NodeType>(
+        &self,
+        end_pos: TokenPosition,
+        node: &VertexData,
+        output: &mut N::GlobalSplitOutput,
+    ) -> bool {
+        let mut back = false;
+        // uses end pos of sub split position to calculate node offset
+        for (outer_offset, pos_cache) in &self.top_down {
+            // outer offset:
+            let inner_offset = Offset::new(end_pos.0 - outer_offset.0).unwrap();
+            for location in pos_cache.edges.bottom.values() {
                 let child = node.expect_child_at(location);
                 let inner_offset = Offset::new(inner_offset.get() % child.width());
                 let location = SubLocation {
                     sub_index: location.sub_index + inner_offset.is_none() as usize,
                     pattern_id: location.pattern_id,
                 };
-                let bottom = SubSplitLocation {
-                    location,
-                    inner_offset,
-                };
+
                 let offset = node.expect_child_offset(&location);
                 let parent_offset = inner_offset
                     .map(|o| o.checked_add(offset).unwrap())
                     .unwrap_or_else(|| NonZeroUsize::new(offset).unwrap());
+
                 if parent_offset.get() < node.width {
+                    let bottom = SubSplitLocation {
+                        location,
+                        inner_offset,
+                    };
                     if let Some(e) = output.splits_mut().get_mut(&parent_offset) {
                         e.push(bottom)
                     } else {
@@ -202,6 +218,16 @@ impl VertexSplitContext<'_> {
                 }
             }
         }
+        back
+    }
+    pub fn global_splits<N: NodeType>(
+        &self,
+        end_pos: TokenPosition,
+        node: &VertexData,
+    ) -> N::GlobalSplitOutput {
+        let mut output = N::GlobalSplitOutput::default();
+        let front = self.bottom_up_splits::<N>(node, &mut output);
+        let back = self.top_down_splits::<N>(end_pos, node, &mut output);
         match (front, back) {
             (true, true) => output.set_root_mode(RootMode::Infix),
             (false, true) => output.set_root_mode(RootMode::Prefix),

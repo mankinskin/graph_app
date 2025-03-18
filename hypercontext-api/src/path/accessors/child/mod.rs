@@ -53,7 +53,7 @@ pub trait PathChild<R: PathRole>: HasPath<R> {
         trav: &Trav,
     ) -> Option<Child> {
         self.path_child_location()
-            .map(|loc| trav.graph().expect_child_at(loc))
+            .map(|loc| trav.graph().expect_child_at(loc).clone())
     }
 }
 

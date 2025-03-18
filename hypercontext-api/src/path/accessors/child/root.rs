@@ -107,6 +107,7 @@ pub trait GraphRootChild<R>: GraphRootPattern + RootChildPos<R> {
     ) -> Child {
         trav.graph()
             .expect_child_at(<_ as GraphRootChild<R>>::root_child_location(self))
+            .clone()
     }
     fn root_post_ctx_width<Trav: Traversable>(
         &self,

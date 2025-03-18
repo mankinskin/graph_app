@@ -6,19 +6,6 @@ pub trait ExtendStates {
         T: IntoIterator<Item = (usize, TraversalState), IntoIter = It>,
     >(
         &mut self,
-        iter: T,
+        next: T,
     );
 }
-
-
-//impl<'a, K: TraversalKind> ExtendStates for TraversalContext<'a, K> {
-//    fn extend<
-//        It: DoubleEndedIterator + Iterator<Item = (usize, TraversalState)>,
-//        In: IntoIterator<Item = (usize, TraversalState), IntoIter = It>,
-//    >(
-//        &mut self,
-//        iter: In,
-//    ) {
-//        self.ctx.extend(iter)
-//    }
-//}
