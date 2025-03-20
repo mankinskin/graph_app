@@ -9,9 +9,11 @@ use crate::traversal::{
         },
         StateContainer,
     },
+    fold::states::init::MakeStartState,
     state::traversal::TraversalState,
     TraversalKind,
 };
+use init::CursorInit;
 use itertools::Itertools;
 use std::fmt::Debug;
 pub(crate) mod init;
@@ -27,6 +29,20 @@ impl<K: TraversalKind> PruneStates for PrunedStates<K> {
     }
     fn pruning_map(&mut self) -> &mut PruningMap {
         &mut self.pruning_map
+    }
+}
+
+impl<K: TraversalKind> StateContainer for PrunedStates<K> {
+    fn clear(&mut self) {
+        self.pruning_map.clear();
+        self.states.clear();
+    }
+}
+impl<K: TraversalKind> FromIterator<(usize, TraversalState)> for PrunedStates<K> {
+    fn from_iter<T: IntoIterator<Item = (usize, TraversalState)>>(iter: T) -> Self {
+        let mut r = Self::default();
+        r.extend(iter.into_iter().collect_vec());
+        r
     }
 }
 

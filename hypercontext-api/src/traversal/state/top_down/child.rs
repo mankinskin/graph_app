@@ -132,7 +132,7 @@ impl ChildState {
         // compare next child
         if path_leaf == query_leaf {
             self.on_match(ctx)
-        } else if path_leaf.width() == 1 && path_leaf.width() == 1 {
+        } else if path_leaf.width() == 1 && query_leaf.width() == 1 {
             self.on_mismatch(&ctx.trav)
         } else {
             NextStates::Prefixes(StateNext {

@@ -6,8 +6,8 @@ use std::{
 use crate::traversal::state::traversal::TraversalState;
 
 use super::{
-    StateContainer,
     extend::ExtendStates,
+    StateContainer,
 };
 
 #[derive(Debug, Default)]
@@ -21,6 +21,13 @@ impl StateContainer for BftQueue {
     }
 }
 
+impl FromIterator<(usize, TraversalState)> for BftQueue {
+    fn from_iter<T: IntoIterator<Item = (usize, TraversalState)>>(iter: T) -> Self {
+        Self {
+            queue: FromIterator::from_iter(iter.into_iter().map(|(d, s)| QueueEntry(d, s))),
+        }
+    }
+}
 impl Iterator for BftQueue {
     type Item = (usize, TraversalState);
     fn next(&mut self) -> Option<Self::Item> {

@@ -32,7 +32,7 @@ pub mod entry;
 pub mod key;
 pub mod label_key;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct TraversalCache {
     pub entries: HashMap<VertexCacheKey, VertexCache>,
 }

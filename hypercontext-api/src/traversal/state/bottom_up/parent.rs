@@ -93,6 +93,7 @@ impl IntoAdvanced for (PrevKey, ParentState) {
         let entry = ps.path.root_child_location();
         let graph = trav.graph();
         let pattern = ps.path.root_pattern::<Trav>(&graph).clone();
+
         if let Some(next) = TravDir::<Trav>::pattern_index_next(pattern.borrow(), entry.sub_index) {
             let root_parent = ps.clone();
             let (
@@ -166,7 +167,6 @@ impl ParentState {
     pub fn parent_next_states<'a, K: TraversalKind>(
         self,
         trav: &K::Trav,
-        //new: Vec<NewEntry>,
         prev: PrevKey,
     ) -> NextStates {
         let key = self.target_key();
@@ -176,7 +176,6 @@ impl ParentState {
                 let delta = <_ as GraphRootChild<Start>>::root_post_ctx_width(&advanced.path, trav);
                 NextStates::Child(StateNext {
                     prev: key.flipped().to_prev(delta),
-                    //new,
                     inner: advanced,
                 })
             }
@@ -187,7 +186,6 @@ impl ParentState {
     pub fn next_parents<'a, K: TraversalKind>(
         self,
         trav: &K::Trav,
-        //new: Vec<NewEntry>,
     ) -> NextStates {
         // get next parents
         let key = self.target_key();
@@ -207,7 +205,6 @@ impl ParentState {
         } else {
             NextStates::Parents(StateNext {
                 prev: key.to_prev(delta),
-                //new,
                 inner: parents,
             })
         }

@@ -9,7 +9,11 @@ pub(crate) mod order;
 pub(crate) mod pruning;
 
 pub trait StateContainer:
-    ExtendStates + Iterator<Item = (usize, TraversalState)> + Default + Debug
+    ExtendStates
+    + Iterator<Item = (usize, TraversalState)>
+    + Default
+    + Debug
+    + FromIterator<(usize, TraversalState)>
 {
     fn clear(&mut self);
 }

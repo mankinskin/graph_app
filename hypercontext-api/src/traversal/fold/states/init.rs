@@ -14,9 +14,9 @@ use crate::{
 pub trait MakeStartState {
     fn start_state(&self) -> StartState;
 }
-impl<K: TraversalKind> MakeStartState for CursorInit<'_, K> {
+impl<K: TraversalKind> MakeStartState for CursorInit<K> {
     fn start_state(&self) -> StartState {
-        let start_index = self.cursor.path.start_index(self.trav);
+        let start_index = self.cursor.path.start_index(&self.trav);
 
         StartState {
             index: start_index,
@@ -25,20 +25,7 @@ impl<K: TraversalKind> MakeStartState for CursorInit<'_, K> {
         }
     }
 }
-pub struct CursorInit<'a, K: TraversalKind> {
-    pub trav: &'a K::Trav,
-    pub cursor: &'a PatternRangeCursor,
-}
-impl<K: TraversalKind> From<CursorInit<'_, K>> for PrunedStates<K> {
-    fn from(init: CursorInit<'_, K>) -> Self {
-        let first = init
-            .start_state()
-            .next_states::<K>(init.trav)
-            .into_iter()
-            .map(|n| (1, n));
-
-        let mut states = Self::default();
-        states.extend(first);
-        states
-    }
+pub struct CursorInit<K: TraversalKind> {
+    pub trav: K::Trav,
+    pub cursor: PatternRangeCursor,
 }

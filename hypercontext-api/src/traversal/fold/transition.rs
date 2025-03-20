@@ -42,9 +42,11 @@ impl<'a, K: TraversalKind> TransitionIter<'a, K> {
                 end.width() >= self.max_width,
                 "Parents not evaluated in order"
             );
-            self.max_width = end.width();
             let not_final = !end.is_final();
-            self.fctx.end_state = Some(end);
+            if end.width() > self.max_width {
+                self.max_width = end.width();
+                self.fctx.end_state = Some(end);
+            }
             not_final
         } else {
             self.fctx.tctx.states.extend(

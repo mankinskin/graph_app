@@ -92,21 +92,7 @@ impl Foldable for PatternRangeCursor {
         self,
         trav: K::Trav,
     ) -> FoldContext<K> {
-        let start_index = self.path.start_index(&trav);
-
-        let init = CursorInit::<K> {
-            trav: &trav,
-            cursor: &self,
-        };
-        FoldContext {
-            tctx: TraversalContext {
-                states: From::from(init),
-                cache: TraversalCache::new(&trav, start_index),
-                trav,
-            },
-            max_width: start_index.width(),
-            start_index,
-            end_state: None,
-        }
+        let init = CursorInit::<K> { trav, cursor: self };
+        From::from(init)
     }
 }

@@ -8,6 +8,7 @@ use crate::{
         adapters::IntoPrimer,
         move_path::{
             key::TokenPosition,
+            Advance,
             CanAdvance,
         },
     },
@@ -46,25 +47,24 @@ impl_cursor_pos! {
 }
 impl StartState {
     pub fn next_states<'a, K: TraversalKind>(
-        &mut self,
+        &self,
         trav: &K::Trav,
     ) -> NextStates
     where
         Self: 'a,
     {
         let delta = self.index.width();
-        if self.cursor.can_advance(trav) {
+        let mut cursor = self.cursor.clone();
+        if cursor.advance(trav).is_continue() {
             NextStates::Parents(StateNext {
                 prev: self.key.to_prev(delta),
-                //new: vec![],
                 inner: K::Policy::gen_parent_states(trav, self.index, |trav, p| {
-                    (self.index, self.cursor.clone()).into_primer(trav, p)
+                    (self.index, cursor.clone()).into_primer(trav, p)
                 }),
             })
         } else {
             NextStates::End(StateNext {
                 prev: self.key.to_prev(delta),
-                //new: vec![],
                 inner: EndState {
                     reason: EndReason::QueryEnd,
                     root_pos: self.index.width().into(),

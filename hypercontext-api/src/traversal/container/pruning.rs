@@ -3,13 +3,13 @@ use crate::{
     HashMap,
 };
 
+pub type PruningMap = HashMap<UpKey, PruningState>;
+
 #[derive(Clone, Debug)]
 pub struct PruningState {
     pub count: usize,
     pub prune: bool,
 }
-
-pub type PruningMap = HashMap<UpKey, PruningState>;
 
 pub trait PruneStates {
     fn clear(&mut self);
