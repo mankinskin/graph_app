@@ -1,10 +1,7 @@
 use crate::{
     graph::{
         getters::ErrorReason,
-        vertex::{
-            pattern::IntoPattern,
-            wide::Wide,
-        },
+        vertex::pattern::IntoPattern,
     },
     path::structs::{
         query_range_path::FoldablePath,
@@ -14,7 +11,6 @@ use crate::{
         },
     },
     traversal::{
-        cache::TraversalCache,
         fold::states::init::CursorInit,
         result::{
             FinishedState,
@@ -24,7 +20,6 @@ use crate::{
             PatternRangeCursor,
             ToCursor,
         },
-        TraversalContext,
         TraversalKind,
     },
 };

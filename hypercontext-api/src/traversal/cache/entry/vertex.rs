@@ -1,3 +1,9 @@
+use derive_more::derive::{
+    Deref,
+    DerefMut,
+    IntoIterator,
+};
+
 use crate::{
     graph::vertex::child::Child,
     path::mutators::move_path::key::TokenPosition,
@@ -7,15 +13,32 @@ use crate::{
 
 use super::position::PositionCache;
 
-pub type DirectedPositions = HashMap<TokenPosition, PositionCache>;
-
+#[derive(Clone, Debug, PartialEq, Eq, Default, IntoIterator, Deref, DerefMut)]
+pub struct DirectedPositions {
+    entries: HashMap<TokenPosition, PositionCache>,
+}
+impl Extend<(TokenPosition, PositionCache)> for DirectedPositions {
+    fn extend<T: IntoIterator<Item = (TokenPosition, PositionCache)>>(
+        &mut self,
+        iter: T,
+    ) {
+        for (k, v) in iter {
+            if let Some(c) = self.entries.get_mut(&k) {
+                assert!(c.index == v.index);
+                c.edges.top.extend(v.edges.top);
+                c.edges.bottom.extend(v.edges.bottom);
+            } else {
+                self.entries.insert(k, v);
+            }
+        }
+    }
+}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VertexCache {
     pub bottom_up: DirectedPositions,
     pub top_down: DirectedPositions,
     pub index: Child,
 }
-
 impl From<Child> for VertexCache {
     fn from(index: Child) -> Self {
         Self {
@@ -28,7 +51,7 @@ impl From<Child> for VertexCache {
 
 impl VertexCache {
     pub fn start(index: Child) -> Self {
-        let bottom_up = HashMap::default();
+        let bottom_up = Default::default();
         //bottom_up.insert(
         //    index.width().into(),
         //    PositionCache::start(index)

@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use derive_more::derive::IntoIterator;
 use key::directed::DirectedKey;
 use label_key::vkey::{
     labelled_key,
@@ -32,11 +33,27 @@ pub mod entry;
 pub mod key;
 pub mod label_key;
 
-#[derive(Clone, Debug, PartialEq, Eq, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, IntoIterator)]
 pub struct TraversalCache {
     pub entries: HashMap<VertexCacheKey, VertexCache>,
 }
 
+impl Extend<(VertexCacheKey, VertexCache)> for TraversalCache {
+    fn extend<T: IntoIterator<Item = (VertexCacheKey, VertexCache)>>(
+        &mut self,
+        iter: T,
+    ) {
+        for (k, v) in iter {
+            if let Some(c) = self.entries.get_mut(&k) {
+                assert!(c.index == v.index);
+                c.bottom_up.extend(v.bottom_up);
+                c.top_down.extend(v.top_down);
+            } else {
+                self.entries.insert(k, v);
+            }
+        }
+    }
+}
 impl TraversalCache {
     pub fn new<Trav: Traversable>(
         trav: &Trav,

@@ -151,7 +151,7 @@ impl VertexSplitContext<'_> {
     ) -> bool {
         let mut front = false;
         // uses inner width of sub split position to calculate node offset
-        for (inner_width, pos_cache) in &self.bottom_up {
+        for (inner_width, pos_cache) in self.bottom_up.iter() {
             // bottom up incoming edge
             for location in pos_cache.edges.bottom.values() {
                 // pattern location
@@ -188,7 +188,7 @@ impl VertexSplitContext<'_> {
     ) -> bool {
         let mut back = false;
         // uses end pos of sub split position to calculate node offset
-        for (outer_offset, pos_cache) in &self.top_down {
+        for (outer_offset, pos_cache) in self.top_down.iter() {
             // outer offset:
             let inner_offset = Offset::new(end_pos.0 - outer_offset.0).unwrap();
             for location in pos_cache.edges.bottom.values() {

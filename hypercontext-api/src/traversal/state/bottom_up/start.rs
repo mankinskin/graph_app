@@ -9,7 +9,6 @@ use crate::{
         move_path::{
             key::TokenPosition,
             Advance,
-            CanAdvance,
         },
     },
     traversal::{

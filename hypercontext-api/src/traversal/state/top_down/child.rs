@@ -109,9 +109,6 @@ pub struct ChildState {
 }
 
 impl ChildState {
-    pub fn root_state(&self) -> (PrevKey, &ParentState) {
-        (self.root_prev, &self.root_parent)
-    }
     pub fn push_major(
         &mut self,
         location: ChildLocation,
@@ -185,25 +182,26 @@ impl ChildState {
             })
             .collect_vec()
     }
+
+    pub fn add_root_candidate<K: TraversalKind>(
+        &self,
+        ctx: &mut TraversalContext<K>,
+    ) {
+        ctx.cache.add_state(
+            &ctx.trav,
+            TraversalState::from((self.root_prev, self.root_parent.clone())),
+            true,
+        );
+    }
     fn on_match<K: TraversalKind>(
         mut self,
         ctx: &mut TraversalContext<K>,
     ) -> NextStates {
         let key = self.target_key();
         ctx.states.clear();
-        ctx.cache.add_state(
-            &ctx.trav,
-            TraversalState::from((|(p, ps): (_, &ParentState)| (p, ps.clone()))(
-                self.root_state(),
-            )),
-            true,
-        );
-        //query.cache.add_path(
-        //    self.trav(),
-        //    path.end_path(),
-        //    root_pos,
-        //    false,
-        //);
+
+        self.add_root_candidate(ctx);
+
         let path = &mut self.base.path;
         let qres = self.base.cursor.advance(&ctx.trav);
         if qres.is_continue() {

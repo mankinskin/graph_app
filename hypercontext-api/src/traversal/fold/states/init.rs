@@ -2,8 +2,6 @@ use crate::{
     path::structs::query_range_path::FoldablePath,
     traversal::{
         cache::key::directed::up::UpKey,
-        container::extend::ExtendStates,
-        fold::states::PrunedStates,
         state::{
             bottom_up::start::StartState,
             cursor::PatternRangeCursor,

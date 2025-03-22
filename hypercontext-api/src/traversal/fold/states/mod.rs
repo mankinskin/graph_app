@@ -9,11 +9,9 @@ use crate::traversal::{
         },
         StateContainer,
     },
-    fold::states::init::MakeStartState,
     state::traversal::TraversalState,
     TraversalKind,
 };
-use init::CursorInit;
 use itertools::Itertools;
 use std::fmt::Debug;
 pub(crate) mod init;

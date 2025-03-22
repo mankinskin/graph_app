@@ -55,7 +55,6 @@ impl<K: TraversalKind> Iterator for TraversalContext<K> {
             let next = match ts.kind.clone() {
                 InnerKind::Parent(ps) => {
                     if self.cache.exists(&ps.target_key()) {
-                        self.cache.add_state(&self.trav, ts, true);
                         NextStates::Empty
                     } else {
                         ps.parent_next_states::<K>(&self.trav, ts.prev)
