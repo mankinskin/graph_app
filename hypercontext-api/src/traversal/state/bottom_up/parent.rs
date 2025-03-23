@@ -22,7 +22,10 @@ use crate::{
             move_path::key::AdvanceKey,
             raise::PathRaise,
         },
-        structs::rooted::role_path::IndexStartPath,
+        structs::rooted::{
+            role_path::IndexStartPath,
+            root::RootedPath,
+        },
     },
     traversal::{
         cache::key::{
@@ -30,10 +33,7 @@ use crate::{
                 up::UpKey,
                 DirectedKey,
             },
-            prev::{
-                PrevKey,
-                ToPrev,
-            },
+            prev::ToPrev,
             props::{
                 RootKey,
                 TargetKey,
@@ -41,10 +41,6 @@ use crate::{
         },
         iterator::policy::DirectedTraversalPolicy,
         state::{
-            next_states::{
-                NextStates,
-                StateNext,
-            },
             top_down::{
                 child::{
                     ChildState,
@@ -56,6 +52,7 @@ use crate::{
                 },
             },
             BaseState,
+            StateNext,
         },
         traversable::{
             TravDir,
@@ -68,14 +65,67 @@ use std::{
     borrow::Borrow,
     cmp::Ordering,
 };
+
+use super::BUNext;
 pub type ParentState = BaseState<IndexStartPath>;
 
-impl TargetKey for ParentState {
+#[derive(Clone, Debug)]
+pub enum ParentNext {
+    BU(BUNext),
+    Child(StateNext<ChildState>),
+}
+impl ParentState {
+    pub fn parent_next_states<'a, K: TraversalKind>(
+        self,
+        trav: &K::Trav,
+        //prev: PrevKey,
+    ) -> ParentNext {
+        let key = self.target_key();
+        match self.into_advanced(trav) {
+            // first child state in this parent
+            Ok(advanced) => {
+                let delta = <_ as GraphRootChild<Start>>::root_post_ctx_width(&advanced.path, trav);
+                ParentNext::Child(StateNext {
+                    prev: key.flipped().to_prev(delta),
+                    inner: advanced,
+                })
+            }
+            // no child state, bottom up path at end of parent
+            Err(state) => ParentNext::BU(state.next_parents::<K>(trav)),
+        }
+    }
+    pub fn next_parents<'a, K: TraversalKind>(
+        self,
+        trav: &K::Trav,
+    ) -> BUNext {
+        // get next parents
+        let key = self.target_key();
+        let parents = K::Policy::next_parents(trav, &self);
+        let delta = self.path.root_post_ctx_width(trav);
+        if parents.is_empty() {
+            BUNext::End(StateNext {
+                prev: key.to_prev(delta),
+                inner: EndState {
+                    reason: EndReason::Mismatch,
+                    root_pos: self.root_pos,
+                    kind: self.path.simplify_to_end(trav),
+                    cursor: self.cursor,
+                },
+            })
+        } else {
+            BUNext::Parents(StateNext {
+                prev: key.to_prev(delta),
+                inner: parents,
+            })
+        }
+    }
+}
+impl<P: RootedPath + GraphRoot> TargetKey for BaseState<P> {
     fn target_key(&self) -> DirectedKey {
         self.root_key().into()
     }
 }
-impl RootKey for ParentState {
+impl<P: RootedPath + GraphRoot> RootKey for BaseState<P> {
     fn root_key(&self) -> UpKey {
         UpKey::new(self.path.root_parent(), self.root_pos.into())
     }
@@ -84,27 +134,23 @@ impl_cursor_pos! {
     CursorPosition for ParentState, self => self.cursor.relative_pos
 }
 
-impl IntoAdvanced for (PrevKey, ParentState) {
+impl IntoAdvanced for ParentState {
     fn into_advanced<Trav: Traversable>(
         self,
         trav: &Trav,
     ) -> Result<ChildState, Self> {
-        let ps = &self.1;
-        let entry = ps.path.root_child_location();
+        let entry = self.path.root_child_location();
         let graph = trav.graph();
-        let pattern = ps.path.root_pattern::<Trav>(&graph).clone();
+        let pattern = self.path.root_pattern::<Trav>(&graph).clone();
 
         if let Some(next) = TravDir::<Trav>::pattern_index_next(pattern.borrow(), entry.sub_index) {
-            let root_parent = ps.clone();
-            let (
-                root_prev,
-                ParentState {
-                    path,
-                    prev_pos,
-                    root_pos,
-                    cursor,
-                },
-            ) = self;
+            let root_parent = self.clone();
+            let ParentState {
+                path,
+                prev_pos,
+                root_pos,
+                cursor,
+            } = self;
             let index = pattern[next];
             Ok(ChildState {
                 base: BaseState {
@@ -116,7 +162,7 @@ impl IntoAdvanced for (PrevKey, ParentState) {
                 mode: PathPairMode::GraphMajor,
                 target: DirectedKey::down(index, root_pos),
                 root_parent,
-                root_prev,
+                //root_prev,
             })
         } else {
             Err(self)
@@ -161,52 +207,5 @@ impl PartialOrd for ParentState {
         other: &Self,
     ) -> Option<Ordering> {
         Some(self.cmp(other))
-    }
-}
-impl ParentState {
-    pub fn parent_next_states<'a, K: TraversalKind>(
-        self,
-        trav: &K::Trav,
-        prev: PrevKey,
-    ) -> NextStates {
-        let key = self.target_key();
-        match (prev, self).into_advanced(trav) {
-            // first child state in this parent
-            Ok(advanced) => {
-                let delta = <_ as GraphRootChild<Start>>::root_post_ctx_width(&advanced.path, trav);
-                NextStates::Child(StateNext {
-                    prev: key.flipped().to_prev(delta),
-                    inner: advanced,
-                })
-            }
-            // no child state, bottom up path at end of parent
-            Err((_, state)) => state.next_parents::<K>(trav), //, new),
-        }
-    }
-    pub fn next_parents<'a, K: TraversalKind>(
-        self,
-        trav: &K::Trav,
-    ) -> NextStates {
-        // get next parents
-        let key = self.target_key();
-        let parents = K::Policy::next_parents(trav, &self);
-        let delta = self.path.root_post_ctx_width(trav);
-        if parents.is_empty() {
-            NextStates::End(StateNext {
-                prev: key.to_prev(delta),
-                //new,
-                inner: EndState {
-                    reason: EndReason::Mismatch,
-                    root_pos: self.root_pos,
-                    kind: self.path.simplify_to_end(trav),
-                    cursor: self.cursor,
-                },
-            })
-        } else {
-            NextStates::Parents(StateNext {
-                prev: key.to_prev(delta),
-                inner: parents,
-            })
-        }
     }
 }

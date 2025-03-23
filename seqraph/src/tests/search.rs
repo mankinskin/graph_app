@@ -298,7 +298,7 @@ fn find_ancestor2() {
                             lab!(xabyz),
                             VertexCache {
                                 index: xabyz,
-                                top_down: HashMap::from_iter([
+                                top_down: FromIterator::from_iter([
                                     //(2.into(), PositionCache {
                                     //    edges: Edges {
                                     //        bottom: HashMap::from_iter([
@@ -313,7 +313,7 @@ fn find_ancestor2() {
                                     //    waiting: Default::default(),
                                     //})
                                 ]),
-                                bottom_up: HashMap::from_iter([(
+                                bottom_up: FromIterator::from_iter([(
                                     2.into(),
                                     PositionCache {
                                         edges: Edges {
@@ -333,8 +333,8 @@ fn find_ancestor2() {
                             lab!(xaby),
                             VertexCache {
                                 index: xaby,
-                                top_down: HashMap::from_iter([]),
-                                bottom_up: HashMap::from_iter([(
+                                top_down: FromIterator::from_iter([]),
+                                bottom_up: FromIterator::from_iter([(
                                     2.into(),
                                     PositionCache {
                                         edges: Edges {
@@ -359,8 +359,8 @@ fn find_ancestor2() {
                             lab!(by),
                             VertexCache {
                                 index: by,
-                                top_down: HashMap::from_iter([]),
-                                bottom_up: HashMap::from_iter([
+                                top_down: FromIterator::from_iter([]),
+                                bottom_up: FromIterator::from_iter([
                                     //(2.into(), PositionCache {
                                     //    edges: Edges {
                                     //        bottom: Default::default(),
@@ -530,7 +530,7 @@ fn find_ancestor3() {
                             lab!(xaby),
                             VertexCache {
                                 index: xaby,
-                                top_down: HashMap::from_iter([
+                                top_down: FromIterator::from_iter([
                                     //(2.into(), PositionCache {
                                     //    edges: Edges {
                                     //        bottom: HashMap::from_iter([
@@ -545,7 +545,7 @@ fn find_ancestor3() {
                                     //    waiting: Default::default(),
                                     //})
                                 ]),
-                                bottom_up: HashMap::from_iter([(
+                                bottom_up: FromIterator::from_iter([(
                                     2.into(),
                                     PositionCache {
                                         edges: Edges {
@@ -565,8 +565,8 @@ fn find_ancestor3() {
                             lab!(xab),
                             VertexCache {
                                 index: xab,
-                                top_down: HashMap::from_iter([]),
-                                bottom_up: HashMap::from_iter([(
+                                top_down: FromIterator::from_iter([]),
+                                bottom_up: FromIterator::from_iter([(
                                     2.into(),
                                     PositionCache {
                                         edges: Edges {
@@ -595,8 +595,8 @@ fn find_ancestor3() {
                             lab!(ab),
                             VertexCache {
                                 index: ab,
-                                top_down: HashMap::from_iter([]),
-                                bottom_up: HashMap::from_iter([
+                                top_down: FromIterator::from_iter([]),
+                                bottom_up: FromIterator::from_iter([
                                     //(2.into(), PositionCache {
                                     //    edges: Edges {
                                     //        bottom: HashMap::default(),

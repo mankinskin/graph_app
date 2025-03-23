@@ -11,7 +11,7 @@ use crate::{
         },
     },
     traversal::{
-        fold::states::init::CursorInit,
+        fold::CursorInit,
         result::{
             FinishedState,
             FoundRange,
@@ -49,9 +49,7 @@ pub trait Foldable: Sized {
         self,
         trav: K::Trav,
     ) -> Result<FinishedState, ErrorState> {
-        let mut ctx = self.to_fold_context::<K>(trav);
-        TransitionIter { fctx: &mut ctx }.for_each(|_| {});
-        ctx.finish_fold()
+        self.to_fold_context::<K>(trav).fold()
     }
 }
 

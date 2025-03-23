@@ -12,7 +12,7 @@ use crate::{
         ModeRangeInfo,
         TraceRangeInfo,
     },
-    traversal::trace::context::{
+    traversal::split::trace::context::{
         node::{
             AsNodeTraceContext,
             NodeTraceContext,

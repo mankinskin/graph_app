@@ -28,11 +28,11 @@ use crate::{
                 vertex::SplitVertexCache,
             },
             cleaned_position_splits,
+            trace::{
+                context::TraceContext,
+                SplitTraceState,
+            },
             vertex::output::InnerNode,
-        },
-        trace::{
-            context::TraceContext,
-            TraceState,
         },
         traversable::Traversable,
     },
@@ -43,10 +43,10 @@ use super::SplitTraceContext;
 #[derive(Debug, Default)]
 pub struct SplitStates {
     pub leaves: Leaves,
-    pub queue: VecDeque<TraceState>,
+    pub queue: VecDeque<SplitTraceState>,
 }
 impl Iterator for SplitStates {
-    type Item = TraceState;
+    type Item = SplitTraceState;
     fn next(&mut self) -> Option<Self::Item> {
         self.queue.pop_front()
     }
@@ -69,7 +69,7 @@ impl SplitStates {
                     locs.into_iter().map(move |sub|
                     // filter sub locations without offset (perfect splits)
                     sub.inner_offset.map(|offset|
-                        TraceState {
+                        SplitTraceState {
                             index: *node.expect_child_at(&sub.location),
                             offset,
                             prev: PosKey {

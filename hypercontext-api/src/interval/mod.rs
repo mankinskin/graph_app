@@ -30,18 +30,18 @@ use crate::{
                 vertex::SplitVertexCache,
             },
             context::SplitCacheContext,
-            trace::states::{
-                SplitStates,
-                SplitTraceStateContext,
+            trace::{
+                context::{
+                    node::NodeTraceContext,
+                    TraceContext,
+                },
+                states::{
+                    SplitStates,
+                    SplitTraceStateContext,
+                },
+                SplitTraceState,
             },
             vertex::output::RootMode,
-        },
-        trace::{
-            context::{
-                node::NodeTraceContext,
-                TraceContext,
-            },
-            TraceState,
         },
         traversable::{
             Traversable,
@@ -67,7 +67,7 @@ impl SplitCache {
         &mut self,
         trav: impl Traversable,
         index: Child,
-    ) -> Vec<TraceState> {
+    ) -> Vec<SplitTraceState> {
         let graph = trav.graph();
         let ctx = NodeTraceContext::new(&graph, index);
         self.get_mut(&index.vertex_index())
@@ -79,7 +79,7 @@ impl SplitCache {
         &mut self,
         trav: impl Traversable,
         root: Child,
-    ) -> Vec<TraceState> {
+    ) -> Vec<SplitTraceState> {
         let graph = trav.graph();
         let ctx = NodeTraceContext::new(&graph, root);
         let index = root.vertex_index();

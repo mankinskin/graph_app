@@ -20,19 +20,18 @@ use crate::{
         iterator::policy::DirectedTraversalPolicy,
         state::{
             cursor::PatternRangeCursor,
-            next_states::{
-                NextStates,
-                StateNext,
-            },
             top_down::end::{
                 EndKind,
                 EndReason,
                 EndState,
             },
+            StateNext,
         },
         TraversalKind,
     },
 };
+
+use super::BUNext;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StartState {
@@ -48,21 +47,21 @@ impl StartState {
     pub fn next_states<'a, K: TraversalKind>(
         &self,
         trav: &K::Trav,
-    ) -> NextStates
+    ) -> BUNext
     where
         Self: 'a,
     {
         let delta = self.index.width();
         let mut cursor = self.cursor.clone();
         if cursor.advance(trav).is_continue() {
-            NextStates::Parents(StateNext {
+            BUNext::Parents(StateNext {
                 prev: self.key.to_prev(delta),
                 inner: K::Policy::gen_parent_states(trav, self.index, |trav, p| {
                     (self.index, cursor.clone()).into_primer(trav, p)
                 }),
             })
         } else {
-            NextStates::End(StateNext {
+            BUNext::End(StateNext {
                 prev: self.key.to_prev(delta),
                 inner: EndState {
                     reason: EndReason::QueryEnd,

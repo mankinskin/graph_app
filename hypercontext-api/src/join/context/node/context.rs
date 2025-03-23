@@ -46,21 +46,12 @@ use crate::{
             JoinPartition,
         },
     },
-    traversal::{
-        split::{
-            cache::{
-                position::PosKey,
-                vertex::SplitVertexCache,
-            },
-            position_splits,
-            vertex::{
-                output::RootMode,
-                PatternSplitPositions,
-                PosSplitContext,
-                VertexSplits,
-            },
-            Split,
+    traversal::split::{
+        cache::{
+            position::PosKey,
+            vertex::SplitVertexCache,
         },
+        position_splits,
         trace::context::{
             node::{
                 AsNodeTraceContext,
@@ -72,6 +63,13 @@ use crate::{
                 PatternTraceContext,
             },
         },
+        vertex::{
+            output::RootMode,
+            PatternSplitPositions,
+            PosSplitContext,
+            VertexSplits,
+        },
+        Split,
     },
 };
 

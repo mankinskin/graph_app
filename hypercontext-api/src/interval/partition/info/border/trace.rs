@@ -9,7 +9,7 @@ use crate::{
             InnerRangeInfo,
         },
     },
-    traversal::trace::context::pattern::HasPatternTraceContext,
+    traversal::split::trace::context::pattern::HasPatternTraceContext,
 };
 
 pub trait TraceBorders<R: RangeRole>: VisitBorders<R> {

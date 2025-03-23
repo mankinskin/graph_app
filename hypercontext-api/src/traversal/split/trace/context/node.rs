@@ -1,4 +1,5 @@
 use crate::graph::{
+    getters::vertex::VertexSet,
     kind::GraphKind,
     vertex::{
         child::Child,
@@ -26,7 +27,7 @@ impl<'p> NodeTraceContext<'p> {
         index: Child,
     ) -> Self {
         Self {
-            patterns: graph.expect_child_patterns(index),
+            patterns: &graph.expect_vertex(index).children,
             index,
         }
     }

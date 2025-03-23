@@ -1,5 +1,4 @@
 pub mod cursor;
-pub(crate) mod next_states;
 pub(crate) mod traversal;
 
 pub mod bottom_up;
@@ -15,6 +14,13 @@ use crate::path::{
     structs::rooted::root::RootedPath,
 };
 
+use super::cache::key::prev::PrevKey;
+
+#[derive(Clone, Debug)]
+pub struct StateNext<T> {
+    pub prev: PrevKey,
+    pub inner: T,
+}
 #[derive(Clone, Debug, PartialEq, Eq, Copy, Hash)]
 pub enum StateDirection {
     BottomUp,

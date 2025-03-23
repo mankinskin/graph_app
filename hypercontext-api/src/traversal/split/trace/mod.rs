@@ -1,21 +1,36 @@
+pub(crate) mod context;
 pub mod states;
+pub(crate) mod traceable;
+
+use context::TraceContext;
 use derive_more::derive::{
     Deref,
     DerefMut,
 };
 
-use super::vertex::VertexSplitContext;
+use super::{
+    cache::position::PosKey,
+    vertex::VertexSplitContext,
+};
 use crate::{
     graph::vertex::{
         child::Child,
         has_vertex_index::HasVertexIndex,
     },
     traversal::{
+        cache::entry::position::Offset,
         split::vertex::output::NodeType,
-        trace::context::TraceContext,
         traversable::Traversable,
     },
 };
+
+#[derive(Debug, Clone)]
+pub struct SplitTraceState {
+    pub index: Child,
+    pub offset: Offset,
+    pub prev: PosKey,
+}
+
 #[derive(Debug, Deref, DerefMut)]
 pub struct SplitTraceContext<Trav: Traversable> {
     pub root: Child,

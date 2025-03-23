@@ -24,8 +24,8 @@ use crate::{
         },
         ToPartition,
     },
-    traversal::{
-        split::pattern::PatternSplits,
+    traversal::split::{
+        pattern::PatternSplits,
         trace::context::pattern::{
             GetPatternContext,
             HasPatternTraceContext,

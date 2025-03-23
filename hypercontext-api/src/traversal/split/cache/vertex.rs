@@ -23,15 +23,13 @@ use crate::{
         Partition,
         ToPartition,
     },
-    traversal::{
-        split::{
-            position_splits,
-            vertex::output::RootMode,
-        },
+    traversal::split::{
+        position_splits,
         trace::{
             context::node::NodeTraceContext,
-            TraceState,
+            SplitTraceState,
         },
+        vertex::output::RootMode,
     },
 };
 use derive_more::derive::{
@@ -62,7 +60,7 @@ impl SplitVertexCache {
     pub fn augment_node(
         &mut self,
         ctx: NodeTraceContext,
-    ) -> Vec<TraceState> {
+    ) -> Vec<SplitTraceState> {
         let num_offsets = self.positions.len();
         let mut states = Vec::new();
         for len in 1..num_offsets {
@@ -79,7 +77,7 @@ impl SplitVertexCache {
         &mut self,
         ctx: NodeTraceContext,
         root_mode: RootMode,
-    ) -> Vec<TraceState> {
+    ) -> Vec<SplitTraceState> {
         let (splits, next) = match root_mode {
             RootMode::Infix => Self::add_inner_offsets(
                 ctx,
@@ -132,7 +130,10 @@ impl SplitVertexCache {
     pub fn add_inner_offsets<'a: 't, 't, K: RangeRole<Mode = Trace>, P: ToPartition<K>>(
         ctx: NodeTraceContext<'a>,
         part: P,
-    ) -> (BTreeMap<NonZeroUsize, SplitPositionCache>, Vec<TraceState>)
+    ) -> (
+        BTreeMap<NonZeroUsize, SplitPositionCache>,
+        Vec<SplitTraceState>,
+    )
 //where K::Mode: ModeChildren::<K>,
     {
         let offsets = Self::inner_offsets(ctx, part);
@@ -155,7 +156,7 @@ impl SplitVertexCache {
                     .flat_map(|(pid, pos)| {
                         pos.inner_offset.map(|inner_offset| {
                             let pattern = &ctx.patterns[pid];
-                            TraceState {
+                            SplitTraceState {
                                 index: pattern[pos.sub_index],
                                 offset: inner_offset,
                                 prev: key,

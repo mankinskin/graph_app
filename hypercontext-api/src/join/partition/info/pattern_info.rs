@@ -34,7 +34,7 @@ use crate::{
         },
         partition::Join,
     },
-    traversal::trace::context::pattern::HasPatternTraceContext,
+    traversal::split::trace::context::pattern::HasPatternTraceContext,
 };
 
 use super::inner_range::JoinInnerRangeInfo;

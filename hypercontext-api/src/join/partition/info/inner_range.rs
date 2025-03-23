@@ -15,7 +15,7 @@ use crate::{
             JoinPartition,
         },
     },
-    traversal::trace::context::node::AsNodeTraceContext,
+    traversal::split::trace::context::node::AsNodeTraceContext,
 };
 use derive_more::derive::{
     Deref,

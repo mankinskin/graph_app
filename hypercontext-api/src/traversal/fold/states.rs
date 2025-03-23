@@ -14,7 +14,6 @@ use crate::traversal::{
 };
 use itertools::Itertools;
 use std::fmt::Debug;
-pub(crate) mod init;
 
 #[derive(Debug, Default)]
 pub struct PrunedStates<K: TraversalKind> {

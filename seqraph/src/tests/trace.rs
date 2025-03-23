@@ -23,8 +23,6 @@ use hypercontext_api::{
         },
         fold::state::FoldState,
     },
-    HashMap,
-    HashSet,
 };
 
 use crate::search::Searchable;
@@ -68,20 +66,20 @@ fn trace_graph1() {
         res.cache.entries[&lab!(a)],
         VertexCache {
             index: *a,
-            bottom_up: HashMap::from_iter([]),
-            top_down: HashMap::from_iter([]),
+            bottom_up: FromIterator::from_iter([]),
+            top_down: FromIterator::from_iter([]),
         },
     );
     assert_eq!(
         res.cache.entries[&lab!(abcd)],
         VertexCache {
             index: *abcd,
-            bottom_up: HashMap::from_iter([(
+            bottom_up: FromIterator::from_iter([(
                 3.into(),
                 PositionCache {
                     edges: Edges {
                         top: Default::default(),
-                        bottom: HashMap::from_iter([(
+                        bottom: FromIterator::from_iter([(
                             DirectedKey::up(*abc, 1),
                             SubLocation::new(*abc_d_id, 0),
                         )]),
@@ -90,20 +88,20 @@ fn trace_graph1() {
                     //waiting: Default::default(),
                 }
             )]),
-            top_down: HashMap::from_iter([]),
+            top_down: FromIterator::from_iter([]),
         }
     );
     assert_eq!(
         res.cache.entries[&lab!(ef)],
         VertexCache {
             index: *ef,
-            bottom_up: HashMap::from_iter([]),
-            top_down: HashMap::from_iter([(
+            bottom_up: FromIterator::from_iter([]),
+            top_down: FromIterator::from_iter([(
                 4.into(),
                 PositionCache {
                     edges: Edges {
-                        top: HashSet::from_iter([]),
-                        bottom: HashMap::from_iter([(
+                        top: FromIterator::from_iter([]),
+                        bottom: FromIterator::from_iter([(
                             DirectedKey::down(*e, 4),
                             SubLocation::new(*e_f_id, 0),
                         )]),
@@ -118,7 +116,7 @@ fn trace_graph1() {
         res.cache.entries[&lab!(e)],
         VertexCache {
             index: *e,
-            top_down: HashMap::from_iter([(
+            top_down: FromIterator::from_iter([(
                 4.into(),
                 PositionCache {
                     edges: Default::default(),
@@ -126,19 +124,19 @@ fn trace_graph1() {
                     //waiting: Default::default(),
                 }
             )]),
-            bottom_up: HashMap::from_iter([]),
+            bottom_up: FromIterator::from_iter([]),
         },
     );
     assert_eq!(
         res.cache.entries[&lab!(abc)],
         VertexCache {
             index: *abc,
-            bottom_up: HashMap::from_iter([(
+            bottom_up: FromIterator::from_iter([(
                 1.into(),
                 PositionCache {
                     edges: Edges {
                         top: Default::default(),
-                        bottom: HashMap::from_iter([(
+                        bottom: FromIterator::from_iter([(
                             DirectedKey::up(*a, 0),
                             SubLocation::new(*a_bc_id, 0),
                         )]),
@@ -147,19 +145,19 @@ fn trace_graph1() {
                     //waiting: Default::default(),
                 }
             )]),
-            top_down: HashMap::from_iter([]),
+            top_down: FromIterator::from_iter([]),
         }
     );
     assert_eq!(
         res.cache.entries[&lab!(abcdef)],
         VertexCache {
             index: *abcdef,
-            bottom_up: HashMap::from_iter([(
+            bottom_up: FromIterator::from_iter([(
                 4.into(),
                 PositionCache {
                     edges: Edges {
-                        top: HashSet::from_iter([]),
-                        bottom: HashMap::from_iter([(
+                        top: FromIterator::from_iter([]),
+                        bottom: FromIterator::from_iter([(
                             DirectedKey::up(*abcd, 3),
                             SubLocation::new(*abcd_ef_id, 0),
                         ),]),
@@ -168,12 +166,12 @@ fn trace_graph1() {
                     //waiting: Default::default(),
                 }
             )]),
-            top_down: HashMap::from_iter([(
+            top_down: FromIterator::from_iter([(
                 4.into(),
                 PositionCache {
                     edges: Edges {
-                        top: HashSet::from_iter([]),
-                        bottom: HashMap::from_iter([(
+                        top: FromIterator::from_iter([]),
+                        bottom: FromIterator::from_iter([(
                             DirectedKey::down(*ef, 4),
                             SubLocation::new(*abcd_ef_id, 1),
                         )]),

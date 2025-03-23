@@ -49,6 +49,12 @@ impl Borrow<ChildWidth> for Child {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SubChild {
+    pub child: Child,
+    pub location: SubLocation,
+}
+
 #[derive(Debug, Eq, Clone, Copy, Serialize, Deserialize)]
 pub struct Child {
     pub index: VertexIndex, // the child index

@@ -19,7 +19,7 @@ use crate::{
             entry::position::SubSplitLocation,
             label_key::labelled_key,
         },
-        trace::TraceState,
+        split::trace::SplitTraceState,
         traversable::Traversable,
     },
 };
@@ -72,9 +72,9 @@ impl<Trav: Traversable> SplitCacheContext<Trav> {
     }
     pub fn apply_trace_state(
         &mut self,
-        state: &TraceState,
+        state: &SplitTraceState,
     ) {
-        let &TraceState {
+        let &SplitTraceState {
             index,
             offset,
             prev,

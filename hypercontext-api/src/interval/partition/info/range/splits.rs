@@ -22,17 +22,15 @@ use crate::{
             RangeRole,
         },
     },
-    traversal::{
-        split::{
-            cache::vertex::SplitVertexCache,
-            position_splits,
-            range_splits,
-            vertex::{
-                PosSplitContext,
-                ToVertexSplits,
-            },
-        },
+    traversal::split::{
+        cache::vertex::SplitVertexCache,
+        position_splits,
+        range_splits,
         trace::context::node::AsNodeTraceContext,
+        vertex::{
+            PosSplitContext,
+            ToVertexSplits,
+        },
     },
 };
 

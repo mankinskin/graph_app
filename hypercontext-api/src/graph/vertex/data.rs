@@ -1,19 +1,3 @@
-use derive_builder::Builder;
-use either::Either;
-use itertools::Itertools;
-use serde::{
-    Deserialize,
-    Serialize,
-};
-use std::{
-    fmt::{
-        Debug,
-        Display,
-    },
-    num::NonZeroUsize,
-    slice::SliceIndex,
-};
-
 use crate::{
     direction::{
         pattern::PatternDirection,
@@ -53,7 +37,12 @@ use crate::{
         },
         Hypergraph,
     },
+    interval::side::{
+        SplitFront,
+        SplitSide,
+    },
     traversal::{
+        cache::entry::position::Offset,
         iterator::bands::{
             BandIterator,
             PostfixIterator,
@@ -66,6 +55,23 @@ use crate::{
     },
     HashSet,
 };
+use derive_builder::Builder;
+use either::Either;
+use itertools::Itertools;
+use serde::{
+    Deserialize,
+    Serialize,
+};
+use std::{
+    fmt::{
+        Debug,
+        Display,
+    },
+    num::NonZeroUsize,
+    slice::SliceIndex,
+};
+
+use super::child::SubChild;
 
 pub fn clone_child_patterns(children: &'_ ChildPatterns) -> impl Iterator<Item = Pattern> + '_ {
     children.iter().map(|(_, p)| p.clone())
@@ -567,5 +573,39 @@ impl VertexData {
             })
             .sorted_by_key(|&(off, _)| off)
             .collect_vec()
+    }
+    pub fn selected_children(
+        &self,
+        selector: impl Fn(&PatternId, &Pattern) -> Option<usize>,
+    ) -> Vec<SubChild> {
+        self.children
+            .iter()
+            .filter_map(|(pid, child_pattern): (_, &Pattern)| {
+                selector(pid, child_pattern).map(|sub_index| {
+                    let &next = child_pattern.get(sub_index).unwrap();
+                    SubChild {
+                        location: SubLocation::new(*pid, sub_index),
+                        child: next,
+                    }
+                })
+            })
+            .collect_vec()
+    }
+    pub fn prefix_children<Trav: Traversable>(&self) -> Vec<SubChild> {
+        self.selected_children(|_, pattern| Some(TravDir::<Trav>::head_index(pattern)))
+    }
+    pub fn postfix_children<Trav: Traversable>(&self) -> Vec<SubChild>
+    where
+        <<Trav::Kind as GraphKind>::Direction as Direction>::Opposite: PatternDirection,
+    {
+        self.selected_children(|_, pattern| Some(TravDir::<Trav>::last_index(pattern)))
+    }
+    pub fn offset_children(
+        &self,
+        offset: Offset,
+    ) -> Vec<SubChild> {
+        self.selected_children(|_, pattern| {
+            SplitFront::token_pos_split(pattern, offset).map(|p| p.sub_index)
+        })
     }
 }

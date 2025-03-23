@@ -15,7 +15,7 @@ use crate::{
         child::Child,
         pattern::id::PatternId,
     },
-    traversal::trace::context::pattern::HasPatternTraceContext,
+    traversal::split::trace::context::pattern::HasPatternTraceContext,
 };
 
 use super::border::{

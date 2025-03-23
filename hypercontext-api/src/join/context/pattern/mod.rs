@@ -6,12 +6,12 @@ use derive_more::derive::{
 
 use crate::{
     graph::vertex::pattern::id::PatternId,
-    traversal::{
-        split::SplitMap,
+    traversal::split::{
         trace::context::pattern::{
             HasPatternTraceContext,
             PatternTraceContext,
         },
+        SplitMap,
     },
 };
 
