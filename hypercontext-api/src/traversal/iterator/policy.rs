@@ -21,6 +21,7 @@ use crate::{
         container::order::TraversalOrder,
         state::bottom_up::parent::ParentState,
         traversable::Traversable,
+        ParentBatch,
     },
 };
 
@@ -33,36 +34,44 @@ pub trait DirectedTraversalPolicy: Sized + Debug {
 
     /// nodes generated when an index ended
     /// (parent nodes)
-    fn next_parents(
+    fn next_batch(
         trav: &Self::Trav,
         parent: &ParentState,
-    ) -> Vec<ParentState> {
-        Self::gen_parent_states(trav, parent.path.root_parent(), |trav, p| {
+    ) -> Option<ParentBatch> {
+        let batch = Self::gen_parent_batch(trav, parent.path.root_parent(), |trav, p| {
             let mut parent = parent.clone();
             parent.path_raise(trav, p);
             parent
-        })
+        });
+        if batch.is_empty() {
+            None
+        } else {
+            Some(batch)
+        }
     }
     /// generates parent nodes
-    fn gen_parent_states<B: (Fn(&Self::Trav, ChildLocation) -> ParentState) + Copy>(
+    fn gen_parent_batch<B: (Fn(&Self::Trav, ChildLocation) -> ParentState) + Copy>(
         trav: &Self::Trav,
         index: Child,
         build_parent: B,
-    ) -> Vec<ParentState> {
-        trav.graph()
-            .expect_vertex(index)
-            .get_parents()
-            .iter()
-            .flat_map(|(i, parent)| {
-                let p = Child::new(i, parent.width);
-                parent
-                    .pattern_indices
-                    .iter()
-                    .cloned()
-                    .map(move |pi| ChildLocation::new(p, pi.pattern_id, pi.sub_index))
-            })
-            .sorted_by(|a, b| TraversalOrder::cmp(b, a))
-            .map(|p| build_parent(trav, p))
-            .collect()
+    ) -> ParentBatch {
+        ParentBatch {
+            parents: trav
+                .graph()
+                .expect_vertex(index)
+                .get_parents()
+                .iter()
+                .flat_map(|(i, parent)| {
+                    let p = Child::new(i, parent.width);
+                    parent
+                        .pattern_indices
+                        .iter()
+                        .cloned()
+                        .map(move |pi| ChildLocation::new(p, pi.pattern_id, pi.sub_index))
+                })
+                .sorted_by(|a, b| TraversalOrder::cmp(b, a))
+                .map(|p| build_parent(trav, p))
+                .collect(),
+        }
     }
 }

@@ -1,6 +1,7 @@
 use hypercontext_api::{
     graph::getters::ErrorReason,
     traversal::{
+        batch::ParentBatch,
         container::bft::BftQueue,
         iterator::policy::DirectedTraversalPolicy,
         result::FinishedState,
@@ -22,11 +23,11 @@ pub struct ParentPolicy<T: Traversable>(std::marker::PhantomData<T>);
 
 impl<T: Traversable> DirectedTraversalPolicy for ParentPolicy<T> {
     type Trav = T;
-    fn next_parents(
+    fn next_batch(
         _trav: &Self::Trav,
         _state: &ParentState,
-    ) -> Vec<ParentState> {
-        vec![]
+    ) -> Option<ParentBatch> {
+        None
     }
 }
 

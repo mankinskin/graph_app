@@ -44,7 +44,7 @@ use crate::{
             top_down::{
                 child::{
                     ChildState,
-                    PathPairMode,
+                    RootChildState,
                 },
                 end::{
                     EndReason,
@@ -72,7 +72,7 @@ pub type ParentState = BaseState<IndexStartPath>;
 #[derive(Clone, Debug)]
 pub enum ParentNext {
     BU(BUNext),
-    Child(StateNext<ChildState>),
+    Child(StateNext<RootChildState>),
 }
 impl ParentState {
     pub fn parent_next_states<'a, K: TraversalKind>(
@@ -100,9 +100,14 @@ impl ParentState {
     ) -> BUNext {
         // get next parents
         let key = self.target_key();
-        let parents = K::Policy::next_parents(trav, &self);
+
         let delta = self.path.root_post_ctx_width(trav);
-        if parents.is_empty() {
+        if let Some(batch) = K::Policy::next_batch(trav, &self) {
+            BUNext::Parents(StateNext {
+                prev: key.to_prev(delta),
+                inner: batch,
+            })
+        } else {
             BUNext::End(StateNext {
                 prev: key.to_prev(delta),
                 inner: EndState {
@@ -111,11 +116,6 @@ impl ParentState {
                     kind: self.path.simplify_to_end(trav),
                     cursor: self.cursor,
                 },
-            })
-        } else {
-            BUNext::Parents(StateNext {
-                prev: key.to_prev(delta),
-                inner: parents,
             })
         }
     }
@@ -135,10 +135,11 @@ impl_cursor_pos! {
 }
 
 impl IntoAdvanced for ParentState {
+    type Next = RootChildState;
     fn into_advanced<Trav: Traversable>(
         self,
         trav: &Trav,
-    ) -> Result<ChildState, Self> {
+    ) -> Result<Self::Next, Self> {
         let entry = self.path.root_child_location();
         let graph = trav.graph();
         let pattern = self.path.root_pattern::<Trav>(&graph).clone();
@@ -152,17 +153,17 @@ impl IntoAdvanced for ParentState {
                 cursor,
             } = self;
             let index = pattern[next];
-            Ok(ChildState {
-                base: BaseState {
-                    prev_pos,
-                    root_pos,
-                    path: path.into_range(next),
-                    cursor,
+            Ok(RootChildState {
+                child: ChildState {
+                    base: BaseState {
+                        prev_pos,
+                        root_pos,
+                        path: path.into_range(next),
+                        cursor,
+                    },
+                    target: DirectedKey::down(index, root_pos),
                 },
-                mode: PathPairMode::GraphMajor,
-                target: DirectedKey::down(index, root_pos),
                 root_parent,
-                //root_prev,
             })
         } else {
             Err(self)

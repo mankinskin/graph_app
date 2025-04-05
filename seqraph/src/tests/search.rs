@@ -144,10 +144,7 @@ fn find_parent1() {
     assert_eq!(
         graph.find_parent(&query),
         Ok(FinishedState {
-            result: FoundRange::Complete(
-                *abc,
-                //PatternRangePath::new_range(query.clone(), 0, query.len() - 1),
-            )
+            result: FoundRange::Complete(*abc,)
         }),
         "a_bc_d"
     );
@@ -155,10 +152,7 @@ fn find_parent1() {
     assert_eq!(
         graph.find_parent(&query),
         Ok(FinishedState {
-            result: FoundRange::Complete(
-                *ab,
-                //PatternRangePath::new_range(query.clone(), 0, query.len() - 1),
-            ),
+            result: FoundRange::Complete(*ab,),
         }),
         "a_b_c"
     );
@@ -166,10 +160,7 @@ fn find_parent1() {
     assert_eq!(
         graph.find_parent(&query),
         Ok(FinishedState {
-            result: FoundRange::Complete(
-                *ab,
-                //PatternRangePath::new_range(query.clone(), 0, query.len() - 2),
-            )
+            result: FoundRange::Complete(*ab,)
         }),
         "a_b_c_c"
     );

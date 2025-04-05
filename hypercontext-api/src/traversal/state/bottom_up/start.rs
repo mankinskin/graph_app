@@ -1,7 +1,10 @@
 use crate::{
-    graph::vertex::{
-        child::Child,
-        wide::Wide,
+    graph::{
+        getters::ErrorReason,
+        vertex::{
+            child::Child,
+            wide::Wide,
+        },
     },
     impl_cursor_pos,
     path::mutators::{
@@ -14,10 +17,11 @@ use crate::{
     traversal::{
         cache::key::{
             directed::up::UpKey,
-            prev::ToPrev,
             props::RootKey,
         },
+        fold::foldable::ErrorState,
         iterator::policy::DirectedTraversalPolicy,
+        result::FoundRange,
         state::{
             cursor::PatternRangeCursor,
             top_down::end::{
@@ -25,13 +29,17 @@ use crate::{
                 EndReason,
                 EndState,
             },
-            StateNext,
         },
+        ParentBatch,
         TraversalKind,
     },
 };
 
-use super::BUNext;
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StartContext<K: TraversalKind> {
+    pub trav: K::Trav,
+    pub state: StartState,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StartState {
@@ -44,31 +52,24 @@ impl_cursor_pos! {
     CursorPosition for StartState, self => self.cursor.relative_pos
 }
 impl StartState {
-    pub fn next_states<'a, K: TraversalKind>(
+    pub fn get_parent_batch<'a, K: TraversalKind>(
         &self,
         trav: &K::Trav,
-    ) -> BUNext
+    ) -> Result<ParentBatch, ErrorState>
     where
         Self: 'a,
     {
-        let delta = self.index.width();
+        //let delta = self.index.width();
         let mut cursor = self.cursor.clone();
         if cursor.advance(trav).is_continue() {
-            BUNext::Parents(StateNext {
-                prev: self.key.to_prev(delta),
-                inner: K::Policy::gen_parent_states(trav, self.index, |trav, p| {
-                    (self.index, cursor.clone()).into_primer(trav, p)
-                }),
-            })
+            //prev: self.key.to_prev(delta),
+            Ok(K::Policy::gen_parent_batch(trav, self.index, |trav, p| {
+                (self.index, cursor.clone()).into_primer(trav, p)
+            }))
         } else {
-            BUNext::End(StateNext {
-                prev: self.key.to_prev(delta),
-                inner: EndState {
-                    reason: EndReason::QueryEnd,
-                    root_pos: self.index.width().into(),
-                    kind: EndKind::Complete(self.index),
-                    cursor: self.cursor.clone(),
-                },
+            Err(ErrorState {
+                reason: ErrorReason::SingleIndex(self.index),
+                found: Some(FoundRange::Complete(self.index)),
             })
         }
     }

@@ -1,54 +1,30 @@
-use cache::{
-    key::{
-        directed::DirectedKey,
-        props::TargetKey,
-    },
-    TraversalCache,
+use batch::{
+    ParentBatch,
+    ParentBatchChildren,
 };
+use cache::TraversalCache;
 use container::StateContainer;
+use fold::foldable::ErrorState;
 use iterator::policy::DirectedTraversalPolicy;
 use state::{
-    bottom_up::{
-        parent::{
-            ParentNext,
-            ParentState,
-        },
-        BUNext,
-    },
-    top_down::{
-        child::{
-            ChildState,
-            MatchedNext,
-            TDNext,
-        },
-        end::{
-            EndReason,
-            EndState,
-            RangeEnd,
-        },
-    },
+    bottom_up::start::StartContext,
+    top_down::end::EndState,
     BaseState,
-    StateNext,
 };
 use std::{
     collections::VecDeque,
     fmt::Debug,
+    ops::ControlFlow::{
+        self,
+        Break,
+        Continue,
+    },
 };
 use traversable::Traversable;
 
-use crate::{
-    graph::vertex::wide::Wide,
-    path::{
-        accessors::role::End,
-        mutators::move_path::{
-            key::AdvanceKey,
-            Advance,
-        },
-        RoleChildPath,
-    },
-    traversal::cache::key::prev::ToPrev,
-};
+pub mod batch;
 pub mod cache;
+pub mod compare;
 pub mod container;
 pub mod fold;
 pub mod iterator;
@@ -63,143 +39,73 @@ pub trait TraversalKind: Debug + Default {
     type Policy: DirectedTraversalPolicy<Trav = Self::Trav>;
 }
 
-//  1. Input
-//      - Pattern
-//      - QueryState
-//  2. Init
-//      - Trav
-//      - start index
-//      - start states
-//  3. Fold
-//      - TraversalCache
-//      - FoldStepState
-
 /// context for generating next states
 #[derive(Debug)]
 pub struct TraversalContext<K: TraversalKind> {
-    //pub states: PrunedStates<K>,
-    pub parents: VecDeque<ParentState>,
-    pub children: VecDeque<ChildState>,
-    pub end: Vec<EndState>,
+    pub batches: VecDeque<ParentBatch>,
     pub cache: TraversalCache,
     pub trav: K::Trav,
 }
 
+impl<K: TraversalKind> TryFrom<StartContext<K>> for TraversalContext<K> {
+    type Error = ErrorState;
+    fn try_from(start: StartContext<K>) -> Result<Self, Self::Error> {
+        match start.state.get_parent_batch::<K>(&start.trav) {
+            Ok(p) => Ok(Self {
+                batches: FromIterator::from_iter([p]),
+                cache: TraversalCache::new(&start.trav, start.state.index),
+                trav: start.trav,
+            }),
+            Err(end) => Err(end),
+        }
+    }
+}
+impl<K: TraversalKind> TraversalContext<K> {
+    fn new(trav: K::Trav) -> Self {
+        Self {
+            trav,
+            cache: Default::default(),
+            batches: Default::default(),
+        }
+    }
+}
 impl<K: TraversalKind> Iterator for TraversalContext<K> {
-    type Item = (usize, Option<EndState>);
+    type Item = ControlFlow<EndState>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(cs) = self.children.pop_front() {
-            let end = match cs.child_next_states(self) {
-                TDNext::Mismatched(end) => Some(end.inner),
-                TDNext::Prefixes(next) => {
-                    self.children.extend(next.inner);
-                    None
-                }
-                TDNext::Matched(next) => {
-                    let primed = match next {
-                        MatchedNext::NextChild(next_child) => self
-                            .try_advance_query(next_child)
-                            .map(MatchedNext::NextChild),
-                        MatchedNext::MatchedParent(cs) => {
-                            self.try_advance_query(cs).map(MatchedNext::MatchedParent)
+        if let Some(batch) = self.batches.pop_front() {
+            // one parent level (batched)
+            Some(
+                match ParentBatchChildren::new(&self.trav, batch)
+                    // find parent with a match
+                    .find_root_cursor()
+                {
+                    // root found
+                    Break((root_parent, root_cursor)) => {
+                        // TODO: add cache for path to parent
+                        if let Some(end) = root_cursor.find_end() {
+                            // TODO: add cache for end
+                            Break(end)
+                        } else {
+                            if let Some(next) = K::Policy::next_batch(&self.trav, &root_parent) {
+                                self.batches.push_back(next);
+                            }
+                            // next batch
+                            Continue(())
                         }
-                    };
-                    match primed {
-                        Ok(MatchedNext::NextChild(next_child)) => {
-                            self.children.extend([next_child]);
-                            None
-                        }
-                        Ok(MatchedNext::MatchedParent(next_child)) => {
-                            //ParentState {
-                            //    path: IndexStartPath::from(self.base.path),
-                            //    ..self.base
-                            //}
-                            //.next_parents::<K>(&ctx.trav)
-
-                            //self.parents.extend(
-                            //    next_child
-                            //        .root_parent
-                            //);
-                            None
-                        }
-                        Err(end) => Some(end),
                     }
-                }
-            };
-
-            Some((0, end))
-        } else if let Some(ps) = self.parents.pop_front() {
-            if self.cache.exists(&ps.target_key()) {
-                Some((0, None))
-            } else {
-                let end = match ps.parent_next_states::<K>(&self.trav) {
-                    ParentNext::Child(next_child) => {
-                        self.children.extend([next_child.inner]);
-                        None
+                    // continue with
+                    Continue(next) => {
+                        self.batches.push_back(next);
+                        Continue(())
                     }
-                    ParentNext::BU(bu_next) => match bu_next {
-                        BUNext::Parents(p) => {
-                            self.parents.extend(p.inner);
-                            None
-                        }
-                        BUNext::End(end) => Some(end.inner),
-                    },
-                };
-                Some((0, end))
-            }
+                },
+            )
         } else {
+            // no more parents
             None
         }
-
-        //self.states.extend(
-        //    next_states
-        //        .into_states()
-        //        .into_iter()
-        //        .map(|nstate| (depth + 1, nstate)),
-        //);
     }
 }
 
 impl<K: TraversalKind> Unpin for TraversalContext<K> {}
-
-impl<K: TraversalKind> TraversalContext<K> {
-    pub fn add_root_candidate(&mut self) {
-        self.children.clear();
-        //ctx.cache.add_state(
-        //    &ctx.trav,
-        //    TraversalState::from((self.root_prev, self.root_parent.clone())),
-        //    true,
-        //);
-    }
-    pub fn try_advance_query(
-        &self,
-        mut state: ChildState,
-    ) -> Result<ChildState, EndState> {
-        if state.cursor.advance(&self.trav).is_continue() {
-            Ok(state)
-        } else {
-            // query ended
-            let key = state.target_key();
-            let BaseState {
-                mut cursor,
-                path,
-                root_pos,
-                ..
-            } = state.base;
-            let target_index = path.role_leaf_child::<End, _>(&self.trav);
-            let pos = cursor.relative_pos;
-            cursor.advance_key(target_index.width());
-            Err(EndState {
-                root_pos,
-                cursor,
-                reason: EndReason::QueryEnd,
-                kind: RangeEnd {
-                    path,
-                    target: DirectedKey::down(target_index, pos),
-                }
-                .simplify_to_end(&self.trav),
-            })
-        }
-    }
-}

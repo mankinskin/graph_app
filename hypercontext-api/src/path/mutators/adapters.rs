@@ -22,7 +22,10 @@ use crate::{
         iterator::policy::NodePath,
         state::{
             bottom_up::parent::ParentState,
-            top_down::child::ChildState,
+            top_down::child::{
+                ChildState,
+                RootChildState,
+            },
         },
         traversable::Traversable,
     },
@@ -73,10 +76,11 @@ pub trait FromAdvanced<A: Advanced> {
     ) -> Self;
 }
 pub trait IntoAdvanced: Sized + Clone {
+    type Next;
     fn into_advanced<Trav: Traversable>(
         self,
         trav: &Trav,
-    ) -> Result<ChildState, Self>;
+    ) -> Result<Self::Next, Self>;
 }
 
 pub trait IntoPrimer: Sized {
