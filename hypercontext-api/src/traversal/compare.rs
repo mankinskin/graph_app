@@ -76,12 +76,11 @@ impl<Trav: Traversable> RootCursor<Trav> {
     // Break: Found an end point in the root
     // Continue: Root matches fully
     pub fn find_end(mut self) -> Option<EndState> {
-        (&mut self)
-            .find_map(|flow| match flow {
-                Continue(()) => None,
-                Break(reason) => Some(reason),
-            })
-            .map(|reason| {
+        match (&mut self).find_map(|flow| match flow {
+            Continue(()) => None,
+            Break(reason) => Some(reason),
+        }) {
+            Some(reason) => {
                 let BaseState {
                     mut cursor,
                     path,
@@ -91,7 +90,7 @@ impl<Trav: Traversable> RootCursor<Trav> {
                 let target_index = path.role_leaf_child::<End, _>(&self.trav);
                 let pos = cursor.relative_pos;
                 cursor.advance_key(target_index.width());
-                EndState {
+                Some(EndState {
                     root_pos,
                     cursor,
                     reason,
@@ -100,8 +99,10 @@ impl<Trav: Traversable> RootCursor<Trav> {
                         target: DirectedKey::down(target_index, pos),
                     }
                     .simplify_to_end(&self.trav),
-                }
-            })
+                })
+            }
+            _ => None,
+        }
         //if let Some(next) = root_cursor.next() {
         //    let primed = match next {
         //        MatchedNext::NextChild(next_child) => self

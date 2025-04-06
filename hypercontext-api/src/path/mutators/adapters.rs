@@ -20,13 +20,7 @@ use crate::{
     },
     traversal::{
         iterator::policy::NodePath,
-        state::{
-            bottom_up::parent::ParentState,
-            top_down::child::{
-                ChildState,
-                RootChildState,
-            },
-        },
+        state::bottom_up::parent::ParentState,
         traversable::Traversable,
     },
 };

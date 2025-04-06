@@ -257,13 +257,13 @@ impl ChildState {
     ) -> EndState {
         //let key = self.target_key();
         let BaseState {
-            mut cursor,
+            cursor,
             mut path,
             mut root_pos,
             prev_pos,
         } = self.base.clone();
-        cursor.retract(trav);
-        path.retract(trav);
+        //cursor.retract(trav);
+        //path.retract(trav);
         if let Some(index) = loop {
             if path.role_root_child_pos::<Start>() == path.role_root_child_pos::<End>() {
                 if (&mut root_pos, &mut path).path_lower(trav).is_break() {

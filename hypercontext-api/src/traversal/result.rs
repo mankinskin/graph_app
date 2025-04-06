@@ -1,24 +1,36 @@
 use crate::{
-    graph::vertex::{
-        child::Child,
-        pattern::IntoPattern,
-    },
+    graph::vertex::child::Child,
     path::accessors::complete::PathComplete,
 };
 
-use super::fold::state::FoldState;
+use super::{
+    cache::TraversalCache,
+    state::top_down::end::{
+        EndKind,
+        EndState,
+    },
+};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum FoundRange {
+pub enum FinishedKind {
     Complete(Child),
-    Incomplete(FoldState),
+    Incomplete(EndState),
 }
 
-impl FoundRange {
+impl From<EndState> for FinishedKind {
+    fn from(state: EndState) -> Self {
+        if let EndKind::Complete(c) = &state.kind {
+            FinishedKind::Complete(*c) // cursor.path
+        } else {
+            FinishedKind::Incomplete(state)
+        }
+    }
+}
+impl FinishedKind {
     pub fn unwrap_complete(self) -> Child {
         self.expect_complete("Unable to unwrap complete FoundRange")
     }
-    pub fn unwrap_incomplete(self) -> FoldState {
+    pub fn unwrap_incomplete(self) -> EndState {
         self.expect_incomplete("Unable to unwrap incomplete FoundRange")
     }
     pub fn expect_complete(
@@ -33,14 +45,15 @@ impl FoundRange {
     pub fn expect_incomplete(
         self,
         msg: &str,
-    ) -> FoldState {
+    ) -> EndState {
         match self {
             Self::Incomplete(s) => s,
             _ => panic!("{}", msg),
         }
     }
 }
-impl PathComplete for FoundRange {
+
+impl PathComplete for FinishedKind {
     /// returns child if reduced to single child
     fn as_complete(&self) -> Option<Child> {
         match self {
@@ -51,24 +64,64 @@ impl PathComplete for FoundRange {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CompleteState {
+    pub cache: TraversalCache,
+    pub root: Child,
+    pub start: Child,
+}
+impl TryFrom<FinishedState> for CompleteState {
+    type Error = IncompleteState;
+    fn try_from(value: FinishedState) -> Result<Self, Self::Error> {
+        match value {
+            FinishedState {
+                kind: FinishedKind::Incomplete(end_state),
+                cache,
+                root,
+                start,
+            } => Err(IncompleteState {
+                end_state,
+                cache,
+                root,
+                start,
+            }),
+            FinishedState {
+                kind: FinishedKind::Complete(_),
+                cache,
+                root,
+                start,
+            } => Ok(CompleteState { cache, root, start }),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IncompleteState {
+    pub end_state: EndState,
+    pub cache: TraversalCache,
+    pub root: Child,
+    pub start: Child,
+}
+impl TryFrom<FinishedState> for IncompleteState {
+    type Error = CompleteState;
+    fn try_from(value: FinishedState) -> Result<Self, Self::Error> {
+        match CompleteState::try_from(value) {
+            Ok(x) => Err(x),
+            Err(x) => Ok(x),
+        }
+    }
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FinishedState {
-    pub result: FoundRange,
-    //pub query: QueryState,
+    pub kind: FinishedKind,
+    pub cache: TraversalCache,
+    pub root: Child,
+    pub start: Child,
 }
 
 impl FinishedState {
-    pub fn new(
-        result: impl Into<FoundRange>,
-        //query: impl Into<QueryState>,
-    ) -> Self {
-        Self {
-            result: result.into(),
-            //query: query.into(),
-        }
-    }
     #[track_caller]
     pub fn unwrap_complete(self) -> Child {
-        self.result.unwrap_complete()
+        self.kind.unwrap_complete()
     }
     #[allow(unused)]
     #[track_caller]
@@ -76,19 +129,6 @@ impl FinishedState {
         self,
         msg: &str,
     ) -> Child {
-        self.result.expect_complete(msg)
-    }
-}
-
-impl FinishedState {
-    #[allow(unused)]
-    pub fn new_complete(
-        query: impl IntoPattern,
-        index: impl crate::graph::vertex::has_vertex_index::ToChild,
-    ) -> Self {
-        let query = query.into_pattern();
-        Self {
-            result: FoundRange::Complete(index.to_child()),
-        }
+        self.kind.expect_complete(msg)
     }
 }

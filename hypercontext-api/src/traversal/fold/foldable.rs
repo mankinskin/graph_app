@@ -13,15 +13,12 @@ use crate::{
     traversal::{
         fold::CursorInit,
         result::{
+            FinishedKind,
             FinishedState,
-            FoundRange,
         },
-        state::{
-            cursor::{
-                PatternRangeCursor,
-                ToCursor,
-            },
-            top_down::end::EndState,
+        state::cursor::{
+            PatternRangeCursor,
+            ToCursor,
         },
         TraversalKind,
     },
@@ -35,8 +32,7 @@ pub type FoldResult = Result<FinishedState, ErrorState>;
 #[derive(Debug)]
 pub struct ErrorState {
     pub reason: ErrorReason,
-    //pub query: QueryState,
-    pub found: Option<FoundRange>,
+    pub found: Option<FinishedKind>,
 }
 
 pub trait Foldable: Sized {

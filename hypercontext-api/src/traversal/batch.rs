@@ -32,7 +32,7 @@ pub struct ParentBatch {
 #[derive(Debug)]
 pub struct ParentBatchChildren<Trav: Traversable> {
     pub batch: ParentBatch,
-    pub keep: ParentBatch,
+    pub keep: Vec<ParentState>,
     pub trav: Trav,
 }
 
@@ -50,7 +50,7 @@ impl<Trav: Traversable> Iterator for ParentBatchChildren<Trav> {
                         .map(|child| (state.root_parent, child)),
                 ),
                 Err(parent) => {
-                    self.keep.parents.push_back(parent);
+                    self.keep.push(parent);
                     Some(None)
                 }
             }
@@ -72,7 +72,9 @@ impl<Trav: Traversable> ParentBatchChildren<Trav> {
             keep: Default::default(),
         }
     }
-    pub fn find_root_cursor(mut self) -> ControlFlow<(ParentState, RootCursor<Trav>), ParentBatch> {
+    pub fn find_root_cursor(
+        mut self
+    ) -> ControlFlow<(ParentState, RootCursor<Trav>), Vec<ParentState>> {
         if let Some((root_parent, child)) = self.find_map(|root| root) {
             Break((
                 root_parent,

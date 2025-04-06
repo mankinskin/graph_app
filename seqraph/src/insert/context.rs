@@ -1,6 +1,9 @@
-use std::sync::{
-    RwLockReadGuard,
-    RwLockWriteGuard,
+use std::{
+    convert::TryFrom,
+    sync::{
+        RwLockReadGuard,
+        RwLockWriteGuard,
+    },
 };
 
 use derive_more::From;
@@ -22,7 +25,10 @@ use hypercontext_api::{
             ErrorState,
             Foldable,
         },
-        result::FoundRange,
+        result::{
+            CompleteState,
+            FinishedKind,
+        },
         traversable::{
             impl_traversable,
             impl_traversable_mut,
@@ -54,11 +60,9 @@ impl InsertContext {
         foldable: impl Foldable,
     ) -> Result<Child, ErrorState> {
         match foldable.fold::<InsertTraversal>(self.clone()) {
-            Ok(result) => match result.result {
-                FoundRange::Complete(c) => Ok(c),
-                FoundRange::Incomplete(fold_state) => {
-                    Ok(self.insert_init(InitInterval::from(fold_state)))
-                }
+            Ok(result) => match CompleteState::try_from(result) {
+                Ok(state) => Ok(state.root),
+                Err(state) => Ok(self.insert_init(InitInterval::from(state))),
             },
             Err(err) => Err(err),
         }
@@ -70,7 +74,7 @@ impl InsertContext {
         match self.insert(query) {
             Err(ErrorState {
                 reason: ErrorReason::SingleIndex(c),
-                found: Some(FoundRange::Complete(_)),
+                found: Some(FinishedKind::Complete(_)),
             }) => Ok(c),
             Err(err) => Err(err.reason),
             Ok(v) => Ok(v),

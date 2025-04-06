@@ -21,15 +21,8 @@ use crate::{
         },
         fold::foldable::ErrorState,
         iterator::policy::DirectedTraversalPolicy,
-        result::FoundRange,
-        state::{
-            cursor::PatternRangeCursor,
-            top_down::end::{
-                EndKind,
-                EndReason,
-                EndState,
-            },
-        },
+        result::FinishedKind,
+        state::cursor::PatternRangeCursor,
         ParentBatch,
         TraversalKind,
     },
@@ -69,7 +62,7 @@ impl StartState {
         } else {
             Err(ErrorState {
                 reason: ErrorReason::SingleIndex(self.index),
-                found: Some(FoundRange::Complete(self.index)),
+                found: Some(FinishedKind::Complete(self.index)),
             })
         }
     }

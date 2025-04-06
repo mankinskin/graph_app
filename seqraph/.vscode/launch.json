@@ -22,7 +22,8 @@
                 }
             },
             "args": [
-                "find_parent1"
+                "find_ancestor1"
+                //"find_parent1"
                 //"trace_graph1"
                 //"${selectedText}"
             ],

@@ -15,7 +15,6 @@ use crate::{
             },
             TraversalCache,
         },
-        result::FoundRange,
         state::top_down::end::EndState,
     },
 };
@@ -73,9 +72,6 @@ impl FoldState {
     }
     pub fn root(&self) -> Child {
         self.root
-    }
-    pub fn into_fold_result(self) -> FoundRange {
-        FoundRange::Incomplete(self)
     }
     //pub fn root_mode(&self) -> RootMode {
     //    let e = self.root_entry();

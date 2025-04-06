@@ -4,6 +4,7 @@ use batch::{
 };
 use cache::TraversalCache;
 use container::StateContainer;
+use derive_new::new;
 use fold::foldable::ErrorState;
 use iterator::policy::DirectedTraversalPolicy;
 use state::{
@@ -40,11 +41,13 @@ pub trait TraversalKind: Debug + Default {
 }
 
 /// context for generating next states
-#[derive(Debug)]
+#[derive(Debug, new)]
 pub struct TraversalContext<K: TraversalKind> {
-    pub batches: VecDeque<ParentBatch>,
-    pub cache: TraversalCache,
     pub trav: K::Trav,
+    #[new(default)]
+    pub batches: VecDeque<ParentBatch>,
+    #[new(default)]
+    pub cache: TraversalCache,
 }
 
 impl<K: TraversalKind> TryFrom<StartContext<K>> for TraversalContext<K> {
@@ -60,15 +63,15 @@ impl<K: TraversalKind> TryFrom<StartContext<K>> for TraversalContext<K> {
         }
     }
 }
-impl<K: TraversalKind> TraversalContext<K> {
-    fn new(trav: K::Trav) -> Self {
-        Self {
-            trav,
-            cache: Default::default(),
-            batches: Default::default(),
-        }
-    }
-}
+//impl<K: TraversalKind> TraversalContext<K> {
+//    fn new(trav: K::Trav) -> Self {
+//        Self {
+//            trav,
+//            cache: Default::default(),
+//            batches: Default::default(),
+//        }
+//    }
+//}
 impl<K: TraversalKind> Iterator for TraversalContext<K> {
     type Item = ControlFlow<EndState>;
 
@@ -82,11 +85,14 @@ impl<K: TraversalKind> Iterator for TraversalContext<K> {
                 {
                     // root found
                     Break((root_parent, root_cursor)) => {
+                        // drop other candidates
+                        self.batches.clear();
                         // TODO: add cache for path to parent
                         if let Some(end) = root_cursor.find_end() {
                             // TODO: add cache for end
                             Break(end)
                         } else {
+                            // TODO: if no new batch, return end state
                             if let Some(next) = K::Policy::next_batch(&self.trav, &root_parent) {
                                 self.batches.push_back(next);
                             }
@@ -96,7 +102,10 @@ impl<K: TraversalKind> Iterator for TraversalContext<K> {
                     }
                     // continue with
                     Continue(next) => {
-                        self.batches.push_back(next);
+                        self.batches.extend(
+                            next.into_iter()
+                                .flat_map(|parent| K::Policy::next_batch(&self.trav, &parent)),
+                        );
                         Continue(())
                     }
                 },

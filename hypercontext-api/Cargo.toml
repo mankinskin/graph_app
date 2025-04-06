@@ -24,6 +24,7 @@ nrfind = "1"
 derivative = "2.2"
 linked_hash_set = "0.1"
 linked-hash-map = "0.5"
+one-of = "0.2"
 
 [dependencies.petgraph]
 #git = "https://github.com/mankinskin/petgraph"

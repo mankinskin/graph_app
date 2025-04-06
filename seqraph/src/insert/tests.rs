@@ -1,9 +1,5 @@
 use std::collections::HashSet;
 
-use itertools::*;
-use maplit::hashset;
-use pretty_assertions::assert_eq;
-
 use crate::{
     insert::ToInsertContext,
     search::Searchable,
@@ -23,11 +19,17 @@ use hypercontext_api::{
     },
     traversal::{
         result::{
+            FinishedKind,
             FinishedState,
-            FoundRange,
         },
         traversable::Traversable,
     },
+};
+use itertools::*;
+use maplit::hashset;
+use pretty_assertions::{
+    assert_eq,
+    assert_matches,
 };
 
 #[test]
@@ -66,17 +68,23 @@ fn index_pattern1() {
         "byz"
     );
     let byz_found = graph.find_ancestor(&query);
-    assert_eq!(
+    assert_matches!(
         byz_found,
-        Ok(FinishedState::new_complete(query, byz)),
+        Ok(FinishedState {
+            kind: FinishedKind::Complete(x),
+            ..
+        }) if x == byz,
         "byz"
     );
     let query = vec![ab, y];
     let aby = graph.insert(query.clone()).expect("Indexing failed");
     let aby_found = graph.find_parent(&query);
-    assert_eq!(
+    assert_matches!(
         aby_found,
-        Ok(FinishedState::new_complete(query, aby)),
+        Ok(FinishedState {
+            kind: FinishedKind::Complete(x),
+            ..
+        }) if x == aby,
         "aby"
     );
 }
@@ -126,11 +134,12 @@ fn index_pattern2() {
     drop(graph);
     let query = vec![a, b, y];
     let aby_found = graph_ref.find_ancestor(&query);
-    assert_eq!(
+    assert_matches!(
         aby_found,
         Ok(FinishedState {
-            result: FoundRange::Complete(aby)
-        }),
+            kind: FinishedKind::Complete(x),
+            ..
+        }) if x == aby,
         "aby"
     );
 }
@@ -177,11 +186,12 @@ fn index_infix1() {
     drop(graph);
     let query = vec![a, b, y];
     let aby_found = graph_ref.find_ancestor(&query);
-    assert_eq!(
+    assert_matches!(
         aby_found,
         Ok(FinishedState {
-            result: FoundRange::Complete(aby),
-        }),
+            kind: FinishedKind::Complete(x),
+            ..
+        }) if x == aby,
         "aby"
     );
     let abyz = graph_ref

@@ -1,5 +1,6 @@
 use std::iter::FromIterator;
 
+use crate::search::Searchable;
 use hypercontext_api::{
     graph::vertex::{
         location::SubLocation,
@@ -21,23 +22,17 @@ use hypercontext_api::{
             },
             key::directed::DirectedKey,
         },
-        fold::state::FoldState,
+        result::IncompleteState,
     },
 };
+use std::convert::TryInto;
 
-use crate::search::Searchable;
-
-pub fn build_trace1() -> FoldState {
+pub fn build_trace1() -> IncompleteState {
     let Env1 {
         graph, a, d, e, bc, ..
     } = &Env1::build_expected();
     let query = vec![*a, *bc, *d, *e];
-    let res = graph
-        .find_ancestor(query)
-        .unwrap()
-        .result
-        .unwrap_incomplete();
-    res
+    graph.find_ancestor(query).unwrap().try_into().unwrap()
 }
 
 #[test]

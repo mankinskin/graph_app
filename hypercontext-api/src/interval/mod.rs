@@ -20,7 +20,7 @@ use crate::{
             label_key::vkey::VertexCacheKey,
             TraversalCache,
         },
-        fold::state::FoldState,
+        result::IncompleteState,
         split::{
             cache::{
                 position::{
@@ -110,12 +110,12 @@ pub struct InitInterval {
     pub cache: TraversalCache,
     pub end_bound: usize,
 }
-impl From<FoldState> for InitInterval {
-    fn from(fold_state: FoldState) -> Self {
+impl From<IncompleteState> for InitInterval {
+    fn from(state: IncompleteState) -> Self {
         Self {
-            cache: fold_state.cache,
-            root: fold_state.root,
-            end_bound: fold_state.end_state.width(),
+            cache: state.cache,
+            root: state.root,
+            end_bound: state.end_state.width(),
         }
     }
 }

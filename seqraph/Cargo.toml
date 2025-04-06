@@ -49,6 +49,7 @@ derive_builder = "^0.20"
 tracing = { version = "^0.1", features = ["attributes", "valuable"] }
 uuid = { version = "^1.10", features = ["v4", "fast-rng", "serde"] }
 derive-into-owned = "0.2"
+one-of = "0.2"
 
 #console-subscriber = "0.2"
 #tracing-mutex = "0.3"

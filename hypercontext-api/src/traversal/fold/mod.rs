@@ -3,17 +3,14 @@ use super::{
         directed::up::UpKey,
         props::RootKey,
     },
-    result::FoundRange,
+    result::FinishedKind,
     state::{
         bottom_up::start::{
             StartContext,
             StartState,
         },
         cursor::PatternRangeCursor,
-        top_down::end::{
-            EndKind,
-            EndState,
-        },
+        top_down::end::EndState,
     },
     TraversalContext,
     TraversalKind,
@@ -36,7 +33,6 @@ use crate::{
     },
 };
 use foldable::ErrorState;
-use state::FoldState;
 use std::{
     fmt::Debug,
     ops::ControlFlow::Break,
@@ -44,7 +40,6 @@ use std::{
 
 pub mod foldable;
 pub mod state;
-pub mod states;
 
 pub trait MakeStartState {
     fn start_state(&self) -> StartState;
@@ -73,6 +68,7 @@ impl<K: TraversalKind> TryFrom<StartContext<K>> for FoldContext<K> {
             tctx,
             max_width: start_index.width(),
             start_index,
+            end_state: None,
         })
     }
 }
@@ -82,7 +78,7 @@ pub struct FoldContext<K: TraversalKind> {
     pub tctx: TraversalContext<K>,
     pub start_index: Child,
     pub max_width: usize,
-    //pub end_state: Option<EndState>,
+    pub end_state: Option<EndState>,
 }
 
 impl<K: TraversalKind> TryFrom<CursorInit<K>> for FoldContext<K> {
@@ -96,61 +92,49 @@ impl<K: TraversalKind> TryFrom<CursorInit<K>> for FoldContext<K> {
     }
 }
 impl<K: TraversalKind> Iterator for FoldContext<K> {
-    type Item = Option<EndState>;
+    type Item = ();
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.tctx.next().and_then(|end_state| {
-            if let Break(end) = end_state {
+        match self.tctx.next() {
+            Some(Break(end)) => {
                 assert!(
                     end.width() >= self.max_width,
                     "Parents not evaluated in order"
                 );
+                let is_final = end.is_final();
                 if end.width() > self.max_width {
                     self.max_width = end.width();
-                    //self.end_state = Some(end);
+                    self.end_state = Some(end);
                 }
-                Some(end.is_final().then_some(end))
-            } else {
-                Some(None)
+                (!is_final).then_some(())
             }
-        })
+            Some(_) => Some(()),
+            None => None,
+        }
     }
 }
 
 impl<'a, K: TraversalKind> FoldContext<K> {
     fn fold(mut self) -> Result<FinishedState, ErrorState> {
-        (&mut self)
-            .find_map(|end| end)
-            .map(|state| {
+        (&mut self).for_each(|_| ());
+        match self.end_state {
+            Some(end) => {
                 let mut ctx = TraceContext {
                     cache: self.tctx.cache,
                     trav: self.tctx.trav,
                 };
-                state.trace(&mut ctx);
-                //let cursor = final_state.state.cursor.clone();
-                let found_path = if let EndKind::Complete(c) = &state.kind {
-                    FoundRange::Complete(*c) // cursor.path
-                } else {
-                    // todo: complete bottom edges of root if
-                    // assert same root
-                    //let min_end = end_states.iter()
-                    //    .min_by(|a, b| a.root_key().index.width().cmp(&b.root_key().index.width()))
-                    //    .unwrap();
-                    let root = state.root_key().index;
-                    FoundRange::Incomplete(FoldState {
-                        cache: ctx.cache,
-                        root,
-                        end_state: state,
-                        start: self.start_index,
-                    })
-                };
-                Ok(FinishedState { result: found_path })
-            })
-            .unwrap_or_else(|| {
-                Err(ErrorState {
-                    reason: ErrorReason::SingleIndex(self.start_index),
-                    found: Some(FoundRange::Complete(self.start_index)),
+                end.trace(&mut ctx);
+                Ok(FinishedState {
+                    cache: ctx.cache,
+                    root: end.root_key().index,
+                    start: self.start_index,
+                    kind: FinishedKind::from(end),
                 })
-            })
+            }
+            None => Err(ErrorState {
+                reason: ErrorReason::SingleIndex(self.start_index),
+                found: Some(FinishedKind::Complete(self.start_index)),
+            }),
+        }
     }
 }

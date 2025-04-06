@@ -6,7 +6,7 @@ pub mod bft;
 pub(crate) mod dft;
 pub(crate) mod extend;
 pub(crate) mod order;
-pub(crate) mod pruning;
+//pub(crate) mod pruning;
 
 pub trait StateContainer:
     ExtendStates
