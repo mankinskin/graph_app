@@ -43,7 +43,7 @@ nrfind = "1"
 ngram = "0.1"
 csv = "1"
 derivative = "^2.2"
-justlog = { path = "../justlog" }
+justlog = { path = "../../justlog" }
 context-search = { path = "../context-search", features = ["test-api"] }
 context-insert = { path = "../context-insert", features = ["test-api"] }
 derive_builder = "^0.20"
@@ -78,7 +78,7 @@ version = "^0.32"
 
 [dependencies.petgraph]
 #git = "https://github.com/mankinskin/petgraph"
-path = "../petgraph"
+path = "../../petgraph"
 
 [dependencies.pretty_assertions]
 features = ["unstable"]

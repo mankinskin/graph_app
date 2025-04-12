@@ -32,10 +32,10 @@ version = "^1.0.0"
 features = ["full"]
 
 [dependencies.context-read]
-path = "../context-read"
+path = "../context-engine/context-read"
 
 [dev-dependencies.context-read]
-path = "../context-read"
+path = "../context-engine/context-read"
 features = ["test-hashing"]
 
 #[dev-dependencies.ngrams]

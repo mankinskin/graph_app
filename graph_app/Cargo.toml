@@ -52,7 +52,7 @@ path = "../petgraph"
 features=["serde-1"]
 
 [dependencies.context-read]
-path = "../context-read"
+path = "../context-engine/context-read"
 #git = "https://github.com/mankinskin/web-app"
 
 [dependencies.ngrams]

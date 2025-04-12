@@ -16,9 +16,9 @@ members = [
   "graph_app",
   "ngrams",
   "justlog",
-  "context-search",
-  "context-insert",
-  "context-read",
+  "context-engine/context-search",
+  "context-engine/context-insert",
+  "context-engine/context-read",
 ]
 
 [profile.release]
