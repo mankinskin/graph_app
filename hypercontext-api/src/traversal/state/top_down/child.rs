@@ -20,10 +20,7 @@ use crate::{
             adapters::IntoAdvanced,
             append::PathAppend,
             lower::PathLower,
-            move_path::{
-                Advance,
-                Retract,
-            },
+            move_path::Advance,
         },
         structs::rooted::index_range::IndexRangePath,
         RoleChildPath,
@@ -75,6 +72,7 @@ pub enum PathPairMode {
     GraphMajor,
     QueryMajor,
 }
+use PathPairMode::*;
 
 impl_cursor_pos! {
     CursorPosition for ChildState, self => self.cursor.relative_pos
@@ -84,11 +82,14 @@ pub enum ChildMatchState {
     Mismatch(EndState),
     Match(ChildState),
 }
+use ChildMatchState::*;
+
 #[derive(Clone, Debug)]
 pub enum TDNext {
     MatchState(ChildMatchState),
     Prefixes(StateNext<ChildBatch>),
 }
+use TDNext::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deref, DerefMut)]
 pub struct RootChildState {
@@ -119,7 +120,7 @@ impl<'a, Trav: Traversable> ChildCtx<Trav> {
         ChildBatchIterator {
             children: FromIterator::from_iter([ChildModeCtx {
                 state: self.state,
-                mode: PathPairMode::GraphMajor,
+                mode: GraphMajor,
             }]),
             trav: self.trav,
         }
@@ -138,11 +139,11 @@ impl<Trav: Traversable> Iterator for ChildBatchIterator<Trav> {
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(cs) = self.children.pop_front() {
             Some(match cs.state.next_match(&self.trav) {
-                TDNext::Prefixes(next) => {
+                Prefixes(next) => {
                     self.children.extend(next.inner);
                     None
                 }
-                TDNext::MatchState(state) => Some(state),
+                MatchState(state) => Some(state),
             })
         } else {
             None
@@ -152,7 +153,7 @@ impl<Trav: Traversable> Iterator for ChildBatchIterator<Trav> {
 impl<Trav: Traversable> ChildBatchIterator<Trav> {
     pub fn find_match(mut self) -> Option<ChildState> {
         self.find_map(|flow| match flow {
-            Some(ChildMatchState::Match(state)) => Some(state),
+            Some(Match(state)) => Some(state),
             _ => None,
         })
     }
@@ -196,8 +197,8 @@ impl ChildModeCtx {
         location: ChildLocation,
     ) {
         match self.mode {
-            PathPairMode::GraphMajor => self.state.path.path_append(location),
-            PathPairMode::QueryMajor => self.state.cursor.path_append(location),
+            GraphMajor => self.state.path.path_append(location),
+            QueryMajor => self.state.cursor.path_append(location),
         }
     }
     pub fn major_leaf<Trav: Traversable>(
@@ -205,8 +206,8 @@ impl ChildModeCtx {
         trav: &Trav,
     ) -> Child {
         match self.mode {
-            PathPairMode::GraphMajor => self.state.path.role_leaf_child::<End, _>(trav),
-            PathPairMode::QueryMajor => self.state.cursor.role_leaf_child::<End, _>(trav),
+            GraphMajor => self.state.path.role_leaf_child::<End, _>(trav),
+            QueryMajor => self.state.cursor.role_leaf_child::<End, _>(trav),
         }
     }
 }
@@ -226,26 +227,27 @@ impl ChildState {
         self,
         trav: &Trav,
     ) -> TDNext {
+        use Ordering::*;
         let key = self.target_key();
         let path_leaf = self.path.role_leaf_child::<End, _>(trav);
         let query_leaf = self.cursor.role_leaf_child::<End, _>(trav);
 
         // compare next child
         if path_leaf == query_leaf {
-            TDNext::MatchState(ChildMatchState::Match(self))
+            MatchState(Match(self))
         } else if path_leaf.width() == 1 && query_leaf.width() == 1 {
-            TDNext::MatchState(ChildMatchState::Mismatch(self.on_mismatch(trav)))
+            MatchState(Mismatch(self.on_mismatch(trav)))
         } else {
-            TDNext::Prefixes(StateNext {
+            Prefixes(StateNext {
                 prev: key.to_prev(0),
                 inner: match path_leaf.width.cmp(&query_leaf.width) {
-                    Ordering::Equal => self
-                        .mode_prefixes(trav, PathPairMode::GraphMajor)
+                    Equal => self
+                        .mode_prefixes(trav, GraphMajor)
                         .into_iter()
-                        .chain(self.mode_prefixes(trav, PathPairMode::QueryMajor))
+                        .chain(self.mode_prefixes(trav, QueryMajor))
                         .collect(),
-                    Ordering::Greater => self.mode_prefixes(trav, PathPairMode::GraphMajor),
-                    Ordering::Less => self.mode_prefixes(trav, PathPairMode::QueryMajor),
+                    Greater => self.mode_prefixes(trav, GraphMajor),
+                    Less => self.mode_prefixes(trav, QueryMajor),
                 },
             })
         }
@@ -255,6 +257,8 @@ impl ChildState {
         &self,
         trav: &Trav,
     ) -> EndState {
+        use EndKind::*;
+        use EndReason::*;
         //let key = self.target_key();
         let BaseState {
             cursor,
@@ -280,13 +284,13 @@ impl ChildState {
             EndState {
                 root_pos,
                 cursor: cursor,
-                reason: EndReason::Mismatch,
-                kind: EndKind::Complete(index),
+                reason: Mismatch,
+                kind: Complete(index),
             }
         } else {
             EndState {
                 root_pos,
-                reason: EndReason::Mismatch,
+                reason: Mismatch,
                 kind: RangeEnd {
                     target: DirectedKey::down(
                         path.role_leaf_child::<End, _>(trav),
