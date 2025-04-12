@@ -51,8 +51,8 @@ path = "../petgraph"
 #git = "https://github.com/mankinskin/petgraph"
 features=["serde-1"]
 
-[dependencies.seqraph]
-path = "../seqraph"
+[dependencies.context-read]
+path = "../context-read"
 #git = "https://github.com/mankinskin/web-app"
 
 [dependencies.ngrams]

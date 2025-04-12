@@ -31,11 +31,11 @@ derive-getters = "0.5"
 version = "^1.0.0"
 features = ["full"]
 
-[dependencies.seqraph]
-path = "../seqraph"
+[dependencies.context-read]
+path = "../context-read"
 
-[dev-dependencies.seqraph]
-path = "../seqraph"
+[dev-dependencies.context-read]
+path = "../context-read"
 features = ["test-hashing"]
 
 #[dev-dependencies.ngrams]

@@ -16,8 +16,9 @@ members = [
   "graph_app",
   "ngrams",
   "justlog",
-  "seqraph",
-  "hypercontext-api",
+  "context-search",
+  "context-insert",
+  "context-read",
 ]
 
 [profile.release]
