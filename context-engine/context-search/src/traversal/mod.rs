@@ -1,15 +1,16 @@
-use batch::{
-    ParentBatch,
-    ParentBatchChildren,
-};
 use cache::TraversalCache;
 use container::StateContainer;
 use derive_new::new;
 use fold::foldable::ErrorState;
 use iterator::policy::DirectedTraversalPolicy;
 use state::{
-    bottom_up::start::StartContext,
-    top_down::end::EndState,
+    cursor::PatternRangeCursor,
+    end::EndState,
+    parent::batch::{
+        ParentBatch,
+        ParentBatchChildren,
+    },
+    start::StartCtx,
     BaseState,
 };
 use std::{
@@ -23,7 +24,6 @@ use std::{
 };
 use traversable::Traversable;
 
-pub mod batch;
 pub mod cache;
 pub mod compare;
 pub mod container;
@@ -47,30 +47,24 @@ pub struct TraversalContext<K: TraversalKind> {
     pub batches: VecDeque<ParentBatch>,
     #[new(default)]
     pub cache: TraversalCache,
+    pub cursor: PatternRangeCursor,
 }
 
-impl<K: TraversalKind> TryFrom<StartContext<K>> for TraversalContext<K> {
+impl<K: TraversalKind> TryFrom<StartCtx<K>> for TraversalContext<K> {
     type Error = ErrorState;
-    fn try_from(start: StartContext<K>) -> Result<Self, Self::Error> {
-        match start.state.get_parent_batch::<K>(&start.trav) {
+    fn try_from(start: StartCtx<K>) -> Result<Self, Self::Error> {
+        match start.get_parent_batch() {
             Ok(p) => Ok(Self {
                 batches: FromIterator::from_iter([p]),
-                cache: TraversalCache::new(&start.trav, start.state.index),
+                cache: TraversalCache::new(&start.trav, start.index),
                 trav: start.trav,
+                cursor: start.cursor,
             }),
             Err(end) => Err(end),
         }
     }
 }
-//impl<K: TraversalKind> TraversalContext<K> {
-//    fn new(trav: K::Trav) -> Self {
-//        Self {
-//            trav,
-//            cache: Default::default(),
-//            batches: Default::default(),
-//        }
-//    }
-//}
+
 impl<K: TraversalKind> Iterator for TraversalContext<K> {
     type Item = ControlFlow<EndState>;
 
@@ -92,21 +86,22 @@ impl<K: TraversalKind> Iterator for TraversalContext<K> {
                             Break(end)
                         } else {
                             // TODO: if no new batch, return end state
-                            if let Some(next) = K::Policy::next_batch(&self.trav, &root_parent) {
+                            if let Some(next) =
+                                K::Policy::next_batch(&self.trav, &root_parent)
+                            {
                                 self.batches.push_back(next);
                             }
                             // next batch
                             Continue(())
                         }
-                    }
+                    },
                     // continue with
                     Continue(next) => {
-                        self.batches.extend(
-                            next.into_iter()
-                                .flat_map(|parent| K::Policy::next_batch(&self.trav, &parent)),
-                        );
+                        self.batches.extend(next.into_iter().flat_map(
+                            |parent| K::Policy::next_batch(&self.trav, &parent),
+                        ));
                         Continue(())
-                    }
+                    },
                 },
             )
         } else {

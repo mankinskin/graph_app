@@ -98,16 +98,24 @@ impl RangeEnd {
         self.path.child_path_mut::<End>().simplify(trav);
 
         match (
-            Start::is_at_border(trav.graph(), self.path.role_root_child_location::<Start>()),
+            Start::is_at_border(
+                trav.graph(),
+                self.path.role_root_child_location::<Start>(),
+            ),
             self.path.raw_child_path::<Start>().is_empty(),
-            End::is_at_border(trav.graph(), self.path.role_root_child_location::<End>()),
+            End::is_at_border(
+                trav.graph(),
+                self.path.role_root_child_location::<End>(),
+            ),
             self.path.raw_child_path::<End>().is_empty(),
         ) {
-            (true, true, true, true) => EndKind::Complete(self.path.root_parent()),
-            (true, true, false, _) | (true, true, true, false) => EndKind::Prefix(PrefixEnd {
-                path: self.path.into(),
-                target: self.target,
-            }),
+            (true, true, true, true) =>
+                EndKind::Complete(self.path.root_parent()),
+            (true, true, false, _) | (true, true, true, false) =>
+                EndKind::Prefix(PrefixEnd {
+                    path: self.path.into(),
+                    target: self.target,
+                }),
             (false, _, true, true) | (true, false, true, true) => {
                 let graph = trav.graph();
                 let path: IndexStartPath = self.path.into();
@@ -117,7 +125,7 @@ impl RangeEnd {
                     path,
                     inner_width: pattern_width(&pattern[root.sub_index + 1..]),
                 })
-            }
+            },
             _ => EndKind::Range(self),
         }
     }
@@ -148,13 +156,13 @@ impl_cursor_pos! {
 
 impl EndState {
     pub fn is_final(&self) -> bool {
-        self.reason == EndReason::QueryEnd && matches!(self.kind, EndKind::Complete(_))
+        self.reason == EndReason::QueryEnd
+            && matches!(self.kind, EndKind::Complete(_))
     }
     pub fn entry_location(&self) -> Option<ChildLocation> {
         match &self.kind {
-            EndKind::Range(state) => {
-                Some(GraphRootChild::<Start>::root_child_location(&state.path))
-            }
+            EndKind::Range(state) =>
+                Some(GraphRootChild::<Start>::root_child_location(&state.path)),
             EndKind::Postfix(_) => None,
             EndKind::Prefix(_) => None,
             EndKind::Complete(_) => None,

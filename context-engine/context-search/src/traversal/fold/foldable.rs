@@ -11,14 +11,16 @@ use crate::{
         },
     },
     traversal::{
-        fold::CursorInit,
         result::{
             FinishedKind,
             FinishedState,
         },
-        state::cursor::{
-            PatternRangeCursor,
-            ToCursor,
+        state::{
+            cursor::{
+                PatternRangeCursor,
+                ToCursor,
+            },
+            start::StartCtx,
         },
         TraversalKind,
     },
@@ -81,7 +83,11 @@ impl Foldable for PatternRangeCursor {
         self,
         trav: K::Trav,
     ) -> Result<FoldContext<K>, ErrorState> {
-        let init = CursorInit::<K> { trav, cursor: self };
-        TryFrom::try_from(init)
+        let start_index = self.path.start_index(&trav);
+        TryFrom::try_from(StartCtx {
+            index: start_index,
+            cursor: self,
+            trav,
+        })
     }
 }

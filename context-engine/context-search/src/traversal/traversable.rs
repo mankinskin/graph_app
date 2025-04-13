@@ -11,7 +11,8 @@ use std::{
 
 pub trait Traversable: Sized + std::fmt::Debug {
     type Kind: GraphKind;
-    type Guard<'a>: Traversable<Kind = Self::Kind> + Deref<Target = Hypergraph<Self::Kind>>
+    type Guard<'a>: Traversable<Kind = Self::Kind>
+        + Deref<Target = Hypergraph<Self::Kind>>
     where
         Self: 'a;
     fn graph(&self) -> Self::Guard<'_>;

@@ -23,15 +23,13 @@ use crate::{
             },
         },
         state::{
-            bottom_up::parent::ParentState,
-            top_down::{
-                child::ChildState,
-                end::{
-                    EndKind,
-                    EndState,
-                    RangeEnd,
-                },
+            child::ChildState,
+            end::{
+                EndKind,
+                EndState,
+                RangeEnd,
             },
+            parent::ParentState,
             traversal::TraversalState,
             InnerKind,
             StateDirection,

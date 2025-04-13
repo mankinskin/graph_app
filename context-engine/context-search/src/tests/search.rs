@@ -56,7 +56,7 @@ use crate::{
         },
         state::{
             cursor::PatternRangeCursor,
-            top_down::end::{
+            end::{
                 EndKind,
                 EndReason,
                 EndState,
@@ -70,8 +70,7 @@ use crate::{
 };
 
 #[test]
-fn find_sequence()
-{
+fn find_sequence() {
     let Env1 {
         graph,
         abc,
@@ -102,8 +101,7 @@ fn find_sequence()
 }
 
 #[test]
-fn find_parent1()
-{
+fn find_parent1() {
     let Env1 {
         graph,
         a,
@@ -188,8 +186,7 @@ fn find_parent1()
 }
 
 #[test]
-fn find_ancestor1()
-{
+fn find_ancestor1() {
     let Env1 {
         graph,
         a,
@@ -207,7 +204,7 @@ fn find_ancestor1()
         abcd,
         ababababcdefghi,
         ..
-    } = &Env1::build_expected();
+    } = Env1::build_expected();
     let a_bc_pattern = vec![Child::new(a, 1), Child::new(bc, 2)];
     let ab_c_pattern = vec![Child::new(ab, 2), Child::new(c, 1)];
     let a_bc_d_pattern =
@@ -220,78 +217,83 @@ fn find_ancestor1()
     let query = bc_pattern;
     assert_eq!(
         graph.find_ancestor(query),
-        Err(ErrorReason::SingleIndex(*bc)),
+        Err(ErrorReason::SingleIndex(bc)),
         "bc"
     );
+
     let query = b_c_pattern;
     assert_matches!(
         graph.find_ancestor(&query),
         Ok(FinishedState {
             kind: FinishedKind::Complete(x),
             ..
-        }) if x == *bc,
+        }) if x == bc,
         "b_c"
     );
+
     let query = a_bc_pattern;
     assert_matches!(
         graph.find_ancestor(&query),
         Ok(FinishedState {
             kind: FinishedKind::Complete(x),
             ..
-        }) if x == *abc,
+        }) if x == abc,
         "a_bc"
     );
+
     let query = ab_c_pattern;
     assert_matches!(
         graph.find_ancestor(&query),
         Ok(FinishedState {
             kind: FinishedKind::Complete(x),
             ..
-        }) if x == *abc,
+        }) if x == abc,
         "ab_c"
     );
+
     let query = a_bc_d_pattern;
     assert_matches!(
         graph.find_ancestor(&query),
         Ok(FinishedState {
             kind: FinishedKind::Complete(x),
             ..
-        }) if x == *abcd,
+        }) if x == abcd,
         "a_bc_d"
     );
+
     let query = a_b_c_pattern.clone();
     assert_matches!(
         graph.find_ancestor(&query),
         Ok(FinishedState {
             kind: FinishedKind::Complete(x),
             ..
-        }) if x == *abc,
+        }) if x == abc,
         "a_b_c"
     );
-    let query =
-        vec![*a, *b, *a, *b, *a, *b, *a, *b, *c, *d, *e, *f, *g, *h, *i];
+
+    let query = vec![a, b, a, b, a, b, a, b, c, d, e, f, g, h, i];
     assert_matches!(
         graph.find_ancestor(&query),
         Ok(FinishedState {
             kind: FinishedKind::Complete(x),
             ..
-        }) if x == *ababababcdefghi,
+        }) if x == ababababcdefghi,
         "a_b_a_b_a_b_a_b_c_d_e_f_g_h_i"
     );
+
     let query = [&a_b_c_pattern[..], &[Child::new(c, 1)]].concat();
     assert_matches!(
         graph.find_ancestor(&query),
         Ok(FinishedState {
             kind: FinishedKind::Complete(x),
             ..
-        }) if x == *abc,
+        }) if x == abc,
         "a_b_c_c"
     );
 }
 
 #[test]
-fn find_ancestor2()
-{
+fn find_ancestor2() {
     let mut graph = crate::graph::Hypergraph::<BaseGraphKind>::default();
     let (a, b, _w, x, y, z) = graph
         .insert_tokens([
@@ -485,8 +487,7 @@ fn find_ancestor2()
 }
 
 #[test]
-fn find_ancestor3()
-{
+fn find_ancestor3() {
     let mut graph = crate::graph::Hypergraph::<BaseGraphKind>::default();
     let (a, b, _w, x, y, z) = graph
         .insert_tokens([

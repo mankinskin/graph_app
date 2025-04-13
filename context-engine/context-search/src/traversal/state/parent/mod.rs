@@ -1,3 +1,7 @@
+pub mod batch;
+
+use batch::ParentBatch;
+
 use crate::{
     direction::pattern::PatternDirection,
     graph::vertex::{
@@ -41,15 +45,13 @@ use crate::{
         },
         iterator::policy::DirectedTraversalPolicy,
         state::{
-            top_down::{
-                child::{
-                    ChildState,
-                    RootChildState,
-                },
-                end::{
-                    EndReason,
-                    EndState,
-                },
+            child::{
+                ChildState,
+                RootChildState,
+            },
+            end::{
+                EndReason,
+                EndState,
             },
             BaseState,
             StateNext,
@@ -66,7 +68,11 @@ use std::{
     cmp::Ordering,
 };
 
-use super::BUNext;
+#[derive(Clone, Debug)]
+pub enum BUNext {
+    Parents(StateNext<ParentBatch>),
+    End(StateNext<EndState>),
+}
 pub type ParentState = BaseState<IndexStartPath>;
 
 #[derive(Clone, Debug)]
@@ -84,12 +90,15 @@ impl ParentState {
         match self.into_advanced(trav) {
             // first child state in this parent
             Ok(advanced) => {
-                let delta = <_ as GraphRootChild<Start>>::root_post_ctx_width(&advanced.path, trav);
+                let delta = <_ as GraphRootChild<Start>>::root_post_ctx_width(
+                    &advanced.path,
+                    trav,
+                );
                 ParentNext::Child(StateNext {
                     prev: key.flipped().to_prev(delta),
                     inner: advanced,
                 })
-            }
+            },
             // no child state, bottom up path at end of parent
             Err(state) => ParentNext::BU(state.next_parents::<K>(trav)),
         }
@@ -144,7 +153,10 @@ impl IntoAdvanced for ParentState {
         let graph = trav.graph();
         let pattern = self.path.root_pattern::<Trav>(&graph).clone();
 
-        if let Some(next) = TravDir::<Trav>::pattern_index_next(pattern.borrow(), entry.sub_index) {
+        if let Some(next) = TravDir::<Trav>::pattern_index_next(
+            pattern.borrow(),
+            entry.sub_index,
+        ) {
             let root_parent = self.clone();
             let ParentState {
                 path,
@@ -195,7 +207,8 @@ impl PathRaise for ParentState {
         self.root_pos
             .advance_key(pattern_width(&pattern[root.sub_index + 1..]));
         if !path.is_empty()
-            || TravDir::<Trav>::pattern_index_prev(pattern, root.sub_index).is_some()
+            || TravDir::<Trav>::pattern_index_prev(pattern, root.sub_index)
+                .is_some()
         {
             path.path.push(root);
         }

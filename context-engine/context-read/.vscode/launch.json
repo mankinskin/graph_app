@@ -11,22 +11,6 @@
             //"program": "${workspaceFolder}/../target/debug/deps/seqraph-bab301329ac7732f.exe",
             //"args": [],
             "cwd": "${workspaceFolder}",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                ],
-                "filter": {
-                    "name": "seqraph",
-                    "kind": "lib"
-                }
-            },
-            "args": [
-                "find_ancestor1"
-                //"find_parent1"
-                //"trace_graph1"
-                //"${selectedText}"
-            ],
         }
     ]
 }

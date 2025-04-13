@@ -34,7 +34,7 @@ use crate::{
     traversal::traversable::Traversable,
 };
 
-use super::bottom_up::parent::ParentState;
+use super::parent::ParentState;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PathCursor<P: FoldablePath> {
@@ -42,7 +42,9 @@ pub struct PathCursor<P: FoldablePath> {
     /// position relative to start of path
     pub relative_pos: TokenPosition,
 }
-impl<R: PathRole, P: FoldablePath + PathChild<R>> PathChild<R> for PathCursor<P> {
+impl<R: PathRole, P: FoldablePath + PathChild<R>> PathChild<R>
+    for PathCursor<P>
+{
     fn path_child_location(&self) -> Option<ChildLocation> {
         self.path.path_child_location()
     }
@@ -53,7 +55,9 @@ impl<R: PathRole, P: FoldablePath + PathChild<R>> PathChild<R> for PathCursor<P>
         self.path.path_child(trav)
     }
 }
-impl<R: PathRole, P: RootChildPos<R> + FoldablePath> RootChildPos<R> for PathCursor<P> {
+impl<R: PathRole, P: RootChildPos<R> + FoldablePath> RootChildPos<R>
+    for PathCursor<P>
+{
     fn root_child_pos(&self) -> usize {
         RootChildPos::<R>::root_child_pos(&self.path)
     }
@@ -102,29 +106,3 @@ impl<P: FoldablePath> ToCursor for P {
         }
     }
 }
-//impl PatternRangeCursor {
-//pub fn new<G: GraphKind, P: IntoPattern>(query: P) -> Result<Self, ErrorState> {
-//    let entry = G::Direction::head_index(&query.borrow());
-//    let query = query.into_pattern();
-//    let first = *query.first().unwrap();
-//    let len = query.len();
-//    //let pos = first.width().into();
-//    let query = Self {
-//        path: RootedRangePath {
-//            root: query,
-//            start: SubPath::new(entry).into(),
-//            end: SubPath::new(entry).into(),
-//        },
-//        //pos,
-//    };
-//    match len {
-//        0 => Err((ErrorReason::EmptyPatterns, query)),
-//        1 => Err((ErrorReason::SingleIndex(first), query)),
-//        _ => Ok(query),
-//    }
-//    .map_err(|(reason, _)| ErrorState {
-//        reason,
-//        found: None,
-//    })
-//}
-//}

@@ -5,7 +5,7 @@ use crate::{
 
 use super::{
     cache::TraversalCache,
-    state::top_down::end::{
+    state::end::{
         EndKind,
         EndState,
     },

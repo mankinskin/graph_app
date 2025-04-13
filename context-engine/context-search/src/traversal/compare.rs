@@ -1,8 +1,7 @@
 use super::{
-    state::top_down::{
+    state::{
         child::{
-            ChildCtx,
-            ChildMatchState,
+            batch::ChildIterator,
             ChildState,
         },
         end::{
@@ -25,6 +24,10 @@ use crate::{
     },
     traversal::{
         cache::key::directed::DirectedKey,
+        state::child::batch::ChildMatchState::{
+            Match,
+            Mismatch,
+        },
         BaseState,
     },
 };
@@ -43,38 +46,44 @@ pub struct RootCursor<Trav: Traversable> {
     pub trav: Trav,
 }
 impl<Trav: Traversable> Iterator for RootCursor<Trav> {
-    // iterator
-    // None -> no end or next child found
-    // Some(Continue) -> at next child position
-    // Some(Break(EndReason)) -> at query end or mismatch
     type Item = ControlFlow<EndReason>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.query_advanced() {
-            Continue(_) => match self.path_advanced() {
-                Continue(_) => Some(
-                    match ChildCtx::new(self.state.clone(), &self.trav).compare() {
-                        ChildMatchState::Match(_) => Continue(()),
-                        ChildMatchState::Mismatch(_) => Break(EndReason::Mismatch),
-                    },
-                ),
-                // end of this root
-                Break(_) => None,
-            },
+        match self.advanced() {
+            Continue(_) => Some(
+                // next position
+                match ChildIterator::new(&self.trav, self.state.clone())
+                    .compare()
+                {
+                    Match(_) => Continue(()),
+                    Mismatch(_) => Break(EndReason::Mismatch),
+                },
+            ),
+            // end of this root
+            Break(None) => None,
             // end of query
-            Break(_) => Some(Break(EndReason::QueryEnd)),
+            Break(Some(end)) => Some(Break(end)),
         }
     }
 }
 impl<Trav: Traversable> RootCursor<Trav> {
+    fn advanced(&mut self) -> ControlFlow<Option<EndReason>> {
+        match self.query_advanced() {
+            Continue(_) => match self.path_advanced() {
+                Continue(_) => Continue(()),
+                // end of this root
+                Break(_) => Break(None),
+            },
+            // end of query
+            Break(_) => Break(Some(EndReason::QueryEnd)),
+        }
+    }
     fn query_advanced(&mut self) -> ControlFlow<()> {
         self.state.cursor.advance(&self.trav)
     }
     fn path_advanced(&mut self) -> ControlFlow<()> {
         self.state.base.path.advance(&self.trav)
     }
-    // Break: Found an end point in the root
-    // Continue: Root matches fully
     pub fn find_end(mut self) -> Option<EndState> {
         match (&mut self).find_map(|flow| match flow {
             Continue(()) => None,
@@ -100,61 +109,8 @@ impl<Trav: Traversable> RootCursor<Trav> {
                     }
                     .simplify_to_end(&self.trav),
                 })
-            }
+            },
             _ => None,
         }
-        //if let Some(next) = root_cursor.next() {
-        //    let primed = match next {
-        //        MatchedNext::NextChild(next_child) => self
-        //            .try_advance_query(next_child)
-        //            .map(MatchedNext::NextChild),
-        //        MatchedNext::MatchedParent(cs) => {
-        //            self.try_advance_query(cs).map(MatchedNext::MatchedParent)
-        //        }
-        //    };
-        //    // TODO: Root Candidate, cache root paths
-        //    match primed {
-        //        Ok(MatchedNext::NextChild(next_child)) => {
-        //            self.children.extend([next_child]);
-        //            None
-        //        }
-        //        Ok(MatchedNext::MatchedParent(next_child)) => {
-        //            //ParentState {
-        //            //    path: IndexStartPath::from(self.base.path),
-        //            //    ..self.base
-        //            //}
-        //            //.next_parents::<K>(&ctx.trav)
-
-        //            //self.parents.extend(
-        //            //    next_child
-        //            //        .root_parent
-        //            //);
-        //            None
-        //        }
-        //        Err(end) => Some(end),
-        //    }
-        //}
-
-        //// TODO: cache candidate root paths
-        //if self.cache.exists(&ps.target_key()) {
-        //    // TODO: add edge to candidate cache
-        //    Some((0, None))
-        //} else {
-        //    let end = match ps.parent_next_states::<K>(&self.trav) {
-        //        ParentNext::Child(next_child) => {
-        //            // TODO: process all parents in batch before processing children
-        //            self.children.extend([next_child.inner]);
-        //            None
-        //        }
-        //        ParentNext::BU(bu_next) => match bu_next {
-        //            BUNext::Parents(p) => {
-        //                self.parents.extend(p.inner);
-        //                None
-        //            }
-        //            BUNext::End(end) => Some(end.inner),
-        //        },
-        //    };
-        //    Some((0, end))
-        //}
     }
 }

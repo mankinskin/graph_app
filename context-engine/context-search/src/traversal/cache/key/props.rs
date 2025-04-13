@@ -18,9 +18,9 @@ pub trait CursorPosition {
 #[macro_export]
 macro_rules! impl_cursor_pos {
     {
-        CursorPosition for $target:ty, $self_:ident => $func:expr
+        $(< $( $par:ident $( : $bhead:tt $( + $btail:tt )*)? ),* >)? CursorPosition for $target:ty, $self_:ident => $func:expr
     } => {
-        impl $crate::traversal::cache::key::props::CursorPosition for $target {
+        impl <$( $( $par $(: $bhead $( + $btail )* )? ),* )?> $crate::traversal::cache::key::props::CursorPosition for $target {
             fn cursor_pos(& $self_) -> &$crate::path::mutators::move_path::key::TokenPosition {
                 &$func
             }

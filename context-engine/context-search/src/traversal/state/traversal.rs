@@ -1,8 +1,8 @@
 use std::cmp::Ordering;
 
 use super::{
-    bottom_up::parent::ParentState,
-    top_down::child::ChildState,
+    child::ChildState,
+    parent::ParentState,
     InnerKind,
     StateDirection,
 };
@@ -39,7 +39,8 @@ impl TraversalState {
     pub fn entry_location(&self) -> Option<ChildLocation> {
         match &self.kind {
             InnerKind::Parent(state) => Some(state.path.root_child_location()),
-            InnerKind::Child(state) => state.path.role_leaf_child_location::<End>(),
+            InnerKind::Child(state) =>
+                state.path.role_leaf_child_location::<End>(),
         }
     }
     pub fn prev_key(&self) -> PrevKey {

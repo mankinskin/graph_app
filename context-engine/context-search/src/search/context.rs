@@ -1,11 +1,13 @@
 use crate::{
     graph::getters::ErrorReason,
     traversal::{
-        batch::ParentBatch,
         container::bft::BftQueue,
         iterator::policy::DirectedTraversalPolicy,
         result::FinishedState,
-        state::bottom_up::parent::ParentState,
+        state::parent::{
+            batch::ParentBatch,
+            ParentState,
+        },
         traversable::Traversable,
         TraversalKind,
     },

@@ -65,7 +65,7 @@ use crate::{
         RoleChildPath,
     },
     traversal::{
-        state::top_down::end::{
+        state::end::{
             EndKind,
             PostfixEnd,
         },
@@ -105,7 +105,10 @@ impl RootedRolePath<Start, IndexRoot> {
     ) -> EndKind {
         self.role_path.simplify(trav);
         match (
-            Start::is_at_border(trav.graph(), self.role_root_child_location::<Start>()),
+            Start::is_at_border(
+                trav.graph(),
+                self.role_root_child_location::<Start>(),
+            ),
             self.role_path.raw_child_path::<Start>().is_empty(),
         ) {
             (true, true) => EndKind::Complete(self.root_parent()),
@@ -117,7 +120,7 @@ impl RootedRolePath<Start, IndexRoot> {
                     path: self,
                     inner_width: pattern_width(&pattern[root.sub_index + 1..]),
                 })
-            }
+            },
         }
     }
 }
@@ -166,7 +169,9 @@ impl<R: PathRoot> RootedRolePath<End, R> {
     }
 }
 
-impl<R: PathRole, Root: PathRoot> RootChildPosMut<R> for RootedRolePath<R, Root> {
+impl<R: PathRole, Root: PathRoot> RootChildPosMut<R>
+    for RootedRolePath<R, Root>
+{
     fn root_child_pos_mut(&mut self) -> &mut usize {
         self.role_path.root_child_pos_mut()
     }
@@ -266,9 +271,15 @@ impl RootChildPos<Start> for PatternEndPath {
         0
     }
 }
-impl<R: PathRole> PathChild<R> for PatternEndPath where Self: HasPath<R> + PatternRootChild<R> {}
+impl<R: PathRole> PathChild<R> for PatternEndPath where
+    Self: HasPath<R> + PatternRootChild<R>
+{
+}
 
-impl<R> PatternRootChild<R> for PatternEndPath where PatternEndPath: RootChildPos<R> {}
+impl<R> PatternRootChild<R> for PatternEndPath where
+    PatternEndPath: RootChildPos<R>
+{
+}
 
 impl HasPath<End> for PatternEndPath {
     fn path(&self) -> &Vec<ChildLocation> {

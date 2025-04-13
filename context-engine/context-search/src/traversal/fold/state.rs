@@ -15,7 +15,7 @@ use crate::{
             },
             TraversalCache,
         },
-        state::top_down::end::EndState,
+        state::end::EndState,
     },
 };
 

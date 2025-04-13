@@ -1,13 +1,15 @@
 pub mod cursor;
 pub(crate) mod traversal;
 
-pub mod bottom_up;
-pub mod top_down;
+pub mod child;
+pub mod end;
+pub mod parent;
+pub mod start;
 
-use bottom_up::parent::ParentState;
+use child::ChildState;
 use cursor::PatternRangeCursor;
+use parent::ParentState;
 use std::cmp::Ordering;
-use top_down::child::ChildState;
 
 use crate::path::{
     mutators::move_path::key::TokenPosition,

@@ -5,7 +5,7 @@ use crate::{
         RoleChildPath,
     },
     traversal::{
-        state::top_down::end::{
+        state::end::{
             EndKind,
             EndState,
             PrefixEnd,
@@ -31,7 +31,7 @@ impl Traceable for EndState {
         match &self.kind {
             EndKind::Range(p) => (self.root_pos, p).trace(ctx),
             EndKind::Prefix(p) => (self.root_pos, p).trace(ctx),
-            _ => {}
+            _ => {},
         }
     }
 }
