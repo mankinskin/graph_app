@@ -18,7 +18,7 @@ members = [
   "justlog",
   "context-engine/context-search",
   "context-engine/context-insert",
-  "context-engine/context-read",
+  "context-engine/context-read", "context-engine/code-helper",
 ]
 
 [profile.release]
