@@ -1,14 +1,12 @@
-use crate::{
+use context_trace::{
     graph::vertex::child::Child,
     path::accessors::complete::PathComplete,
+    trace::cache::TraceCache,
 };
 
-use super::{
-    cache::TraversalCache,
-    state::end::{
-        EndKind,
-        EndState,
-    },
+use super::state::end::{
+    EndKind,
+    EndState,
 };
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -65,7 +63,7 @@ impl PathComplete for FinishedKind {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CompleteState {
-    pub cache: TraversalCache,
+    pub cache: TraceCache,
     pub root: Child,
     pub start: Child,
 }
@@ -97,7 +95,7 @@ impl TryFrom<FinishedState> for CompleteState {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IncompleteState {
     pub end_state: EndState,
-    pub cache: TraversalCache,
+    pub cache: TraceCache,
     pub root: Child,
     pub start: Child,
 }
@@ -113,7 +111,7 @@ impl TryFrom<FinishedState> for IncompleteState {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FinishedState {
     pub kind: FinishedKind,
-    pub cache: TraversalCache,
+    pub cache: TraceCache,
     pub root: Child,
     pub start: Child,
 }

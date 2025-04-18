@@ -4,9 +4,8 @@ use super::{
     child::ChildState,
     parent::ParentState,
     InnerKind,
-    StateDirection,
 };
-use crate::{
+use context_trace::{
     graph::vertex::location::child::ChildLocation,
     path::{
         accessors::{
@@ -16,20 +15,25 @@ use crate::{
         mutators::move_path::key::TokenPosition,
         RoleChildPath,
     },
-    traversal::cache::key::{
-        directed::{
-            up::UpKey,
-            DirectedKey,
+    trace::{
+        cache::{
+            entry::new::NewEntry,
+            key::{
+                directed::{
+                    up::UpKey,
+                    DirectedKey,
+                },
+                prev::PrevKey,
+                props::{
+                    CursorPosition,
+                    RootKey,
+                    TargetKey,
+                },
+            },
         },
-        prev::PrevKey,
-        props::{
-            CursorPosition,
-            RootKey,
-            TargetKey,
-        },
+        StateDirection,
     },
 };
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TraversalState {
     pub prev: PrevKey,
@@ -57,6 +61,16 @@ impl TraversalState {
         match &self.kind {
             InnerKind::Parent(_) => StateDirection::BottomUp,
             InnerKind::Child(_) => StateDirection::TopDown,
+        }
+    }
+}
+
+impl From<TraversalState> for NewEntry {
+    fn from(state: TraversalState) -> Self {
+        Self {
+            prev: state.prev_key(),
+            //root_pos: state.root_pos(),
+            kind: state.kind.into(),
         }
     }
 }

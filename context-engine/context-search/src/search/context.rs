@@ -1,16 +1,16 @@
-use crate::{
-    graph::getters::ErrorReason,
-    traversal::{
-        container::bft::BftQueue,
-        iterator::policy::DirectedTraversalPolicy,
-        result::FinishedState,
-        state::parent::{
-            batch::ParentBatch,
-            ParentState,
-        },
-        traversable::Traversable,
-        TraversalKind,
+use crate::traversal::{
+    container::bft::BftQueue,
+    iterator::policy::DirectedTraversalPolicy,
+    result::FinishedState,
+    state::parent::{
+        batch::ParentBatch,
+        ParentState,
     },
+    TraversalKind,
+};
+use context_trace::{
+    graph::getters::ErrorReason,
+    trace::traversable::Traversable,
 };
 
 #[derive(Debug)]
@@ -37,15 +37,6 @@ impl<T: Traversable> DirectedTraversalPolicy for ParentPolicy<T> {
 pub struct SearchContext<T: Traversable> {
     pub graph: T,
 }
-
-//pub trait SearchTraversalPolicy<T: Traversable>:
-//    DirectedTraversalPolicy<Trav = T>
-//{
-//}
-//
-//impl<T: Traversable> SearchTraversalPolicy<T> for AncestorPolicy<T> {}
-//
-//impl<T: Traversable> SearchTraversalPolicy<T> for ParentPolicy<T> {}
 
 pub type SearchResult = Result<FinishedState, ErrorReason>;
 #[derive(Debug)]

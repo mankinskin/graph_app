@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use context_search::{
     HashMap,
     graph::vertex::location::SubLocation,
-    traversal::cache::entry::position::{
+    trace::cache::entry::position::{
         Offset,
         SubSplitLocation,
     },

@@ -33,13 +33,13 @@ use context_search::{
     },
     trace::{
         TraceContext,
+        cache::{
+            TraceCache,
+            label_key::vkey::VertexCacheKey,
+        },
         node::NodeTraceContext,
     },
     traversal::{
-        cache::{
-            TraversalCache,
-            label_key::vkey::VertexCacheKey,
-        },
         result::IncompleteState,
         traversable::{
             Traversable,
@@ -51,22 +51,19 @@ use context_search::{
 pub mod partition;
 
 #[derive(Debug, Deref, DerefMut, new)]
-pub struct SplitCache
-{
+pub struct SplitCache {
     pub root_mode: RootMode,
 
     #[deref]
     #[deref_mut]
     entries: HashMap<VertexCacheKey, SplitVertexCache>,
 }
-impl SplitCache
-{
+impl SplitCache {
     pub fn augment_node(
         &mut self,
         trav: impl Traversable,
         index: Child,
-    ) -> Vec<SplitTraceState>
-    {
+    ) -> Vec<SplitTraceState> {
         let graph = trav.graph();
         let ctx = NodeTraceContext::new(&graph, index);
         self.get_mut(&index.vertex_index())
@@ -78,8 +75,7 @@ impl SplitCache
         &mut self,
         trav: impl Traversable,
         root: Child,
-    ) -> Vec<SplitTraceState>
-    {
+    ) -> Vec<SplitTraceState> {
         let graph = trav.graph();
         let ctx = NodeTraceContext::new(&graph, root);
         let index = root.vertex_index();
@@ -90,10 +86,8 @@ impl SplitCache
         &mut self,
         ctx: &mut SplitTraceStateContext<Trav>,
         nodes: I,
-    )
-    {
-        for c in nodes
-        {
+    ) {
+        for c in nodes {
             let new = self.augment_node(&ctx.trav, c);
             // todo: force order
             ctx.states.queue.extend(new.into_iter());
@@ -101,23 +95,19 @@ impl SplitCache
     }
 }
 #[derive(Debug)]
-pub struct IntervalGraph
-{
+pub struct IntervalGraph {
     pub states: SplitStates,
     pub cache: SplitCache,
     pub root: Child,
 }
 #[derive(Debug)]
-pub struct InitInterval
-{
+pub struct InitInterval {
     pub root: Child,
-    pub cache: TraversalCache,
+    pub cache: TraceCache,
     pub end_bound: usize,
 }
-impl From<IncompleteState> for InitInterval
-{
-    fn from(state: IncompleteState) -> Self
-    {
+impl From<IncompleteState> for InitInterval {
+    fn from(state: IncompleteState) -> Self {
         Self {
             cache: state.cache,
             root: state.root,
@@ -128,8 +118,7 @@ impl From<IncompleteState> for InitInterval
 impl<'a, Trav: TraversableMut + 'a> From<(&'a mut Trav, InitInterval)>
     for IntervalGraph
 {
-    fn from((trav, init): (&'a mut Trav, InitInterval)) -> Self
-    {
+    fn from((trav, init): (&'a mut Trav, InitInterval)) -> Self {
         let InitInterval {
             root,
             cache,
@@ -140,13 +129,11 @@ impl<'a, Trav: TraversableMut + 'a> From<(&'a mut Trav, InitInterval)>
         Self::from(SplitCacheContext::init(iter))
     }
 }
-impl IntervalGraph
-{
+impl IntervalGraph {
     pub fn get(
         &self,
         key: &PosKey,
-    ) -> Option<&SplitPositionCache>
-    {
+    ) -> Option<&SplitPositionCache> {
         self.cache
             .get(&key.index.vertex_index())
             .and_then(|ve| ve.positions.get(&key.pos))
@@ -154,8 +141,7 @@ impl IntervalGraph
     pub fn get_mut(
         &mut self,
         key: &PosKey,
-    ) -> Option<&mut SplitPositionCache>
-    {
+    ) -> Option<&mut SplitPositionCache> {
         self.cache
             .get_mut(&key.index.vertex_index())
             .and_then(|ve| ve.positions.get_mut(&key.pos))
@@ -163,15 +149,13 @@ impl IntervalGraph
     pub fn expect(
         &self,
         key: &PosKey,
-    ) -> &SplitPositionCache
-    {
+    ) -> &SplitPositionCache {
         self.get(key).unwrap()
     }
     pub fn expect_mut(
         &mut self,
         key: &PosKey,
-    ) -> &mut SplitPositionCache
-    {
+    ) -> &mut SplitPositionCache {
         self.get_mut(key).unwrap()
     }
 }

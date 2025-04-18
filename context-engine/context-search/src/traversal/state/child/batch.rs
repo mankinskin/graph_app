@@ -1,4 +1,8 @@
-use crate::{
+use crate::traversal::state::{
+    child::ChildState,
+    end::EndState,
+};
+use context_trace::{
     graph::{
         getters::vertex::VertexSet,
         vertex::{
@@ -11,14 +15,10 @@ use crate::{
         mutators::append::PathAppend,
         RoleChildPath,
     },
-    traversal::{
+    trace::{
         cache::key::{
             directed::DirectedKey,
             props::CursorPosition,
-        },
-        state::{
-            child::ChildState,
-            end::EndState,
         },
         traversable::Traversable,
     },

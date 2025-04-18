@@ -22,18 +22,16 @@ use context_search::{
         location::SubLocation,
         wide::Wide,
     },
-    traversal::cache::entry::position::SubSplitLocation,
+    trace::cache::entry::position::SubSplitLocation,
 };
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq)]
-pub struct PosKey
-{
+pub struct PosKey {
     pub index: Child,
     pub pos: NonZeroUsize,
 }
 
-impl PosKey
-{
+impl PosKey {
     pub fn new<P: TryInto<NonZeroUsize>>(
         index: Child,
         pos: P,
@@ -48,10 +46,8 @@ impl PosKey
     }
 }
 
-impl From<Child> for PosKey
-{
-    fn from(index: Child) -> Self
-    {
+impl From<Child> for PosKey {
+    fn from(index: Child) -> Self {
         Self {
             index,
             pos: NonZeroUsize::new(index.width()).unwrap(),
@@ -60,20 +56,17 @@ impl From<Child> for PosKey
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct SplitPositionCache
-{
+pub struct SplitPositionCache {
     pub top: HashSet<PosKey>,
     pub pattern_splits: ChildTracePositions,
 }
 
-impl std::ops::Sub<PatternSubDeltas> for SplitPositionCache
-{
+impl std::ops::Sub<PatternSubDeltas> for SplitPositionCache {
     type Output = Self;
     fn sub(
         mut self,
         rhs: PatternSubDeltas,
-    ) -> Self::Output
-    {
+    ) -> Self::Output {
         self.pattern_splits
             .iter_mut()
             .for_each(|(pid, pos)| pos.sub_index -= rhs[pid]);
@@ -81,34 +74,26 @@ impl std::ops::Sub<PatternSubDeltas> for SplitPositionCache
     }
 }
 
-impl Borrow<ChildTracePositions> for SplitPositionCache
-{
-    fn borrow(&self) -> &ChildTracePositions
-    {
+impl Borrow<ChildTracePositions> for SplitPositionCache {
+    fn borrow(&self) -> &ChildTracePositions {
         &self.pattern_splits
     }
 }
 
-impl Borrow<ChildTracePositions> for &SplitPositionCache
-{
-    fn borrow(&self) -> &ChildTracePositions
-    {
+impl Borrow<ChildTracePositions> for &SplitPositionCache {
+    fn borrow(&self) -> &ChildTracePositions {
         &self.pattern_splits
     }
 }
 
-impl BorrowMut<ChildTracePositions> for SplitPositionCache
-{
-    fn borrow_mut(&mut self) -> &mut ChildTracePositions
-    {
+impl BorrowMut<ChildTracePositions> for SplitPositionCache {
+    fn borrow_mut(&mut self) -> &mut ChildTracePositions {
         &mut self.pattern_splits
     }
 }
 
-impl SplitPositionCache
-{
-    pub fn root(subs: impl ToVertexSplitPos) -> Self
-    {
+impl SplitPositionCache {
+    pub fn root(subs: impl ToVertexSplitPos) -> Self {
         Self {
             top: HashSet::default(),
             pattern_splits: subs.to_vertex_split_pos(),
@@ -117,15 +102,13 @@ impl SplitPositionCache
     pub fn new(
         prev: PosKey,
         subs: Vec<SubSplitLocation>,
-    ) -> Self
-    {
+    ) -> Self {
         Self {
             top: HashSet::from_iter(Some(prev)),
             pattern_splits: subs.into_iter().map(Into::into).collect(),
         }
     }
-    pub fn find_clean_split(&self) -> Option<SubLocation>
-    {
+    pub fn find_clean_split(&self) -> Option<SubLocation> {
         self.pattern_splits.iter().find_map(|(pid, s)| {
             s.inner_offset.is_none().then_some(SubLocation {
                 pattern_id: *pid,

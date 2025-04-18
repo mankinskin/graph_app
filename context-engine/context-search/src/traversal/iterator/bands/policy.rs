@@ -1,4 +1,4 @@
-use crate::{
+use context_trace::{
     direction::{
         pattern::PatternDirection,
         Direction,
@@ -12,7 +12,7 @@ use crate::{
         pattern::Pattern,
         wide::Wide,
     },
-    traversal::traversable::Traversable,
+    trace::traversable::Traversable,
 };
 use itertools::Itertools;
 
@@ -30,7 +30,8 @@ pub trait BandExpandingPolicy<Trav: Traversable> {
 pub struct PostfixExpandingPolicy<D: PatternDirection> {
     _ty: std::marker::PhantomData<D>,
 }
-impl<Trav: Traversable, D: PatternDirection> BandExpandingPolicy<Trav> for PostfixExpandingPolicy<D>
+impl<Trav: Traversable, D: PatternDirection> BandExpandingPolicy<Trav>
+    for PostfixExpandingPolicy<D>
 where
     <D as Direction>::Opposite: PatternDirection,
 {
@@ -55,7 +56,9 @@ where
 pub struct PrefixExpandingPolicy<D: Direction> {
     _ty: std::marker::PhantomData<D>,
 }
-impl<Trav: Traversable, D: Direction> BandExpandingPolicy<Trav> for PrefixExpandingPolicy<D> {
+impl<Trav: Traversable, D: Direction> BandExpandingPolicy<Trav>
+    for PrefixExpandingPolicy<D>
+{
     fn map_band(
         location: PatternLocation,
         pattern: &Pattern,

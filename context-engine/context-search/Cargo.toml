@@ -25,6 +25,8 @@ linked_hash_set = "0.1"
 linked-hash-map = "0.5"
 one-of = "0.2"
 
+context-trace = { path = "../context-trace", features = ["test-api"] }
+
 [dependencies.pretty_assertions]
 features = ["unstable"]
 version = "^1.4"

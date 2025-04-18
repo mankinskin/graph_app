@@ -1,29 +1,25 @@
+use crate::traversal::{
+    compare::RootCursor,
+    state::{
+        child::{
+            batch::ChildIterator,
+            ChildState,
+        },
+        parent::ParentState,
+    },
+    Traversable,
+};
+use context_trace::path::mutators::adapters::IntoAdvanced;
+use derive_more::derive::{
+    Deref,
+    DerefMut,
+};
 use std::{
     collections::VecDeque,
     ops::ControlFlow::{
         self,
         Break,
         Continue,
-    },
-};
-
-use derive_more::derive::{
-    Deref,
-    DerefMut,
-};
-
-use crate::{
-    path::mutators::adapters::IntoAdvanced,
-    traversal::{
-        compare::RootCursor,
-        state::{
-            child::{
-                batch::ChildIterator,
-                ChildState,
-            },
-            parent::ParentState,
-        },
-        traversable::Traversable,
     },
 };
 

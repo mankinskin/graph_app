@@ -1,21 +1,19 @@
 use std::cmp::Ordering;
 
-use crate::{
+use crate::traversal::EndState;
+use context_trace::{
     graph::vertex::{
         child::Child,
         has_vertex_index::HasVertexIndex,
         wide::Wide,
     },
-    traversal::{
-        cache::{
-            entry::vertex::VertexCache,
-            key::{
-                directed::DirectedKey,
-                props::RootKey,
-            },
-            TraversalCache,
+    trace::cache::{
+        entry::vertex::VertexCache,
+        key::{
+            directed::DirectedKey,
+            props::RootKey,
         },
-        state::end::EndState,
+        TraceCache,
     },
 };
 
@@ -57,7 +55,7 @@ impl Ord for FinalState<'_> {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct FoldState {
-    pub cache: TraversalCache,
+    pub cache: TraceCache,
     pub end_state: EndState,
     pub start: Child,
     pub root: Child,

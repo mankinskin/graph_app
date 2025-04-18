@@ -17,28 +17,23 @@ use crate::{
 };
 use context_search::{
     graph::vertex::has_vertex_index::HasVertexIndex,
-    traversal::{
-        cache::{
-            entry::position::SubSplitLocation,
-            label_key::labelled_key,
-        },
-        traversable::Traversable,
+    trace::cache::{
+        entry::position::SubSplitLocation,
+        label_key::labelled_key,
     },
+    traversal::traversable::Traversable,
 };
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct SplitCacheContext<Trav: Traversable>
-{
+pub struct SplitCacheContext<Trav: Traversable> {
     #[deref]
     #[deref_mut]
     pub states_ctx: SplitTraceStateContext<Trav>,
 
     pub cache: SplitCache,
 }
-impl<Trav: Traversable> SplitCacheContext<Trav>
-{
-    pub fn init(mut states_ctx: SplitTraceStateContext<Trav>) -> Self
-    {
+impl<Trav: Traversable> SplitCacheContext<Trav> {
+    pub fn init(mut states_ctx: SplitTraceStateContext<Trav>) -> Self {
         let (offsets, root_mode) =
             states_ctx.completed_splits::<RootNode>(&states_ctx.ctx.root);
         let pos_splits = states_ctx
@@ -81,15 +76,13 @@ impl<Trav: Traversable> SplitCacheContext<Trav>
     pub fn apply_trace_state(
         &mut self,
         state: &SplitTraceState,
-    )
-    {
+    ) {
         let &SplitTraceState {
             index,
             offset,
             prev,
         } = state;
-        if let Some(ve) = self.cache.get_mut(&index.vertex_index())
-        {
+        if let Some(ve) = self.cache.get_mut(&index.vertex_index()) {
             ve.positions
                 .entry(offset)
                 .and_modify(|pe| {
@@ -98,9 +91,7 @@ impl<Trav: Traversable> SplitCacheContext<Trav>
                 .or_insert_with(|| {
                     self.states_ctx.new_split_position(index, offset, prev)
                 });
-        }
-        else
-        {
+        } else {
             let vertex = self.new_split_vertex(index, offset, prev);
             self.cache
                 .insert(labelled_key(&self.states_ctx.ctx.trav, index), vertex);

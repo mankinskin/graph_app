@@ -15,24 +15,22 @@ use context_search::{
         child::Child,
         has_vertex_index::HasVertexIndex,
     },
-    trace::TraceContext,
-    traversal::{
+    trace::{
+        TraceContext,
         cache::entry::position::Offset,
-        traversable::Traversable,
     },
+    traversal::traversable::Traversable,
 };
 
 #[derive(Debug, Clone)]
-pub struct SplitTraceState
-{
+pub struct SplitTraceState {
     pub index: Child,
     pub offset: Offset,
     pub prev: PosKey,
 }
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct SplitTraceContext<Trav: Traversable>
-{
+pub struct SplitTraceContext<Trav: Traversable> {
     pub root: Child,
     pub end_bound: usize,
 
@@ -41,13 +39,11 @@ pub struct SplitTraceContext<Trav: Traversable>
     pub ctx: TraceContext<Trav>,
 }
 
-impl<Trav: Traversable> SplitTraceContext<Trav>
-{
+impl<Trav: Traversable> SplitTraceContext<Trav> {
     pub fn get_node<'a, N: NodeType>(
         &'a self,
         index: &Child,
-    ) -> Option<VertexSplitContext<'a>>
-    {
+    ) -> Option<VertexSplitContext<'a>> {
         self.cache
             .entries
             .get(&index.vertex_index())
@@ -56,8 +52,7 @@ impl<Trav: Traversable> SplitTraceContext<Trav>
     pub fn completed_splits<N: NodeType>(
         &self,
         index: &Child,
-    ) -> N::CompleteSplitOutput
-    {
+    ) -> N::CompleteSplitOutput {
         self.get_node::<N>(index)
             .map(|ctx| {
                 ctx.complete_splits::<_, N>(&self.trav, self.end_bound.into())

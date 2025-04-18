@@ -1,148 +1,98 @@
-use std::{
-    iter::FromIterator,
-    sync::RwLockWriteGuard,
-};
+use std::sync::RwLockWriteGuard;
 
-use rand::seq;
-use serde_json::de::Read;
-use tracing::{
-    debug,
-    instrument,
-};
-
-use crate::read::sequence::{
-    SequenceIter,
-    ToNewTokenIndices,
-};
 use context_insert::insert::{
     context::InsertContext,
     ToInsertContext,
 };
 use context_search::{
-    direction::Right,
     graph::{
-        getters::ErrorReason,
         vertex::{
             child::Child,
-            has_vertex_data::HasVertexDataMut,
-            has_vertex_index::{
-                HasVertexIndex,
-                ToChild,
-            },
-            pattern::{
-                IntoPattern,
-                Pattern,
-            },
+            pattern::IntoPattern,
         },
         Hypergraph,
         HypergraphRef,
     },
     path::{
         mutators::move_path::Advance,
-        structs::{
-            query_range_path::FoldablePath,
-            rooted::{
-                pattern_range::PatternRangePath,
-                role_path::PatternEndPath,
-            },
-        },
+        structs::rooted::role_path::PatternEndPath,
     },
-    traversal::{
-        self,
-        fold::foldable::{
-            ErrorState,
-            Foldable,
-        },
-        traversable::{
-            impl_traversable,
-            impl_traversable_mut,
-            Traversable,
-            TraversableMut,
-        },
+    traversal::traversable::{
+        impl_traversable,
+        impl_traversable_mut,
+        Traversable,
+        TraversableMut,
     },
 };
 
-use super::overlap::{
-    chain::OverlapChain,
-    iterator::ExpansionIterator,
+use super::{
+    overlap::{
+        chain::OverlapChain,
+        iterator::ExpansionIterator,
+    },
+    sequence::ToNewTokenIndices,
 };
-pub trait HasReadContext: ToInsertContext
-{
+pub trait HasReadContext: ToInsertContext {
     fn read_context<'g>(&'g mut self) -> ReadContext;
     fn read_sequence(
         &mut self,
         //sequence: impl IntoIterator<Item = DefaultToken> + std::fmt::Debug + Send + Sync,
         sequence: impl ToNewTokenIndices,
-    ) -> Option<Child>
-    {
+    ) -> Option<Child> {
         self.read_context().read_sequence(sequence)
     }
     fn read_pattern(
         &mut self,
         pattern: impl IntoPattern,
-    ) -> Option<Child>
-    {
+    ) -> Option<Child> {
         self.read_context().read_pattern(pattern)
     }
 }
 
-impl HasReadContext for ReadContext
-{
-    fn read_context(&mut self) -> ReadContext
-    {
+impl HasReadContext for ReadContext {
+    fn read_context(&mut self) -> ReadContext {
         self.clone()
     }
 }
-impl<T: HasReadContext> HasReadContext for &'_ mut T
-{
-    fn read_context(&mut self) -> ReadContext
-    {
+impl<T: HasReadContext> HasReadContext for &'_ mut T {
+    fn read_context(&mut self) -> ReadContext {
         (**self).read_context()
     }
 }
-impl HasReadContext for HypergraphRef
-{
-    fn read_context(&mut self) -> ReadContext
-    {
+impl HasReadContext for HypergraphRef {
+    fn read_context(&mut self) -> ReadContext {
         //ReadContext::new(self.graph_mut())
         ReadContext::new(self.clone())
     }
 }
 #[derive(Debug, Clone)]
-pub struct ReadContext
-{
+pub struct ReadContext {
     pub graph: HypergraphRef,
     pub sequence: PatternEndPath,
     //pub root: Option<Child>,
 }
 
-impl Iterator for ReadContext
-{
+impl Iterator for ReadContext {
     type Item = Child;
-    fn next(&mut self) -> Option<Self::Item>
-    {
+    fn next(&mut self) -> Option<Self::Item> {
         self.read_step()
     }
 }
-pub enum ReadState
-{
+pub enum ReadState {
     Continue(Child, PatternEndPath),
     Stop(PatternEndPath),
 }
-impl ReadContext
-{
+impl ReadContext {
     pub fn new(
         graph: HypergraphRef,
         sequence: PatternEndPath,
-    ) -> Self
-    {
+    ) -> Self {
         Self { graph, sequence }
     }
     pub fn expand_block(
         &mut self,
         first: Child,
-    ) -> Child
-    {
+    ) -> Child {
         ExpansionIterator::new(
             self.clone(),
             &mut self.sequence,
@@ -150,32 +100,25 @@ impl ReadContext
         )
         .collect()
     }
-    pub fn read_step(&mut self) -> Option<Child>
-    {
+    pub fn read_step(&mut self) -> Option<Child> {
         self.next_index().map(|next| self.expand_block(next))
     }
-    pub fn read(&mut self)
-    {
-        if let Some(next) = self.read_step()
-        {
+    pub fn read(&mut self) {
+        if let Some(next) = self.read_step() {
             self.append_index(next);
             self.read()
         }
     }
-    pub fn next_index(&mut self) -> Option<Child>
-    {
-        match self.insert_or_get_complete(self.sequence.clone())
-        {
-            Ok((index, advanced)) =>
-            {
+    pub fn next_index(&mut self) -> Option<Child> {
+        match self.insert_or_get_complete(self.sequence.clone()) {
+            Ok((index, advanced)) => {
                 self.sequence = PatternEndPath::from(advanced);
                 Some(index)
-            }
-            Err(_) =>
-            {
+            },
+            Err(_) => {
                 self.sequence.advance(&self.graph);
                 None
-            }
+            },
         }
     }
     //#[instrument(skip(self))]
@@ -287,10 +230,8 @@ impl ReadContext
     //}
 }
 
-impl ToInsertContext for ReadContext
-{
-    fn insert_context(&self) -> InsertContext
-    {
+impl ToInsertContext for ReadContext {
+    fn insert_context(&self) -> InsertContext {
         InsertContext::from(self.graph.clone())
     }
 }

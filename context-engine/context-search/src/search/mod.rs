@@ -1,4 +1,11 @@
-use crate::{
+use crate::traversal::fold::foldable::Foldable;
+use context::{
+    AncestorSearchTraversal,
+    ParentSearchTraversal,
+    SearchContext,
+    SearchResult,
+};
+use context_trace::{
     graph::{
         kind::TokenOf,
         vertex::token::{
@@ -8,19 +15,10 @@ use crate::{
         Hypergraph,
         HypergraphRef,
     },
-    traversal::{
-        fold::foldable::Foldable,
-        traversable::{
-            TravKind,
-            Traversable,
-        },
+    trace::traversable::{
+        TravKind,
+        Traversable,
     },
-};
-use context::{
-    AncestorSearchTraversal,
-    ParentSearchTraversal,
-    SearchContext,
-    SearchResult,
 };
 pub mod context;
 

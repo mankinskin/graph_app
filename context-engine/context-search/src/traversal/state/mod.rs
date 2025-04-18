@@ -11,24 +11,21 @@ use cursor::PatternRangeCursor;
 use parent::ParentState;
 use std::cmp::Ordering;
 
-use crate::path::{
-    mutators::move_path::key::TokenPosition,
-    structs::rooted::root::RootedPath,
+use context_trace::{
+    path::{
+        mutators::move_path::key::TokenPosition,
+        structs::rooted::root::RootedPath,
+    },
+    trace::cache::{
+        entry::new::NewKind,
+        key::prev::PrevKey,
+    },
 };
-
-use super::cache::key::prev::PrevKey;
-
 #[derive(Clone, Debug)]
 pub struct StateNext<T> {
     pub prev: PrevKey,
     pub inner: T,
 }
-#[derive(Clone, Debug, PartialEq, Eq, Copy, Hash)]
-pub enum StateDirection {
-    BottomUp,
-    TopDown,
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BaseState<P: RootedPath> {
     pub prev_pos: TokenPosition,
@@ -54,6 +51,15 @@ impl InnerKind {
             c
         } else {
             panic!();
+        }
+    }
+}
+
+impl From<InnerKind> for NewKind {
+    fn from(state: InnerKind) -> Self {
+        match state {
+            InnerKind::Parent(state) => Self::Parent(state.into()),
+            InnerKind::Child(state) => Self::Child(state.into()),
         }
     }
 }

@@ -1,7 +1,35 @@
 pub mod batch;
-use crate::{
+use crate::traversal::state::{
+    child::{
+        batch::ChildMatchState::{
+            Match,
+            Mismatch,
+        },
+        PathPairMode::{
+            GraphMajor,
+            QueryMajor,
+        },
+        TDNext::{
+            MatchState,
+            Prefixes,
+        },
+    },
+    end::{
+        EndKind,
+        EndReason,
+        EndState,
+        RangeEnd,
+    },
+    parent::ParentState,
+    BaseState,
+};
+use batch::{
+    ChildModeCtx,
+    PathPairMode,
+    TDNext,
+};
+use context_trace::{
     graph::vertex::{
-        child::Child,
         location::child::ChildLocation,
         wide::Wide,
     },
@@ -22,50 +50,24 @@ use crate::{
         structs::rooted::index_range::IndexRangePath,
         RoleChildPath,
     },
-    traversal::{
-        cache::key::{
-            directed::{
-                up::UpKey,
-                DirectedKey,
-            },
-            props::{
-                CursorPosition,
-                LeafKey,
-                RootKey,
-                TargetKey,
-            },
-        },
-        state::{
-            child::{
-                batch::ChildMatchState::{
-                    Match,
-                    Mismatch,
+    trace::{
+        cache::{
+            entry::new::NewChild,
+            key::{
+                directed::{
+                    up::UpKey,
+                    DirectedKey,
                 },
-                PathPairMode::{
-                    GraphMajor,
-                    QueryMajor,
-                },
-                TDNext::{
-                    MatchState,
-                    Prefixes,
+                props::{
+                    CursorPosition,
+                    LeafKey,
+                    RootKey,
+                    TargetKey,
                 },
             },
-            end::{
-                EndKind,
-                EndReason,
-                EndState,
-                RangeEnd,
-            },
-            parent::ParentState,
-            BaseState,
         },
         traversable::Traversable,
     },
-};
-use batch::{
-    ChildModeCtx,
-    PathPairMode,
-    TDNext,
 };
 use derive_more::{
     derive::Deref,
@@ -182,6 +184,16 @@ impl ChildState {
     }
 }
 
+impl From<ChildState> for NewChild {
+    fn from(state: ChildState) -> Self {
+        Self {
+            root: state.root_key(),
+            target: state.target_key(),
+            end_leaf: state.path.role_leaf_child_location::<End>(),
+        }
+    }
+}
+
 impl IntoAdvanced for ChildState {
     type Next = Self;
     fn into_advanced<Trav: Traversable>(
@@ -200,15 +212,6 @@ impl IntoAdvanced for ChildState {
         } else {
             Err(self)
         }
-    }
-}
-
-impl Ord for Child {
-    fn cmp(
-        &self,
-        other: &Self,
-    ) -> Ordering {
-        self.width().cmp(&other.width())
     }
 }
 

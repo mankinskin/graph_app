@@ -1,15 +1,13 @@
-use crate::{
-    graph::{
-        kind::DirectionOf,
-        vertex::{
-            child::Child,
-            location::{
-                child::ChildLocation,
-                pattern::PatternLocation,
-            },
+use crate::traversal::Traversable;
+use context_trace::graph::{
+    kind::DirectionOf,
+    vertex::{
+        child::Child,
+        location::{
+            child::ChildLocation,
+            pattern::PatternLocation,
         },
     },
-    traversal::traversable::Traversable,
 };
 use policy::{
     BandExpandingPolicy,
@@ -35,9 +33,16 @@ pub trait BandIterator<'a, Trav: Traversable + 'a>:
         &self,
         index: Child,
     ) -> Vec<(ChildLocation, Child)> {
-        Self::Policy::map_batch(self.trav().graph().expect_child_patterns(index).iter().map(
-            |(pid, pattern)| Self::Policy::map_band(PatternLocation::new(index, *pid), &pattern),
-        ))
+        Self::Policy::map_batch(
+            self.trav().graph().expect_child_patterns(index).iter().map(
+                |(pid, pattern)| {
+                    Self::Policy::map_band(
+                        PatternLocation::new(index, *pid),
+                        &pattern,
+                    )
+                },
+            ),
+        )
     }
 }
 

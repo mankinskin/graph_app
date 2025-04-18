@@ -1,5 +1,4 @@
 use super::{
-    cache::key::props::RootKey,
     result::FinishedKind,
     state::{
         cursor::PatternRangeCursor,
@@ -9,7 +8,8 @@ use super::{
     TraversalContext,
     TraversalKind,
 };
-use crate::{
+use crate::traversal::result::FinishedState;
+use context_trace::{
     graph::{
         getters::ErrorReason,
         vertex::{
@@ -18,10 +18,10 @@ use crate::{
         },
     },
     trace::{
+        cache::key::props::RootKey,
         traceable::Traceable,
         TraceContext,
     },
-    traversal::result::FinishedState,
 };
 use foldable::ErrorState;
 use std::{

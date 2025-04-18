@@ -12,28 +12,8 @@
 
 extern crate test;
 
-pub mod direction;
-pub mod path;
-
-pub mod graph;
 pub mod search;
-pub mod trace;
 pub mod traversal;
 
 #[cfg(any(test, feature = "test-api"))]
 pub mod tests;
-
-#[cfg(not(any(test, feature = "test-api")))]
-pub use std::collections::{
-    HashMap,
-    HashSet,
-};
-#[cfg(any(test, feature = "test-api"))]
-pub use std::hash::{
-    BuildHasherDefault,
-    DefaultHasher,
-};
-#[cfg(any(test, feature = "test-api"))]
-pub type HashSet<T> = std::collections::HashSet<T, BuildHasherDefault<DefaultHasher>>;
-#[cfg(any(test, feature = "test-api"))]
-pub type HashMap<K, V> = std::collections::HashMap<K, V, BuildHasherDefault<DefaultHasher>>;

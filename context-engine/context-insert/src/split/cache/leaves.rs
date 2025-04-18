@@ -2,7 +2,7 @@ use crate::split::vertex::output::CompleteLocations;
 use context_search::{
     HashMap,
     graph::vertex::child::Child,
-    traversal::cache::entry::position::{
+    trace::cache::entry::position::{
         Offset,
         SubSplitLocation,
     },

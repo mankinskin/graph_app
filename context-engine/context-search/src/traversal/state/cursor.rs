@@ -1,4 +1,14 @@
-use crate::{
+use super::parent::ParentState;
+use crate::traversal::{
+    state::parent::IntoPrimer,
+    ControlFlow,
+};
+use context_trace::{
+    direction::{
+        pattern::PatternDirection,
+        Left,
+        Right,
+    },
     graph::vertex::{
         child::Child,
         location::{
@@ -11,14 +21,35 @@ use crate::{
     path::{
         accessors::{
             child::{
+                root::RootChild,
                 PathChild,
                 RootChildPos,
+                RootChildPosMut,
             },
-            role::PathRole,
+            has_path::HasPath,
+            role::{
+                End,
+                PathRole,
+            },
         },
         mutators::{
-            adapters::IntoPrimer,
-            move_path::key::TokenPosition,
+            append::PathAppend,
+            move_path::{
+                key::{
+                    AdvanceKey,
+                    MoveKey,
+                    RetractKey,
+                    TokenPosition,
+                },
+                leaf::{
+                    AdvanceLeaf,
+                    KeyedLeaf,
+                    RetractLeaf,
+                },
+                path::MovePath,
+                root::MoveRootPos,
+            },
+            pop::PathPop,
         },
         structs::{
             query_range_path::FoldablePath,
@@ -31,10 +62,11 @@ use crate::{
             sub_path::SubPath,
         },
     },
-    traversal::traversable::Traversable,
+    trace::traversable::{
+        TravDir,
+        Traversable,
+    },
 };
-
-use super::parent::ParentState;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PathCursor<P: FoldablePath> {
@@ -42,6 +74,38 @@ pub struct PathCursor<P: FoldablePath> {
     /// position relative to start of path
     pub relative_pos: TokenPosition,
 }
+impl<P: FoldablePath> PathPop for PathCursor<P> {
+    fn path_pop(&mut self) -> Option<ChildLocation> {
+        self.path.path_pop()
+    }
+}
+impl<P: FoldablePath> PathAppend for PathCursor<P> {
+    fn path_append(
+        &mut self,
+        parent_entry: ChildLocation,
+    ) {
+        self.path.path_append(parent_entry);
+    }
+}
+impl<R: PathRole, P: RootChild<R> + FoldablePath> RootChild<R>
+    for PathCursor<P>
+{
+    fn root_child<Trav: Traversable>(
+        &self,
+        trav: &Trav,
+    ) -> Child {
+        self.path.root_child(trav)
+    }
+}
+impl<R: PathRole, P: FoldablePath + HasPath<R>> HasPath<R> for PathCursor<P> {
+    fn path(&self) -> &Vec<ChildLocation> {
+        self.path.path()
+    }
+    fn path_mut(&mut self) -> &mut Vec<ChildLocation> {
+        self.path.path_mut()
+    }
+}
+
 impl<R: PathRole, P: FoldablePath + PathChild<R>> PathChild<R>
     for PathCursor<P>
 {
@@ -66,6 +130,80 @@ impl<R: PathRole, P: RootChildPos<R> + FoldablePath> RootChildPos<R>
 pub type PatternRangeCursor = PathCursor<PatternRangePath>;
 impl_cursor_pos! {
     CursorPosition for PatternRangeCursor, self => self.relative_pos
+}
+
+impl MovePath<Right, End> for PatternRangeCursor {
+    fn move_leaf<Trav: Traversable>(
+        &mut self,
+        location: &mut ChildLocation,
+        trav: &Trav::Guard<'_>,
+    ) -> ControlFlow<()> {
+        KeyedLeaf::new(self, location).advance_leaf(trav)
+    }
+}
+impl MovePath<Left, End> for PatternRangeCursor {
+    fn move_leaf<Trav: Traversable>(
+        &mut self,
+        location: &mut ChildLocation,
+        trav: &Trav::Guard<'_>,
+    ) -> ControlFlow<()> {
+        KeyedLeaf::new(self, location).retract_leaf(trav)
+    }
+}
+
+impl MoveRootPos<Right, End> for PatternRangeCursor {
+    fn move_root_pos<Trav: Traversable>(
+        &mut self,
+        _trav: &Trav,
+    ) -> ControlFlow<()> {
+        let pattern = &self.path.root;
+        if let Some(next) = TravDir::<Trav>::pattern_index_next(
+            pattern,
+            self.path.end.root_child_pos(),
+        ) {
+            self.advance_key(pattern[self.path.end.root_child_pos()].width());
+            *self.path.end.root_child_pos_mut() = next;
+            ControlFlow::Continue(())
+        } else {
+            ControlFlow::Break(())
+        }
+    }
+}
+impl MoveRootPos<Left, End> for PatternRangeCursor {
+    fn move_root_pos<Trav: Traversable>(
+        &mut self,
+        _trav: &Trav,
+    ) -> ControlFlow<()> {
+        let pattern = &self.path.root;
+        if let Some(prev) = TravDir::<Trav>::pattern_index_prev(
+            pattern,
+            self.path.end.root_child_pos(),
+        ) {
+            self.retract_key(pattern[self.path.end.root_child_pos()].width());
+            *self.path.end.root_child_pos_mut() = prev;
+            ControlFlow::Continue(())
+        } else {
+            ControlFlow::Break(())
+        }
+    }
+}
+impl MoveKey<Right> for PatternRangeCursor {
+    type Delta = usize;
+    fn move_key(
+        &mut self,
+        delta: Self::Delta,
+    ) {
+        self.relative_pos.advance_key(delta)
+    }
+}
+impl MoveKey<Left> for PatternRangeCursor {
+    type Delta = usize;
+    fn move_key(
+        &mut self,
+        delta: Self::Delta,
+    ) {
+        self.relative_pos.retract_key(delta)
+    }
 }
 
 impl IntoPrimer for (Child, PatternRangeCursor) {

@@ -1,18 +1,22 @@
-use super::{
-    state::{
-        child::{
-            batch::ChildIterator,
-            ChildState,
-        },
-        end::{
-            EndReason,
-            EndState,
-            RangeEnd,
-        },
+use super::state::{
+    child::{
+        batch::ChildIterator,
+        ChildState,
     },
-    traversable::Traversable,
+    end::{
+        EndReason,
+        EndState,
+        RangeEnd,
+    },
 };
-use crate::{
+use crate::traversal::{
+    state::child::batch::ChildMatchState::{
+        Match,
+        Mismatch,
+    },
+    BaseState,
+};
+use context_trace::{
     graph::vertex::wide::Wide,
     path::{
         accessors::role::End,
@@ -22,13 +26,9 @@ use crate::{
         },
         RoleChildPath,
     },
-    traversal::{
+    trace::{
         cache::key::directed::DirectedKey,
-        state::child::batch::ChildMatchState::{
-            Match,
-            Mismatch,
-        },
-        BaseState,
+        traversable::Traversable,
     },
 };
 use std::{

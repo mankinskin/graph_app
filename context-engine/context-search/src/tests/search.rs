@@ -10,9 +10,24 @@ use pretty_assertions::{
 };
 
 #[cfg(test)]
-use crate::tests::env::Env1;
+use context_trace::tests::env::Env1;
 
-use crate::{
+use crate::traversal::{
+    result::{
+        FinishedKind,
+        FinishedState,
+    },
+    state::{
+        cursor::PatternRangeCursor,
+        end::{
+            EndKind,
+            EndReason,
+            EndState,
+            PostfixEnd,
+        },
+    },
+};
+use context_trace::{
     graph::{
         getters::ErrorReason,
         kind::BaseGraphKind,
@@ -25,6 +40,7 @@ use crate::{
             },
             token::Token,
         },
+        Hypergraph,
         HypergraphRef,
     },
     lab,
@@ -38,7 +54,7 @@ use crate::{
         sub_path::SubPath,
     },
     tests::env::TestEnv,
-    traversal::{
+    trace::{
         cache::{
             entry::{
                 position::{
@@ -48,20 +64,7 @@ use crate::{
                 vertex::VertexCache,
             },
             key::directed::DirectedKey,
-            TraversalCache,
-        },
-        result::{
-            FinishedKind,
-            FinishedState,
-        },
-        state::{
-            cursor::PatternRangeCursor,
-            end::{
-                EndKind,
-                EndReason,
-                EndState,
-                PostfixEnd,
-            },
+            TraceCache,
         },
         traversable::Traversable,
     },
@@ -294,7 +297,7 @@ fn find_ancestor1() {
 
 #[test]
 fn find_ancestor2() {
-    let mut graph = crate::graph::Hypergraph::<BaseGraphKind>::default();
+    let mut graph = Hypergraph::<BaseGraphKind>::default();
     let (a, b, _w, x, y, z) = graph
         .insert_tokens([
             Token::Element('a'),
@@ -375,7 +378,7 @@ fn find_ancestor2() {
             }),
             root: xabyz,
             start: by,
-            cache: TraversalCache {
+            cache: TraceCache {
                 entries: HashMap::from_iter([
                     (
                         lab!(xabyz),
@@ -488,7 +491,7 @@ fn find_ancestor2() {
 
 #[test]
 fn find_ancestor3() {
-    let mut graph = crate::graph::Hypergraph::<BaseGraphKind>::default();
+    let mut graph = Hypergraph::<BaseGraphKind>::default();
     let (a, b, _w, x, y, z) = graph
         .insert_tokens([
             Token::Element('a'),
@@ -575,7 +578,7 @@ fn find_ancestor3() {
 
             root: xaby,
             start: ab,
-            cache: TraversalCache {
+            cache: TraceCache {
                 entries: HashMap::from_iter([
                     //(xabyz.index, VertexCache {
                     //    index: xabyz,

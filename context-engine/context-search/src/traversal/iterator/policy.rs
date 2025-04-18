@@ -1,7 +1,12 @@
 use itertools::Itertools;
 use std::fmt::Debug;
 
-use crate::{
+use crate::traversal::{
+    container::order::TraversalOrder,
+    state::parent::ParentState,
+    ParentBatch,
+};
+use context_trace::{
     graph::{
         getters::vertex::VertexSet,
         vertex::{
@@ -10,30 +15,11 @@ use crate::{
         },
     },
     path::{
-        accessors::{
-            child::root::RootChild,
-            role::PathRole,
-            root::GraphRoot,
-        },
+        accessors::root::GraphRoot,
         mutators::raise::PathRaise,
     },
-    traversal::{
-        container::order::TraversalOrder,
-        state::parent::ParentState,
-        traversable::Traversable,
-        ParentBatch,
-    },
+    trace::traversable::Traversable,
 };
-
-pub trait NodePath<R: PathRole>:
-    RootChild<R> + Send + Clone + Eq + Debug
-{
-}
-
-impl<R: PathRole, T: RootChild<R> + Send + Clone + Eq + Debug> NodePath<R>
-    for T
-{
-}
 
 pub trait DirectedTraversalPolicy: Sized + Debug {
     type Trav: Traversable;

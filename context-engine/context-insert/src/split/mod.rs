@@ -21,19 +21,20 @@ use context_search::{
             id::PatternId,
         },
     },
-    trace::child::{
-        TraceBack,
-        TraceSide,
+    trace::{
+        cache::entry::position::SubSplitLocation,
+        child::{
+            TraceBack,
+            TraceSide,
+        },
     },
-    traversal::cache::entry::position::SubSplitLocation,
 };
 use vertex::VertexSplits;
 
 pub fn position_splits<'a>(
     patterns: impl IntoIterator<Item = (&'a PatternId, &'a Pattern)>,
     pos: NonZeroUsize,
-) -> VertexSplits
-{
+) -> VertexSplits {
     VertexSplits {
         pos,
         splits: patterns
@@ -49,8 +50,7 @@ pub fn position_splits<'a>(
 pub(crate) fn range_splits<'a>(
     patterns: impl Iterator<Item = (&'a PatternId, &'a Pattern)>,
     parent_range: (NonZeroUsize, NonZeroUsize),
-) -> (VertexSplits, VertexSplits)
-{
+) -> (VertexSplits, VertexSplits) {
     let (ls, rs) = patterns
         .map(|(pid, pat)| {
             let lpos = TraceBack::trace_child_pos(pat, parent_range.0).unwrap();
@@ -73,22 +73,18 @@ pub(crate) fn range_splits<'a>(
 pub(crate) fn cleaned_position_splits<'a>(
     patterns: impl Iterator<Item = (&'a PatternId, &'a Pattern)>,
     parent_offset: NonZeroUsize,
-) -> Result<Vec<SubSplitLocation>, SubLocation>
-{
+) -> Result<Vec<SubSplitLocation>, SubLocation> {
     patterns
         .map(|(pid, pat)| {
             let pos = TraceBack::trace_child_pos(pat, parent_offset).unwrap();
             let location = SubLocation::new(*pid, pos.sub_index);
-            if pos.inner_offset.is_some() || pat.len() > 2
-            {
+            if pos.inner_offset.is_some() || pat.len() > 2 {
                 // can't be clean
                 Ok(SubSplitLocation {
                     location,
                     inner_offset: pos.inner_offset,
                 })
-            }
-            else
-            {
+            } else {
                 // must be clean
                 Err(location)
             }
@@ -101,30 +97,25 @@ pub trait SplitInner: Debug + Clone {}
 impl<T: Debug + Clone> SplitInner for T {}
 
 #[derive(Debug, Clone)]
-pub struct Split<T: SplitInner = Child>
-{
+pub struct Split<T: SplitInner = Child> {
     pub left: T,
     pub right: T,
 }
 
-impl<T: SplitInner> Split<T>
-{
+impl<T: SplitInner> Split<T> {
     pub fn new(
         left: T,
         right: T,
-    ) -> Self
-    {
+    ) -> Self {
         Self { left, right }
     }
 }
 
-impl<I, T: SplitInner + Extend<I> + IntoIterator<Item = I>> Split<T>
-{
+impl<I, T: SplitInner + Extend<I> + IntoIterator<Item = I>> Split<T> {
     pub fn infix(
         &mut self,
         mut inner: Split<T>,
-    )
-    {
+    ) {
         self.left.extend(inner.left);
         inner.right.extend(self.right.clone());
         self.right = inner.right;

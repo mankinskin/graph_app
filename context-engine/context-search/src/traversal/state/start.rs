@@ -1,20 +1,20 @@
-use crate::{
+use crate::traversal::{
+    fold::foldable::ErrorState,
+    iterator::policy::DirectedTraversalPolicy,
+    result::FinishedKind,
+    state::{
+        cursor::PatternRangeCursor,
+        parent::IntoPrimer,
+    },
+    ParentBatch,
+    TraversalKind,
+};
+use context_trace::{
     graph::{
         getters::ErrorReason,
         vertex::child::Child,
     },
-    path::mutators::{
-        adapters::IntoPrimer,
-        move_path::Advance,
-    },
-    traversal::{
-        fold::foldable::ErrorState,
-        iterator::policy::DirectedTraversalPolicy,
-        result::FinishedKind,
-        state::cursor::PatternRangeCursor,
-        ParentBatch,
-        TraversalKind,
-    },
+    path::mutators::move_path::Advance,
 };
 
 #[derive(Debug, PartialEq, Eq)]

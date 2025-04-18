@@ -1,8 +1,5 @@
-use crate::{
-    graph::{
-        getters::ErrorReason,
-        vertex::pattern::IntoPattern,
-    },
+use context_trace::{
+    graph::getters::ErrorReason,
     path::structs::{
         query_range_path::FoldablePath,
         rooted::{
@@ -10,21 +7,23 @@ use crate::{
             role_path::PatternEndPath,
         },
     },
-    traversal::{
-        result::{
-            FinishedKind,
-            FinishedState,
-        },
-        state::{
-            cursor::{
-                PatternRangeCursor,
-                ToCursor,
-            },
-            start::StartCtx,
-        },
-        TraversalKind,
-    },
 };
+
+use crate::traversal::{
+    result::{
+        FinishedKind,
+        FinishedState,
+    },
+    state::{
+        cursor::{
+            PatternRangeCursor,
+            ToCursor,
+        },
+        start::StartCtx,
+    },
+    TraversalKind,
+};
+use context_trace::graph::vertex::pattern::Pattern;
 use std::fmt::Debug;
 
 use super::FoldContext;
@@ -51,14 +50,20 @@ pub trait Foldable: Sized {
     }
 }
 
-impl<P: IntoPattern> Foldable for P {
+impl Foldable for &'_ Pattern {
     fn to_fold_context<K: TraversalKind>(
         self,
         trav: K::Trav,
     ) -> Result<FoldContext<K>, ErrorState> {
-        // build cursor path
-        let path = PatternRangePath::from(self.into_pattern());
-        path.to_fold_context::<K>(trav)
+        PatternRangePath::from(self).to_fold_context::<K>(trav)
+    }
+}
+impl Foldable for Pattern {
+    fn to_fold_context<K: TraversalKind>(
+        self,
+        trav: K::Trav,
+    ) -> Result<FoldContext<K>, ErrorState> {
+        PatternRangePath::from(self).to_fold_context::<K>(trav)
     }
 }
 

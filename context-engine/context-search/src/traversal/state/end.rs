@@ -1,4 +1,5 @@
-use crate::{
+use crate::traversal::state::cursor::PatternRangeCursor;
+use context_trace::{
     graph::vertex::{
         child::Child,
         location::child::ChildLocation,
@@ -26,30 +27,34 @@ use crate::{
             index_range::IndexRangePath,
             role_path::{
                 IndexEndPath,
+                IndexRolePath,
                 IndexStartPath,
             },
             split_path::RootedSplitPathRef,
         },
         RoleChildPath,
     },
-    traversal::{
-        cache::key::{
-            directed::{
-                up::UpKey,
-                DirectedKey,
+    trace::{
+        cache::{
+            entry::new::{
+                NewEnd,
+                NewRangeEnd,
             },
-            props::{
-                CursorPosition,
-                LeafKey,
-                RootKey,
-                TargetKey,
+            key::{
+                directed::{
+                    up::UpKey,
+                    DirectedKey,
+                },
+                props::{
+                    CursorPosition,
+                    LeafKey,
+                    RootKey,
+                    TargetKey,
+                },
             },
-        },
-        state::{
-            cursor::PatternRangeCursor,
-            StateDirection,
         },
         traversable::Traversable,
+        StateDirection,
     },
 };
 
@@ -59,6 +64,32 @@ pub enum EndKind {
     Postfix(PostfixEnd),
     Prefix(PrefixEnd),
     Complete(Child),
+}
+impl EndKind {
+    pub fn simplify_path<Trav: Traversable>(
+        mut path: IndexRolePath<Start>,
+        trav: &Trav,
+    ) -> Self {
+        path.role_path.simplify(trav);
+        match (
+            Start::is_at_border(
+                trav.graph(),
+                path.role_root_child_location::<Start>(),
+            ),
+            path.role_path.raw_child_path::<Start>().is_empty(),
+        ) {
+            (true, true) => EndKind::Complete(path.root_parent()),
+            _ => {
+                let graph = trav.graph();
+                let root = path.role_root_child_location();
+                let pattern = graph.expect_pattern_at(root);
+                EndKind::Postfix(PostfixEnd {
+                    path,
+                    inner_width: pattern_width(&pattern[root.sub_index + 1..]),
+                })
+            },
+        }
+    }
 }
 impl PathComplete for EndKind {
     fn as_complete(&self) -> Option<Child> {
@@ -89,6 +120,15 @@ impl LeafKey for RangeEnd {
         self.path.leaf_location()
     }
 }
+impl From<&RangeEnd> for NewRangeEnd {
+    fn from(state: &RangeEnd) -> Self {
+        Self {
+            target: state.target,
+            entry: GraphRootChild::<Start>::root_child_location(&state.path),
+        }
+    }
+}
+
 impl RangeEnd {
     pub fn simplify_to_end<Trav: Traversable>(
         mut self,
@@ -136,6 +176,28 @@ pub struct PrefixEnd {
     pub path: IndexEndPath,
     pub target: DirectedKey,
 }
+use context_trace::trace::{
+    traceable::Traceable,
+    TraceContext,
+};
+impl Traceable for &PrefixEnd {
+    fn trace<Trav: Traversable>(
+        &self,
+        ctx: &mut TraceContext<Trav>,
+    ) {
+        ctx.trace_path(0, &self.path, *self.target.pos.pos(), true)
+    }
+}
+impl Traceable for &RangeEnd {
+    fn trace<Trav: Traversable>(
+        &self,
+        ctx: &mut TraceContext<Trav>,
+    ) {
+        let root_entry =
+            self.path.role_root_child_location::<Start>().sub_index;
+        ctx.trace_path(root_entry, &self.path, *self.target.pos.pos(), true)
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PostfixEnd {
@@ -154,6 +216,18 @@ impl_cursor_pos! {
     CursorPosition for EndState, self => self.cursor.relative_pos
 }
 
+impl Traceable for EndState {
+    fn trace<Trav: Traversable>(
+        &self,
+        ctx: &mut TraceContext<Trav>,
+    ) {
+        match &self.kind {
+            EndKind::Range(p) => p.trace(ctx),
+            EndKind::Prefix(p) => p.trace(ctx),
+            _ => {},
+        }
+    }
+}
 impl EndState {
     pub fn is_final(&self) -> bool {
         self.reason == EndReason::QueryEnd
@@ -186,6 +260,17 @@ impl EndState {
     }
     pub fn is_complete(&self) -> bool {
         matches!(self.kind, EndKind::Complete(_))
+    }
+}
+
+impl From<&EndState> for NewEnd {
+    fn from(state: &EndState) -> Self {
+        match &state.kind {
+            EndKind::Range(range) => Self::Range(range.into()),
+            EndKind::Postfix(_) => Self::Postfix(state.root_key()),
+            EndKind::Prefix(_) => Self::Prefix(state.target_key()),
+            EndKind::Complete(_) => Self::Complete(state.target_key()),
+        }
     }
 }
 

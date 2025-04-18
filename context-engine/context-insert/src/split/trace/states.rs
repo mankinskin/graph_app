@@ -26,42 +26,37 @@ use context_search::{
         getters::vertex::VertexSet,
         vertex::child::Child,
     },
-    trace::TraceContext,
-    traversal::{
+    trace::{
+        TraceContext,
         cache::entry::position::{
             Offset,
             SubSplitLocation,
         },
-        traversable::Traversable,
     },
+    traversal::traversable::Traversable,
 };
 
 use super::SplitTraceContext;
 
 #[derive(Debug, Default)]
-pub struct SplitStates
-{
+pub struct SplitStates {
     pub leaves: Leaves,
     pub queue: VecDeque<SplitTraceState>,
 }
-impl Iterator for SplitStates
-{
+impl Iterator for SplitStates {
     type Item = SplitTraceState;
-    fn next(&mut self) -> Option<Self::Item>
-    {
+    fn next(&mut self) -> Option<Self::Item> {
         self.queue.pop_front()
     }
 }
-impl SplitStates
-{
+impl SplitStates {
     /// kind of like filter_leaves but from subsplits to trace states
     pub fn filter_trace_states<Trav: Traversable>(
         &mut self,
         trav: Trav,
         index: &Child,
         pos_splits: impl IntoIterator<Item = (Offset, Vec<SubSplitLocation>)>,
-    )
-    {
+    ) {
         let (perfect, next) = {
             let graph = trav.graph();
             let node = graph.expect_vertex(index);
@@ -87,12 +82,10 @@ impl SplitStates
                     ))
                 })
                 .fold((Vec::new(), Vec::new()), |(mut p, mut n), res| {
-                    match res
-                    {
+                    match res {
                         Ok(s) => n.push(s),
                         Err(Some(k)) => p.push(k),
-                        Err(None) =>
-                        {}
+                        Err(None) => {},
                     }
                     (p, n)
                 })
@@ -103,21 +96,18 @@ impl SplitStates
 }
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct SplitTraceStateContext<Trav: Traversable>
-{
+pub struct SplitTraceStateContext<Trav: Traversable> {
     #[deref]
     #[deref_mut]
     pub ctx: SplitTraceContext<Trav>,
     pub states: SplitStates,
 }
-impl<Trav: Traversable> SplitTraceStateContext<Trav>
-{
+impl<Trav: Traversable> SplitTraceStateContext<Trav> {
     pub fn new(
         ctx: TraceContext<Trav>,
         root: Child,
         end_bound: usize,
-    ) -> Self
-    {
+    ) -> Self {
         Self {
             ctx: SplitTraceContext {
                 ctx,
@@ -132,8 +122,7 @@ impl<Trav: Traversable> SplitTraceStateContext<Trav>
         index: Child,
         offset: NonZeroUsize,
         prev: PosKey,
-    ) -> SplitVertexCache
-    {
+    ) -> SplitVertexCache {
         let mut subs = self.completed_splits::<InnerNode>(&index);
         subs.entry(offset).or_insert_with(|| {
             let graph = self.ctx.trav.graph();
@@ -170,8 +159,7 @@ impl<Trav: Traversable> SplitTraceStateContext<Trav>
         index: Child,
         offset: NonZeroUsize,
         prev: PosKey,
-    ) -> SplitPositionCache
-    {
+    ) -> SplitPositionCache {
         let splits = {
             let graph = self.ctx.trav.graph();
             let node = graph.expect_vertex(index);
@@ -179,25 +167,22 @@ impl<Trav: Traversable> SplitTraceStateContext<Trav>
         };
 
         // handle clean splits
-        match splits
-        {
-            Ok(subs) =>
-            {
+        match splits {
+            Ok(subs) => {
                 self.states.filter_trace_states(
                     &self.ctx.trav,
                     &index,
                     Vec::from_iter([(offset, subs.clone())]),
                 );
                 SplitPositionCache::new(prev, subs)
-            }
-            Err(location) =>
-            {
+            },
+            Err(location) => {
                 self.states.leaves.push(PosKey::new(index, offset));
                 SplitPositionCache::new(prev, vec![SubSplitLocation {
                     location,
                     inner_offset: None,
                 }])
-            }
+            },
         }
     }
 }

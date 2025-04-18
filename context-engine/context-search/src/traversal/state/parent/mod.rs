@@ -2,7 +2,24 @@ pub mod batch;
 
 use batch::ParentBatch;
 
-use crate::{
+use crate::traversal::{
+    iterator::policy::DirectedTraversalPolicy,
+    state::{
+        child::{
+            ChildState,
+            RootChildState,
+        },
+        end::{
+            EndKind,
+            EndReason,
+            EndState,
+        },
+        BaseState,
+        StateNext,
+    },
+    TraversalKind,
+};
+use context_trace::{
     direction::pattern::PatternDirection,
     graph::vertex::{
         location::{
@@ -30,50 +47,56 @@ use crate::{
             role_path::IndexStartPath,
             root::RootedPath,
         },
+        RoleChildPath,
     },
-    traversal::{
-        cache::key::{
-            directed::{
-                up::UpKey,
-                DirectedKey,
+    trace::{
+        cache::{
+            entry::new::NewParent,
+            key::{
+                directed::{
+                    up::UpKey,
+                    DirectedKey,
+                },
+                prev::ToPrev,
+                props::{
+                    RootKey,
+                    TargetKey,
+                },
             },
-            prev::ToPrev,
-            props::{
-                RootKey,
-                TargetKey,
-            },
-        },
-        iterator::policy::DirectedTraversalPolicy,
-        state::{
-            child::{
-                ChildState,
-                RootChildState,
-            },
-            end::{
-                EndReason,
-                EndState,
-            },
-            BaseState,
-            StateNext,
         },
         traversable::{
             TravDir,
             Traversable,
         },
-        TraversalKind,
     },
 };
 use std::{
     borrow::Borrow,
     cmp::Ordering,
 };
-
 #[derive(Clone, Debug)]
 pub enum BUNext {
     Parents(StateNext<ParentBatch>),
     End(StateNext<EndState>),
 }
 pub type ParentState = BaseState<IndexStartPath>;
+
+pub trait IntoPrimer: Sized {
+    fn into_primer<Trav: Traversable>(
+        self,
+        trav: &Trav,
+        parent_entry: ChildLocation,
+    ) -> ParentState;
+}
+
+impl From<ParentState> for NewParent {
+    fn from(state: ParentState) -> Self {
+        Self {
+            root: state.root_key(),
+            entry: state.path.role_root_child_location(),
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 pub enum ParentNext {
@@ -122,7 +145,7 @@ impl ParentState {
                 inner: EndState {
                     reason: EndReason::Mismatch,
                     root_pos: self.root_pos,
-                    kind: self.path.simplify_to_end(trav),
+                    kind: EndKind::simplify_path(self.path, trav),
                     cursor: self.cursor,
                 },
             })

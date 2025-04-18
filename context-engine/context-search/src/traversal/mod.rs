@@ -1,5 +1,11 @@
-use cache::TraversalCache;
 use container::StateContainer;
+use context_trace::trace::{
+    cache::TraceCache,
+    traversable::{
+        TravKind,
+        Traversable,
+    },
+};
 use derive_new::new;
 use fold::foldable::ErrorState;
 use iterator::policy::DirectedTraversalPolicy;
@@ -22,16 +28,13 @@ use std::{
         Continue,
     },
 };
-use traversable::Traversable;
 
-pub mod cache;
 pub mod compare;
 pub mod container;
 pub mod fold;
 pub mod iterator;
 pub mod result;
 pub mod state;
-pub mod traversable;
 
 pub trait TraversalKind: Debug + Default {
     type Trav: Traversable;
@@ -46,7 +49,7 @@ pub struct TraversalContext<K: TraversalKind> {
     #[new(default)]
     pub batches: VecDeque<ParentBatch>,
     #[new(default)]
-    pub cache: TraversalCache,
+    pub cache: TraceCache,
     pub cursor: PatternRangeCursor,
 }
 
@@ -56,7 +59,7 @@ impl<K: TraversalKind> TryFrom<StartCtx<K>> for TraversalContext<K> {
         match start.get_parent_batch() {
             Ok(p) => Ok(Self {
                 batches: FromIterator::from_iter([p]),
-                cache: TraversalCache::new(&start.trav, start.index),
+                cache: TraceCache::new(&start.trav, start.index),
                 trav: start.trav,
                 cursor: start.cursor,
             }),
@@ -112,3 +115,25 @@ impl<K: TraversalKind> Iterator for TraversalContext<K> {
 }
 
 impl<K: TraversalKind> Unpin for TraversalContext<K> {}
+
+impl<'a, K: TraversalKind> Traversable for &'a TraversalContext<K> {
+    type Kind = TravKind<K::Trav>;
+    type Guard<'g>
+        = <K::Trav as Traversable>::Guard<'g>
+    where
+        Self: 'g;
+    fn graph(&self) -> Self::Guard<'_> {
+        self.trav.graph()
+    }
+}
+
+impl<'a, K: TraversalKind> Traversable for &'a mut TraversalContext<K> {
+    type Kind = TravKind<K::Trav>;
+    type Guard<'g>
+        = <K::Trav as Traversable>::Guard<'g>
+    where
+        Self: 'g;
+    fn graph(&self) -> Self::Guard<'_> {
+        self.trav.graph()
+    }
+}
