@@ -1,6 +1,25 @@
-use crate::graph::getters::vertex::{GetVertexIndex, VertexSet};
-use crate::graph::getters::ErrorReason;
-use crate::graph::{kind::GraphKind, vertex::{has_vertex_index::HasVertexIndex, location::pattern::IntoPatternLocation, pattern::{id::PatternId, pattern_range::PatternRangeIndex, pattern_width, Pattern}, ChildPatterns}, Hypergraph};
+use crate::graph::{
+    Hypergraph,
+    getters::{
+        ErrorReason,
+        vertex::{
+            GetVertexIndex,
+            VertexSet,
+        },
+    },
+    kind::GraphKind,
+    vertex::{
+        ChildPatterns,
+        has_vertex_index::HasVertexIndex,
+        location::pattern::IntoPatternLocation,
+        pattern::{
+            Pattern,
+            id::PatternId,
+            pattern_range::PatternRangeIndex,
+            pattern_width,
+        },
+    },
+};
 
 impl<G: GraphKind> Hypergraph<G> {
     pub fn get_pattern_at(
@@ -20,8 +39,9 @@ impl<G: GraphKind> Hypergraph<G> {
         location: impl IntoPatternLocation,
     ) -> &Pattern {
         let location = location.into_pattern_location();
-        self.get_pattern_at(location)
-            .unwrap_or_else(|_| panic!("Pattern not found at location {:#?}", location))
+        self.get_pattern_at(location.clone()).unwrap_or_else(|_| {
+            panic!("Pattern not found at location {:#?}", location)
+        })
     }
     pub fn get_pattern_mut_at(
         &mut self,
@@ -40,8 +60,10 @@ impl<G: GraphKind> Hypergraph<G> {
         location: impl IntoPatternLocation,
     ) -> &mut Pattern {
         let location = location.into_pattern_location();
-        self.get_pattern_mut_at(location)
-            .unwrap_or_else(|_| panic!("Pattern not found at location {:#?}", location))
+        self.get_pattern_mut_at(location.clone())
+            .unwrap_or_else(|_| {
+                panic!("Pattern not found at location {:#?}", location)
+            })
     }
     pub fn get_child_patterns_of(
         &self,
@@ -64,14 +86,16 @@ impl<G: GraphKind> Hypergraph<G> {
         index: impl GetVertexIndex,
         pid: PatternId,
     ) -> &Pattern {
-        self.expect_vertex(index.get_vertex_index(self)).expect_child_pattern(&pid)
+        self.expect_vertex(index.get_vertex_index(self))
+            .expect_child_pattern(&pid)
     }
     #[track_caller]
     pub fn expect_child_patterns(
         &self,
         index: impl GetVertexIndex,
     ) -> &ChildPatterns {
-        self.expect_vertex(index.get_vertex_index(self)).get_child_patterns()
+        self.expect_vertex(index.get_vertex_index(self))
+            .get_child_patterns()
     }
 
     #[track_caller]
@@ -79,7 +103,8 @@ impl<G: GraphKind> Hypergraph<G> {
         &self,
         index: impl GetVertexIndex,
     ) -> (&PatternId, &Pattern) {
-        self.expect_vertex(index.get_vertex_index(self)).expect_any_child_pattern()
+        self.expect_vertex(index.get_vertex_index(self))
+            .expect_any_child_pattern()
     }
     #[track_caller]
     pub fn expect_pattern_range_width(

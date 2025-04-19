@@ -9,7 +9,9 @@ use std::{
 use crate::{
     direction::Right,
     graph::vertex::{
+        VertexIndex,
         child::Child,
+        has_vertex_index::HasVertexIndex,
         wide::Wide,
     },
     path::mutators::move_path::key::{
@@ -30,125 +32,102 @@ use up::{
 };
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq)]
-pub enum DirectedPosition
-{
+pub enum DirectedPosition {
     BottomUp(UpPosition),
     TopDown(DownPosition),
 }
 
-impl DirectedPosition
-{
-    pub fn pos(&self) -> &TokenPosition
-    {
-        match self
-        {
+impl DirectedPosition {
+    pub fn pos(&self) -> &TokenPosition {
+        match self {
             Self::BottomUp(pos) => &pos.0,
             Self::TopDown(pos) => &pos.0,
         }
     }
-    pub fn flipped(self) -> Self
-    {
-        match self
-        {
+    pub fn flipped(self) -> Self {
+        match self {
             Self::BottomUp(pos) => Self::TopDown(pos.flipped()),
             Self::TopDown(pos) => Self::BottomUp(pos.flipped()),
         }
     }
 }
 
-impl From<usize> for DirectedPosition
-{
-    fn from(value: usize) -> Self
-    {
+impl From<usize> for DirectedPosition {
+    fn from(value: usize) -> Self {
         Self::BottomUp(value.into())
     }
 }
 
-impl Add<usize> for DirectedPosition
-{
+impl Add<usize> for DirectedPosition {
     type Output = Self;
     fn add(
         self,
         rhs: usize,
-    ) -> Self::Output
-    {
-        match self
-        {
+    ) -> Self::Output {
+        match self {
             Self::BottomUp(p) => Self::BottomUp(p + rhs),
             Self::TopDown(p) => Self::TopDown(p + rhs),
         }
     }
 }
 
-impl AddAssign<usize> for DirectedPosition
-{
+impl AddAssign<usize> for DirectedPosition {
     fn add_assign(
         &mut self,
         rhs: usize,
-    )
-    {
-        match self
-        {
+    ) {
+        match self {
             Self::BottomUp(p) => *p += rhs,
             Self::TopDown(p) => *p += rhs,
         }
     }
 }
 
-impl MoveKey<Right> for DirectedPosition
-{
+impl MoveKey<Right> for DirectedPosition {
     type Delta = usize;
     fn move_key(
         &mut self,
         delta: Self::Delta,
-    )
-    {
-        match self
-        {
+    ) {
+        match self {
             DirectedPosition::BottomUp(UpPosition(p)) =>
-            {
-                <TokenPosition as MoveKey<Right>>::move_key(p, delta)
-            }
+                <TokenPosition as MoveKey<Right>>::move_key(p, delta),
             DirectedPosition::TopDown(DownPosition(p)) =>
-            {
-                <TokenPosition as MoveKey<Right>>::move_key(p, delta)
-            }
+                <TokenPosition as MoveKey<Right>>::move_key(p, delta),
         }
     }
 }
 
-#[derive(Clone, Debug, Copy, Hash, Eq, PartialEq)]
-pub struct DirectedKey
-{
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+pub struct DirectedKey {
     pub index: Child,
     pub pos: DirectedPosition,
 }
-impl Wide for DirectedKey
-{
-    fn width(&self) -> usize
-    {
+impl Wide for DirectedKey {
+    fn width(&self) -> usize {
         self.index.width()
     }
 }
-impl MoveKey<Right> for DirectedKey
-{
+impl HasVertexIndex for DirectedKey {
+    fn vertex_index(&self) -> VertexIndex {
+        self.index.vertex_index()
+    }
+}
+impl MoveKey<Right> for DirectedKey {
     type Delta = usize;
     fn move_key(
         &mut self,
         delta: Self::Delta,
-    )
-    {
+    ) {
         self.pos.move_key(delta)
     }
 }
 
-impl DirectedKey
-{
+impl DirectedKey {
     pub fn new(
         index: Child,
         pos: impl Into<DirectedPosition>,
-    ) -> Self
-    {
+    ) -> Self {
         Self {
             index,
             pos: pos.into(),
@@ -157,8 +136,7 @@ impl DirectedKey
     pub fn up(
         index: Child,
         pos: impl Into<UpPosition>,
-    ) -> Self
-    {
+    ) -> Self {
         Self {
             index,
             pos: DirectedPosition::BottomUp(pos.into()),
@@ -167,15 +145,13 @@ impl DirectedKey
     pub fn down(
         index: Child,
         pos: impl Into<DownPosition>,
-    ) -> Self
-    {
+    ) -> Self {
         Self {
             index,
             pos: DirectedPosition::TopDown(pos.into()),
         }
     }
-    pub fn flipped(self) -> Self
-    {
+    pub fn flipped(self) -> Self {
         Self {
             index: self.index,
             pos: self.pos.flipped(),
@@ -183,21 +159,17 @@ impl DirectedKey
     }
 }
 
-impl From<Child> for DirectedKey
-{
-    fn from(index: Child) -> Self
-    {
+impl From<Child> for DirectedKey {
+    fn from(index: Child) -> Self {
         Self {
-            index,
             pos: DirectedPosition::BottomUp(index.width().into()),
+            index,
         }
     }
 }
 
-impl From<UpKey> for DirectedKey
-{
-    fn from(key: UpKey) -> Self
-    {
+impl From<UpKey> for DirectedKey {
+    fn from(key: UpKey) -> Self {
         Self {
             index: key.index,
             pos: DirectedPosition::BottomUp(key.pos),
@@ -205,10 +177,8 @@ impl From<UpKey> for DirectedKey
     }
 }
 
-impl From<DownKey> for DirectedKey
-{
-    fn from(key: DownKey) -> Self
-    {
+impl From<DownKey> for DirectedKey {
+    fn from(key: DownKey) -> Self {
         Self {
             index: key.index,
             pos: DirectedPosition::TopDown(key.pos),

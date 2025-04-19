@@ -6,7 +6,7 @@ use super::super::{
 };
 use crate::{
     path::structs::sub_path::SubPath,
-    trace::traversable::Traversable,
+    trace::has_graph::HasGraph,
 };
 
 pub trait PathLower {
@@ -19,8 +19,8 @@ pub trait PathLower {
             _ty: Default::default(),
         }
     }
-    fn path_lower<Trav: Traversable>(
+    fn path_lower<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> ControlFlow<()>;
 }

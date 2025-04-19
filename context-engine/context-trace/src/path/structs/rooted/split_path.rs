@@ -4,8 +4,8 @@ use crate::{
     path::{
         accessors::{
             child::{
-                root::GraphRootChild,
                 RootChildPos,
+                root::GraphRootChild,
             },
             role::PathRole,
             root::GraphRootPattern,
@@ -35,7 +35,9 @@ pub struct RootedSplitPathRef<'a, Root: PathRoot = IndexRoot> {
     pub sub_path: &'a SubPath,
 }
 
-impl<'a, R: PathRoot> From<&'a RootedSplitPath<R>> for RootedSplitPathRef<'a, R> {
+impl<'a, R: PathRoot> From<&'a RootedSplitPath<R>>
+    for RootedSplitPathRef<'a, R>
+{
     fn from(value: &'a RootedSplitPath<R>) -> Self {
         Self {
             root: &value.root,
@@ -68,10 +70,10 @@ impl<'a, R: PathRole, Root: PathRoot> From<&'a RootedRolePath<R, Root>>
     }
 }
 
-impl_root! { GraphRootPattern for RootedSplitPath<IndexRoot>, self => self.root.location }
-impl_root! { GraphRootPattern for RootedSplitPathRef<'_, IndexRoot>, self => self.root.location }
-impl_root! { GraphRoot for RootedSplitPath<IndexRoot>, self => self.root.location.parent }
-impl_root! { GraphRoot for RootedSplitPathRef<'_, IndexRoot>, self => self.root.location.parent }
+impl_root! { GraphRootPattern for RootedSplitPath<IndexRoot>, self => self.root.location.clone() }
+impl_root! { GraphRootPattern for RootedSplitPathRef<'_, IndexRoot>, self => self.root.location.clone() }
+impl_root! { GraphRoot for RootedSplitPath<IndexRoot>, self => self.root.location.parent.clone() }
+impl_root! { GraphRoot for RootedSplitPathRef<'_, IndexRoot>, self => self.root.location.parent.clone() }
 
 impl<R: PathRole, Root: PathRoot> RootChildPos<R> for RootedSplitPath<Root> {
     fn root_child_pos(&self) -> usize {
@@ -79,7 +81,9 @@ impl<R: PathRole, Root: PathRoot> RootChildPos<R> for RootedSplitPath<Root> {
     }
 }
 
-impl<R: PathRole, Root: PathRoot> RootChildPos<R> for RootedSplitPathRef<'_, Root> {
+impl<R: PathRole, Root: PathRoot> RootChildPos<R>
+    for RootedSplitPathRef<'_, Root>
+{
     fn root_child_pos(&self) -> usize {
         RootChildPos::<R>::root_child_pos(self.sub_path)
     }
@@ -101,5 +105,5 @@ impl<R: PathRole> GraphRootChild<R> for RootedSplitPathRef<'_, IndexRoot> {
     }
 }
 
-impl_root! { RootPattern for RootedSplitPath<IndexRoot>, self, trav => GraphRootPattern::graph_root_pattern::<Trav>(self, trav) }
-impl_root! { RootPattern for RootedSplitPathRef<'_, IndexRoot>, self, trav => GraphRootPattern::graph_root_pattern::<Trav>(self, trav) }
+impl_root! { RootPattern for RootedSplitPath<IndexRoot>, self, trav => GraphRootPattern::graph_root_pattern::<G>(self, trav) }
+impl_root! { RootPattern for RootedSplitPathRef<'_, IndexRoot>, self, trav => GraphRootPattern::graph_root_pattern::<G>(self, trav) }

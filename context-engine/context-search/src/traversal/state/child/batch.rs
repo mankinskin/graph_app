@@ -20,7 +20,7 @@ use context_trace::{
             directed::DirectedKey,
             props::CursorPosition,
         },
-        traversable::Traversable,
+        has_graph::HasGraph,
     },
 };
 use derive_more::{
@@ -56,13 +56,13 @@ use TDNext::*;
 pub type ChildQueue = VecDeque<ChildModeCtx>;
 
 #[derive(Debug)]
-pub struct ChildIterator<Trav: Traversable> {
+pub struct ChildIterator<G: HasGraph> {
     pub children: ChildQueue,
-    pub trav: Trav,
+    pub trav: G,
 }
-impl<Trav: Traversable> ChildIterator<Trav> {
+impl<G: HasGraph> ChildIterator<G> {
     pub fn new(
-        trav: Trav,
+        trav: G,
         state: ChildState,
     ) -> Self {
         Self {
@@ -84,7 +84,7 @@ impl<Trav: Traversable> ChildIterator<Trav> {
     }
 }
 
-impl<Trav: Traversable> Iterator for ChildIterator<Trav> {
+impl<G: HasGraph> Iterator for ChildIterator<G> {
     type Item = Option<ChildMatchState>;
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(cs) = self.children.pop_front() {
@@ -111,14 +111,14 @@ pub struct ChildModeCtx {
 
 impl ChildModeCtx {
     /// generate child states for index prefixes
-    pub fn prefix_states<Trav: Traversable>(
+    pub fn prefix_states<G: HasGraph>(
         &self,
-        trav: &Trav,
+        trav: &G,
     ) -> VecDeque<ChildModeCtx> {
         let leaf = self.major_leaf(&trav);
         trav.graph()
             .expect_vertex(leaf)
-            .prefix_children::<Trav>()
+            .prefix_children::<G>()
             .iter()
             .sorted_unstable_by(|a, b| b.child.width.cmp(&a.child.width))
             .map(|sub| {
@@ -146,9 +146,9 @@ impl ChildModeCtx {
             QueryMajor => self.state.cursor.path_append(location),
         }
     }
-    pub fn major_leaf<Trav: Traversable>(
+    pub fn major_leaf<G: HasGraph>(
         &self,
-        trav: &Trav,
+        trav: &G,
     ) -> Child {
         match self.mode {
             GraphMajor => self.state.path.role_leaf_child::<End, _>(trav),

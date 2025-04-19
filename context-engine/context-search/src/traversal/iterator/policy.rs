@@ -18,11 +18,11 @@ use context_trace::{
         accessors::root::GraphRoot,
         mutators::raise::PathRaise,
     },
-    trace::traversable::Traversable,
+    trace::has_graph::HasGraph,
 };
 
 pub trait DirectedTraversalPolicy: Sized + Debug {
-    type Trav: Traversable;
+    type Trav: HasGraph;
 
     /// nodes generated when an index ended
     /// (parent nodes)

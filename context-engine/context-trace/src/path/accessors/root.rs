@@ -4,14 +4,14 @@ use crate::{
         location::pattern::PatternLocation,
         pattern::Pattern,
     },
-    trace::traversable::Traversable,
+    trace::has_graph::HasGraph,
 };
 
 pub trait GraphRootPattern: GraphRoot + RootPattern {
     fn root_pattern_location(&self) -> PatternLocation;
-    fn graph_root_pattern<'a: 'g, 'g, Trav: Traversable + 'a>(
+    fn graph_root_pattern<'a: 'g, 'g, G: HasGraph + 'a>(
         &self,
-        trav: &'g Trav::Guard<'a>,
+        trav: &'g G::Guard<'a>,
     ) -> &'g Pattern {
         trav.expect_pattern_at(self.root_pattern_location())
     }
@@ -26,9 +26,9 @@ pub trait PatternRoot {
 }
 
 pub trait RootPattern {
-    fn root_pattern<'a: 'g, 'b: 'g, 'g, Trav: Traversable + 'a>(
+    fn root_pattern<'a: 'g, 'b: 'g, 'g, G: HasGraph + 'a>(
         &'b self,
-        trav: &'g Trav::Guard<'a>,
+        trav: &'g G::Guard<'a>,
     ) -> &'g Pattern;
 }
 #[macro_export]
@@ -41,8 +41,8 @@ macro_rules! impl_root {
                 'a: 'g,
                 'b: 'g,
                 'g,
-                Trav: $crate::trace::traversable::Traversable + 'a
-            >(&'b $self_, $trav: &'g Trav::Guard<'a>) -> &'g $crate::graph::vertex::pattern::Pattern {
+                G: $crate::trace::has_graph::HasGraph + 'a
+            >(&'b $self_, $trav: &'g G::Guard<'a>) -> &'g $crate::graph::vertex::pattern::Pattern {
                 $func
             }
         }

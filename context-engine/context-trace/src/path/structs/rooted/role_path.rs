@@ -58,7 +58,7 @@ use crate::{
             sub_path::SubPath,
         },
     },
-    trace::traversable::Traversable,
+    trace::has_graph::HasGraph,
     //traversal::{
     //    state::end::{
     //        EndKind,
@@ -191,13 +191,13 @@ impl<R: PathRole, Root: PathRoot> RootChildPos<R> for RootedRolePath<R, Root> {
 
 impl<R: PathRole> GraphRoot for RootedRolePath<R, IndexRoot> {
     fn root_parent(&self) -> Child {
-        self.root.location.parent
+        self.root.location.parent.clone()
     }
 }
 
 impl<R: PathRole> GraphRootPattern for RootedRolePath<R, IndexRoot> {
     fn root_pattern_location(&self) -> PatternLocation {
-        self.root.location
+        self.root.location.clone()
     }
 }
 
@@ -216,19 +216,19 @@ impl<R: PathRole, Root: PathRoot> HasRolePath<R> for RootedRolePath<R, Root> {
 }
 
 impl<R: PathRole> RootPattern for RootedRolePath<R, IndexRoot> {
-    fn root_pattern<'a: 'g, 'b: 'g, 'g, Trav: Traversable + 'a>(
+    fn root_pattern<'a: 'g, 'b: 'g, 'g, G: HasGraph + 'a>(
         &'b self,
-        trav: &'g Trav::Guard<'a>,
+        trav: &'g G::Guard<'a>,
     ) -> &'g Pattern {
-        GraphRootPattern::graph_root_pattern::<Trav>(self, trav)
+        GraphRootPattern::graph_root_pattern::<G>(self, trav)
     }
 }
 
 impl MovePath<Right, End> for PatternEndPath {
-    fn move_leaf<Trav: Traversable>(
+    fn move_leaf<G: HasGraph>(
         &mut self,
         location: &mut ChildLocation,
-        trav: &Trav::Guard<'_>,
+        trav: &G::Guard<'_>,
     ) -> ControlFlow<()> {
         location.advance_leaf(trav)
     }
@@ -261,9 +261,9 @@ impl HasPath<End> for PatternEndPath {
 //    fn path_child_location(&self) -> Option<ChildLocation> {
 //        None
 //    }
-//    fn path_child<Trav: Traversable>(
+//    fn path_child<G: HasGraph>(
 //        &self,
-//        trav: &Trav,
+//        trav: &G,
 //    ) -> Option<Child> {
 //        Some(self.root_child())
 //    }

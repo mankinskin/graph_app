@@ -9,12 +9,11 @@ use crate::{
         location::SubLocation,
     },
     trace::{
-        StateDirection,
+        TraceDirection,
         cache::{
             TraceCache,
             key::directed::DirectedKey,
         },
-        traversable::Traversable,
     },
 };
 
@@ -64,24 +63,25 @@ impl PositionCache {
             edges: Default::default(),
         }
     }
-    pub fn new<Trav: Traversable>(
+    pub fn new(
         cache: &mut TraceCache,
-        trav: &Trav,
         key: DirectedKey,
         state: NewEntry,
         add_edges: bool,
     ) -> Self {
         let mut edges = Edges::default();
         match (add_edges, state.state_direction(), state.entry_location()) {
-            (true, StateDirection::BottomUp, Some(entry)) => {
+            (true, TraceDirection::BottomUp, Some(entry)) => {
                 edges.bottom.insert(
                     state.prev_key().prev_target,
                     entry.to_sub_location(),
                 );
             },
-            (true, StateDirection::TopDown, Some(entry)) => {
-                let prev = cache.force_mut(trav, &state.prev_key().prev_target);
-                prev.edges.bottom.insert(key, entry.to_sub_location());
+            (true, TraceDirection::TopDown, Some(entry)) => {
+                let prev = cache.force_mut(&state.prev_key().prev_target);
+                prev.edges
+                    .bottom
+                    .insert(key.clone(), entry.to_sub_location());
             },
             _ => {},
         }

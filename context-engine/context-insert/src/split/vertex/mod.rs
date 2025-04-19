@@ -38,7 +38,7 @@ use context_search::{
         },
         child::ChildTracePos,
     },
-    traversal::traversable::Traversable,
+    traversal::has_graph::HasGraph,
 };
 use derive_more::derive::Deref;
 use derive_new::new;
@@ -238,9 +238,9 @@ impl VertexSplitContext<'_> {
         }
         output
     }
-    pub fn complete_splits<Trav: Traversable, N: NodeType>(
+    pub fn complete_splits<G: HasGraph, N: NodeType>(
         &self,
-        trav: &Trav,
+        trav: &G,
         end_pos: TokenPosition,
     ) -> N::CompleteSplitOutput {
         let graph = trav.graph();

@@ -16,7 +16,7 @@ use crate::{
         location::child::ChildLocation,
     },
     path::accessors::child::RootChildPos,
-    trace::traversable::Traversable,
+    trace::has_graph::HasGraph,
 };
 
 pub mod accessors;
@@ -68,9 +68,9 @@ pub trait RoleChildPath {
     {
         HasRolePath::<R>::role_path_mut(self)
     }
-    fn role_leaf_child<R: PathRole, Trav: Traversable>(
+    fn role_leaf_child<R: PathRole, G: HasGraph>(
         &self,
-        trav: &Trav,
+        trav: &G,
     ) -> Child
     where
         Self: LeafChild<R>,

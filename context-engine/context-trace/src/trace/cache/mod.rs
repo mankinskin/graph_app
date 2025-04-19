@@ -1,82 +1,45 @@
-use std::fmt::Display;
-
-use derive_more::derive::IntoIterator;
-use key::directed::DirectedKey;
-use label_key::vkey::{
-    VertexCacheKey,
-    labelled_key,
-};
-
 use crate::{
     HashMap,
     graph::vertex::{
+        VertexIndex,
         child::Child,
         has_vertex_index::HasVertexIndex,
     },
     trace::cache::{
-        entry::{
-            new::NewEntry,
-            position::PositionCache,
-            vertex::VertexCache,
-        },
         key::props::TargetKey,
+        new::NewEntry,
+        position::PositionCache,
+        vertex::VertexCache,
     },
 };
+use derive_more::derive::IntoIterator;
+use key::directed::DirectedKey;
 
-use super::traversable::{
-    TravToken,
-    Traversable,
-};
-
-pub mod entry;
 pub mod key;
-pub mod label_key;
+pub mod new;
+pub mod position;
+pub mod vertex;
+
+pub type StateDepth = usize;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, IntoIterator)]
 pub struct TraceCache {
-    pub entries: HashMap<VertexCacheKey, VertexCache>,
-}
-
-impl Extend<(VertexCacheKey, VertexCache)> for TraceCache {
-    fn extend<T: IntoIterator<Item = (VertexCacheKey, VertexCache)>>(
-        &mut self,
-        iter: T,
-    ) {
-        for (k, v) in iter {
-            if let Some(c) = self.entries.get_mut(&k) {
-                assert!(c.index == v.index);
-                c.bottom_up.extend(v.bottom_up);
-                c.top_down.extend(v.top_down);
-            } else {
-                self.entries.insert(k, v);
-            }
-        }
-    }
+    pub entries: HashMap<VertexIndex, VertexCache>,
 }
 impl TraceCache {
-    pub fn new<Trav: Traversable>(
-        trav: &Trav,
-        start_index: Child,
-    ) -> Self
-    where
-        TravToken<Trav>: Display,
-    {
+    pub fn new(start_index: Child) -> Self {
         let mut entries = HashMap::default();
         entries.insert(
-            labelled_key(trav, start_index),
+            start_index.vertex_index(),
             VertexCache::start(start_index),
         );
         Self { entries }
     }
-    pub fn add_state<Trav: Traversable, E: Into<NewEntry>>(
+    pub fn add_state<E: Into<NewEntry>>(
         &mut self,
-        trav: &Trav,
         state: E,
         add_edges: bool,
-    ) -> (DirectedKey, bool)
-    where
-        TravToken<Trav>: Display,
-    {
+    ) -> (DirectedKey, bool) {
         let state = state.into();
         let key = state.target_key();
         if let Some(ve) = self.entries.get_mut(&key.index.vertex_index()) {
@@ -85,48 +48,41 @@ impl TraceCache {
             } else {
                 //drop(ve);
 
-                let pe = PositionCache::new(self, trav, key, state, add_edges);
+                let pe =
+                    PositionCache::new(self, key.clone(), state, add_edges);
                 let ve =
                     self.entries.get_mut(&key.index.vertex_index()).unwrap();
                 ve.insert(&key.pos, pe);
                 (key, true)
             }
         } else {
-            self.new_vertex(trav, key, state, add_edges);
+            self.new_entry(key.clone(), state, add_edges);
             (key, true)
         }
     }
-
-    fn new_vertex<Trav: Traversable>(
+    fn new_entry(
         &mut self,
-        trav: &Trav,
         key: DirectedKey,
         state: NewEntry,
         add_edges: bool,
-    ) where
-        TravToken<Trav>: Display,
-    {
-        let mut ve = VertexCache::from(key.index);
-        let pe = PositionCache::new(self, trav, key, state, add_edges);
+    ) {
+        let mut ve = VertexCache::from(key.index.clone());
+        let pe = PositionCache::new(self, key.clone(), state, add_edges);
         ve.insert(&key.pos, pe);
-        self.entries.insert(labelled_key(trav, key.index), ve);
+        self.entries.insert(key.index.vertex_index(), ve);
     }
-    pub fn force_mut<Trav: Traversable>(
+    pub fn force_mut(
         &mut self,
-        trav: &Trav,
         key: &DirectedKey,
-    ) -> &mut PositionCache
-    where
-        TravToken<Trav>: Display,
-    {
+    ) -> &mut PositionCache {
         if !self.exists(key) {
-            let pe = PositionCache::start(key.index);
+            let pe = PositionCache::start(key.index.clone());
             if let Some(ve) = self.get_vertex_mut(&key.index) {
                 ve.insert(&key.pos, pe);
             } else {
-                let mut ve = VertexCache::from(key.index);
+                let mut ve = VertexCache::from(key.index.clone());
                 ve.insert(&key.pos, pe);
-                self.entries.insert(labelled_key(trav, key.index), ve);
+                self.entries.insert(key.index.vertex_index(), ve);
             }
         }
         self.expect_mut(key)
@@ -165,10 +121,8 @@ impl TraceCache {
         &mut self,
         key: &DirectedKey,
     ) -> Option<&mut PositionCache> {
-        self.get_vertex_mut(&key.index).and_then(|ve| {
-            //println!("get_entry positions {:#?}: {:#?}", key, ve.positions);
-            ve.get_mut(&key.pos)
-        })
+        self.get_vertex_mut(&key.index)
+            .and_then(|ve| ve.get_mut(&key.pos))
     }
     pub fn expect(
         &self,
@@ -196,6 +150,23 @@ impl TraceCache {
             ve.get(&key.pos).is_some()
         } else {
             false
+        }
+    }
+}
+
+impl Extend<(VertexIndex, VertexCache)> for TraceCache {
+    fn extend<T: IntoIterator<Item = (VertexIndex, VertexCache)>>(
+        &mut self,
+        iter: T,
+    ) {
+        for (k, v) in iter {
+            if let Some(c) = self.entries.get_mut(&k) {
+                assert!(c.index == v.index);
+                c.bottom_up.extend(v.bottom_up);
+                c.top_down.extend(v.top_down);
+            } else {
+                self.entries.insert(k, v);
+            }
         }
     }
 }

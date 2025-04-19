@@ -12,11 +12,11 @@ use context_trace::{
         pattern::Pattern,
         wide::Wide,
     },
-    trace::traversable::Traversable,
+    trace::has_graph::HasGraph,
 };
 use itertools::Itertools;
 
-pub trait BandExpandingPolicy<Trav: Traversable> {
+pub trait BandExpandingPolicy<G: HasGraph> {
     fn map_band(
         location: PatternLocation,
         pattern: &Pattern,
@@ -30,7 +30,7 @@ pub trait BandExpandingPolicy<Trav: Traversable> {
 pub struct PostfixExpandingPolicy<D: PatternDirection> {
     _ty: std::marker::PhantomData<D>,
 }
-impl<Trav: Traversable, D: PatternDirection> BandExpandingPolicy<Trav>
+impl<G: HasGraph, D: PatternDirection> BandExpandingPolicy<G>
     for PostfixExpandingPolicy<D>
 where
     <D as Direction>::Opposite: PatternDirection,
@@ -56,7 +56,7 @@ where
 pub struct PrefixExpandingPolicy<D: Direction> {
     _ty: std::marker::PhantomData<D>,
 }
-impl<Trav: Traversable, D: Direction> BandExpandingPolicy<Trav>
+impl<G: HasGraph, D: Direction> BandExpandingPolicy<G>
     for PrefixExpandingPolicy<D>
 {
     fn map_band(

@@ -12,14 +12,12 @@ use context_trace::{
         TestEnv,
     },
     trace::cache::{
-        entry::{
-            position::{
-                Edges,
-                PositionCache,
-            },
-            vertex::VertexCache,
-        },
         key::directed::DirectedKey,
+        position::{
+            Edges,
+            PositionCache,
+        },
+        vertex::VertexCache,
     },
 };
 use std::convert::TryInto;
@@ -79,7 +77,7 @@ fn traverse_graph1() {
     assert_eq!(res.end_state.width(), 5);
 
     assert_eq!(
-        res.cache.entries[&lab!(a)],
+        res.cache.entries[&a.index],
         VertexCache {
             index: *a,
             bottom_up: FromIterator::from_iter([]),
@@ -87,7 +85,7 @@ fn traverse_graph1() {
         },
     );
     assert_eq!(
-        res.cache.entries[&lab!(abcd)],
+        res.cache.entries[&abcd.index],
         VertexCache {
             index: *abcd,
             bottom_up: FromIterator::from_iter([(
@@ -108,7 +106,7 @@ fn traverse_graph1() {
         }
     );
     assert_eq!(
-        res.cache.entries[&lab!(ef)],
+        res.cache.entries[&ef.index],
         VertexCache {
             index: *ef,
             bottom_up: FromIterator::from_iter([]),
@@ -129,7 +127,7 @@ fn traverse_graph1() {
         }
     );
     assert_eq!(
-        res.cache.entries[&lab!(e)],
+        res.cache.entries[&e.index],
         VertexCache {
             index: *e,
             top_down: FromIterator::from_iter([(
@@ -144,7 +142,7 @@ fn traverse_graph1() {
         },
     );
     assert_eq!(
-        res.cache.entries[&lab!(abc)],
+        res.cache.entries[&abc.index],
         VertexCache {
             index: *abc,
             bottom_up: FromIterator::from_iter([(
@@ -165,7 +163,7 @@ fn traverse_graph1() {
         }
     );
     assert_eq!(
-        res.cache.entries[&lab!(abcdef)],
+        res.cache.entries[&abcdef.index],
         VertexCache {
             index: *abcdef,
             bottom_up: FromIterator::from_iter([(

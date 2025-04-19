@@ -13,7 +13,7 @@ use crate::{
         End,
         Start,
     },
-    trace::traversable::Traversable,
+    trace::has_graph::HasGraph,
 };
 
 pub trait RelativeDirection: PatternDirection {}
@@ -67,12 +67,12 @@ pub trait PathBorder {
     //fn pattern_outer_pos<P: IntoPattern>(&self, pattern: P) -> Option<usize> {
     //    Self::pattern_entry_outer_pos(pattern, <_ as GraphRootChild<R>>::root_child_location(self).sub_index)
     //}
-    fn is_at_border<Trav: Traversable>(
-        trav: Trav,
+    fn is_at_border<G: HasGraph>(
+        trav: G,
         location: ChildLocation,
     ) -> bool {
         let graph = trav.graph();
-        let pattern = graph.expect_pattern_at(location);
+        let pattern = graph.expect_pattern_at(location.clone());
         <Self::BorderDirection as PatternDirection>::pattern_index_next(
             pattern,
             location.sub_index,

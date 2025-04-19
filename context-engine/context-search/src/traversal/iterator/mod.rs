@@ -9,9 +9,9 @@ use context_trace::{
         Direction,
     },
     graph::vertex::has_vertex_index::ToChild,
-    trace::traversable::{
+    trace::has_graph::{
+        HasGraph,
         TravDir,
-        Traversable,
     },
 };
 
@@ -19,19 +19,19 @@ pub mod bands;
 pub mod policy;
 
 pub trait HasChildRoleIters: ToChild {
-    fn postfix_iter<'a, Trav: Traversable + 'a>(
+    fn postfix_iter<'a, G: HasGraph + 'a>(
         &self,
-        trav: Trav,
-    ) -> PostfixIterator<'a, Trav>
+        trav: G,
+    ) -> PostfixIterator<'a, G>
     where
-        <TravDir<Trav> as Direction>::Opposite: PatternDirection,
+        <TravDir<G> as Direction>::Opposite: PatternDirection,
     {
         PostfixIterator::band_iter(trav, self.to_child())
     }
-    fn prefix_iter<'a, Trav: Traversable + 'a>(
+    fn prefix_iter<'a, G: HasGraph + 'a>(
         &self,
-        trav: Trav,
-    ) -> PrefixIterator<'a, Trav> {
+        trav: G,
+    ) -> PrefixIterator<'a, G> {
         PrefixIterator::band_iter(trav, self.to_child())
     }
 }

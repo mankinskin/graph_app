@@ -1,9 +1,9 @@
 use super::TraceContext;
-use crate::trace::Traversable;
+use crate::trace::HasGraph;
 
 pub trait Traceable {
-    fn trace<Trav: Traversable>(
+    fn trace<G: HasGraph>(
         &self,
-        ctx: &mut TraceContext<Trav>,
+        ctx: &mut TraceContext<G>,
     );
 }

@@ -8,7 +8,7 @@ use crate::{
         Right,
     },
     path::accessors::role::End,
-    trace::traversable::Traversable,
+    trace::has_graph::HasGraph,
 };
 
 pub mod key;
@@ -17,9 +17,9 @@ pub mod path;
 pub mod root;
 
 pub trait Retract: MovePath<Left, End> {
-    fn retract<Trav: Traversable>(
+    fn retract<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> ControlFlow<()> {
         self.move_path(trav)
     }
@@ -28,18 +28,18 @@ pub trait Retract: MovePath<Left, End> {
 impl<T: MovePath<Left, End>> Retract for T {}
 
 pub trait CanAdvance: Advance + Clone {
-    fn can_advance<Trav: Traversable>(
+    fn can_advance<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> bool {
         self.clone().move_path(trav).is_continue()
     }
 }
 impl<T: Advance + Clone> CanAdvance for T {}
 pub trait Advance: MovePath<Right, End> {
-    fn advance<Trav: Traversable>(
+    fn advance<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> ControlFlow<()> {
         self.move_path(trav)
     }

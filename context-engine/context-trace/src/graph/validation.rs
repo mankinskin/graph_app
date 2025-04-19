@@ -1,7 +1,9 @@
-use crate::graph::kind::GraphKind;
-use crate::graph::vertex::location::pattern::{
-    IntoPatternLocation,
-    PatternLocation,
+use crate::graph::{
+    kind::GraphKind,
+    vertex::location::pattern::{
+        IntoPatternLocation,
+        PatternLocation,
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -39,11 +41,15 @@ where
     ) -> Result<(), ValidationError> {
         let location = location.into_pattern_location();
         let pattern = self
-            .get_pattern_at(location)
-            .map_err(|_| ValidationError::InvalidPattern(location))?;
+            .get_pattern_at(location.clone())
+            .map_err(|_| ValidationError::InvalidPattern(location.clone()))?;
         if end >= pattern.len() {
             Err(ValidationError::InvalidPatternRange(
-                format!("End index {} out of pattern range {}", end, pattern.len()),
+                format!(
+                    "End index {} out of pattern range {}",
+                    end,
+                    pattern.len()
+                ),
                 location,
                 start,
                 end,
@@ -51,7 +57,7 @@ where
         } else if end < start {
             Err(ValidationError::InvalidPatternRange(
                 format!("end < start: {} < {}", end, start),
-                location,
+                location.clone(),
                 start,
                 end,
             ))

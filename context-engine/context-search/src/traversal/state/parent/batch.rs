@@ -7,7 +7,7 @@ use crate::traversal::{
         },
         parent::ParentState,
     },
-    Traversable,
+    HasGraph,
 };
 use context_trace::path::mutators::adapters::IntoAdvanced;
 use derive_more::derive::{
@@ -29,15 +29,15 @@ pub struct ParentBatch {
 }
 
 #[derive(Debug)]
-pub struct ParentBatchChildren<Trav: Traversable> {
+pub struct ParentBatchChildren<G: HasGraph> {
     pub batch: ParentBatch,
     pub keep: Vec<ParentState>,
-    pub trav: Trav,
+    pub trav: G,
 }
 
-impl<'a, Trav: Traversable> ParentBatchChildren<Trav> {
+impl<'a, G: HasGraph> ParentBatchChildren<G> {
     pub fn new(
-        trav: Trav,
+        trav: G,
         batch: ParentBatch,
     ) -> Self {
         assert!(!batch.is_empty());
@@ -51,7 +51,7 @@ impl<'a, Trav: Traversable> ParentBatchChildren<Trav> {
 
     pub fn find_root_cursor(
         mut self
-    ) -> ControlFlow<(ParentState, RootCursor<Trav>), Vec<ParentState>> {
+    ) -> ControlFlow<(ParentState, RootCursor<G>), Vec<ParentState>> {
         if let Some((root_parent, child)) = self.find_map(|root| root) {
             Break((
                 root_parent,
@@ -66,7 +66,7 @@ impl<'a, Trav: Traversable> ParentBatchChildren<Trav> {
     }
 }
 
-impl<Trav: Traversable> Iterator for ParentBatchChildren<Trav> {
+impl<G: HasGraph> Iterator for ParentBatchChildren<G> {
     type Item = Option<(ParentState, ChildState)>;
 
     fn next(&mut self) -> Option<Self::Item> {

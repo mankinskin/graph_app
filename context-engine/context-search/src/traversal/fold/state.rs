@@ -8,11 +8,11 @@ use context_trace::{
         wide::Wide,
     },
     trace::cache::{
-        entry::vertex::VertexCache,
         key::{
             directed::DirectedKey,
             props::RootKey,
         },
+        vertex::VertexCache,
         TraceCache,
     },
 };

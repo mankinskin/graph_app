@@ -1,9 +1,9 @@
 use container::StateContainer;
 use context_trace::trace::{
     cache::TraceCache,
-    traversable::{
+    has_graph::{
+        HasGraph,
         TravKind,
-        Traversable,
     },
 };
 use derive_new::new;
@@ -37,7 +37,7 @@ pub mod result;
 pub mod state;
 
 pub trait TraversalKind: Debug + Default {
-    type Trav: Traversable;
+    type Trav: HasGraph;
     type Container: StateContainer;
     type Policy: DirectedTraversalPolicy<Trav = Self::Trav>;
 }
@@ -59,7 +59,7 @@ impl<K: TraversalKind> TryFrom<StartCtx<K>> for TraversalContext<K> {
         match start.get_parent_batch() {
             Ok(p) => Ok(Self {
                 batches: FromIterator::from_iter([p]),
-                cache: TraceCache::new(&start.trav, start.index),
+                cache: TraceCache::new(start.index),
                 trav: start.trav,
                 cursor: start.cursor,
             }),
@@ -116,10 +116,10 @@ impl<K: TraversalKind> Iterator for TraversalContext<K> {
 
 impl<K: TraversalKind> Unpin for TraversalContext<K> {}
 
-impl<'a, K: TraversalKind> Traversable for &'a TraversalContext<K> {
+impl<'a, K: TraversalKind> HasGraph for &'a TraversalContext<K> {
     type Kind = TravKind<K::Trav>;
     type Guard<'g>
-        = <K::Trav as Traversable>::Guard<'g>
+        = <K::Trav as HasGraph>::Guard<'g>
     where
         Self: 'g;
     fn graph(&self) -> Self::Guard<'_> {
@@ -127,10 +127,10 @@ impl<'a, K: TraversalKind> Traversable for &'a TraversalContext<K> {
     }
 }
 
-impl<'a, K: TraversalKind> Traversable for &'a mut TraversalContext<K> {
+impl<'a, K: TraversalKind> HasGraph for &'a mut TraversalContext<K> {
     type Kind = TravKind<K::Trav>;
     type Guard<'g>
-        = <K::Trav as Traversable>::Guard<'g>
+        = <K::Trav as HasGraph>::Guard<'g>
     where
         Self: 'g;
     fn graph(&self) -> Self::Guard<'_> {

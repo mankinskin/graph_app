@@ -42,7 +42,7 @@ impl OverlapPrimer {
     //}
 }
 //impl Foldable for OverlapPrimer {
-//    fn fold<'a, K: TraversalKind>(self, trav: &'a K::Trav) -> FoldResult {
+//    fn fold<'a, K: TraversalKind>(self, trav: &'a K::G) -> FoldResult {
 //        FoldContext::<K>::fold_query(trav, self)
 //    }
 //}
@@ -53,8 +53,8 @@ impl OverlapPrimer {
 //        'g,
 //        T: Tokenize,
 //        D: MatchDirection,
-//        Trav: Traversable<T>,
-//    >(&self, trav: Trav) -> Option<usize> {
+//        G: HasGraph<T>,
+//    >(&self, trav: G) -> Option<usize> {
 //        match self.exit {
 //            0 => None,
 //            1 => if self.context.root_child_pos() > self.context_offset {

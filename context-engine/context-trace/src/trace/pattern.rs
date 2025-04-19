@@ -2,10 +2,11 @@ use derivative::Derivative;
 
 use crate::graph::vertex::{
     location::pattern::PatternLocation,
-    pattern::Pattern,
-    pattern::id::PatternId,
+    pattern::{
+        Pattern,
+        id::PatternId,
+    },
 };
-
 
 //pub trait GetPatternContext<'p> {
 //    type PatternCtx<'t>;
@@ -17,7 +18,7 @@ use crate::graph::vertex::{
 //    }
 //}
 
-#[derive(Debug, Clone, Copy, Derivative)]
+#[derive(Debug, Clone, Derivative)]
 #[derivative(Hash, PartialEq, Eq)]
 pub struct PatternTraceContext<'a> {
     pub loc: PatternLocation,
@@ -32,14 +33,16 @@ impl<'p> From<PatternTraceContext<'p>> for PatternId {
 }
 
 pub trait HasPatternTraceContext {
-    fn pattern_trace_context<'a>(&'a self,
-    ) -> PatternTraceContext<'a>
-        where Self: 'a;
+    fn pattern_trace_context<'a>(&'a self) -> PatternTraceContext<'a>
+    where
+        Self: 'a;
 }
 impl HasPatternTraceContext for PatternTraceContext<'_> {
     fn pattern_trace_context<'a>(&'a self) -> PatternTraceContext<'a>
-        where Self: 'a {
-        *self
+    where
+        Self: 'a,
+    {
+        self.clone()
     }
 }
 pub trait GetPatternTraceContext {
@@ -47,15 +50,19 @@ pub trait GetPatternTraceContext {
         &'b self,
         pattern_id: &PatternId,
     ) -> PatternTraceContext<'b>
-        where Self: 'b;
+    where
+        Self: 'b;
 }
 pub trait GetPatternContext {
-    type PatternCtx<'b>: HasPatternTraceContext where Self: 'b;
+    type PatternCtx<'b>: HasPatternTraceContext
+    where
+        Self: 'b;
     fn get_pattern_context<'b>(
         &'b self,
         pattern_id: &PatternId,
     ) -> Self::PatternCtx<'b>
-        where Self: 'b;
+    where
+        Self: 'b;
 }
 
 //impl<'b, T: GetPatternContext<PatternCtx<'b> = PatternTraceContext<'b>>> GetPatternTraceContext<'b> for T
@@ -76,4 +83,3 @@ pub trait GetPatternContext {
 //        pattern_id: &PatternId,
 //    ) -> Self::PatternCtx;
 //}
-

@@ -1,6 +1,6 @@
 use context_search::{
     graph::vertex::pattern::Pattern,
-    traversal::traversable::TraversableMut,
+    traversal::has_graph::HasGraphMut,
 };
 
 use super::chain::band::Band;
@@ -27,7 +27,7 @@ impl<'p> Bundle {
     }
     pub fn wrap_into_band(
         mut self,
-        mut trav: impl TraversableMut,
+        mut trav: impl HasGraphMut,
     ) -> Band {
         assert!(!self.bundle.is_empty());
         let pattern = if self.bundle.len() == 1 {

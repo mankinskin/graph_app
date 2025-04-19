@@ -5,9 +5,9 @@ use std::{
 };
 
 use crate::graph::vertex::{
+    PatternId,
     location::ChildLocation,
     pattern::Pattern,
-    PatternId,
 };
 
 use super::super::child::Child;
@@ -19,7 +19,7 @@ pub struct PatternRangeLocation {
     pub range: Range<usize>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct PatternLocation {
     pub parent: Child,
     pub id: PatternId,
@@ -27,13 +27,10 @@ pub struct PatternLocation {
 
 impl PatternLocation {
     pub fn new(
-        parent: impl crate::graph::vertex::has_vertex_index::ToChild,
+        parent: Child,
         id: PatternId,
     ) -> Self {
-        Self {
-            parent: parent.to_child(),
-            id,
-        }
+        Self { parent, id }
     }
     pub fn to_child_location(
         &self,
@@ -60,7 +57,7 @@ impl PatternLocation {
     //    'a: 'g,
     //    'g,
     //    T: Tokenize,
-    //    Trav: Traversable<T> + 'a,
+    //    Trav: HasGraph<T> + 'a,
     //>(&'a self, trav: &'a Trav) -> Option<&Pattern> {
     //    trav.graph().get_pattern_at(self).ok()
     //}
@@ -69,7 +66,7 @@ impl PatternLocation {
     //    'a: 'g,
     //    'g,
     //    T: Tokenize,
-    //    Trav: Traversable<T> + 'a,
+    //    Trav: HasGraph<T> + 'a,
     //>(&'a self, trav: &'a Trav) -> &Pattern {
     //    trav.graph().expect_pattern_at(self)
     //}

@@ -23,7 +23,7 @@ use context_search::{
         Hypergraph,
         HypergraphRef,
     },
-    traversal::traversable::Traversable,
+    traversal::has_graph::HasGraph,
     HashMap,
 };
 

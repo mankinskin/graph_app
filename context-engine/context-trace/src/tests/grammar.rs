@@ -8,11 +8,24 @@ use std::{
 use derive_more::Deref;
 use derive_new::new;
 
-use crate::graph::getters::vertex::VertexSet;
-use crate::HashMap;
-use crate::graph::vertex::{child::Child, has_vertex_index::HasVertexIndex, location::child::ChildLocation, pattern::Pattern, VertexIndex, wide::Wide};
-use crate::graph::vertex::data::VertexData;
-use crate::graph::vertex::pattern::id::PatternId;
+use crate::{
+    HashMap,
+    graph::{
+        getters::vertex::VertexSet,
+        vertex::{
+            VertexIndex,
+            child::Child,
+            data::VertexData,
+            has_vertex_index::HasVertexIndex,
+            location::child::ChildLocation,
+            pattern::{
+                Pattern,
+                id::PatternId,
+            },
+            wide::Wide,
+        },
+    },
+};
 
 type BuildKey = RangeInclusive<usize>;
 
@@ -20,7 +33,7 @@ type BuildKey = RangeInclusive<usize>;
 pub fn test_grammar() {
     let N: usize = 100; // total length
     let k: usize = 20; // alphabet size
-                       //let mut graph = HypergraphRef::<BaseGraphKind>::default();
+    //let mut graph = HypergraphRef::<BaseGraphKind>::default();
     println!("N = {}\nk = {}", N, k);
     let num_v = count_max_nodes(N, k);
     println!("num_v = {}", num_v);
@@ -38,7 +51,8 @@ pub fn test_grammar() {
         * (std::mem::size_of::<VertexData>()
             + std::mem::size_of::<VertexIndex>())
         + 4 * g.vertex_count()
-            * (std::mem::size_of::<Child>() + std::mem::size_of::<crate::graph::vertex::parent::Parent>());
+            * (std::mem::size_of::<Child>()
+                + std::mem::size_of::<crate::graph::vertex::parent::Parent>());
     println!("total MB = {}", num_bytes as u32 / 10_u32.pow(6),);
     println!("mul = {}", num_bytes / N,);
 }
@@ -108,7 +122,8 @@ impl GraphBuilder {
                         self.graph.expect_vertex_mut(v).add_parent(loc);
                         Child::new(*v, key.clone().count())
                     } else {
-                        self.range_map.insert(key.clone(), self.range_map.len());
+                        self.range_map
+                            .insert(key.clone(), self.range_map.len());
                         let vid = self.graph.next_vertex_index();
                         let c = Child::new(vid, key.clone().count());
                         self.queue_node(BuilderNode::new(c, key.clone()));
@@ -123,7 +138,10 @@ impl GraphBuilder {
     }
     pub fn fill_grammar(&mut self) {
         let vid = self.graph.next_vertex_index();
-        self.queue_node(BuilderNode::new(Child::new(vid, self.N), 0..=self.N - 1));
+        self.queue_node(BuilderNode::new(
+            Child::new(vid, self.N),
+            0..=self.N - 1,
+        ));
         while let Some(node) = self.queue.pop_front() {
             self.add_rules(node);
         }

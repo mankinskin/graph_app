@@ -17,11 +17,11 @@ use context_search::{
         mutators::move_path::Advance,
         structs::rooted::role_path::PatternEndPath,
     },
-    traversal::traversable::{
-        impl_traversable,
-        impl_traversable_mut,
-        Traversable,
-        TraversableMut,
+    traversal::has_graph::{
+        impl_has_graph,
+        impl_has_graph_mut,
+        HasGraph,
+        HasGraphMut,
     },
 };
 
@@ -236,35 +236,35 @@ impl ToInsertContext for ReadContext {
     }
 }
 
-impl_traversable! {
+impl_has_graph! {
     impl for ReadContext,
     //Self => self.graph.graph();
     //<'a> &'a Hypergraph
     self => self.graph.write().unwrap();
     <'a> RwLockWriteGuard<'a, Hypergraph>
 }
-//impl_traversable! {
+//impl_has_graph! {
 //    impl for &'_ ReadContext,
 //    //self => self.graph.graph();
 //    //<'a> &'a Hypergraph
 //    self => self.graph.read().unwrap();
 //    <'a> RwLockReadGuard<'a, Hypergraph>
 //}
-//impl_traversable! {
+//impl_has_graph! {
 //    impl for &'_ mut ReadContext,
 //    //self => self.graph.graph();
 //    //<'a> &'a Hypergraph
 //    self => self.graph.read().unwrap();
 //    <'a> RwLockReadGuard<'a, Hypergraph>
 //}
-impl_traversable_mut! {
+impl_has_graph_mut! {
     impl for ReadContext,
     //self => self.graph.graph_mut();
     //<'a> &'a mut Hypergraph
     self => self.graph.write().unwrap();
     <'a> RwLockWriteGuard<'a, Hypergraph>
 }
-//impl_traversable_mut! {
+//impl_has_graph_mut! {
 //    impl for &'_ mut ReadContext,
 //    //self => self.graph.graph_mut();
 //    //<'a> &'a mut Hypergraph

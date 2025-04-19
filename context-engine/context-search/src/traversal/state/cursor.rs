@@ -62,9 +62,9 @@ use context_trace::{
             sub_path::SubPath,
         },
     },
-    trace::traversable::{
+    trace::has_graph::{
+        HasGraph,
         TravDir,
-        Traversable,
     },
 };
 
@@ -90,9 +90,9 @@ impl<P: FoldablePath> PathAppend for PathCursor<P> {
 impl<R: PathRole, P: RootChild<R> + FoldablePath> RootChild<R>
     for PathCursor<P>
 {
-    fn root_child<Trav: Traversable>(
+    fn root_child<G: HasGraph>(
         &self,
-        trav: &Trav,
+        trav: &G,
     ) -> Child {
         self.path.root_child(trav)
     }
@@ -112,9 +112,9 @@ impl<R: PathRole, P: FoldablePath + PathChild<R>> PathChild<R>
     fn path_child_location(&self) -> Option<ChildLocation> {
         self.path.path_child_location()
     }
-    fn path_child<Trav: Traversable>(
+    fn path_child<G: HasGraph>(
         &self,
-        trav: &Trav,
+        trav: &G,
     ) -> Option<Child> {
         self.path.path_child(trav)
     }
@@ -133,31 +133,31 @@ impl_cursor_pos! {
 }
 
 impl MovePath<Right, End> for PatternRangeCursor {
-    fn move_leaf<Trav: Traversable>(
+    fn move_leaf<G: HasGraph>(
         &mut self,
         location: &mut ChildLocation,
-        trav: &Trav::Guard<'_>,
+        trav: &G::Guard<'_>,
     ) -> ControlFlow<()> {
         KeyedLeaf::new(self, location).advance_leaf(trav)
     }
 }
 impl MovePath<Left, End> for PatternRangeCursor {
-    fn move_leaf<Trav: Traversable>(
+    fn move_leaf<G: HasGraph>(
         &mut self,
         location: &mut ChildLocation,
-        trav: &Trav::Guard<'_>,
+        trav: &G::Guard<'_>,
     ) -> ControlFlow<()> {
         KeyedLeaf::new(self, location).retract_leaf(trav)
     }
 }
 
 impl MoveRootPos<Right, End> for PatternRangeCursor {
-    fn move_root_pos<Trav: Traversable>(
+    fn move_root_pos<G: HasGraph>(
         &mut self,
-        _trav: &Trav,
+        _trav: &G,
     ) -> ControlFlow<()> {
         let pattern = &self.path.root;
-        if let Some(next) = TravDir::<Trav>::pattern_index_next(
+        if let Some(next) = TravDir::<G>::pattern_index_next(
             pattern,
             self.path.end.root_child_pos(),
         ) {
@@ -170,12 +170,12 @@ impl MoveRootPos<Right, End> for PatternRangeCursor {
     }
 }
 impl MoveRootPos<Left, End> for PatternRangeCursor {
-    fn move_root_pos<Trav: Traversable>(
+    fn move_root_pos<G: HasGraph>(
         &mut self,
-        _trav: &Trav,
+        _trav: &G,
     ) -> ControlFlow<()> {
         let pattern = &self.path.root;
-        if let Some(prev) = TravDir::<Trav>::pattern_index_prev(
+        if let Some(prev) = TravDir::<G>::pattern_index_prev(
             pattern,
             self.path.end.root_child_pos(),
         ) {
@@ -207,9 +207,9 @@ impl MoveKey<Left> for PatternRangeCursor {
 }
 
 impl IntoPrimer for (Child, PatternRangeCursor) {
-    fn into_primer<Trav: Traversable>(
+    fn into_primer<G: HasGraph>(
         self,
-        _trav: &Trav,
+        _trav: &G,
         parent_entry: ChildLocation,
     ) -> ParentState {
         let (c, cursor) = self;
@@ -219,7 +219,7 @@ impl IntoPrimer for (Child, PatternRangeCursor) {
             root_pos: width,
             path: RootedRolePath {
                 root: IndexRoot {
-                    location: parent_entry.into_pattern_location(),
+                    location: parent_entry.clone().into_pattern_location(),
                 },
                 role_path: RolePath {
                     sub_path: SubPath {

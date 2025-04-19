@@ -36,10 +36,6 @@ use context_trace::{
     },
     trace::{
         cache::{
-            entry::new::{
-                NewEnd,
-                NewRangeEnd,
-            },
             key::{
                 directed::{
                     up::UpKey,
@@ -52,9 +48,13 @@ use context_trace::{
                     TargetKey,
                 },
             },
+            new::{
+                NewEnd,
+                NewRangeEnd,
+            },
         },
-        traversable::Traversable,
-        StateDirection,
+        has_graph::HasGraph,
+        TraceDirection,
     },
 };
 
@@ -66,9 +66,9 @@ pub enum EndKind {
     Complete(Child),
 }
 impl EndKind {
-    pub fn simplify_path<Trav: Traversable>(
+    pub fn simplify_path<G: HasGraph>(
         mut path: IndexRolePath<Start>,
-        trav: &Trav,
+        trav: &G,
     ) -> Self {
         path.role_path.simplify(trav);
         match (
@@ -82,7 +82,7 @@ impl EndKind {
             _ => {
                 let graph = trav.graph();
                 let root = path.role_root_child_location();
-                let pattern = graph.expect_pattern_at(root);
+                let pattern = graph.expect_pattern_at(root.clone());
                 EndKind::Postfix(PostfixEnd {
                     path,
                     inner_width: pattern_width(&pattern[root.sub_index + 1..]),
@@ -123,16 +123,16 @@ impl LeafKey for RangeEnd {
 impl From<&RangeEnd> for NewRangeEnd {
     fn from(state: &RangeEnd) -> Self {
         Self {
-            target: state.target,
+            target: state.target.clone(),
             entry: GraphRootChild::<Start>::root_child_location(&state.path),
         }
     }
 }
 
 impl RangeEnd {
-    pub fn simplify_to_end<Trav: Traversable>(
+    pub fn simplify_to_end<G: HasGraph>(
         mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> EndKind {
         self.path.child_path_mut::<Start>().simplify(trav);
         self.path.child_path_mut::<End>().simplify(trav);
@@ -160,7 +160,7 @@ impl RangeEnd {
                 let graph = trav.graph();
                 let path: IndexStartPath = self.path.into();
                 let root = path.role_root_child_location();
-                let pattern = graph.expect_pattern_at(root);
+                let pattern = graph.expect_pattern_at(root.clone());
                 EndKind::Postfix(PostfixEnd {
                     path,
                     inner_width: pattern_width(&pattern[root.sub_index + 1..]),
@@ -181,17 +181,17 @@ use context_trace::trace::{
     TraceContext,
 };
 impl Traceable for &PrefixEnd {
-    fn trace<Trav: Traversable>(
+    fn trace<G: HasGraph>(
         &self,
-        ctx: &mut TraceContext<Trav>,
+        ctx: &mut TraceContext<G>,
     ) {
         ctx.trace_path(0, &self.path, *self.target.pos.pos(), true)
     }
 }
 impl Traceable for &RangeEnd {
-    fn trace<Trav: Traversable>(
+    fn trace<G: HasGraph>(
         &self,
-        ctx: &mut TraceContext<Trav>,
+        ctx: &mut TraceContext<G>,
     ) {
         let root_entry =
             self.path.role_root_child_location::<Start>().sub_index;
@@ -217,9 +217,9 @@ impl_cursor_pos! {
 }
 
 impl Traceable for EndState {
-    fn trace<Trav: Traversable>(
+    fn trace<G: HasGraph>(
         &self,
-        ctx: &mut TraceContext<Trav>,
+        ctx: &mut TraceContext<G>,
     ) {
         match &self.kind {
             EndKind::Range(p) => p.trace(ctx),
@@ -242,12 +242,12 @@ impl EndState {
             EndKind::Complete(_) => None,
         }
     }
-    pub fn state_direction(&self) -> StateDirection {
+    pub fn state_direction(&self) -> TraceDirection {
         match self.kind {
-            EndKind::Range(_) => StateDirection::TopDown,
-            EndKind::Postfix(_) => StateDirection::BottomUp,
-            EndKind::Prefix(_) => StateDirection::TopDown,
-            EndKind::Complete(_) => StateDirection::BottomUp,
+            EndKind::Range(_) => TraceDirection::TopDown,
+            EndKind::Postfix(_) => TraceDirection::BottomUp,
+            EndKind::Prefix(_) => TraceDirection::TopDown,
+            EndKind::Complete(_) => TraceDirection::BottomUp,
         }
     }
     pub fn end_path(&self) -> Option<RootedSplitPathRef<'_>> {
@@ -277,9 +277,9 @@ impl From<&EndState> for NewEnd {
 impl TargetKey for EndState {
     fn target_key(&self) -> DirectedKey {
         match &self.kind {
-            EndKind::Range(p) => p.target,
+            EndKind::Range(p) => p.target.clone(),
             EndKind::Postfix(_) => self.root_key().into(),
-            EndKind::Prefix(p) => p.target,
+            EndKind::Prefix(p) => p.target.clone(),
             EndKind::Complete(c) => DirectedKey::up(*c, *self.cursor_pos()),
         }
     }

@@ -17,8 +17,8 @@ use context_trace::{
         structs::rooted::root::RootedPath,
     },
     trace::cache::{
-        entry::new::NewKind,
         key::prev::PrevKey,
+        new::NewKind,
     },
 };
 #[derive(Clone, Debug)]

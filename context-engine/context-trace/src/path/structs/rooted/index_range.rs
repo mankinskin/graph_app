@@ -64,9 +64,9 @@ use crate::{
     },
     trace::{
         cache::key::props::LeafKey,
-        traversable::{
+        has_graph::{
+            HasGraph,
             TravDir,
-            Traversable,
         },
     },
 };
@@ -94,9 +94,9 @@ impl RangePath for IndexRangePath {
         }
     }
 }
-impl_root! { GraphRootPattern for IndexRangePath, self => self.root.location }
+impl_root! { GraphRootPattern for IndexRangePath, self => self.root.location.clone() }
 impl_root! { GraphRoot for IndexRangePath, self => self.root_pattern_location().parent }
-impl_root! { RootPattern for IndexRangePath, self, trav => GraphRootPattern::graph_root_pattern::<Trav>(self, trav) }
+impl_root! { RootPattern for IndexRangePath, self, trav => GraphRootPattern::graph_root_pattern::<G>(self, trav) }
 
 impl<R: PathRole + 'static> HasPath<R> for IndexRangePath
 where
@@ -135,9 +135,9 @@ where
                 ),
         )
     }
-    fn path_child<Trav: Traversable>(
+    fn path_child<G: HasGraph>(
         &self,
-        trav: &Trav,
+        trav: &G,
     ) -> Option<Child> {
         PathChild::<R>::path_child(self.role_path(), trav)
     }
@@ -159,13 +159,13 @@ impl HasMatchPaths for IndexRangePath {
 }
 
 impl MoveRootPos<Right, End> for IndexRangePath {
-    fn move_root_pos<Trav: Traversable>(
+    fn move_root_pos<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> ControlFlow<()> {
         let graph = trav.graph();
-        let pattern = self.root_pattern::<Trav>(&graph);
-        if let Some(next) = TravDir::<Trav>::pattern_index_next(
+        let pattern = self.root_pattern::<G>(&graph);
+        if let Some(next) = TravDir::<G>::pattern_index_next(
             pattern,
             RootChildPos::<End>::root_child_pos(self),
         ) {
@@ -178,13 +178,13 @@ impl MoveRootPos<Right, End> for IndexRangePath {
 }
 
 impl MoveRootPos<Left, End> for IndexRangePath {
-    fn move_root_pos<Trav: Traversable>(
+    fn move_root_pos<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> ControlFlow<()> {
         let graph = trav.graph();
-        let pattern = self.root_pattern::<Trav>(&graph);
-        if let Some(prev) = TravDir::<Trav>::pattern_index_prev(
+        let pattern = self.root_pattern::<G>(&graph);
+        if let Some(prev) = TravDir::<G>::pattern_index_prev(
             pattern,
             RootChildPos::<End>::root_child_pos(self),
         ) {
@@ -196,29 +196,29 @@ impl MoveRootPos<Left, End> for IndexRangePath {
     }
 }
 impl MovePath<Right, End> for IndexRangePath {
-    fn move_leaf<Trav: Traversable>(
+    fn move_leaf<G: HasGraph>(
         &mut self,
         location: &mut ChildLocation,
-        trav: &Trav::Guard<'_>,
+        trav: &G::Guard<'_>,
     ) -> ControlFlow<()> {
         location.advance_leaf(trav)
     }
 }
 
 impl MovePath<Left, End> for IndexRangePath {
-    fn move_leaf<Trav: Traversable>(
+    fn move_leaf<G: HasGraph>(
         &mut self,
         location: &mut ChildLocation,
-        trav: &Trav::Guard<'_>,
+        trav: &G::Guard<'_>,
     ) -> ControlFlow<()> {
         location.retract_leaf(trav)
     }
 }
 
 impl RootChild<Start> for IndexRangePath {
-    fn root_child<Trav: Traversable>(
+    fn root_child<G: HasGraph>(
         &self,
-        trav: &Trav,
+        trav: &G,
     ) -> Child {
         trav.graph()
             .expect_child_at(
@@ -231,9 +231,9 @@ impl RootChild<Start> for IndexRangePath {
 }
 
 impl RootChild<End> for IndexRangePath {
-    fn root_child<Trav: Traversable>(
+    fn root_child<G: HasGraph>(
         &self,
-        trav: &Trav,
+        trav: &G,
     ) -> Child {
         trav.graph()
             .expect_child_at(
@@ -285,9 +285,9 @@ impl RootChildPosMut<End> for IndexRangePath {
 }
 
 impl PathLower for (&mut TokenPosition, &mut IndexRangePath) {
-    fn path_lower<Trav: Traversable>(
+    fn path_lower<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> ControlFlow<()> {
         let (root_pos, range) = self;
         let (start, end, root) = (
@@ -297,7 +297,7 @@ impl PathLower for (&mut TokenPosition, &mut IndexRangePath) {
         );
         if let Some(prev) = start.path.pop() {
             let graph = trav.graph();
-            let pattern = graph.expect_pattern_at(prev);
+            let pattern = graph.expect_pattern_at(prev.clone());
             root_pos.retract_key(
                 pattern[prev.sub_index + 1..]
                     .iter()

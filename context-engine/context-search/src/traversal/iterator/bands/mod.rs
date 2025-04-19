@@ -1,4 +1,4 @@
-use crate::traversal::Traversable;
+use crate::traversal::HasGraph;
 use context_trace::graph::{
     kind::DirectionOf,
     vertex::{
@@ -18,16 +18,16 @@ use std::collections::VecDeque;
 
 pub mod policy;
 
-pub trait BandIterator<'a, Trav: Traversable + 'a>:
+pub trait BandIterator<'a, G: HasGraph + 'a>:
     Iterator<Item = (ChildLocation, Child)>
 {
-    type Policy: BandExpandingPolicy<Trav>;
+    type Policy: BandExpandingPolicy<G>;
     fn band_iter(
-        trav: Trav,
+        trav: G,
         root: Child,
     ) -> Self;
-    fn trav(&self) -> &Trav;
-    fn trav_mut(&mut self) -> &mut Trav;
+    fn trav(&self) -> &G;
+    fn trav_mut(&mut self) -> &mut G;
     /// get all postfixes of index with their locations
     fn next_children(
         &self,
@@ -46,37 +46,37 @@ pub trait BandIterator<'a, Trav: Traversable + 'a>:
     }
 }
 
-pub struct BandExpandingIterator<'a, Trav, P>
+pub struct BandExpandingIterator<'a, G, P>
 where
-    Trav: Traversable + 'a,
-    P: BandExpandingPolicy<Trav>,
+    G: HasGraph + 'a,
+    P: BandExpandingPolicy<G>,
 {
-    trav: Trav,
+    trav: G,
     queue: VecDeque<(ChildLocation, Child)>,
     last: (Option<ChildLocation>, Child),
     _ty: std::marker::PhantomData<&'a P>,
 }
 
-pub type PostfixIterator<'a, Trav> = BandExpandingIterator<
+pub type PostfixIterator<'a, G> = BandExpandingIterator<
     'a,
-    Trav,
-    PostfixExpandingPolicy<DirectionOf<<Trav as Traversable>::Kind>>,
+    G,
+    PostfixExpandingPolicy<DirectionOf<<G as HasGraph>::Kind>>,
 >;
 
-pub type PrefixIterator<'a, Trav> = BandExpandingIterator<
+pub type PrefixIterator<'a, G> = BandExpandingIterator<
     'a,
-    Trav,
-    PrefixExpandingPolicy<DirectionOf<<Trav as Traversable>::Kind>>,
+    G,
+    PrefixExpandingPolicy<DirectionOf<<G as HasGraph>::Kind>>,
 >;
 
-impl<'a, Trav, P> BandIterator<'a, Trav> for BandExpandingIterator<'a, Trav, P>
+impl<'a, G, P> BandIterator<'a, G> for BandExpandingIterator<'a, G, P>
 where
-    Trav: Traversable + 'a,
-    P: BandExpandingPolicy<Trav>,
+    G: HasGraph + 'a,
+    P: BandExpandingPolicy<G>,
 {
     type Policy = P;
     fn band_iter(
-        trav: Trav,
+        trav: G,
         root: Child,
     ) -> Self {
         Self {
@@ -86,18 +86,18 @@ where
             _ty: Default::default(),
         }
     }
-    fn trav(&self) -> &Trav {
+    fn trav(&self) -> &G {
         &self.trav
     }
-    fn trav_mut(&mut self) -> &mut Trav {
+    fn trav_mut(&mut self) -> &mut G {
         &mut self.trav
     }
 }
 
-impl<'a, Trav, P> Iterator for BandExpandingIterator<'a, Trav, P>
+impl<'a, G, P> Iterator for BandExpandingIterator<'a, G, P>
 where
-    Trav: Traversable,
-    P: BandExpandingPolicy<Trav>,
+    G: HasGraph,
+    P: BandExpandingPolicy<G>,
 {
     type Item = (ChildLocation, Child);
 
@@ -109,7 +109,7 @@ where
             self.queue.extend(next)
         }
         self.queue.pop_front().map(|(location, node)| {
-            self.last.0 = Some(location);
+            self.last.0 = Some(location.clone());
             self.last.1 = node;
             (location, node)
         })

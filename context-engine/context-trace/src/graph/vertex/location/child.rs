@@ -10,9 +10,9 @@ use crate::{
         wide::Wide,
     },
     path::mutators::move_path::leaf::MoveLeaf,
-    trace::traversable::{
+    trace::has_graph::{
+        HasGraph,
         TravDir,
-        Traversable,
     },
 };
 
@@ -20,7 +20,6 @@ use super::{
     super::{
         ChildPatterns,
         child::Child,
-        has_vertex_index::ToChild,
         pattern::Pattern,
     },
     PatternId,
@@ -29,21 +28,21 @@ use super::{
     pattern::IntoPatternLocation,
 };
 use crate::direction::pattern::PatternDirection;
-#[derive(Clone, Debug, PartialEq, Eq, Copy, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ChildLocation {
     pub parent: Child,
     pub pattern_id: PatternId,
     pub sub_index: usize,
 }
 impl MoveLeaf<Right> for ChildLocation {
-    fn move_leaf<Trav: Traversable>(
+    fn move_leaf<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> ControlFlow<()> {
         let graph = trav.graph();
-        let pattern = graph.expect_pattern_at(*self);
+        let pattern = graph.expect_pattern_at(self.clone());
         if let Some(next) =
-            TravDir::<Trav>::pattern_index_next(pattern, self.sub_index)
+            TravDir::<G>::pattern_index_next(pattern, self.sub_index)
         {
             self.sub_index = next;
             ControlFlow::Continue(())
@@ -53,14 +52,14 @@ impl MoveLeaf<Right> for ChildLocation {
     }
 }
 impl MoveLeaf<Left> for ChildLocation {
-    fn move_leaf<Trav: Traversable>(
+    fn move_leaf<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> ControlFlow<()> {
         let graph = trav.graph();
-        let pattern = graph.expect_pattern_at(*self);
+        let pattern = graph.expect_pattern_at(self.clone());
         if let Some(prev) =
-            TravDir::<Trav>::pattern_index_prev(pattern, self.sub_index)
+            TravDir::<G>::pattern_index_prev(pattern, self.sub_index)
         {
             self.sub_index = prev;
             ControlFlow::Continue(())
@@ -72,12 +71,12 @@ impl MoveLeaf<Left> for ChildLocation {
 
 impl ChildLocation {
     pub fn new(
-        parent: impl ToChild,
+        parent: Child,
         pattern_id: PatternId,
         sub_index: usize,
     ) -> Self {
         Self {
-            parent: parent.to_child(),
+            parent,
             pattern_id,
             sub_index,
         }
@@ -157,7 +156,7 @@ impl IntoChildLocation for ChildLocation {
 
 impl IntoChildLocation for &ChildLocation {
     fn into_child_location(self) -> ChildLocation {
-        *self
+        self.clone()
     }
 }
 

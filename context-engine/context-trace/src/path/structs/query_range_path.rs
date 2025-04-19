@@ -27,7 +27,7 @@ use crate::{
         },
         structs::rooted::root::RootedPath,
     },
-    trace::traversable::Traversable,
+    trace::has_graph::HasGraph,
 };
 
 use super::rooted::pattern_range::PatternRangePath;
@@ -45,9 +45,9 @@ BaseQuery
     fn new_directed<
         D: PatternDirection,
     >(query: Pattern) -> Result<Self, (ErrorReason, Self)>;
-    fn start_index<Trav: Traversable>(
+    fn start_index<G: HasGraph>(
         &self,
-        trav: Trav,
+        trav: G,
     ) -> Child {
         self.role_leaf_child(&trav)
     }
@@ -69,8 +69,8 @@ pub trait RangePath: RootedPath {
 //        'g,
 //        T: Tokenize,
 //        D: ,
-//        Trav: Traversable<T>,
-//    >(&self, trav: Trav) -> Option<usize> {
+//        G: HasGraph<T>,
+//    >(&self, trav: G) -> Option<usize> {
 //        if self.end.is_empty() {
 //            D::pattern_index_prev(self.query.borrow(), self.exit)
 //        } else {

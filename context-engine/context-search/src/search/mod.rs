@@ -15,15 +15,15 @@ use context_trace::{
         Hypergraph,
         HypergraphRef,
     },
-    trace::traversable::{
+    trace::has_graph::{
         TravKind,
-        Traversable,
+        HasGraph,
     },
 };
 pub mod context;
 
 #[allow(dead_code)]
-pub trait Searchable: Traversable {
+pub trait Searchable: HasGraph {
     fn ctx(&self) -> SearchContext<Self>;
     fn find_sequence(
         &self,

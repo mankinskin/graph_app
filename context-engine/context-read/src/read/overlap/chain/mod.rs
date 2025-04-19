@@ -32,7 +32,7 @@ use context_search::{
             },
         },
     },
-    traversal::traversable::TraversableMut,
+    traversal::has_graph::HasGraphMut,
 };
 
 use band::{
@@ -209,7 +209,7 @@ impl OverlapChain {
     //#[instrument(skip(self, trav))]
     //pub fn close(
     //    self,
-    //    trav: impl TraversableMut,
+    //    trav: impl HasGraphMut,
     //) -> Option<Child> {
     //    //println!("closing {:#?}", self);
     //    let mut chain_iter = self.chain.into_iter();
@@ -273,7 +273,7 @@ impl OverlapChain {
 
     //pub fn take_past_context_pattern(
     //    &mut self,
-    //    trav: impl TraversableMut,
+    //    trav: impl HasGraphMut,
     //    start_bound: usize,
     //) -> Option<(usize, Pattern)> {
     //    let mut past = self.take_past(start_bound);

@@ -12,27 +12,27 @@ use crate::{
             pop::PathPop,
         },
     },
-    trace::traversable::Traversable,
+    trace::has_graph::HasGraph,
 };
 use std::ops::ControlFlow;
 
 pub trait MovePath<D: Direction, R: PathRole = End>:
     PathPop + PathAppend + MoveRootPos<D, R>
 {
-    fn move_leaf<Trav: Traversable>(
+    fn move_leaf<G: HasGraph>(
         &mut self,
         location: &mut ChildLocation,
-        trav: &Trav::Guard<'_>,
+        trav: &G::Guard<'_>,
     ) -> ControlFlow<()>;
 
-    fn move_path<Trav: Traversable>(
+    fn move_path<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> ControlFlow<()> {
         let graph = trav.graph();
         if let Some(location) = std::iter::from_fn(|| {
             self.path_pop().map(|mut location| {
-                self.move_leaf::<Trav>(&mut location, &graph)
+                self.move_leaf::<G>(&mut location, &graph)
                     .is_continue()
                     .then_some(location)
             })

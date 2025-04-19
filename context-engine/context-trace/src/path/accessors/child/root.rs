@@ -14,15 +14,15 @@ use crate::{
             PatternRoot,
         },
     },
-    trace::traversable::Traversable,
+    trace::has_graph::HasGraph,
 };
 use auto_impl::auto_impl;
 
 #[auto_impl(&, & mut)]
 pub trait RootChild<R>: RootChildPos<R> {
-    fn root_child<Trav: Traversable>(
+    fn root_child<G: HasGraph>(
         &self,
-        trav: &Trav,
+        trav: &G,
     ) -> Child;
 }
 #[macro_export]
@@ -34,8 +34,8 @@ macro_rules! impl_child {
             where $target: RootChildPos<R>
         {
             fn root_child<
-                Trav: Traversable,
-            >(& $self_, $trav: &Trav) -> $crate::graph::vertex::child::Child {
+                G: HasGraph,
+            >(& $self_, $trav: &G) -> $crate::graph::vertex::child::Child {
                 $func
             }
         }
@@ -45,9 +45,9 @@ macro_rules! impl_child {
 /// used to get a direct child in a Graph
 pub trait GraphRootChild<R>: GraphRootPattern + RootChildPos<R> {
     fn root_child_location(&self) -> ChildLocation;
-    fn graph_root_child<Trav: Traversable>(
+    fn graph_root_child<G: HasGraph>(
         &self,
-        trav: &Trav,
+        trav: &G,
     ) -> Child {
         trav.graph()
             .expect_child_at(<_ as GraphRootChild<R>>::root_child_location(
@@ -55,22 +55,22 @@ pub trait GraphRootChild<R>: GraphRootPattern + RootChildPos<R> {
             ))
             .clone()
     }
-    fn root_post_ctx_width<Trav: Traversable>(
+    fn root_post_ctx_width<G: HasGraph>(
         &self,
-        trav: &Trav,
+        trav: &G,
     ) -> usize {
         let i = self.root_child_location().sub_index;
         let g = trav.graph();
-        let p = self.graph_root_pattern::<Trav>(&g);
+        let p = self.graph_root_pattern::<G>(&g);
         pattern_post_ctx_width(p, i)
     }
-    fn root_pre_ctx_width<Trav: Traversable>(
+    fn root_pre_ctx_width<G: HasGraph>(
         &self,
-        trav: &Trav,
+        trav: &G,
     ) -> usize {
         let i = self.root_child_location().sub_index;
         let g = trav.graph();
-        let p = self.graph_root_pattern::<Trav>(&g);
+        let p = self.graph_root_pattern::<G>(&g);
         pattern_pre_ctx_width(p, i)
     }
 }

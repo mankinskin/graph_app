@@ -20,28 +20,28 @@ use crate::{
             root::PathRoot,
         },
     },
-    trace::traversable::{
+    trace::has_graph::{
+        HasGraph,
         TravDir,
-        Traversable,
     },
 };
 use std::ops::ControlFlow;
 
 pub trait MoveRootPos<D: Direction, R: PathRole = End> {
-    fn move_root_pos<Trav: Traversable>(
+    fn move_root_pos<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> ControlFlow<()>;
 }
 
 impl<Root: PathRoot> MoveRootPos<Right, End> for RootedRolePath<End, Root> {
-    fn move_root_pos<Trav: Traversable>(
+    fn move_root_pos<G: HasGraph>(
         &mut self,
-        _trav: &Trav,
+        _trav: &G,
     ) -> ControlFlow<()> {
-        if let Some(next) = TravDir::<Trav>::index_next(
-            RootChildPos::<End>::root_child_pos(self),
-        ) {
+        if let Some(next) =
+            TravDir::<G>::index_next(RootChildPos::<End>::root_child_pos(self))
+        {
             *self.root_child_pos_mut() = next;
             ControlFlow::Continue(())
         } else {

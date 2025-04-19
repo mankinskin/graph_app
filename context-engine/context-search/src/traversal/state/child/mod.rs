@@ -52,7 +52,6 @@ use context_trace::{
     },
     trace::{
         cache::{
-            entry::new::NewChild,
             key::{
                 directed::{
                     up::UpKey,
@@ -65,8 +64,9 @@ use context_trace::{
                     TargetKey,
                 },
             },
+            new::NewChild,
         },
-        traversable::Traversable,
+        has_graph::HasGraph,
     },
 };
 use derive_more::{
@@ -99,9 +99,9 @@ pub struct ChildState {
 }
 
 impl ChildState {
-    fn mode_prefixes<'a, Trav: Traversable>(
+    fn mode_prefixes<'a, G: HasGraph>(
         &self,
-        trav: &Trav,
+        trav: &G,
         mode: PathPairMode,
     ) -> VecDeque<ChildModeCtx> {
         ChildModeCtx {
@@ -110,9 +110,9 @@ impl ChildState {
         }
         .prefix_states(trav)
     }
-    pub fn next_match<Trav: Traversable>(
+    pub fn next_match<G: HasGraph>(
         self,
-        trav: &Trav,
+        trav: &G,
     ) -> TDNext {
         use Ordering::*;
         let path_leaf = self.path.role_leaf_child::<End, _>(trav);
@@ -135,9 +135,9 @@ impl ChildState {
         }
     }
 
-    fn on_mismatch<'a, Trav: Traversable>(
+    fn on_mismatch<'a, G: HasGraph>(
         self,
-        trav: &Trav,
+        trav: &G,
     ) -> EndState {
         use EndKind::*;
         use EndReason::*;
@@ -154,7 +154,8 @@ impl ChildState {
             {
                 if (&mut root_pos, &mut path).path_lower(trav).is_break() {
                     let graph = trav.graph();
-                    let pattern = graph.expect_pattern_at(path.root.location);
+                    let pattern =
+                        graph.expect_pattern_at(path.clone().root.location);
                     let entry = path.start.sub_path.root_entry;
                     root_pos = prev_pos;
                     break Some(pattern[entry]);
@@ -196,9 +197,9 @@ impl From<ChildState> for NewChild {
 
 impl IntoAdvanced for ChildState {
     type Next = Self;
-    fn into_advanced<Trav: Traversable>(
+    fn into_advanced<G: HasGraph>(
         mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> Result<Self, Self> {
         if self.base.path.advance(trav).is_continue() {
             // gen next child
@@ -245,6 +246,6 @@ impl LeafKey for ChildState {
 }
 impl TargetKey for ChildState {
     fn target_key(&self) -> DirectedKey {
-        self.target
+        self.target.clone()
     }
 }

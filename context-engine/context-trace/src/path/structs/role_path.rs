@@ -34,7 +34,7 @@ use crate::{
             sub_path::SubPath,
         },
     },
-    trace::traversable::Traversable,
+    trace::has_graph::HasGraph,
 };
 
 use super::rooted::{
@@ -110,13 +110,13 @@ impl<R: PathRole> HasRolePath<R> for RolePath<R> {
 }
 
 impl<R: PathRole> PathSimplify for RolePath<R> {
-    fn into_simplified<Trav: Traversable>(
+    fn into_simplified<G: HasGraph>(
         mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> Self {
         let graph = trav.graph();
         while let Some(loc) = self.path_mut().pop() {
-            if !<R as PathBorder>::is_at_border(graph.graph(), loc) {
+            if !<R as PathBorder>::is_at_border(graph.graph(), loc.clone()) {
                 self.path_mut().push(loc);
                 break;
             }
@@ -159,9 +159,9 @@ impl From<IndexRangePath> for RolePath<End> {
 //}
 
 impl FromAdvanced<IndexRangePath> for RolePath<Start> {
-    fn from_advanced<Trav: Traversable>(
+    fn from_advanced<G: HasGraph>(
         path: IndexRangePath,
-        _trav: &Trav,
+        _trav: &G,
     ) -> Self {
         path.start
     }

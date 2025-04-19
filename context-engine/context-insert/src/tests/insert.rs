@@ -19,7 +19,7 @@ use context_search::{
             FinishedKind,
             FinishedState,
         },
-        traversable::Traversable,
+        has_graph::HasGraph,
     },
 };
 use itertools::*;

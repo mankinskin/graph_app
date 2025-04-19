@@ -1,65 +1,19 @@
 use crate::{
     graph::vertex::child::Child,
-    path::mutators::move_path::key::TokenPosition,
     trace::cache::key::directed::DirectedPosition,
-    HashMap,
 };
-use derive_more::derive::{
-    Deref,
-    DerefMut,
-    IntoIterator,
-};
-use std::iter::FromIterator;
+use positions::DirectedPositions;
 
 use super::position::PositionCache;
 
-#[derive(
-    Clone, Debug, PartialEq, Eq, Default, IntoIterator, Deref, DerefMut,
-)]
-pub struct DirectedPositions {
-    entries: HashMap<TokenPosition, PositionCache>,
-}
-impl FromIterator<(TokenPosition, PositionCache)> for DirectedPositions {
-    fn from_iter<T: IntoIterator<Item = (TokenPosition, PositionCache)>>(
-        iter: T
-    ) -> Self {
-        Self {
-            entries: FromIterator::from_iter(iter),
-        }
-    }
-}
-impl Extend<(TokenPosition, PositionCache)> for DirectedPositions {
-    fn extend<T: IntoIterator<Item = (TokenPosition, PositionCache)>>(
-        &mut self,
-        iter: T,
-    ) {
-        for (k, v) in iter {
-            if let Some(c) = self.entries.get_mut(&k) {
-                assert!(c.index == v.index);
-                c.edges.top.extend(v.edges.top);
-                c.edges.bottom.extend(v.edges.bottom);
-            } else {
-                self.entries.insert(k, v);
-            }
-        }
-    }
-}
+pub mod positions;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VertexCache {
     pub bottom_up: DirectedPositions,
     pub top_down: DirectedPositions,
     pub index: Child,
 }
-impl From<Child> for VertexCache {
-    fn from(index: Child) -> Self {
-        Self {
-            index,
-            bottom_up: Default::default(),
-            top_down: Default::default(),
-        }
-    }
-}
-
 impl VertexCache {
     pub fn start(index: Child) -> Self {
         let bottom_up = Default::default();
@@ -109,5 +63,15 @@ impl VertexCache {
         cache: PositionCache,
     ) {
         self.dir_mut(pos).insert(*pos.pos(), cache);
+    }
+}
+
+impl From<Child> for VertexCache {
+    fn from(index: Child) -> Self {
+        Self {
+            index,
+            bottom_up: Default::default(),
+            top_down: Default::default(),
+        }
     }
 }

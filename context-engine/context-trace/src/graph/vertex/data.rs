@@ -39,14 +39,14 @@ use crate::{
         },
     },
     trace::{
-        cache::entry::position::Offset,
+        cache::position::Offset,
         child::{
             TraceFront,
             TraceSide,
         },
-        traversable::{
+        has_graph::{
+            HasGraph,
             TravDir,
-            Traversable,
         },
     },
 };
@@ -585,18 +585,18 @@ impl VertexData {
             })
             .collect_vec()
     }
-    pub fn prefix_children<Trav: Traversable>(&self) -> Vec<SubChild> {
+    pub fn prefix_children<G: HasGraph>(&self) -> Vec<SubChild> {
         self.selected_children(|_, pattern| {
-            Some(TravDir::<Trav>::head_index(pattern))
+            Some(TravDir::<G>::head_index(pattern))
         })
     }
-    pub fn postfix_children<Trav: Traversable>(&self) -> Vec<SubChild>
+    pub fn postfix_children<G: HasGraph>(&self) -> Vec<SubChild>
     where
-        <<Trav::Kind as GraphKind>::Direction as Direction>::Opposite:
+        <<G::Kind as GraphKind>::Direction as Direction>::Opposite:
             PatternDirection,
     {
         self.selected_children(|_, pattern| {
-            Some(TravDir::<Trav>::last_index(pattern))
+            Some(TravDir::<G>::last_index(pattern))
         })
     }
     pub fn offset_children(

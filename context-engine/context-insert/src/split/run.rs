@@ -10,38 +10,32 @@ use context_search::{
         },
         wide::Wide,
     },
-    traversal::traversable::Traversable,
+    traversal::has_graph::HasGraph,
 };
 #[derive(Debug)]
 pub struct SplitRunStep;
 
 #[derive(Debug)]
-pub struct SplitRun<Trav: Traversable>
-{
-    ctx: SplitCacheContext<Trav>,
+pub struct SplitRun<G: HasGraph> {
+    ctx: SplitCacheContext<G>,
     incomplete: BTreeSet<Child>,
 }
-impl<'a, Trav: Traversable + 'a> SplitRun<Trav>
-{
-    pub fn init(&mut self)
-    {
+impl<'a, G: HasGraph + 'a> SplitRun<G> {
+    pub fn init(&mut self) {
         self.ctx
             .cache
             .augment_root(&self.ctx.states_ctx.trav, self.ctx.root);
     }
-    pub fn finish(mut self) -> SplitCacheContext<Trav>
-    {
+    pub fn finish(mut self) -> SplitCacheContext<G> {
         self.ctx
             .cache
             .augment_nodes(&mut self.ctx.states_ctx, self.incomplete);
         self.ctx
     }
 }
-impl<'a, Trav: Traversable + 'a> Iterator for SplitRun<Trav>
-{
+impl<'a, G: HasGraph + 'a> Iterator for SplitRun<G> {
     type Item = SplitRunStep;
-    fn next(&mut self) -> Option<Self::Item>
-    {
+    fn next(&mut self) -> Option<Self::Item> {
         self.ctx.states_ctx.states.next().map(|state| {
             self.ctx.apply_trace_state(&state);
             self.incomplete.insert(state.index);
@@ -55,28 +49,21 @@ impl<'a, Trav: Traversable + 'a> Iterator for SplitRun<Trav>
         })
     }
 }
-impl<'a, Trav: Traversable + 'a> From<SplitCacheContext<Trav>>
-    for SplitRun<Trav>
-{
-    fn from(ctx: SplitCacheContext<Trav>) -> Self
-    {
+impl<'a, G: HasGraph + 'a> From<SplitCacheContext<G>> for SplitRun<G> {
+    fn from(ctx: SplitCacheContext<G>) -> Self {
         Self {
             ctx,
             incomplete: Default::default(),
         }
     }
 }
-impl<'a, Trav: Traversable + 'a> From<SplitCacheContext<Trav>> for IntervalGraph
-{
-    fn from(cache: SplitCacheContext<Trav>) -> Self
-    {
+impl<'a, G: HasGraph + 'a> From<SplitCacheContext<G>> for IntervalGraph {
+    fn from(cache: SplitCacheContext<G>) -> Self {
         Self::from(SplitRun::from(cache))
     }
 }
-impl<'a, Trav: Traversable + 'a> From<SplitRun<Trav>> for IntervalGraph
-{
-    fn from(mut run: SplitRun<Trav>) -> Self
-    {
+impl<'a, G: HasGraph + 'a> From<SplitRun<G>> for IntervalGraph {
+    fn from(mut run: SplitRun<G>) -> Self {
         run.init();
         run.all(|_| true); // run iterator to end
         let cache = run.finish();

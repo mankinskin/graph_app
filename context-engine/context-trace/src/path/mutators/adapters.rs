@@ -25,7 +25,7 @@ use crate::{
             root::GraphRoot,
         },
     },
-    trace::traversable::Traversable,
+    trace::has_graph::HasGraph,
 };
 use std::fmt::Debug;
 
@@ -73,15 +73,15 @@ impl<
 {
 }
 pub trait FromAdvanced<A: Advanced> {
-    fn from_advanced<Trav: Traversable>(
+    fn from_advanced<G: HasGraph>(
         path: A,
-        trav: &Trav,
+        trav: &G,
     ) -> Self;
 }
 pub trait IntoAdvanced: Sized + Clone {
     type Next;
-    fn into_advanced<Trav: Traversable>(
+    fn into_advanced<G: HasGraph>(
         self,
-        trav: &Trav,
+        trav: &G,
     ) -> Result<Self::Next, Self>;
 }

@@ -33,7 +33,7 @@ use context_search::{
             SubSplitLocation,
         },
     },
-    traversal::traversable::Traversable,
+    traversal::has_graph::HasGraph,
 };
 
 use super::SplitTraceContext;
@@ -51,9 +51,9 @@ impl Iterator for SplitStates {
 }
 impl SplitStates {
     /// kind of like filter_leaves but from subsplits to trace states
-    pub fn filter_trace_states<Trav: Traversable>(
+    pub fn filter_trace_states<G: HasGraph>(
         &mut self,
-        trav: Trav,
+        trav: G,
         index: &Child,
         pos_splits: impl IntoIterator<Item = (Offset, Vec<SubSplitLocation>)>,
     ) {
@@ -96,15 +96,15 @@ impl SplitStates {
 }
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct SplitTraceStateContext<Trav: Traversable> {
+pub struct SplitTraceStateContext<G: HasGraph> {
     #[deref]
     #[deref_mut]
-    pub ctx: SplitTraceContext<Trav>,
+    pub ctx: SplitTraceContext<G>,
     pub states: SplitStates,
 }
-impl<Trav: Traversable> SplitTraceStateContext<Trav> {
+impl<G: HasGraph> SplitTraceStateContext<G> {
     pub fn new(
-        ctx: TraceContext<Trav>,
+        ctx: TraceContext<G>,
         root: Child,
         end_bound: usize,
     ) -> Self {

@@ -1,13 +1,13 @@
-use crate::trace::traversable::Traversable;
+use crate::trace::has_graph::HasGraph;
 
 pub trait PathSimplify: Sized {
-    fn into_simplified<Trav: Traversable>(
+    fn into_simplified<G: HasGraph>(
         self,
-        trav: &Trav,
+        trav: &G,
     ) -> Self;
-    fn simplify<Trav: Traversable>(
+    fn simplify<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
     ) {
         unsafe {
             let old = std::ptr::read(self);
@@ -19,14 +19,14 @@ pub trait PathSimplify: Sized {
 
 //impl<R: PathRole> PathSimplify for RolePath<R> {
 //    fn into_simplified<
-//        Trav: Traversable,
-//    >(mut self, trav: &Trav) -> Self {
+//        G: HasGraph,
+//    >(mut self, trav: &G) -> Self {
 //        let graph = trav.graph();
 //        // remove segments pointing to mismatch at pattern head
 //        while let Some(location) = self.path_mut().pop() {
 //            let pattern = graph.expect_pattern_at(&location);
 //            // skip segments at end of pattern
-//            if Trav::Direction::pattern_index_next(pattern.borrow(), location.sub_index).is_some() {
+//            if G::Direction::pattern_index_next(pattern.borrow(), location.sub_index).is_some() {
 //                self.path_mut().push(location);
 //                break;
 //            }
@@ -38,8 +38,8 @@ pub trait PathSimplify: Sized {
 //    fn into_simplified<
 //        T: Tokenize,
 //        D: ,
-//        Trav: Traversable<T>,
-//    >(mut self, trav: &Trav) -> Self {
+//        G: HasGraph<T>,
+//    >(mut self, trav: &G) -> Self {
 //        self.postfix.simplify::<_, D, _>(trav);
 //        self
 //    }

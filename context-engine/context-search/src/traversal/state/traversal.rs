@@ -17,7 +17,6 @@ use context_trace::{
     },
     trace::{
         cache::{
-            entry::new::NewEntry,
             key::{
                 directed::{
                     up::UpKey,
@@ -30,8 +29,9 @@ use context_trace::{
                     TargetKey,
                 },
             },
+            new::NewEntry,
         },
-        StateDirection,
+        TraceDirection,
     },
 };
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -48,7 +48,7 @@ impl TraversalState {
         }
     }
     pub fn prev_key(&self) -> PrevKey {
-        self.prev
+        self.prev.clone()
     }
     pub fn root_pos(&self) -> TokenPosition {
         match &self.kind {
@@ -57,10 +57,10 @@ impl TraversalState {
         }
     }
 
-    pub fn state_direction(&self) -> StateDirection {
+    pub fn state_direction(&self) -> TraceDirection {
         match &self.kind {
-            InnerKind::Parent(_) => StateDirection::BottomUp,
-            InnerKind::Child(_) => StateDirection::TopDown,
+            InnerKind::Parent(_) => TraceDirection::BottomUp,
+            InnerKind::Child(_) => TraceDirection::TopDown,
         }
     }
 }

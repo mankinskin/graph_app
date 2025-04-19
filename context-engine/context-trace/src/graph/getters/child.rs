@@ -1,7 +1,8 @@
 use crate::graph::{
+    Hypergraph,
     getters::{
-        vertex::VertexSet,
         ErrorReason,
+        vertex::VertexSet,
     },
     kind::GraphKind,
     vertex::{
@@ -13,7 +14,6 @@ use crate::graph::{
         },
         pattern::Pattern,
     },
-    Hypergraph,
 };
 
 impl<G: GraphKind> Hypergraph<G> {
@@ -22,9 +22,9 @@ impl<G: GraphKind> Hypergraph<G> {
         location: impl IntoChildLocation,
     ) -> Result<&Child, ErrorReason> {
         let location = location.into_child_location();
-        let pattern = self.get_pattern_at(location)?;
+        let pattern = self.get_pattern_at(location.clone())?;
         pattern
-            .get(location.sub_index)
+            .get(location.sub_index.clone())
             .ok_or(ErrorReason::NoChildPatterns) // todo: better error
     }
     pub fn get_child_mut_at(
@@ -32,9 +32,9 @@ impl<G: GraphKind> Hypergraph<G> {
         location: impl IntoChildLocation,
     ) -> Result<&mut Child, ErrorReason> {
         let location = location.into_child_location();
-        let pattern = self.get_pattern_mut_at(location)?;
+        let pattern = self.get_pattern_mut_at(location.clone())?;
         pattern
-            .get_mut(location.sub_index)
+            .get_mut(location.sub_index.clone())
             .ok_or(ErrorReason::NoChildPatterns) // todo: better error
     }
     #[track_caller]
@@ -43,8 +43,9 @@ impl<G: GraphKind> Hypergraph<G> {
         location: impl IntoChildLocation,
     ) -> &Child {
         let location = location.into_child_location();
-        self.get_child_at(location)
-            .unwrap_or_else(|_| panic!("Child not found at location {:#?}", location))
+        self.get_child_at(location.clone()).unwrap_or_else(|_| {
+            panic!("Child not found at location {:#?}", location)
+        })
     }
     #[track_caller]
     pub fn expect_child_mut_at(
@@ -52,8 +53,9 @@ impl<G: GraphKind> Hypergraph<G> {
         location: impl IntoChildLocation,
     ) -> &mut Child {
         let location = location.into_child_location();
-        self.get_child_mut_at(location)
-            .unwrap_or_else(|_| panic!("Child not found at location {:#?}", location))
+        self.get_child_mut_at(location.clone()).unwrap_or_else(|_| {
+            panic!("Child not found at location {:#?}", location)
+        })
     }
     pub fn expect_is_at_end(
         &self,
@@ -68,7 +70,7 @@ impl<G: GraphKind> Hypergraph<G> {
         loc: &ChildLocation,
     ) -> usize {
         self.expect_vertex(loc.vertex_index())
-            .expect_child_offset(&loc.to_sub_location())
+            .expect_child_offset(&loc.clone().to_sub_location())
     }
     pub fn expect_child(
         &self,

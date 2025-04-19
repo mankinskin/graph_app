@@ -1,6 +1,6 @@
 use super::directed::DirectedKey;
 
-#[derive(Clone, Debug, Copy, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrevKey {
     pub prev_target: DirectedKey,
     pub delta: usize,
@@ -8,7 +8,7 @@ pub struct PrevKey {
 
 impl PrevKey {
     pub fn advanced(&self) -> DirectedKey {
-        let mut target = self.prev_target;
+        let mut target = self.prev_target.clone();
         target.pos += self.delta;
         target
     }

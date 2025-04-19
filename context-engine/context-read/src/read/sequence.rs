@@ -10,7 +10,7 @@ use context_search::{
             },
         },
     },
-    traversal::traversable::TraversableMut,
+    traversal::has_graph::HasGraphMut,
 };
 use derive_more::{
     Deref,
@@ -78,16 +78,20 @@ impl<'it> SequenceIter<'it> {
 }
 
 pub trait ToNewTokenIndices: Debug {
-    fn to_new_token_indices<'a: 'g, 'g, Trav: TraversableMut<Kind = BaseGraphKind>>(
+    fn to_new_token_indices<'a: 'g, 'g, G: HasGraphMut<Kind = BaseGraphKind>>(
         self,
-        graph: &'a mut Trav,
+        graph: &'a mut G,
     ) -> NewTokenIndices;
 }
 
 impl ToNewTokenIndices for NewTokenIndices {
-    fn to_new_token_indices<'a: 'g, 'g, Trav: TraversableMut<Kind = BaseGraphKind>>(
+    fn to_new_token_indices<
+        'a: 'g,
+        'g,
+        G: HasGraphMut<Kind = BaseGraphKind>,
+    >(
         self,
-        _graph: &'a mut Trav,
+        _graph: &'a mut G,
     ) -> NewTokenIndices {
         self
     }
@@ -96,8 +100,8 @@ impl ToNewTokenIndices for NewTokenIndices {
 //    fn to_new_token_indices<
 //        'a: 'g,
 //        'g,
-//        Trav: TraversableMut<T>,
-//        >(self, graph: &'a mut Trav) -> NewTokenIndices {
+//        G: HasGraphMut<T>,
+//        >(self, graph: &'a mut G) -> NewTokenIndices {
 //        graph.graph_mut().new_token_indices(self)
 //    }
 //}
@@ -105,9 +109,9 @@ impl ToNewTokenIndices for NewTokenIndices {
 //impl<Iter: IntoIterator<Item = DefaultToken> + Debug + Send + Sync> ToNewTokenIndices<DefaultToken>
 //    for Iter
 //{
-//    fn to_new_token_indices<'a: 'g, 'g, Trav: TraversableMut<Kind = BaseGraphKind>>(
+//    fn to_new_token_indices<'a: 'g, 'g, G: HasGraphMut<Kind = BaseGraphKind>>(
 //        self,
-//        graph: &'a mut Trav,
+//        graph: &'a mut G,
 //    ) -> NewTokenIndices {
 //        graph.graph_mut().new_token_indices(self)
 //    }

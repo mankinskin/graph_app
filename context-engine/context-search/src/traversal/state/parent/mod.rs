@@ -51,7 +51,6 @@ use context_trace::{
     },
     trace::{
         cache::{
-            entry::new::NewParent,
             key::{
                 directed::{
                     up::UpKey,
@@ -63,10 +62,11 @@ use context_trace::{
                     TargetKey,
                 },
             },
+            new::NewParent,
         },
-        traversable::{
+        has_graph::{
+            HasGraph,
             TravDir,
-            Traversable,
         },
     },
 };
@@ -82,9 +82,9 @@ pub enum BUNext {
 pub type ParentState = BaseState<IndexStartPath>;
 
 pub trait IntoPrimer: Sized {
-    fn into_primer<Trav: Traversable>(
+    fn into_primer<G: HasGraph>(
         self,
-        trav: &Trav,
+        trav: &G,
         parent_entry: ChildLocation,
     ) -> ParentState;
 }
@@ -168,18 +168,17 @@ impl_cursor_pos! {
 
 impl IntoAdvanced for ParentState {
     type Next = RootChildState;
-    fn into_advanced<Trav: Traversable>(
+    fn into_advanced<G: HasGraph>(
         self,
-        trav: &Trav,
+        trav: &G,
     ) -> Result<Self::Next, Self> {
         let entry = self.path.root_child_location();
         let graph = trav.graph();
-        let pattern = self.path.root_pattern::<Trav>(&graph).clone();
+        let pattern = self.path.root_pattern::<G>(&graph).clone();
 
-        if let Some(next) = TravDir::<Trav>::pattern_index_next(
-            pattern.borrow(),
-            entry.sub_index,
-        ) {
+        if let Some(next) =
+            TravDir::<G>::pattern_index_next(pattern.borrow(), entry.sub_index)
+        {
             let root_parent = self.clone();
             let ParentState {
                 path,
@@ -215,9 +214,9 @@ impl Ord for ParentState {
     }
 }
 impl PathRaise for ParentState {
-    fn path_raise<Trav: Traversable>(
+    fn path_raise<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
         parent_entry: ChildLocation,
     ) {
         let path = &mut self.path.role_path.sub_path;
@@ -225,12 +224,12 @@ impl PathRaise for ParentState {
         path.root_entry = parent_entry.sub_index;
         self.path.root.location = parent_entry.into_pattern_location();
         let graph = trav.graph();
-        let pattern = graph.expect_pattern_at(root);
+        let pattern = graph.expect_pattern_at(root.clone());
         self.prev_pos = self.root_pos;
         self.root_pos
             .advance_key(pattern_width(&pattern[root.sub_index + 1..]));
         if !path.is_empty()
-            || TravDir::<Trav>::pattern_index_prev(pattern, root.sub_index)
+            || TravDir::<G>::pattern_index_prev(pattern, root.sub_index)
                 .is_some()
         {
             path.path.push(root);

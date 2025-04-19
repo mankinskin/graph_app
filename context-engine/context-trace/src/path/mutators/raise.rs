@@ -1,12 +1,12 @@
 use crate::{
     graph::vertex::location::child::ChildLocation,
-    trace::traversable::Traversable,
+    trace::has_graph::HasGraph,
 };
 
 pub trait PathRaise {
-    fn path_raise<Trav: Traversable>(
+    fn path_raise<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
         parent_entry: ChildLocation,
     );
 }

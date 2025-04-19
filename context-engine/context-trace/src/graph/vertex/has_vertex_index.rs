@@ -8,13 +8,13 @@ use crate::graph::vertex::{
 
 pub trait HasVertexIndex: Sized {
     fn vertex_index(&self) -> VertexIndex;
-    //fn expect_child_patterns<Trav: Traversable>(
+    //fn expect_child_patterns<Trav: HasGraph>(
     //    &self,
     //    trav: &Trav,
     //) -> ChildPatterns {
     //    trav.graph().expect_child_patterns(self).clone()
     //}
-    //fn expect_child_pattern<Trav: Traversable>(
+    //fn expect_child_pattern<Trav: HasGraph>(
     //    &self,
     //    trav: &Trav,
     //    pid: PatternId,

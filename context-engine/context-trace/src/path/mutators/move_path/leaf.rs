@@ -12,9 +12,9 @@ use crate::{
         location::child::ChildLocation,
         wide::Wide,
     },
-    trace::traversable::{
+    trace::has_graph::{
+        HasGraph,
         TravDir,
-        Traversable,
     },
 };
 
@@ -38,16 +38,16 @@ impl<'k, D: Direction, K: MoveKey<D>> KeyedLeaf<'k, D, K> {
 }
 
 pub trait MoveLeaf<D: Direction> {
-    fn move_leaf<Trav: Traversable>(
+    fn move_leaf<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> ControlFlow<()>;
 }
 
 pub trait AdvanceLeaf: MoveLeaf<Right> {
-    fn advance_leaf<Trav: Traversable>(
+    fn advance_leaf<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> ControlFlow<()> {
         self.move_leaf(trav)
     }
@@ -56,9 +56,9 @@ pub trait AdvanceLeaf: MoveLeaf<Right> {
 impl<T: MoveLeaf<Right>> AdvanceLeaf for T {}
 
 pub trait RetractLeaf: MoveLeaf<Left> {
-    fn retract_leaf<Trav: Traversable>(
+    fn retract_leaf<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> ControlFlow<()> {
         self.move_leaf(trav)
     }
@@ -69,16 +69,15 @@ impl<T: MoveLeaf<Left>> RetractLeaf for T {}
 impl<K: MoveKey<Right, Delta = usize>> MoveLeaf<Right>
     for KeyedLeaf<'_, Right, K>
 {
-    fn move_leaf<Trav: Traversable>(
+    fn move_leaf<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> ControlFlow<()> {
         let graph = trav.graph();
-        let pattern = graph.expect_pattern_at(*self.location);
-        if let Some(next) = TravDir::<Trav>::pattern_index_next(
-            pattern,
-            self.location.sub_index,
-        ) {
+        let pattern = graph.expect_pattern_at(self.location.clone());
+        if let Some(next) =
+            TravDir::<G>::pattern_index_next(pattern, self.location.sub_index)
+        {
             let prev = &pattern[self.location.sub_index];
             self.path.move_key(prev.width());
             self.location.sub_index = next;
@@ -92,16 +91,15 @@ impl<K: MoveKey<Right, Delta = usize>> MoveLeaf<Right>
 impl<K: MoveKey<Left, Delta = usize>> MoveLeaf<Left>
     for KeyedLeaf<'_, Left, K>
 {
-    fn move_leaf<Trav: Traversable>(
+    fn move_leaf<G: HasGraph>(
         &mut self,
-        trav: &Trav,
+        trav: &G,
     ) -> ControlFlow<()> {
         let graph = trav.graph();
-        let pattern = graph.expect_pattern_at(*self.location);
-        if let Some(prev) = TravDir::<Trav>::pattern_index_prev(
-            pattern,
-            self.location.sub_index,
-        ) {
+        let pattern = graph.expect_pattern_at(self.location.clone());
+        if let Some(prev) =
+            TravDir::<G>::pattern_index_prev(pattern, self.location.sub_index)
+        {
             let c = &pattern[self.location.sub_index];
             self.path.move_key(c.width());
             self.location.sub_index = prev;

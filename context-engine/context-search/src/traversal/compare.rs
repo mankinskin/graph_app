@@ -28,7 +28,7 @@ use context_trace::{
     },
     trace::{
         cache::key::directed::DirectedKey,
-        traversable::Traversable,
+        has_graph::HasGraph,
     },
 };
 use std::{
@@ -41,11 +41,11 @@ use std::{
 };
 
 #[derive(Debug)]
-pub struct RootCursor<Trav: Traversable> {
+pub struct RootCursor<G: HasGraph> {
     pub state: ChildState,
-    pub trav: Trav,
+    pub trav: G,
 }
-impl<Trav: Traversable> Iterator for RootCursor<Trav> {
+impl<G: HasGraph> Iterator for RootCursor<G> {
     type Item = ControlFlow<EndReason>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -66,7 +66,7 @@ impl<Trav: Traversable> Iterator for RootCursor<Trav> {
         }
     }
 }
-impl<Trav: Traversable> RootCursor<Trav> {
+impl<G: HasGraph> RootCursor<G> {
     fn advanced(&mut self) -> ControlFlow<Option<EndReason>> {
         match self.query_advanced() {
             Continue(_) => match self.path_advanced() {

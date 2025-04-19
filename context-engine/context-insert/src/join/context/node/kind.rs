@@ -9,13 +9,13 @@ use crate::{
 };
 use context_search::{
     graph::Hypergraph,
-    traversal::traversable::TraversableMut,
+    traversal::has_graph::HasGraphMut,
 };
 use std::fmt::Debug;
 
 pub trait JoinKind: RangeRole<Mode = Join> + Debug + Clone + Copy
 {
-    type Trav: TraversableMut;
+    type Trav: HasGraphMut;
 }
 
 impl JoinKind for Pre<Join>

@@ -57,9 +57,9 @@ use crate::{
             sub_path::SubPath,
         },
     },
-    trace::traversable::{
+    trace::has_graph::{
+        HasGraph,
         TravDir,
-        Traversable,
     },
 };
 
@@ -121,13 +121,13 @@ impl RootChildPos<End> for PatternRangePath {
 }
 
 impl MoveRootPos<Right, End> for PatternRangePath {
-    fn move_root_pos<Trav: Traversable>(
+    fn move_root_pos<G: HasGraph>(
         &mut self,
-        _trav: &Trav,
+        _trav: &G,
     ) -> ControlFlow<()> {
-        if let Some(next) = TravDir::<Trav>::index_next(
-            RootChildPos::<End>::root_child_pos(self),
-        ) {
+        if let Some(next) =
+            TravDir::<G>::index_next(RootChildPos::<End>::root_child_pos(self))
+        {
             *self.root_child_pos_mut() = next;
             ControlFlow::Continue(())
         } else {

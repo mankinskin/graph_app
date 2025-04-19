@@ -19,7 +19,7 @@ use context_search::{
         TraceContext,
         cache::entry::position::Offset,
     },
-    traversal::traversable::Traversable,
+    traversal::has_graph::HasGraph,
 };
 
 #[derive(Debug, Clone)]
@@ -30,16 +30,16 @@ pub struct SplitTraceState {
 }
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct SplitTraceContext<Trav: Traversable> {
+pub struct SplitTraceContext<G: HasGraph> {
     pub root: Child,
     pub end_bound: usize,
 
     #[deref]
     #[deref_mut]
-    pub ctx: TraceContext<Trav>,
+    pub ctx: TraceContext<G>,
 }
 
-impl<Trav: Traversable> SplitTraceContext<Trav> {
+impl<G: HasGraph> SplitTraceContext<G> {
     pub fn get_node<'a, N: NodeType>(
         &'a self,
         index: &Child,

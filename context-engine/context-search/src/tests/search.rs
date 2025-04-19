@@ -56,17 +56,15 @@ use context_trace::{
     tests::env::TestEnv,
     trace::{
         cache::{
-            entry::{
-                position::{
-                    Edges,
-                    PositionCache,
-                },
-                vertex::VertexCache,
-            },
             key::directed::DirectedKey,
+            position::{
+                Edges,
+                PositionCache,
+            },
+            vertex::VertexCache,
             TraceCache,
         },
-        traversable::Traversable,
+        has_graph::HasGraph,
     },
     HashMap,
     HashSet,
@@ -381,7 +379,7 @@ fn find_ancestor2() {
             cache: TraceCache {
                 entries: HashMap::from_iter([
                     (
-                        lab!(xabyz),
+                        xabyz.index,
                         VertexCache {
                             index: xabyz,
                             top_down: FromIterator::from_iter([
@@ -416,7 +414,7 @@ fn find_ancestor2() {
                         }
                     ),
                     (
-                        lab!(xaby),
+                        xaby.index,
                         VertexCache {
                             index: xaby,
                             top_down: FromIterator::from_iter([]),
@@ -442,7 +440,7 @@ fn find_ancestor2() {
                         }
                     ),
                     (
-                        lab!(by),
+                        by.index,
                         VertexCache {
                             index: by,
                             top_down: FromIterator::from_iter([]),
@@ -614,7 +612,7 @@ fn find_ancestor3() {
                     //    ])
                     //}),
                     (
-                        lab!(xaby),
+                        xaby.index,
                         VertexCache {
                             index: xaby,
                             top_down: FromIterator::from_iter([
@@ -649,7 +647,7 @@ fn find_ancestor3() {
                         }
                     ),
                     (
-                        lab!(xab),
+                        xab.index,
                         VertexCache {
                             index: xab,
                             top_down: FromIterator::from_iter([]),
@@ -679,7 +677,7 @@ fn find_ancestor3() {
                         }
                     ),
                     (
-                        lab!(ab),
+                        ab.index,
                         VertexCache {
                             index: ab,
                             top_down: FromIterator::from_iter([]),

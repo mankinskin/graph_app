@@ -12,7 +12,7 @@ use context_search::{
             ErrorState,
             Foldable,
         },
-        traversable::TraversableMut,
+        has_graph::HasGraphMut,
     },
 };
 
@@ -26,7 +26,7 @@ pub mod direction;
 //    pub path: Vec<ChildLocation>,
 //}
 
-pub trait ToInsertContext: TraversableMut
+pub trait ToInsertContext: HasGraphMut
 {
     fn insert_context(&self) -> InsertContext;
 

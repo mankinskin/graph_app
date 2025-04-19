@@ -21,19 +21,19 @@ use context_search::{
         entry::position::SubSplitLocation,
         label_key::labelled_key,
     },
-    traversal::traversable::Traversable,
+    traversal::has_graph::HasGraph,
 };
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct SplitCacheContext<Trav: Traversable> {
+pub struct SplitCacheContext<G: HasGraph> {
     #[deref]
     #[deref_mut]
-    pub states_ctx: SplitTraceStateContext<Trav>,
+    pub states_ctx: SplitTraceStateContext<G>,
 
     pub cache: SplitCache,
 }
-impl<Trav: Traversable> SplitCacheContext<Trav> {
-    pub fn init(mut states_ctx: SplitTraceStateContext<Trav>) -> Self {
+impl<G: HasGraph> SplitCacheContext<G> {
+    pub fn init(mut states_ctx: SplitTraceStateContext<G>) -> Self {
         let (offsets, root_mode) =
             states_ctx.completed_splits::<RootNode>(&states_ctx.ctx.root);
         let pos_splits = states_ctx

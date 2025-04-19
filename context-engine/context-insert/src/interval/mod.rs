@@ -40,11 +40,11 @@ use context_search::{
         node::NodeTraceContext,
     },
     traversal::{
-        result::IncompleteState,
-        traversable::{
-            Traversable,
-            TraversableMut,
+        has_graph::{
+            HasGraph,
+            HasGraphMut,
         },
+        result::IncompleteState,
     },
 };
 
@@ -61,7 +61,7 @@ pub struct SplitCache {
 impl SplitCache {
     pub fn augment_node(
         &mut self,
-        trav: impl Traversable,
+        trav: impl HasGraph,
         index: Child,
     ) -> Vec<SplitTraceState> {
         let graph = trav.graph();
@@ -73,7 +73,7 @@ impl SplitCache {
     /// complete inner range offsets for root
     pub fn augment_root(
         &mut self,
-        trav: impl Traversable,
+        trav: impl HasGraph,
         root: Child,
     ) -> Vec<SplitTraceState> {
         let graph = trav.graph();
@@ -82,9 +82,9 @@ impl SplitCache {
         let root_mode = self.root_mode;
         self.get_mut(&index).unwrap().augment_root(ctx, root_mode)
     }
-    pub fn augment_nodes<Trav: Traversable, I: IntoIterator<Item = Child>>(
+    pub fn augment_nodes<G: HasGraph, I: IntoIterator<Item = Child>>(
         &mut self,
-        ctx: &mut SplitTraceStateContext<Trav>,
+        ctx: &mut SplitTraceStateContext<G>,
         nodes: I,
     ) {
         for c in nodes {
@@ -115,10 +115,10 @@ impl From<IncompleteState> for InitInterval {
         }
     }
 }
-impl<'a, Trav: TraversableMut + 'a> From<(&'a mut Trav, InitInterval)>
+impl<'a, G: HasGraphMut + 'a> From<(&'a mut G, InitInterval)>
     for IntervalGraph
 {
-    fn from((trav, init): (&'a mut Trav, InitInterval)) -> Self {
+    fn from((trav, init): (&'a mut G, InitInterval)) -> Self {
         let InitInterval {
             root,
             cache,

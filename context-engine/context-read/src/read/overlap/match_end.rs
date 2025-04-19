@@ -28,8 +28,8 @@ use context_search::{
         BasePath,
     },
     traversal::{
+        has_graph::HasGraph,
         iterator::policy::NodePath,
-        traversable::Traversable,
     },
 };
 
@@ -87,9 +87,9 @@ impl<P: MatchEndPath> PathComplete for MatchEnd<P> {
 }
 
 impl<P: MatchEndPath> PathSimplify for MatchEnd<P> {
-    fn into_simplified<Trav: Traversable>(
+    fn into_simplified<G: HasGraph>(
         self,
-        trav: &Trav,
+        trav: &G,
     ) -> Self {
         if let Some(c) = match self.get_path() {
             Some(p) => {
@@ -97,7 +97,7 @@ impl<P: MatchEndPath> PathSimplify for MatchEnd<P> {
                     let location = p.root_child_location();
                     let graph = trav.graph();
                     let pattern = graph.expect_pattern_at(location);
-                    <Trav::Kind as GraphKind>::Direction::pattern_index_prev(
+                    <G::Kind as GraphKind>::Direction::pattern_index_prev(
                         pattern.borrow(),
                         location.sub_index,
                     )
@@ -107,7 +107,7 @@ impl<P: MatchEndPath> PathSimplify for MatchEnd<P> {
                 } else {
                     None
                 }
-            }
+            },
             None => None,
         } {
             MatchEnd::Complete(c)
@@ -140,7 +140,9 @@ impl<P: MatchEndPath> IntoMatchEndStartPath for MatchEnd<P> {
 //        start.postfix
 //    }
 //}
-impl<P: MatchEndPath + From<Q>, Q: Into<RootedRolePath<Start, IndexRoot>>> From<Q> for MatchEnd<P> {
+impl<P: MatchEndPath + From<Q>, Q: Into<RootedRolePath<Start, IndexRoot>>>
+    From<Q> for MatchEnd<P>
+{
     fn from(start: Q) -> Self {
         // todo: handle complete
         MatchEnd::Path(P::from(start))
@@ -148,9 +150,9 @@ impl<P: MatchEndPath + From<Q>, Q: Into<RootedRolePath<Start, IndexRoot>>> From<
 }
 
 impl<P: MatchEndPath> RootChild<Start> for MatchEnd<P> {
-    fn root_child<Trav: Traversable>(
+    fn root_child<G: HasGraph>(
         &self,
-        trav: &Trav,
+        trav: &G,
     ) -> Child {
         match self {
             Self::Complete(c) => *c,

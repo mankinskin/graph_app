@@ -63,12 +63,12 @@ impl<T, F, I> FusedIterator for Bft<T, F, I>
         I: Iterator<Item=T>,
 {}
 
-pub(crate) trait Traversable {
+pub(crate) trait HasGraph {
     type Node;
     type State;
 }
 
 pub(crate) trait BreadthFirstTraversal<'g> {
-    type Trav: Traversable;
-    fn end_op(state: <Self::Trav as Traversable>::State) -> Vec<<Self::Trav as Traversable>::Node>;
+    type Trav: HasGraph;
+    fn end_op(state: <Self::Trav as HasGraph>::State) -> Vec<<Self::Trav as HasGraph>::Node>;
 }

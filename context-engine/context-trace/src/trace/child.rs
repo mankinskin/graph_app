@@ -6,12 +6,12 @@ use std::{
 use crate::{
     graph::vertex::{
         pattern::{
-            id::PatternId,
             IntoPattern,
+            id::PatternId,
         },
         wide::Wide,
     },
-    trace::cache::entry::position::SubSplitLocation,
+    trace::cache::position::SubSplitLocation,
 };
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -29,13 +29,10 @@ impl From<(usize, Option<NonZeroUsize>)> for ChildTracePos {
 }
 impl From<SubSplitLocation> for (PatternId, ChildTracePos) {
     fn from(sub: SubSplitLocation) -> Self {
-        (
-            sub.location.pattern_id,
-            ChildTracePos {
-                inner_offset: sub.inner_offset,
-                sub_index: sub.location.sub_index,
-            },
-        )
+        (sub.location.pattern_id, ChildTracePos {
+            inner_offset: sub.inner_offset,
+            sub_index: sub.location.sub_index,
+        })
     }
 }
 

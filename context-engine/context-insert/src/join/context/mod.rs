@@ -19,17 +19,17 @@ use context_search::{
             wide::Wide,
         },
     },
-    traversal::traversable::{
+    traversal::has_graph::{
         TravKind,
-        Traversable,
-        TraversableMut,
+        HasGraph,
+        HasGraphMut,
     },
 };
 
 pub mod node;
 pub mod pattern;
 
-//pub trait VertexJoin: TraversableMut {
+//pub trait VertexJoin: HasGraphMut {
 //    fn join_prefix(
 //        &mut self,
 //        vertex: impl HasVertexDataMut,
@@ -64,7 +64,7 @@ pub struct JoinContext
 #[derive(Debug)]
 pub struct LockedJoinContext<'a>
 {
-    pub trav: <HypergraphRef as TraversableMut>::GuardMut<'a>,
+    pub trav: <HypergraphRef as HasGraphMut>::GuardMut<'a>,
     //pub split_map: &'a SubSplits,
     pub interval: &'a IntervalGraph,
 }
@@ -132,11 +132,11 @@ impl JoinContext
     }
 }
 
-impl Traversable for JoinContext
+impl HasGraph for JoinContext
 {
     type Kind = TravKind<Hypergraph>;
     type Guard<'g>
-        = <HypergraphRef as Traversable>::Guard<'g>
+        = <HypergraphRef as HasGraph>::Guard<'g>
     where
         Self: 'g;
     fn graph(&self) -> Self::Guard<'_>
@@ -144,10 +144,10 @@ impl Traversable for JoinContext
         self.trav.graph()
     }
 }
-impl TraversableMut for JoinContext
+impl HasGraphMut for JoinContext
 {
     type GuardMut<'g>
-        = <HypergraphRef as TraversableMut>::GuardMut<'g>
+        = <HypergraphRef as HasGraphMut>::GuardMut<'g>
     where
         Self: 'g;
     fn graph_mut(&mut self) -> Self::GuardMut<'_>

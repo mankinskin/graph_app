@@ -12,13 +12,13 @@ use crate::{
         has_path::HasPath,
         role::PathRole,
     },
-    trace::traversable::Traversable,
+    trace::has_graph::HasGraph,
 };
 pub trait LeafChild<R>: RootChildPos<R> {
     fn leaf_child_location(&self) -> Option<ChildLocation>;
-    fn leaf_child<Trav: Traversable>(
+    fn leaf_child<G: HasGraph>(
         &self,
-        trav: &Trav,
+        trav: &G,
     ) -> Child;
 }
 
@@ -26,9 +26,9 @@ impl<R: PathRole, P: RootChild<R> + PathChild<R>> LeafChild<R> for P {
     fn leaf_child_location(&self) -> Option<ChildLocation> {
         self.path_child_location()
     }
-    fn leaf_child<Trav: Traversable>(
+    fn leaf_child<G: HasGraph>(
         &self,
-        trav: &Trav,
+        trav: &G,
     ) -> Child {
         self.path_child(trav)
             .unwrap_or_else(|| self.root_child(trav))
@@ -48,9 +48,9 @@ pub trait PathChild<R: PathRole>: HasPath<R> {
     fn path_child_location_mut(&mut self) -> Option<&mut ChildLocation> {
         R::bottom_up_iter(self.path_mut().iter_mut()).next()
     }
-    fn path_child<Trav: Traversable>(
+    fn path_child<G: HasGraph>(
         &self,
-        trav: &Trav,
+        trav: &G,
     ) -> Option<Child> {
         self.path_child_location()
             .map(|loc| trav.graph().expect_child_at(loc).clone())
