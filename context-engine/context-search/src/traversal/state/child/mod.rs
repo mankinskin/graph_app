@@ -46,7 +46,7 @@ use context_trace::{
         mutators::{
             adapters::IntoAdvanced,
             lower::PathLower,
-            move_path::Advance,
+            move_path::advance::Advance,
         },
         structs::rooted::index_range::IndexRangePath,
         RoleChildPath,

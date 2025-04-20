@@ -38,7 +38,10 @@ use context_trace::{
         },
         mutators::{
             adapters::IntoAdvanced,
-            move_path::key::AdvanceKey,
+            move_path::{
+                advance::Advance,
+                key::AdvanceKey,
+            },
             raise::PathRaise,
         },
         structs::rooted::{
@@ -115,33 +118,33 @@ impl ParentState {
     //    }
     //}
     pub fn next_parents<'a, K: TraversalKind>(
-        self,
+        mut self,
         trav: &K::Trav,
-    ) -> Result<ParentBatch, EndState> {
+    ) -> Result<(Self, ParentBatch), EndState> {
         // get next parents
         //let key = self.target_key();
         //let delta = self.path.root_post_ctx_width(trav);
 
-        //let mut cursor = self.cursor.clone();
-        //if cursor.advance(trav).is_continue() {
-        if let Some(batch) = K::Policy::next_batch(trav, &self) {
-            Ok(batch)
+        let cursor = self.cursor.clone();
+        if self.cursor.advance(trav).is_continue() {
+            if let Some(batch) = K::Policy::next_batch(trav, &self) {
+                Ok((self, batch))
+            } else {
+                Err(EndState {
+                    reason: EndReason::Mismatch,
+                    root_pos: self.root_pos,
+                    kind: EndKind::simplify_path(self.path, trav),
+                    cursor,
+                })
+            }
         } else {
             Err(EndState {
-                reason: EndReason::Mismatch,
+                reason: EndReason::QueryEnd,
                 root_pos: self.root_pos,
                 kind: EndKind::simplify_path(self.path, trav),
-                cursor: self.cursor,
+                cursor,
             })
         }
-        //} else {
-        //    Err(EndState {
-        //        reason: EndReason::QueryEnd,
-        //        root_pos: self.root_pos,
-        //        kind: EndKind::simplify_path(self.path, trav),
-        //        cursor: self.cursor,
-        //    })
-        //}
     }
 }
 

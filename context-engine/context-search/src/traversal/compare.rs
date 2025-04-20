@@ -21,8 +21,11 @@ use context_trace::{
     path::{
         accessors::role::End,
         mutators::move_path::{
+            advance::{
+                Advance,
+                CanAdvance,
+            },
             key::AdvanceKey,
-            Advance,
         },
         RoleChildPath,
     },
@@ -71,14 +74,18 @@ impl<G: HasGraph> Iterator for RootCursor<G> {
 }
 impl<G: HasGraph> RootCursor<G> {
     fn advanced(&mut self) -> ControlFlow<Option<EndReason>> {
-        match self.query_advanced() {
-            Continue(_) => match self.path_advanced() {
-                Continue(_) => Continue(()),
-                // end of this root
-                Break(_) => Break(None),
-            },
-            // end of query
-            Break(_) => Break(Some(EndReason::QueryEnd)),
+        if self.state.base.path.can_advance(&self.trav) {
+            match self.query_advanced() {
+                Continue(_) => {
+                    self.path_advanced();
+                    Continue(())
+                },
+                // end of query
+                Break(_) => Break(Some(EndReason::QueryEnd)),
+            }
+        } else {
+            // end of this root
+            Break(None)
         }
     }
     fn query_advanced(&mut self) -> ControlFlow<()> {
@@ -113,7 +120,7 @@ impl<G: HasGraph> RootCursor<G> {
                     .simplify_to_end(&self.trav),
                 })
             },
-            _ => Err(self),
+            None => Err(self),
         }
     }
 }

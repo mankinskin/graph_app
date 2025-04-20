@@ -22,7 +22,7 @@ use context_trace::{
         },
     },
     path::{
-        mutators::move_path::Advance,
+        mutators::move_path::advance::Advance,
         structs::{
             role_path::RolePath,
             rooted::{

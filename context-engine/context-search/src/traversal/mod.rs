@@ -1,18 +1,24 @@
 use compare::RootCursor;
 use container::StateContainer;
-use context_trace::trace::{
-    cache::TraceCache,
-    has_graph::{
-        HasGraph,
-        TravKind,
+use context_trace::{
+    graph::vertex::wide::Wide,
+    trace::{
+        cache::TraceCache,
+        has_graph::{
+            HasGraph,
+            TravKind,
+        },
     },
 };
 use derive_new::new;
 use fold::foldable::ErrorState;
 use iterator::policy::DirectedTraversalPolicy;
 use state::{
-    cursor::PatternRangeCursor,
-    end::EndState,
+    end::{
+        EndKind,
+        EndReason,
+        EndState,
+    },
     parent::batch::{
         ParentBatch,
         ParentBatchChildren,
@@ -50,6 +56,7 @@ pub struct TraversalContext<K: TraversalKind> {
     #[new(default)]
     pub cache: TraceCache,
     pub trav: K::Trav,
+    pub last_end: EndState,
 }
 
 impl<K: TraversalKind> TryFrom<StartCtx<K>> for TraversalContext<K> {
@@ -59,10 +66,15 @@ impl<K: TraversalKind> TryFrom<StartCtx<K>> for TraversalContext<K> {
             Ok(p) => Ok(Self {
                 matches: MatchContext {
                     batches: FromIterator::from_iter([p]),
-                    cursor: start.cursor,
                 },
                 trav: start.trav,
                 cache: TraceCache::new(start.index),
+                last_end: EndState {
+                    reason: EndReason::QueryEnd,
+                    root_pos: 0.into(),
+                    kind: EndKind::Complete(start.index),
+                    cursor: start.cursor,
+                },
             }),
             Err(end) => Err(end),
         }
@@ -70,31 +82,21 @@ impl<K: TraversalKind> TryFrom<StartCtx<K>> for TraversalContext<K> {
 }
 
 impl<K: TraversalKind> Iterator for TraversalContext<K> {
-    type Item = OptGen<Result<ParentBatch, EndState>>;
+    type Item = ();
 
     fn next(&mut self) -> Option<Self::Item> {
-        match MatchIterator::<K>::new(&self.trav, &mut self.matches).next() {
-            Some(Yield(root_cursor)) => Some(
-                // TODO: add cache for path to parent
-                match root_cursor.find_end() {
-                    // TODO: add cache for end
-                    Err(root_cursor) => match root_cursor
-                        .state
-                        .root_parent()
-                        .next_parents::<K>(&self.trav)
-                    {
-                        Ok(batch) => {
-                            // next batch
-                            self.matches.batches.push_back(batch);
-                            Pass
-                        },
-                        // TODO: if no new batch, return end state
-                        Err(end) => Yield(Err(end)),
-                    },
-                    Ok(end) => Yield(Err(end)),
-                },
-            ),
-            Some(Pass) => Some(Pass),
+        match EndIterator::<K>::new(&self.trav, &mut self.matches).next() {
+            Some(Yield(end)) => {
+                // TODO: add cache for end
+
+                assert!(
+                    end.width() >= self.last_end.width(),
+                    "Parents not evaluated in order"
+                );
+                self.last_end = end;
+                (!self.last_end.is_final()).then_some(())
+            },
+            Some(Pass) => Some(()),
             None => None,
         }
     }
@@ -106,12 +108,55 @@ pub enum OptGen<Y> {
     Pass,
 }
 use OptGen::*;
+
+#[derive(Debug, new)]
+pub struct EndIterator<'a, K: TraversalKind>(&'a K::Trav, &'a mut MatchContext);
+
+impl<'a, K: TraversalKind> Iterator for EndIterator<'a, K> {
+    type Item = OptGen<EndState>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match MatchIterator::<K>::new(self.0, self.1).next() {
+            Some(Yield(root_cursor)) => Some(
+                // TODO: add cache for path to parent
+                // TODO: add cache for end
+                match root_cursor.find_end() {
+                    Ok(end) => Yield(end),
+                    Err(root_cursor) => match root_cursor
+                        .state
+                        .root_parent()
+                        .next_parents::<K>(&self.0)
+                    {
+                        // TODO: if no new batch, return end state
+                        Err(end) => Yield(end),
+                        Ok((parent, batch)) => {
+                            assert!(!batch.is_empty());
+                            // next batch
+                            self.1.batches.push_back(batch);
+                            Yield(EndState {
+                                reason: EndReason::Mismatch,
+                                root_pos: parent.root_pos,
+                                kind: EndKind::simplify_path(
+                                    parent.path,
+                                    self.0,
+                                ),
+                                cursor: parent.cursor,
+                            })
+                        },
+                    },
+                },
+            ),
+            Some(Pass) => Some(Pass),
+            None => None,
+        }
+    }
+}
+
 /// context for generating next states
 #[derive(Debug, new)]
 pub struct MatchContext {
     #[new(default)]
     pub batches: VecDeque<ParentBatch>,
-    pub cursor: PatternRangeCursor,
 }
 #[derive(Debug, new)]
 pub struct MatchIterator<'a, K: TraversalKind>(
