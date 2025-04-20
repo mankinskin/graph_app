@@ -8,11 +8,14 @@ use context_trace::{
             HasGraph,
             TravKind,
         },
+        traceable::Traceable,
+        TraceContext,
     },
 };
 use derive_new::new;
 use fold::foldable::ErrorState;
 use iterator::policy::DirectedTraversalPolicy;
+use itertools::Itertools;
 use state::{
     end::{
         EndKind,
@@ -35,7 +38,6 @@ use std::{
         Continue,
     },
 };
-
 pub mod compare;
 pub mod container;
 pub mod fold;
@@ -87,12 +89,23 @@ impl<K: TraversalKind> Iterator for TraversalContext<K> {
     fn next(&mut self) -> Option<Self::Item> {
         match EndIterator::<K>::new(&self.trav, &mut self.matches).next() {
             Some(Yield(end)) => {
-                // TODO: add cache for end
-
                 assert!(
                     end.width() >= self.last_end.width(),
                     "Parents not evaluated in order"
                 );
+                // TODO: add cache for front of end
+                // TODO: only add cache until last matched parent
+                match &end.kind {
+                    EndKind::Postfix(post) => {
+                        let mut ctx = TraceContext {
+                            cache: &mut self.cache,
+                            trav: &self.trav,
+                        };
+                        post.trace(&mut ctx);
+                    },
+                    _ => {},
+                };
+
                 self.last_end = end;
                 (!self.last_end.is_final()).then_some(())
             },
@@ -117,23 +130,23 @@ impl<'a, K: TraversalKind> Iterator for EndIterator<'a, K> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match MatchIterator::<K>::new(self.0, self.1).next() {
-            Some(Yield(root_cursor)) => Some(
-                // TODO: add cache for path to parent
+            Some(Yield(root_cursor)) => Some(Yield(
+                // add cache for path to parent
                 // TODO: add cache for end
                 match root_cursor.find_end() {
-                    Ok(end) => Yield(end),
+                    Ok(end) => end,
                     Err(root_cursor) => match root_cursor
                         .state
                         .root_parent()
                         .next_parents::<K>(&self.0)
                     {
                         // TODO: if no new batch, return end state
-                        Err(end) => Yield(end),
+                        Err(end) => end,
                         Ok((parent, batch)) => {
                             assert!(!batch.is_empty());
                             // next batch
                             self.1.batches.push_back(batch);
-                            Yield(EndState {
+                            EndState {
                                 reason: EndReason::Mismatch,
                                 root_pos: parent.root_pos,
                                 kind: EndKind::simplify_path(
@@ -141,11 +154,11 @@ impl<'a, K: TraversalKind> Iterator for EndIterator<'a, K> {
                                     self.0,
                                 ),
                                 cursor: parent.cursor,
-                            })
+                            }
                         },
                     },
                 },
-            ),
+            )),
             Some(Pass) => Some(Pass),
             None => None,
         }
@@ -185,7 +198,7 @@ impl<'a, K: TraversalKind> Iterator for MatchIterator<'a, K> {
                     },
                     // continue with
                     Continue(next) => {
-                        ctx.batches.extend(next.into_iter().flat_map(
+                        ctx.batches.extend(next.into_iter().sorted().flat_map(
                             |parent| K::Policy::next_batch(&trav, &parent),
                         ));
                         Pass

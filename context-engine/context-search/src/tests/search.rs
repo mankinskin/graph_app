@@ -372,7 +372,7 @@ fn find_ancestor2() {
                             _ty: Default::default(),
                         },
                     },
-                    relative_pos: 3.into(),
+                    relative_pos: 2.into(),
                 },
             }),
             root: xabyz,

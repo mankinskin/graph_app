@@ -195,7 +195,7 @@ impl ChildState {
 impl From<ChildState> for NewChild {
     fn from(state: ChildState) -> Self {
         Self {
-            root: state.root_key(),
+            //root: state.root_key(),
             target: state.target_key(),
             end_leaf: state.path.role_leaf_child_location::<End>(),
         }

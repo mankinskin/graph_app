@@ -185,7 +185,7 @@ impl Traceable for &PrefixEnd {
         &self,
         ctx: &mut TraceContext<G>,
     ) {
-        ctx.trace_path(0, &self.path, *self.target.pos.pos(), true)
+        ctx.trace_rooted_end_path(0, &self.path, *self.target.pos.pos(), true)
     }
 }
 impl Traceable for &RangeEnd {
@@ -195,7 +195,12 @@ impl Traceable for &RangeEnd {
     ) {
         let root_entry =
             self.path.role_root_child_location::<Start>().sub_index;
-        ctx.trace_path(root_entry, &self.path, *self.target.pos.pos(), true)
+        ctx.trace_rooted_end_path(
+            root_entry,
+            &self.path,
+            *self.target.pos.pos(),
+            true,
+        )
     }
 }
 
@@ -204,7 +209,18 @@ pub struct PostfixEnd {
     pub path: IndexStartPath,
     pub inner_width: usize,
 }
-
+impl Traceable for &PostfixEnd {
+    fn trace<G: HasGraph>(
+        &self,
+        ctx: &mut TraceContext<G>,
+    ) {
+        ctx.trace_path::<_, Start>(
+            &self.path,
+            UpKey::new(self.path.root.location.parent.into(), 0.into()).into(),
+            true,
+        )
+    }
+}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EndState {
     pub reason: EndReason,

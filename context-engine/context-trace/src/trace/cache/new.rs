@@ -59,7 +59,7 @@ pub struct NewParent {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NewChild {
-    pub root: UpKey,
+    //pub root: UpKey,
     pub target: DirectedKey,
     pub end_leaf: Option<ChildLocation>,
 }
