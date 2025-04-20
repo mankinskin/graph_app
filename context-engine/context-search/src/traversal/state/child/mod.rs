@@ -36,6 +36,7 @@ use context_trace::{
     impl_cursor_pos,
     path::{
         accessors::{
+            has_path::HasRootedRolePath,
             role::{
                 End,
                 Start,
@@ -99,6 +100,12 @@ pub struct ChildState {
 }
 
 impl ChildState {
+    pub fn root_parent(&self) -> ParentState {
+        ParentState {
+            path: self.base.path.rooted_role_path(),
+            ..self.base.clone()
+        }
+    }
     fn mode_prefixes<'a, G: HasGraph>(
         &self,
         trav: &G,

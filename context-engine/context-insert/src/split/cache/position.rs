@@ -15,7 +15,7 @@ use crate::{
         ToVertexSplitPos,
     },
 };
-use context_search::{
+use context_trace::{
     HashSet,
     graph::vertex::{
         child::Child,

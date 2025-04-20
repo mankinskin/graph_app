@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 
 use crate::insert::ToInsertContext;
-use context_search::{
+use context_search::search::Searchable;
+use context_trace::{
     graph::{
         Hypergraph,
         HypergraphRef,
@@ -13,13 +14,12 @@ use context_search::{
             wide::Wide,
         },
     },
-    search::Searchable,
     traversal::{
+        has_graph::HasGraph,
         result::{
             FinishedKind,
             FinishedState,
         },
-        has_graph::HasGraph,
     },
 };
 use itertools::*;
@@ -30,8 +30,7 @@ use pretty_assertions::{
 };
 
 #[test]
-fn index_pattern1()
-{
+fn index_pattern1() {
     let mut graph = Hypergraph::<BaseGraphKind>::default();
     let (a, b, _w, x, y, z) = graph
         .insert_tokens([
@@ -88,8 +87,7 @@ fn index_pattern1()
 }
 
 #[test]
-fn index_pattern2()
-{
+fn index_pattern2() {
     let mut graph =
         context_search::graph::Hypergraph::<BaseGraphKind>::default();
     let (a, b, _w, x, y, z) = graph
@@ -145,8 +143,7 @@ fn index_pattern2()
 }
 
 #[test]
-fn index_infix1()
-{
+fn index_infix1() {
     let mut graph =
         context_search::graph::Hypergraph::<BaseGraphKind>::default();
     let (a, b, w, x, y, z) = graph
@@ -222,8 +219,7 @@ fn index_infix1()
 }
 
 #[test]
-fn index_infix2()
-{
+fn index_infix2() {
     let mut graph =
         context_search::graph::Hypergraph::<BaseGraphKind>::default();
     let (a, b, c, d, x, y) = graph

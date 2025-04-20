@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use super::context::SplitCacheContext;
 use crate::interval::IntervalGraph;
-use context_search::{
+use context_trace::{
     graph::vertex::{
         child::{
             Child,

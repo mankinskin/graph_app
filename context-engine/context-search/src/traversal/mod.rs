@@ -1,3 +1,4 @@
+use compare::RootCursor;
 use container::StateContainer;
 use context_trace::trace::{
     cache::TraceCache,
@@ -45,12 +46,10 @@ pub trait TraversalKind: Debug + Default {
 /// context for generating next states
 #[derive(Debug, new)]
 pub struct TraversalContext<K: TraversalKind> {
-    pub trav: K::Trav,
-    #[new(default)]
-    pub batches: VecDeque<ParentBatch>,
+    pub matches: MatchContext,
     #[new(default)]
     pub cache: TraceCache,
-    pub cursor: PatternRangeCursor,
+    pub trav: K::Trav,
 }
 
 impl<K: TraversalKind> TryFrom<StartCtx<K>> for TraversalContext<K> {
@@ -58,10 +57,12 @@ impl<K: TraversalKind> TryFrom<StartCtx<K>> for TraversalContext<K> {
     fn try_from(start: StartCtx<K>) -> Result<Self, Self::Error> {
         match start.get_parent_batch() {
             Ok(p) => Ok(Self {
-                batches: FromIterator::from_iter([p]),
-                cache: TraceCache::new(start.index),
+                matches: MatchContext {
+                    batches: FromIterator::from_iter([p]),
+                    cursor: start.cursor,
+                },
                 trav: start.trav,
-                cursor: start.cursor,
+                cache: TraceCache::new(start.index),
             }),
             Err(end) => Err(end),
         }
@@ -69,41 +70,80 @@ impl<K: TraversalKind> TryFrom<StartCtx<K>> for TraversalContext<K> {
 }
 
 impl<K: TraversalKind> Iterator for TraversalContext<K> {
-    type Item = ControlFlow<EndState>;
+    type Item = OptGen<Result<ParentBatch, EndState>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(batch) = self.batches.pop_front() {
+        match MatchIterator::<K>::new(&self.trav, &mut self.matches).next() {
+            Some(Yield(root_cursor)) => Some(
+                // TODO: add cache for path to parent
+                match root_cursor.find_end() {
+                    // TODO: add cache for end
+                    Err(root_cursor) => match root_cursor
+                        .state
+                        .root_parent()
+                        .next_parents::<K>(&self.trav)
+                    {
+                        Ok(batch) => {
+                            // next batch
+                            self.matches.batches.push_back(batch);
+                            Pass
+                        },
+                        // TODO: if no new batch, return end state
+                        Err(end) => Yield(Err(end)),
+                    },
+                    Ok(end) => Yield(Err(end)),
+                },
+            ),
+            Some(Pass) => Some(Pass),
+            None => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum OptGen<Y> {
+    Yield(Y),
+    Pass,
+}
+use OptGen::*;
+/// context for generating next states
+#[derive(Debug, new)]
+pub struct MatchContext {
+    #[new(default)]
+    pub batches: VecDeque<ParentBatch>,
+    pub cursor: PatternRangeCursor,
+}
+#[derive(Debug, new)]
+pub struct MatchIterator<'a, K: TraversalKind>(
+    &'a K::Trav,
+    &'a mut MatchContext,
+);
+
+impl<'a, K: TraversalKind> Iterator for MatchIterator<'a, K> {
+    type Item = OptGen<RootCursor<&'a K::Trav>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let MatchIterator(trav, ctx) = self;
+        if let Some(batch) = ctx.batches.pop_front() {
             // one parent level (batched)
             Some(
-                match ParentBatchChildren::new(&self.trav, batch)
+                match ParentBatchChildren::<&'a K::Trav>::new(*trav, batch)
                     // find parent with a match
                     .find_root_cursor()
                 {
                     // root found
-                    Break((root_parent, root_cursor)) => {
+                    Break(root_cursor) => {
                         // drop other candidates
-                        self.batches.clear();
+                        ctx.batches.clear();
                         // TODO: add cache for path to parent
-                        if let Some(end) = root_cursor.find_end() {
-                            // TODO: add cache for end
-                            Break(end)
-                        } else {
-                            // TODO: if no new batch, return end state
-                            if let Some(next) =
-                                K::Policy::next_batch(&self.trav, &root_parent)
-                            {
-                                self.batches.push_back(next);
-                            }
-                            // next batch
-                            Continue(())
-                        }
+                        Yield(root_cursor)
                     },
                     // continue with
                     Continue(next) => {
-                        self.batches.extend(next.into_iter().flat_map(
-                            |parent| K::Policy::next_batch(&self.trav, &parent),
+                        ctx.batches.extend(next.into_iter().flat_map(
+                            |parent| K::Policy::next_batch(&trav, &parent),
                         ));
-                        Continue(())
+                        Pass
                     },
                 },
             )

@@ -55,7 +55,10 @@ impl<G: HasGraph> Iterator for RootCursor<G> {
                 match ChildIterator::new(&self.trav, self.state.clone())
                     .compare()
                 {
-                    Match(_) => Continue(()),
+                    Match(c) => {
+                        self.state = c;
+                        Continue(())
+                    },
                     Mismatch(_) => Break(EndReason::Mismatch),
                 },
             ),
@@ -84,7 +87,7 @@ impl<G: HasGraph> RootCursor<G> {
     fn path_advanced(&mut self) -> ControlFlow<()> {
         self.state.base.path.advance(&self.trav)
     }
-    pub fn find_end(mut self) -> Option<EndState> {
+    pub fn find_end(mut self) -> Result<EndState, Self> {
         match (&mut self).find_map(|flow| match flow {
             Continue(()) => None,
             Break(reason) => Some(reason),
@@ -99,7 +102,7 @@ impl<G: HasGraph> RootCursor<G> {
                 let target_index = path.role_leaf_child::<End, _>(&self.trav);
                 let pos = cursor.relative_pos;
                 cursor.advance_key(target_index.width());
-                Some(EndState {
+                Ok(EndState {
                     root_pos,
                     cursor,
                     reason,
@@ -110,7 +113,7 @@ impl<G: HasGraph> RootCursor<G> {
                     .simplify_to_end(&self.trav),
                 })
             },
-            _ => None,
+            _ => Err(self),
         }
     }
 }

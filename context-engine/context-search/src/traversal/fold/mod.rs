@@ -8,7 +8,10 @@ use super::{
     TraversalContext,
     TraversalKind,
 };
-use crate::traversal::result::FinishedState;
+use crate::traversal::{
+    result::FinishedState,
+    OptGen::*,
+};
 use context_trace::{
     graph::{
         getters::ErrorReason,
@@ -24,10 +27,7 @@ use context_trace::{
     },
 };
 use foldable::ErrorState;
-use std::{
-    fmt::Debug,
-    ops::ControlFlow::Break,
-};
+use std::fmt::Debug;
 
 pub mod foldable;
 pub mod state;
@@ -63,7 +63,7 @@ impl<K: TraversalKind> Iterator for FoldContext<K> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.tctx.next() {
-            Some(Break(end)) => {
+            Some(Yield(Err(end))) => {
                 assert!(
                     end.width() >= self.max_width,
                     "Parents not evaluated in order"

@@ -51,15 +51,12 @@ impl<'a, G: HasGraph> ParentBatchChildren<G> {
 
     pub fn find_root_cursor(
         mut self
-    ) -> ControlFlow<(ParentState, RootCursor<G>), Vec<ParentState>> {
-        if let Some((root_parent, child)) = self.find_map(|root| root) {
-            Break((
-                root_parent,
-                RootCursor {
-                    trav: self.trav,
-                    state: child,
-                },
-            ))
+    ) -> ControlFlow<RootCursor<G>, Vec<ParentState>> {
+        if let Some(child) = self.find_map(|root| root) {
+            Break(RootCursor {
+                trav: self.trav,
+                state: child,
+            })
         } else {
             Continue(self.keep)
         }
@@ -67,16 +64,14 @@ impl<'a, G: HasGraph> ParentBatchChildren<G> {
 }
 
 impl<G: HasGraph> Iterator for ParentBatchChildren<G> {
-    type Item = Option<(ParentState, ChildState)>;
+    type Item = Option<ChildState>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(parent) = self.batch.parents.pop_front() {
             // process parent
             match parent.into_advanced(&self.trav) {
                 Ok(state) => Some(
-                    ChildIterator::new(&self.trav, state.child)
-                        .find_match()
-                        .map(|child| (state.root_parent, child)),
+                    ChildIterator::new(&self.trav, state.child).find_match(),
                 ),
                 Err(parent) => {
                     self.keep.push(parent);

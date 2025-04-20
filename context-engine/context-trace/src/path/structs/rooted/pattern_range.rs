@@ -152,11 +152,12 @@ where
         HasRolePath::<R>::role_path_mut(self).path_mut()
     }
 }
-impl<R: PathRole> HasRootedRolePath<R> for PatternRangePath
+impl<Role: PathRole, Root: PathRoot + Clone> HasRootedRolePath<Role>
+    for RootedRangePath<Root>
 where
-    Self: HasRolePath<R> + RootedPath,
+    Self: HasRolePath<Role> + RootedPath<Root = Root>,
 {
-    fn rooted_role_path(&self) -> RootedRolePath<R, Self::Root> {
+    fn rooted_role_path(&self) -> RootedRolePath<Role, Self::Root> {
         self.role_path()
             .clone()
             .into_rooted(self.path_root().clone())

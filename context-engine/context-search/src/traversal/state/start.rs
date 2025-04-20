@@ -4,7 +4,7 @@ use crate::traversal::{
     result::FinishedKind,
     state::{
         cursor::PatternRangeCursor,
-        parent::IntoPrimer,
+        ParentState,
     },
     ParentBatch,
     TraversalKind,
@@ -12,11 +12,28 @@ use crate::traversal::{
 use context_trace::{
     graph::{
         getters::ErrorReason,
-        vertex::child::Child,
+        vertex::{
+            child::Child,
+            location::{
+                child::ChildLocation,
+                pattern::IntoPatternLocation,
+            },
+            wide::Wide,
+        },
     },
-    path::mutators::move_path::Advance,
+    path::{
+        mutators::move_path::Advance,
+        structs::{
+            role_path::RolePath,
+            rooted::{
+                role_path::RootedRolePath,
+                root::IndexRoot,
+            },
+            sub_path::SubPath,
+        },
+    },
+    trace::has_graph::HasGraph,
 };
-
 #[derive(Debug, PartialEq, Eq)]
 pub struct StartCtx<K: TraversalKind> {
     pub index: Child,
@@ -39,6 +56,40 @@ impl<K: TraversalKind> StartCtx<K> {
                 reason: ErrorReason::SingleIndex(self.index),
                 found: Some(FinishedKind::Complete(self.index)),
             })
+        }
+    }
+}
+pub trait IntoPrimer: Sized {
+    fn into_primer<G: HasGraph>(
+        self,
+        trav: &G,
+        parent_entry: ChildLocation,
+    ) -> ParentState;
+}
+impl IntoPrimer for (Child, PatternRangeCursor) {
+    fn into_primer<G: HasGraph>(
+        self,
+        _trav: &G,
+        parent_entry: ChildLocation,
+    ) -> ParentState {
+        let (c, cursor) = self;
+        let width = c.width().into();
+        ParentState {
+            prev_pos: width,
+            root_pos: width,
+            path: RootedRolePath {
+                root: IndexRoot {
+                    location: parent_entry.clone().into_pattern_location(),
+                },
+                role_path: RolePath {
+                    sub_path: SubPath {
+                        root_entry: parent_entry.sub_index,
+                        path: vec![],
+                    },
+                    _ty: Default::default(),
+                },
+            },
+            cursor,
         }
     }
 }

@@ -1,8 +1,4 @@
-use super::parent::ParentState;
-use crate::traversal::{
-    state::parent::IntoPrimer,
-    ControlFlow,
-};
+use crate::traversal::ControlFlow;
 use context_trace::{
     direction::{
         pattern::PatternDirection,
@@ -11,10 +7,7 @@ use context_trace::{
     },
     graph::vertex::{
         child::Child,
-        location::{
-            child::ChildLocation,
-            pattern::IntoPatternLocation,
-        },
+        location::child::ChildLocation,
         wide::Wide,
     },
     impl_cursor_pos,
@@ -53,13 +46,7 @@ use context_trace::{
         },
         structs::{
             query_range_path::FoldablePath,
-            role_path::RolePath,
-            rooted::{
-                pattern_range::PatternRangePath,
-                role_path::RootedRolePath,
-                root::IndexRoot,
-            },
-            sub_path::SubPath,
+            rooted::pattern_range::PatternRangePath,
         },
     },
     trace::has_graph::{
@@ -206,33 +193,6 @@ impl MoveKey<Left> for PatternRangeCursor {
     }
 }
 
-impl IntoPrimer for (Child, PatternRangeCursor) {
-    fn into_primer<G: HasGraph>(
-        self,
-        _trav: &G,
-        parent_entry: ChildLocation,
-    ) -> ParentState {
-        let (c, cursor) = self;
-        let width = c.width().into();
-        ParentState {
-            prev_pos: width,
-            root_pos: width,
-            path: RootedRolePath {
-                root: IndexRoot {
-                    location: parent_entry.clone().into_pattern_location(),
-                },
-                role_path: RolePath {
-                    sub_path: SubPath {
-                        root_entry: parent_entry.sub_index,
-                        path: vec![],
-                    },
-                    _ty: Default::default(),
-                },
-            },
-            cursor,
-        }
-    }
-}
 pub trait ToCursor: FoldablePath {
     fn to_cursor(self) -> PathCursor<Self>;
 }

@@ -232,6 +232,7 @@ fn find_ancestor1() {
         "b_c"
     );
 
+    println!("################## A_BC");
     let query = a_bc_pattern;
     assert_matches!(
         graph.find_ancestor(&query),

@@ -1,0 +1,12 @@
+
+[workspace]
+resolver = "2"
+members = [
+  "context-search",
+  "context-insert",
+  "context-read",
+  "context-trace",
+]
+
+[profile.release]
+opt-level = 2 # fast and small wasm
