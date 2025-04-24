@@ -11,7 +11,7 @@ use crate::interval::partition::info::range::{
         RangeRole,
     },
 };
-use context_search::trace::{
+use context_tracetrace::{
     node::{
         AsNodeTraceContext,
         NodeTraceContext,

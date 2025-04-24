@@ -7,7 +7,7 @@ use crate::{
     },
     join::partition::Join,
 };
-use context_search::{
+use context_trace{
     graph::Hypergraph,
     traversal::has_graph::HasGraphMut,
 };

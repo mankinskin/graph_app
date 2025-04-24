@@ -8,6 +8,16 @@ use crate::{
         },
     },
     path::accessors::border::PathBorder,
+    trace::{
+        BottomUp,
+        TopDown,
+        TraceDirection,
+        cache::new::{
+            DownEdit,
+            Edit,
+            UpEdit,
+        },
+    },
 };
 use std::{
     borrow::Borrow,
@@ -22,12 +32,16 @@ pub struct End;
 
 pub trait PathRole: 'static + Debug + PathBorder + Default + Clone {
     type TopDownPathIter<I: Borrow<ChildLocation>, T: DoubleEndedIterator<Item=I> + ExactSizeIterator>: DoubleEndedIterator<Item=I> + ExactSizeIterator;
+    type Direction: TraceDirection;
+    type Edit: Edit;
+
     fn top_down_iter<
         I: Borrow<ChildLocation>,
         T: DoubleEndedIterator<Item = I> + ExactSizeIterator,
     >(
         collection: T
     ) -> Self::TopDownPathIter<I, T>;
+
     fn bottom_up_iter<
         I: Borrow<ChildLocation>,
         T: DoubleEndedIterator<Item = I> + ExactSizeIterator,
@@ -55,7 +69,9 @@ pub trait PathRole: 'static + Debug + PathBorder + Default + Clone {
     ) -> Vec<T> {
         Self::split_end(pattern, Self::normalize_index(pattern, index))
     }
-    fn directed_pattern_split<T: crate::graph::vertex::has_vertex_index::ToChild + Clone>(
+    fn directed_pattern_split<
+        T: crate::graph::vertex::has_vertex_index::ToChild + Clone,
+    >(
         pattern: &'_ [T],
         index: usize,
     ) -> (Vec<T>, Vec<T>) {
@@ -67,10 +83,13 @@ pub trait PathRole: 'static + Debug + PathBorder + Default + Clone {
 }
 
 impl PathRole for Start {
+    type Direction = BottomUp;
     type TopDownPathIter<
         I: Borrow<ChildLocation>,
         T: DoubleEndedIterator<Item = I> + ExactSizeIterator,
     > = std::iter::Rev<T>;
+    type Edit = UpEdit;
+
     fn top_down_iter<
         I: Borrow<ChildLocation>,
         T: DoubleEndedIterator<Item = I> + ExactSizeIterator,
@@ -100,10 +119,14 @@ impl PathRole for Start {
 }
 
 impl PathRole for End {
+    type Direction = TopDown;
+    type Edit = DownEdit;
+
     type TopDownPathIter<
         I: Borrow<ChildLocation>,
         T: DoubleEndedIterator<Item = I> + ExactSizeIterator,
     > = T;
+
     fn top_down_iter<
         I: Borrow<ChildLocation>,
         T: DoubleEndedIterator<Item = I> + ExactSizeIterator,

@@ -5,7 +5,7 @@ use derive_more::derive::{
 };
 
 use crate::split::SplitMap;
-use context_search::{
+use context_trace{
     graph::vertex::pattern::id::PatternId,
     trace::pattern::{
         HasPatternTraceContext,

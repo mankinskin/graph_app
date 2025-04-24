@@ -13,30 +13,26 @@ use context_trace::{
             role::End,
         },
         mutators::move_path::key::TokenPosition,
-        RoleChildPath,
+        GetRoleChildPath,
     },
     trace::{
-        cache::{
-            key::{
-                directed::{
-                    up::UpKey,
-                    DirectedKey,
-                },
-                prev::PrevKey,
-                props::{
-                    CursorPosition,
-                    RootKey,
-                    TargetKey,
-                },
+        cache::key::{
+            directed::{
+                up::UpKey,
+                DirectedKey,
             },
-            new::NewEntry,
+            props::{
+                CursorPosition,
+                RootKey,
+                TargetKey,
+            },
         },
-        TraceDirection,
+        StateDirection,
     },
 };
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TraversalState {
-    pub prev: PrevKey,
+    pub prev: DirectedKey,
     pub kind: InnerKind,
 }
 impl TraversalState {
@@ -47,7 +43,7 @@ impl TraversalState {
                 state.path.role_leaf_child_location::<End>(),
         }
     }
-    pub fn prev_key(&self) -> PrevKey {
+    pub fn prev_key(&self) -> DirectedKey {
         self.prev.clone()
     }
     pub fn root_pos(&self) -> TokenPosition {
@@ -57,34 +53,34 @@ impl TraversalState {
         }
     }
 
-    pub fn state_direction(&self) -> TraceDirection {
+    pub fn state_direction(&self) -> StateDirection {
         match &self.kind {
-            InnerKind::Parent(_) => TraceDirection::BottomUp,
-            InnerKind::Child(_) => TraceDirection::TopDown,
+            InnerKind::Parent(_) => StateDirection::BottomUp,
+            InnerKind::Child(_) => StateDirection::TopDown,
         }
     }
 }
 
-impl From<TraversalState> for NewEntry {
-    fn from(state: TraversalState) -> Self {
-        Self {
-            prev: state.prev_key(),
-            //root_pos: state.root_pos(),
-            kind: state.kind.into(),
-        }
-    }
-}
+//impl From<TraversalState> for NewEntry {
+//    fn from(state: TraversalState) -> Self {
+//        Self {
+//            prev: state.prev_key(),
+//            //root_pos: state.root_pos(),
+//            kind: state.kind.into(),
+//        }
+//    }
+//}
 
-impl From<(PrevKey, ParentState)> for TraversalState {
-    fn from((prev, ps): (PrevKey, ParentState)) -> Self {
+impl From<(DirectedKey, ParentState)> for TraversalState {
+    fn from((prev, ps): (DirectedKey, ParentState)) -> Self {
         Self {
             prev,
             kind: InnerKind::Parent(ps),
         }
     }
 }
-impl From<(PrevKey, ChildState)> for TraversalState {
-    fn from((prev, cs): (PrevKey, ChildState)) -> Self {
+impl From<(DirectedKey, ChildState)> for TraversalState {
+    fn from((prev, cs): (DirectedKey, ChildState)) -> Self {
         Self {
             prev,
             kind: InnerKind::Child(cs),

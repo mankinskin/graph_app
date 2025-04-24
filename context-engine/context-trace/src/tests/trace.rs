@@ -6,7 +6,7 @@ use crate::{
         pattern::pattern_width,
     },
     path::{
-        RoleChildPath,
+        GetRoleChildPath,
         accessors::{
             child::root::GraphRootChild,
             role::End,
@@ -20,7 +20,6 @@ use crate::{
                 DirectedKey,
                 up::UpKey,
             },
-            prev::PrevKey,
             props::{
                 CursorPosition,
                 RootKey,

@@ -31,7 +31,7 @@ use crate::{
         },
     },
 };
-use context_search::{
+use context_trace{
     graph::vertex::pattern::pattern_range::PatternRangeIndex,
     trace::node::AsNodeTraceContext,
 };

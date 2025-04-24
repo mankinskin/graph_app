@@ -13,11 +13,11 @@ use context_trace::{
     path::{
         accessors::role::End,
         mutators::append::PathAppend,
-        RoleChildPath,
+        GetRoleChildPath,
     },
     trace::{
         cache::key::{
-            directed::DirectedKey,
+            directed::down::DownKey,
             props::CursorPosition,
         },
         has_graph::HasGraph,
@@ -32,7 +32,6 @@ use std::{
     collections::VecDeque,
     fmt::Debug,
 };
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PathPairMode {
     GraphMajor,
@@ -126,9 +125,9 @@ impl ChildModeCtx {
                 mctx.push_major(leaf.to_child_location(sub.location));
                 ChildModeCtx {
                     state: ChildState {
-                        target: DirectedKey::down(
+                        target: DownKey::new(
                             sub.child,
-                            *mctx.state.cursor.cursor_pos(),
+                            (*mctx.state.cursor.cursor_pos()).into(),
                         ),
                         ..mctx.state
                     },

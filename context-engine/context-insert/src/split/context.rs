@@ -15,7 +15,7 @@ use crate::{
     interval::SplitCache,
     split::trace::SplitTraceState,
 };
-use context_search::{
+use context_trace{
     graph::vertex::has_vertex_index::HasVertexIndex,
     trace::cache::{
         entry::position::SubSplitLocation,

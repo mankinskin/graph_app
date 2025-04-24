@@ -8,7 +8,7 @@ use derive_more::{
     IntoIterator,
 };
 
-use context_search::{
+use context_trace{
     HashMap,
     graph::vertex::pattern::id::PatternId,
 };

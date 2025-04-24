@@ -13,7 +13,7 @@ use crate::interval::partition::info::range::{
         RangeRole,
     },
 };
-use context_search::{
+use context_trace{
     graph::vertex::pattern::{
         Pattern,
         pattern_pre_ctx_width,

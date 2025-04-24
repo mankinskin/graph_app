@@ -18,7 +18,7 @@ use crate::{
         vertex::SplitVertexCache,
     },
 };
-use context_search::{
+use context_trace{
     HashMap,
     HashSet,
     lab,

@@ -6,7 +6,7 @@ use crate::{
     direction::Right,
     path::{
         BasePath,
-        RoleChildPath,
+        GetRoleChildPath,
         accessors::{
             child::{
                 LeafChild,
@@ -40,7 +40,7 @@ impl<R: PathRole, T: RootChild<R> + Send + Clone + Eq + Debug> NodePath<R>
 }
 
 pub trait Advanced:
-    RoleChildPath
+    GetRoleChildPath
     + NodePath<Start>
     + BasePath
     + HasRolePath<Start>
@@ -57,7 +57,7 @@ pub trait Advanced:
 }
 
 impl<
-    T: RoleChildPath
+    T: GetRoleChildPath
         + NodePath<Start>
         + BasePath
         + HasRolePath<Start>

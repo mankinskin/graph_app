@@ -1,4 +1,4 @@
-use context_search::{
+use context_trace::{
     direction::{
         Direction,
         Left,
@@ -10,8 +10,7 @@ use context_search::{
     },
 };
 
-pub trait InsertDirection: Direction + Clone + PartialEq + Eq
-{
+pub trait InsertDirection: Direction + Clone + PartialEq + Eq {
     fn context_then_inner(
         context: Pattern,
         inner: Child,
@@ -58,13 +57,11 @@ pub trait InsertDirection: Direction + Clone + PartialEq + Eq
     //) -> Pattern;
 }
 
-impl InsertDirection for Left
-{
+impl InsertDirection for Left {
     fn inner_then_context(
         inner: Child,
         context: Pattern,
-    ) -> Pattern
-    {
+    ) -> Pattern {
         context.iter().copied().chain(inner).collect()
     }
 
@@ -101,13 +98,11 @@ impl InsertDirection for Left
     //}
 }
 
-impl InsertDirection for Right
-{
+impl InsertDirection for Right {
     fn inner_then_context(
         inner: Child,
         context: Pattern,
-    ) -> Pattern
-    {
+    ) -> Pattern {
         std::iter::once(inner).chain(context.to_owned()).collect()
     }
 

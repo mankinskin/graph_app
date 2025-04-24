@@ -27,7 +27,7 @@ use context_trace::{
             },
             key::AdvanceKey,
         },
-        RoleChildPath,
+        GetRoleChildPath,
     },
     trace::{
         cache::key::directed::DirectedKey,

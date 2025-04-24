@@ -8,7 +8,7 @@ use crate::interval::partition::info::{
         },
     },
 };
-use context_search::trace::pattern::HasPatternTraceContext;
+use context_tracetrace::pattern::HasPatternTraceContext;
 
 pub trait TraceBorders<R: RangeRole>: VisitBorders<R>
 {

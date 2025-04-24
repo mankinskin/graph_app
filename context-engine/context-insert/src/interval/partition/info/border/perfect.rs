@@ -9,7 +9,7 @@ use derive_more::{
     Into,
 };
 
-use context_search::graph::vertex::pattern::id::PatternId;
+use context_tracegraph::vertex::pattern::id::PatternId;
 
 pub trait BoolPerfect: Default + Debug + Clone
 {

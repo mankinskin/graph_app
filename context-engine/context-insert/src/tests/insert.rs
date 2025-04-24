@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::insert::ToInsertContext;
-use context_search::search::Searchable;
+use context_tracesearch::Searchable;
 use context_trace::{
     graph::{
         Hypergraph,
@@ -89,7 +89,7 @@ fn index_pattern1() {
 #[test]
 fn index_pattern2() {
     let mut graph =
-        context_search::graph::Hypergraph::<BaseGraphKind>::default();
+        context_tracegraph::Hypergraph::<BaseGraphKind>::default();
     let (a, b, _w, x, y, z) = graph
         .insert_tokens([
             Token::Element('a'),
@@ -145,7 +145,7 @@ fn index_pattern2() {
 #[test]
 fn index_infix1() {
     let mut graph =
-        context_search::graph::Hypergraph::<BaseGraphKind>::default();
+        context_tracegraph::Hypergraph::<BaseGraphKind>::default();
     let (a, b, w, x, y, z) = graph
         .insert_tokens([
             Token::Element('a'),
@@ -221,7 +221,7 @@ fn index_infix1() {
 #[test]
 fn index_infix2() {
     let mut graph =
-        context_search::graph::Hypergraph::<BaseGraphKind>::default();
+        context_tracegraph::Hypergraph::<BaseGraphKind>::default();
     let (a, b, c, d, x, y) = graph
         .insert_tokens([
             Token::Element('a'),

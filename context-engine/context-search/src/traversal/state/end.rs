@@ -32,7 +32,7 @@ use context_trace::{
             },
             split_path::RootedSplitPathRef,
         },
-        RoleChildPath,
+        GetRoleChildPath,
     },
     trace::{
         cache::{
@@ -40,6 +40,7 @@ use context_trace::{
                 directed::{
                     up::UpKey,
                     DirectedKey,
+                    HasTokenPosition,
                 },
                 props::{
                     CursorPosition,
@@ -54,10 +55,9 @@ use context_trace::{
             },
         },
         has_graph::HasGraph,
-        TraceDirection,
+        StateDirection,
     },
 };
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EndKind {
     Range(RangeEnd),
@@ -185,7 +185,7 @@ impl Traceable for &PrefixEnd {
         &self,
         ctx: &mut TraceContext<G>,
     ) {
-        ctx.trace_rooted_end_path(0, &self.path, *self.target.pos.pos(), true)
+        ctx.trace_prefix_path(&self.path, true)
     }
 }
 impl Traceable for &RangeEnd {
@@ -193,12 +193,13 @@ impl Traceable for &RangeEnd {
         &self,
         ctx: &mut TraceContext<G>,
     ) {
-        let root_entry =
-            self.path.role_root_child_location::<Start>().sub_index;
-        ctx.trace_rooted_end_path(
-            root_entry,
+        let root = self.path.role_root_child_location::<Start>().parent;
+        ctx.trace_range_path(
             &self.path,
-            *self.target.pos.pos(),
+            UpKey {
+                index: root,
+                pos: (*self.target.pos.pos()).into(),
+            },
             true,
         )
     }
@@ -214,7 +215,7 @@ impl Traceable for &PostfixEnd {
         &self,
         ctx: &mut TraceContext<G>,
     ) {
-        ctx.trace_path::<_, Start>(
+        ctx.trace_postfix_path(
             &self.path,
             UpKey::new(self.path.root.location.parent.into(), 0.into()).into(),
             true,
@@ -258,12 +259,12 @@ impl EndState {
             EndKind::Complete(_) => None,
         }
     }
-    pub fn state_direction(&self) -> TraceDirection {
+    pub fn state_direction(&self) -> StateDirection {
         match self.kind {
-            EndKind::Range(_) => TraceDirection::TopDown,
-            EndKind::Postfix(_) => TraceDirection::BottomUp,
-            EndKind::Prefix(_) => TraceDirection::TopDown,
-            EndKind::Complete(_) => TraceDirection::BottomUp,
+            EndKind::Range(_) => StateDirection::TopDown,
+            EndKind::Postfix(_) => StateDirection::BottomUp,
+            EndKind::Prefix(_) => StateDirection::TopDown,
+            EndKind::Complete(_) => StateDirection::BottomUp,
         }
     }
     pub fn end_path(&self) -> Option<RootedSplitPathRef<'_>> {

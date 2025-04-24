@@ -7,13 +7,13 @@ use crate::{
     },
     trace::cache::{
         key::props::TargetKey,
-        new::NewEntry,
         position::PositionCache,
         vertex::VertexCache,
     },
 };
 use derive_more::derive::IntoIterator;
 use key::directed::DirectedKey;
+use new::EditKind;
 
 pub mod key;
 pub mod new;
@@ -35,39 +35,36 @@ impl TraceCache {
         );
         Self { entries }
     }
-    pub fn add_state<E: Into<NewEntry>>(
+    pub fn add_state<E: Into<EditKind>>(
         &mut self,
-        state: E,
+        edit: E,
         add_edges: bool,
     ) -> (DirectedKey, bool) {
-        let state = state.into();
-        let key = state.target_key();
+        let edit = edit.into();
+        let key = edit.target_key();
         if let Some(ve) = self.entries.get_mut(&key.index.vertex_index()) {
             if ve.get_mut(&key.pos).is_some() {
                 (key, false)
             } else {
-                //drop(ve);
-
-                let pe =
-                    PositionCache::new(self, key.clone(), state, add_edges);
+                let pe = PositionCache::new(self, key.clone(), edit, add_edges);
                 let ve =
                     self.entries.get_mut(&key.index.vertex_index()).unwrap();
                 ve.insert(&key.pos, pe);
                 (key, true)
             }
         } else {
-            self.new_entry(key.clone(), state, add_edges);
+            self.new_entry(key.clone(), edit, add_edges);
             (key, true)
         }
     }
     fn new_entry(
         &mut self,
         key: DirectedKey,
-        state: NewEntry,
+        edit: EditKind,
         add_edges: bool,
     ) {
         let mut ve = VertexCache::from(key.index.clone());
-        let pe = PositionCache::new(self, key.clone(), state, add_edges);
+        let pe = PositionCache::new(self, key.clone(), edit, add_edges);
         ve.insert(&key.pos, pe);
         self.entries.insert(key.index.vertex_index(), ve);
     }

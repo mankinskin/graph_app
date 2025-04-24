@@ -10,7 +10,7 @@ use super::{
     vertex::VertexSplitContext,
 };
 use crate::split::vertex::output::NodeType;
-use context_search::{
+use context_trace{
     graph::vertex::{
         child::Child,
         has_vertex_index::HasVertexIndex,

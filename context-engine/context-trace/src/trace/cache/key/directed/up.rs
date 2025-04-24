@@ -11,7 +11,10 @@ use crate::{
     path::mutators::move_path::key::TokenPosition,
 };
 
-use super::down::DownPosition;
+use super::{
+    HasTokenPosition,
+    down::DownPosition,
+};
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, From)]
 pub struct UpPosition(pub TokenPosition);
@@ -51,4 +54,10 @@ impl Add<usize> for UpPosition {
 pub struct UpKey {
     pub index: Child,
     pub pos: UpPosition,
+}
+
+impl HasTokenPosition for UpKey {
+    fn pos(&self) -> &TokenPosition {
+        &self.pos.0
+    }
 }

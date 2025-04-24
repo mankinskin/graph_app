@@ -53,7 +53,7 @@ use crate::{
         },
     },
 };
-use context_search::{
+use context_trace{
     graph::vertex::{
         ChildPatterns,
         child::Child,

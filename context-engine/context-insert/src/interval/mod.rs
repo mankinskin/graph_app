@@ -24,7 +24,7 @@ use crate::split::{
     },
     vertex::output::RootMode,
 };
-use context_search::{
+use context_trace{
     HashMap,
     graph::vertex::{
         child::Child,

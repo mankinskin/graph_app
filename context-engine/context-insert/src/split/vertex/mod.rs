@@ -15,7 +15,7 @@ use crate::split::{
         RootMode,
     },
 };
-use context_search::{
+use context_trace::{
     HashMap,
     HashSet,
     graph::{

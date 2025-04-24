@@ -15,10 +15,14 @@ use crate::{
     },
     path::{
         BaseQuery,
-        RoleChildPath,
+        GetRoleChildPath,
         accessors::{
             child::LeafChild,
-            role::End,
+            has_path::HasRootedRolePath,
+            role::{
+                End,
+                Start,
+            },
         },
         mutators::{
             append::PathAppend,
@@ -53,7 +57,9 @@ BaseQuery
     }
 }
 
-pub trait RangePath: RootedPath {
+pub trait RangePath:
+    RootedPath + HasRootedRolePath<Start> + HasRootedRolePath<End>
+{
     fn new_range(
         root: Self::Root,
         entry: usize,

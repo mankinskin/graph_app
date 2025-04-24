@@ -36,14 +36,18 @@ pub enum DirectedPosition {
     BottomUp(UpPosition),
     TopDown(DownPosition),
 }
-
-impl DirectedPosition {
-    pub fn pos(&self) -> &TokenPosition {
+pub trait HasTokenPosition {
+    fn pos(&self) -> &TokenPosition;
+}
+impl HasTokenPosition for DirectedPosition {
+    fn pos(&self) -> &TokenPosition {
         match self {
             Self::BottomUp(pos) => &pos.0,
             Self::TopDown(pos) => &pos.0,
         }
     }
+}
+impl DirectedPosition {
     pub fn flipped(self) -> Self {
         match self {
             Self::BottomUp(pos) => Self::TopDown(pos.flipped()),
@@ -111,6 +115,11 @@ impl Wide for DirectedKey {
 impl HasVertexIndex for DirectedKey {
     fn vertex_index(&self) -> VertexIndex {
         self.index.vertex_index()
+    }
+}
+impl HasTokenPosition for DirectedKey {
+    fn pos(&self) -> &TokenPosition {
+        self.pos.pos()
     }
 }
 impl MoveKey<Right> for DirectedKey {

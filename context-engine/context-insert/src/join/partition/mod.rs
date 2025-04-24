@@ -17,7 +17,7 @@ use crate::{
     },
     join::context::node::context::NodeJoinContext,
 };
-use context_search::graph::vertex::child::Child;
+use context_tracegraph::vertex::child::Child;
 use info::{
     JoinPartitionInfo,
     pattern_info::JoinPatternInfo,
@@ -43,12 +43,9 @@ where
         Self: 'c,
         R: 'a,
     {
-        match self.info_partition(ctx)
-        {
+        match self.info_partition(ctx) {
             Ok(info) =>
-            {
-                Ok(JoinPartitionInfo::new(info).to_joined_partition(ctx))
-            }
+                Ok(JoinPartitionInfo::new(info).to_joined_partition(ctx)),
             Err(c) => Err(c),
         }
     }
@@ -62,14 +59,12 @@ impl<R: RangeRole<Mode = Join>, P: InfoPartition<R>> JoinPartition<R> for P wher
 #[derive(Debug, Clone, Copy)]
 pub struct Join;
 
-impl ModeContext for Join
-{
+impl ModeContext for Join {
     type NodeContext<'a: 'b, 'b> = NodeJoinContext<'a>;
     type PatternResult<'a> = PatternJoinContext<'a>;
 }
 
-impl<R: RangeRole<Mode = Join>> ModeChildren<R> for Join
-{
+impl<R: RangeRole<Mode = Join>> ModeChildren<R> for Join {
     type Result = R::Children;
 }
 

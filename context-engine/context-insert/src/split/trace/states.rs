@@ -21,7 +21,7 @@ use crate::split::{
     trace::SplitTraceState,
     vertex::output::InnerNode,
 };
-use context_search::{
+use context_trace{
     graph::{
         getters::vertex::VertexSet,
         vertex::child::Child,

@@ -43,7 +43,7 @@ impl<T: Debug + Sized + Clone + PartialEq + Eq + Send + Sync + Unpin + 'static>
 {
 }
 
-pub trait RoleChildPath {
+pub trait GetRoleChildPath {
     fn role_leaf_child_location<R: PathRole>(&self) -> Option<ChildLocation>
     where
         Self: LeafChild<R>,
@@ -97,4 +97,4 @@ pub trait RoleChildPath {
     }
 }
 
-impl<T> RoleChildPath for T {}
+impl<T> GetRoleChildPath for T {}

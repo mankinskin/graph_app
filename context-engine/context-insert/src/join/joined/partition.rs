@@ -22,7 +22,7 @@ use crate::{
         },
     },
 };
-use context_search::graph::vertex::child::Child;
+use context_tracegraph::vertex::child::Child;
 
 use super::patterns::JoinedPatterns;
 

@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use context_search::{
+use context_trace{
     HashMap,
     graph::vertex::location::SubLocation,
     trace::cache::entry::position::{

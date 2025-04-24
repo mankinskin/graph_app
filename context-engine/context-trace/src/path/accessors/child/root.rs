@@ -7,12 +7,15 @@ use crate::{
             pattern_pre_ctx_width,
         },
     },
-    path::accessors::{
-        child::RootChildPos,
-        root::{
-            GraphRootPattern,
-            PatternRoot,
+    path::{
+        accessors::{
+            child::RootChildPos,
+            root::{
+                GraphRootPattern,
+                PatternRoot,
+            },
         },
+        structs::rooted::root::RootedPath,
     },
     trace::has_graph::HasGraph,
 };
@@ -43,7 +46,9 @@ macro_rules! impl_child {
 }
 
 /// used to get a direct child in a Graph
-pub trait GraphRootChild<R>: GraphRootPattern + RootChildPos<R> {
+pub trait GraphRootChild<R>:
+    RootedPath + GraphRootPattern + RootChildPos<R>
+{
     fn root_child_location(&self) -> ChildLocation;
     fn graph_root_child<G: HasGraph>(
         &self,

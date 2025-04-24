@@ -1,7 +1,7 @@
 use context::*;
 
 use crate::interval::InitInterval;
-use context_search::{
+use context_trace{
     graph::{
         HypergraphRef,
         getters::ErrorReason,

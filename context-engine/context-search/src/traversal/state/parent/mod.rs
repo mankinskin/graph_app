@@ -48,21 +48,17 @@ use context_trace::{
             role_path::IndexStartPath,
             root::RootedPath,
         },
-        RoleChildPath,
     },
     trace::{
-        cache::{
-            key::{
-                directed::{
-                    up::UpKey,
-                    DirectedKey,
-                },
-                props::{
-                    RootKey,
-                    TargetKey,
-                },
+        cache::key::{
+            directed::{
+                up::UpKey,
+                DirectedKey,
             },
-            new::NewParent,
+            props::{
+                RootKey,
+                TargetKey,
+            },
         },
         has_graph::{
             HasGraph,
@@ -84,14 +80,15 @@ use std::{
 //    BU(BUNext),
 //    Child(StateNext<RootChildState>),
 //}
-impl From<ParentState> for NewParent {
-    fn from(state: ParentState) -> Self {
-        Self {
-            root: state.root_key(),
-            entry: state.path.role_root_child_location(),
-        }
-    }
-}
+use context_trace::trace::cache::key::directed::down::DownKey;
+//impl From<ParentState> for UpEdit {
+//    fn from(state: ParentState) -> Self {
+//        Self {
+//            key: state.root_key(),
+//            entry: state.path.role_root_child_location(),
+//        }
+//    }
+//}
 
 pub type ParentState = BaseState<IndexStartPath>;
 impl ParentState {
@@ -177,7 +174,7 @@ impl IntoAdvanced for ParentState {
                         path: path.into_range(next_i),
                         cursor,
                     },
-                    target: DirectedKey::down(index, root_pos),
+                    target: DownKey::new(index, root_pos.into()),
                 },
                 root_parent,
             })
@@ -193,14 +190,19 @@ impl PathRaise for ParentState {
         parent_entry: ChildLocation,
     ) {
         let path = &mut self.path.role_path.sub_path;
-        let root = self.path.root.location.to_child_location(path.root_entry);
         path.root_entry = parent_entry.sub_index;
         self.path.root.location = parent_entry.into_pattern_location();
+        self.prev_pos = self.root_pos;
+
+        let root = self.path.root.location.to_child_location(path.root_entry);
+
         let graph = trav.graph();
         let pattern = graph.expect_pattern_at(root.clone());
-        self.prev_pos = self.root_pos;
         self.root_pos
             .advance_key(pattern_width(&pattern[root.sub_index + 1..]));
+
+        // path raise is only called when path matches until end
+        // avoid pointing path to the first child
         if !path.is_empty()
             || TravDir::<G>::pattern_index_prev(pattern, root.sub_index)
                 .is_some()

@@ -9,7 +9,7 @@ use crate::{
         cache::position::PosKey,
     },
 };
-use context_search::{
+use context_trace{
     HashMap,
     graph::{
         Hypergraph,

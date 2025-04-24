@@ -1,67 +1,75 @@
 use crate::{
     graph::vertex::location::child::ChildLocation,
     trace::{
-        TraceDirection,
+        StateDirection,
         cache::key::{
             directed::{
                 DirectedKey,
                 up::UpKey,
             },
-            prev::PrevKey,
             props::TargetKey,
         },
     },
 };
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct NewEntry {
-    pub prev: PrevKey,
-    pub kind: NewKind,
+//impl NewEntry {
+//pub fn entry_location(&self) -> Option<ChildLocation> {
+//    match &self.kind {
+//        EditKind::Parent(state) => Some(state.entry.clone()),
+//        EditKind::Child(state) => state.end_leaf.clone(),
+//    }
+//}
+//pub fn prev_key(&self) -> PrevKey {
+//    self.prev.clone()
+//}
+//pub fn state_direction(&self) -> StateDirection {
+//    match &self.kind {
+//        EditKind::Parent(_) => StateDirection::BottomUp,
+//        EditKind::Child(_) => StateDirection::TopDown,
+//    }
+//}
+//}
+use derive_more::From;
+
+use super::key::directed::down::DownKey;
+
+#[derive(Clone, Debug, PartialEq, Eq, From)]
+pub enum EditKind {
+    Parent(UpEdit),
+    Child(DownEdit),
+    //Root(RootEdit),
 }
 
-impl NewEntry {
-    pub fn entry_location(&self) -> Option<ChildLocation> {
-        match &self.kind {
-            NewKind::Parent(state) => Some(state.entry.clone()),
-            NewKind::Child(state) => state.end_leaf.clone(),
-        }
-    }
-    pub fn prev_key(&self) -> PrevKey {
-        self.prev.clone()
-    }
-    pub fn state_direction(&self) -> TraceDirection {
-        match &self.kind {
-            NewKind::Parent(_) => TraceDirection::BottomUp,
-            NewKind::Child(_) => TraceDirection::TopDown,
-        }
-    }
-}
-impl TargetKey for NewEntry {
+impl TargetKey for EditKind {
     fn target_key(&self) -> DirectedKey {
-        match &self.kind {
-            NewKind::Parent(state) => state.root.clone().into(),
-            NewKind::Child(state) => state.target.clone(),
+        match &self {
+            EditKind::Parent(state) => state.target.clone().into(),
+            //EditKind::Root(state) => state.entry_key.clone().into(),
+            EditKind::Child(state) => state.target.clone().into(),
         }
     }
 }
+pub trait Edit: Into<EditKind> {}
+impl<T: Into<EditKind>> Edit for T {}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum NewKind {
-    Parent(NewParent),
-    Child(NewChild),
+pub struct UpEdit {
+    pub target: UpKey,
+    pub location: ChildLocation,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RootEdit {
+    pub entry_key: UpKey,
+    pub entry_location: ChildLocation,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct NewParent {
-    pub root: UpKey,
-    pub entry: ChildLocation,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct NewChild {
+pub struct DownEdit {
     //pub root: UpKey,
-    pub target: DirectedKey,
-    pub end_leaf: Option<ChildLocation>,
+    pub prev: DownKey,
+    pub target: DownKey,
+    pub location: ChildLocation,
+    //pub end_leaf: Option<ChildLocation>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -97,12 +105,12 @@ impl NewEnd {
             Self::Complete(_) => None,
         }
     }
-    pub fn state_direction(&self) -> TraceDirection {
+    pub fn state_direction(&self) -> StateDirection {
         match self {
-            Self::Range(_) => TraceDirection::TopDown,
-            Self::Postfix(_) => TraceDirection::BottomUp,
-            Self::Prefix(_) => TraceDirection::TopDown,
-            Self::Complete(_) => TraceDirection::BottomUp,
+            Self::Range(_) => StateDirection::TopDown,
+            Self::Postfix(_) => StateDirection::BottomUp,
+            Self::Prefix(_) => StateDirection::TopDown,
+            Self::Complete(_) => StateDirection::BottomUp,
         }
     }
 }

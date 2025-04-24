@@ -49,23 +49,21 @@ use context_trace::{
             move_path::advance::Advance,
         },
         structs::rooted::index_range::IndexRangePath,
-        RoleChildPath,
+        GetRoleChildPath,
     },
     trace::{
-        cache::{
-            key::{
-                directed::{
-                    up::UpKey,
-                    DirectedKey,
-                },
-                props::{
-                    CursorPosition,
-                    LeafKey,
-                    RootKey,
-                    TargetKey,
-                },
+        cache::key::{
+            directed::{
+                down::DownKey,
+                up::UpKey,
+                DirectedKey,
             },
-            new::NewChild,
+            props::{
+                CursorPosition,
+                LeafKey,
+                RootKey,
+                TargetKey,
+            },
         },
         has_graph::HasGraph,
     },
@@ -96,7 +94,7 @@ pub struct ChildState {
     #[deref]
     #[deref_mut]
     pub base: BaseState<IndexRangePath>,
-    pub target: DirectedKey,
+    pub target: DownKey,
 }
 
 impl ChildState {
@@ -191,16 +189,22 @@ impl ChildState {
         }
     }
 }
-
-impl From<ChildState> for NewChild {
-    fn from(state: ChildState) -> Self {
-        Self {
-            //root: state.root_key(),
-            target: state.target_key(),
-            end_leaf: state.path.role_leaf_child_location::<End>(),
-        }
-    }
-}
+//impl From<ChildState> for EditKind {
+//    fn from(state: ChildState) -> Self {
+//        match state.path.role_leaf_child_location::<End>() {
+//            Some(entry) => DownEdit {
+//                target: state.target,
+//                entry,
+//            }
+//            .into(),
+//            None => RootEdit {
+//                entry_key: state.target,
+//                entry_location: entry,
+//            }
+//            .into(),
+//        }
+//    }
+//}
 
 impl IntoAdvanced for ChildState {
     type Next = Self;
@@ -211,9 +215,9 @@ impl IntoAdvanced for ChildState {
         if self.base.path.advance(trav).is_continue() {
             // gen next child
             Ok(Self {
-                target: DirectedKey::down(
+                target: DownKey::new(
                     self.base.path.role_leaf_child::<End, _>(&trav),
-                    *self.cursor_pos(),
+                    (*self.cursor_pos()).into(),
                 ),
                 ..self
             })
@@ -253,6 +257,6 @@ impl LeafKey for ChildState {
 }
 impl TargetKey for ChildState {
     fn target_key(&self) -> DirectedKey {
-        self.target.clone()
+        self.target.clone().into()
     }
 }

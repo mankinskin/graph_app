@@ -13,7 +13,7 @@ use crate::{
     },
     join::context::JoinContext,
 };
-use context_search::{
+use context_trace{
     graph::{
         Hypergraph,
         HypergraphRef,
