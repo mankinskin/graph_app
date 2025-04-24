@@ -189,25 +189,28 @@ impl PathRaise for ParentState {
         trav: &G,
         parent_entry: ChildLocation,
     ) {
+        // new root
         let path = &mut self.path.role_path.sub_path;
+
+        let prev = self.path.root.location.to_child_location(path.root_entry);
+
         path.root_entry = parent_entry.sub_index;
         self.path.root.location = parent_entry.into_pattern_location();
-        self.prev_pos = self.root_pos;
-
-        let root = self.path.root.location.to_child_location(path.root_entry);
 
         let graph = trav.graph();
-        let pattern = graph.expect_pattern_at(root.clone());
+        let prev_pattern = graph.expect_pattern_at(prev.clone());
+
+        self.prev_pos = self.root_pos;
         self.root_pos
-            .advance_key(pattern_width(&pattern[root.sub_index + 1..]));
+            .advance_key(pattern_width(&prev_pattern[prev.sub_index + 1..]));
 
         // path raise is only called when path matches until end
         // avoid pointing path to the first child
         if !path.is_empty()
-            || TravDir::<G>::pattern_index_prev(pattern, root.sub_index)
+            || TravDir::<G>::pattern_index_prev(prev_pattern, prev.sub_index)
                 .is_some()
         {
-            path.path.push(root);
+            path.path.push(prev);
         }
     }
 }
