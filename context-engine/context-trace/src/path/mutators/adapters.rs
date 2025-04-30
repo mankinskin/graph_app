@@ -1,6 +1,6 @@
 use super::{
     append::PathAppend,
-    move_path::root::MoveRootPos,
+    move_path::root::MoveRootIndex,
 };
 use crate::{
     direction::Right,
@@ -10,7 +10,7 @@ use crate::{
         accessors::{
             child::{
                 LeafChild,
-                RootChildPosMut,
+                RootChildIndexMut,
                 root::{
                     GraphRootChild,
                     RootChild,
@@ -49,8 +49,8 @@ pub trait Advanced:
     + GraphRootChild<End>
     + LeafChild<Start>
     + LeafChild<End>
-    + MoveRootPos<Right, End>
-    + RootChildPosMut<End>
+    + MoveRootIndex<Right, End>
+    + RootChildIndexMut<End>
     + GraphRoot
     + PathAppend
 {
@@ -66,8 +66,8 @@ impl<
         + GraphRootChild<End>
         + LeafChild<Start>
         + LeafChild<End>
-        + MoveRootPos<Right, End>
-        + RootChildPosMut<End>
+        + MoveRootIndex<Right, End>
+        + RootChildIndexMut<End>
         + PathAppend,
 > Advanced for T
 {

@@ -13,7 +13,7 @@ use context_search::{
                     GraphRootChild,
                     RootChild,
                 },
-                RootChildPos,
+                RootChildIndex,
             },
             complete::PathComplete,
             has_path::HasSinglePath,
@@ -69,11 +69,11 @@ impl<P: MatchEndPath + GraphRoot> GraphRoot for MatchEnd<P> {
     }
 }
 
-impl<P: MatchEndPath> RootChildPos<Start> for MatchEnd<P> {
-    fn root_child_pos(&self) -> usize {
+impl<P: MatchEndPath> RootChildIndex<Start> for MatchEnd<P> {
+    fn root_child_index(&self) -> usize {
         match self {
             Self::Complete(_) => 0,
-            Self::Path(path) => path.root_child_pos(),
+            Self::Path(path) => path.root_child_index(),
         }
     }
 }

@@ -3,7 +3,7 @@ use std::ops::Deref;
 use crate::{
     graph::vertex::location::child::ChildLocation,
     path::accessors::{
-        child::RootChildPos,
+        child::RootChildIndex,
         role::PathRole,
     },
 };
@@ -29,8 +29,8 @@ impl SubPath {
         }
     }
 }
-impl<R: PathRole> RootChildPos<R> for SubPath {
-    fn root_child_pos(&self) -> usize {
+impl<R: PathRole> RootChildIndex<R> for SubPath {
+    fn root_child_index(&self) -> usize {
         self.root_entry
     }
 }

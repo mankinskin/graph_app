@@ -88,10 +88,9 @@ impl AddAssign<usize> for DirectedPosition {
 }
 
 impl MoveKey<Right> for DirectedPosition {
-    type Delta = usize;
     fn move_key(
         &mut self,
-        delta: Self::Delta,
+        delta: usize,
     ) {
         match self {
             DirectedPosition::BottomUp(UpPosition(p)) =>
@@ -123,10 +122,9 @@ impl HasTokenPosition for DirectedKey {
     }
 }
 impl MoveKey<Right> for DirectedKey {
-    type Delta = usize;
     fn move_key(
         &mut self,
-        delta: Self::Delta,
+        delta: usize,
     ) {
         self.pos.move_key(delta)
     }

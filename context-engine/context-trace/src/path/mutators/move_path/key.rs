@@ -63,18 +63,16 @@ impl std::ops::SubAssign<usize> for TokenPosition {
 }
 
 pub trait MoveKey<D: Direction> {
-    type Delta = usize;
     fn move_key(
         &mut self,
-        delta: Self::Delta,
+        delta: usize,
     );
 }
 
 impl<D: Direction, T: MoveKey<D>> MoveKey<D> for &'_ mut T {
-    type Delta = <T as MoveKey<D>>::Delta;
     fn move_key(
         &mut self,
-        delta: Self::Delta,
+        delta: usize,
     ) {
         (*self).move_key(delta)
     }
@@ -83,7 +81,7 @@ impl<D: Direction, T: MoveKey<D>> MoveKey<D> for &'_ mut T {
 pub trait AdvanceKey: MoveKey<Right> {
     fn advance_key(
         &mut self,
-        delta: Self::Delta,
+        delta: usize,
     ) {
         self.move_key(delta)
     }
@@ -94,7 +92,7 @@ impl<T: MoveKey<Right>> AdvanceKey for T {}
 pub trait RetractKey: MoveKey<Left> {
     fn retract_key(
         &mut self,
-        delta: Self::Delta,
+        delta: usize,
     ) {
         self.move_key(delta)
     }
@@ -103,20 +101,18 @@ pub trait RetractKey: MoveKey<Left> {
 impl<T: MoveKey<Left>> RetractKey for T {}
 
 impl MoveKey<Right> for TokenPosition {
-    type Delta = usize;
     fn move_key(
         &mut self,
-        delta: Self::Delta,
+        delta: usize,
     ) {
         *self += delta;
     }
 }
 
 impl MoveKey<Left> for TokenPosition {
-    type Delta = usize;
     fn move_key(
         &mut self,
-        delta: Self::Delta,
+        delta: usize,
     ) {
         *self -= delta;
     }

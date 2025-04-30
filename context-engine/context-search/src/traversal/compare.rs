@@ -4,9 +4,9 @@ use super::state::{
         ChildState,
     },
     end::{
+        EndKind,
         EndReason,
         EndState,
-        RangeEnd,
     },
 };
 use crate::traversal::{
@@ -30,7 +30,7 @@ use context_trace::{
         GetRoleChildPath,
     },
     trace::{
-        cache::key::directed::DirectedKey,
+        cache::key::directed::down::DownKey,
         has_graph::HasGraph,
     },
 };
@@ -109,15 +109,13 @@ impl<G: HasGraph> RootCursor<G> {
                 let target_index = path.role_leaf_child::<End, _>(&self.trav);
                 let pos = cursor.relative_pos;
                 cursor.advance_key(target_index.width());
+                let target = DownKey::new(target_index, pos.into());
                 Ok(EndState {
-                    root_pos,
                     cursor,
                     reason,
-                    kind: RangeEnd {
-                        path,
-                        target: DirectedKey::down(target_index, pos),
-                    }
-                    .simplify_to_end(&self.trav),
+                    kind: EndKind::from_range_path(
+                        path, root_pos, target, &self.trav,
+                    ),
                 })
             },
             None => Err(self),

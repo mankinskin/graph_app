@@ -7,7 +7,7 @@ pub mod parent;
 pub mod start;
 
 use child::ChildState;
-use cursor::PatternRangeCursor;
+use cursor::PatternPrefixCursor;
 use parent::ParentState;
 use std::cmp::Ordering;
 
@@ -24,7 +24,7 @@ pub struct StateNext<T> {
 pub struct BaseState<P: RootedPath> {
     pub prev_pos: TokenPosition,
     pub root_pos: TokenPosition,
-    pub cursor: PatternRangeCursor,
+    pub cursor: PatternPrefixCursor,
     pub path: P,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]

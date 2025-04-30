@@ -129,16 +129,20 @@ impl ParentState {
             } else {
                 Err(EndState {
                     reason: EndReason::Mismatch,
-                    root_pos: self.root_pos,
-                    kind: EndKind::simplify_path(self.path, trav),
+                    //root_pos: self.root_pos,
+                    kind: EndKind::from_start_path(
+                        self.path,
+                        self.root_pos,
+                        trav,
+                    ),
                     cursor,
                 })
             }
         } else {
             Err(EndState {
                 reason: EndReason::QueryEnd,
-                root_pos: self.root_pos,
-                kind: EndKind::simplify_path(self.path, trav),
+                //root_pos: self.root_pos,
+                kind: EndKind::from_start_path(self.path, self.root_pos, trav),
                 cursor,
             })
         }
@@ -194,15 +198,15 @@ impl PathRaise for ParentState {
 
         let prev = self.path.root.location.to_child_location(path.root_entry);
 
-        path.root_entry = parent_entry.sub_index;
-        self.path.root.location = parent_entry.into_pattern_location();
-
         let graph = trav.graph();
         let prev_pattern = graph.expect_pattern_at(prev.clone());
 
         self.prev_pos = self.root_pos;
         self.root_pos
             .advance_key(pattern_width(&prev_pattern[prev.sub_index + 1..]));
+
+        path.root_entry = parent_entry.sub_index;
+        self.path.root.location = parent_entry.into_pattern_location();
 
         // path raise is only called when path matches until end
         // avoid pointing path to the first child

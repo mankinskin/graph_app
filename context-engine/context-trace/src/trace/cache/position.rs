@@ -4,12 +4,9 @@ use super::new::EditKind;
 use crate::{
     HashMap,
     HashSet,
-    graph::vertex::{
-        child::Child,
-        location::{
-            SubLocation,
-            child::ChildLocation,
-        },
+    graph::vertex::location::{
+        SubLocation,
+        child::ChildLocation,
     },
     trace::cache::{
         TraceCache,
@@ -32,25 +29,17 @@ pub struct Edges {
     pub bottom: HashMap<DirectedKey, SubLocation>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct PositionCache {
     pub edges: Edges,
-    pub index: Child,
 }
 pub enum AddChildLocation {
     Target(ChildLocation),
     Prev(ChildLocation),
 }
 impl PositionCache {
-    pub fn start(index: Child) -> Self {
-        Self {
-            index,
-            edges: Default::default(),
-        }
-    }
     pub fn new(
         cache: &mut TraceCache,
-        key: DirectedKey,
         state: EditKind,
         add_edges: bool,
     ) -> Self {
@@ -60,10 +49,9 @@ impl PositionCache {
             (false, _) => {},
             (_, EditKind::Parent(edit)) => {
                 // created by upwards traversal
-                edges.bottom.insert(
-                    edit.target.into(),
-                    edit.location.to_sub_location(),
-                );
+                edges
+                    .bottom
+                    .insert(edit.prev.into(), edit.location.to_sub_location());
             },
             (_, EditKind::Child(edit)) => {
                 // created by downwards traversal
@@ -93,7 +81,7 @@ impl PositionCache {
         //    _ => {},
         //}
         Self {
-            index: key.index,
+            //index: key.index,
             edges,
         }
     }

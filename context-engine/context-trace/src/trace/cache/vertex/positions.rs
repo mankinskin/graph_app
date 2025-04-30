@@ -32,7 +32,7 @@ impl Extend<(TokenPosition, PositionCache)> for DirectedPositions {
     ) {
         for (k, v) in iter {
             if let Some(c) = self.entries.get_mut(&k) {
-                assert!(c.index == v.index);
+                //assert!(c.index == v.index);
                 c.edges.top.extend(v.edges.top);
                 c.edges.bottom.extend(v.edges.bottom);
             } else {

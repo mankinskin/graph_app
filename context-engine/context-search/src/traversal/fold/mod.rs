@@ -66,7 +66,7 @@ impl<'a, K: TraversalKind> FoldContext<K> {
                 trav: &self.tctx.trav,
                 cache: &mut self.tctx.cache,
             };
-            end.trace(&mut ctx);
+            end.clone().trace(&mut ctx);
         }
         Ok(FinishedState {
             cache: self.tctx.cache,

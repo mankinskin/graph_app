@@ -14,7 +14,7 @@ use crate::{
     },
     trace::has_graph::HasGraph,
 };
-pub trait LeafChild<R>: RootChildPos<R> {
+pub trait LeafChild<R>: RootChildIndex<R> {
     fn leaf_child_location(&self) -> Option<ChildLocation>;
     fn leaf_child<G: HasGraph>(
         &self,
@@ -35,7 +35,7 @@ impl<R: PathRole, P: RootChild<R> + PathChild<R>> LeafChild<R> for P {
     }
 }
 
-pub trait LeafChildPosMut<R>: RootChildPosMut<R> {
+pub trait LeafChildPosMut<R>: RootChildIndexMut<R> {
     fn leaf_child_pos_mut(&mut self) -> &mut usize;
 }
 
@@ -59,10 +59,10 @@ pub trait PathChild<R: PathRole>: HasPath<R> {
 
 /// access to the position of a child
 #[auto_impl(&, & mut)]
-pub trait RootChildPos<R> {
-    fn root_child_pos(&self) -> usize;
+pub trait RootChildIndex<R> {
+    fn root_child_index(&self) -> usize;
 }
 
-pub trait RootChildPosMut<R>: RootChildPos<R> {
-    fn root_child_pos_mut(&mut self) -> &mut usize;
+pub trait RootChildIndexMut<R>: RootChildIndex<R> {
+    fn root_child_index_mut(&mut self) -> &mut usize;
 }

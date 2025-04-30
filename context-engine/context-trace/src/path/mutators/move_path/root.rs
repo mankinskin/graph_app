@@ -1,48 +1,50 @@
 use crate::{
     direction::{
         Direction,
-        Right,
         pattern::PatternDirection,
     },
     path::{
         accessors::{
             child::{
-                RootChildPos,
-                RootChildPosMut,
+                RootChildIndex,
+                RootChildIndexMut,
             },
             role::{
                 End,
                 PathRole,
             },
+            root::RootPattern,
         },
         structs::rooted::{
             role_path::RootedRolePath,
             root::PathRoot,
         },
     },
-    trace::has_graph::{
-        HasGraph,
-        TravDir,
-    },
+    trace::has_graph::HasGraph,
 };
 use std::ops::ControlFlow;
 
-pub trait MoveRootPos<D: Direction, R: PathRole = End> {
-    fn move_root_pos<G: HasGraph>(
+pub trait MoveRootIndex<D: Direction, R: PathRole = End> {
+    fn move_root_index<G: HasGraph>(
         &mut self,
         trav: &G,
     ) -> ControlFlow<()>;
 }
-
-impl<Root: PathRoot> MoveRootPos<Right, End> for RootedRolePath<End, Root> {
-    fn move_root_pos<G: HasGraph>(
+impl<Root: PathRoot, Role: PathRole, D: PatternDirection> MoveRootIndex<D, Role>
+    for RootedRolePath<Role, Root>
+{
+    fn move_root_index<G: HasGraph>(
         &mut self,
-        _trav: &G,
+        trav: &G,
     ) -> ControlFlow<()> {
-        if let Some(next) =
-            TravDir::<G>::index_next(RootChildPos::<End>::root_child_pos(self))
-        {
-            *self.root_child_pos_mut() = next;
+        let graph = trav.graph();
+        let pattern = self.root_pattern::<G>(&graph);
+        if let Some(next) = D::pattern_index_next(
+            pattern,
+            RootChildIndex::<Role>::root_child_index(self),
+        ) {
+            assert!(next < pattern.len());
+            *self.root_child_index_mut() = next;
             ControlFlow::Continue(())
         } else {
             ControlFlow::Break(())

@@ -1,7 +1,17 @@
 use std::ops::ControlFlow;
 
+use super::{
+    RootedRangePath,
+    role_path::RootedRolePath,
+    root::{
+        IndexRoot,
+        PathRoot,
+        RootedPath,
+    },
+};
 use crate::{
     direction::{
+        Direction,
         Left,
         Right,
         pattern::PatternDirection,
@@ -19,8 +29,8 @@ use crate::{
         accessors::{
             child::{
                 PathChild,
-                RootChildPos,
-                RootChildPosMut,
+                RootChildIndex,
+                RootChildIndexMut,
                 root::{
                     GraphRootChild,
                     RootChild,
@@ -42,18 +52,16 @@ use crate::{
             },
         },
         mutators::{
+            append::PathAppend,
             lower::PathLower,
             move_path::{
                 key::{
                     RetractKey,
                     TokenPosition,
                 },
-                leaf::{
-                    AdvanceLeaf,
-                    RetractLeaf,
-                },
+                leaf::MoveLeaf,
                 path::MovePath,
-                root::MoveRootPos,
+                root::MoveRootIndex,
             },
         },
         structs::{
@@ -68,14 +76,6 @@ use crate::{
             HasGraph,
             TravDir,
         },
-    },
-};
-
-use super::{
-    RootedRangePath,
-    root::{
-        IndexRoot,
-        RootedPath,
     },
 };
 
@@ -158,8 +158,8 @@ impl HasMatchPaths for IndexRangePath {
     }
 }
 
-impl MoveRootPos<Right, End> for IndexRangePath {
-    fn move_root_pos<G: HasGraph>(
+impl MoveRootIndex<Right, End> for IndexRangePath {
+    fn move_root_index<G: HasGraph>(
         &mut self,
         trav: &G,
     ) -> ControlFlow<()> {
@@ -167,9 +167,9 @@ impl MoveRootPos<Right, End> for IndexRangePath {
         let pattern = self.root_pattern::<G>(&graph);
         if let Some(next) = TravDir::<G>::pattern_index_next(
             pattern,
-            RootChildPos::<End>::root_child_pos(self),
+            RootChildIndex::<End>::root_child_index(self),
         ) {
-            *self.root_child_pos_mut() = next;
+            *self.root_child_index_mut() = next;
             ControlFlow::Continue(())
         } else {
             ControlFlow::Break(())
@@ -177,8 +177,8 @@ impl MoveRootPos<Right, End> for IndexRangePath {
     }
 }
 
-impl MoveRootPos<Left, End> for IndexRangePath {
-    fn move_root_pos<G: HasGraph>(
+impl MoveRootIndex<Left, End> for IndexRangePath {
+    fn move_root_index<G: HasGraph>(
         &mut self,
         trav: &G,
     ) -> ControlFlow<()> {
@@ -186,35 +186,43 @@ impl MoveRootPos<Left, End> for IndexRangePath {
         let pattern = self.root_pattern::<G>(&graph);
         if let Some(prev) = TravDir::<G>::pattern_index_prev(
             pattern,
-            RootChildPos::<End>::root_child_pos(self),
+            RootChildIndex::<End>::root_child_index(self),
         ) {
-            *self.root_child_pos_mut() = prev;
+            *self.root_child_index_mut() = prev;
             ControlFlow::Continue(())
         } else {
             ControlFlow::Break(())
         }
     }
 }
-impl MovePath<Right, End> for IndexRangePath {
-    fn move_leaf<G: HasGraph>(
+impl<D: Direction, Root: PathRoot> MovePath<D, End> for RootedRangePath<Root>
+where
+    Self: MoveRootIndex<D> + PathAppend,
+    ChildLocation: MoveLeaf<D>,
+{
+    fn move_path_segment<G: HasGraph>(
         &mut self,
         location: &mut ChildLocation,
         trav: &G::Guard<'_>,
     ) -> ControlFlow<()> {
-        location.advance_leaf(trav)
+        location.move_leaf(trav)
     }
 }
 
-impl MovePath<Left, End> for IndexRangePath {
-    fn move_leaf<G: HasGraph>(
+impl<D: Direction, Root: PathRoot> MovePath<D, End>
+    for RootedRolePath<End, Root>
+where
+    Self: MoveRootIndex<D> + PathAppend,
+    ChildLocation: MoveLeaf<D>,
+{
+    fn move_path_segment<G: HasGraph>(
         &mut self,
         location: &mut ChildLocation,
         trav: &G::Guard<'_>,
     ) -> ControlFlow<()> {
-        location.retract_leaf(trav)
+        location.move_leaf(trav)
     }
 }
-
 impl RootChild<Start> for IndexRangePath {
     fn root_child<G: HasGraph>(
         &self,
@@ -266,21 +274,21 @@ impl GraphRootChild<End> for IndexRangePath {
     }
 }
 
-impl RootChildPos<Start> for IndexRangePath {
-    fn root_child_pos(&self) -> usize {
-        RootChildPos::<Start>::root_child_pos(&self.start)
+impl RootChildIndex<Start> for IndexRangePath {
+    fn root_child_index(&self) -> usize {
+        RootChildIndex::<Start>::root_child_index(&self.start)
     }
 }
 
-impl RootChildPos<End> for IndexRangePath {
-    fn root_child_pos(&self) -> usize {
-        RootChildPos::<End>::root_child_pos(&self.end)
+impl RootChildIndex<End> for IndexRangePath {
+    fn root_child_index(&self) -> usize {
+        RootChildIndex::<End>::root_child_index(&self.end)
     }
 }
 
-impl RootChildPosMut<End> for IndexRangePath {
-    fn root_child_pos_mut(&mut self) -> &mut usize {
-        self.end.root_child_pos_mut()
+impl RootChildIndexMut<End> for IndexRangePath {
+    fn root_child_index_mut(&mut self) -> &mut usize {
+        self.end.root_child_index_mut()
     }
 }
 

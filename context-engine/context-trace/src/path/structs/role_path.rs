@@ -11,8 +11,8 @@ use crate::{
             child::{
                 LeafChildPosMut,
                 PathChild,
-                RootChildPos,
-                RootChildPosMut,
+                RootChildIndex,
+                RootChildIndexMut,
             },
             has_path::{
                 HasPath,
@@ -65,8 +65,8 @@ impl<R: PathRole> RolePath<R> {
         }
     }
 }
-impl<R: PathRole> RootChildPos<R> for RolePath<R> {
-    fn root_child_pos(&self) -> usize {
+impl<R: PathRole> RootChildIndex<R> for RolePath<R> {
+    fn root_child_index(&self) -> usize {
         self.sub_path.root_entry
     }
 }
@@ -75,12 +75,12 @@ impl LeafChildPosMut<End> for RolePath<End> {
         if !self.path().is_empty() {
             &mut self.path_child_location_mut().unwrap().sub_index
         } else {
-            self.root_child_pos_mut()
+            self.root_child_index_mut()
         }
     }
 }
-impl<R: PathRole> RootChildPosMut<R> for RolePath<R> {
-    fn root_child_pos_mut(&mut self) -> &mut usize {
+impl<R: PathRole> RootChildIndexMut<R> for RolePath<R> {
+    fn root_child_index_mut(&mut self) -> &mut usize {
         &mut self.sub_path.root_entry
     }
 }

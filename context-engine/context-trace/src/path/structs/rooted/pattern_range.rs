@@ -28,8 +28,8 @@ use crate::{
         accessors::{
             child::{
                 PathChild,
-                RootChildPos,
-                RootChildPosMut,
+                RootChildIndex,
+                RootChildIndexMut,
                 root::PatternRootChild,
             },
             has_path::{
@@ -45,7 +45,7 @@ use crate::{
             root::PatternRoot,
         },
         mutators::{
-            move_path::root::MoveRootPos,
+            move_path::root::MoveRootIndex,
             pop::PathPop,
         },
         structs::{
@@ -65,7 +65,10 @@ use crate::{
 
 use super::{
     RootedRangePath,
-    role_path::RootedRolePath,
+    role_path::{
+        PatternRolePath,
+        RootedRolePath,
+    },
     root::{
         PathRoot,
         RootedPath,
@@ -73,9 +76,11 @@ use super::{
 };
 
 pub type PatternRangePath = RootedRangePath<Pattern>;
+pub type PatternPrefixPath = RootedRolePath<End, Pattern>;
+pub type PatternPostfixPath = RootedRolePath<Start, Pattern>;
 
-impl RootChildPosMut<End> for PatternRangePath {
-    fn root_child_pos_mut(&mut self) -> &mut usize {
+impl RootChildIndexMut<End> for PatternRangePath {
+    fn root_child_index_mut(&mut self) -> &mut usize {
         &mut self.end.sub_path.root_entry
     }
 }
@@ -108,27 +113,28 @@ impl RangePath for PatternRangePath {
 
 impl_root! { RootPattern for PatternRangePath, self, _trav => PatternRoot::pattern_root_pattern(self) }
 impl_root! { PatternRoot for PatternRangePath, self => self.root.borrow() }
+impl_root! { <Role: PathRole> PatternRoot for PatternRolePath<Role>, self => self.root.borrow() }
 
-impl RootChildPos<Start> for PatternRangePath {
-    fn root_child_pos(&self) -> usize {
+impl RootChildIndex<Start> for PatternRangePath {
+    fn root_child_index(&self) -> usize {
         self.start.root_entry
     }
 }
-impl RootChildPos<End> for PatternRangePath {
-    fn root_child_pos(&self) -> usize {
+impl RootChildIndex<End> for PatternRangePath {
+    fn root_child_index(&self) -> usize {
         self.end.root_entry
     }
 }
 
-impl MoveRootPos<Right, End> for PatternRangePath {
-    fn move_root_pos<G: HasGraph>(
+impl MoveRootIndex<Right, End> for PatternRangePath {
+    fn move_root_index<G: HasGraph>(
         &mut self,
         _trav: &G,
     ) -> ControlFlow<()> {
-        if let Some(next) =
-            TravDir::<G>::index_next(RootChildPos::<End>::root_child_pos(self))
-        {
-            *self.root_child_pos_mut() = next;
+        if let Some(next) = TravDir::<G>::index_next(
+            RootChildIndex::<End>::root_child_index(self),
+        ) {
+            *self.root_child_index_mut() = next;
             ControlFlow::Continue(())
         } else {
             ControlFlow::Break(())
@@ -136,6 +142,10 @@ impl MoveRootPos<Right, End> for PatternRangePath {
     }
 }
 
+impl<R: PathRole> PathChild<R> for PatternRolePath<R> where
+    Self: HasPath<R> + PatternRootChild<R>
+{
+}
 impl<R: PathRole> PathChild<R> for PatternRangePath where
     Self: HasPath<R> + PatternRootChild<R>
 {
@@ -180,9 +190,19 @@ impl HasRolePath<End> for PatternRangePath {
     }
 }
 
-impl_child! { RootChild for PatternRangePath, self, _trav => self.pattern_root_child() }
+impl<R: PathRole> PatternRootChild<R> for PatternRolePath<R> where
+    Self: RootChildIndex<R>
+{
+}
+impl<R: PathRole> PatternRootChild<R> for PatternRangePath where
+    Self: RootChildIndex<R>
+{
+}
 
-impl<R> PatternRootChild<R> for PatternRangePath where Self: RootChildPos<R> {}
+impl_child! { RootChild for PatternRangePath, self, _trav =>
+       *self.root.get(self.role_root_child_index::<R>()).unwrap()
+}
+use crate::path::GetRoleChildPath;
 
 impl FoldablePath for PatternRangePath {
     fn to_range_path(self) -> PatternRangePath {

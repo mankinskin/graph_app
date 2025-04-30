@@ -1,16 +1,13 @@
 use compare::RootCursor;
 use container::StateContainer;
-use context_trace::{
-    graph::vertex::wide::Wide,
-    trace::{
-        cache::TraceCache,
-        has_graph::{
-            HasGraph,
-            TravKind,
-        },
-        traceable::Traceable,
-        TraceContext,
+use context_trace::trace::{
+    cache::TraceCache,
+    has_graph::{
+        HasGraph,
+        TravKind,
     },
+    traceable::Traceable,
+    TraceContext,
 };
 use derive_new::new;
 use fold::foldable::ErrorState;
@@ -73,7 +70,6 @@ impl<K: TraversalKind> TryFrom<StartCtx<K>> for TraversalContext<K> {
                 cache: TraceCache::new(start.index),
                 last_end: EndState {
                     reason: EndReason::QueryEnd,
-                    root_pos: 0.into(),
                     kind: EndKind::Complete(start.index),
                     cursor: start.cursor,
                 },
@@ -89,10 +85,10 @@ impl<K: TraversalKind> Iterator for TraversalContext<K> {
     fn next(&mut self) -> Option<Self::Item> {
         match EndIterator::<K>::new(&self.trav, &mut self.matches).next() {
             Some(Yield(end)) => {
-                assert!(
-                    end.width() >= self.last_end.width(),
-                    "Parents not evaluated in order"
-                );
+                //assert!(
+                //    end.width() >= self.last_end.width(),
+                //    "Parents not evaluated in order"
+                //);
                 // TODO: add cache for front of end
                 // TODO: only add cache until last matched parent
                 match &end.kind {
@@ -101,7 +97,7 @@ impl<K: TraversalKind> Iterator for TraversalContext<K> {
                             cache: &mut self.cache,
                             trav: &self.trav,
                         };
-                        post.trace(&mut ctx);
+                        post.clone().trace(&mut ctx);
                     },
                     _ => {},
                 };
@@ -148,9 +144,9 @@ impl<'a, K: TraversalKind> Iterator for EndIterator<'a, K> {
                             self.1.batches.push_back(batch);
                             EndState {
                                 reason: EndReason::Mismatch,
-                                root_pos: parent.root_pos,
-                                kind: EndKind::simplify_path(
+                                kind: EndKind::from_start_path(
                                     parent.path,
+                                    parent.root_pos,
                                     self.0,
                                 ),
                                 cursor: parent.cursor,

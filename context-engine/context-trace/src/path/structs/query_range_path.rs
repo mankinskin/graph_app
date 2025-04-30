@@ -23,10 +23,11 @@ use crate::{
                 End,
                 Start,
             },
+            root::RootPattern,
         },
         mutators::{
             append::PathAppend,
-            move_path::root::MoveRootPos,
+            move_path::root::MoveRootIndex,
             pop::PathPop,
         },
         structs::rooted::root::RootedPath,
@@ -41,8 +42,9 @@ BaseQuery
 //+ LeafChildPosMut<End>
 + PathAppend
 + PathPop
-+ MoveRootPos<Right, End>
++ MoveRootIndex<Right, End>
 + LeafChild<End>
++ RootPattern
 {
     fn to_range_path(self) -> PatternRangePath;
     fn complete(pattern: impl IntoPattern) -> Self;
@@ -56,7 +58,6 @@ BaseQuery
         self.role_leaf_child(&trav)
     }
 }
-
 pub trait RangePath:
     RootedPath + HasRootedRolePath<Start> + HasRootedRolePath<End>
 {

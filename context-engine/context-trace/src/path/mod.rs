@@ -11,11 +11,12 @@ use accessors::{
 use structs::role_path::RolePath;
 
 use crate::{
+    direction::pattern::PatternDirection,
     graph::vertex::{
         child::Child,
         location::child::ChildLocation,
     },
-    path::accessors::child::RootChildPos,
+    path::accessors::child::RootChildIndex,
     trace::has_graph::HasGraph,
 };
 
@@ -50,17 +51,52 @@ pub trait GetRoleChildPath {
     {
         LeafChild::<R>::leaf_child_location(self)
     }
-    fn role_root_child_pos<R: PathRole>(&self) -> usize
+    fn role_root_child_index<R: PathRole>(&self) -> usize
     where
-        Self: GraphRootChild<R>,
+        Self: RootChildIndex<R>,
     {
-        GraphRootChild::<R>::root_child_location(self).sub_index
+        RootChildIndex::<R>::root_child_index(self)
     }
     fn role_root_child_location<R: PathRole>(&self) -> ChildLocation
     where
         Self: GraphRootChild<R>,
     {
         GraphRootChild::<R>::root_child_location(self)
+    }
+
+    fn role_post_width<G: HasGraph, R>(
+        &self,
+        trav: &G,
+    ) -> usize
+    where
+        Self: GraphRootChild<R>,
+    {
+        self.get_post_width(trav)
+    }
+    fn role_pre_width<G: HasGraph, R>(
+        &self,
+        trav: &G,
+    ) -> usize
+    where
+        Self: GraphRootChild<R>,
+    {
+        self.get_pre_width(trav)
+    }
+    fn is_at_border<G: HasGraph, R: PathRole>(
+        &self,
+        trav: G,
+    ) -> bool
+    where
+        Self: GraphRootChild<R>,
+    {
+        let graph = trav.graph();
+        let location = self.role_root_child_location::<R>();
+        let pattern = graph.expect_pattern_at(location.clone());
+        <R::BorderDirection as PatternDirection>::pattern_index_next(
+            pattern,
+            location.sub_index,
+        )
+        .is_none()
     }
     fn child_path_mut<R: PathRole>(&mut self) -> &mut RolePath<R>
     where
@@ -81,7 +117,7 @@ pub trait GetRoleChildPath {
     where
         Self: HasRolePath<R>,
     {
-        HasRolePath::<R>::role_path(self).root_child_pos()
+        HasRolePath::<R>::role_path(self).root_child_index()
     }
     fn raw_child_path<R: PathRole>(&self) -> &Vec<ChildLocation>
     where

@@ -1,14 +1,11 @@
 use crate::{
     graph::vertex::location::child::ChildLocation,
-    trace::{
-        StateDirection,
-        cache::key::{
-            directed::{
-                DirectedKey,
-                up::UpKey,
-            },
-            props::TargetKey,
+    trace::cache::key::{
+        directed::{
+            DirectedKey,
+            up::UpKey,
         },
+        props::TargetKey,
     },
 };
 
@@ -54,6 +51,7 @@ impl<T: Into<EditKind>> Edit for T {}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UpEdit {
+    pub prev: UpKey,
     pub target: UpKey,
     pub location: ChildLocation,
 }
@@ -72,45 +70,45 @@ pub struct DownEdit {
     //pub end_leaf: Option<ChildLocation>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct NewRangeEnd {
-    pub target: DirectedKey,
-    pub entry: ChildLocation,
-}
+//#[derive(Clone, Debug, PartialEq, Eq)]
+//pub struct NewRangeEnd {
+//    pub target: DownKey,
+//    pub entry: ChildLocation,
+//}
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum NewEnd {
-    Range(NewRangeEnd),
-    Postfix(UpKey),
-    Prefix(DirectedKey),
-    Complete(DirectedKey),
-}
-
-impl TargetKey for NewEnd {
-    fn target_key(&self) -> DirectedKey {
-        match &self {
-            Self::Range(state) => state.target.clone(),
-            Self::Postfix(root) => root.clone().into(),
-            Self::Prefix(target) | Self::Complete(target) => target.clone(),
-        }
-    }
-}
-
-impl NewEnd {
-    pub fn entry_location(&self) -> Option<ChildLocation> {
-        match self {
-            Self::Range(state) => Some(state.entry.clone()),
-            Self::Postfix(_) => None,
-            Self::Prefix(_) => None,
-            Self::Complete(_) => None,
-        }
-    }
-    pub fn state_direction(&self) -> StateDirection {
-        match self {
-            Self::Range(_) => StateDirection::TopDown,
-            Self::Postfix(_) => StateDirection::BottomUp,
-            Self::Prefix(_) => StateDirection::TopDown,
-            Self::Complete(_) => StateDirection::BottomUp,
-        }
-    }
-}
+//#[derive(Clone, Debug, PartialEq, Eq)]
+//pub enum NewEnd {
+//    Range(NewRangeEnd),
+//    Postfix(UpKey),
+//    Prefix(DirectedKey),
+//    Complete(DirectedKey),
+//}
+//
+//impl TargetKey for NewEnd {
+//    fn target_key(&self) -> DirectedKey {
+//        match &self {
+//            Self::Range(state) => state.target.clone(),
+//            Self::Postfix(root) => root.clone().into(),
+//            Self::Prefix(target) | Self::Complete(target) => target.clone(),
+//        }
+//    }
+//}
+//
+//impl NewEnd {
+//    pub fn entry_location(&self) -> Option<ChildLocation> {
+//        match self {
+//            Self::Range(state) => Some(state.entry.clone()),
+//            Self::Postfix(_) => None,
+//            Self::Prefix(_) => None,
+//            Self::Complete(_) => None,
+//        }
+//    }
+//    pub fn state_direction(&self) -> StateDirection {
+//        match self {
+//            Self::Range(_) => StateDirection::TopDown,
+//            Self::Postfix(_) => StateDirection::BottomUp,
+//            Self::Prefix(_) => StateDirection::TopDown,
+//            Self::Complete(_) => StateDirection::BottomUp,
+//        }
+//    }
+//}

@@ -18,7 +18,6 @@ use crate::traversal::state::{
         EndKind,
         EndReason,
         EndState,
-        RangeEnd,
     },
     parent::ParentState,
     BaseState,
@@ -154,8 +153,8 @@ impl ChildState {
         } = self.base;
         // TODO: Fix this
         let index = loop {
-            if path.role_root_child_pos::<Start>()
-                == path.role_root_child_pos::<End>()
+            if path.role_root_child_index::<Start>()
+                == path.role_root_child_index::<End>()
             {
                 if (&mut root_pos, &mut path).path_lower(trav).is_break() {
                     let graph = trav.graph();
@@ -172,18 +171,14 @@ impl ChildState {
         let kind = if let Some(index) = index {
             Complete(index)
         } else {
-            RangeEnd {
-                target: DirectedKey::down(
-                    path.role_leaf_child::<End, _>(trav),
-                    cursor.relative_pos,
-                ),
-                path,
-            }
-            .simplify_to_end(trav)
+            let target = DownKey::new(
+                path.role_leaf_child::<End, _>(trav),
+                cursor.relative_pos.into(),
+            );
+            EndKind::from_range_path(path, root_pos, target, trav)
         };
         EndState {
             reason: Mismatch,
-            root_pos,
             kind,
             cursor,
         }

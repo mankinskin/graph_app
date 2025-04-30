@@ -9,7 +9,7 @@ use crate::{
     },
     path::{
         accessors::{
-            child::RootChildPos,
+            child::RootChildIndex,
             root::{
                 GraphRootPattern,
                 PatternRoot,
@@ -22,7 +22,7 @@ use crate::{
 use auto_impl::auto_impl;
 
 #[auto_impl(&, & mut)]
-pub trait RootChild<R>: RootChildPos<R> {
+pub trait RootChild<R>: RootChildIndex<R> {
     fn root_child<G: HasGraph>(
         &self,
         trav: &G,
@@ -34,7 +34,7 @@ macro_rules! impl_child {
         RootChild for $target:ty, $self_:ident, $trav:ident => $func:expr
     } => {
         impl<R: PathRole> $crate::path::accessors::child::root::RootChild<R> for $target
-            where $target: RootChildPos<R>
+            where $target: RootChildIndex<R>
         {
             fn root_child<
                 G: HasGraph,
@@ -46,9 +46,7 @@ macro_rules! impl_child {
 }
 
 /// used to get a direct child in a Graph
-pub trait GraphRootChild<R>:
-    RootedPath + GraphRootPattern + RootChildPos<R>
-{
+pub trait GraphRootChild<R>: RootedPath + GraphRootPattern {
     fn root_child_location(&self) -> ChildLocation;
     fn graph_root_child<G: HasGraph>(
         &self,
@@ -60,7 +58,7 @@ pub trait GraphRootChild<R>:
             ))
             .clone()
     }
-    fn root_post_ctx_width<G: HasGraph>(
+    fn get_post_width<G: HasGraph>(
         &self,
         trav: &G,
     ) -> usize {
@@ -69,7 +67,7 @@ pub trait GraphRootChild<R>:
         let p = self.graph_root_pattern::<G>(&g);
         pattern_post_ctx_width(p, i)
     }
-    fn root_pre_ctx_width<G: HasGraph>(
+    fn get_pre_width<G: HasGraph>(
         &self,
         trav: &G,
     ) -> usize {
@@ -79,10 +77,14 @@ pub trait GraphRootChild<R>:
         pattern_pre_ctx_width(p, i)
     }
 }
-
-/// used to get a direct child of a pattern
-pub trait PatternRootChild<R>: RootChildPos<R> + PatternRoot {
+impl<R> GraphRootChild<R> for ChildLocation {
+    fn root_child_location(&self) -> ChildLocation {
+        self.clone()
+    }
+}
+// used to get a direct child of a pattern
+pub trait PatternRootChild<R>: RootChildIndex<R> + PatternRoot {
     fn pattern_root_child(&self) -> Child {
-        PatternRoot::pattern_root_pattern(self)[self.root_child_pos()]
+        PatternRoot::pattern_root_pattern(self)[self.root_child_index()]
     }
 }

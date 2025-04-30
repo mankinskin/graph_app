@@ -2,10 +2,7 @@ use crate::traversal::{
     fold::foldable::ErrorState,
     iterator::policy::DirectedTraversalPolicy,
     result::FinishedKind,
-    state::{
-        cursor::PatternRangeCursor,
-        ParentState,
-    },
+    state::ParentState,
     ParentBatch,
     TraversalKind,
 };
@@ -34,10 +31,12 @@ use context_trace::{
     },
     trace::has_graph::HasGraph,
 };
+
+use super::cursor::PatternPrefixCursor;
 #[derive(Debug, PartialEq, Eq)]
 pub struct StartCtx<K: TraversalKind> {
     pub index: Child,
-    pub cursor: PatternRangeCursor,
+    pub cursor: PatternPrefixCursor,
     pub trav: K::Trav,
 }
 
@@ -66,7 +65,7 @@ pub trait IntoPrimer: Sized {
         parent_entry: ChildLocation,
     ) -> ParentState;
 }
-impl IntoPrimer for (Child, PatternRangeCursor) {
+impl IntoPrimer for (Child, PatternPrefixCursor) {
     fn into_primer<G: HasGraph>(
         self,
         _trav: &G,

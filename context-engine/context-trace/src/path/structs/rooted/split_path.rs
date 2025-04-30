@@ -4,7 +4,7 @@ use crate::{
     path::{
         accessors::{
             child::{
-                RootChildPos,
+                RootChildIndex,
                 root::GraphRootChild,
             },
             role::PathRole,
@@ -47,15 +47,15 @@ impl<'a, R: PathRoot> From<&'a RootedSplitPath<R>>
 }
 impl<R: PathRoot> RootedPath for RootedSplitPath<R> {
     type Root = R;
-    fn path_root(&self) -> &Self::Root {
-        &self.root
+    fn path_root(&self) -> Self::Root {
+        self.root.clone()
     }
 }
 
 impl<R: PathRoot> RootedPath for RootedSplitPathRef<'_, R> {
     type Root = R;
-    fn path_root(&self) -> &Self::Root {
-        self.root
+    fn path_root(&self) -> Self::Root {
+        self.root.clone()
     }
 }
 
@@ -75,17 +75,17 @@ impl_root! { GraphRootPattern for RootedSplitPathRef<'_, IndexRoot>, self => sel
 impl_root! { GraphRoot for RootedSplitPath<IndexRoot>, self => self.root.location.parent.clone() }
 impl_root! { GraphRoot for RootedSplitPathRef<'_, IndexRoot>, self => self.root.location.parent.clone() }
 
-impl<R: PathRole, Root: PathRoot> RootChildPos<R> for RootedSplitPath<Root> {
-    fn root_child_pos(&self) -> usize {
-        RootChildPos::<R>::root_child_pos(&self.sub_path)
+impl<R: PathRole, Root: PathRoot> RootChildIndex<R> for RootedSplitPath<Root> {
+    fn root_child_index(&self) -> usize {
+        RootChildIndex::<R>::root_child_index(&self.sub_path)
     }
 }
 
-impl<R: PathRole, Root: PathRoot> RootChildPos<R>
+impl<R: PathRole, Root: PathRoot> RootChildIndex<R>
     for RootedSplitPathRef<'_, Root>
 {
-    fn root_child_pos(&self) -> usize {
-        RootChildPos::<R>::root_child_pos(self.sub_path)
+    fn root_child_index(&self) -> usize {
+        RootChildIndex::<R>::root_child_index(self.sub_path)
     }
 }
 

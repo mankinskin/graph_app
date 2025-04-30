@@ -26,8 +26,8 @@ pub struct RootedRangePath<Root: PathRoot> {
 }
 impl<R: PathRoot> RootedPath for RootedRangePath<R> {
     type Root = R;
-    fn path_root(&self) -> &Self::Root {
-        &self.root
+    fn path_root(&self) -> Self::Root {
+        self.root.clone()
     }
 }
 

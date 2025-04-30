@@ -3,7 +3,7 @@ use crate::trace::HasGraph;
 
 pub trait Traceable {
     fn trace<G: HasGraph>(
-        &self,
+        self,
         ctx: &mut TraceContext<G>,
     );
 }
