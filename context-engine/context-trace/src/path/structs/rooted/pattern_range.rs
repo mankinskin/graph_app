@@ -3,6 +3,18 @@ use std::{
     ops::ControlFlow,
 };
 
+use super::{
+    RootedRangePath,
+    role_path::{
+        CalcWidth,
+        PatternRolePath,
+        RootedRolePath,
+    },
+    root::{
+        PathRoot,
+        RootedPath,
+    },
+};
 use crate::{
     direction::{
         Right,
@@ -19,7 +31,9 @@ use crate::{
             pattern::{
                 IntoPattern,
                 Pattern,
+                pattern_width,
             },
+            wide::Wide,
         },
     },
     impl_child,
@@ -27,6 +41,7 @@ use crate::{
     path::{
         accessors::{
             child::{
+                LeafChild,
                 PathChild,
                 RootChildIndex,
                 RootChildIndexMut,
@@ -53,25 +68,16 @@ use crate::{
                 FoldablePath,
                 RangePath,
             },
-            role_path::RolePath,
+            role_path::{
+                CalcOffset,
+                RolePath,
+            },
             sub_path::SubPath,
         },
     },
     trace::has_graph::{
         HasGraph,
         TravDir,
-    },
-};
-
-use super::{
-    RootedRangePath,
-    role_path::{
-        PatternRolePath,
-        RootedRolePath,
-    },
-    root::{
-        PathRoot,
-        RootedPath,
     },
 };
 
@@ -203,7 +209,46 @@ impl_child! { RootChild for PatternRangePath, self, _trav =>
        *self.root.get(self.role_root_child_index::<R>()).unwrap()
 }
 use crate::path::GetRoleChildPath;
-
+impl<Root: PathRoot> CalcOffset for RootedRangePath<Root> {
+    // TODO: Make offset side relative
+    fn calc_offset<G: HasGraph>(
+        &self,
+        trav: G,
+    ) -> usize {
+        let outer_offsets =
+            self.start.calc_offset(&trav) + self.end.calc_offset(&trav);
+        let graph = trav.graph();
+        let pattern = self.root.root_pattern::<G>(&graph);
+        let entry = self.start.sub_path.root_entry;
+        let exit = self.end.sub_path.root_entry;
+        let inner_offset = if entry < exit {
+            pattern_width(&pattern[entry + 1..exit])
+        } else {
+            0
+        };
+        inner_offset + outer_offsets
+    }
+}
+impl<Root: PathRoot> CalcWidth for RootedRangePath<Root>
+where
+    Self: LeafChild<Start> + LeafChild<End>,
+{
+    // TODO: Make offset side relative
+    fn calc_width<G: HasGraph>(
+        &self,
+        trav: G,
+    ) -> usize {
+        self.calc_offset(&trav)
+            + self.role_leaf_child::<Start, _>(&trav).width()
+            + if self.role_root_child_index::<Start>()
+                != self.role_root_child_index::<End>()
+            {
+                self.role_leaf_child::<End, _>(&trav).width()
+            } else {
+                0
+            }
+    }
+}
 impl FoldablePath for PatternRangePath {
     fn to_range_path(self) -> PatternRangePath {
         self

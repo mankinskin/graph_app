@@ -17,7 +17,7 @@ use crate::{
     },
     join::context::node::context::NodeJoinContext,
 };
-use context_tracegraph::vertex::child::Child;
+use context_trace::graph::vertex::child::Child;
 use info::{
     JoinPartitionInfo,
     pattern_info::JoinPatternInfo,

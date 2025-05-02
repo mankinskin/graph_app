@@ -20,3 +20,4 @@ maplit = "1.0"
 pretty_assertions = "1.4"
 
 context-search = { path = "../context-search", features = ["test-api"] }
+context-trace = { path = "../context-trace", features = ["test-api"] }

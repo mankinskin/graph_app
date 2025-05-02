@@ -10,8 +10,9 @@ use context_trace::{
         },
         wide::Wide,
     },
-    traversal::has_graph::HasGraph,
+    trace::has_graph::HasGraph,
 };
+
 #[derive(Debug)]
 pub struct SplitRunStep;
 
@@ -22,9 +23,10 @@ pub struct SplitRun<G: HasGraph> {
 }
 impl<'a, G: HasGraph + 'a> SplitRun<G> {
     pub fn init(&mut self) {
-        self.ctx
-            .cache
-            .augment_root(&self.ctx.states_ctx.trav, self.ctx.root);
+        self.ctx.cache.augment_root(
+            &self.ctx.states_ctx.trav,
+            self.ctx.states_ctx.ctx.root,
+        );
     }
     pub fn finish(mut self) -> SplitCacheContext<G> {
         self.ctx
@@ -68,7 +70,7 @@ impl<'a, G: HasGraph + 'a> From<SplitRun<G>> for IntervalGraph {
         run.all(|_| true); // run iterator to end
         let cache = run.finish();
         Self {
-            root: cache.root,
+            root: cache.states_ctx.ctx.root,
             states: cache.states_ctx.states,
             cache: cache.cache,
         }

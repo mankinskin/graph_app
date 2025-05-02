@@ -3,7 +3,12 @@ use crate::read::{
     overlap::chain::OverlapChain,
 };
 use context_insert::insert::ToInsertContext;
-use context_search::{
+use context_search::traversal::iterator::bands::{
+    BandIterator,
+    PostfixIterator,
+    PrefixIterator,
+};
+use context_trace::{
     graph::vertex::{
         child::Child,
         wide::Wide,
@@ -30,11 +35,6 @@ use context_search::{
             sub_path::SubPath,
         },
     },
-    traversal::iterator::bands::{
-        BandIterator,
-        PostfixIterator,
-        PrefixIterator,
-    },
 };
 use derive_more::{
     Deref,
@@ -47,29 +47,25 @@ use itertools::{
 };
 
 #[derive(Debug, From)]
-pub enum ChainOp
-{
+pub enum ChainOp {
     Expansion(ExpansionLink),
     Cap(BandCap),
 }
 #[derive(Debug)]
-pub struct BandCap
-{
+pub struct BandCap {
     pub postfix_path: RolePath<End>,
     pub expansion: Child,
     pub start_bound: usize,
 }
 #[derive(Debug)]
-pub struct ExpansionLink
-{
+pub struct ExpansionLink {
     pub prefix_path: RolePath<Start>,
     pub expansion: Child,
     pub start_bound: usize,
 }
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct ChainGenerator<'a>
-{
+pub struct ChainGenerator<'a> {
     pub trav: ReadContext,
     pub cursor: &'a mut PatternEndPath,
     #[deref]
@@ -77,23 +73,19 @@ pub struct ChainGenerator<'a>
     pub chain: OverlapChain,
 }
 
-impl<'a> Iterator for ChainGenerator<'a>
-{
+impl<'a> Iterator for ChainGenerator<'a> {
     type Item = ChainOp;
 
-    fn next(&mut self) -> Option<Self::Item>
-    {
+    fn next(&mut self) -> Option<Self::Item> {
         self.find_next_expansion()
     }
 }
-impl<'a> ChainGenerator<'a>
-{
+impl<'a> ChainGenerator<'a> {
     pub fn new(
         trav: ReadContext,
         cursor: &'a mut PatternEndPath,
         chain: OverlapChain,
-    ) -> Self
-    {
+    ) -> Self {
         Self {
             trav,
             cursor,
@@ -102,8 +94,7 @@ impl<'a> ChainGenerator<'a>
     }
 
     /// find largest expandable postfix
-    fn find_next_expansion(&mut self) -> Option<ChainOp>
-    {
+    fn find_next_expansion(&mut self) -> Option<ChainOp> {
         let last = self.chain.last();
         let last_end_bound = last.band.end_bound;
         let last_end = last.band.postfix();
@@ -145,8 +136,7 @@ impl<'a> ChainGenerator<'a>
         start_bound: usize,
         expansion: Child,
         advanced: PatternRangePath,
-    ) -> ExpansionLink
-    {
+    ) -> ExpansionLink {
         let adv_prefix =
             PatternRootChild::<Start>::pattern_root_child(&advanced);
         // find prefix from advanced path in expansion index
@@ -158,12 +148,9 @@ impl<'a> ChainGenerator<'a>
                 RootedRolePath::new(entry),
                 |mut acc, (prefix_location, prefix)| {
                     acc.path_append(prefix_location);
-                    if prefix == adv_prefix
-                    {
+                    if prefix == adv_prefix {
                         FoldWhile::Done(acc)
-                    }
-                    else
-                    {
+                    } else {
                         FoldWhile::Continue(acc)
                     }
                 },

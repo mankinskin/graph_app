@@ -1,5 +1,5 @@
 use derive_new::new;
-use context_search::graph::vertex::child::Child;
+use context_trace::graph::vertex::child::Child;
 
 use super::{context::ReadContext, overlap::generator::ExpansionLink};
 

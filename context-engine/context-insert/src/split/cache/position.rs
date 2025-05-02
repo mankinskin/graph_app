@@ -22,7 +22,7 @@ use context_trace::{
         location::SubLocation,
         wide::Wide,
     },
-    trace::cache::entry::position::SubSplitLocation,
+    trace::cache::position::SubSplitLocation,
 };
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq)]

@@ -22,6 +22,7 @@ use crate::{
     path::{
         accessors::{
             child::{
+                LeafChild,
                 PathChild,
                 RootChildIndex,
                 RootChildIndexMut,
@@ -48,17 +49,14 @@ use crate::{
         },
         structs::{
             query_range_path::FoldablePath,
-            role_path::RolePath,
+            role_path::{
+                CalcOffset,
+                RolePath,
+            },
             sub_path::SubPath,
         },
     },
     trace::has_graph::HasGraph,
-    //traversal::{
-    //    state::end::{
-    //        EndKind,
-    //        PostfixEnd,
-    //    },
-    //},
 };
 
 use super::{
@@ -70,7 +68,34 @@ use super::{
         RootedPath,
     },
 };
+use crate::graph::vertex::wide::Wide;
 
+pub trait CalcWidth: CalcOffset + RootedPath {
+    fn calc_width<G: HasGraph>(
+        &self,
+        trav: G,
+    ) -> usize;
+}
+impl<Role: PathRole, Root: PathRoot> CalcOffset for RootedRolePath<Role, Root> {
+    fn calc_offset<G: HasGraph>(
+        &self,
+        trav: G,
+    ) -> usize {
+        self.role_path.calc_offset(trav)
+    }
+}
+impl<Role: PathRole, Root: PathRoot> CalcWidth for RootedRolePath<Role, Root>
+where
+    Self: LeafChild<Role>,
+{
+    // TODO: Make offset side relative
+    fn calc_width<G: HasGraph>(
+        &self,
+        trav: G,
+    ) -> usize {
+        self.calc_offset(&trav) + self.leaf_child(&trav).width()
+    }
+}
 pub type IndexRolePath<R> = RootedRolePath<R, IndexRoot>;
 pub type PatternRolePath<R> = RootedRolePath<R, Pattern>;
 

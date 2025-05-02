@@ -3,18 +3,13 @@ use crate::read::{
     context::ReadContext,
     overlap::chain::OverlapChain,
 };
+use context_trace::{
+    graph::vertex::wide::Wide,
+    path::structs::rooted::role_path::PatternEndPath,
+};
 use derive_more::{
     Deref,
     DerefMut,
-};
-use context_search::{
-    self,
-    graph::vertex::{
-        child::Child,
-        pattern::Pattern,
-        wide::Wide,
-    },
-    path::structs::rooted::role_path::PatternEndPath,
 };
 
 use super::{
@@ -23,7 +18,6 @@ use super::{
     generator::{
         ChainGenerator,
         ChainOp,
-        ExpansionLink,
     },
 };
 
@@ -73,8 +67,8 @@ impl<'a> Iterator for ExpansionIterator<'a> {
                         .last()
                         .expect("empty pattern");
 
-                    let complement =
-                        ComplementBuilder::new(root, next).build_context_index(&self.trav);
+                    let complement = ComplementBuilder::new(root, next)
+                        .build_context_index(&self.trav);
                     //let mut back_pattern = self.back_context_for_link(&next);
 
                     let back_pattern = vec![complement, expansion];
@@ -82,20 +76,21 @@ impl<'a> Iterator for ExpansionIterator<'a> {
                     let end_bound = start_bound + expansion.width();
                     self.chain.append((end_bound, next_band));
                     Some(None)
-                }
+                },
                 ChainOp::Cap(cap) => {
                     // if not expandable, at band boundary -> add to bundle
                     // postfixes should always be first in the chain
                     let mut first_band = self.chain.pop_first().unwrap();
                     first_band.append(cap.expansion);
-                    self.bundle = Some(if let Some(mut bundle) = self.bundle.take() {
-                        bundle.add_pattern(first_band.pattern);
-                        bundle
-                    } else {
-                        Bundle::new(first_band)
-                    });
+                    self.bundle =
+                        Some(if let Some(mut bundle) = self.bundle.take() {
+                            bundle.add_pattern(first_band.pattern);
+                            bundle
+                        } else {
+                            Bundle::new(first_band)
+                        });
                     Some(None)
-                }
+                },
             }
         } else {
             None

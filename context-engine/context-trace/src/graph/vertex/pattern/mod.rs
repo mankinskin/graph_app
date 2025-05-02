@@ -93,22 +93,24 @@ pub trait AsPatternMut: BorrowMut<Vec<Child>> + Debug {}
 
 impl<T> AsPatternMut for T where T: BorrowMut<Vec<Child>> + Debug {}
 
-pub fn pattern_width<T: Borrow<Child>>(pat: impl IntoIterator<Item = T>) -> usize {
+pub fn pattern_width<T: Borrow<Child>>(
+    pat: impl IntoIterator<Item = T>
+) -> usize {
     pat.into_iter().map(|c| c.borrow().width()).sum()
 }
 
-pub fn pattern_pre_ctx_width<T: Borrow<Child>>(
+pub fn pattern_pre_ctx<T: Borrow<Child>>(
     pat: impl IntoIterator<Item = T>,
     sub_index: usize,
-) -> usize {
-    pattern_width(pat.into_iter().take(sub_index))
+) -> impl IntoIterator<Item = T> {
+    pat.into_iter().take(sub_index)
 }
 
-pub fn pattern_post_ctx_width<T: Borrow<Child>>(
+pub fn pattern_post_ctx<T: Borrow<Child>>(
     pat: impl IntoIterator<Item = T>,
     sub_index: usize,
-) -> usize {
-    pattern_width(pat.into_iter().skip(sub_index + 1))
+) -> impl IntoIterator<Item = T> {
+    pat.into_iter().skip(sub_index + 1)
 }
 
 pub fn prefix<T: ToChild + Clone>(
@@ -146,9 +148,12 @@ pub fn replace_in_pattern(
         .collect()
 }
 
-pub fn single_child_patterns(halves: Vec<Pattern>) -> Result<Child, Vec<Pattern>> {
+pub fn single_child_patterns(
+    halves: Vec<Pattern>
+) -> Result<Child, Vec<Pattern>> {
     match (halves.len(), halves.first()) {
-        (1, Some(first)) => single_child_pattern(first.clone()).map_err(|_| halves),
+        (1, Some(first)) =>
+            single_child_pattern(first.clone()).map_err(|_| halves),
         _ => Err(halves),
     }
 }
@@ -182,7 +187,8 @@ pub fn double_split_context(
 ) -> (Pattern, Pattern, Pattern) {
     let (prefix, rem) = split_context(pattern, left_index);
     if left_index < right_index {
-        let (infix, postfix) = split_context(&rem, right_index - (left_index + 1));
+        let (infix, postfix) =
+            split_context(&rem, right_index - (left_index + 1));
         (prefix, infix, postfix)
     } else {
         (prefix, vec![], rem)

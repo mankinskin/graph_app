@@ -64,23 +64,23 @@ pub trait GetRoleChildPath {
         GraphRootChild::<R>::root_child_location(self)
     }
 
-    fn role_post_width<G: HasGraph, R>(
+    fn role_outer_width<G: HasGraph, R: PathRole>(
         &self,
         trav: &G,
     ) -> usize
     where
         Self: GraphRootChild<R>,
     {
-        self.get_post_width(trav)
+        self.get_outer_width(trav)
     }
-    fn role_pre_width<G: HasGraph, R>(
+    fn role_inner_width<G: HasGraph, R: PathRole>(
         &self,
         trav: &G,
     ) -> usize
     where
         Self: GraphRootChild<R>,
     {
-        self.get_pre_width(trav)
+        self.get_inner_width(trav)
     }
     fn is_at_border<G: HasGraph, R: PathRole>(
         &self,

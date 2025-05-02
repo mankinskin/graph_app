@@ -1,11 +1,5 @@
 use std::fmt::Debug;
 
-use derive_more::derive::{
-    Deref,
-    DerefMut,
-};
-use derive_new::new;
-
 use crate::split::{
     cache::{
         position::{
@@ -24,39 +18,38 @@ use crate::split::{
     },
     vertex::output::RootMode,
 };
-use context_trace{
+use context_search::traversal::result::IncompleteState;
+use context_trace::{
     HashMap,
     graph::vertex::{
+        VertexIndex,
         child::Child,
         has_vertex_index::HasVertexIndex,
         wide::Wide,
     },
     trace::{
         TraceContext,
-        cache::{
-            TraceCache,
-            label_key::vkey::VertexCacheKey,
-        },
-        node::NodeTraceContext,
-    },
-    traversal::{
+        cache::TraceCache,
         has_graph::{
             HasGraph,
             HasGraphMut,
         },
-        result::IncompleteState,
+        node::NodeTraceContext,
     },
 };
-
+use derive_more::derive::{
+    Deref,
+    DerefMut,
+};
+use derive_new::new;
 pub mod partition;
 
 #[derive(Debug, Deref, DerefMut, new)]
 pub struct SplitCache {
     pub root_mode: RootMode,
-
     #[deref]
     #[deref_mut]
-    entries: HashMap<VertexCacheKey, SplitVertexCache>,
+    entries: HashMap<VertexIndex, SplitVertexCache>,
 }
 impl SplitCache {
     pub fn augment_node(
@@ -111,7 +104,7 @@ impl From<IncompleteState> for InitInterval {
         Self {
             cache: state.cache,
             root: state.root,
-            end_bound: state.end_state.width(),
+            end_bound: state.end_state.cursor.width(),
         }
     }
 }

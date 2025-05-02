@@ -13,7 +13,7 @@ use derive_more::derive::{
     DerefMut,
 };
 
-use context_search::{
+use context_trace::{
     graph::vertex::{
         child::Child,
         pattern::Pattern,
@@ -32,7 +32,7 @@ use context_search::{
             },
         },
     },
-    traversal::has_graph::HasGraphMut,
+    trace::has_graph::HasGraphMut,
 };
 
 use band::{

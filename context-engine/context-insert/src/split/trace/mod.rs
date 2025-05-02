@@ -10,16 +10,16 @@ use super::{
     vertex::VertexSplitContext,
 };
 use crate::split::vertex::output::NodeType;
-use context_trace{
+use context_trace::{
     graph::vertex::{
         child::Child,
         has_vertex_index::HasVertexIndex,
     },
     trace::{
         TraceContext,
-        cache::entry::position::Offset,
+        cache::position::Offset,
+        has_graph::HasGraph,
     },
-    traversal::has_graph::HasGraph,
 };
 
 #[derive(Debug, Clone)]

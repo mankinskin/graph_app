@@ -1,4 +1,4 @@
-use context_search::{
+use context_trace::{
     graph::{
         kind::BaseGraphKind,
         vertex::{
@@ -10,7 +10,7 @@ use context_search::{
             },
         },
     },
-    traversal::has_graph::HasGraphMut,
+    trace::has_graph::HasGraphMut,
 };
 use derive_more::{
     Deref,

@@ -24,7 +24,7 @@ use crate::{
         },
     },
 };
-use context_tracegraph::vertex::pattern::{
+use context_trace::graph::vertex::pattern::{
     Pattern,
     id::PatternId,
 };

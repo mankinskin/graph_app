@@ -1,9 +1,6 @@
-use core::borrow;
 use std::borrow::Borrow;
 
-use derivative::Derivative;
-use derive_more::Deref;
-use context_search::graph::vertex::{
+use context_trace::graph::vertex::{
     child::Child,
     pattern::{
         pattern_width,
@@ -11,6 +8,8 @@ use context_search::graph::vertex::{
     },
     wide::Wide,
 };
+use derivative::Derivative;
+use derive_more::Deref;
 
 use super::OverlapLink;
 

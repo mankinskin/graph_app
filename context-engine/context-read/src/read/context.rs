@@ -1,10 +1,17 @@
 use std::sync::RwLockWriteGuard;
 
+use super::{
+    overlap::{
+        chain::OverlapChain,
+        iterator::ExpansionIterator,
+    },
+    sequence::ToNewTokenIndices,
+};
 use context_insert::insert::{
     context::InsertContext,
     ToInsertContext,
 };
-use context_search::{
+use context_trace::{
     graph::{
         vertex::{
             child::Child,
@@ -13,24 +20,8 @@ use context_search::{
         Hypergraph,
         HypergraphRef,
     },
-    path::{
-        mutators::move_path::Advance,
-        structs::rooted::role_path::PatternEndPath,
-    },
-    traversal::has_graph::{
-        impl_has_graph,
-        impl_has_graph_mut,
-        HasGraph,
-        HasGraphMut,
-    },
-};
-
-use super::{
-    overlap::{
-        chain::OverlapChain,
-        iterator::ExpansionIterator,
-    },
-    sequence::ToNewTokenIndices,
+    impl_has_graph_mut,
+    path::structs::rooted::role_path::PatternEndPath,
 };
 pub trait HasReadContext: ToInsertContext {
     fn read_context<'g>(&'g mut self) -> ReadContext;

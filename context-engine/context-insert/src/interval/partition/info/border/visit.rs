@@ -21,7 +21,7 @@ use crate::interval::partition::info::{
         },
     },
 };
-use context_trace{
+use context_trace::{
     graph::vertex::{
         pattern::Pattern,
         wide::Wide,

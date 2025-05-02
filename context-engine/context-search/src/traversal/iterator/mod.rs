@@ -16,6 +16,8 @@ use context_trace::{
 };
 
 pub mod bands;
+pub mod end;
+pub mod r#match;
 pub mod policy;
 
 pub trait HasChildRoleIters: ToChild {

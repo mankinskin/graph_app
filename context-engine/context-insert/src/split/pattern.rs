@@ -1,4 +1,4 @@
-use context_trace{
+use context_trace::{
     graph::vertex::pattern::id::PatternId,
     trace::child::ChildTracePos,
 };
@@ -6,8 +6,7 @@ use context_trace{
 use super::vertex::VertexSplits;
 use std::fmt::Debug;
 
-pub trait PatternSplits: Debug + Clone
-{
+pub trait PatternSplits: Debug + Clone {
     type Pos;
     type Offsets;
     fn get(
@@ -18,44 +17,36 @@ pub trait PatternSplits: Debug + Clone
     fn offsets(&self) -> Self::Offsets;
 }
 
-impl PatternSplits for VertexSplits
-{
+impl PatternSplits for VertexSplits {
     type Pos = ChildTracePos;
     type Offsets = usize;
     fn get(
         &self,
         pid: &PatternId,
-    ) -> Option<Self::Pos>
-    {
+    ) -> Option<Self::Pos> {
         self.splits.get(pid).cloned()
     }
-    fn ids<'a>(&'a self) -> Box<dyn Iterator<Item = &'a PatternId> + 'a>
-    {
+    fn ids<'a>(&'a self) -> Box<dyn Iterator<Item = &'a PatternId> + 'a> {
         Box::new(self.splits.keys())
     }
-    fn offsets(&self) -> Self::Offsets
-    {
+    fn offsets(&self) -> Self::Offsets {
         self.pos.get()
     }
 }
 
-impl PatternSplits for &VertexSplits
-{
+impl PatternSplits for &VertexSplits {
     type Pos = ChildTracePos;
     type Offsets = usize;
     fn get(
         &self,
         pid: &PatternId,
-    ) -> Option<Self::Pos>
-    {
+    ) -> Option<Self::Pos> {
         self.splits.get(pid).cloned()
     }
-    fn ids<'a>(&'a self) -> Box<dyn Iterator<Item = &'a PatternId> + 'a>
-    {
+    fn ids<'a>(&'a self) -> Box<dyn Iterator<Item = &'a PatternId> + 'a> {
         Box::new(self.splits.keys())
     }
-    fn offsets(&self) -> Self::Offsets
-    {
+    fn offsets(&self) -> Self::Offsets {
         self.pos.get()
     }
 }
@@ -66,26 +57,22 @@ impl PatternSplits for &VertexSplits
 //        *self
 //    }
 //}
-impl<A: PatternSplits, B: PatternSplits> PatternSplits for (A, B)
-{
+impl<A: PatternSplits, B: PatternSplits> PatternSplits for (A, B) {
     type Pos = (A::Pos, B::Pos);
     type Offsets = (A::Offsets, B::Offsets);
     fn get(
         &self,
         pid: &PatternId,
-    ) -> Option<Self::Pos>
-    {
+    ) -> Option<Self::Pos> {
         self.0.get(pid).map(|a| {
             let b = self.1.get(pid).unwrap();
             (a, b)
         })
     }
-    fn ids<'a>(&'a self) -> Box<dyn Iterator<Item = &'a PatternId> + 'a>
-    {
+    fn ids<'a>(&'a self) -> Box<dyn Iterator<Item = &'a PatternId> + 'a> {
         self.0.ids()
     }
-    fn offsets(&self) -> Self::Offsets
-    {
+    fn offsets(&self) -> Self::Offsets {
         (self.0.offsets(), self.1.offsets())
     }
 }

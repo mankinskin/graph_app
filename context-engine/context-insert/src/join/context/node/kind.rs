@@ -7,27 +7,23 @@ use crate::{
     },
     join::partition::Join,
 };
-use context_trace{
+use context_trace::{
     graph::Hypergraph,
-    traversal::has_graph::HasGraphMut,
+    trace::has_graph::HasGraphMut,
 };
 use std::fmt::Debug;
 
-pub trait JoinKind: RangeRole<Mode = Join> + Debug + Clone + Copy
-{
+pub trait JoinKind: RangeRole<Mode = Join> + Debug + Clone + Copy {
     type Trav: HasGraphMut;
 }
 
-impl JoinKind for Pre<Join>
-{
+impl JoinKind for Pre<Join> {
     type Trav = Hypergraph;
 }
-impl JoinKind for In<Join>
-{
+impl JoinKind for In<Join> {
     type Trav = Hypergraph;
 }
 
-impl JoinKind for Post<Join>
-{
+impl JoinKind for Post<Join> {
     type Trav = Hypergraph;
 }

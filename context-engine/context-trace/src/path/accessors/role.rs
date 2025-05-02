@@ -1,8 +1,12 @@
 use crate::{
     graph::vertex::{
+        child::Child,
         has_vertex_index::ToChild,
         location::child::ChildLocation,
         pattern::{
+            pattern_post_ctx,
+            pattern_pre_ctx,
+            pattern_width,
             postfix,
             prefix,
         },
@@ -50,6 +54,15 @@ pub trait PathRole: 'static + Debug + PathBorder + Default + Clone {
     ) -> std::iter::Rev<Self::TopDownPathIter<I, T>> {
         Self::top_down_iter(collection).rev()
     }
+    fn outer_ctx_width<T: Borrow<Child>>(
+        pattern: &'_ [T],
+        index: usize,
+    ) -> usize;
+    fn inner_ctx_width<T: Borrow<Child>>(
+        pattern: &'_ [T],
+        index: usize,
+    ) -> usize;
+
     /// get remaining pattern agains matching direction excluding index
     fn back_context<T: ToChild + Clone>(
         pattern: &'_ [T],
@@ -116,6 +129,24 @@ impl PathRole for Start {
     ) -> Vec<T> {
         postfix(pattern, index)
     }
+    fn outer_ctx_width<T: Borrow<Child>>(
+        pattern: &'_ [T],
+        index: usize,
+    ) -> usize {
+        pattern_width(pattern_pre_ctx(
+            pattern.into_iter().map(Borrow::borrow),
+            index,
+        ))
+    }
+    fn inner_ctx_width<T: Borrow<Child>>(
+        pattern: &'_ [T],
+        index: usize,
+    ) -> usize {
+        pattern_width(pattern_post_ctx(
+            pattern.into_iter().map(Borrow::borrow),
+            index,
+        ))
+    }
 }
 
 impl PathRole for End {
@@ -152,5 +183,17 @@ impl PathRole for End {
         index: usize,
     ) -> Vec<T> {
         prefix(pattern, index + 1)
+    }
+    fn outer_ctx_width<T: Borrow<Child>>(
+        pattern: &'_ [T],
+        index: usize,
+    ) -> usize {
+        Start::inner_ctx_width(pattern, index)
+    }
+    fn inner_ctx_width<T: Borrow<Child>>(
+        pattern: &'_ [T],
+        index: usize,
+    ) -> usize {
+        Start::outer_ctx_width(pattern, index)
     }
 }

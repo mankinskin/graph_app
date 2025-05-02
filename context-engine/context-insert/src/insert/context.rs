@@ -1,10 +1,4 @@
-use std::{
-    convert::TryFrom,
-    sync::{
-        RwLockReadGuard,
-        RwLockWriteGuard,
-    },
-};
+use std::convert::TryFrom;
 
 use crate::{
     interval::{
@@ -13,13 +7,7 @@ use crate::{
     },
     join::context::JoinContext,
 };
-use context_trace{
-    graph::{
-        Hypergraph,
-        HypergraphRef,
-        getters::ErrorReason,
-        vertex::child::Child,
-    },
+use context_search::{
     search::context::ParentPolicy,
     traversal::{
         TraversalKind,
@@ -28,19 +16,28 @@ use context_trace{
             ErrorState,
             Foldable,
         },
-        has_graph::{
-            HasGraph,
-            HasGraphMut,
-            impl_has_graph,
-            impl_has_graph_mut,
-        },
         result::{
             CompleteState,
             FinishedKind,
         },
     },
 };
+use context_trace::{
+    graph::{
+        Hypergraph,
+        HypergraphRef,
+        getters::ErrorReason,
+        vertex::child::Child,
+    },
+    impl_has_graph,
+    impl_has_graph_mut,
+    trace::has_graph::HasGraphMut,
+};
 use derive_more::From;
+use std::sync::{
+    RwLockReadGuard,
+    RwLockWriteGuard,
+};
 
 #[derive(Debug, Clone, Default)]
 pub struct InsertTraversal;
@@ -94,7 +91,6 @@ impl InsertContext {
         ctx.join_subgraph()
     }
 }
-
 impl_has_graph! {
     impl for InsertContext,
     self => self.graph.read().unwrap();

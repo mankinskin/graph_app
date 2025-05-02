@@ -1,7 +1,13 @@
 use std::collections::HashSet;
 
 use crate::insert::ToInsertContext;
-use context_tracesearch::Searchable;
+use context_search::{
+    search::Searchable,
+    traversal::result::{
+        FinishedKind,
+        FinishedState,
+    },
+};
 use context_trace::{
     graph::{
         Hypergraph,
@@ -14,13 +20,7 @@ use context_trace::{
             wide::Wide,
         },
     },
-    traversal::{
-        has_graph::HasGraph,
-        result::{
-            FinishedKind,
-            FinishedState,
-        },
-    },
+    trace::has_graph::HasGraph,
 };
 use itertools::*;
 use maplit::hashset;
@@ -89,7 +89,7 @@ fn index_pattern1() {
 #[test]
 fn index_pattern2() {
     let mut graph =
-        context_tracegraph::Hypergraph::<BaseGraphKind>::default();
+        context_trace::graph::Hypergraph::<BaseGraphKind>::default();
     let (a, b, _w, x, y, z) = graph
         .insert_tokens([
             Token::Element('a'),
@@ -145,7 +145,7 @@ fn index_pattern2() {
 #[test]
 fn index_infix1() {
     let mut graph =
-        context_tracegraph::Hypergraph::<BaseGraphKind>::default();
+        context_trace::graph::Hypergraph::<BaseGraphKind>::default();
     let (a, b, w, x, y, z) = graph
         .insert_tokens([
             Token::Element('a'),
@@ -221,7 +221,7 @@ fn index_infix1() {
 #[test]
 fn index_infix2() {
     let mut graph =
-        context_tracegraph::Hypergraph::<BaseGraphKind>::default();
+        context_trace::graph::Hypergraph::<BaseGraphKind>::default();
     let (a, b, c, d, x, y) = graph
         .insert_tokens([
             Token::Element('a'),

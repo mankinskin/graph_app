@@ -41,6 +41,7 @@ use super::rooted::{
     index_range::IndexRangePath,
     role_path::RootedRolePath,
 };
+use crate::path::GetRoleChildPath;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct RolePath<R: PathRole> {
@@ -63,6 +64,25 @@ impl<R: PathRole> RolePath<R> {
             root,
             role_path: self,
         }
+    }
+}
+pub trait CalcOffset {
+    fn calc_offset<G: HasGraph>(
+        &self,
+        trav: G,
+    ) -> usize;
+}
+impl<R: PathRole> CalcOffset for RolePath<R> {
+    // TODO: Make offset side relative
+    fn calc_offset<G: HasGraph>(
+        &self,
+        trav: G,
+    ) -> usize {
+        let graph = trav.graph();
+        self.sub_path
+            .path
+            .iter()
+            .fold(0, |acc, loc| acc + loc.role_inner_width::<_, R>(&graph))
     }
 }
 impl<R: PathRole> RootChildIndex<R> for RolePath<R> {

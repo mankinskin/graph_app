@@ -1,6 +1,6 @@
-use context_search::{
+use context_trace::{
     graph::vertex::pattern::Pattern,
-    traversal::has_graph::HasGraphMut,
+    trace::has_graph::HasGraphMut,
 };
 
 use super::chain::band::Band;

@@ -73,7 +73,9 @@ impl Foldable for PatternEndPath {
         self,
         trav: K::Trav,
     ) -> Result<FoldContext<K>, ErrorState> {
-        self.to_range_path().to_cursor().to_fold_context::<K>(trav)
+        self.to_range_path()
+            .to_cursor(&trav)
+            .to_fold_context::<K>(trav)
     }
 }
 impl Foldable for PatternRangePath {
@@ -81,7 +83,9 @@ impl Foldable for PatternRangePath {
         self,
         trav: K::Trav,
     ) -> Result<FoldContext<K>, ErrorState> {
-        self.to_range_path().to_cursor().to_fold_context::<K>(trav)
+        self.to_range_path()
+            .to_cursor(&trav)
+            .to_fold_context::<K>(trav)
     }
 }
 impl Foldable for PatternRangeCursor {

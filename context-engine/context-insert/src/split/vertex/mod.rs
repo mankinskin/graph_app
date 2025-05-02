@@ -29,7 +29,7 @@ use context_trace::{
     },
     path::mutators::move_path::key::TokenPosition,
     trace::{
-        cache::entry::{
+        cache::{
             position::{
                 Offset,
                 SubSplitLocation,
@@ -37,8 +37,8 @@ use context_trace::{
             vertex::VertexCache,
         },
         child::ChildTracePos,
+        has_graph::HasGraph,
     },
-    traversal::has_graph::HasGraph,
 };
 use derive_more::derive::Deref;
 use derive_new::new;

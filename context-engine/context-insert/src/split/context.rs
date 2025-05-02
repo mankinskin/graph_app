@@ -15,13 +15,12 @@ use crate::{
     interval::SplitCache,
     split::trace::SplitTraceState,
 };
-use context_trace{
+use context_trace::{
     graph::vertex::has_vertex_index::HasVertexIndex,
-    trace::cache::{
-        entry::position::SubSplitLocation,
-        label_key::labelled_key,
+    trace::{
+        cache::position::SubSplitLocation,
+        has_graph::HasGraph,
     },
-    traversal::has_graph::HasGraph,
 };
 
 #[derive(Debug, Deref, DerefMut)]
@@ -32,7 +31,7 @@ pub struct SplitCacheContext<G: HasGraph> {
 
     pub cache: SplitCache,
 }
-impl<G: HasGraph> SplitCacheContext<G> {
+impl<'a, G: HasGraph> SplitCacheContext<G> {
     pub fn init(mut states_ctx: SplitTraceStateContext<G>) -> Self {
         let (offsets, root_mode) =
             states_ctx.completed_splits::<RootNode>(&states_ctx.ctx.root);
@@ -65,10 +64,7 @@ impl<G: HasGraph> SplitCacheContext<G> {
         };
         let cache = SplitCache::new(
             root_mode,
-            FromIterator::from_iter([(
-                labelled_key(&states_ctx.ctx.trav, states_ctx.ctx.root),
-                root_vertex,
-            )]),
+            FromIterator::from_iter([(states_ctx.ctx.root.index, root_vertex)]),
         );
 
         Self { states_ctx, cache }
@@ -92,9 +88,8 @@ impl<G: HasGraph> SplitCacheContext<G> {
                     self.states_ctx.new_split_position(index, offset, prev)
                 });
         } else {
-            let vertex = self.new_split_vertex(index, offset, prev);
-            self.cache
-                .insert(labelled_key(&self.states_ctx.ctx.trav, index), vertex);
+            let vertex = self.states_ctx.new_split_vertex(index, offset, prev);
+            self.cache.insert(index.index, vertex);
         }
     }
 }

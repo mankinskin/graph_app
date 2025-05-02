@@ -10,7 +10,7 @@ use role::{
     RangeRole,
 };
 
-use context_trace{
+use context_trace::{
     graph::vertex::{
         child::Child,
         pattern::id::PatternId,

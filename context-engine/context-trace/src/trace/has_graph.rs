@@ -52,7 +52,7 @@ macro_rules! impl_has_graph {
     {
         impl $(< $( $par:ident $( : $bhead:tt $( + $btail:tt )*)? ),* >)? for $target:ty, $self_:ident => $func:expr; <$lt:lifetime> $guard:ty
     } => {
-        impl <$( $( $par $(: $bhead $( + $btail )* )? ),* )?> HasGraph for $target {
+        impl <$( $( $par $(: $bhead $( + $btail )* )? ),* )?> $crate::trace::has_graph::HasGraph for $target {
             type Kind = $crate::graph::kind::BaseGraphKind;
             type Guard<$lt> = $guard where Self: $lt, Self::Kind: $lt;
             fn graph(&$self_) -> Self::Guard<'_> {
@@ -66,7 +66,7 @@ macro_rules! impl_has_graph_mut {
     {
         impl $(< $( $par:ident $( : $bhead:tt $( + $btail:tt )*)? ),* >)? for $target:ty, $self_:ident => $func:expr; <$lt:lifetime> $guard:ty
     } => {
-        impl <$( $(, $par $(: $bhead $( + $btail )* )? ),* )?> HasGraphMut for $target {
+        impl <$( $(, $par $(: $bhead $( + $btail )* )? ),* )?> $crate::trace::has_graph::HasGraphMut for $target {
             type GuardMut<$lt> = $guard where Self: $lt;
             fn graph_mut(&mut $self_) -> Self::GuardMut<'_> {
                 $func

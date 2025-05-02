@@ -169,7 +169,7 @@ impl IntoAdvanced for ParentState {
                 cursor,
             } = self;
             let index = pattern[next_i];
-            println!("{:#?}", (&pattern, entry, index));
+            //println!("{:#?}", (&pattern, entry, index));
             Ok(RootChildState {
                 child: ChildState {
                     base: BaseState {

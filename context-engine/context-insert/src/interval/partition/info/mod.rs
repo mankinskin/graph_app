@@ -23,7 +23,7 @@ use crate::{
     },
     split::pattern::PatternSplits,
 };
-use context_trace{
+use context_trace::{
     HashMap,
     graph::vertex::{
         child::Child,

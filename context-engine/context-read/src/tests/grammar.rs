@@ -8,7 +8,7 @@ use std::{
 use derive_more::Deref;
 use derive_new::new;
 
-use context_search::{
+use context_trace::{
     graph::{
         getters::vertex::VertexSet,
         vertex::{
@@ -16,6 +16,7 @@ use context_search::{
             data::VertexData,
             has_vertex_index::HasVertexIndex,
             location::child::ChildLocation,
+            parent::Parent,
             pattern::{
                 id::PatternId,
                 Pattern,
@@ -23,10 +24,10 @@ use context_search::{
             wide::Wide,
             VertexIndex,
         },
+        Hypergraph,
     },
     HashMap,
 };
-
 type BuildKey = RangeInclusive<usize>;
 
 //#[test]
@@ -48,10 +49,10 @@ pub fn test_grammar() {
     println!("num_v = {}", g.vertex_count());
     println!("num_e = {}", 4 * g.vertex_count());
     let num_bytes = g.vertex_count()
-        * (std::mem::size_of::<VertexData>() + std::mem::size_of::<VertexIndex>())
+        * (std::mem::size_of::<VertexData>()
+            + std::mem::size_of::<VertexIndex>())
         + 4 * g.vertex_count()
-            * (std::mem::size_of::<Child>()
-                + std::mem::size_of::<context_search::graph::vertex::parent::Parent>());
+            * (std::mem::size_of::<Child>() + std::mem::size_of::<Parent>());
     println!("total MB = {}", num_bytes as u32 / 10_u32.pow(6),);
     println!("mul = {}", num_bytes / N,);
 }
@@ -78,7 +79,7 @@ impl BuilderNode {
 struct GraphBuilder {
     range_map: HashMap<BuildKey, usize>,
     queue: VecDeque<BuilderNode>,
-    graph: context_search::graph::Hypergraph,
+    graph: Hypergraph,
     N: usize,
 }
 
@@ -121,7 +122,8 @@ impl GraphBuilder {
                         self.graph.expect_vertex_mut(v).add_parent(loc);
                         Child::new(*v, key.clone().count())
                     } else {
-                        self.range_map.insert(key.clone(), self.range_map.len());
+                        self.range_map
+                            .insert(key.clone(), self.range_map.len());
                         let vid = self.graph.next_vertex_index();
                         let c = Child::new(vid, key.clone().count());
                         self.queue_node(BuilderNode::new(c, key.clone()));
@@ -136,7 +138,10 @@ impl GraphBuilder {
     }
     pub fn fill_grammar(&mut self) {
         let vid = self.graph.next_vertex_index();
-        self.queue_node(BuilderNode::new(Child::new(vid, self.N), 0..=self.N - 1));
+        self.queue_node(BuilderNode::new(
+            Child::new(vid, self.N),
+            0..=self.N - 1,
+        ));
         while let Some(node) = self.queue.pop_front() {
             self.add_rules(node);
         }
@@ -154,7 +159,7 @@ impl GraphBuilder {
     pub fn saturated_grammar(
         mut self,
         k: usize,
-    ) -> context_search::graph::Hypergraph {
+    ) -> Hypergraph {
         self.fill_grammar();
         let mut ctx = RewireContext::new(k, self);
         ctx.rewire_grammar();
@@ -255,7 +260,7 @@ impl RewireContext {
 fn worst_case_grammar(
     N: usize,
     k: usize,
-) -> context_search::graph::Hypergraph {
+) -> Hypergraph {
     GraphBuilder::new(N).saturated_grammar(k)
 }
 

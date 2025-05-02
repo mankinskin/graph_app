@@ -16,7 +16,6 @@ use context_trace::{
     trace::{
         cache::key::props::RootKey,
         traceable::Traceable,
-        TraceContext,
     },
 };
 use foldable::ErrorState;
@@ -62,14 +61,10 @@ impl<'a, K: TraversalKind> FoldContext<K> {
         (&mut self).for_each(|_| ());
         let end = self.tctx.last_end;
         {
-            let mut ctx = TraceContext {
-                trav: &self.tctx.trav,
-                cache: &mut self.tctx.cache,
-            };
-            end.clone().trace(&mut ctx);
+            end.clone().trace(&mut self.tctx.ctx);
         }
         Ok(FinishedState {
-            cache: self.tctx.cache,
+            cache: self.tctx.ctx.cache,
             root: end.root_key().index,
             start: self.start_index,
             kind: FinishedKind::from(end),

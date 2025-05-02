@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use context_trace{
+use context_trace::{
     HashMap,
     graph::vertex::{
         child::Child,

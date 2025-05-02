@@ -44,6 +44,7 @@ ngram = "0.1"
 csv = "1"
 derivative = "^2.2"
 justlog = { path = "../../justlog" }
+context-trace = { path = "../context-trace", features = ["test-api"] }
 context-search = { path = "../context-search", features = ["test-api"] }
 context-insert = { path = "../context-insert", features = ["test-api"] }
 derive_builder = "^0.20"

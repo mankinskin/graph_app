@@ -8,23 +8,20 @@ use crate::interval::partition::info::{
         },
     },
 };
-use context_tracetrace::pattern::HasPatternTraceContext;
+use context_trace::trace::pattern::HasPatternTraceContext;
 
-pub trait TraceBorders<R: RangeRole>: VisitBorders<R>
-{
+pub trait TraceBorders<R: RangeRole>: VisitBorders<R> {
     fn inner_info(
         &self,
         ctx: &ModePatternCtxOf<'_, R>,
     ) -> Option<InnerRangeInfo<R>>;
 }
 
-impl<R: RangeRole> TraceBorders<R> for R::Borders
-{
+impl<R: RangeRole> TraceBorders<R> for R::Borders {
     fn inner_info(
         &self,
         ctx: &ModePatternCtxOf<'_, R>,
-    ) -> Option<InnerRangeInfo<R>>
-    {
+    ) -> Option<InnerRangeInfo<R>> {
         let pctx = ctx.pattern_trace_context();
         self.inner_range_offsets(pctx.pattern).map(move |offsets| {
             InnerRangeInfo {

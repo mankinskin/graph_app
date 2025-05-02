@@ -13,36 +13,33 @@ use crate::interval::partition::info::range::{
         RangeRole,
     },
 };
-use context_trace{
-    graph::vertex::pattern::{
-        Pattern,
-        pattern_pre_ctx_width,
+use context_trace::{
+    graph::vertex::pattern::Pattern,
+    path::accessors::role::{
+        End,
+        PathRole,
     },
     trace::child::ChildTracePos,
 };
-
 pub mod perfect;
 
 pub mod trace;
 
 pub mod visit;
 
-pub struct BorderInfo
-{
+pub struct BorderInfo {
     pub sub_index: usize,
     pub inner_offset: Option<NonZeroUsize>,
     /// start offset of index with border
     pub start_offset: Option<NonZeroUsize>,
 }
 
-impl BorderInfo
-{
+impl BorderInfo {
     fn new(
         pattern: &Pattern,
         pos: &ChildTracePos,
-    ) -> Self
-    {
-        let offset = pattern_pre_ctx_width(pattern, pos.sub_index);
+    ) -> Self {
+        let offset = End::inner_ctx_width(pattern, pos.sub_index);
         BorderInfo {
             sub_index: pos.sub_index,
             inner_offset: pos.inner_offset,
@@ -51,8 +48,7 @@ impl BorderInfo
     }
 }
 
-pub trait PartitionBorder<R: RangeRole>: Sized
-{
+pub trait PartitionBorder<R: RangeRole>: Sized {
     fn perfect(&self) -> BooleanPerfectOf<R>;
     fn offsets(&self) -> OffsetsOf<R>;
 }
@@ -62,12 +58,10 @@ impl<
     R: RangeRole<Perfect = P, Offsets = NonZeroUsize>,
 > PartitionBorder<R> for BorderInfo
 {
-    fn perfect(&self) -> BooleanPerfectOf<R>
-    {
+    fn perfect(&self) -> BooleanPerfectOf<R> {
         self.inner_offset.is_none()
     }
-    fn offsets(&self) -> OffsetsOf<R>
-    {
+    fn offsets(&self) -> OffsetsOf<R> {
         self.start_offset
             .map(|o| {
                 self.inner_offset
@@ -78,17 +72,14 @@ impl<
     }
 }
 
-impl<M: InVisitMode> PartitionBorder<In<M>> for (BorderInfo, BorderInfo)
-{
-    fn perfect(&self) -> BooleanPerfectOf<In<M>>
-    {
+impl<M: InVisitMode> PartitionBorder<In<M>> for (BorderInfo, BorderInfo) {
+    fn perfect(&self) -> BooleanPerfectOf<In<M>> {
         (
             <_ as PartitionBorder<Pre<M>>>::perfect(&self.0),
             <_ as PartitionBorder<Post<M>>>::perfect(&self.1),
         )
     }
-    fn offsets(&self) -> OffsetsOf<In<M>>
-    {
+    fn offsets(&self) -> OffsetsOf<In<M>> {
         (
             <_ as PartitionBorder<Pre<M>>>::offsets(&self.0),
             <_ as PartitionBorder<Post<M>>>::offsets(&self.1),

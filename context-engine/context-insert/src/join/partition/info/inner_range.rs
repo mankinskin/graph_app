@@ -15,7 +15,7 @@ use crate::{
         },
     },
 };
-use context_trace{
+use context_trace::{
     graph::vertex::child::Child,
     trace::node::AsNodeTraceContext,
 };

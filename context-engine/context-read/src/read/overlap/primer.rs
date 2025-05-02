@@ -1,4 +1,4 @@
-use context_search::{
+use context_trace::{
     graph::vertex::child::Child,
     path::{
         accessors::role::End,

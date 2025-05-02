@@ -36,7 +36,7 @@ use crate::{
         vertex::VertexSplits,
     },
 };
-use context_tracegraph::vertex::child::Child;
+use context_trace::graph::vertex::child::Child;
 
 use super::{
     mode::{

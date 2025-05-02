@@ -37,6 +37,7 @@ use crate::{
             role::{
                 End,
                 PathRole,
+                Start,
             },
         },
         mutators::move_path::key::TokenPosition,
@@ -101,7 +102,7 @@ pub trait TraceRole<Role: PathRole> {
         add_edges: bool,
     ) -> RoleTraceKey<Role>;
 }
-impl<'a, G: HasGraph, Role: PathRole> TraceRole<Role> for TraceContext<'a, G> {
+impl<'a, G: HasGraph, Role: PathRole> TraceRole<Role> for TraceContext<G> {
     fn trace_sub_path<P: TraceRolePath<Role>>(
         &mut self,
         path: &P,
@@ -124,11 +125,11 @@ impl<'a, G: HasGraph, Role: PathRole> TraceRole<Role> for TraceContext<'a, G> {
 }
 
 #[derive(Debug)]
-pub struct TraceContext<'a, G: HasGraph> {
-    pub trav: &'a G,
-    pub cache: &'a mut TraceCache,
+pub struct TraceContext<G: HasGraph> {
+    pub trav: G,
+    pub cache: TraceCache,
 }
-impl<'a, G: HasGraph> TraceContext<'a, G> {
+impl<G: HasGraph> TraceContext<G> {
     fn skip_key(
         &mut self,
         root_entry: usize, // sub index
@@ -187,9 +188,7 @@ impl TraceDirection for BottomUp {
         last_pos: TokenPosition,
         location: &ChildLocation,
     ) -> Self::Key {
-        let delta = location.role_post_width::<_, Self>(trav);
-        //let last_pos =
-        //location.parent.width() - graph.expect_child_offset(location);
+        let delta = location.role_inner_width::<_, Start>(trav);
         UpKey {
             index: location.parent,
             pos: UpPosition::from(last_pos + delta),

@@ -370,7 +370,7 @@ fn find_ancestor2() {
                         _ty: Default::default(),
                     },
                 },
-                relative_pos: 2.into(),
+                relative_pos: 3.into(),
             },
         })
     );
@@ -383,7 +383,7 @@ fn find_ancestor2() {
                     index: xabyz,
                     top_down: FromIterator::from_iter([]),
                     bottom_up: FromIterator::from_iter([(
-                        2.into(), // width of xa
+                        2.into(), // width of by
                         PositionCache {
                             edges: Edges {
                                 bottom: HashMap::from_iter([(
@@ -402,7 +402,7 @@ fn find_ancestor2() {
                     index: xaby,
                     top_down: FromIterator::from_iter([]),
                     bottom_up: FromIterator::from_iter([(
-                        2.into(), // width of xa
+                        2.into(), // width of by
                         PositionCache {
                             edges: Edges {
                                 bottom: HashMap::from_iter([(
@@ -467,9 +467,7 @@ fn find_ancestor3() {
         aby_found.kind,
         FinishedKind::Incomplete(EndState {
             reason: EndReason::QueryEnd,
-            //target: y.top_down(2),
             kind: EndKind::Postfix(PostfixEnd {
-                //inner_width: 1,
                 root_pos: 2.into(),
                 path: RootedRolePath {
                     root: IndexRoot {
@@ -540,7 +538,7 @@ fn find_ancestor3() {
                         PositionCache {
                             edges: Edges {
                                 bottom: HashMap::from_iter([(
-                                    DirectedKey::up(ab, 0),
+                                    DirectedKey::up(ab, 2),
                                     SubLocation::new(x_ab_id, 1),
                                 )]),
                                 top: HashSet::from_iter([]),

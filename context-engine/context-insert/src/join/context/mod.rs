@@ -9,7 +9,7 @@ use crate::{
         cache::position::PosKey,
     },
 };
-use context_trace{
+use context_trace::{
     HashMap,
     graph::{
         Hypergraph,
@@ -19,10 +19,10 @@ use context_trace{
             wide::Wide,
         },
     },
-    traversal::has_graph::{
-        TravKind,
+    trace::has_graph::{
         HasGraph,
         HasGraphMut,
+        TravKind,
     },
 };
 
@@ -55,31 +55,26 @@ pub mod pattern;
 //}
 
 #[derive(Debug)]
-pub struct JoinContext
-{
+pub struct JoinContext {
     pub trav: HypergraphRef,
     //pub split_map: &'a SubSplits,
     pub interval: IntervalGraph,
 }
 #[derive(Debug)]
-pub struct LockedJoinContext<'a>
-{
+pub struct LockedJoinContext<'a> {
     pub trav: <HypergraphRef as HasGraphMut>::GuardMut<'a>,
     //pub split_map: &'a SubSplits,
     pub interval: &'a IntervalGraph,
 }
 
-impl JoinContext
-{
-    pub fn locked<'a: 'b, 'b>(&'a mut self) -> LockedJoinContext<'a>
-    {
+impl JoinContext {
+    pub fn locked<'a: 'b, 'b>(&'a mut self) -> LockedJoinContext<'a> {
         LockedJoinContext {
             trav: self.trav.graph_mut(),
             interval: &self.interval,
         }
     }
-    pub fn join_subgraph(&mut self) -> Child
-    {
+    pub fn join_subgraph(&mut self) -> Child {
         let mut splits = HashMap::default();
         let leaves = self.interval.states.leaves.iter().cloned().rev();
         let mut frontier: LinkedHashSet<PosKey> =
@@ -88,15 +83,12 @@ impl JoinContext
             frontier.pop_front().and_then(|key| {
                 (key.index != self.interval.root).then_some(key)
             })
-        }
-        {
-            if !splits.contains_key(&key)
-            {
+        } {
+            if !splits.contains_key(&key) {
                 let partitions =
                     self.node(key.index, &splits).join_partitions();
 
-                for (key, split) in partitions
-                {
+                for (key, split) in partitions {
                     splits.insert(key, split);
                 }
             }
@@ -132,26 +124,22 @@ impl JoinContext
     }
 }
 
-impl HasGraph for JoinContext
-{
+impl HasGraph for JoinContext {
     type Kind = TravKind<Hypergraph>;
     type Guard<'g>
         = <HypergraphRef as HasGraph>::Guard<'g>
     where
         Self: 'g;
-    fn graph(&self) -> Self::Guard<'_>
-    {
+    fn graph(&self) -> Self::Guard<'_> {
         self.trav.graph()
     }
 }
-impl HasGraphMut for JoinContext
-{
+impl HasGraphMut for JoinContext {
     type GuardMut<'g>
         = <HypergraphRef as HasGraphMut>::GuardMut<'g>
     where
         Self: 'g;
-    fn graph_mut(&mut self) -> Self::GuardMut<'_>
-    {
+    fn graph_mut(&mut self) -> Self::GuardMut<'_> {
         self.trav.graph_mut()
     }
 }

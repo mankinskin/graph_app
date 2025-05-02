@@ -8,6 +8,7 @@ use derive_more::derive::{
     DerefMut,
 };
 
+use super::SplitTraceContext;
 use crate::split::{
     cache::{
         leaves::Leaves,
@@ -18,25 +19,25 @@ use crate::split::{
         vertex::SplitVertexCache,
     },
     cleaned_position_splits,
-    trace::SplitTraceState,
+    trace::{
+        HasGraph,
+        SplitTraceState,
+    },
     vertex::output::InnerNode,
 };
-use context_trace{
+use context_trace::{
     graph::{
         getters::vertex::VertexSet,
         vertex::child::Child,
     },
     trace::{
         TraceContext,
-        cache::entry::position::{
+        cache::position::{
             Offset,
             SubSplitLocation,
         },
     },
-    traversal::has_graph::HasGraph,
 };
-
-use super::SplitTraceContext;
 
 #[derive(Debug, Default)]
 pub struct SplitStates {
@@ -102,7 +103,7 @@ pub struct SplitTraceStateContext<G: HasGraph> {
     pub ctx: SplitTraceContext<G>,
     pub states: SplitStates,
 }
-impl<G: HasGraph> SplitTraceStateContext<G> {
+impl<'a, G: HasGraph> SplitTraceStateContext<G> {
     pub fn new(
         ctx: TraceContext<G>,
         root: Child,

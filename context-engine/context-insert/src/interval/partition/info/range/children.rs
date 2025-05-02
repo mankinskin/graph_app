@@ -13,7 +13,7 @@ use crate::interval::partition::info::range::{
         RangeRole,
     },
 };
-use context_tracegraph::vertex::{
+use context_trace::graph::vertex::{
     child::Child,
     pattern::{
         IntoPattern,

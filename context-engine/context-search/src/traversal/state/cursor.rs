@@ -49,6 +49,11 @@ pub struct PathCursor<P> {
     pub relative_pos: TokenPosition,
 }
 
+impl<P> Wide for PathCursor<P> {
+    fn width(&self) -> usize {
+        self.relative_pos.into()
+    }
+}
 impl<P: PathPop> PathPop for PathCursor<P> {
     fn path_pop(&mut self) -> Option<ChildLocation> {
         self.path.path_pop()
@@ -149,11 +154,10 @@ where
         location: &mut ChildLocation,
         trav: &G::Guard<'_>,
     ) -> ControlFlow<()> {
-        let prev = location.clone();
         let flow = self.path.move_path_segment::<G>(location, trav);
         if let ControlFlow::Continue(()) = flow {
             let graph = trav.graph();
-            self.move_key(graph.expect_child_at(prev).width());
+            self.move_key(graph.expect_child_at(location.clone()).width());
         }
         flow
     }
@@ -168,24 +172,29 @@ where
         &mut self,
         trav: &G,
     ) -> ControlFlow<()> {
-        let prev = self.role_root_child_index();
         let flow = self.path.move_root_index(trav);
         if let ControlFlow::Continue(()) = flow {
             let graph = trav.graph();
             let pattern = self.path.root_pattern::<G>(&graph);
-            self.move_key(pattern[prev].width());
+            self.move_key(pattern[self.role_root_child_index()].width());
         }
         flow
     }
 }
 pub trait ToCursor: FoldablePath {
-    fn to_cursor(self) -> PathCursor<Self>;
+    fn to_cursor<G: HasGraph>(
+        self,
+        trav: &G,
+    ) -> PathCursor<Self>;
 }
 impl<P: FoldablePath> ToCursor for P {
-    fn to_cursor(self) -> PathCursor<Self> {
+    fn to_cursor<G: HasGraph>(
+        self,
+        trav: &G,
+    ) -> PathCursor<Self> {
         PathCursor {
+            relative_pos: self.calc_width(trav).into(),
             path: self,
-            relative_pos: TokenPosition::default(),
         }
     }
 }

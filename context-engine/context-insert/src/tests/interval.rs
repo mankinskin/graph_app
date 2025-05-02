@@ -18,16 +18,13 @@ use crate::{
         vertex::SplitVertexCache,
     },
 };
-use context_trace{
+use context_search::tests::traversal::build_traversal1;
+use context_trace::{
     HashMap,
     HashSet,
-    lab,
-    tests::{
-        env::{
-            Env1,
-            TestEnv,
-        },
-        trace::build_trace1,
+    tests::env::{
+        Env1,
+        TestEnv,
     },
     trace::child::ChildTracePos,
 };
@@ -37,9 +34,8 @@ macro_rules! nz {
     };
 }
 #[test]
-fn interval_graph1()
-{
-    let res = build_trace1();
+fn interval_graph1() {
+    let res = build_traversal1();
     let Env1 {
         graph,
         def,
@@ -56,7 +52,7 @@ fn interval_graph1()
     } = &mut Env1::build_expected();
     let init = InitInterval::from(res);
     let interval = IntervalGraph::from((&mut *graph, init));
-    assert_eq!(interval.cache[&lab!(ef)], SplitVertexCache {
+    assert_eq!(interval.cache[&ef.index], SplitVertexCache {
         positions: BTreeMap::from_iter([(nz!(1), SplitPositionCache {
             top: HashSet::from_iter([
                 PosKey {
@@ -74,7 +70,7 @@ fn interval_graph1()
             })])
         })])
     },);
-    assert_eq!(interval.cache[&lab!(def)], SplitVertexCache {
+    assert_eq!(interval.cache[&def.index], SplitVertexCache {
         positions: BTreeMap::from_iter([(nz!(2), SplitPositionCache {
             top: HashSet::from_iter([
                 PosKey {
@@ -92,7 +88,7 @@ fn interval_graph1()
             })])
         })])
     },);
-    assert_eq!(interval.cache[&lab!(cdef)], SplitVertexCache {
+    assert_eq!(interval.cache[&cdef.index], SplitVertexCache {
         positions: BTreeMap::from_iter([(nz!(3), SplitPositionCache {
             top: HashSet::from_iter([PosKey {
                 index: *abcdef,
@@ -104,7 +100,7 @@ fn interval_graph1()
             })])
         })])
     },);
-    assert_eq!(interval.cache[&lab!(abcdef)], SplitVertexCache {
+    assert_eq!(interval.cache[&abcdef.index], SplitVertexCache {
         positions: BTreeMap::from_iter([(nz!(5), SplitPositionCache {
             top: HashSet::from_iter([]),
             pattern_splits: HashMap::from_iter([

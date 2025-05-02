@@ -11,7 +11,7 @@ use crate::interval::partition::info::range::{
         RangeRole,
     },
 };
-use context_tracetrace::{
+use context_trace::trace::{
     node::{
         AsNodeTraceContext,
         NodeTraceContext,
@@ -41,13 +41,11 @@ pub trait ModeInfo<R: RangeRole<Mode = Self>>:
 
 pub type PatternInfoOf<R> = <ModeOf<R> as ModeInfo<R>>::PatternInfo;
 
-impl<R: RangeRole<Mode = Self>> ModeInfo<R> for Trace
-{
+impl<R: RangeRole<Mode = Self>> ModeInfo<R> for Trace {
     type PatternInfo = TraceRangeInfo<R>;
 }
 
-pub trait ModeContext
-{
+pub trait ModeContext {
     type NodeContext<'a: 'b, 'b>: AsNodeTraceContext
         + GetPatternContext<PatternCtx<'b> = Self::PatternResult<'b>>
         + GetPatternTraceContext
@@ -59,19 +57,16 @@ pub trait ModeContext
         Self: 'a;
 }
 
-impl ModeContext for Trace
-{
+impl ModeContext for Trace {
     type NodeContext<'a: 'b, 'b> = NodeTraceContext<'b>;
     type PatternResult<'a> = PatternTraceContext<'a>;
 }
 
-pub trait ModeChildren<R: RangeRole>
-{
+pub trait ModeChildren<R: RangeRole> {
     type Result: Clone + Debug;
 }
 
-impl<R: RangeRole<Mode = Trace>> ModeChildren<R> for Trace
-{
+impl<R: RangeRole<Mode = Trace>> ModeChildren<R> for Trace {
     type Result = ();
 }
 pub trait PreVisitMode: ModeInfo<Pre<Self>> {}

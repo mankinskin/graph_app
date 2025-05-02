@@ -11,7 +11,7 @@ use std::{
 };
 
 use cache::position::PosKey;
-use context_trace{
+use context_trace::{
     HashMap,
     graph::vertex::{
         child::Child,
@@ -22,7 +22,7 @@ use context_trace{
         },
     },
     trace::{
-        cache::entry::position::SubSplitLocation,
+        cache::position::SubSplitLocation,
         child::{
             TraceBack,
             TraceSide,

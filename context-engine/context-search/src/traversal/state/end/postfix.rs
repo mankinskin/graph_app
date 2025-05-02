@@ -18,7 +18,7 @@ pub struct PostfixEnd {
     //pub inner_width: usize,
     pub root_pos: TokenPosition,
 }
-impl Traceable for PostfixEnd {
+impl Traceable for &'_ PostfixEnd {
     fn trace<G: HasGraph>(
         self,
         ctx: &mut TraceContext<G>,
@@ -27,8 +27,8 @@ impl Traceable for PostfixEnd {
     }
 }
 
-impl From<PostfixEnd> for PostfixCommand {
-    fn from(value: PostfixEnd) -> Self {
+impl From<&'_ PostfixEnd> for PostfixCommand {
+    fn from(value: &'_ PostfixEnd) -> Self {
         PostfixCommand {
             add_edges: true,
             path: value.path.clone(),
