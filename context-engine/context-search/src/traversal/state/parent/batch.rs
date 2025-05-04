@@ -1,5 +1,12 @@
 use crate::traversal::{
     compare::RootCursor,
+    iterator::{
+        policy::DirectedTraversalPolicy,
+        r#match::{
+            MatchContext,
+            TraceNode,
+        },
+    },
     state::{
         child::{
             batch::{
@@ -10,97 +17,117 @@ use crate::traversal::{
             ChildState,
         },
         parent::{
-            batch::ChildMatchState::{
-                Match,
-                Mismatch,
+            batch::{
+                ChildMatchState::Mismatch,
+                TraceNode::{
+                    Child,
+                    Parent,
+                },
             },
             ParentState,
         },
     },
-    HasGraph,
+    TraversalKind,
 };
 use context_trace::path::mutators::adapters::IntoAdvanced;
 use derive_more::derive::{
     Deref,
     DerefMut,
 };
-use std::{
-    collections::VecDeque,
-    ops::ControlFlow::{
-        self,
-        Break,
-        Continue,
-    },
-};
+use derive_new::new;
+use std::collections::VecDeque;
 #[derive(Debug, Clone, Deref, DerefMut, Default)]
 pub struct ParentBatch {
     pub parents: VecDeque<ParentState>,
 }
 
 #[derive(Debug)]
-pub struct ParentBatchChildren<G: HasGraph> {
-    pub child_iters: VecDeque<ChildQueue>,
-    pub keep: Vec<ParentState>,
-    pub trav: G,
+pub struct RootSearchIterator<'a, K: TraversalKind> {
+    pub ctx: &'a mut MatchContext,
+    pub trav: &'a K::Trav,
 }
-
-impl<'a, G: HasGraph> ParentBatchChildren<G> {
+impl<'a, K: TraversalKind> RootSearchIterator<'a, K> {
     pub fn new(
-        trav: G,
-        batch: ParentBatch,
+        trav: &'a K::Trav,
+        ctx: &'a mut MatchContext,
     ) -> Self {
-        assert!(!batch.is_empty());
+        //assert!(!batch.is_empty());
 
-        let mut child_iters = VecDeque::default();
-        let mut keep = Vec::default();
-        for parent in batch.parents {
-            match parent.into_advanced(&trav) {
-                Ok(state) =>
-                    child_iters.push_back(ChildQueue::from(state.child)),
-                Err(parent) => {
-                    keep.push(parent);
-                },
-            }
-        }
         Self {
-            child_iters,
+            //nodes: batch.parents.into_iter().map(Parent).collect(),
+            ctx,
             trav,
-            keep,
         }
     }
 
-    pub fn find_root_cursor(
-        mut self
-    ) -> ControlFlow<RootCursor<G>, Vec<ParentState>> {
-        if let Some(child) = self.find_map(|root| root) {
-            Break(RootCursor {
-                trav: self.trav,
-                state: child,
-            })
-        } else {
-            Continue(self.keep)
-        }
+    pub fn find_root_cursor(mut self) -> Option<RootCursor<&'a K::Trav>> {
+        self.find_map(|root| root).map(|child| RootCursor {
+            trav: self.trav,
+            state: child,
+        })
     }
 }
 
-impl<G: HasGraph> Iterator for ParentBatchChildren<G> {
+impl<'a, K: TraversalKind> Iterator for RootSearchIterator<'a, K> {
     type Item = Option<ChildState>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.child_iters
+        self.ctx
+            .nodes
             .pop_front()
-            .map(|child_queue| {
-                let mut child_iter =
-                    ChildIterator::new(&self.trav, child_queue);
-                child_iter.next().map(|res| match res {
-                    Some(Match(cs)) => Some(cs),
-                    Some(Mismatch(_)) => None,
-                    None => {
-                        self.child_iters.push_back(child_iter.children);
-                        None
-                    },
-                })
+            .and_then(|node| {
+                PolicyNode::<'_, K>::new(node, &self.trav).consume()
             })
-            .flatten()
+            .map(|step| match step {
+                Append(next) => {
+                    self.ctx.nodes.extend(next);
+                    None
+                },
+                Match(cs) => {
+                    self.ctx.nodes.clear();
+                    Some(cs)
+                },
+                Pass => None,
+            })
+    }
+}
+#[derive(Debug, new)]
+struct PolicyNode<'a, K: TraversalKind>(TraceNode, &'a K::Trav);
+
+#[derive(Debug)]
+pub enum TraceStep {
+    Append(Vec<TraceNode>),
+    Match(ChildState),
+    Pass,
+}
+use TraceStep::*;
+
+impl<'a, K: TraversalKind> PolicyNode<'a, K> {
+    fn consume(self) -> Option<TraceStep> {
+        match self.0 {
+            Parent(parent) => match parent.into_advanced(&self.1) {
+                Ok(state) => PolicyNode::<K>::new(
+                    Child(ChildQueue::from(state.child)),
+                    self.1,
+                )
+                .consume(),
+                Err(parent) => Some(Append(
+                    K::Policy::next_batch(&self.1, &parent)
+                        .into_iter()
+                        .flat_map(|batch| batch.parents)
+                        .map(Parent)
+                        .collect(),
+                )),
+            },
+            Child(queue) => {
+                let mut child_iter =
+                    ChildIterator::<&K::Trav>::new(&self.1, queue);
+                child_iter.next().map(|res| match res {
+                    Some(ChildMatchState::Match(cs)) => Match(cs),
+                    Some(Mismatch(_)) => Pass,
+                    None => Append(vec![Child(child_iter.children)]),
+                })
+            },
+        }
     }
 }

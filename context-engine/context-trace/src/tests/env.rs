@@ -1,9 +1,3 @@
-use std::sync::{
-    Arc,
-    RwLock,
-    RwLockReadGuard,
-};
-
 use crate::graph::{
     Hypergraph,
     HypergraphRef,
@@ -13,9 +7,16 @@ use crate::graph::{
         token::Token,
     },
 };
+use std::sync::{
+    Arc,
+    RwLock,
+    RwLockReadGuard,
+    RwLockWriteGuard,
+};
 pub trait TestEnv {
     fn initialize_expected() -> Self;
     fn get_expected<'a>() -> RwLockReadGuard<'a, Self>;
+    fn get_expected_mut<'a>() -> RwLockWriteGuard<'a, Self>;
 }
 pub struct Env1 {
     pub graph: HypergraphRef,
@@ -35,6 +36,7 @@ pub struct Env1 {
     pub cd_id: PatternId,
     pub bcd: Child,
     pub b_cd_id: PatternId,
+    pub bc_d_id: PatternId,
     pub def: Child,
     pub d_ef_id: PatternId,
     pub abc: Child,
@@ -44,8 +46,10 @@ pub struct Env1 {
     pub abc_d_id: PatternId,
     pub ef: Child,
     pub e_f_id: PatternId,
+    pub ghi: Child,
     pub cdef: Child,
     pub c_def_id: PatternId,
+    pub cd_ef_id: PatternId,
     pub efghi: Child,
     pub abab: Child,
     pub ababab: Child,
@@ -54,6 +58,8 @@ pub struct Env1 {
     pub abc_def_id: PatternId,
     pub ab_cdef_id: PatternId,
     pub abcdefghi: Child,
+    pub abcd_efghi_id: PatternId,
+    pub abcdef_ghi_id: PatternId,
     pub ababababcdefghi: Child,
 }
 pub fn tokens1(graph: &mut Hypergraph) -> Vec<Child> {
@@ -110,15 +116,16 @@ impl TestEnv for Env1 {
         let efgh = graph.insert_pattern(vec![ef, gh]);
         let efghi = graph.insert_patterns([vec![efgh, i], vec![ef, ghi]]);
         let (def, d_ef_id) = graph.insert_pattern_with_id(vec![d, ef]);
-        let (cdef, c_def_id) = graph.insert_pattern_with_id(vec![c, def]);
+        let (cdef, cdef_ids) =
+            graph.insert_patterns_with_ids([vec![c, def], vec![cd, ef]]);
         // index 22
         let (abcdef, abcdef_ids) = graph.insert_patterns_with_ids([
             vec![abcd, ef],
             vec![abc, def],
             vec![ab, cdef],
         ]);
-        let abcdefghi =
-            graph.insert_patterns([vec![abcd, efghi], vec![abcdef, ghi]]);
+        let (abcdefghi, abcdefghi_ids) = graph
+            .insert_patterns_with_ids([vec![abcd, efghi], vec![abcdef, ghi]]);
         let aba = graph.insert_pattern(vec![ab, a]);
         // 25
         let abab = graph.insert_patterns([vec![aba, b], vec![ab, ab]]);
@@ -155,6 +162,7 @@ impl TestEnv for Env1 {
             cd,
             cd_id: cd_id.unwrap(),
             bcd,
+            bc_d_id: bcd_ids[0],
             b_cd_id: bcd_ids[1],
             abc,
             a_bc_id: abc_ids[1],
@@ -165,13 +173,17 @@ impl TestEnv for Env1 {
             e_f_id: e_f_id.unwrap(),
             def,
             d_ef_id: d_ef_id.unwrap(),
+            ghi,
             abcdef,
             abcd_ef_id: abcdef_ids[0],
             abc_def_id: abcdef_ids[1],
             ab_cdef_id: abcdef_ids[2],
             abcdefghi,
+            abcd_efghi_id: abcdefghi_ids[0],
+            abcdef_ghi_id: abcdefghi_ids[1],
             cdef,
-            c_def_id: c_def_id.unwrap(),
+            c_def_id: cdef_ids[0],
+            cd_ef_id: cdef_ids[1],
             efghi,
             abab,
             ababab,
@@ -180,6 +192,9 @@ impl TestEnv for Env1 {
     }
     fn get_expected<'a>() -> RwLockReadGuard<'a, Self> {
         CONTEXT.read().unwrap()
+    }
+    fn get_expected_mut<'a>() -> RwLockWriteGuard<'a, Self> {
+        CONTEXT.write().unwrap()
     }
 }
 lazy_static::lazy_static! {

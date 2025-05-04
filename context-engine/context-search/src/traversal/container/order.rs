@@ -15,7 +15,6 @@ pub trait TraversalOrder: Wide {
             Ordering::Equal => self.sub_index().cmp(&other.sub_index()),
             r => r,
         }
-        .reverse()
     }
 }
 

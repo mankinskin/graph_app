@@ -18,7 +18,10 @@ use crate::{
         vertex::SplitVertexCache,
     },
 };
-use context_search::tests::traversal::build_traversal1;
+use context_search::{
+    search::Searchable,
+    traversal::result::IncompleteState,
+};
 use context_trace::{
     HashMap,
     HashSet,
@@ -35,9 +38,12 @@ macro_rules! nz {
 }
 #[test]
 fn interval_graph1() {
-    let res = build_traversal1();
     let Env1 {
         graph,
+        a,
+        d,
+        e,
+        bc,
         def,
         d_ef_id,
         c_def_id,
@@ -49,7 +55,10 @@ fn interval_graph1() {
         ef,
         e_f_id,
         ..
-    } = &mut Env1::build_expected();
+    } = &mut *Env1::get_expected_mut();
+    let query = vec![*a, *bc, *d, *e];
+    let res: IncompleteState =
+        graph.find_ancestor(query).unwrap().try_into().unwrap();
     let init = InitInterval::from(res);
     let interval = IntervalGraph::from((&mut *graph, init));
     assert_eq!(interval.cache[&ef.index], SplitVertexCache {

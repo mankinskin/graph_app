@@ -60,11 +60,9 @@ impl<'a, K: TraversalKind> FoldContext<K> {
     fn fold(mut self) -> Result<FinishedState, ErrorState> {
         (&mut self).for_each(|_| ());
         let end = self.tctx.last_end;
-        {
-            end.clone().trace(&mut self.tctx.ctx);
-        }
+        end.trace(&mut self.tctx.end_iter.0);
         Ok(FinishedState {
-            cache: self.tctx.ctx.cache,
+            cache: self.tctx.end_iter.0.cache,
             root: end.root_key().index,
             start: self.start_index,
             kind: FinishedKind::from(end),

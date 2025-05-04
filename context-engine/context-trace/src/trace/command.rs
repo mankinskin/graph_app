@@ -99,6 +99,7 @@ impl Traceable for PrefixCommand {
         self,
         ctx: &mut super::TraceContext<G>,
     ) {
+        assert!(!self.path.role_path.sub_path.is_empty());
         let root_exit = self.path.role_root_child_location::<End>();
         // TODO: implement root_child for prefix/postfix path with most outer root child
         let exit_key = DownKey {
@@ -141,6 +142,7 @@ impl Traceable for RangeCommand {
         ctx: &mut super::TraceContext<G>,
     ) {
         assert!(!self.path.start.sub_path.is_empty());
+        assert!(!self.path.end.sub_path.is_empty());
         let first = self.path.start.sub_path.first().unwrap();
         let start_index = *ctx.trav.graph().expect_child_at(first);
         let prev = TraceRole::<Start>::trace_sub_path(
@@ -152,10 +154,16 @@ impl Traceable for RangeCommand {
             },
             self.add_edges,
         );
+        //let location = self.path.role_root_child_location::<Start>();
+        //let new = UpEdit {
+        //    target: self.root_up_key.clone(),
+        //    prev,
+        //    location,
+        //};
         let root_entry = self.path.role_root_child_location::<Start>();
-        let root_entry_index = *ctx.trav.graph().expect_child_at(&root_entry);
+        //let root_entry_index = *ctx.trav.graph().expect_child_at(&root_entry);
         let root_up_key = UpKey {
-            index: root_entry_index,
+            index: root_entry.parent,
             pos: self.root_pos.clone(),
         };
         let new = UpEdit {
@@ -171,12 +179,23 @@ impl Traceable for RangeCommand {
             pos: (self.path.role_leaf_child::<Start, _>(&ctx.trav).width()
                 + self.path.calc_offset(&ctx.trav))
             .into(),
+            index: root_exit.parent,
+        };
+        let target_key = DownKey {
+            pos: exit_key.pos,
             index: *ctx.trav.graph().expect_child_at(root_exit.clone()),
         };
+        let new = DownEdit {
+            target: target_key.clone(),
+            prev: exit_key.clone(),
+            location: root_exit,
+        };
+        ctx.cache.add_state(new, self.add_edges);
+
         TraceRole::<End>::trace_sub_path(
             ctx,
             &self.path,
-            exit_key,
+            target_key,
             self.add_edges,
         );
     }
