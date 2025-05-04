@@ -5,7 +5,6 @@ use context_trace::trace::{
         HasGraph,
         TravKind,
     },
-    traceable::Traceable,
     TraceContext,
 };
 use derive_new::new;
@@ -40,6 +39,11 @@ pub trait TraversalKind: Debug + Default {
     type Trav: HasGraph;
     type Container: StateContainer;
     type Policy: DirectedTraversalPolicy<Trav = Self::Trav>;
+}
+#[derive(Debug, Clone, Copy)]
+pub enum OptGen<Y> {
+    Yield(Y),
+    Pass,
 }
 
 /// context for generating next states
@@ -78,25 +82,13 @@ impl<K: TraversalKind> Iterator for TraversalContext<K> {
     type Item = ();
 
     fn next(&mut self) -> Option<Self::Item> {
-        match EndIterator::<K>::new(&self.ctx.trav, &mut self.matches).next() {
-            Some(Yield(end)) => {
-                //assert!(
-                //    end.width() >= self.last_end.width(),
-                //    "Parents not evaluated in order"
-                //);
-                // TODO: add cache for front of end
-                // TODO: only add cache until last matched parent
-                match &end.kind {
-                    EndKind::Postfix(post) => {
-                        post.trace(&mut self.ctx);
-                    },
-                    _ => {},
-                };
-
+        match EndIterator::<K>::new(&mut self.ctx, &mut self.matches)
+            .find_next()
+        {
+            Some(end) => {
                 self.last_end = end;
-                (!self.last_end.is_final()).then_some(())
+                Some(())
             },
-            Some(Pass) => Some(()),
             None => None,
         }
     }
@@ -123,10 +115,3 @@ impl<'a, K: TraversalKind> HasGraph for &'a mut TraversalContext<K> {
         self.ctx.trav.graph()
     }
 }
-
-#[derive(Debug, Clone, Copy)]
-pub enum OptGen<Y> {
-    Yield(Y),
-    Pass,
-}
-use OptGen::*;

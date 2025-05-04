@@ -54,6 +54,14 @@ use TDNext::*;
 
 pub type ChildQueue = VecDeque<ChildModeCtx>;
 
+impl From<ChildState> for ChildQueue {
+    fn from(state: ChildState) -> Self {
+        FromIterator::from_iter([ChildModeCtx {
+            state,
+            mode: GraphMajor,
+        }])
+    }
+}
 #[derive(Debug)]
 pub struct ChildIterator<G: HasGraph> {
     pub children: ChildQueue,
@@ -62,13 +70,10 @@ pub struct ChildIterator<G: HasGraph> {
 impl<G: HasGraph> ChildIterator<G> {
     pub fn new(
         trav: G,
-        state: ChildState,
+        queue: impl Into<ChildQueue>,
     ) -> Self {
         Self {
-            children: FromIterator::from_iter([ChildModeCtx {
-                state,
-                mode: GraphMajor,
-            }]),
+            children: queue.into(),
             trav,
         }
     }
@@ -86,17 +91,15 @@ impl<G: HasGraph> ChildIterator<G> {
 impl<G: HasGraph> Iterator for ChildIterator<G> {
     type Item = Option<ChildMatchState>;
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(cs) = self.children.pop_front() {
-            Some(match cs.state.next_match(&self.trav) {
+        self.children.pop_front().map(|cs| {
+            match cs.state.next_match(&self.trav) {
                 Prefixes(next) => {
                     self.children.extend(next);
                     None
                 },
                 MatchState(state) => Some(state),
-            })
-        } else {
-            None
-        }
+            }
+        })
     }
 }
 

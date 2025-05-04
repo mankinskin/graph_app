@@ -81,7 +81,7 @@ fn find_sequence() {
         ababababcdefghi,
         a,
         ..
-    } = &Env1::build_expected();
+    } = &*Env1::get_expected();
     assert_eq!(
         graph.find_sequence("a".chars()),
         Err(ErrorReason::SingleIndex(*a)),
@@ -116,7 +116,7 @@ fn find_parent1() {
         bc,
         abc,
         ..
-    } = &Env1::build_expected();
+    } = &*Env1::get_expected();
     let a_bc_pattern = vec![Child::new(a, 1), Child::new(bc, 2)];
     let ab_c_pattern = vec![Child::new(ab, 2), Child::new(c, 1)];
     let a_bc_d_pattern =
@@ -208,7 +208,7 @@ fn find_ancestor1() {
         abcd,
         ababababcdefghi,
         ..
-    } = Env1::build_expected();
+    } = &*Env1::get_expected();
     let a_bc_pattern = vec![Child::new(a, 1), Child::new(bc, 2)];
     let ab_c_pattern = vec![Child::new(ab, 2), Child::new(c, 1)];
     let a_bc_d_pattern =
@@ -221,7 +221,7 @@ fn find_ancestor1() {
     let query = bc_pattern;
     assert_eq!(
         graph.find_ancestor(query),
-        Err(ErrorReason::SingleIndex(bc)),
+        Err(ErrorReason::SingleIndex(*bc)),
         "bc"
     );
 
@@ -231,7 +231,7 @@ fn find_ancestor1() {
         Ok(FinishedState {
             kind: FinishedKind::Complete(x),
             ..
-        }) if x == bc,
+        }) if x == *bc,
         "b_c"
     );
 
@@ -242,7 +242,7 @@ fn find_ancestor1() {
         Ok(FinishedState {
             kind: FinishedKind::Complete(x),
             ..
-        }) if x == abc,
+        }) if x == *abc,
         "a_bc"
     );
 
@@ -252,7 +252,7 @@ fn find_ancestor1() {
         Ok(FinishedState {
             kind: FinishedKind::Complete(x),
             ..
-        }) if x == abc,
+        }) if x == *abc,
         "ab_c"
     );
 
@@ -262,7 +262,7 @@ fn find_ancestor1() {
         Ok(FinishedState {
             kind: FinishedKind::Complete(x),
             ..
-        }) if x == abcd,
+        }) if x == *abcd,
         "a_bc_d"
     );
 
@@ -272,17 +272,20 @@ fn find_ancestor1() {
         Ok(FinishedState {
             kind: FinishedKind::Complete(x),
             ..
-        }) if x == abc,
+        }) if x == *abc,
         "a_b_c"
     );
 
-    let query = vec![a, b, a, b, a, b, a, b, c, d, e, f, g, h, i];
+    let query = [a, b, a, b, a, b, a, b, c, d, e, f, g, h, i]
+        .into_iter()
+        .cloned()
+        .collect();
     assert_matches!(
         graph.find_ancestor(&query),
         Ok(FinishedState {
             kind: FinishedKind::Complete(x),
             ..
-        }) if x == ababababcdefghi,
+        }) if x == *ababababcdefghi,
         "a_b_a_b_a_b_a_b_c_d_e_f_g_h_i"
     );
 
@@ -292,7 +295,7 @@ fn find_ancestor1() {
         Ok(FinishedState {
             kind: FinishedKind::Complete(x),
             ..
-        }) if x == abc,
+        }) if x == *abc,
         "a_b_c_c"
     );
 }

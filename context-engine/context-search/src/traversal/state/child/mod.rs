@@ -76,6 +76,7 @@ use std::{
     collections::VecDeque,
     fmt::Debug,
 };
+use tracing::debug;
 impl_cursor_pos! {
     CursorPosition for ChildState, self => self.cursor.relative_pos
 }
@@ -123,6 +124,12 @@ impl ChildState {
         let query_leaf = self.cursor.role_leaf_child::<End, _>(trav);
 
         if path_leaf == query_leaf {
+            debug!(
+                "Matched\n\tlabel: {}\n\troot: {}\n\tpos: {}",
+                trav.graph().index_string(path_leaf),
+                trav.graph().index_string(self.path.root.location.parent),
+                self.cursor.width()
+            );
             MatchState(Match(self))
         } else if path_leaf.width() == 1 && query_leaf.width() == 1 {
             MatchState(Mismatch(self.on_mismatch(trav)))

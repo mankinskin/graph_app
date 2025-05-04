@@ -1,32 +1,42 @@
+use super::{
+    RoleTraceKey,
+    TraceRole,
+    cache::{
+        key::directed::{
+            down::DownKey,
+            up::UpPosition,
+        },
+        new::{
+            DownEdit,
+            UpEdit,
+        },
+    },
+    traceable::Traceable,
+};
 use crate::{
     graph::vertex::wide::Wide,
     path::{
         GetRoleChildPath,
-        accessors::role::{
-            End,
-            Start,
+        accessors::{
+            role::{
+                End,
+                Start,
+            },
+            root::RootPattern,
         },
-        structs::rooted::{
-            index_range::IndexRangePath,
-            role_path::{
-                IndexEndPath,
-                IndexStartPath,
+        structs::{
+            role_path::CalcOffset,
+            rooted::{
+                index_range::IndexRangePath,
+                role_path::{
+                    IndexEndPath,
+                    IndexStartPath,
+                },
             },
         },
     },
     trace::cache::key::directed::up::UpKey,
 };
-
-use super::{
-    RoleTraceKey,
-    TraceRole,
-    cache::{
-        key::directed::up::UpPosition,
-        new::UpEdit,
-    },
-    traceable::Traceable,
-};
-
 #[derive(Debug)]
 pub enum TraceCommand {
     Postfix(PostfixCommand),
@@ -90,11 +100,29 @@ impl Traceable for PrefixCommand {
         ctx: &mut super::TraceContext<G>,
     ) {
         let root_exit = self.path.role_root_child_location::<End>();
-        let exit_key = ctx.skip_key(0, 0.into(), root_exit);
+        // TODO: implement root_child for prefix/postfix path with most outer root child
+        let exit_key = DownKey {
+            pos: (self.path.root_pattern::<G>(&ctx.trav.graph())[0].width()
+                + self.path.calc_offset(&ctx.trav))
+            .into(),
+            index: root_exit.parent,
+            //*ctx.trav.graph().expect_child_at(root_exit.clone()),
+        };
+        let target = DownKey {
+            index: *ctx.trav.graph().expect_child_at(root_exit.clone()),
+            pos: exit_key.pos,
+        };
+        let new = DownEdit {
+            target: target.clone(),
+            prev: exit_key.clone(),
+            location: root_exit,
+        };
+        ctx.cache.add_state(new, self.add_edges);
+
         TraceRole::<End>::trace_sub_path(
             ctx,
             &self.path,
-            exit_key,
+            target,
             self.add_edges,
         );
     }
@@ -137,11 +165,14 @@ impl Traceable for RangeCommand {
         };
         ctx.cache.add_state(new, self.add_edges);
 
-        let root_entry = self.path.role_root_child_location::<Start>();
         let root_exit = self.path.role_root_child_location::<End>();
-        let exit_key =
-            ctx.skip_key(root_entry.sub_index, root_up_key.pos, root_exit);
 
+        let exit_key = DownKey {
+            pos: (self.path.role_leaf_child::<Start, _>(&ctx.trav).width()
+                + self.path.calc_offset(&ctx.trav))
+            .into(),
+            index: *ctx.trav.graph().expect_child_at(root_exit.clone()),
+        };
         TraceRole::<End>::trace_sub_path(
             ctx,
             &self.path,

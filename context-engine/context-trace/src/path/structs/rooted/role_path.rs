@@ -88,7 +88,6 @@ impl<Role: PathRole, Root: PathRoot> CalcWidth for RootedRolePath<Role, Root>
 where
     Self: LeafChild<Role>,
 {
-    // TODO: Make offset side relative
     fn calc_width<G: HasGraph>(
         &self,
         trav: G,
@@ -96,6 +95,7 @@ where
         self.calc_offset(&trav) + self.leaf_child(&trav).width()
     }
 }
+
 pub type IndexRolePath<R> = RootedRolePath<R, IndexRoot>;
 pub type PatternRolePath<R> = RootedRolePath<R, Pattern>;
 

@@ -11,10 +11,11 @@ pub trait TraversalOrder: Wide {
         &self,
         other: impl TraversalOrder,
     ) -> Ordering {
-        match other.width().cmp(&self.width()) {
+        match self.width().cmp(&other.width()) {
             Ordering::Equal => self.sub_index().cmp(&other.sub_index()),
             r => r,
         }
+        .reverse()
     }
 }
 

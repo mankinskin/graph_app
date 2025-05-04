@@ -2,10 +2,20 @@ use crate::traversal::{
     compare::RootCursor,
     state::{
         child::{
-            batch::ChildIterator,
+            batch::{
+                ChildIterator,
+                ChildMatchState,
+                ChildQueue,
+            },
             ChildState,
         },
-        parent::ParentState,
+        parent::{
+            batch::ChildMatchState::{
+                Match,
+                Mismatch,
+            },
+            ParentState,
+        },
     },
     HasGraph,
 };
@@ -22,7 +32,6 @@ use std::{
         Continue,
     },
 };
-
 #[derive(Debug, Clone, Deref, DerefMut, Default)]
 pub struct ParentBatch {
     pub parents: VecDeque<ParentState>,
@@ -30,7 +39,7 @@ pub struct ParentBatch {
 
 #[derive(Debug)]
 pub struct ParentBatchChildren<G: HasGraph> {
-    pub batch: ParentBatch,
+    pub child_iters: VecDeque<ChildQueue>,
     pub keep: Vec<ParentState>,
     pub trav: G,
 }
@@ -42,10 +51,21 @@ impl<'a, G: HasGraph> ParentBatchChildren<G> {
     ) -> Self {
         assert!(!batch.is_empty());
 
+        let mut child_iters = VecDeque::default();
+        let mut keep = Vec::default();
+        for parent in batch.parents {
+            match parent.into_advanced(&trav) {
+                Ok(state) =>
+                    child_iters.push_back(ChildQueue::from(state.child)),
+                Err(parent) => {
+                    keep.push(parent);
+                },
+            }
+        }
         Self {
-            batch,
+            child_iters,
             trav,
-            keep: Default::default(),
+            keep,
         }
     }
 
@@ -67,19 +87,20 @@ impl<G: HasGraph> Iterator for ParentBatchChildren<G> {
     type Item = Option<ChildState>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(parent) = self.batch.parents.pop_front() {
-            // process parent
-            match parent.into_advanced(&self.trav) {
-                Ok(state) => Some(
-                    ChildIterator::new(&self.trav, state.child).find_match(),
-                ),
-                Err(parent) => {
-                    self.keep.push(parent);
-                    Some(None)
-                },
-            }
-        } else {
-            None
-        }
+        self.child_iters
+            .pop_front()
+            .map(|child_queue| {
+                let mut child_iter =
+                    ChildIterator::new(&self.trav, child_queue);
+                child_iter.next().map(|res| match res {
+                    Some(Match(cs)) => Some(cs),
+                    Some(Mismatch(_)) => None,
+                    None => {
+                        self.child_iters.push_back(child_iter.children);
+                        None
+                    },
+                })
+            })
+            .flatten()
     }
 }

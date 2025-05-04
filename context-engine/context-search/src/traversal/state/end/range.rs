@@ -36,7 +36,7 @@ impl LeafKey for RangeEnd {
 //    }
 //}
 
-impl Traceable for RangeEnd {
+impl Traceable for &RangeEnd {
     fn trace<G: HasGraph>(
         self,
         ctx: &mut TraceContext<G>,
@@ -45,8 +45,8 @@ impl Traceable for RangeEnd {
     }
 }
 
-impl From<RangeEnd> for RangeCommand {
-    fn from(value: RangeEnd) -> Self {
+impl From<&RangeEnd> for RangeCommand {
+    fn from(value: &RangeEnd) -> Self {
         RangeCommand {
             add_edges: true,
             path: value.path.clone(),

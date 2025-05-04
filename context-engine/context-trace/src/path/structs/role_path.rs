@@ -67,13 +67,13 @@ impl<R: PathRole> RolePath<R> {
     }
 }
 pub trait CalcOffset {
+    // TODO: Make offset side relative
     fn calc_offset<G: HasGraph>(
         &self,
         trav: G,
     ) -> usize;
 }
 impl<R: PathRole> CalcOffset for RolePath<R> {
-    // TODO: Make offset side relative
     fn calc_offset<G: HasGraph>(
         &self,
         trav: G,

@@ -210,7 +210,6 @@ impl_child! { RootChild for PatternRangePath, self, _trav =>
 }
 use crate::path::GetRoleChildPath;
 impl<Root: PathRoot> CalcOffset for RootedRangePath<Root> {
-    // TODO: Make offset side relative
     fn calc_offset<G: HasGraph>(
         &self,
         trav: G,
@@ -233,7 +232,6 @@ impl<Root: PathRoot> CalcWidth for RootedRangePath<Root>
 where
     Self: LeafChild<Start> + LeafChild<End>,
 {
-    // TODO: Make offset side relative
     fn calc_width<G: HasGraph>(
         &self,
         trav: G,

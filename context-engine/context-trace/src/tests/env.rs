@@ -1,20 +1,21 @@
 use std::sync::{
     Arc,
     RwLock,
+    RwLockReadGuard,
 };
 
 use crate::graph::{
+    Hypergraph,
+    HypergraphRef,
     vertex::{
         child::Child,
         pattern::id::PatternId,
         token::Token,
     },
-    Hypergraph,
-    HypergraphRef,
 };
-
 pub trait TestEnv {
-    fn build_expected() -> Self;
+    fn initialize_expected() -> Self;
+    fn get_expected<'a>() -> RwLockReadGuard<'a, Self>;
 }
 pub struct Env1 {
     pub graph: HypergraphRef,
@@ -69,7 +70,7 @@ pub fn tokens1(graph: &mut Hypergraph) -> Vec<Child> {
     ])
 }
 impl TestEnv for Env1 {
-    fn build_expected() -> Env1 {
+    fn initialize_expected() -> Self {
         let mut graph = Hypergraph::default();
         let [a, b, c, d, e, f, g, h, i] = tokens1(&mut graph)[..] else {
             panic!()
@@ -91,14 +92,17 @@ impl TestEnv for Env1 {
         // index: 9
         let ab = graph.insert_pattern(vec![a, b]);
         let (bc, bc_id) = graph.insert_pattern_with_id(vec![b, c]);
-        let (abc, abc_ids) = graph.insert_patterns_with_ids([vec![ab, c], vec![a, bc]]);
+        let (abc, abc_ids) =
+            graph.insert_patterns_with_ids([vec![ab, c], vec![a, bc]]);
 
         let (cd, cd_id) = graph.insert_pattern_with_id(vec![c, d]);
         // 13
-        let (bcd, bcd_ids) = graph.insert_patterns_with_ids([vec![bc, d], vec![b, cd]]);
+        let (bcd, bcd_ids) =
+            graph.insert_patterns_with_ids([vec![bc, d], vec![b, cd]]);
         //let abcd = graph.insert_pattern(&[abc, d]);
         //graph.insert_to_pattern(abcd, &[a, bcd]);
-        let (abcd, abcd_ids) = graph.insert_patterns_with_ids([vec![abc, d], vec![a, bcd]]);
+        let (abcd, abcd_ids) =
+            graph.insert_patterns_with_ids([vec![abc, d], vec![a, bcd]]);
         // index 15
         let (ef, e_f_id) = graph.insert_pattern_with_id(vec![e, f]);
         let gh = graph.insert_pattern(vec![g, h]);
@@ -108,17 +112,26 @@ impl TestEnv for Env1 {
         let (def, d_ef_id) = graph.insert_pattern_with_id(vec![d, ef]);
         let (cdef, c_def_id) = graph.insert_pattern_with_id(vec![c, def]);
         // index 22
-        let (abcdef, abcdef_ids) =
-            graph.insert_patterns_with_ids([vec![abcd, ef], vec![abc, def], vec![ab, cdef]]);
-        let abcdefghi = graph.insert_patterns([vec![abcd, efghi], vec![abcdef, ghi]]);
+        let (abcdef, abcdef_ids) = graph.insert_patterns_with_ids([
+            vec![abcd, ef],
+            vec![abc, def],
+            vec![ab, cdef],
+        ]);
+        let abcdefghi =
+            graph.insert_patterns([vec![abcd, efghi], vec![abcdef, ghi]]);
         let aba = graph.insert_pattern(vec![ab, a]);
         // 25
         let abab = graph.insert_patterns([vec![aba, b], vec![ab, ab]]);
         let ababab = graph.insert_patterns([vec![abab, ab], vec![ab, abab]]);
-        let ababcd = graph.insert_patterns([vec![ab, abcd], vec![aba, bcd], vec![abab, cd]]);
+        let ababcd =
+            graph.insert_patterns([vec![ab, abcd], vec![aba, bcd], vec![
+                abab, cd,
+            ]]);
         // 28
-        let ababababcd = graph.insert_patterns([vec![ababab, abcd], vec![abab, ababcd]]);
-        let ababcdefghi = graph.insert_patterns([vec![ab, abcdefghi], vec![ababcd, efghi]]);
+        let ababababcd =
+            graph.insert_patterns([vec![ababab, abcd], vec![abab, ababcd]]);
+        let ababcdefghi =
+            graph.insert_patterns([vec![ab, abcdefghi], vec![ababcd, efghi]]);
         // 30
         let ababababcdefghi = graph.insert_patterns([
             vec![ababababcd, efghi],
@@ -165,10 +178,13 @@ impl TestEnv for Env1 {
             ababababcdefghi,
         }
     }
+    fn get_expected<'a>() -> RwLockReadGuard<'a, Self> {
+        CONTEXT.read().unwrap()
+    }
 }
 lazy_static::lazy_static! {
     pub static ref
-        CONTEXT: Arc<RwLock<Env1>> = Arc::new(RwLock::new(Env1::build_expected()));
+        CONTEXT: Arc<RwLock<Env1>> = Arc::new(RwLock::new(Env1::initialize_expected()));
 }
 //pub fn context() -> RwLockReadGuard<'static, Context> {
 //    CONTEXT.read().unwrap()

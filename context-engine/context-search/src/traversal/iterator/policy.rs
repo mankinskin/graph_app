@@ -65,7 +65,7 @@ pub trait DirectedTraversalPolicy: Sized + Debug {
                         ChildLocation::new(p, pi.pattern_id, pi.sub_index)
                     })
                 })
-                .sorted_by(|a, b| TraversalOrder::cmp(b, a))
+                .sorted_by(|a, b| TraversalOrder::cmp(a, b))
                 .map(|p| build_parent(trav, p))
                 .collect(),
         }

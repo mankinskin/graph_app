@@ -43,9 +43,18 @@ use context_trace::{
         TraceContext,
     },
 };
+use context_trace::{
+    path::{
+        accessors::role::End,
+        structs::rooted::index_range::IndexRangePath,
+    },
+    trace::cache::key::directed::down::DownKey,
+};
 use postfix::PostfixEnd;
 use prefix::PrefixEnd;
 use range::RangeEnd;
+
+use super::cursor::PatternPrefixCursor;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EndKind {
@@ -54,15 +63,6 @@ pub enum EndKind {
     Prefix(PrefixEnd),
     Complete(Child),
 }
-use context_trace::{
-    path::{
-        accessors::role::End,
-        structs::rooted::index_range::IndexRangePath,
-    },
-    trace::cache::key::directed::down::DownKey,
-};
-
-use super::cursor::PatternPrefixCursor;
 impl EndKind {
     pub fn from_range_path<G: HasGraph>(
         mut path: IndexRangePath,
@@ -149,14 +149,15 @@ impl_cursor_pos! {
     CursorPosition for EndState, self => self.cursor.relative_pos
 }
 
-impl Traceable for EndState {
+impl Traceable for &EndState {
     fn trace<G: HasGraph>(
         self,
         ctx: &mut TraceContext<G>,
     ) {
-        match self.kind {
+        match &self.kind {
             EndKind::Range(p) => p.trace(ctx),
             EndKind::Prefix(p) => p.trace(ctx),
+            EndKind::Postfix(p) => p.trace(ctx),
             _ => {},
         }
     }
