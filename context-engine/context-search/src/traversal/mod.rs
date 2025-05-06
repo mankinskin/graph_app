@@ -9,6 +9,7 @@ use context_trace::trace::{
         HasGraph,
         TravKind,
     },
+    traceable::Traceable,
     TraceContext,
 };
 use derive_new::new;
@@ -22,6 +23,7 @@ use state::{
         EndKind,
         EndReason,
         EndState,
+        TraceStart,
     },
     parent::ParentBatch,
     start::StartCtx,
@@ -90,6 +92,8 @@ impl<K: TraversalKind> Iterator for TraversalContext<K> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.end_iter.find_next() {
             Some(end) => {
+                TraceStart(&end, self.last_end.start_len())
+                    .trace(&mut self.end_iter.0);
                 self.last_end = end;
                 Some(())
             },

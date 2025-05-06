@@ -7,17 +7,11 @@ use crate::traversal::{
         RootSearchIterator,
         TraceNode::Parent,
     },
-    state::end::{
-        EndState,
-        TraceStart,
-    },
+    state::end::EndState,
     MatchContext,
     TraversalKind,
 };
-use context_trace::trace::{
-    traceable::Traceable,
-    TraceContext,
-};
+use context_trace::trace::TraceContext;
 use derive_new::new;
 
 #[derive(Debug, new)]
@@ -39,7 +33,7 @@ impl<K: TraversalKind> Iterator for EndIterator<K> {
             .find_root_cursor()
         {
             Some(root_cursor) => Some({
-                let end = match root_cursor.find_end() {
+                match root_cursor.find_end() {
                     Ok(end) => end,
                     Err(root_cursor) =>
                         match root_cursor.next_parents::<K>(&self.0.trav) {
@@ -53,10 +47,8 @@ impl<K: TraversalKind> Iterator for EndIterator<K> {
                                 EndState::mismatch(&self.0.trav, parent)
                             },
                         },
-                };
+                }
                 //debug!("End {:#?}", end);
-                TraceStart(&end).trace(&mut self.0);
-                end
             }),
             None => None,
         }

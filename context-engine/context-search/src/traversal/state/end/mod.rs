@@ -169,7 +169,7 @@ impl Traceable for &EndState {
     }
 }
 #[derive(Clone, Debug)]
-pub struct TraceStart<'a>(pub &'a EndState);
+pub struct TraceStart<'a>(pub &'a EndState, pub usize);
 
 impl<'a> Traceable for TraceStart<'a> {
     fn trace<G: HasGraph>(
@@ -177,14 +177,17 @@ impl<'a> Traceable for TraceStart<'a> {
         ctx: &mut TraceContext<G>,
     ) {
         match &self.0.kind {
-            EndKind::Postfix(p) => p.trace(ctx),
-            EndKind::Range(p) => PostfixEnd {
+            EndKind::Postfix(p) => Some(p.clone()),
+            EndKind::Range(p) => Some(PostfixEnd {
                 path: p.path.rooted_role_path(),
                 root_pos: p.root_pos,
-            }
-            .trace(ctx),
-            _ => {},
+            }),
+            _ => None,
         }
+        .map(|mut p| {
+            p.path.role_path.sub_path.path.drain(0..self.1);
+            p.trace(ctx)
+        });
     }
 }
 impl EndState {
@@ -231,6 +234,11 @@ impl EndState {
             EndKind::Prefix(_) => StateDirection::TopDown,
             EndKind::Complete(_) => StateDirection::BottomUp,
         }
+    }
+    pub fn start_len(&self) -> usize {
+        self.start_path()
+            .map(|p| p.sub_path.len())
+            .unwrap_or_default()
     }
     pub fn start_path(&self) -> Option<RootedSplitPathRef<'_>> {
         match &self.kind {
