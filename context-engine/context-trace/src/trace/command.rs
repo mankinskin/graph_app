@@ -1,16 +1,17 @@
 use super::{
+    BottomUp,
     RoleTraceKey,
+    TopDown,
+    TraceContext,
     TraceRole,
     cache::{
         key::directed::{
             down::DownKey,
             up::UpPosition,
         },
-        new::{
-            DownEdit,
-            UpEdit,
-        },
+        new::NewTraceEdge,
     },
+    has_graph::HasGraph,
     traceable::Traceable,
 };
 use crate::{
@@ -37,6 +38,7 @@ use crate::{
     },
     trace::cache::key::directed::up::UpKey,
 };
+use tracing::debug;
 #[derive(Debug)]
 pub enum TraceCommand {
     Postfix(PostfixCommand),
@@ -63,12 +65,11 @@ pub struct PostfixCommand {
     pub root_up_key: RoleTraceKey<Start>,
 }
 impl Traceable for PostfixCommand {
-    fn trace<G: super::has_graph::HasGraph>(
+    fn trace<G: HasGraph>(
         self,
-        ctx: &mut super::TraceContext<G>,
+        ctx: &mut TraceContext<G>,
     ) {
-        assert!(!self.path.role_path.sub_path.is_empty());
-        let first = self.path.role_path.sub_path.first().unwrap();
+        let first = self.path.role_leaf_child_location::<Start>().unwrap();
         let start_index = *ctx.trav.graph().expect_child_at(first);
         let prev = TraceRole::<Start>::trace_sub_path(
             ctx,
@@ -80,7 +81,8 @@ impl Traceable for PostfixCommand {
             self.add_edges,
         );
         let location = self.path.role_root_child_location::<Start>();
-        let new = UpEdit {
+        debug!("{:#?}", self.root_up_key);
+        let new = NewTraceEdge::<BottomUp> {
             target: self.root_up_key.clone(),
             prev,
             location,
@@ -88,18 +90,16 @@ impl Traceable for PostfixCommand {
         ctx.cache.add_state(new, self.add_edges);
     }
 }
-
 #[derive(Debug)]
 pub struct PrefixCommand {
     pub path: IndexEndPath,
     pub add_edges: bool,
 }
 impl Traceable for PrefixCommand {
-    fn trace<G: super::has_graph::HasGraph>(
+    fn trace<G: HasGraph>(
         self,
-        ctx: &mut super::TraceContext<G>,
+        ctx: &mut TraceContext<G>,
     ) {
-        assert!(!self.path.role_path.sub_path.is_empty());
         let root_exit = self.path.role_root_child_location::<End>();
         // TODO: implement root_child for prefix/postfix path with most outer root child
         let exit_key = DownKey {
@@ -113,7 +113,8 @@ impl Traceable for PrefixCommand {
             index: *ctx.trav.graph().expect_child_at(root_exit.clone()),
             pos: exit_key.pos,
         };
-        let new = DownEdit {
+        debug!("{:#?}", target);
+        let new = NewTraceEdge::<TopDown> {
             target: target.clone(),
             prev: exit_key.clone(),
             location: root_exit,
@@ -135,15 +136,12 @@ pub struct RangeCommand {
     pub add_edges: bool,
     pub root_pos: UpPosition,
 }
-
 impl Traceable for RangeCommand {
-    fn trace<G: super::has_graph::HasGraph>(
+    fn trace<G: HasGraph>(
         self,
-        ctx: &mut super::TraceContext<G>,
+        ctx: &mut TraceContext<G>,
     ) {
-        assert!(!self.path.start.sub_path.is_empty());
-        assert!(!self.path.end.sub_path.is_empty());
-        let first = self.path.start.sub_path.first().unwrap();
+        let first = self.path.role_leaf_child_location::<Start>().unwrap();
         let start_index = *ctx.trav.graph().expect_child_at(first);
         let prev = TraceRole::<Start>::trace_sub_path(
             ctx,
@@ -166,7 +164,8 @@ impl Traceable for RangeCommand {
             index: root_entry.parent,
             pos: self.root_pos.clone(),
         };
-        let new = UpEdit {
+        debug!("{:#?}", root_up_key);
+        let new = NewTraceEdge::<BottomUp> {
             target: root_up_key.clone(),
             prev,
             location: root_entry,
@@ -185,7 +184,8 @@ impl Traceable for RangeCommand {
             pos: exit_key.pos,
             index: *ctx.trav.graph().expect_child_at(root_exit.clone()),
         };
-        let new = DownEdit {
+        debug!("{:#?}", target_key);
+        let new = NewTraceEdge::<TopDown> {
             target: target_key.clone(),
             prev: exit_key.clone(),
             location: root_exit,

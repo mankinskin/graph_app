@@ -49,7 +49,7 @@ impl Add<usize> for DownPosition {
     }
 }
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq, new)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Copy, new)]
 pub struct DownKey {
     pub index: Child,
     pub pos: DownPosition,

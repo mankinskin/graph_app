@@ -32,6 +32,12 @@ impl<R: PathRoot> RootedPath for RootedRangePath<R> {
 }
 
 impl<R: PathRoot> RootedRangePath<R> {
+    pub fn start_path(&self) -> RootedSplitPathRef<'_, R> {
+        RootedSplitPathRef {
+            root: &self.root,
+            sub_path: &self.start.sub_path,
+        }
+    }
     pub fn end_path(&self) -> RootedSplitPathRef<'_, R> {
         RootedSplitPathRef {
             root: &self.root,

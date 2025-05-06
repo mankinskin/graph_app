@@ -8,7 +8,7 @@ use crate::{
     join::context::JoinContext,
 };
 use context_search::{
-    search::context::ParentPolicy,
+    search::context::AncestorPolicy,
     traversal::{
         TraversalKind,
         container::bft::BftQueue,
@@ -45,7 +45,7 @@ pub struct InsertTraversal;
 impl TraversalKind for InsertTraversal {
     type Trav = InsertContext;
     type Container = BftQueue;
-    type Policy = ParentPolicy<Self::Trav>;
+    type Policy = AncestorPolicy<Self::Trav>;
 }
 
 #[derive(Debug, Clone, From)]

@@ -3,7 +3,7 @@ use crate::traversal::{
     iterator::policy::DirectedTraversalPolicy,
     result::FinishedState,
     state::parent::{
-        batch::ParentBatch,
+        ParentBatch,
         ParentState,
     },
     TraversalKind,

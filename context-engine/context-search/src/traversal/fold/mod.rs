@@ -36,7 +36,7 @@ impl<K: TraversalKind> TryFrom<StartCtx<K>> for FoldContext<K> {
         TraversalContext::try_from(start).map(|tctx| Self {
             tctx,
             max_width: start_index.width(),
-            start_index: start_index,
+            start_index,
         })
     }
 }

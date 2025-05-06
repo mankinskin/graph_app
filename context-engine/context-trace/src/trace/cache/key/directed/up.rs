@@ -50,7 +50,7 @@ impl Add<usize> for UpPosition {
     }
 }
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq, new)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Copy, new)]
 pub struct UpKey {
     pub index: Child,
     pub pos: UpPosition,

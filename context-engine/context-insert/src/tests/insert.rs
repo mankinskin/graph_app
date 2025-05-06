@@ -51,7 +51,8 @@ fn index_pattern1() {
     let xa = graph.insert_pattern(vec![x, a]);
     let xab = graph.insert_patterns([vec![x, ab], vec![xa, b]]);
     let xaby = graph.insert_patterns([vec![xab, y], vec![xa, by]]);
-    let _xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
+    let xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
+    print!("{:#?}", xabyz);
     // todo: split sub patterns not caught by query search
     let graph = HypergraphRef::from(graph);
     let query = vec![by, z];

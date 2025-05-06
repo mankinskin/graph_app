@@ -13,10 +13,7 @@ use crate::{
         accessors::{
             child::root::GraphRootChild,
             has_path::HasRolePath,
-            role::{
-                PathRole,
-                Start,
-            },
+            role::PathRole,
         },
         mutators::move_path::key::TokenPosition,
     },
@@ -27,6 +24,7 @@ use crate::{
                 DirectedKey,
                 down::DownKey,
             },
+            new::NewTraceEdge,
         },
         traceable::Traceable,
     },
@@ -40,16 +38,11 @@ use cache::{
             UpPosition,
         },
     },
-    new::{
-        DownEdit,
-        EditKind,
-        UpEdit,
-    },
+    new::EditKind,
 };
 use command::TraceCommand;
 use has_graph::HasGraph;
 use std::fmt::Debug;
-use tracing::debug;
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy, Hash)]
 pub enum StateDirection {
@@ -91,7 +84,7 @@ impl<
 //   Segment    Segment
 //    /^           >\
 // Start         End
-
+use tracing::debug;
 pub trait TraceRole<Role: PathRole> {
     fn trace_sub_path<P: TraceRolePath<Role>>(
         &mut self,
@@ -100,7 +93,12 @@ pub trait TraceRole<Role: PathRole> {
         add_edges: bool,
     ) -> RoleTraceKey<Role>;
 }
-impl<'a, G: HasGraph, Role: PathRole> TraceRole<Role> for TraceContext<G> {
+pub type RoleEdit<R> = NewTraceEdge<<R as PathRole>::Direction>;
+
+impl<'a, G: HasGraph, Role: PathRole> TraceRole<Role> for TraceContext<G>
+where
+    EditKind: From<NewTraceEdge<<Role as PathRole>::Direction>>,
+{
     fn trace_sub_path<P: TraceRolePath<Role>>(
         &mut self,
         path: &P,
@@ -109,17 +107,23 @@ impl<'a, G: HasGraph, Role: PathRole> TraceRole<Role> for TraceContext<G> {
     ) -> RoleTraceKey<Role> {
         let graph = self.trav.graph();
 
-        path.raw_child_path()
-            .into_iter()
-            .fold(prev_key, |prev, loc| {
-                let key = Role::Direction::build_key(&graph, *prev.pos(), loc);
-                debug!("Trace {:#?}", key);
+        path.raw_child_path().into_iter().cloned().fold(
+            prev_key,
+            |prev, location| {
+                let target =
+                    Role::Direction::build_key(&graph, *prev.pos(), &location);
+                debug!("Trace {:#?}", target);
                 self.cache.add_state(
-                    Role::Direction::build_edit(key.clone(), prev, loc.clone()),
+                    RoleEdit::<Role> {
+                        target,
+                        prev,
+                        location,
+                    },
                     add_edges,
                 );
-                key
-            })
+                target
+            },
+        )
     }
 }
 
@@ -158,53 +162,37 @@ impl<G: HasGraph> TraceContext<G> {
 }
 
 pub trait TraceKey:
-    HasTokenPosition + Debug + Clone + Into<DirectedKey>
+    HasTokenPosition + Debug + Clone + Copy + Into<DirectedKey>
 {
 }
-impl<T: HasTokenPosition + Debug + Clone + Into<DirectedKey>> TraceKey for T {}
+impl<T: HasTokenPosition + Debug + Clone + Into<DirectedKey> + Copy> TraceKey
+    for T
+{
+}
 
 pub type RoleTraceKey<Role> =
     <<Role as PathRole>::Direction as TraceDirection>::Key;
 pub trait TraceDirection {
     type Opposite: TraceDirection;
     type Key: TraceKey;
-    type Edit: Into<EditKind>;
     fn build_key<G: HasGraph>(
         trav: &G,
         last_pos: TokenPosition,
         location: &ChildLocation,
     ) -> Self::Key;
-    fn build_edit(
-        key: Self::Key,
-        prev: Self::Key,
-        location: ChildLocation,
-    ) -> Self::Edit;
 }
 
 impl TraceDirection for BottomUp {
     type Opposite = TopDown;
     type Key = UpKey;
-    type Edit = UpEdit;
     fn build_key<G: HasGraph>(
-        trav: &G,
+        _trav: &G,
         last_pos: TokenPosition,
         location: &ChildLocation,
     ) -> Self::Key {
-        let delta = location.role_inner_width::<_, Start>(trav);
         UpKey {
             index: location.parent,
-            pos: UpPosition::from(last_pos + delta),
-        }
-    }
-    fn build_edit(
-        key: Self::Key,
-        prev: Self::Key,
-        location: ChildLocation,
-    ) -> Self::Edit {
-        UpEdit {
-            target: key.clone(),
-            prev,
-            location,
+            pos: UpPosition::from(last_pos),
         }
     }
 }
@@ -212,7 +200,6 @@ impl TraceDirection for BottomUp {
 impl TraceDirection for TopDown {
     type Opposite = BottomUp;
     type Key = DownKey;
-    type Edit = DownEdit;
     fn build_key<G: HasGraph>(
         trav: &G,
         last_pos: TokenPosition,
@@ -224,17 +211,6 @@ impl TraceDirection for TopDown {
         DownKey {
             index,
             pos: DownPosition::from(last_pos + delta),
-        }
-    }
-    fn build_edit(
-        key: Self::Key,
-        prev: Self::Key,
-        location: ChildLocation,
-    ) -> Self::Edit {
-        DownEdit {
-            target: key.clone(),
-            prev,
-            location,
         }
     }
 }

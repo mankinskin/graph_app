@@ -47,6 +47,7 @@ fn interval_graph1() {
         def,
         d_ef_id,
         c_def_id,
+        cd_ef_id,
         cdef,
         abcdef,
         abcd_ef_id,
@@ -71,6 +72,10 @@ fn interval_graph1() {
                 PosKey {
                     index: *def,
                     pos: nz!(2),
+                },
+                PosKey {
+                    index: *cdef,
+                    pos: nz!(3),
                 },
             ]),
             pattern_splits: HashMap::from_iter([(*e_f_id, ChildTracePos {
@@ -103,10 +108,16 @@ fn interval_graph1() {
                 index: *abcdef,
                 pos: nz!(5),
             },]),
-            pattern_splits: HashMap::from_iter([(*c_def_id, ChildTracePos {
-                inner_offset: Some(nz!(2)),
-                sub_index: 1,
-            })])
+            pattern_splits: HashMap::from_iter([
+                (*c_def_id, ChildTracePos {
+                    inner_offset: Some(nz!(2)),
+                    sub_index: 1,
+                },),
+                (*cd_ef_id, ChildTracePos {
+                    inner_offset: Some(nz!(1)),
+                    sub_index: 1,
+                },)
+            ])
         })])
     },);
     assert_eq!(interval.cache[&abcdef.index], SplitVertexCache {

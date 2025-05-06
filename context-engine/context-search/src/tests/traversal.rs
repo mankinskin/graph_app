@@ -85,6 +85,7 @@ fn prefix1() {
         graph.find_ancestor(query).unwrap().try_into().unwrap();
 
     assert_eq!(res.start, *a);
+    assert_eq!(res.end_state.cursor.relative_pos.0, 5);
     assert_eq!(
         res.cache.entries[&a.index],
         VertexCache {
@@ -184,6 +185,7 @@ fn postfix1() {
         graph.find_ancestor(query).unwrap().try_into().unwrap();
 
     assert_eq!(res.start, *c);
+    assert_eq!(res.end_state.cursor.relative_pos.0, 7);
 
     assert_eq!(
         res.cache.entries[&c.index],
@@ -291,6 +293,7 @@ fn range1() {
         graph.find_ancestor(query).unwrap().try_into().unwrap();
 
     assert_eq!(res.start, *bc);
+    assert_eq!(res.end_state.cursor.relative_pos.0, 4);
 
     assert_eq!(
         res.cache.entries[&bc.index],

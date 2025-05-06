@@ -2,7 +2,10 @@ use std::ops::ControlFlow;
 
 use super::{
     RootedRangePath,
-    role_path::RootedRolePath,
+    role_path::{
+        IndexRolePath,
+        RootedRolePath,
+    },
     root::{
         IndexRoot,
         PathRoot,
@@ -99,6 +102,17 @@ impl_root! { GraphRoot for IndexRangePath, self => self.root_pattern_location().
 impl_root! { RootPattern for IndexRangePath, self, trav => GraphRootPattern::graph_root_pattern::<G>(self, trav) }
 
 impl<R: PathRole + 'static> HasPath<R> for IndexRangePath
+where
+    Self: HasRolePath<R>,
+{
+    fn path(&self) -> &Vec<ChildLocation> {
+        HasRolePath::<R>::role_path(self).path()
+    }
+    fn path_mut(&mut self) -> &mut Vec<ChildLocation> {
+        HasRolePath::<R>::role_path_mut(self).path_mut()
+    }
+}
+impl<R: PathRole + 'static> HasPath<R> for IndexRolePath<R>
 where
     Self: HasRolePath<R>,
 {

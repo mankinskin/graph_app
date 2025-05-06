@@ -23,7 +23,7 @@ use state::{
         EndReason,
         EndState,
     },
-    parent::batch::ParentBatch,
+    parent::ParentBatch,
     start::StartCtx,
     BaseState,
 };
@@ -52,8 +52,6 @@ pub enum OptGen<Y> {
 /// context for generating next states
 #[derive(Debug, new)]
 pub struct TraversalContext<K: TraversalKind> {
-    //pub matches: MatchContext,
-    //pub ctx: TraceContext<K::Trav>,
     pub end_iter: EndIterator<K>,
     pub last_end: EndState,
 }

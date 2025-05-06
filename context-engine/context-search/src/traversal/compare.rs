@@ -1,15 +1,23 @@
-use super::state::{
-    child::{
-        batch::ChildIterator,
-        ChildState,
+use super::{
+    state::{
+        child::{
+            batch::ChildIterator,
+            ChildState,
+        },
+        end::{
+            EndKind,
+            EndReason,
+            EndState,
+        },
+        parent::{
+            ParentBatch,
+            ParentState,
+        },
     },
-    end::{
-        EndKind,
-        EndReason,
-        EndState,
-    },
+    TraversalKind,
 };
 use crate::traversal::{
+    iterator::policy::DirectedTraversalPolicy,
     state::child::batch::ChildMatchState::{
         Match,
         Mismatch,
@@ -17,15 +25,11 @@ use crate::traversal::{
     BaseState,
 };
 use context_trace::{
-    graph::vertex::wide::Wide,
     path::{
         accessors::role::End,
-        mutators::move_path::{
-            advance::{
-                Advance,
-                CanAdvance,
-            },
-            key::AdvanceKey,
+        mutators::move_path::advance::{
+            Advance,
+            CanAdvance,
         },
         GetRoleChildPath,
     },
@@ -52,6 +56,7 @@ impl<G: HasGraph> Iterator for RootCursor<G> {
     type Item = ControlFlow<EndReason>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        let prev_state = self.state.clone();
         match self.advanced() {
             Continue(_) => Some(
                 // next position
@@ -62,7 +67,10 @@ impl<G: HasGraph> Iterator for RootCursor<G> {
                         self.state = c;
                         Continue(())
                     },
-                    Mismatch(_) => Break(EndReason::Mismatch),
+                    Mismatch(_) => {
+                        self.state = prev_state;
+                        Break(EndReason::Mismatch)
+                    },
                 },
             ),
             // end of this root
@@ -73,6 +81,23 @@ impl<G: HasGraph> Iterator for RootCursor<G> {
     }
 }
 impl<G: HasGraph> RootCursor<G> {
+    pub fn next_parents<'a, K: TraversalKind>(
+        self,
+        trav: &K::Trav,
+    ) -> Result<(ParentState, ParentBatch), EndState> {
+        let mut parent = self.state.root_parent();
+        let prev_cursor = parent.cursor.clone();
+        if parent.cursor.advance(trav).is_continue() {
+            if let Some(batch) = K::Policy::next_batch(trav, &parent) {
+                Ok((parent, batch))
+            } else {
+                parent.cursor = prev_cursor;
+                Err(EndState::mismatch(trav, parent))
+            }
+        } else {
+            Err(EndState::query_end(trav, parent))
+        }
+    }
     fn advanced(&mut self) -> ControlFlow<Option<EndReason>> {
         if self.state.base.path.can_advance(&self.trav) {
             match self.query_advanced() {
@@ -101,14 +126,13 @@ impl<G: HasGraph> RootCursor<G> {
         }) {
             Some(reason) => {
                 let BaseState {
-                    mut cursor,
+                    cursor,
                     path,
                     root_pos,
                     ..
                 } = self.state.base;
                 let target_index = path.role_leaf_child::<End, _>(&self.trav);
                 let pos = cursor.relative_pos;
-                cursor.advance_key(target_index.width());
                 let target = DownKey::new(target_index, pos.into());
                 Ok(EndState {
                     cursor,

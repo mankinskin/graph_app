@@ -16,11 +16,6 @@ use crate::{
         BottomUp,
         TopDown,
         TraceDirection,
-        cache::new::{
-            DownEdit,
-            Edit,
-            UpEdit,
-        },
     },
 };
 use std::{
@@ -37,7 +32,6 @@ pub struct End;
 pub trait PathRole: 'static + Debug + PathBorder + Default + Clone {
     type TopDownPathIter<I: Borrow<ChildLocation>, T: DoubleEndedIterator<Item=I> + ExactSizeIterator>: DoubleEndedIterator<Item=I> + ExactSizeIterator;
     type Direction: TraceDirection;
-    type Edit: Edit;
 
     fn top_down_iter<
         I: Borrow<ChildLocation>,
@@ -101,7 +95,6 @@ impl PathRole for Start {
         I: Borrow<ChildLocation>,
         T: DoubleEndedIterator<Item = I> + ExactSizeIterator,
     > = std::iter::Rev<T>;
-    type Edit = UpEdit;
 
     fn top_down_iter<
         I: Borrow<ChildLocation>,
@@ -151,7 +144,6 @@ impl PathRole for Start {
 
 impl PathRole for End {
     type Direction = TopDown;
-    type Edit = DownEdit;
 
     type TopDownPathIter<
         I: Borrow<ChildLocation>,

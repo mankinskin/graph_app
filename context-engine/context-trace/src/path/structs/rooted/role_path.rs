@@ -96,6 +96,30 @@ where
     }
 }
 
+impl<R: PathRole> PathChild<R> for IndexRolePath<R>
+where
+    Self: HasRolePath<R>,
+{
+    fn path_child_location(&self) -> Option<ChildLocation> {
+        Some(
+            R::bottom_up_iter(self.path().iter())
+                .next()
+                .cloned()
+                .unwrap_or(
+                    self.root
+                        .location
+                        .to_child_location(self.role_path().root_entry),
+                ),
+        )
+    }
+    fn path_child<G: HasGraph>(
+        &self,
+        trav: &G,
+    ) -> Option<Child> {
+        PathChild::<R>::path_child(self.role_path(), trav)
+    }
+}
+
 pub type IndexRolePath<R> = RootedRolePath<R, IndexRoot>;
 pub type PatternRolePath<R> = RootedRolePath<R, Pattern>;
 

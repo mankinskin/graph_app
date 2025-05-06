@@ -45,7 +45,10 @@ use context_trace::{
 };
 use context_trace::{
     path::{
-        accessors::role::End,
+        accessors::{
+            has_path::HasRootedRolePath,
+            role::End,
+        },
         structs::rooted::index_range::IndexRangePath,
     },
     trace::cache::key::directed::down::DownKey,
@@ -54,7 +57,10 @@ use postfix::PostfixEnd;
 use prefix::PrefixEnd;
 use range::RangeEnd;
 
-use super::cursor::PatternPrefixCursor;
+use super::{
+    cursor::PatternPrefixCursor,
+    parent::ParentState,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EndKind {
@@ -162,7 +168,49 @@ impl Traceable for &EndState {
         }
     }
 }
+#[derive(Clone, Debug)]
+pub struct TraceStart<'a>(pub &'a EndState);
+
+impl<'a> Traceable for TraceStart<'a> {
+    fn trace<G: HasGraph>(
+        self,
+        ctx: &mut TraceContext<G>,
+    ) {
+        match &self.0.kind {
+            EndKind::Postfix(p) => p.trace(ctx),
+            EndKind::Range(p) => PostfixEnd {
+                path: p.path.rooted_role_path(),
+                root_pos: p.root_pos,
+            }
+            .trace(ctx),
+            _ => {},
+        }
+    }
+}
 impl EndState {
+    pub fn with_reason<G: HasGraph>(
+        trav: G,
+        reason: EndReason,
+        parent: ParentState,
+    ) -> Self {
+        Self {
+            reason,
+            kind: EndKind::from_start_path(parent.path, parent.root_pos, &trav),
+            cursor: parent.cursor,
+        }
+    }
+    pub fn query_end<G: HasGraph>(
+        trav: G,
+        parent: ParentState,
+    ) -> Self {
+        Self::with_reason(trav, EndReason::QueryEnd, parent)
+    }
+    pub fn mismatch<G: HasGraph>(
+        trav: G,
+        parent: ParentState,
+    ) -> Self {
+        Self::with_reason(trav, EndReason::Mismatch, parent)
+    }
     pub fn is_final(&self) -> bool {
         self.reason == EndReason::QueryEnd
             && matches!(self.kind, EndKind::Complete(_))
@@ -182,6 +230,14 @@ impl EndState {
             EndKind::Postfix(_) => StateDirection::BottomUp,
             EndKind::Prefix(_) => StateDirection::TopDown,
             EndKind::Complete(_) => StateDirection::BottomUp,
+        }
+    }
+    pub fn start_path(&self) -> Option<RootedSplitPathRef<'_>> {
+        match &self.kind {
+            EndKind::Range(e) => Some(e.path.start_path()),
+            EndKind::Postfix(e) => Some((&e.path).into()),
+            EndKind::Prefix(_) => None,
+            EndKind::Complete(_) => None,
         }
     }
     pub fn end_path(&self) -> Option<RootedSplitPathRef<'_>> {
@@ -208,16 +264,6 @@ impl TargetKey for EndState {
     }
 }
 
-//impl Wide for EndState {
-//    fn width(&self) -> usize {
-//        match &self.kind {
-//            EndKind::Range(p) => p.target.pos.0 .0 + p.target.index.width(),
-//            EndKind::Prefix(p) => p.target.pos.0 .0 + p.target.index.width(),
-//            EndKind::Postfix(p) => p.root_pos.0 + p.inner_width,
-//            EndKind::Complete(c) => c.width(),
-//        }
-//    }
-//}
 impl RootKey for EndState {
     fn root_key(&self) -> UpKey {
         UpKey::new(
