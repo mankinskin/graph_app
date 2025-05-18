@@ -1,9 +1,11 @@
+use super::cursor::PatternPrefixCursor;
 use crate::traversal::{
     fold::foldable::ErrorState,
-    iterator::policy::DirectedTraversalPolicy,
+    iterator::{
+        end::CompareParentBatch,
+        policy::DirectedTraversalPolicy,
+    },
     result::FinishedKind,
-    state::ParentState,
-    ParentBatch,
     TraversalKind,
 };
 use context_trace::{
@@ -29,10 +31,11 @@ use context_trace::{
             sub_path::SubPath,
         },
     },
-    trace::has_graph::HasGraph,
+    trace::{
+        has_graph::HasGraph,
+        state::parent::ParentState,
+    },
 };
-
-use super::cursor::PatternPrefixCursor;
 #[derive(Debug, PartialEq, Eq)]
 pub struct StartCtx<K: TraversalKind> {
     pub index: Child,
@@ -41,15 +44,16 @@ pub struct StartCtx<K: TraversalKind> {
 }
 
 impl<K: TraversalKind> StartCtx<K> {
-    pub fn get_parent_batch(&self) -> Result<ParentBatch, ErrorState> {
+    pub fn get_parent_batch(&self) -> Result<CompareParentBatch, ErrorState> {
         let mut cursor = self.cursor.clone();
         if cursor.advance(&self.trav).is_continue() {
             //prev: self.key.to_prev(delta),
-            Ok(K::Policy::gen_parent_batch(
+            let batch = K::Policy::gen_parent_batch(
                 &self.trav,
                 self.index,
-                |trav, p| (self.index, cursor.clone()).into_primer(trav, p),
-            ))
+                |trav, p| self.index.into_primer(trav, p),
+            );
+            Ok(CompareParentBatch { batch, cursor })
         } else {
             Err(ErrorState {
                 reason: ErrorReason::SingleIndex(self.index),
@@ -65,14 +69,13 @@ pub trait IntoPrimer: Sized {
         parent_entry: ChildLocation,
     ) -> ParentState;
 }
-impl IntoPrimer for (Child, PatternPrefixCursor) {
+impl IntoPrimer for Child {
     fn into_primer<G: HasGraph>(
         self,
         _trav: &G,
         parent_entry: ChildLocation,
     ) -> ParentState {
-        let (c, cursor) = self;
-        let width = c.width().into();
+        let width = self.width().into();
         ParentState {
             prev_pos: width,
             root_pos: width,
@@ -88,7 +91,6 @@ impl IntoPrimer for (Child, PatternPrefixCursor) {
                     _ty: Default::default(),
                 },
             },
-            cursor,
         }
     }
 }

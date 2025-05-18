@@ -9,8 +9,6 @@
 #![feature(associated_type_defaults)]
 //#![feature(return_position_impl_trait_in_trait)]
 
-extern crate context_search;
-
 extern crate test;
 
 mod read;

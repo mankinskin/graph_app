@@ -28,7 +28,6 @@ pub struct ExpansionIterator<'a> {
     chain: ChainGenerator<'a>,
     bundle: Option<Bundle>,
 }
-
 impl<'a> Iterator for ExpansionIterator<'a> {
     type Item = Option<Bundle>;
 

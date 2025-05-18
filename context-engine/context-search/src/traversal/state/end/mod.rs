@@ -57,10 +57,9 @@ use postfix::PostfixEnd;
 use prefix::PrefixEnd;
 use range::RangeEnd;
 
-use super::{
-    cursor::PatternPrefixCursor,
-    parent::ParentState,
-};
+use crate::traversal::compare::parent::ParentCompareState;
+
+use super::cursor::PatternPrefixCursor;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EndKind {
@@ -194,23 +193,27 @@ impl EndState {
     pub fn with_reason<G: HasGraph>(
         trav: G,
         reason: EndReason,
-        parent: ParentState,
+        parent: ParentCompareState,
     ) -> Self {
         Self {
             reason,
-            kind: EndKind::from_start_path(parent.path, parent.root_pos, &trav),
+            kind: EndKind::from_start_path(
+                parent.parent_state.path,
+                parent.parent_state.root_pos,
+                &trav,
+            ),
             cursor: parent.cursor,
         }
     }
     pub fn query_end<G: HasGraph>(
         trav: G,
-        parent: ParentState,
+        parent: ParentCompareState,
     ) -> Self {
         Self::with_reason(trav, EndReason::QueryEnd, parent)
     }
     pub fn mismatch<G: HasGraph>(
         trav: G,
-        parent: ParentState,
+        parent: ParentCompareState,
     ) -> Self {
         Self::with_reason(trav, EndReason::Mismatch, parent)
     }

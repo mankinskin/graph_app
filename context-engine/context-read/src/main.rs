@@ -1,6 +1,4 @@
-pub mod insert;
-pub mod search;
-//pub mod read;
+pub mod read;
 
 #[cfg(test)]
 pub mod tests;

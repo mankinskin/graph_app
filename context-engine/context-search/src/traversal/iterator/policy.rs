@@ -1,11 +1,7 @@
 use itertools::Itertools;
 use std::fmt::Debug;
 
-use crate::traversal::{
-    container::order::TraversalOrder,
-    state::parent::ParentState,
-    ParentBatch,
-};
+use crate::traversal::container::order::TraversalOrder;
 use context_trace::{
     graph::{
         getters::vertex::VertexSet,
@@ -18,7 +14,13 @@ use context_trace::{
         accessors::root::GraphRoot,
         mutators::raise::PathRaise,
     },
-    trace::has_graph::HasGraph,
+    trace::{
+        has_graph::HasGraph,
+        state::parent::{
+            ParentBatch,
+            ParentState,
+        },
+    },
 };
 
 pub trait DirectedTraversalPolicy: Sized + Debug {

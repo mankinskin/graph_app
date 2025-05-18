@@ -1,3 +1,6 @@
+pub mod iterator;
+pub mod state;
+
 use std::{
     cmp::Ordering,
     num::NonZeroUsize,
@@ -13,6 +16,8 @@ use crate::{
     },
     trace::cache::position::SubSplitLocation,
 };
+
+use std::fmt::Debug;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ChildTracePos {

@@ -1,11 +1,4 @@
-use crate::traversal::state::{
-    child::{
-        ChildState,
-        RootChildState,
-    },
-    BaseState,
-};
-use context_trace::{
+use crate::{
     direction::pattern::PatternDirection,
     graph::vertex::{
         location::{
@@ -14,7 +7,6 @@ use context_trace::{
         },
         pattern::pattern_width,
     },
-    impl_cursor_pos,
     path::{
         accessors::{
             child::root::GraphRootChild,
@@ -36,19 +28,23 @@ use context_trace::{
     trace::{
         cache::key::{
             directed::{
-                down::DownKey,
-                up::UpKey,
                 DirectedKey,
+                up::UpKey,
             },
             props::{
                 RootKey,
                 TargetKey,
             },
         },
+        child::state::{
+            ChildState,
+            RootChildState,
+        },
         has_graph::{
             HasGraph,
             TravDir,
         },
+        state::BaseState,
     },
 };
 use derive_more::{
@@ -67,6 +63,10 @@ pub struct ParentBatch {
 }
 pub type ParentState = BaseState<IndexStartPath>;
 
+//impl_cursor_pos! {
+//    CursorPosition for ParentState, self => self.cursor.relative_pos
+//}
+
 impl IntoAdvanced for ParentState {
     type Next = RootChildState;
     fn into_advanced<G: HasGraph>(
@@ -84,9 +84,9 @@ impl IntoAdvanced for ParentState {
                 path,
                 prev_pos,
                 root_pos,
-                cursor,
+                //cursor,
             } = self;
-            let index = pattern[next_i];
+            //let index = pattern[next_i];
             //println!("{:#?}", (&pattern, entry, index));
             Ok(RootChildState {
                 child: ChildState {
@@ -94,9 +94,9 @@ impl IntoAdvanced for ParentState {
                         prev_pos,
                         root_pos,
                         path: path.into_range(next_i),
-                        cursor,
+                        //cursor,
                     },
-                    target: DownKey::new(index, root_pos.into()),
+                    //target: DownKey::new(index, root_pos.into()),
                 },
                 root_parent,
             })
@@ -146,9 +146,6 @@ impl<P: RootedPath + GraphRoot> RootKey for BaseState<P> {
     fn root_key(&self) -> UpKey {
         UpKey::new(self.path.root_parent(), self.root_pos.into())
     }
-}
-impl_cursor_pos! {
-    CursorPosition for ParentState, self => self.cursor.relative_pos
 }
 impl Ord for ParentState {
     fn cmp(

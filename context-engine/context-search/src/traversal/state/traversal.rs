@@ -1,10 +1,5 @@
 use std::cmp::Ordering;
 
-use super::{
-    child::ChildState,
-    parent::ParentState,
-    InnerKind,
-};
 use context_trace::{
     graph::vertex::location::child::ChildLocation,
     path::{
@@ -22,11 +17,11 @@ use context_trace::{
                 DirectedKey,
             },
             props::{
-                CursorPosition,
                 RootKey,
                 TargetKey,
             },
         },
+        state::InnerKind,
         StateDirection,
     },
 };
@@ -70,7 +65,10 @@ impl TraversalState {
 //        }
 //    }
 //}
-
+use context_trace::trace::{
+    child::state::ChildState,
+    state::parent::ParentState,
+};
 impl From<(DirectedKey, ParentState)> for TraversalState {
     fn from((prev, ps): (DirectedKey, ParentState)) -> Self {
         Self {
@@ -96,20 +94,20 @@ impl TargetKey for TraversalState {
     }
 }
 
-impl CursorPosition for TraversalState {
-    fn cursor_pos(&self) -> &TokenPosition {
-        match &self.kind {
-            InnerKind::Parent(state) => state.cursor_pos(),
-            InnerKind::Child(state) => state.cursor_pos(),
-        }
-    }
-    fn cursor_pos_mut(&mut self) -> &mut TokenPosition {
-        match &mut self.kind {
-            InnerKind::Parent(state) => state.cursor_pos_mut(),
-            InnerKind::Child(state) => state.cursor_pos_mut(),
-        }
-    }
-}
+//impl CursorPosition for TraversalState {
+//    fn cursor_pos(&self) -> &TokenPosition {
+//        match &self.kind {
+//            InnerKind::Parent(state) => state.cursor_pos(),
+//            InnerKind::Child(state) => state.cursor_pos(),
+//        }
+//    }
+//    fn cursor_pos_mut(&mut self) -> &mut TokenPosition {
+//        match &mut self.kind {
+//            InnerKind::Parent(state) => state.cursor_pos_mut(),
+//            InnerKind::Child(state) => state.cursor_pos_mut(),
+//        }
+//    }
+//}
 impl Ord for TraversalState {
     fn cmp(
         &self,

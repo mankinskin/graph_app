@@ -2,17 +2,18 @@ use crate::traversal::{
     container::bft::BftQueue,
     iterator::policy::DirectedTraversalPolicy,
     result::FinishedState,
-    state::parent::{
-        ParentBatch,
-        ParentState,
-    },
     TraversalKind,
 };
 use context_trace::{
     graph::getters::ErrorReason,
-    trace::has_graph::HasGraph,
+    trace::{
+        has_graph::HasGraph,
+        state::parent::{
+            ParentBatch,
+            ParentState,
+        },
+    },
 };
-
 #[derive(Debug)]
 pub struct AncestorPolicy<T: HasGraph>(std::marker::PhantomData<T>);
 

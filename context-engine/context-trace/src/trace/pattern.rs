@@ -8,16 +8,6 @@ use crate::graph::vertex::{
     },
 };
 
-//pub trait GetPatternContext<'p> {
-//    type PatternCtx<'t>;
-//    fn get_pattern_context<'t>(&'t self) -> Self::PatternCtx<'t> where Self: 't, 'p: 't;
-//}
-//impl<'p> GetPatternContext<'p> for PatternJoinContext<'p> {
-//    fn as_pattern_join_context<'t>(&'t self) -> PatternJoinContext<'t> where Self: 't, 'p: 't {
-//        *self
-//    }
-//}
-
 #[derive(Debug, Clone, Derivative)]
 #[derivative(Hash, PartialEq, Eq)]
 pub struct PatternTraceContext<'a> {
@@ -64,22 +54,3 @@ pub trait GetPatternContext {
     where
         Self: 'b;
 }
-
-//impl<'b, T: GetPatternContext<PatternCtx<'b> = PatternTraceContext<'b>>> GetPatternTraceContext<'b> for T
-//{
-//    fn get_pattern_trace_context(&'b self,
-//        pattern_id: &PatternId,
-//    ) -> PatternTraceContext<'b>
-//        where Self: 'b
-//    {
-//        self.get_pattern_context(pattern_id)
-//    }
-//}
-
-//pub trait ToPatternContext {
-//    type PatternCtx: GetPatternTraceContext;
-//    fn to_pattern_context(
-//        self,
-//        pattern_id: &PatternId,
-//    ) -> Self::PatternCtx;
-//}

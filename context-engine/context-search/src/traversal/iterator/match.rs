@@ -1,25 +1,23 @@
 use std::collections::VecDeque;
 
 use crate::traversal::{
-    compare::RootCursor,
+    compare::{
+        iterator::CompareIterator,
+        parent::ParentCompareState,
+        state::CompareState,
+    },
     iterator::policy::DirectedTraversalPolicy,
-    state::{
-        child::{
-            batch::{
-                ChildIterator,
-                ChildMatchState::{
-                    self,
-                    Mismatch,
-                },
-                ChildQueue,
-            },
-            ChildState,
-        },
-        parent::ParentState,
+    root_cursor::RootCursor,
+    state::ChildMatchState::{
+        self,
+        Mismatch,
     },
     TraversalKind,
 };
-use context_trace::path::mutators::adapters::IntoAdvanced;
+use context_trace::{
+    path::mutators::adapters::IntoAdvanced,
+    trace::child::iterator::ChildQueue,
+};
 
 use derive_new::new;
 
@@ -28,13 +26,6 @@ pub struct MatchContext {
     #[new(default)]
     pub nodes: VecDeque<TraceNode>,
 }
-
-#[derive(Debug)]
-pub enum TraceNode {
-    Parent(ParentState),
-    Child(ChildQueue),
-}
-use TraceNode::*;
 
 #[derive(Debug)]
 pub struct RootSearchIterator<'a, K: TraversalKind> {
@@ -56,15 +47,15 @@ impl<'a, K: TraversalKind> RootSearchIterator<'a, K> {
     }
 
     pub fn find_root_cursor(mut self) -> Option<RootCursor<&'a K::Trav>> {
-        self.find_map(|root| root).map(|child| RootCursor {
+        self.find_map(|root| root).map(|state| RootCursor {
             trav: self.trav,
-            state: child,
+            state,
         })
     }
 }
 
 impl<'a, K: TraversalKind> Iterator for RootSearchIterator<'a, K> {
-    type Item = Option<ChildState>;
+    type Item = Option<CompareState>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.ctx.nodes.pop_front().and_then(|node| {
@@ -83,23 +74,31 @@ impl<'a, K: TraversalKind> Iterator for RootSearchIterator<'a, K> {
         }
     }
 }
-#[derive(Debug, new)]
-struct PolicyNode<'a, K: TraversalKind>(TraceNode, &'a K::Trav);
 
 #[derive(Debug)]
 pub enum TraceStep {
     Append(Vec<TraceNode>),
-    Match(ChildState),
+    Match(CompareState),
     Pass,
 }
 use TraceStep::*;
+
+#[derive(Debug)]
+pub enum TraceNode {
+    Parent(ParentCompareState),
+    Child(ChildQueue<CompareState>),
+}
+use TraceNode::*;
+
+#[derive(Debug, new)]
+struct PolicyNode<'a, K: TraversalKind>(TraceNode, &'a K::Trav);
 
 impl<'a, K: TraversalKind> PolicyNode<'a, K> {
     fn consume(self) -> Option<TraceStep> {
         match self.0 {
             Parent(parent) => match parent.into_advanced(&self.1) {
                 Ok(state) => PolicyNode::<K>::new(
-                    Child(ChildQueue::from(state.child)),
+                    Child(ChildQueue::from_iter([state.child])),
                     self.1,
                 )
                 .consume(),
@@ -107,18 +106,22 @@ impl<'a, K: TraversalKind> PolicyNode<'a, K> {
                     K::Policy::next_batch(&self.1, &parent)
                         .into_iter()
                         .flat_map(|batch| batch.parents)
+                        .map(|parent_state| ParentCompareState {
+                            parent_state,
+                            cursor: parent.cursor.clone(),
+                        })
                         .map(Parent)
                         .collect(),
                 )),
             },
             Child(queue) => {
-                let mut child_iter =
-                    ChildIterator::<&K::Trav>::new(&self.1, queue);
-                match child_iter.next() {
+                let mut compare_iter =
+                    CompareIterator::<&K::Trav>::new(&self.1, queue);
+                match compare_iter.next() {
                     Some(Some(ChildMatchState::Match(cs))) => Some(Match(cs)),
                     Some(Some(Mismatch(_))) => Some(Pass),
                     Some(None) =>
-                        Some(Append(vec![Child(child_iter.children)])),
+                        Some(Append(vec![Child(compare_iter.children.queue)])),
                     None => None,
                 }
             },

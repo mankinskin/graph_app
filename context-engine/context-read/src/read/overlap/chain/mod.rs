@@ -1,22 +1,11 @@
-use std::{
-    borrow::Borrow,
-    collections::{
-        BTreeMap,
-        BTreeSet,
-        VecDeque,
-    },
-};
-
-use derivative::Derivative;
-use derive_more::derive::{
-    Deref,
-    DerefMut,
+use std::collections::{
+    BTreeSet,
+    VecDeque,
 };
 
 use context_trace::{
     graph::vertex::{
         child::Child,
-        pattern::Pattern,
         wide::Wide,
     },
     path::{
@@ -24,27 +13,15 @@ use context_trace::{
             End,
             Start,
         },
-        structs::{
-            role_path::RolePath,
-            rooted::{
-                role_path::RootedRolePath,
-                root::IndexRoot,
-            },
-        },
+        structs::role_path::RolePath,
     },
-    trace::has_graph::HasGraphMut,
 };
 
 use band::{
     Band,
     BandCtx,
-    Overlap,
 };
 
-use super::{
-    bundle::Bundle,
-    generator::ExpansionLink,
-};
 pub mod band;
 
 /// IMPORTANT:

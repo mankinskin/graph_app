@@ -1,7 +1,10 @@
-use derive_new::new;
 use context_trace::graph::vertex::child::Child;
+use derive_new::new;
 
-use super::{context::ReadContext, overlap::generator::ExpansionLink};
+use super::{
+    context::ReadContext,
+    overlap::generator::ExpansionLink,
+};
 
 #[derive(Debug, new)]
 pub struct ComplementBuilder {
@@ -10,10 +13,13 @@ pub struct ComplementBuilder {
 }
 
 impl ComplementBuilder {
-    pub fn build_context_index(self, trav: &ReadContext) -> Child {
+    pub fn build_context_index(
+        self,
+        trav: &ReadContext,
+    ) -> Child {
         //
         //
-        self.root.
+        self.root
     }
 
     //pub fn back_context_for_link(

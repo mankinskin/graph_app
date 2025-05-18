@@ -99,6 +99,7 @@ impl<'a> ChainGenerator<'a> {
         let last_end_bound = last.band.end_bound;
         let last_end = last.band.postfix();
 
+        // TODO: Replace with Child Trace Iter
         let mut postfix_iter =
             PostfixIterator::band_iter(self.trav.clone(), last_end);
         let mut postfix_path = {
@@ -106,18 +107,18 @@ impl<'a> ChainGenerator<'a> {
             RolePath::from(SubPath::new(postfix_location.sub_index))
         };
         postfix_iter.find_map(|(postfix_location, postfix)| {
-            let primer: PatternEndPath = self.cursor.clone();
+            let cursor: PatternEndPath = self.cursor.clone();
             let start_bound = last_end_bound - postfix.width();
 
             // build path to this location
             //postfix_path.path_append(postfix_location);
             self.trav
                 .insert_or_get_complete(primer)
-                .map(|(expansion, advanced)| {
+                .map(|expansion| {
                     Some(ChainOp::Expansion(self.link_expansion(
                         start_bound,
                         expansion,
-                        advanced,
+                        postfix_path,
                     )))
                 })
                 .unwrap_or_else(|_| {
@@ -138,7 +139,7 @@ impl<'a> ChainGenerator<'a> {
         advanced: PatternRangePath,
     ) -> ExpansionLink {
         let adv_prefix =
-            PatternRootChild::<Start>::pattern_root_child(&advanced);
+            PatternRootChild::<Start>::pattern_root_child(advanced);
         // find prefix from advanced path in expansion index
         let mut prefix_iter =
             PrefixIterator::band_iter(self.trav.clone(), expansion);

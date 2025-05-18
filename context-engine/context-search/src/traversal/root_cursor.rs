@@ -1,28 +1,23 @@
 use super::{
-    state::{
-        child::{
-            batch::ChildIterator,
-            ChildState,
-        },
-        end::{
-            EndKind,
-            EndReason,
-            EndState,
-        },
-        parent::{
-            ParentBatch,
-            ParentState,
-        },
+    compare::parent::ParentCompareState,
+    iterator::end::CompareParentBatch,
+    state::end::{
+        EndKind,
+        EndReason,
+        EndState,
     },
     TraversalKind,
 };
 use crate::traversal::{
+    compare::{
+        iterator::CompareIterator,
+        state::CompareState,
+    },
     iterator::policy::DirectedTraversalPolicy,
-    state::child::batch::ChildMatchState::{
+    state::ChildMatchState::{
         Match,
         Mismatch,
     },
-    BaseState,
 };
 use context_trace::{
     path::{
@@ -35,9 +30,14 @@ use context_trace::{
     },
     trace::{
         cache::key::directed::down::DownKey,
+        child::state::ChildState,
         has_graph::HasGraph,
+        state::BaseState,
     },
 };
+use std::collections::VecDeque;
+pub type CompareQueue = VecDeque<CompareState>;
+
 use std::{
     fmt::Debug,
     ops::ControlFlow::{
@@ -46,10 +46,9 @@ use std::{
         Continue,
     },
 };
-
 #[derive(Debug)]
 pub struct RootCursor<G: HasGraph> {
-    pub state: ChildState,
+    pub state: CompareState,
     pub trav: G,
 }
 impl<G: HasGraph> Iterator for RootCursor<G> {
@@ -60,7 +59,7 @@ impl<G: HasGraph> Iterator for RootCursor<G> {
         match self.advanced() {
             Continue(_) => Some(
                 // next position
-                match ChildIterator::new(&self.trav, self.state.clone())
+                match CompareIterator::new(&self.trav, self.state.clone())
                     .compare()
                 {
                     Match(c) => {
@@ -84,11 +83,17 @@ impl<G: HasGraph> RootCursor<G> {
     pub fn next_parents<'a, K: TraversalKind>(
         self,
         trav: &K::Trav,
-    ) -> Result<(ParentState, ParentBatch), EndState> {
-        let mut parent = self.state.root_parent();
+    ) -> Result<(ParentCompareState, CompareParentBatch), EndState> {
+        let mut parent = self.state.parent_state();
         let prev_cursor = parent.cursor.clone();
         if parent.cursor.advance(trav).is_continue() {
-            if let Some(batch) = K::Policy::next_batch(trav, &parent) {
+            if let Some(batch) =
+                K::Policy::next_batch(trav, &parent.parent_state)
+            {
+                let batch = CompareParentBatch {
+                    batch,
+                    cursor: parent.cursor.clone(),
+                };
                 Ok((parent, batch))
             } else {
                 parent.cursor = prev_cursor;
@@ -125,12 +130,15 @@ impl<G: HasGraph> RootCursor<G> {
             Break(reason) => Some(reason),
         }) {
             Some(reason) => {
-                let BaseState {
+                let CompareState {
+                    child_state:
+                        ChildState {
+                            base: BaseState { path, root_pos, .. },
+                            ..
+                        },
                     cursor,
-                    path,
-                    root_pos,
                     ..
-                } = self.state.base;
+                } = self.state;
                 let target_index = path.role_leaf_child::<End, _>(&self.trav);
                 let pos = cursor.relative_pos;
                 let target = DownKey::new(target_index, pos.into());

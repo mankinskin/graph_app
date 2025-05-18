@@ -25,9 +25,7 @@ use state::{
         EndState,
         TraceStart,
     },
-    parent::ParentBatch,
     start::StartCtx,
-    BaseState,
 };
 use std::{
     fmt::Debug,
@@ -38,6 +36,7 @@ pub mod container;
 pub mod fold;
 pub mod iterator;
 pub mod result;
+pub mod root_cursor;
 pub mod state;
 
 pub trait TraversalKind: Debug + Default {
@@ -71,7 +70,7 @@ impl<K: TraversalKind> TryFrom<StartCtx<K>> for TraversalContext<K> {
                     },
                     MatchContext {
                         nodes: FromIterator::from_iter(
-                            p.parents.into_iter().map(Parent),
+                            p.into_compare_batch().into_iter().map(Parent),
                         ),
                     },
                 ),
