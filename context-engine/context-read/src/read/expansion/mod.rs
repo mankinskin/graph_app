@@ -1,7 +1,17 @@
 use crate::read::{
     complement::ComplementBuilder,
     context::ReadContext,
-    overlap::chain::OverlapChain,
+    overlap::{
+        bundle::Bundle,
+        chain::{
+            band::Band,
+            generator::{
+                ChainGenerator,
+                ChainOp,
+            },
+            OverlapChain,
+        },
+    },
 };
 use context_trace::{
     graph::vertex::wide::Wide,
@@ -10,15 +20,6 @@ use context_trace::{
 use derive_more::{
     Deref,
     DerefMut,
-};
-
-use super::{
-    bundle::Bundle,
-    chain::band::Band,
-    generator::{
-        ChainGenerator,
-        ChainOp,
-    },
 };
 
 #[derive(Debug, Deref, DerefMut)]

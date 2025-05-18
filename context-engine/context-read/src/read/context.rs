@@ -1,11 +1,8 @@
 use std::sync::RwLockWriteGuard;
 
 use super::{
-    overlap::{
-        chain::OverlapChain,
-        iterator::ExpansionIterator,
-    },
-    sequence::ToNewTokenIndices,
+    expansion::ExpansionIterator,
+    overlap::chain::OverlapChain,
 };
 use context_insert::insert::{
     context::InsertContext,
@@ -15,11 +12,11 @@ use context_trace::{
     graph::{
         vertex::{
             child::Child,
+            has_vertex_data::HasVertexDataMut,
             has_vertex_index::{
                 HasVertexIndex,
                 ToChild,
             },
-            pattern::IntoPattern,
         },
         Hypergraph,
         HypergraphRef,
@@ -70,7 +67,7 @@ use tracing::instrument;
 pub struct ReadContext {
     pub graph: HypergraphRef,
     pub sequence: PatternEndPath,
-    //pub root: Option<Child>,
+    pub root: Option<Child>,
 }
 
 pub enum ReadState {
@@ -81,7 +78,7 @@ impl Iterator for ReadContext {
     type Item = ();
     fn next(&mut self) -> Option<Self::Item> {
         self.next_index().map(|next| {
-            self.expand_block(next);
+            self.read_block(next);
             self.append_index(next)
         })
     }
@@ -91,9 +88,13 @@ impl ReadContext {
         graph: HypergraphRef,
         sequence: PatternEndPath,
     ) -> Self {
-        Self { graph, sequence }
+        Self {
+            graph,
+            sequence,
+            root: None,
+        }
     }
-    pub fn expand_block(
+    pub fn read_block(
         &mut self,
         first: Child,
     ) -> Child {

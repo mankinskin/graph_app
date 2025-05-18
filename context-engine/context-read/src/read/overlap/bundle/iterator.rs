@@ -1,5 +1,3 @@
-use async_std::path::Iter;
-
 use super::Bundle;
 
 pub struct BundleIterator {}

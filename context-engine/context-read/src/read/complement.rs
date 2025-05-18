@@ -3,7 +3,7 @@ use derive_new::new;
 
 use super::{
     context::ReadContext,
-    overlap::generator::ExpansionLink,
+    overlap::chain::generator::ExpansionLink,
 };
 
 #[derive(Debug, new)]

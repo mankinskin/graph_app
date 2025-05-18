@@ -46,6 +46,27 @@ use itertools::{
     Itertools,
 };
 
+use super::band::Band;
+
+pub trait ChainAppendage: Sized {
+    fn append_to_chain(
+        self,
+        chain: &mut OverlapChain,
+    ) {
+        chain.bands.insert(self.into_band());
+    }
+    fn into_band(self) -> Band;
+}
+impl ChainAppendage for Band {
+    fn into_band(self) -> Band {
+        self
+    }
+}
+impl ChainAppendage for (usize, Band) {
+    fn into_band(self) -> Band {
+        self.1
+    }
+}
 #[derive(Debug, From)]
 pub enum ChainOp {
     Expansion(ExpansionLink),
@@ -111,25 +132,25 @@ impl<'a> ChainGenerator<'a> {
             let start_bound = last_end_bound - postfix.width();
 
             // build path to this location
-            //postfix_path.path_append(postfix_location);
-            self.trav
-                .insert_or_get_complete(primer)
-                .map(|expansion| {
-                    Some(ChainOp::Expansion(self.link_expansion(
+            postfix_path.path_append(postfix_location);
+            match self.trav.insert_or_get_complete(primer) {
+                Ok(expansion) => {
+                    let link = self.link_expansion(
                         start_bound,
                         expansion,
                         postfix_path,
-                    )))
-                })
-                .unwrap_or_else(|_| {
-                    self.chain.ends_at(start_bound).is_some().then(|| {
-                        ChainOp::Cap(BandCap {
-                            postfix_path: postfix_path.clone(),
-                            expansion: postfix,
-                            start_bound,
-                        })
-                    })
-                })
+                    );
+                    Some(ChainOp::Expansion(link))
+                },
+                Err(_) => match self.chain.ends_at(start_bound) {
+                    Some(_) => Some(ChainOp::Cap(BandCap {
+                        postfix_path: postfix_path.clone(),
+                        expansion: postfix,
+                        start_bound,
+                    })),
+                    _ => None,
+                },
+            }
         })
     }
     fn link_expansion(

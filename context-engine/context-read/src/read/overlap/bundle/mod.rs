@@ -5,7 +5,7 @@ use context_trace::{
 
 use super::chain::band::Band;
 
-pub mod iterator;
+//pub mod iterator;
 
 #[derive(Default, Clone, Debug)]
 pub struct Bundle {
