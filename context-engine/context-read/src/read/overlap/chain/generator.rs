@@ -3,11 +3,6 @@ use crate::read::{
     overlap::chain::OverlapChain,
 };
 use context_insert::insert::ToInsertContext;
-use context_search::traversal::iterator::bands::{
-    BandIterator,
-    PostfixIterator,
-    PrefixIterator,
-};
 use context_trace::{
     graph::vertex::{
         child::Child,
@@ -34,6 +29,11 @@ use context_trace::{
             },
             sub_path::SubPath,
         },
+    },
+    trace::child::bands::{
+        BandIterator,
+        PostfixIterator,
+        PrefixIterator,
     },
 };
 use derive_more::{
@@ -121,8 +121,7 @@ impl<'a> ChainGenerator<'a> {
         let last_end = last.band.postfix();
 
         // TODO: Replace with Child Trace Iter
-        let mut postfix_iter =
-            PostfixIterator::band_iter(self.trav.clone(), last_end);
+        let mut postfix_iter = last_end.postfix_iter(self.trav.clone());
         let mut postfix_path = {
             let postfix_location = postfix_iter.next().unwrap().0;
             RolePath::from(SubPath::new(postfix_location.sub_index))
@@ -162,8 +161,7 @@ impl<'a> ChainGenerator<'a> {
         let adv_prefix =
             PatternRootChild::<Start>::pattern_root_child(advanced);
         // find prefix from advanced path in expansion index
-        let mut prefix_iter =
-            PrefixIterator::band_iter(self.trav.clone(), expansion);
+        let mut prefix_iter = expansion.prefix_iter(self.trav.clone());
         let entry = prefix_iter.next().unwrap().0;
         let mut prefix_path = prefix_iter
             .fold_while(

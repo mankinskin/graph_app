@@ -1,3 +1,4 @@
+pub mod bands;
 pub mod iterator;
 pub mod state;
 

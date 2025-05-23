@@ -37,13 +37,7 @@ impl<'a, K: TraversalKind> RootSearchIterator<'a, K> {
         trav: &'a K::Trav,
         ctx: &'a mut MatchContext,
     ) -> Self {
-        //assert!(!batch.is_empty());
-
-        Self {
-            //nodes: batch.parents.into_iter().map(Parent).collect(),
-            ctx,
-            trav,
-        }
+        Self { ctx, trav }
     }
 
     pub fn find_root_cursor(mut self) -> Option<RootCursor<&'a K::Trav>> {

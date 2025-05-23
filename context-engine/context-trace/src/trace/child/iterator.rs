@@ -16,6 +16,7 @@ impl From<ChildState> for ChildQueue {
 //pub type ChildQueue = VecDeque<ChildModeCtx>;
 pub trait QueuedState {}
 impl<T> QueuedState for T {}
+
 #[derive(Debug)]
 pub struct ChildIterator<G: HasGraph, S: QueuedState = ChildState> {
     pub queue: ChildQueue<S>,
