@@ -74,8 +74,7 @@ impl RangeKind for Inner {}
 
 impl RangeKind for Outer {}
 
-pub trait RangeRole: Debug + Clone + Copy
-{
+pub trait RangeRole: Debug + Clone + Copy {
     type Mode: ModeInfo<Self>; // todo: use to change join/trace
     type Perfect: BorderPerfect;
     type Offsets: RangeOffsets<Self>;
@@ -91,8 +90,7 @@ pub trait RangeRole: Debug + Clone + Copy
 #[derive(Debug, Clone, Default, Copy)]
 pub struct Pre<M: PreVisitMode>(std::marker::PhantomData<M>);
 
-impl<M: PreVisitMode> RangeRole for Pre<M>
-{
+impl<M: PreVisitMode> RangeRole for Pre<M> {
     type Mode = M;
     type Range = Range<usize>;
     type Kind = Outer;
@@ -102,8 +100,7 @@ impl<M: PreVisitMode> RangeRole for Pre<M>
     type Splits = VertexSplits;
     type Offsets = NonZeroUsize;
     type Perfect = SinglePerfect;
-    fn to_partition(splits: Self::Splits) -> Partition<Self>
-    {
+    fn to_partition(splits: Self::Splits) -> Partition<Self> {
         Partition { offsets: splits }
     }
 }
@@ -111,8 +108,7 @@ impl<M: PreVisitMode> RangeRole for Pre<M>
 #[derive(Debug, Clone, Default, Copy)]
 pub struct In<M: InVisitMode>(std::marker::PhantomData<M>);
 
-impl<M: InVisitMode> RangeRole for In<M>
-{
+impl<M: InVisitMode> RangeRole for In<M> {
     type Mode = M;
     type Range = Range<usize>;
     type Kind = Inner;
@@ -122,8 +118,7 @@ impl<M: InVisitMode> RangeRole for In<M>
     type Splits = (VertexSplits, VertexSplits);
     type Offsets = (NonZeroUsize, NonZeroUsize);
     type Perfect = DoublePerfect;
-    fn to_partition(splits: Self::Splits) -> Partition<Self>
-    {
+    fn to_partition(splits: Self::Splits) -> Partition<Self> {
         Partition { offsets: splits }
     }
 }
@@ -131,8 +126,7 @@ impl<M: InVisitMode> RangeRole for In<M>
 #[derive(Debug, Clone, Default, Copy)]
 pub struct Post<M: PostVisitMode>(std::marker::PhantomData<M>);
 
-impl<M: PostVisitMode> RangeRole for Post<M>
-{
+impl<M: PostVisitMode> RangeRole for Post<M> {
     type Mode = M;
     type Range = RangeFrom<usize>;
     type Kind = Outer;
@@ -142,8 +136,7 @@ impl<M: PostVisitMode> RangeRole for Post<M>
     type Splits = VertexSplits;
     type Offsets = NonZeroUsize;
     type Perfect = SinglePerfect;
-    fn to_partition(splits: Self::Splits) -> Partition<Self>
-    {
+    fn to_partition(splits: Self::Splits) -> Partition<Self> {
         Partition { offsets: splits }
     }
 }

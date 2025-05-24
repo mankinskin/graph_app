@@ -32,8 +32,7 @@ use context_trace::graph::vertex::pattern::{
 use super::partition::JoinedPartition;
 
 #[derive(Debug)]
-pub struct JoinedPatterns<R: RangeRole>
-{
+pub struct JoinedPatterns<R: RangeRole> {
     pub patterns: Vec<Pattern>,
     pub perfect: R::Perfect,
     pub range: Option<R::Range>,
@@ -61,12 +60,9 @@ where
         // - (inner, child),
         // - (child, child),
         // - child: not possible, handled earlier
-        let range = if let SinglePerfect(Some(pid)) = info.perfect.complete()
-        {
+        let range = if let SinglePerfect(Some(pid)) = info.perfect.complete() {
             Some(info.patterns[&pid].range.clone())
-        }
-        else
-        {
+        } else {
             None
         };
         let perfect = info.perfect.clone();
@@ -87,8 +83,7 @@ where
     pub fn to_joined_partition(
         self,
         ctx: &'b mut NodeJoinContext<'a>,
-    ) -> JoinedPartition<R>
-    {
+    ) -> JoinedPartition<R> {
         JoinedPartition::from_joined_patterns(self, ctx)
     }
 }

@@ -1,8 +1,17 @@
-use crate::join::{
-    context::pattern::borders::JoinBorders,
-    joined::{
-        partition::JoinedPartition,
-        patterns::JoinedPatterns,
+use crate::{
+    interval::partition::info::{
+        PartitionInfo,
+        range::role::{
+            ModeNodeCtxOf,
+            RangeRole,
+        },
+    },
+    join::{
+        context::pattern::borders::JoinBorders,
+        joined::{
+            partition::JoinedPartition,
+            patterns::JoinedPatterns,
+        },
     },
 };
 use derive_more::derive::{
@@ -12,13 +21,6 @@ use derive_more::derive::{
     Into,
 };
 use derive_new::new;
-use crate::interval::partition::info::{
-    range::role::{
-        ModeNodeCtxOf,
-        RangeRole,
-    },
-    PartitionInfo,
-};
 
 use super::Join;
 pub mod inner_range;

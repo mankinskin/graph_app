@@ -30,35 +30,29 @@ pub mod mode;
 pub mod splits;
 
 #[derive(Debug)]
-pub struct PatternRangeInfo<R: RangeRole>
-{
+pub struct PatternRangeInfo<R: RangeRole> {
     pub pattern_id: PatternId,
     pub info: PatternInfoOf<R>,
 }
 
-impl<R: RangeRole> From<PatternRangeInfo<R>> for (PatternId, PatternInfoOf<R>)
-{
-    fn from(val: PatternRangeInfo<R>) -> Self
-    {
+impl<R: RangeRole> From<PatternRangeInfo<R>> for (PatternId, PatternInfoOf<R>) {
+    fn from(val: PatternRangeInfo<R>) -> Self {
         (val.pattern_id, val.info)
     }
 }
 
-pub trait ModeRangeInfo<R: RangeRole>: Debug
-{
+pub trait ModeRangeInfo<R: RangeRole>: Debug {
     fn info_pattern_range(
         borders: BordersOf<R>,
         ctx: &ModePatternCtxOf<R>,
     ) -> Result<PatternRangeInfo<R>, Child>;
 }
 
-impl<R: RangeRole<Mode = Trace>> ModeRangeInfo<R> for TraceRangeInfo<R>
-{
+impl<R: RangeRole<Mode = Trace>> ModeRangeInfo<R> for TraceRangeInfo<R> {
     fn info_pattern_range(
         borders: BordersOf<R>,
         ctx: &ModePatternCtxOf<R>,
-    ) -> Result<PatternRangeInfo<R>, Child>
-    {
+    ) -> Result<PatternRangeInfo<R>, Child> {
         let range = borders.outer_range();
         let inner = borders.inner_info(ctx);
         let (pat, pid) = {
@@ -66,29 +60,24 @@ impl<R: RangeRole<Mode = Trace>> ModeRangeInfo<R> for TraceRangeInfo<R>
             let pat = ctx.pattern.get(range.clone()).unwrap();
             (pat, ctx.loc.id)
         };
-        if pat.len() != 1
-        {
+        if pat.len() != 1 {
             Ok(PatternRangeInfo {
                 pattern_id: pid,
                 info: TraceRangeInfo { inner_range: inner },
             })
-        }
-        else
-        {
+        } else {
             Err(pat[0])
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct InnerRangeInfo<R: RangeRole>
-{
+pub struct InnerRangeInfo<R: RangeRole> {
     pub range: R::Range,
     pub offsets: R::Offsets,
 }
 
 #[derive(Debug, Clone)]
-pub struct TraceRangeInfo<R: RangeRole<Mode = Trace>>
-{
+pub struct TraceRangeInfo<R: RangeRole<Mode = Trace>> {
     pub inner_range: Option<InnerRangeInfo<R>>,
 }

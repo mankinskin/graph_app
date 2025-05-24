@@ -21,6 +21,7 @@ use band::{
     Band,
     BandCtx,
 };
+use generator::ChainAppendage;
 
 pub mod band;
 pub mod generator;

@@ -45,18 +45,15 @@ use context_trace::{
 };
 
 #[derive(Debug, new)]
-pub struct NodeMergeContext<'a: 'b, 'b>
-{
+pub struct NodeMergeContext<'a: 'b, 'b> {
     pub ctx: &'b mut NodeJoinContext<'a>,
 }
 
-impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b>
-{
+impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b> {
     pub fn merge_node(
         &'c mut self,
         partitions: &Vec<Child>,
-    ) -> LinkedHashMap<PosKey, Split>
-    {
+    ) -> LinkedHashMap<PosKey, Split> {
         let offsets = self.ctx.vertex_cache().clone();
         assert_eq!(partitions.len(), offsets.len() + 1);
 
@@ -65,14 +62,12 @@ impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b>
         let len = offsets.len();
         let index = self.ctx.index;
         let mut finals = LinkedHashMap::new();
-        for (i, (offset, v)) in offsets.iter().enumerate()
-        {
+        for (i, (offset, v)) in offsets.iter().enumerate() {
             let lr = 0..i;
             let rr = i + 1..len;
             let left = *merges.get(&lr).unwrap();
             let right = *merges.get(&rr).unwrap();
-            if !lr.is_empty() || !lr.is_empty()
-            {
+            if !lr.is_empty() || !lr.is_empty() {
                 if let Some((&pid, _)) = (v.borrow() as &ChildTracePositions)
                     .iter()
                     .find(|(_, s)| s.inner_offset.is_none())
@@ -82,9 +77,7 @@ impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b>
                         0..,
                         vec![left, right],
                     );
-                }
-                else
-                {
+                } else {
                     self.ctx
                         .trav
                         .add_pattern_with_update(index, vec![left, right]);
@@ -98,16 +91,13 @@ impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b>
         &mut self,
         offsets: &SplitVertexCache,
         partitions: &Vec<Child>,
-    ) -> RangeMap
-    {
+    ) -> RangeMap {
         let num_offsets = offsets.positions.len();
 
         let mut range_map = RangeMap::from(partitions);
 
-        for len in 1..num_offsets
-        {
-            for start in 0..num_offsets - len + 1
-            {
+        for len in 1..num_offsets {
+            for start in 0..num_offsets - len + 1 {
                 let range = start..start + len;
 
                 let lo = offsets
@@ -126,10 +116,8 @@ impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b>
                 let res: Result<PartitionInfo<In<Join>>, _> =
                     infix.info_partition(self.ctx);
 
-                let index = match res
-                {
-                    Ok(info) =>
-                    {
+                let index = match res {
+                    Ok(info) => {
                         let merges =
                             range_map.range_sub_merges(start..start + len);
                         let joined =
@@ -144,7 +132,7 @@ impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b>
                         let patterns =
                             merges.into_iter().chain(joined).collect_vec();
                         self.ctx.trav.insert_patterns(patterns)
-                    }
+                    },
                     Err(c) => c,
                 };
                 range_map.insert(range, index);
@@ -155,8 +143,7 @@ impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b>
 }
 
 #[derive(Debug, Deref, DerefMut, Default)]
-pub struct RangeMap<R = Range<usize>>
-{
+pub struct RangeMap<R = Range<usize>> {
     #[deref]
     map: HashMap<R, Child>,
 }
@@ -164,24 +151,20 @@ pub struct RangeMap<R = Range<usize>>
 impl<C: Borrow<Child>, I: IntoIterator<Item = C>> From<I>
     for RangeMap<Range<usize>>
 {
-    fn from(iter: I) -> Self
-    {
+    fn from(iter: I) -> Self {
         let mut map = HashMap::default();
-        for (i, part) in iter.into_iter().enumerate()
-        {
+        for (i, part) in iter.into_iter().enumerate() {
             map.insert(i..i, *part.borrow());
         }
         Self { map }
     }
 }
 
-impl RangeMap<Range<usize>>
-{
+impl RangeMap<Range<usize>> {
     pub fn range_sub_merges(
         &self,
         range: Range<usize>,
-    ) -> impl IntoIterator<Item = Pattern> + '_
-    {
+    ) -> impl IntoIterator<Item = Pattern> + '_ {
         let (start, end) = (range.start, range.end);
         range.into_iter().map(move |ri| {
             let &left = self.map.get(&(start..ri)).unwrap();

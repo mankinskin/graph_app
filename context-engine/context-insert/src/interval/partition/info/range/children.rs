@@ -22,27 +22,22 @@ use context_trace::graph::vertex::{
 };
 
 #[derive(Debug, Clone)]
-pub enum InfixChildren
-{
+pub enum InfixChildren {
     Both(Child, Child),
     Left(Child),
     Right(Child),
 }
 
-impl InfixChildren
-{
-    pub fn to_joined_pattern(self) -> Result<Pattern, Child>
-    {
-        match self
-        {
+impl InfixChildren {
+    pub fn to_joined_pattern(self) -> Result<Pattern, Child> {
+        match self {
             InfixChildren::Both(l, r) => Ok([l, r].into_pattern()),
             InfixChildren::Left(c) | InfixChildren::Right(c) => Err(c),
         }
     }
 }
 
-pub trait RangeChildren<R: RangeRole>: Debug + Clone
-{
+pub trait RangeChildren<R: RangeRole>: Debug + Clone {
     fn insert_inner(
         self,
         inner: Option<Child>,
@@ -50,75 +45,55 @@ pub trait RangeChildren<R: RangeRole>: Debug + Clone
     fn to_child(self) -> Option<Child>;
 }
 
-impl<M: PreVisitMode> RangeChildren<Pre<M>> for Child
-{
+impl<M: PreVisitMode> RangeChildren<Pre<M>> for Child {
     fn insert_inner(
         self,
         inner: Option<Child>,
-    ) -> Result<Pattern, Child>
-    {
-        if let Some(inner) = inner
-        {
+    ) -> Result<Pattern, Child> {
+        if let Some(inner) = inner {
             Ok([inner, self].into_pattern())
-        }
-        else
-        {
+        } else {
             Err(self)
         }
     }
-    fn to_child(self) -> Option<Child>
-    {
+    fn to_child(self) -> Option<Child> {
         Some(self)
     }
 }
 
-impl<M: PostVisitMode> RangeChildren<Post<M>> for Child
-{
+impl<M: PostVisitMode> RangeChildren<Post<M>> for Child {
     fn insert_inner(
         self,
         inner: Option<Child>,
-    ) -> Result<Pattern, Child>
-    {
-        if let Some(inner) = inner
-        {
+    ) -> Result<Pattern, Child> {
+        if let Some(inner) = inner {
             Ok([self, inner].into_pattern())
-        }
-        else
-        {
+        } else {
             Err(self)
         }
     }
-    fn to_child(self) -> Option<Child>
-    {
+    fn to_child(self) -> Option<Child> {
         Some(self)
     }
 }
 
-impl<M: InVisitMode> RangeChildren<In<M>> for InfixChildren
-{
+impl<M: InVisitMode> RangeChildren<In<M>> for InfixChildren {
     fn insert_inner(
         self,
         inner: Option<Child>,
-    ) -> Result<Pattern, Child>
-    {
-        if let Some(inner) = inner
-        {
-            Ok(match self
-            {
+    ) -> Result<Pattern, Child> {
+        if let Some(inner) = inner {
+            Ok(match self {
                 Self::Both(l, r) => [l, inner, r].into_pattern(),
                 Self::Left(l) => [l, inner].into_pattern(),
                 Self::Right(r) => [inner, r].into_pattern(),
             })
-        }
-        else
-        {
+        } else {
             self.to_joined_pattern()
         }
     }
-    fn to_child(self) -> Option<Child>
-    {
-        match self
-        {
+    fn to_child(self) -> Option<Child> {
+        match self {
             Self::Both(_, _) => None,
             Self::Left(c) | Self::Right(c) => Some(c),
         }

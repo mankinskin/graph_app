@@ -42,8 +42,7 @@ use context_trace::{
 use super::inner_range::JoinInnerRangeInfo;
 
 #[derive(Debug, Clone)]
-pub struct JoinPatternInfo<R: RangeRole<Mode = Join>>
-{
+pub struct JoinPatternInfo<R: RangeRole<Mode = Join>> {
     pub inner_range: Option<InnerRangeInfo<R>>,
     pub range: R::Range,
     pub children: Option<ModeChildrenOf<R>>,
@@ -67,18 +66,15 @@ where
         let inner = self
             .inner_range
             .map(|r| JoinInnerRangeInfo::new(r).index_pattern_inner(ctx));
-        match (inner, self.children)
-        {
+        match (inner, self.children) {
             (inner, Some(children)) => children.insert_inner(inner).unwrap(),
-            (None, None) =>
-            {
-                ctx.trav
-                    .expect_pattern_range(
-                        index.to_pattern_location(*pattern_id),
-                        self.range,
-                    )
-                    .into_pattern()
-            }
+            (None, None) => ctx
+                .trav
+                .expect_pattern_range(
+                    index.to_pattern_location(*pattern_id),
+                    self.range,
+                )
+                .into_pattern(),
             (Some(_), None) => panic!("inner range without children"),
             //let pat = ctx.pattern.get(range.clone()).unwrap();
         }
@@ -92,8 +88,7 @@ where
     fn info_pattern_range(
         borders: BordersOf<R>,
         ctx: &ModePatternCtxOf<R>,
-    ) -> Result<PatternRangeInfo<R>, Child>
-    {
+    ) -> Result<PatternRangeInfo<R>, Child> {
         let perfect = borders.perfect();
         let range = borders.outer_range();
         let offsets = borders.offsets();
@@ -114,24 +109,20 @@ where
         };
         let children = (!perfect.all_perfect())
             .then(|| borders.get_child_splits(ctx).unwrap());
-        match (pat.len(), children)
-        {
+        match (pat.len(), children) {
             (0, _) => panic!("Empty range"),
             (1, Some(children)) => Err(children.to_child().unwrap()),
             (1, None) => Err(pat[0]),
-            (_, children) =>
-            {
-                Ok(PatternRangeInfo {
-                    pattern_id: pid,
-                    info: JoinPatternInfo {
-                        inner_range: inner,
-                        delta,
-                        offsets,
-                        range,
-                        children,
-                    },
-                })
-            }
+            (_, children) => Ok(PatternRangeInfo {
+                pattern_id: pid,
+                info: JoinPatternInfo {
+                    inner_range: inner,
+                    delta,
+                    offsets,
+                    range,
+                    children,
+                },
+            }),
         }
     }
 }
