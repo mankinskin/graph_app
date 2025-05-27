@@ -5,16 +5,14 @@ use derive_more::derive::{
 
 use super::{
     cache::{
+        SplitCache,
         position::SplitPositionCache,
         vertex::SplitVertexCache,
     },
-    trace::states::SplitTraceStateContext,
+    trace::states::context::SplitTraceStatesContext,
     vertex::output::RootNode,
 };
-use crate::{
-    interval::SplitCache,
-    split::trace::SplitTraceState,
-};
+use crate::split::trace::SplitTraceState;
 use context_trace::{
     graph::vertex::has_vertex_index::HasVertexIndex,
     trace::{
@@ -27,12 +25,12 @@ use context_trace::{
 pub struct SplitCacheContext<G: HasGraph> {
     #[deref]
     #[deref_mut]
-    pub states_ctx: SplitTraceStateContext<G>,
+    pub states_ctx: SplitTraceStatesContext<G>,
 
     pub cache: SplitCache,
 }
 impl<'a, G: HasGraph> SplitCacheContext<G> {
-    pub fn init(mut states_ctx: SplitTraceStateContext<G>) -> Self {
+    pub fn init(mut states_ctx: SplitTraceStatesContext<G>) -> Self {
         let (offsets, root_mode) =
             states_ctx.completed_splits::<RootNode>(&states_ctx.ctx.root);
         let pos_splits = states_ctx

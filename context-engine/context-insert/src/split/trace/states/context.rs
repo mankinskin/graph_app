@@ -1,17 +1,16 @@
-use std::{
-    collections::VecDeque,
-    num::NonZeroUsize,
-};
+use std::num::NonZeroUsize;
 
 use derive_more::derive::{
     Deref,
     DerefMut,
 };
 
-use super::SplitTraceContext;
+use super::{
+    SplitStates,
+    SplitTraceContext,
+};
 use crate::split::{
     cache::{
-        leaves::Leaves,
         position::{
             PosKey,
             SplitPositionCache,
@@ -19,10 +18,7 @@ use crate::split::{
         vertex::SplitVertexCache,
     },
     cleaned_position_splits,
-    trace::{
-        HasGraph,
-        SplitTraceState,
-    },
+    trace::HasGraph,
     vertex::output::InnerNode,
 };
 use context_trace::{
@@ -32,78 +28,18 @@ use context_trace::{
     },
     trace::{
         TraceContext,
-        cache::position::{
-            Offset,
-            SubSplitLocation,
-        },
+        cache::position::SubSplitLocation,
     },
 };
 
-#[derive(Debug, Default)]
-pub struct SplitStates {
-    pub leaves: Leaves,
-    pub queue: VecDeque<SplitTraceState>,
-}
-impl Iterator for SplitStates {
-    type Item = SplitTraceState;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.queue.pop_front()
-    }
-}
-impl SplitStates {
-    /// kind of like filter_leaves but from subsplits to trace states
-    pub fn filter_trace_states<G: HasGraph>(
-        &mut self,
-        trav: G,
-        index: &Child,
-        pos_splits: impl IntoIterator<Item = (Offset, Vec<SubSplitLocation>)>,
-    ) {
-        let (perfect, next) = {
-            let graph = trav.graph();
-            let node = graph.expect_vertex(index);
-            pos_splits
-                .into_iter()
-                .flat_map(|(parent_offset, locs)| {
-                    let len = locs.len();
-                    locs.into_iter().map(move |sub|
-                    // filter sub locations without offset (perfect splits)
-                    sub.inner_offset.map(|offset|
-                        SplitTraceState {
-                            index: *node.expect_child_at(&sub.location),
-                            offset,
-                            prev: PosKey {
-                                index: *index,
-                                pos: parent_offset,
-                            },
-                        }
-                    ).ok_or_else(||
-                        (len == 1).then(||
-                            PosKey::new(*index, parent_offset)
-                        )
-                    ))
-                })
-                .fold((Vec::new(), Vec::new()), |(mut p, mut n), res| {
-                    match res {
-                        Ok(s) => n.push(s),
-                        Err(Some(k)) => p.push(k),
-                        Err(None) => {},
-                    }
-                    (p, n)
-                })
-        };
-        self.leaves.extend(perfect);
-        self.queue.extend(next);
-    }
-}
-
 #[derive(Debug, Deref, DerefMut)]
-pub struct SplitTraceStateContext<G: HasGraph> {
+pub struct SplitTraceStatesContext<G: HasGraph> {
     #[deref]
     #[deref_mut]
     pub ctx: SplitTraceContext<G>,
     pub states: SplitStates,
 }
-impl<'a, G: HasGraph> SplitTraceStateContext<G> {
+impl<'a, G: HasGraph> SplitTraceStatesContext<G> {
     pub fn new(
         ctx: TraceContext<G>,
         root: Child,
