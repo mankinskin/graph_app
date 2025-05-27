@@ -23,6 +23,7 @@ use context_trace::{
             rooted::{
                 pattern_range::PatternRangePath,
                 role_path::{
+                    IndexEndPath,
                     PatternEndPath,
                     RootedRolePath,
                 },
@@ -32,6 +33,7 @@ use context_trace::{
     },
     trace::child::bands::{
         BandIterator,
+        HasChildRoleIters,
         PostfixIterator,
         PrefixIterator,
     },
@@ -115,6 +117,30 @@ impl<'a> ChainGenerator<'a> {
     }
 
     /// find largest expandable postfix
+    fn try_expand(
+        &mut self,
+        start_bound: usize,
+        index: Child,
+        postfix_path: &RolePath<End>,
+    ) -> Option<ChainOp> {
+        let primer = self.cursor.clone();
+        match self.trav.insert_or_get_complete(primer) {
+            Ok(expansion) => {
+                let link =
+                    self.link_expansion(start_bound, expansion, advanced);
+                Some(ChainOp::Expansion(link))
+            },
+            Err(_) => match self.chain.ends_at(start_bound) {
+                Some(_) => Some(ChainOp::Cap(BandCap {
+                    postfix_path: postfix_path.clone(),
+                    expansion: index,
+                    start_bound,
+                })),
+                _ => None,
+            },
+        }
+    }
+    /// find largest expandable postfix
     fn find_next_expansion(&mut self) -> Option<ChainOp> {
         let last = self.chain.last();
         let last_end_bound = last.band.end_bound;
@@ -127,36 +153,19 @@ impl<'a> ChainGenerator<'a> {
             RolePath::from(SubPath::new(postfix_location.sub_index))
         };
         postfix_iter.find_map(|(postfix_location, postfix)| {
-            let cursor: PatternEndPath = self.cursor.clone();
             let start_bound = last_end_bound - postfix.width();
-
-            // build path to this location
             postfix_path.path_append(postfix_location);
-            match self.trav.insert_or_get_complete(primer) {
-                Ok(expansion) => {
-                    let link = self.link_expansion(
-                        start_bound,
-                        expansion,
-                        postfix_path,
-                    );
-                    Some(ChainOp::Expansion(link))
-                },
-                Err(_) => match self.chain.ends_at(start_bound) {
-                    Some(_) => Some(ChainOp::Cap(BandCap {
-                        postfix_path: postfix_path.clone(),
-                        expansion: postfix,
-                        start_bound,
-                    })),
-                    _ => None,
-                },
-            }
+
+            let cursor: PatternEndPath = self.cursor.clone();
+
+            self.try_expand(start_bound, postfix, &postfix_path)
         })
     }
     fn link_expansion(
         &mut self,
         start_bound: usize,
         expansion: Child,
-        advanced: PatternRangePath,
+        advanced: &PatternRangePath,
     ) -> ExpansionLink {
         let adv_prefix =
             PatternRootChild::<Start>::pattern_root_child(advanced);
