@@ -10,7 +10,6 @@ use crate::{
     },
 };
 use context_trace::{
-    HashMap,
     graph::{
         Hypergraph,
         HypergraphRef,
@@ -54,63 +53,52 @@ pub mod pattern;
 //    }
 //}
 
-#[derive(Debug)]
-pub struct JoinContext {
-    pub trav: HypergraphRef,
-    //pub split_map: &'a SubSplits,
-    pub interval: IntervalGraph,
+pub struct FrontierIterator {
+    frontier: LinkedHashSet<PosKey>,
+    interval: IntervalGraph,
 }
-#[derive(Debug)]
-pub struct LockedJoinContext<'a> {
-    pub trav: <HypergraphRef as HasGraphMut>::GuardMut<'a>,
-    //pub split_map: &'a SubSplits,
-    pub interval: &'a IntervalGraph,
+impl Iterator for FrontierIterator {
+    type Item = Option<PosKey>;
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.frontier.pop_front() {
+            Some(key) =>
+                Some(match (key.index != self.interval.root).then_some(key) {
+                    Some(key) => {
+                        let top = self
+                            .interval
+                            .expect(&key)
+                            .top
+                            .iter()
+                            .sorted_by(|a, b| {
+                                a.index.width().cmp(&b.index.width())
+                            })
+                            .cloned();
+                        self.frontier.extend(top);
+                        Some(key)
+                    },
+                    None => None,
+                }),
+            None => None,
+        }
+    }
 }
-
-impl JoinContext {
+pub struct FrontierSplitIterator {
+    frontier: FrontierIterator,
+    splits: SplitMap,
+    trav: HypergraphRef,
+}
+impl FrontierSplitIterator {
     pub fn locked<'a: 'b, 'b>(&'a mut self) -> LockedJoinContext<'a> {
         LockedJoinContext {
             trav: self.trav.graph_mut(),
-            interval: &self.interval,
+            interval: &self.frontier.interval,
+            splits: &self.splits,
         }
-    }
-    pub fn join_subgraph(&mut self) -> Child {
-        let mut splits = HashMap::default();
-        let leaves = self.interval.states.leaves.iter().cloned().rev();
-        let mut frontier: LinkedHashSet<PosKey> =
-            LinkedHashSet::from_iter(leaves);
-        while let Some(key) = {
-            frontier.pop_front().and_then(|key| {
-                (key.index != self.interval.root).then_some(key)
-            })
-        } {
-            if !splits.contains_key(&key) {
-                let partitions =
-                    self.node(key.index, &splits).join_partitions();
-
-                for (key, split) in partitions {
-                    splits.insert(key, split);
-                }
-            }
-            let top = self
-                .interval
-                .expect(&key)
-                .top
-                .iter()
-                .sorted_by(|a, b| a.index.width().cmp(&b.index.width()))
-                .cloned();
-            frontier.extend(top);
-        }
-        let joined = self
-            .node(self.interval.root, &splits)
-            .join_root_partitions();
-        joined
     }
 
     fn node<'a: 'b, 'b>(
         &'a mut self,
         index: Child,
-        splits: &'a SplitMap,
     ) -> NodeJoinContext<'a>
     where
         Self: 'a,
@@ -119,8 +107,60 @@ impl JoinContext {
         NodeJoinContext {
             index,
             ctx: self.locked(),
-            splits,
         }
+    }
+}
+impl Iterator for FrontierSplitIterator {
+    type Item = Option<Child>;
+    fn next(&mut self) -> Option<Self::Item> {
+        Some(match self.frontier.next() {
+            Some(Some(key)) => {
+                if !self.splits.contains_key(&key) {
+                    let partitions = self.node(key.index).join_partitions();
+
+                    for (key, split) in partitions {
+                        self.splits.insert(key, split);
+                    }
+                }
+                None
+            },
+            Some(None) => None,
+            None => Some(
+                self.node(self.frontier.interval.root)
+                    .join_root_partitions(),
+            ),
+        })
+    }
+}
+impl From<(HypergraphRef, IntervalGraph)> for FrontierSplitIterator {
+    fn from((trav, interval): (HypergraphRef, IntervalGraph)) -> Self {
+        let leaves = interval.states.leaves.iter().cloned().rev();
+        FrontierSplitIterator {
+            frontier: FrontierIterator {
+                frontier: LinkedHashSet::from_iter(leaves),
+                interval,
+            },
+            splits: Default::default(),
+            trav,
+        }
+    }
+}
+#[derive(Debug)]
+pub struct JoinContext {
+    pub trav: HypergraphRef,
+    pub interval: IntervalGraph,
+}
+#[derive(Debug)]
+pub struct LockedJoinContext<'a> {
+    pub trav: <HypergraphRef as HasGraphMut>::GuardMut<'a>,
+    pub interval: &'a IntervalGraph,
+    pub splits: &'a SplitMap,
+}
+impl JoinContext {
+    pub fn join_subgraph(self) -> Child {
+        FrontierSplitIterator::from((self.trav, self.interval))
+            .find_map(|joined| joined)
+            .unwrap()
     }
 }
 

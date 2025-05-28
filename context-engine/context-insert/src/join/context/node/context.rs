@@ -27,7 +27,6 @@ use crate::{
     join::{
         context::{
             LockedJoinContext,
-            SplitMap,
             node::merge::NodeMergeContext,
             pattern::PatternJoinContext,
         },
@@ -81,7 +80,6 @@ pub struct NodeJoinContext<'a> {
     #[deref_mut]
     pub ctx: LockedJoinContext<'a>,
     pub index: Child,
-    pub splits: &'a SplitMap,
 }
 
 impl<'a: 'b, 'b> AsNodeTraceContext for NodeJoinContext<'a> {

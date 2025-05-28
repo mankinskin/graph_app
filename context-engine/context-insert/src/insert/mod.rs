@@ -1,6 +1,6 @@
 use context::*;
 
-use crate::interval::InitInterval;
+use crate::interval::init::InitInterval;
 use context_search::traversal::fold::foldable::{
     ErrorState,
     Foldable,

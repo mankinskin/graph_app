@@ -2,8 +2,8 @@ use std::convert::TryFrom;
 
 use crate::{
     interval::{
-        InitInterval,
         IntervalGraph,
+        init::InitInterval,
     },
     join::context::JoinContext,
 };
@@ -84,11 +84,11 @@ impl InsertContext {
         init: InitInterval,
     ) -> Child {
         let interval = IntervalGraph::from((&mut self.graph_mut(), init));
-        let mut ctx = JoinContext {
+        JoinContext {
             trav: self.graph.clone(),
             interval,
-        };
-        ctx.join_subgraph()
+        }
+        .join_subgraph()
     }
 }
 impl_has_graph! {

@@ -7,8 +7,8 @@ use pretty_assertions::assert_eq;
 
 use crate::{
     interval::{
-        InitInterval,
         IntervalGraph,
+        init::InitInterval,
     },
     split::cache::{
         position::{
