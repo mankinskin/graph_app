@@ -5,7 +5,7 @@ use crate::{
         IntervalGraph,
         init::InitInterval,
     },
-    join::context::JoinContext,
+    join::context::frontier::FrontierSplitIterator,
 };
 use context_search::{
     search::context::AncestorPolicy,
@@ -84,11 +84,9 @@ impl InsertContext {
         init: InitInterval,
     ) -> Child {
         let interval = IntervalGraph::from((&mut self.graph_mut(), init));
-        JoinContext {
-            trav: self.graph.clone(),
-            interval,
-        }
-        .join_subgraph()
+        FrontierSplitIterator::from((self.graph.clone(), interval))
+            .find_map(|joined| joined)
+            .unwrap()
     }
 }
 impl_has_graph! {
