@@ -10,23 +10,26 @@ use derive_more::{
 use linked_hash_map::LinkedHashMap;
 
 use crate::{
-    interval::partition::{
-        Infix,
-        Postfix,
-        Prefix,
-        info::{
-            InfoPartition,
-            borders::PartitionBorders,
-            range::role::{
-                In,
-                Post,
-                Pre,
+    interval::{
+        IntervalGraph,
+        partition::{
+            Infix,
+            Postfix,
+            Prefix,
+            info::{
+                InfoPartition,
+                borders::PartitionBorders,
+                range::role::{
+                    In,
+                    Post,
+                    Pre,
+                },
             },
         },
     },
     join::{
         context::{
-            LockedJoinContext,
+            frontier::FrontierSplitIterator,
             node::merge::NodeMergeContext,
             pattern::PatternJoinContext,
         },
@@ -39,6 +42,7 @@ use crate::{
     },
     split::{
         Split,
+        SplitMap,
         cache::{
             position::PosKey,
             vertex::SplitVertexCache,
@@ -53,15 +57,19 @@ use crate::{
     },
 };
 use context_trace::{
-    graph::vertex::{
-        ChildPatterns,
-        child::Child,
-        has_vertex_index::HasVertexIndex,
-        location::SubLocation,
-        pattern::id::PatternId,
-        wide::Wide,
+    graph::{
+        HypergraphRef,
+        vertex::{
+            ChildPatterns,
+            child::Child,
+            has_vertex_index::HasVertexIndex,
+            location::SubLocation,
+            pattern::id::PatternId,
+            wide::Wide,
+        },
     },
     trace::{
+        has_graph::HasGraphMut,
         node::{
             AsNodeTraceContext,
             NodeTraceContext,
@@ -74,14 +82,40 @@ use context_trace::{
     },
 };
 
+#[derive(Debug)]
+pub struct LockedFrontierContext<'a> {
+    pub trav: <HypergraphRef as HasGraphMut>::GuardMut<'a>,
+    pub interval: &'a IntervalGraph,
+    pub splits: &'a SplitMap,
+}
+impl<'a> LockedFrontierContext<'a> {
+    pub fn new(ctx: &'a mut FrontierSplitIterator) -> Self {
+        Self {
+            trav: ctx.trav.graph_mut(),
+            interval: &ctx.frontier.interval,
+            splits: &ctx.splits,
+        }
+    }
+}
 #[derive(Debug, Deref, DerefMut)]
 pub struct NodeJoinContext<'a> {
     #[deref]
     #[deref_mut]
-    pub ctx: LockedJoinContext<'a>,
+    pub ctx: LockedFrontierContext<'a>,
     pub index: Child,
 }
 
+impl<'a> NodeJoinContext<'a> {
+    pub fn new(
+        index: Child,
+        ctx: &'a mut FrontierSplitIterator,
+    ) -> Self {
+        NodeJoinContext {
+            index,
+            ctx: LockedFrontierContext::new(ctx),
+        }
+    }
+}
 impl<'a: 'b, 'b> AsNodeTraceContext for NodeJoinContext<'a> {
     fn as_trace_context<'t>(&'t self) -> NodeTraceContext<'t>
     where
