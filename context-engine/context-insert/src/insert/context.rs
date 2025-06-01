@@ -1,4 +1,8 @@
-use std::convert::TryFrom;
+use std::{
+    convert::TryFrom,
+    fmt::Debug,
+    sync::RwLockWriteGuard,
+};
 
 use crate::{
     interval::{
@@ -33,34 +37,41 @@ use context_trace::{
     impl_has_graph_mut,
     trace::has_graph::HasGraphMut,
 };
-use derive_more::From;
-use std::sync::{
-    RwLockReadGuard,
-    RwLockWriteGuard,
-};
+use std::sync::RwLockReadGuard;
+
+use super::result::InsertResult;
 
 #[derive(Debug, Clone, Default)]
 pub struct InsertTraversal;
 
 impl TraversalKind for InsertTraversal {
-    type Trav = InsertContext;
+    type Trav = HypergraphRef;
     type Container = BftQueue;
     type Policy = AncestorPolicy<Self::Trav>;
 }
 
-#[derive(Debug, Clone, From)]
-pub struct InsertContext {
+#[derive(Debug)]
+pub struct InsertContext<R: InsertResult = Child> {
     graph: HypergraphRef,
+    _ty: std::marker::PhantomData<R>,
+}
+impl<R: InsertResult> From<HypergraphRef> for InsertContext<R> {
+    fn from(graph: HypergraphRef) -> Self {
+        Self {
+            graph,
+            _ty: Default::default(),
+        }
+    }
 }
 
-impl InsertContext {
+impl<R: InsertResult> InsertContext<R> {
     pub fn insert(
         &mut self,
         foldable: impl Foldable,
-    ) -> Result<Child, ErrorState> {
-        match foldable.fold::<InsertTraversal>(self.clone()) {
+    ) -> Result<R, ErrorState> {
+        match foldable.fold::<InsertTraversal>(self.graph.clone()) {
             Ok(result) => match CompleteState::try_from(result) {
-                Ok(state) => Ok(state.root),
+                Ok(state) => Ok(R::from(state.root)),
                 Err(state) => Ok(self.insert_init(InitInterval::from(state))),
             },
             Err(err) => Err(err),
@@ -69,12 +80,12 @@ impl InsertContext {
     pub fn insert_or_get_complete(
         &mut self,
         query: impl Foldable,
-    ) -> Result<Child, ErrorReason> {
+    ) -> Result<R, ErrorReason> {
         match self.insert(query) {
             Err(ErrorState {
                 reason: ErrorReason::SingleIndex(c),
                 found: Some(FinishedKind::Complete(_)),
-            }) => Ok(c),
+            }) => Ok(R::from(c)),
             Err(err) => Err(err.reason),
             Ok(v) => Ok(v),
         }
@@ -82,20 +93,21 @@ impl InsertContext {
     pub fn insert_init(
         &mut self,
         init: InitInterval,
-    ) -> Child {
-        let interval = IntervalGraph::from((&mut self.graph_mut(), init));
-        FrontierSplitIterator::from((self.graph.clone(), interval))
-            .find_map(|joined| joined)
-            .unwrap()
+    ) -> R {
+        let interval = IntervalGraph::from((&mut self.graph.graph_mut(), init));
+        let mut ctx =
+            FrontierSplitIterator::from((self.graph.clone(), interval));
+        let joined = ctx.find_map(|joined| joined).unwrap();
+        R::build_with_ctx(joined, ctx)
     }
 }
 impl_has_graph! {
-    impl for InsertContext,
+    impl<R: InsertResult> for InsertContext<R>,
     self => self.graph.read().unwrap();
     <'a> RwLockReadGuard<'a, Hypergraph>
 }
 impl_has_graph_mut! {
-    impl for InsertContext,
+    impl<R: InsertResult> for InsertContext<R>,
     self => self.graph.write().unwrap();
     <'a> RwLockWriteGuard<'a, Hypergraph>
 }

@@ -1,4 +1,5 @@
 use context::*;
+use result::InsertResult;
 
 use crate::interval::init::InitInterval;
 use context_search::traversal::fold::foldable::{
@@ -9,49 +10,42 @@ use context_trace::{
     graph::{
         HypergraphRef,
         getters::ErrorReason,
-        vertex::child::Child,
     },
     trace::has_graph::HasGraphMut,
 };
 pub mod context;
 pub mod direction;
+pub mod result;
 
-//#[derive(Debug, Clone)]
-//pub struct IndexSplitResult {
-//    pub inner: Child,
-//    pub location: ChildLocation,
-//    pub path: Vec<ChildLocation>,
-//}
-
-pub trait ToInsertContext: HasGraphMut {
-    fn insert_context(&self) -> InsertContext;
+pub trait ToInsertContext<R: InsertResult>: HasGraphMut {
+    fn insert_context(&self) -> InsertContext<R>;
 
     fn insert(
         &self,
         foldable: impl Foldable,
-    ) -> Result<Child, ErrorState> {
+    ) -> Result<R, ErrorState> {
         self.insert_context().insert(foldable)
     }
     fn insert_init(
         &self,
         init: InitInterval,
-    ) -> Child {
+    ) -> R {
         self.insert_context().insert_init(init)
     }
     fn insert_or_get_complete(
         &self,
         foldable: impl Foldable,
-    ) -> Result<Child, ErrorReason> {
+    ) -> Result<R, ErrorReason> {
         self.insert_context().insert_or_get_complete(foldable)
     }
 }
-impl ToInsertContext for HypergraphRef {
-    fn insert_context(&self) -> InsertContext {
-        InsertContext::from(self.clone())
+impl<R: InsertResult> ToInsertContext<R> for HypergraphRef {
+    fn insert_context(&self) -> InsertContext<R> {
+        InsertContext::<R>::from(self.clone())
     }
 }
-impl<T: ToInsertContext> ToInsertContext for &'_ mut T {
-    fn insert_context(&self) -> InsertContext {
+impl<R: InsertResult, T: ToInsertContext<R>> ToInsertContext<R> for &'_ mut T {
+    fn insert_context(&self) -> InsertContext<R> {
         (**self).insert_context()
     }
 }

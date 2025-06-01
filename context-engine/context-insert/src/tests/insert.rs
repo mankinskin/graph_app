@@ -56,7 +56,7 @@ fn index_pattern1() {
     // todo: split sub patterns not caught by query search
     let graph = HypergraphRef::from(graph);
     let query = vec![by, z];
-    let byz = graph.insert(query.clone()).expect("Indexing failed");
+    let byz: Child = graph.insert(query.clone()).expect("Indexing failed");
     assert_eq!(
         byz,
         Child {
@@ -75,7 +75,7 @@ fn index_pattern1() {
         "byz"
     );
     let query = vec![ab, y];
-    let aby = graph.insert(query.clone()).expect("Indexing failed");
+    let aby: Child = graph.insert(query.clone()).expect("Indexing failed");
     let aby_found = graph.find_parent(&query);
     assert_matches!(
         aby_found,
@@ -113,7 +113,7 @@ fn index_pattern2() {
     let graph_ref = HypergraphRef::from(graph);
 
     let query = vec![a, b, y, x];
-    let aby = graph_ref.insert(query.clone()).expect("Indexing failed");
+    let aby: Child = graph_ref.insert(query.clone()).expect("Indexing failed");
     assert_eq!(aby.width(), 3);
     let ab = graph_ref
         .find_sequence("ab".chars())
@@ -165,7 +165,7 @@ fn index_infix1() {
 
     let graph_ref = HypergraphRef::from(graph);
 
-    let aby = graph_ref.insert(vec![a, b, y]).expect("Indexing failed");
+    let aby: Child = graph_ref.insert(vec![a, b, y]).expect("Indexing failed");
     let ab = graph_ref
         .find_ancestor(vec![a, b])
         .unwrap()
@@ -249,7 +249,8 @@ fn index_infix2() {
 
     let graph_ref = HypergraphRef::from(graph);
 
-    let abcd = graph_ref.insert(vec![a, b, c, d]).expect("Indexing failed");
+    let abcd: Child =
+        graph_ref.insert(vec![a, b, c, d]).expect("Indexing failed");
     let graph = graph_ref.graph();
     let abcd_vertex = graph.expect_vertex(abcd);
     assert_eq!(abcd.width(), 4, "abcd");
