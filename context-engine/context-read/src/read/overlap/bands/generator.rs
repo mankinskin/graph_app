@@ -1,8 +1,11 @@
 use crate::read::{
     context::ReadContext,
-    overlap::chain::OverlapChain,
+    overlap::bands::LinkedBands,
 };
-use context_insert::insert::ToInsertContext;
+use context_insert::insert::{
+    result::IndexWithPath,
+    ToInsertContext,
+};
 use context_trace::{
     graph::vertex::{
         child::Child,
@@ -53,7 +56,7 @@ use super::band::Band;
 pub trait ChainAppendage: Sized {
     fn append_to_chain(
         self,
-        chain: &mut OverlapChain,
+        chain: &mut LinkedBands,
     ) {
         chain.bands.insert(self.into_band());
     }
@@ -93,7 +96,7 @@ pub struct ChainGenerator<'a> {
     pub cursor: &'a mut PatternEndPath,
     #[deref]
     #[deref_mut]
-    pub chain: OverlapChain,
+    pub chain: LinkedBands,
 }
 
 impl<'a> Iterator for ChainGenerator<'a> {
@@ -107,7 +110,7 @@ impl<'a> ChainGenerator<'a> {
     pub fn new(
         trav: ReadContext,
         cursor: &'a mut PatternEndPath,
-        chain: OverlapChain,
+        chain: LinkedBands,
     ) -> Self {
         Self {
             trav,
@@ -124,7 +127,10 @@ impl<'a> ChainGenerator<'a> {
         postfix_path: &RolePath<End>,
     ) -> Option<ChainOp> {
         let primer = self.cursor.clone();
-        match self.trav.insert_or_get_complete(primer) {
+        match ToInsertContext::<IndexWithPath>::insert_or_get_complete(
+            &self.trav.graph,
+            primer,
+        ) {
             Ok(expansion) => {
                 let link =
                     self.link_expansion(start_bound, expansion, advanced);

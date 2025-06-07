@@ -2,15 +2,15 @@ use crate::read::{
     complement::ComplementBuilder,
     context::ReadContext,
     overlap::{
-        bundle::Bundle,
-        chain::{
+        bands::{
             band::Band,
             generator::{
                 ChainGenerator,
                 ChainOp,
             },
-            OverlapChain,
+            LinkedBands,
         },
+        bundle::Bundle,
     },
 };
 use context_trace::{
@@ -101,7 +101,7 @@ impl<'a> ExpansionIterator<'a> {
     pub fn new(
         trav: ReadContext,
         cursor: &'a mut PatternEndPath,
-        chain: OverlapChain,
+        chain: LinkedBands,
     ) -> Self {
         Self {
             chain: ChainGenerator::new(trav, cursor, chain),

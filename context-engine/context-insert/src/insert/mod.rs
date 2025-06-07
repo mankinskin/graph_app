@@ -28,9 +28,10 @@ pub trait ToInsertContext<R: InsertResult>: HasGraphMut {
     }
     fn insert_init(
         &self,
+        ext: R::Extract,
         init: InitInterval,
     ) -> R {
-        self.insert_context().insert_init(init)
+        self.insert_context().insert_init(ext, init)
     }
     fn insert_or_get_complete(
         &self,

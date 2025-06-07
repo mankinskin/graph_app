@@ -2,10 +2,14 @@ use std::sync::RwLockWriteGuard;
 
 use super::{
     expansion::ExpansionIterator,
-    overlap::chain::OverlapChain,
+    overlap::bands::LinkedBands,
 };
 use context_insert::insert::{
     context::InsertContext,
+    result::{
+        IndexWithPath,
+        InsertResult,
+    },
     ToInsertContext,
 };
 use context_trace::{
@@ -77,7 +81,7 @@ pub enum ReadState {
 impl Iterator for ReadContext {
     type Item = ();
     fn next(&mut self) -> Option<Self::Item> {
-        self.next_index().map(|next| {
+        self.read_next().map(|next| {
             self.read_block(next);
             self.append_index(next)
         })
@@ -94,6 +98,7 @@ impl ReadContext {
             root: None,
         }
     }
+    // read one block of new overlaps
     pub fn read_block(
         &mut self,
         first: Child,
@@ -101,14 +106,24 @@ impl ReadContext {
         ExpansionIterator::new(
             self.clone(),
             &mut self.sequence,
-            OverlapChain::new(first),
+            LinkedBands::new(first),
         )
         .collect()
     }
-    pub fn next_index(&mut self) -> Option<Child> {
-        match self.insert_or_get_complete(self.sequence.clone()) {
-            Ok(index) => {
-                //self.sequence = PatternEndPath::from(advanced);
+    pub fn read_next(&mut self) -> Option<Child> {
+        match ToInsertContext::<IndexWithPath>::insert_or_get_complete(
+            &self.graph,
+            self.sequence.clone(),
+        ) {
+            Ok(IndexWithPath {
+                index,
+                path: Some(advanced),
+            }) => {
+                self.sequence = advanced;
+                Some(index)
+            },
+            Ok(IndexWithPath { index, path: None }) => {
+                self.sequence.advance(&self.graph);
                 Some(index)
             },
             Err(_) => {
@@ -226,8 +241,8 @@ impl ReadContext {
     //}
 }
 
-impl ToInsertContext for ReadContext {
-    fn insert_context(&self) -> InsertContext {
+impl<R: InsertResult> ToInsertContext<R> for ReadContext {
+    fn insert_context(&self) -> InsertContext<R> {
         InsertContext::from(self.graph.clone())
     }
 }
@@ -253,13 +268,6 @@ impl_has_graph! {
 //    self => self.graph.read().unwrap();
 //    <'a> RwLockReadGuard<'a, Hypergraph>
 //}
-impl_has_graph_mut! {
-    impl for ReadContext,
-    //self => self.graph.graph_mut();
-    //<'a> &'a mut Hypergraph
-    self => self.graph.write().unwrap();
-    <'a> RwLockWriteGuard<'a, Hypergraph>
-}
 //impl_has_graph_mut! {
 //    impl for &'_ mut ReadContext,
 //    //self => self.graph.graph_mut();

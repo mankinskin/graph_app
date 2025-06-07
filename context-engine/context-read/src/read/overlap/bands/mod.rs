@@ -102,11 +102,11 @@ pub struct OverlapLink {
 }
 
 #[derive(Default, Clone, Debug)]
-pub struct OverlapChain {
+pub struct LinkedBands {
     pub bands: BTreeSet<Band>,
     pub links: VecDeque<OverlapLink>,
 }
-impl OverlapChain {
+impl LinkedBands {
     pub fn new(index: Child) -> Self {
         Self {
             bands: Some(Band {
@@ -158,7 +158,7 @@ impl OverlapChain {
     //pub fn take_past(
     //    &mut self,
     //    bound: usize,
-    //) -> OverlapChain {
+    //) -> LinkedBands {
     //    let mut past = self.chain.split_off(&bound);
     //    std::mem::swap(&mut self.chain, &mut past);
     //    Self {

@@ -5,6 +5,7 @@ use std::{
 };
 
 use crate::{
+    insert::result::ResultExtraction,
     interval::{
         IntervalGraph,
         init::InitInterval,
@@ -72,7 +73,10 @@ impl<R: InsertResult> InsertContext<R> {
         match foldable.fold::<InsertTraversal>(self.graph.clone()) {
             Ok(result) => match CompleteState::try_from(result) {
                 Ok(state) => Ok(R::from(state.root)),
-                Err(state) => Ok(self.insert_init(InitInterval::from(state))),
+                Err(state) => Ok(self.insert_init(
+                    <R::Extract as ResultExtraction>::extract_from(&state),
+                    InitInterval::from(state),
+                )),
             },
             Err(err) => Err(err),
         }
@@ -87,18 +91,19 @@ impl<R: InsertResult> InsertContext<R> {
                 found: Some(FinishedKind::Complete(_)),
             }) => Ok(R::from(c)),
             Err(err) => Err(err.reason),
-            Ok(v) => Ok(v),
+            Ok(r) => Ok(r),
         }
     }
     pub fn insert_init(
         &mut self,
+        ext: R::Extract,
         init: InitInterval,
     ) -> R {
         let interval = IntervalGraph::from((&mut self.graph.graph_mut(), init));
         let mut ctx =
             FrontierSplitIterator::from((self.graph.clone(), interval));
         let joined = ctx.find_map(|joined| joined).unwrap();
-        R::build_with_ctx(joined, ctx)
+        R::build_with_extract(joined, ext)
     }
 }
 impl_has_graph! {

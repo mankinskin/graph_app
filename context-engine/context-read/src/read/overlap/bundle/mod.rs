@@ -3,7 +3,7 @@ use context_trace::{
     trace::has_graph::HasGraphMut,
 };
 
-use super::chain::band::Band;
+use super::bands::band::Band;
 
 //pub mod iterator;
 

@@ -42,6 +42,7 @@ impl<'a, G: HasGraphMut + 'a> From<(&'a mut G, InitInterval)>
             root,
             cache,
             end_bound,
+            ..
         } = init;
         let ctx = TraceContext { trav, cache };
         let iter = SplitTraceStatesContext::new(ctx, root, end_bound);
