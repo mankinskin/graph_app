@@ -208,7 +208,7 @@ impl<R: PathRole> PatternRootChild<R> for PatternRangePath where
 impl_child! { RootChild for PatternRangePath, self, _trav =>
        *self.root.get(self.role_root_child_index::<R>()).unwrap()
 }
-use crate::path::GetRoleChildPath;
+use crate::path::RolePathUtils;
 impl<Root: PathRoot> CalcOffset for RootedRangePath<Root> {
     fn calc_offset<G: HasGraph>(
         &self,

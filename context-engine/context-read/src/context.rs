@@ -1,19 +1,12 @@
 use std::sync::RwLockWriteGuard;
 
-use super::{
-    expansion::ExpansionIterator,
-    overlap::bands::LinkedBands,
-};
 use context_insert::insert::{
-    context::InsertContext,
-    result::{
-        IndexWithPath,
-        InsertResult,
-    },
+    result::IndexWithPath,
     ToInsertContext,
 };
 use context_trace::{
     graph::{
+        getters::ErrorReason,
         vertex::{
             child::Child,
             has_vertex_data::HasVertexDataMut,
@@ -26,7 +19,6 @@ use context_trace::{
         HypergraphRef,
     },
     impl_has_graph,
-    impl_has_graph_mut,
     path::{
         mutators::move_path::advance::Advance,
         structs::rooted::role_path::PatternEndPath,
@@ -78,15 +70,15 @@ pub enum ReadState {
     Continue(Child, PatternEndPath),
     Stop(PatternEndPath),
 }
-impl Iterator for ReadContext {
-    type Item = ();
-    fn next(&mut self) -> Option<Self::Item> {
-        self.read_next().map(|next| {
-            self.read_block(next);
-            self.append_index(next)
-        })
-    }
-}
+//impl Iterator for ReadContext {
+//    type Item = ();
+//    fn next(&mut self) -> Option<Self::Item> {
+//        self.read_next().map(|next| {
+//            self.read_block(next);
+//            self.append_index(next)
+//        })
+//    }
+//}
 impl ReadContext {
     pub fn new(
         graph: HypergraphRef,
@@ -99,17 +91,17 @@ impl ReadContext {
         }
     }
     // read one block of new overlaps
-    pub fn read_block(
-        &mut self,
-        first: Child,
-    ) -> Child {
-        ExpansionIterator::new(
-            self.clone(),
-            &mut self.sequence,
-            LinkedBands::new(first),
-        )
-        .collect()
-    }
+    //pub fn read_block(
+    //    &mut self,
+    //    first: Child,
+    //) -> Child {
+    //    ExpansionIterator::new(
+    //        self.clone(),
+    //        &mut self.sequence,
+    //        LinkedBands::new(first),
+    //    )
+    //    .collect()
+    //}
     pub fn read_next(&mut self) -> Option<Child> {
         match ToInsertContext::<IndexWithPath>::insert_or_get_complete(
             &self.graph,
@@ -117,12 +109,12 @@ impl ReadContext {
         ) {
             Ok(IndexWithPath {
                 index,
-                path: Some(advanced),
+                path: advanced,
             }) => {
                 self.sequence = advanced;
                 Some(index)
             },
-            Ok(IndexWithPath { index, path: None }) => {
+            Err(ErrorReason::SingleIndex(index)) => {
                 self.sequence.advance(&self.graph);
                 Some(index)
             },
@@ -241,11 +233,18 @@ impl ReadContext {
     //}
 }
 
-impl<R: InsertResult> ToInsertContext<R> for ReadContext {
-    fn insert_context(&self) -> InsertContext<R> {
-        InsertContext::from(self.graph.clone())
-    }
-}
+//impl<R: InsertResult> ToInsertContext<R> for ReadContext {
+//    fn insert_context(&self) -> InsertContext<R> {
+//        InsertContext::from(self.graph.clone())
+//    }
+//}
+//impl_has_graph_mut! {
+//    impl for &'_ mut ReadContext,
+//    //self => self.graph.graph_mut();
+//    //<'a> &'a mut Hypergraph
+//    self => self.graph.write().unwrap();
+//    <'a> RwLockWriteGuard<'a, Hypergraph>
+//}
 
 impl_has_graph! {
     impl for ReadContext,
@@ -267,11 +266,4 @@ impl_has_graph! {
 //    //<'a> &'a Hypergraph
 //    self => self.graph.read().unwrap();
 //    <'a> RwLockReadGuard<'a, Hypergraph>
-//}
-//impl_has_graph_mut! {
-//    impl for &'_ mut ReadContext,
-//    //self => self.graph.graph_mut();
-//    //<'a> &'a mut Hypergraph
-//    self => self.graph.write().unwrap();
-//    <'a> RwLockWriteGuard<'a, Hypergraph>
 //}

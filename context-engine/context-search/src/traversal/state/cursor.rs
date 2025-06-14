@@ -38,7 +38,7 @@ use context_trace::{
                 PatternRangePath,
             },
         },
-        GetRoleChildPath,
+        RolePathUtils,
     },
     trace::has_graph::HasGraph,
 };

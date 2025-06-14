@@ -1,17 +1,19 @@
 use std::collections::VecDeque;
 
-use crate::traversal::{
+use crate::{
     compare::parent::ParentCompareState,
-    iterator::r#match::{
+    r#match::{
+        MatchContext,
         RootSearchIterator,
         TraceNode::Parent,
     },
-    state::{
-        cursor::PatternPrefixCursor,
-        end::EndState,
+    traversal::{
+        state::{
+            cursor::PatternPrefixCursor,
+            end::EndState,
+        },
+        TraversalKind,
     },
-    MatchContext,
-    TraversalKind,
 };
 use context_trace::trace::{
     state::parent::ParentBatch,
@@ -22,17 +24,7 @@ use derive_more::{
     DerefMut,
 };
 use derive_new::new;
-#[derive(Debug, new)]
-pub struct EndIterator<K: TraversalKind>(
-    pub TraceContext<K::Trav>,
-    pub MatchContext,
-);
 
-impl<K: TraversalKind> EndIterator<K> {
-    pub fn find_next(&mut self) -> Option<EndState> {
-        self.find_map(|flow| Some(flow))
-    }
-}
 #[derive(Debug, Clone, Deref, DerefMut)]
 pub struct CompareParentBatch {
     #[deref]
@@ -52,7 +44,20 @@ impl CompareParentBatch {
             .collect()
     }
 }
-impl<K: TraversalKind> Iterator for EndIterator<K> {
+
+#[derive(Debug, new)]
+pub struct MatchIterator<K: TraversalKind>(
+    pub TraceContext<K::Trav>,
+    pub MatchContext,
+);
+
+impl<K: TraversalKind> MatchIterator<K> {
+    pub fn find_next(&mut self) -> Option<EndState> {
+        self.find_map(|flow| Some(flow))
+    }
+}
+
+impl<K: TraversalKind> Iterator for MatchIterator<K> {
     type Item = EndState;
 
     fn next(&mut self) -> Option<Self::Item> {

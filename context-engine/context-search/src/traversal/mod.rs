@@ -1,4 +1,5 @@
-use crate::traversal::iterator::r#match::{
+use crate::r#match::{
+    end::MatchIterator,
     MatchContext,
     TraceNode::Parent,
 };
@@ -14,10 +15,7 @@ use context_trace::trace::{
 };
 use derive_new::new;
 use fold::foldable::ErrorState;
-use iterator::{
-    end::EndIterator,
-    policy::DirectedTraversalPolicy,
-};
+use iterator::policy::DirectedTraversalPolicy;
 use state::{
     end::{
         EndKind,
@@ -31,7 +29,6 @@ use std::{
     fmt::Debug,
     ops::ControlFlow,
 };
-pub mod compare;
 pub mod container;
 pub mod fold;
 pub mod iterator;
@@ -53,8 +50,8 @@ pub enum OptGen<Y> {
 /// context for generating next states
 #[derive(Debug, new)]
 pub struct TraversalContext<K: TraversalKind> {
-    pub end_iter: EndIterator<K>,
-    pub last_end: EndState,
+    pub match_iter: MatchIterator<K>,
+    pub last_match: EndState,
 }
 impl<K: TraversalKind> Unpin for TraversalContext<K> {}
 
@@ -63,7 +60,7 @@ impl<K: TraversalKind> TryFrom<StartCtx<K>> for TraversalContext<K> {
     fn try_from(start: StartCtx<K>) -> Result<Self, Self::Error> {
         match start.get_parent_batch() {
             Ok(p) => Ok(Self {
-                end_iter: EndIterator::new(
+                match_iter: MatchIterator::new(
                     TraceContext {
                         trav: start.trav,
                         cache: TraceCache::new(start.index),
@@ -74,7 +71,7 @@ impl<K: TraversalKind> TryFrom<StartCtx<K>> for TraversalContext<K> {
                         ),
                     },
                 ),
-                last_end: EndState {
+                last_match: EndState {
                     reason: EndReason::QueryEnd,
                     kind: EndKind::Complete(start.index),
                     cursor: start.cursor,
@@ -89,11 +86,11 @@ impl<K: TraversalKind> Iterator for TraversalContext<K> {
     type Item = ();
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.end_iter.find_next() {
+        match self.match_iter.find_next() {
             Some(end) => {
-                TraceStart(&end, self.last_end.start_len())
-                    .trace(&mut self.end_iter.0);
-                self.last_end = end;
+                TraceStart(&end, self.last_match.start_len())
+                    .trace(&mut self.match_iter.0);
+                self.last_match = end;
                 Some(())
             },
             None => None,
@@ -108,7 +105,7 @@ impl<'a, K: TraversalKind> HasGraph for &'a TraversalContext<K> {
     where
         Self: 'g;
     fn graph(&self) -> Self::Guard<'_> {
-        self.end_iter.0.trav.graph()
+        self.match_iter.0.trav.graph()
     }
 }
 
@@ -119,6 +116,6 @@ impl<'a, K: TraversalKind> HasGraph for &'a mut TraversalContext<K> {
     where
         Self: 'g;
     fn graph(&self) -> Self::Guard<'_> {
-        self.end_iter.0.trav.graph()
+        self.match_iter.0.trav.graph()
     }
 }

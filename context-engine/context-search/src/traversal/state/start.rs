@@ -1,12 +1,12 @@
 use super::cursor::PatternPrefixCursor;
-use crate::traversal::{
-    fold::foldable::ErrorState,
-    iterator::{
-        end::CompareParentBatch,
-        policy::DirectedTraversalPolicy,
+use crate::{
+    r#match::end::CompareParentBatch,
+    traversal::{
+        fold::foldable::ErrorState,
+        iterator::policy::DirectedTraversalPolicy,
+        result::FinishedKind,
+        TraversalKind,
     },
-    result::FinishedKind,
-    TraversalKind,
 };
 use context_trace::{
     graph::{

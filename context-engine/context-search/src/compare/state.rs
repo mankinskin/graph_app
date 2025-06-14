@@ -22,7 +22,7 @@ use context_trace::{
             adapters::IntoAdvanced,
             lower::PathLower,
         },
-        GetRoleChildPath,
+        RolePathUtils,
     },
     trace::{
         cache::key::{
@@ -50,7 +50,11 @@ use std::{
     fmt::Debug,
 };
 use tracing::debug;
+use CompareNext::*;
 use PathPairMode::*;
+
+use super::parent::ParentCompareState;
+
 pub type CompareQueue = VecDeque<CompareState>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy)]
@@ -74,10 +78,6 @@ pub enum CompareNext {
     MatchState(ChildMatchState),
     Prefixes(ChildQueue<CompareState>),
 }
-use CompareNext::*;
-
-use super::parent::ParentCompareState;
-
 impl CompareState {
     fn mode_prefixes<'a, G: HasGraph>(
         &self,
@@ -216,6 +216,7 @@ impl CompareState {
         }
     }
 }
+
 impl Into<ChildQueue<CompareState>> for CompareState {
     fn into(self) -> ChildQueue<Self> {
         VecDeque::from_iter([self])

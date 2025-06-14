@@ -4,9 +4,9 @@ pub(crate) mod traversal;
 pub mod end;
 pub mod start;
 
-use crate::traversal::{
+use crate::{
     compare::state::CompareState,
-    EndState,
+    traversal::EndState,
 };
 
 #[derive(Clone, Debug)]

@@ -1,9 +1,6 @@
 use super::{
     result::FinishedKind,
-    state::{
-        cursor::PatternRangeCursor,
-        start::StartCtx,
-    },
+    state::start::StartCtx,
     TraversalContext,
     TraversalKind,
 };
@@ -23,11 +20,6 @@ use std::fmt::Debug;
 
 pub mod foldable;
 pub mod state;
-
-pub struct CursorInit<K: TraversalKind> {
-    pub trav: K::Trav,
-    pub cursor: PatternRangeCursor,
-}
 
 impl<K: TraversalKind> TryFrom<StartCtx<K>> for FoldContext<K> {
     type Error = ErrorState;
@@ -59,10 +51,10 @@ impl<K: TraversalKind> Iterator for FoldContext<K> {
 impl<'a, K: TraversalKind> FoldContext<K> {
     fn fold(mut self) -> Result<FinishedState, ErrorState> {
         (&mut self).for_each(|_| ());
-        let end = self.tctx.last_end;
-        end.trace(&mut self.tctx.end_iter.0);
+        let end = self.tctx.last_match;
+        end.trace(&mut self.tctx.match_iter.0);
         Ok(FinishedState {
-            cache: self.tctx.end_iter.0.cache,
+            cache: self.tctx.match_iter.0.cache,
             root: end.root_key().index,
             start: self.start_index,
             kind: FinishedKind::from(end),

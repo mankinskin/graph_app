@@ -13,7 +13,7 @@ use derive_more::{
 use std::fmt::Debug;
 
 use super::state::CompareState;
-use crate::traversal::compare::state::PathPairMode::GraphMajor;
+use crate::compare::state::PathPairMode::GraphMajor;
 use context_trace::{
     graph::vertex::child::Child,
     trace::cache::key::directed::down::DownKey,

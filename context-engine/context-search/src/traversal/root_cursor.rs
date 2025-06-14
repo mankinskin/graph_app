@@ -1,22 +1,24 @@
-use super::{
-    compare::parent::ParentCompareState,
-    iterator::end::CompareParentBatch,
-    state::end::{
-        EndKind,
-        EndReason,
-        EndState,
-    },
-    TraversalKind,
-};
-use crate::traversal::{
+use crate::{
     compare::{
         iterator::CompareIterator,
+        parent::ParentCompareState,
         state::CompareState,
     },
-    iterator::policy::DirectedTraversalPolicy,
-    state::ChildMatchState::{
-        Match,
-        Mismatch,
+    r#match::end::CompareParentBatch,
+    traversal::{
+        iterator::policy::DirectedTraversalPolicy,
+        state::{
+            end::{
+                EndKind,
+                EndReason,
+                EndState,
+            },
+            ChildMatchState::{
+                Match,
+                Mismatch,
+            },
+        },
+        TraversalKind,
     },
 };
 use context_trace::{
@@ -26,7 +28,7 @@ use context_trace::{
             Advance,
             CanAdvance,
         },
-        GetRoleChildPath,
+        RolePathUtils,
     },
     trace::{
         cache::key::directed::down::DownKey,

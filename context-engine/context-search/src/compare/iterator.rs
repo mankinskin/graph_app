@@ -16,7 +16,8 @@ use context_trace::trace::{
 use std::fmt::Debug;
 
 use super::state::CompareState;
-use crate::traversal::compare::state::CompareNext::*;
+use crate::compare::state::CompareNext::*;
+
 #[derive(Debug)]
 pub struct CompareIterator<G: HasGraph> {
     pub children: ChildIterator<G, CompareState>,

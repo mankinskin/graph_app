@@ -17,7 +17,7 @@ use super::{
 use crate::{
     graph::vertex::wide::Wide,
     path::{
-        GetRoleChildPath,
+        RolePathUtils,
         accessors::{
             role::{
                 End,

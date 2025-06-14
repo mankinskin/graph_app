@@ -1,18 +1,20 @@
 use std::collections::VecDeque;
 
-use crate::traversal::{
+use crate::{
     compare::{
         iterator::CompareIterator,
         parent::ParentCompareState,
         state::CompareState,
     },
-    iterator::policy::DirectedTraversalPolicy,
-    root_cursor::RootCursor,
-    state::ChildMatchState::{
-        self,
-        Mismatch,
+    traversal::{
+        iterator::policy::DirectedTraversalPolicy,
+        root_cursor::RootCursor,
+        state::ChildMatchState::{
+            self,
+            Mismatch,
+        },
+        TraversalKind,
     },
-    TraversalKind,
 };
 use context_trace::{
     path::mutators::adapters::IntoAdvanced,
@@ -20,6 +22,7 @@ use context_trace::{
 };
 
 use derive_new::new;
+pub mod end;
 
 #[derive(Debug, new)]
 pub struct MatchContext {

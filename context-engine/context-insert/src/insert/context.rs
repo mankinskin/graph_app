@@ -72,26 +72,14 @@ impl<R: InsertResult> InsertContext<R> {
     ) -> Result<R, ErrorState> {
         match foldable.fold::<InsertTraversal>(self.graph.clone()) {
             Ok(result) => match CompleteState::try_from(result) {
-                Ok(state) => Ok(R::from(state.root)),
+                Ok(state) => R::try_init(state.root)
+                    .map_err(|index| ErrorReason::SingleIndex(index).into()),
                 Err(state) => Ok(self.insert_init(
                     <R::Extract as ResultExtraction>::extract_from(&state),
                     InitInterval::from(state),
                 )),
             },
             Err(err) => Err(err),
-        }
-    }
-    pub fn insert_or_get_complete(
-        &mut self,
-        query: impl Foldable,
-    ) -> Result<R, ErrorReason> {
-        match self.insert(query) {
-            Err(ErrorState {
-                reason: ErrorReason::SingleIndex(c),
-                found: Some(FinishedKind::Complete(_)),
-            }) => Ok(R::from(c)),
-            Err(err) => Err(err.reason),
-            Ok(r) => Ok(r),
         }
     }
     pub fn insert_init(
@@ -104,6 +92,20 @@ impl<R: InsertResult> InsertContext<R> {
             FrontierSplitIterator::from((self.graph.clone(), interval));
         let joined = ctx.find_map(|joined| joined).unwrap();
         R::build_with_extract(joined, ext)
+    }
+    pub fn insert_or_get_complete(
+        &mut self,
+        query: impl Foldable,
+    ) -> Result<R, ErrorReason> {
+        match self.insert(query) {
+            Err(ErrorState {
+                reason: ErrorReason::SingleIndex(c),
+                found: Some(FinishedKind::Complete(_)),
+            }) => R::try_init(c)
+                .map_err(|index| ErrorReason::SingleIndex(index).into()),
+            Err(err) => Err(err.reason),
+            Ok(r) => Ok(r),
+        }
     }
 }
 impl_has_graph! {

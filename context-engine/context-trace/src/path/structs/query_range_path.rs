@@ -15,7 +15,7 @@ use crate::{
     },
     path::{
         BaseQuery,
-        GetRoleChildPath,
+        RolePathUtils,
         accessors::{
             child::LeafChild,
             has_path::HasRootedRolePath,

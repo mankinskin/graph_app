@@ -3,16 +3,12 @@ use std::{
     fmt::Debug,
 };
 
-use crate::join::context::frontier::FrontierSplitIterator;
-
 use context_search::traversal::result::IncompleteState;
 use context_trace::{
     graph::vertex::child::Child,
-    path::structs::rooted::{
-        pattern_range::PatternRangePath,
-        role_path::PatternEndPath,
-    },
+    path::structs::rooted::role_path::PatternEndPath,
 };
+
 pub trait ResultExtraction {
     fn extract_from(state: &IncompleteState) -> Self;
 }
@@ -21,12 +17,36 @@ impl ResultExtraction for () {
         ()
     }
 }
-impl ResultExtraction for Option<PatternEndPath> {
+impl ResultExtraction for PatternEndPath {
     fn extract_from(state: &IncompleteState) -> Self {
-        Some(state.end_state.cursor.path.clone())
+        state.end_state.cursor.path.clone()
     }
 }
-pub trait InsertResult: Debug + Borrow<Child> + From<Child> {
+pub trait TryInitWith<T>: Sized {
+    type Error;
+    fn try_init(value: T) -> Result<Self, Self::Error>;
+}
+//impl<T, A: TryFrom<T>> TryInitWith<T> for A {
+//    type Error = <A as TryFrom<T>>::Error;
+//    fn try_init(value: T) -> Result<Self, Self::Error> {
+//        Self::try_from(value)
+//    }
+//}
+impl TryInitWith<Child> for Child {
+    type Error = Child;
+    fn try_init(value: Child) -> Result<Self, Self::Error> {
+        Ok(value)
+    }
+}
+impl TryInitWith<Child> for IndexWithPath {
+    type Error = Child;
+    fn try_init(value: Child) -> Result<Self, Self::Error> {
+        Err(value)
+    }
+}
+pub trait InsertResult:
+    Debug + Borrow<Child> + TryInitWith<Child, Error = Child> + Into<Child>
+{
     type Extract: ResultExtraction;
     fn build_with_extract(
         root: Child,
@@ -46,11 +66,17 @@ impl InsertResult for Child {
 #[derive(Debug, Clone)]
 pub struct IndexWithPath {
     pub index: Child,
-    pub path: Option<PatternEndPath>,
+    pub path: PatternEndPath,
 }
-impl From<Child> for IndexWithPath {
-    fn from(index: Child) -> Self {
-        Self { index, path: None }
+impl TryFrom<Child> for IndexWithPath {
+    type Error = Child;
+    fn try_from(value: Child) -> Result<Self, Self::Error> {
+        Err(value)
+    }
+}
+impl Into<Child> for IndexWithPath {
+    fn into(self) -> Child {
+        self.index
     }
 }
 impl Borrow<Child> for IndexWithPath {
@@ -59,7 +85,7 @@ impl Borrow<Child> for IndexWithPath {
     }
 }
 impl InsertResult for IndexWithPath {
-    type Extract = Option<PatternEndPath>;
+    type Extract = PatternEndPath;
     fn build_with_extract(
         root: Child,
         ext: Self::Extract,

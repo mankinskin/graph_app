@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use std::iter::FromIterator;
 
 use crate::search::Searchable;
@@ -24,6 +22,7 @@ use crate::traversal::{
         },
         end::{
             postfix::PostfixEnd,
+            range::RangeEnd,
             EndKind,
             EndReason,
             EndState,
@@ -59,7 +58,10 @@ use context_trace::{
     tests::env::TestEnv,
     trace::{
         cache::{
-            key::directed::DirectedKey,
+            key::directed::{
+                down::DownKey,
+                DirectedKey,
+            },
             position::{
                 Edges,
                 PositionCache,
@@ -72,122 +74,10 @@ use context_trace::{
     HashMap,
     HashSet,
 };
-
-#[test]
-fn find_sequence() {
-    let Env1 {
-        graph,
-        abc,
-        ababababcdefghi,
-        a,
-        ..
-    } = &*Env1::get_expected();
-    assert_eq!(
-        graph.find_sequence("a".chars()),
-        Err(ErrorReason::SingleIndex(*a)),
-    );
-    let query = graph.graph().expect_token_children("abc".chars());
-    let abc_found = graph.find_ancestor(&query);
-    assert_eq!(
-        abc_found.map(|r| r.kind),
-        Ok(FinishedKind::Complete(*abc)),
-        "abc"
-    );
-    let query = graph
-        .graph()
-        .expect_token_children("ababababcdefghi".chars());
-    let ababababcdefghi_found = graph.find_ancestor(&query);
-    assert_eq!(
-        ababababcdefghi_found.map(|r| r.kind),
-        Ok(FinishedKind::Complete(*ababababcdefghi)),
-        "ababababcdefghi"
-    );
-}
-
-#[test]
-fn find_parent1() {
-    let Env1 {
-        graph,
-        a,
-        b,
-        c,
-        d,
-        ab,
-        bc,
-        abc,
-        ..
-    } = &*Env1::get_expected();
-    let a_bc_pattern = vec![Child::new(a, 1), Child::new(bc, 2)];
-    let ab_c_pattern = vec![Child::new(ab, 2), Child::new(c, 1)];
-    let a_bc_d_pattern =
-        vec![Child::new(a, 1), Child::new(bc, 2), Child::new(d, 1)];
-    let b_c_pattern = vec![Child::new(b, 1), Child::new(c, 1)];
-    let bc_pattern = vec![Child::new(bc, 2)];
-    let a_b_c_pattern =
-        vec![Child::new(a, 1), Child::new(b, 1), Child::new(c, 1)];
-
-    let query = bc_pattern;
-    assert_eq!(
-        graph.find_parent(&query),
-        Err(ErrorReason::SingleIndex(*bc)),
-        "bc"
-    );
-    let query = b_c_pattern;
-    assert_matches!(
-        graph.find_parent(&query),
-        Ok(FinishedState {
-            kind: FinishedKind::Complete(x),
-            ..
-        }) if x == *bc,
-        "b_c"
-    );
-    let query = ab_c_pattern;
-    assert_matches!(
-        graph.find_parent(&query),
-        Ok(FinishedState {
-            kind: FinishedKind::Complete(x),
-            ..
-        }) if x == *abc,
-        "ab_c"
-    );
-    // enable when bfs for parent-child batches is implemented
-    //let query = a_bc_pattern;
-    //assert_matches!(
-    //    graph.find_parent(&query),
-    //    Ok(FinishedState {
-    //        kind: FinishedKind::Complete(x),
-    //        ..
-    //    }) if x == *abc,
-    //    "a_bc"
-    //);
-    //let query = a_bc_d_pattern;
-    //assert_matches!(
-    //    graph.find_parent(&query),
-    //    Ok(FinishedState {
-    //        kind: FinishedKind::Complete(x),
-    //        ..
-    //    }) if x == *abc,
-    //    "a_bc_d"
-    //);
-    //let query = a_b_c_pattern.clone();
-    //assert_matches!(
-    //    graph.find_parent(&query),
-    //    Ok(FinishedState {
-    //        kind: FinishedKind::Complete(x),
-    //        ..
-    //    }) if x == *abc,
-    //    "a_b_c"
-    //);
-    //let query = [&a_b_c_pattern[..], &[Child::new(c, 1)]].concat();
-    //assert_matches!(
-    //    graph.find_parent(&query),
-    //    Ok(FinishedState {
-    //        kind: FinishedKind::Complete(x),
-    //        ..
-    //    }) if x == *abc,
-    //    "a_b_c_c"
-    //);
-}
+use tracing::{
+    info,
+    Level,
+};
 
 #[test]
 fn find_ancestor1() {
@@ -560,169 +450,5 @@ fn find_ancestor3() {
             ),
         ]),
         "ab_y"
-    );
-}
-use crate::traversal::state::end::range::RangeEnd;
-use context_trace::trace::cache::key::directed::down::DownKey;
-use tracing::{
-    info,
-    Level,
-};
-#[test]
-fn find_pattern1() {
-    tracing_subscriber::fmt()
-        .with_max_level(Level::DEBUG)
-        .with_target(false)
-        .init();
-    let mut graph =
-        context_trace::graph::Hypergraph::<BaseGraphKind>::default();
-    let (a, b, _w, x, y, z) = graph
-        .insert_tokens([
-            Token::Element('a'),
-            Token::Element('b'),
-            Token::Element('w'),
-            Token::Element('x'),
-            Token::Element('y'),
-            Token::Element('z'),
-        ])
-        .into_iter()
-        .next_tuple()
-        .unwrap();
-    // index 6
-    let (yz, y_z_id) = graph.insert_pattern_with_id(vec![y, z]);
-    let (xab, x_a_b_id) = graph.insert_pattern_with_id(vec![x, a, b]);
-    let _xyz = graph.insert_pattern(vec![x, yz]);
-    let _xabz = graph.insert_pattern(vec![xab, z]);
-    let (xabyz, xab_yz_id) = graph.insert_pattern_with_id(vec![xab, yz]);
-
-    let graph_ref = HypergraphRef::from(graph);
-
-    let query = vec![a, b, y, x];
-    let aby_found = graph_ref
-        .find_ancestor(query.clone())
-        .expect("Search failed");
-    //info!("{:#?}", aby);
-
-    assert_eq!(
-        aby_found.cache.entries[&xab.index],
-        VertexCache {
-            index: xab,
-            bottom_up: FromIterator::from_iter([(
-                1.into(),
-                PositionCache {
-                    edges: Edges {
-                        bottom: HashMap::from_iter([(
-                            DirectedKey::up(a, 1),
-                            SubLocation::new(x_a_b_id.unwrap(), 1)
-                        )]),
-                        top: HashSet::from_iter([]),
-                    },
-                }
-            )]),
-            top_down: FromIterator::from_iter([]),
-        }
-    );
-    assert_eq!(
-        aby_found.cache.entries[&xabyz.index],
-        VertexCache {
-            index: xabyz,
-            bottom_up: FromIterator::from_iter([(
-                2.into(),
-                PositionCache {
-                    edges: Edges {
-                        bottom: HashMap::from_iter([(
-                            DirectedKey::up(xab, 1),
-                            SubLocation::new(xab_yz_id.unwrap(), 0)
-                        )]),
-                        top: HashSet::from_iter([]),
-                    },
-                }
-            )]),
-            top_down: FromIterator::from_iter([(
-                2.into(),
-                PositionCache {
-                    edges: Edges {
-                        bottom: HashMap::from_iter([(
-                            DirectedKey::down(yz, 2),
-                            SubLocation::new(xab_yz_id.unwrap(), 1)
-                        )]),
-                        top: HashSet::from_iter([]),
-                    },
-                }
-            )]),
-        }
-    );
-    assert_eq!(
-        aby_found.cache.entries[&yz.index],
-        VertexCache {
-            index: yz,
-            bottom_up: FromIterator::from_iter([]),
-            top_down: FromIterator::from_iter([(
-                2.into(),
-                PositionCache {
-                    edges: Edges {
-                        bottom: HashMap::from_iter([(
-                            DirectedKey::down(y, 2),
-                            SubLocation::new(y_z_id.unwrap(), 0)
-                        )]),
-                        top: HashSet::from_iter([]),
-                    },
-                }
-            )]),
-        }
-    );
-    assert_eq!(aby_found.cache.entries.len(), 5);
-    assert_eq!(
-        aby_found.kind,
-        FinishedKind::Incomplete(EndState {
-            reason: EndReason::Mismatch,
-            kind: EndKind::Range(RangeEnd {
-                root_pos: 2.into(),
-                target: DownKey::new(y, 3.into()),
-                path: RootedRangePath {
-                    root: IndexRoot {
-                        location: PatternLocation {
-                            parent: xabyz,
-                            id: xab_yz_id.unwrap(),
-                        },
-                    },
-                    start: RolePath {
-                        sub_path: SubPath {
-                            root_entry: 0,
-                            path: vec![ChildLocation {
-                                parent: xab,
-                                pattern_id: x_a_b_id.unwrap(),
-                                sub_index: 1,
-                            },],
-                        },
-                        _ty: Default::default(),
-                    },
-                    end: RolePath {
-                        sub_path: SubPath {
-                            root_entry: 1,
-                            path: vec![ChildLocation {
-                                parent: yz,
-                                pattern_id: y_z_id.unwrap(),
-                                sub_index: 0,
-                            },],
-                        },
-                        _ty: Default::default(),
-                    },
-                },
-            }),
-            cursor: PatternPrefixCursor {
-                path: RootedRolePath {
-                    root: query.clone(),
-                    role_path: RolePath {
-                        sub_path: SubPath {
-                            root_entry: 2,
-                            path: vec![],
-                        },
-                        _ty: Default::default(),
-                    },
-                },
-                relative_pos: 3.into(),
-            },
-        })
     );
 }

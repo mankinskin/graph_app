@@ -36,6 +36,14 @@ pub struct ErrorState {
     pub reason: ErrorReason,
     pub found: Option<FinishedKind>,
 }
+impl From<ErrorReason> for ErrorState {
+    fn from(reason: ErrorReason) -> Self {
+        Self {
+            reason,
+            found: None,
+        }
+    }
+}
 
 pub trait Foldable: Sized {
     fn to_fold_context<K: TraversalKind>(

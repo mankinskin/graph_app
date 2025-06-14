@@ -1,4 +1,4 @@
-use crate::read::{
+use crate::{
     complement::ComplementBuilder,
     context::ReadContext,
     overlap::{
@@ -7,19 +7,49 @@ use crate::read::{
             generator::{
                 ChainGenerator,
                 ChainOp,
+                ExpansionLink,
             },
             LinkedBands,
         },
         bundle::Bundle,
     },
 };
+use context_insert::insert::result::IndexWithPath;
 use context_trace::{
-    graph::vertex::wide::Wide,
-    path::structs::rooted::role_path::PatternEndPath,
+    graph::vertex::{
+        child::Child,
+        wide::Wide,
+    },
+    path::{
+        accessors::{
+            child::root::PatternRootChild,
+            has_path::HasRolePath,
+            role::{
+                End,
+                Start,
+            },
+        },
+        mutators::append::PathAppend,
+        structs::{
+            role_path::RolePath,
+            rooted::{
+                pattern_range::PatternRangePath,
+                role_path::{
+                    PatternEndPath,
+                    RootedRolePath,
+                },
+            },
+        },
+    },
+    trace::child::bands::HasChildRoleIters,
 };
 use derive_more::{
     Deref,
     DerefMut,
+};
+use itertools::{
+    FoldWhile,
+    Itertools,
 };
 
 #[derive(Debug, Deref, DerefMut)]
@@ -37,19 +67,18 @@ impl<'a> Iterator for ExpansionIterator<'a> {
         //println!("read next overlap with {:#?}", cache.last);
         if let Some(next_op) = self.chain.next() {
             match next_op {
-                ChainOp::Expansion(next) => {
+                ChainOp::Expansion(start_bound, next) => {
                     //println!("found overlap at {}: {:?}", start_bound, expansion);
 
                     // finish current bundle
                     if let Some(bundle) = self.bundle.take() {
-                        let band = bundle.wrap_into_band(&mut self.trav);
+                        let band = bundle.wrap_into_band(&mut self.trav.graph);
                         self.chain.append(band);
                     }
 
                     // BACK CONTEXT FROM CACHE
                     // finish back context
-                    let expansion = next.expansion;
-                    let start_bound = next.start_bound;
+                    let link = self.link_expansion(start_bound, next);
 
                     // TODO:
                     // 1. walk overlaps at position
@@ -67,7 +96,7 @@ impl<'a> Iterator for ExpansionIterator<'a> {
                         .last()
                         .expect("empty pattern");
 
-                    let complement = ComplementBuilder::new(root, next)
+                    let complement = ComplementBuilder::new(root, link)
                         .build_context_index(&self.trav);
                     //let mut back_pattern = self.back_context_for_link(&next);
 
@@ -106,6 +135,46 @@ impl<'a> ExpansionIterator<'a> {
         Self {
             chain: ChainGenerator::new(trav, cursor, chain),
             bundle: None,
+        }
+    }
+    fn link_expansion(
+        &self,
+        start_bound: usize,
+        ext: IndexWithPath,
+    ) -> ExpansionLink {
+        let IndexWithPath {
+            index: expansion,
+            path: advanced,
+        } = ext;
+        let adv_prefix =
+            PatternRootChild::<Start>::pattern_root_child(advanced);
+        // find prefix from advanced path in expansion index
+        let mut prefix_iter = expansion.prefix_iter(self.trav.clone());
+        let entry = prefix_iter.next().unwrap().0;
+        let mut prefix_path = prefix_iter
+            .fold_while(
+                RootedRolePath::new(entry),
+                |mut acc, (prefix_location, prefix)| {
+                    acc.path_append(prefix_location);
+                    if prefix == adv_prefix {
+                        FoldWhile::Done(acc)
+                    } else {
+                        FoldWhile::Continue(acc)
+                    }
+                },
+            )
+            .into_inner();
+        // append path <expansion to adv_prefix> to <adv_prefix to overlap>
+        prefix_path.role_path.sub_path.path.extend(
+            (advanced.role_path().clone() as RolePath<End>)
+                .sub_path
+                .path,
+        );
+
+        ExpansionLink {
+            start_bound,
+            prefix_path: prefix_path.role_path,
+            expansion,
         }
     }
 }

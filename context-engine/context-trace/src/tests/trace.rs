@@ -6,7 +6,7 @@ use crate::{
         pattern::pattern_width,
     },
     path::{
-        GetRoleChildPath,
+        RolePathUtils,
         accessors::{
             child::root::GraphRootChild,
             role::End,

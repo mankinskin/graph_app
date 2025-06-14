@@ -47,7 +47,7 @@ use context_trace::{
             move_path::advance::Advance,
         },
         structs::rooted::index_range::IndexRangePath,
-        GetRoleChildPath,
+        RolePathUtils,
     },
     trace::{
         cache::key::{

@@ -41,7 +41,7 @@ use super::rooted::{
     index_range::IndexRangePath,
     role_path::RootedRolePath,
 };
-use crate::path::GetRoleChildPath;
+use crate::path::RolePathUtils;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct RolePath<R: PathRole> {

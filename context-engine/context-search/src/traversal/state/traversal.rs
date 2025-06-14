@@ -8,7 +8,7 @@ use context_trace::{
             role::End,
         },
         mutators::move_path::key::TokenPosition,
-        GetRoleChildPath,
+        RolePathUtils,
     },
     trace::{
         cache::key::{

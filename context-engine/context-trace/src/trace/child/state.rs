@@ -10,7 +10,7 @@ use crate::{
         },
     },
     path::{
-        GetRoleChildPath,
+        RolePathUtils,
         accessors::{
             child::RootChildIndex,
             has_path::HasRootedRolePath,
@@ -72,7 +72,6 @@ pub struct ChildState {
     #[deref]
     #[deref_mut]
     pub base: BaseState<IndexRangePath>,
-    //pub target: DownKey,
 }
 impl ChildState {
     pub fn parent_state(&self) -> ParentState {

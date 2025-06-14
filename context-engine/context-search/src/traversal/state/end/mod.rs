@@ -20,7 +20,7 @@ use context_trace::{
             role_path::IndexStartPath,
             split_path::RootedSplitPathRef,
         },
-        GetRoleChildPath,
+        RolePathUtils,
     },
     trace::{
         cache::{
@@ -57,7 +57,7 @@ use postfix::PostfixEnd;
 use prefix::PrefixEnd;
 use range::RangeEnd;
 
-use crate::traversal::compare::parent::ParentCompareState;
+use crate::compare::parent::ParentCompareState;
 
 use super::cursor::PatternPrefixCursor;
 

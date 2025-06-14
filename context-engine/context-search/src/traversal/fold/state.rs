@@ -71,20 +71,6 @@ impl FoldState {
     pub fn root(&self) -> Child {
         self.root
     }
-    //pub fn root_mode(&self) -> RootMode {
-    //    let e = self.root_entry();
-    //    if e.bottom_up.is_empty() {
-    //        assert!(!e.top_down.is_empty());
-    //        RootMode::Prefix
-    //    } else if e.top_down.is_empty() {
-    //        RootMode::Postfix
-    //    } else {
-    //        RootMode::Infix
-    //    }
-    //}
-    //pub fn leaf_key(&self) -> DirectedKey {
-    //    self.end_state.target_key()
-    //}
 }
 
 // get bottom up edge iterators

@@ -10,7 +10,7 @@ pub mod traceable;
 use crate::{
     graph::vertex::location::child::ChildLocation,
     path::{
-        GetRoleChildPath,
+        RolePathUtils,
         accessors::{
             child::root::GraphRootChild,
             has_path::HasRolePath,
@@ -61,12 +61,12 @@ pub struct TopDown;
 //      - Start paths: bottom up
 // - keys are relative to the start index
 pub trait TraceRolePath<Role: PathRole>:
-    GetRoleChildPath + HasRolePath<Role> + GraphRootChild<Role>
+    RolePathUtils + HasRolePath<Role> + GraphRootChild<Role>
 {
 }
 impl<
     Role: PathRole,
-    P: GetRoleChildPath + HasRolePath<Role> + GraphRootChild<Role>,
+    P: RolePathUtils + HasRolePath<Role> + GraphRootChild<Role>,
 > TraceRolePath<Role> for P
 {
 }

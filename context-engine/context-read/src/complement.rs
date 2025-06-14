@@ -15,7 +15,7 @@ pub struct ComplementBuilder {
 impl ComplementBuilder {
     pub fn build_context_index(
         self,
-        trav: &ReadContext,
+        _trav: &ReadContext,
     ) -> Child {
         //
         //
