@@ -16,7 +16,7 @@ use crate::traversal::{
     },
     state::{
         cursor::{
-            PatternPrefixCursor,
+            PatternCursor,
             PatternRangeCursor,
             ToCursor,
         },
@@ -101,11 +101,11 @@ impl Foldable for PatternRangeCursor {
         self,
         trav: K::Trav,
     ) -> Result<FoldContext<K>, ErrorState> {
-        PatternPrefixCursor::from(self).to_fold_context(trav)
+        PatternCursor::from(self).to_fold_context(trav)
     }
 }
 
-impl Foldable for PatternPrefixCursor {
+impl Foldable for PatternCursor {
     fn to_fold_context<K: TraversalKind>(
         self,
         trav: K::Trav,

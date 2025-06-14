@@ -17,7 +17,7 @@ use crate::traversal::{
     },
     state::{
         cursor::{
-            PatternPrefixCursor,
+            PatternCursor,
             PatternRangeCursor,
         },
         end::{
@@ -252,7 +252,7 @@ fn find_ancestor2() {
                     },
                 },
             }),
-            cursor: PatternPrefixCursor {
+            cursor: PatternCursor {
                 path: RootedRolePath {
                     root: query.clone(),
                     role_path: RolePath {
@@ -382,7 +382,7 @@ fn find_ancestor3() {
                     },
                 },
             }),
-            cursor: PatternPrefixCursor {
+            cursor: PatternCursor {
                 path: RootedRolePath {
                     root: query.clone(),
                     role_path: RolePath {

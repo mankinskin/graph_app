@@ -82,8 +82,8 @@ use crate::{
 };
 
 pub type PatternRangePath = RootedRangePath<Pattern>;
-pub type PatternPrefixPath = RootedRolePath<End, Pattern>;
-pub type PatternPostfixPath = RootedRolePath<Start, Pattern>;
+pub type PatternPrefixPath = RootedRolePath<Start, Pattern>;
+pub type PatternPostfixPath = RootedRolePath<End, Pattern>;
 
 impl RootChildIndexMut<End> for PatternRangePath {
     fn root_child_index_mut(&mut self) -> &mut usize {

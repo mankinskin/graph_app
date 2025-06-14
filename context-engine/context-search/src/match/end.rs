@@ -9,7 +9,7 @@ use crate::{
     },
     traversal::{
         state::{
-            cursor::PatternPrefixCursor,
+            cursor::PatternCursor,
             end::EndState,
         },
         TraversalKind,
@@ -30,7 +30,7 @@ pub struct CompareParentBatch {
     #[deref]
     #[deref_mut]
     pub batch: ParentBatch,
-    pub cursor: PatternPrefixCursor,
+    pub cursor: PatternCursor,
 }
 impl CompareParentBatch {
     pub fn into_compare_batch(self) -> VecDeque<ParentCompareState> {

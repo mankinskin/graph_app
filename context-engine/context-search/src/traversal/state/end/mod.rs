@@ -57,9 +57,10 @@ use postfix::PostfixEnd;
 use prefix::PrefixEnd;
 use range::RangeEnd;
 
-use crate::compare::parent::ParentCompareState;
-
-use super::cursor::PatternPrefixCursor;
+use crate::{
+    compare::parent::ParentCompareState,
+    traversal::state::cursor::PatternCursor,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EndKind {
@@ -148,7 +149,7 @@ pub mod range;
 pub struct EndState {
     pub reason: EndReason,
     pub kind: EndKind,
-    pub cursor: PatternPrefixCursor,
+    pub cursor: PatternCursor,
 }
 impl_cursor_pos! {
     CursorPosition for EndState, self => self.cursor.relative_pos

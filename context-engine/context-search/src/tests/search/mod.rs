@@ -23,7 +23,7 @@ use crate::traversal::{
     },
     state::{
         cursor::{
-            PatternPrefixCursor,
+            PatternCursor,
             PatternRangeCursor,
         },
         end::{
@@ -258,7 +258,7 @@ fn find_pattern1() {
                     },
                 },
             }),
-            cursor: PatternPrefixCursor {
+            cursor: PatternCursor {
                 path: RootedRolePath {
                     root: query.clone(),
                     role_path: RolePath {

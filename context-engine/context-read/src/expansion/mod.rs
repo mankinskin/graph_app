@@ -147,7 +147,7 @@ impl<'a> ExpansionIterator<'a> {
             path: advanced,
         } = ext;
         let adv_prefix =
-            PatternRootChild::<Start>::pattern_root_child(advanced);
+            PatternRootChild::<Start>::pattern_root_child(&advanced);
         // find prefix from advanced path in expansion index
         let mut prefix_iter = expansion.prefix_iter(self.trav.clone());
         let entry = prefix_iter.next().unwrap().0;

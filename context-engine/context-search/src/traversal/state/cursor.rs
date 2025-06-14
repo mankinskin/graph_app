@@ -34,7 +34,6 @@ use context_trace::{
             query_range_path::FoldablePath,
             rooted::pattern_range::{
                 PatternPostfixPath,
-                PatternPrefixPath,
                 PatternRangePath,
             },
         },
@@ -109,10 +108,9 @@ impl_cursor_pos! {
 }
 
 pub type PatternRangeCursor = PathCursor<PatternRangePath>;
-pub type PatternPrefixCursor = PathCursor<PatternPrefixPath>;
-pub type PatternPostfixCursor = PathCursor<PatternPostfixPath>;
+pub type PatternCursor = PathCursor<PatternPostfixPath>;
 
-impl From<PathCursor<PatternRangePath>> for PathCursor<PatternPrefixPath> {
+impl From<PatternRangeCursor> for PatternCursor {
     fn from(value: PathCursor<PatternRangePath>) -> Self {
         Self {
             path: value.path.into(),

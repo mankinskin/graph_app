@@ -1,4 +1,4 @@
-use super::cursor::PatternPrefixCursor;
+use super::cursor::PatternCursor;
 use crate::{
     r#match::end::CompareParentBatch,
     traversal::{
@@ -39,7 +39,7 @@ use context_trace::{
 #[derive(Debug, PartialEq, Eq)]
 pub struct StartCtx<K: TraversalKind> {
     pub index: Child,
-    pub cursor: PatternPrefixCursor,
+    pub cursor: PatternCursor,
     pub trav: K::Trav,
 }
 

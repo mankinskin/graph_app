@@ -6,7 +6,7 @@ use std::{
 use context_search::traversal::result::IncompleteState;
 use context_trace::{
     graph::vertex::child::Child,
-    path::structs::rooted::role_path::PatternEndPath,
+    path::structs::rooted::pattern_range::PatternRangePath,
 };
 
 pub trait ResultExtraction {
@@ -17,7 +17,7 @@ impl ResultExtraction for () {
         ()
     }
 }
-impl ResultExtraction for PatternEndPath {
+impl ResultExtraction for PatternRangePath {
     fn extract_from(state: &IncompleteState) -> Self {
         state.end_state.cursor.path.clone()
     }
@@ -66,7 +66,7 @@ impl InsertResult for Child {
 #[derive(Debug, Clone)]
 pub struct IndexWithPath {
     pub index: Child,
-    pub path: PatternEndPath,
+    pub path: PatternRangePath,
 }
 impl TryFrom<Child> for IndexWithPath {
     type Error = Child;
@@ -85,7 +85,7 @@ impl Borrow<Child> for IndexWithPath {
     }
 }
 impl InsertResult for IndexWithPath {
-    type Extract = PatternEndPath;
+    type Extract = PatternRangePath;
     fn build_with_extract(
         root: Child,
         ext: Self::Extract,

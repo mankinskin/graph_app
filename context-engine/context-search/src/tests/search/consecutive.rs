@@ -17,7 +17,7 @@ use crate::traversal::{
     },
     state::{
         cursor::{
-            PatternPrefixCursor,
+            PatternCursor,
             PatternRangeCursor,
         },
         end::{

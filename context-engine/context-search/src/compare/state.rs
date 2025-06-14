@@ -1,12 +1,12 @@
 use crate::traversal::state::{
-    cursor::PatternPrefixCursor,
+    cursor::PatternCursor,
     end::{
         EndKind,
         EndReason,
         EndState,
     },
-    ChildMatchState,
     ChildMatchState::{
+        self,
         Match,
         Mismatch,
     },
@@ -68,7 +68,7 @@ pub struct CompareState {
     #[deref]
     #[deref_mut]
     pub child_state: ChildState,
-    pub cursor: PatternPrefixCursor,
+    pub cursor: PatternCursor,
     pub target: DownKey,
     pub mode: PathPairMode,
 }

@@ -1,4 +1,4 @@
-use crate::traversal::state::cursor::PatternPrefixCursor;
+use crate::traversal::state::cursor::PatternCursor;
 use context_trace::{
     path::mutators::adapters::IntoAdvanced,
     trace::{
@@ -31,7 +31,7 @@ pub struct ParentCompareState {
     #[deref]
     #[deref_mut]
     pub parent_state: ParentState,
-    pub cursor: PatternPrefixCursor,
+    pub cursor: PatternCursor,
 }
 impl IntoAdvanced for ParentCompareState {
     type Next = CompareRootState;
