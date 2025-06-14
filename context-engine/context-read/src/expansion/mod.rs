@@ -16,10 +16,7 @@ use crate::{
 };
 use context_insert::insert::result::IndexWithPath;
 use context_trace::{
-    graph::vertex::{
-        child::Child,
-        wide::Wide,
-    },
+    graph::vertex::wide::Wide,
     path::{
         accessors::{
             child::root::PatternRootChild,
@@ -32,12 +29,9 @@ use context_trace::{
         mutators::append::PathAppend,
         structs::{
             role_path::RolePath,
-            rooted::{
-                pattern_range::PatternRangePath,
-                role_path::{
-                    PatternEndPath,
-                    RootedRolePath,
-                },
+            rooted::role_path::{
+                PatternEndPath,
+                RootedRolePath,
             },
         },
     },
@@ -78,7 +72,7 @@ impl<'a> Iterator for ExpansionIterator<'a> {
 
                     // BACK CONTEXT FROM CACHE
                     // finish back context
-                    let link = self.link_expansion(start_bound, next);
+                    let link = self.link_expansion(start_bound, &next);
 
                     // TODO:
                     // 1. walk overlaps at position
@@ -100,9 +94,9 @@ impl<'a> Iterator for ExpansionIterator<'a> {
                         .build_context_index(&self.trav);
                     //let mut back_pattern = self.back_context_for_link(&next);
 
-                    let back_pattern = vec![complement, expansion];
+                    let back_pattern = vec![complement, next.index];
                     let next_band = Band::from((0, back_pattern));
-                    let end_bound = start_bound + expansion.width();
+                    let end_bound = start_bound + next.index.width();
                     self.chain.append((end_bound, next_band));
                     Some(None)
                 },
@@ -140,14 +134,12 @@ impl<'a> ExpansionIterator<'a> {
     fn link_expansion(
         &self,
         start_bound: usize,
-        ext: IndexWithPath,
+        ext: &IndexWithPath,
     ) -> ExpansionLink {
-        let IndexWithPath {
-            index: expansion,
-            path: advanced,
-        } = ext;
+        let advanced = &ext.path;
+        let expansion = ext.index.clone();
         let adv_prefix =
-            PatternRootChild::<Start>::pattern_root_child(&advanced);
+            PatternRootChild::<Start>::pattern_root_child(advanced);
         // find prefix from advanced path in expansion index
         let mut prefix_iter = expansion.prefix_iter(self.trav.clone());
         let entry = prefix_iter.next().unwrap().0;

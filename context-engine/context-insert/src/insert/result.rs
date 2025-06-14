@@ -19,7 +19,7 @@ impl ResultExtraction for () {
 }
 impl ResultExtraction for PatternRangePath {
     fn extract_from(state: &IncompleteState) -> Self {
-        state.end_state.cursor.path.clone()
+        state.end_state.cursor.path.clone().into()
     }
 }
 pub trait TryInitWith<T>: Sized {

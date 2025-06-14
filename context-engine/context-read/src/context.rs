@@ -21,7 +21,10 @@ use context_trace::{
     impl_has_graph,
     path::{
         mutators::move_path::advance::Advance,
-        structs::rooted::role_path::PatternEndPath,
+        structs::rooted::{
+            pattern_range::PatternRangePath,
+            role_path::PatternEndPath,
+        },
     },
     trace::has_graph::HasGraphMut,
 };
@@ -62,7 +65,7 @@ use tracing::instrument;
 #[derive(Debug, Clone)]
 pub struct ReadContext {
     pub graph: HypergraphRef,
-    pub sequence: PatternEndPath,
+    pub sequence: PatternRangePath,
     pub root: Option<Child>,
 }
 
@@ -82,7 +85,7 @@ pub enum ReadState {
 impl ReadContext {
     pub fn new(
         graph: HypergraphRef,
-        sequence: PatternEndPath,
+        sequence: PatternRangePath,
     ) -> Self {
         Self {
             graph,

@@ -50,6 +50,12 @@ pub struct RolePath<R: PathRole> {
 }
 
 impl<R: PathRole> RolePath<R> {
+    pub fn new(entry: usize) -> Self {
+        Self {
+            sub_path: SubPath::new(entry),
+            _ty: Default::default(),
+        }
+    }
     pub fn path(&self) -> &Vec<ChildLocation> {
         &self.sub_path.path
     }

@@ -10,12 +10,18 @@ use root::{
 };
 use split_path::RootedSplitPathRef;
 
-use crate::path::{
-    accessors::role::{
-        End,
-        Start,
+use crate::{
+    graph::vertex::pattern::Pattern,
+    path::{
+        accessors::role::{
+            End,
+            Start,
+        },
+        structs::{
+            role_path::RolePath,
+            rooted::role_path::RootedRolePath,
+        },
     },
-    structs::role_path::RolePath,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,6 +34,24 @@ impl<R: PathRoot> RootedPath for RootedRangePath<R> {
     type Root = R;
     fn path_root(&self) -> Self::Root {
         self.root.clone()
+    }
+}
+impl<R: PathRoot> From<RootedRolePath<End, R>> for RootedRangePath<R> {
+    fn from(value: RootedRolePath<End, R>) -> Self {
+        Self {
+            root: value.root,
+            start: Default::default(),
+            end: value.role_path,
+        }
+    }
+}
+impl From<RootedRolePath<Start, Pattern>> for RootedRangePath<Pattern> {
+    fn from(value: RootedRolePath<Start, Pattern>) -> Self {
+        Self {
+            start: value.role_path,
+            end: RolePath::new(value.root.len()),
+            root: value.root,
+        }
     }
 }
 
