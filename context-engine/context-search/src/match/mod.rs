@@ -4,15 +4,14 @@ use crate::{
     compare::{
         iterator::CompareIterator,
         parent::ParentCompareState,
-        state::CompareState,
-    },
-    traversal::{
-        iterator::policy::DirectedTraversalPolicy,
-        root_cursor::RootCursor,
-        state::ChildMatchState::{
-            self,
-            Mismatch,
+        state::{
+            ChildMatchState,
+            CompareState,
         },
+    },
+    r#match::root_cursor::RootCursor,
+    traversal::{
+        policy::DirectedTraversalPolicy,
         TraversalKind,
     },
 };
@@ -23,6 +22,7 @@ use context_trace::{
 
 use derive_new::new;
 pub mod end;
+pub mod root_cursor;
 
 #[derive(Debug, new)]
 pub struct MatchContext {
@@ -116,7 +116,7 @@ impl<'a, K: TraversalKind> PolicyNode<'a, K> {
                     CompareIterator::<&K::Trav>::new(&self.1, queue);
                 match compare_iter.next() {
                     Some(Some(ChildMatchState::Match(cs))) => Some(Match(cs)),
-                    Some(Some(Mismatch(_))) => Some(Pass),
+                    Some(Some(ChildMatchState::Mismatch(_))) => Some(Pass),
                     Some(None) =>
                         Some(Append(vec![Child(compare_iter.children.queue)])),
                     None => None,

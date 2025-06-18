@@ -29,6 +29,11 @@ use context_trace::{
     trace::has_graph::HasGraphMut,
 };
 use tracing::instrument;
+
+use crate::{
+    expansion::ExpansionIterator,
+    overlap::bands::LinkedBands,
+};
 //pub trait HasReadContext: ToInsertContext {
 //    fn read_context<'g>(&'g mut self) -> ReadContext;
 //    fn read_sequence(
@@ -73,15 +78,15 @@ pub enum ReadState {
     Continue(Child, PatternEndPath),
     Stop(PatternEndPath),
 }
-//impl Iterator for ReadContext {
-//    type Item = ();
-//    fn next(&mut self) -> Option<Self::Item> {
-//        self.read_next().map(|next| {
-//            self.read_block(next);
-//            self.append_index(next)
-//        })
-//    }
-//}
+impl Iterator for ReadContext {
+    type Item = ();
+    fn next(&mut self) -> Option<Self::Item> {
+        self.read_next().map(|next| {
+            self.read_block(next);
+            self.append_index(next)
+        })
+    }
+}
 impl ReadContext {
     pub fn new(
         graph: HypergraphRef,
@@ -94,17 +99,17 @@ impl ReadContext {
         }
     }
     // read one block of new overlaps
-    //pub fn read_block(
-    //    &mut self,
-    //    first: Child,
-    //) -> Child {
-    //    ExpansionIterator::new(
-    //        self.clone(),
-    //        &mut self.sequence,
-    //        LinkedBands::new(first),
-    //    )
-    //    .collect()
-    //}
+    pub fn read_block(
+        &mut self,
+        first: Child,
+    ) -> Child {
+        ExpansionIterator::new(
+            self.clone(),
+            &mut self.sequence,
+            LinkedBands::new(first),
+        )
+        .collect()
+    }
     pub fn read_next(&mut self) -> Option<Child> {
         match ToInsertContext::<IndexWithPath>::insert_or_get_complete(
             &self.graph,

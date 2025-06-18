@@ -20,7 +20,7 @@ use context_trace::{
         mutators::append::PathAppend,
         structs::{
             role_path::RolePath,
-            rooted::role_path::PatternEndPath,
+            rooted::pattern_range::PatternRangePath,
             sub_path::SubPath,
         },
     },
@@ -74,7 +74,7 @@ pub struct ExpansionLink {
 #[derive(Debug, Deref, DerefMut)]
 pub struct ChainGenerator<'a> {
     pub trav: ReadContext,
-    pub cursor: &'a mut PatternEndPath,
+    pub cursor: &'a mut PatternRangePath,
     #[deref]
     #[deref_mut]
     pub chain: LinkedBands,
@@ -90,7 +90,7 @@ impl<'a> Iterator for ChainGenerator<'a> {
 impl<'a> ChainGenerator<'a> {
     pub fn new(
         trav: ReadContext,
-        cursor: &'a mut PatternEndPath,
+        cursor: &'a mut PatternRangePath,
         chain: LinkedBands,
     ) -> Self {
         Self {
@@ -110,7 +110,7 @@ impl<'a> ChainGenerator<'a> {
     ) -> Option<ChainOp> {
         postfix_path.path_append(postfix_location);
 
-        let cursor: PatternEndPath = self.cursor.clone();
+        let cursor: PatternRangePath = self.cursor.clone();
         let primer = postfix_path.clone();
 
         match ToInsertContext::<IndexWithPath>::insert_or_get_complete(

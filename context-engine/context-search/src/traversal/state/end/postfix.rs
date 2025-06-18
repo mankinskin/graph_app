@@ -15,7 +15,6 @@ use context_trace::{
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PostfixEnd {
     pub path: IndexStartPath,
-    //pub inner_width: usize,
     pub root_pos: TokenPosition,
 }
 impl Traceable for &'_ PostfixEnd {

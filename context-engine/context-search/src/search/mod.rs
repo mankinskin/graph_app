@@ -1,4 +1,4 @@
-use crate::traversal::fold::foldable::Foldable;
+use crate::fold::foldable::Foldable;
 use context::{
     AncestorSearchTraversal,
     ParentSearchTraversal,
@@ -16,8 +16,8 @@ use context_trace::{
         HypergraphRef,
     },
     trace::has_graph::{
-        TravKind,
         HasGraph,
+        TravKind,
     },
 };
 pub mod context;

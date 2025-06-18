@@ -1,10 +1,14 @@
-use super::{
-    result::FinishedKind,
-    state::start::StartCtx,
-    TraversalContext,
-    TraversalKind,
+use crate::{
+    fold::result::{
+        FinishedKind,
+        FinishedState,
+    },
+    traversal::{
+        state::start::StartCtx,
+        TraversalContext,
+        TraversalKind,
+    },
 };
-use crate::traversal::result::FinishedState;
 use context_trace::{
     graph::vertex::{
         child::Child,
@@ -19,6 +23,7 @@ use foldable::ErrorState;
 use std::fmt::Debug;
 
 pub mod foldable;
+pub mod result;
 pub mod state;
 
 impl<K: TraversalKind> TryFrom<StartCtx<K>> for FoldContext<K> {

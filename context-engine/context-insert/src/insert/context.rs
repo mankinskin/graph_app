@@ -13,11 +13,8 @@ use crate::{
     join::context::frontier::FrontierSplitIterator,
 };
 use context_search::{
-    search::context::AncestorPolicy,
-    traversal::{
-        TraversalKind,
-        container::bft::BftQueue,
-        fold::foldable::{
+    fold::{
+        foldable::{
             ErrorState,
             Foldable,
         },
@@ -25,6 +22,11 @@ use context_search::{
             CompleteState,
             FinishedKind,
         },
+    },
+    search::context::AncestorPolicy,
+    traversal::{
+        TraversalKind,
+        container::bft::BftQueue,
     },
 };
 use context_trace::{

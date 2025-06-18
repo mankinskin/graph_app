@@ -27,14 +27,6 @@ impl LeafKey for RangeEnd {
         self.path.leaf_location()
     }
 }
-//impl From<&RangeEnd> for NewRangeEnd {
-//    fn from(state: &RangeEnd) -> Self {
-//        Self {
-//            target: state.target.clone(),
-//            entry: GraphRootChild::<Start>::root_child_location(&state.path),
-//        }
-//    }
-//}
 
 impl Traceable for &RangeEnd {
     fn trace<G: HasGraph>(

@@ -16,12 +16,12 @@ use pretty_assertions::{
 #[cfg(test)]
 use context_trace::tests::env::Env1;
 
-use crate::traversal::{
-    result::{
+use crate::{
+    fold::result::{
         FinishedKind,
         FinishedState,
     },
-    state::{
+    traversal::state::{
         cursor::{
             PatternCursor,
             PatternRangeCursor,

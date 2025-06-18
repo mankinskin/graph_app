@@ -21,7 +21,11 @@ use context_trace::{
                 TargetKey,
             },
         },
-        state::InnerKind,
+        child::state::ChildState,
+        state::{
+            parent::ParentState,
+            InnerKind,
+        },
         StateDirection,
     },
 };
@@ -56,19 +60,6 @@ impl TraversalState {
     }
 }
 
-//impl From<TraversalState> for NewEntry {
-//    fn from(state: TraversalState) -> Self {
-//        Self {
-//            prev: state.prev_key(),
-//            //root_pos: state.root_pos(),
-//            kind: state.kind.into(),
-//        }
-//    }
-//}
-use context_trace::trace::{
-    child::state::ChildState,
-    state::parent::ParentState,
-};
 impl From<(DirectedKey, ParentState)> for TraversalState {
     fn from((prev, ps): (DirectedKey, ParentState)) -> Self {
         Self {
@@ -94,20 +85,6 @@ impl TargetKey for TraversalState {
     }
 }
 
-//impl CursorPosition for TraversalState {
-//    fn cursor_pos(&self) -> &TokenPosition {
-//        match &self.kind {
-//            InnerKind::Parent(state) => state.cursor_pos(),
-//            InnerKind::Child(state) => state.cursor_pos(),
-//        }
-//    }
-//    fn cursor_pos_mut(&mut self) -> &mut TokenPosition {
-//        match &mut self.kind {
-//            InnerKind::Parent(state) => state.cursor_pos_mut(),
-//            InnerKind::Child(state) => state.cursor_pos_mut(),
-//        }
-//    }
-//}
 impl Ord for TraversalState {
     fn cmp(
         &self,

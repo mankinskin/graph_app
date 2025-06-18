@@ -1,9 +1,7 @@
-use crate::traversal::state::{
-    ChildMatchState,
-    ChildMatchState::{
-        Match,
-        Mismatch,
-    },
+use crate::compare::state::ChildMatchState::{
+    self,
+    Match,
+    Mismatch,
 };
 use context_trace::trace::{
     child::iterator::{

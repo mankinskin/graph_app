@@ -9,7 +9,11 @@ use context_trace::{
         accessors::{
             child::root::GraphRootChild,
             complete::PathComplete,
-            role::Start,
+            has_path::HasRootedRolePath,
+            role::{
+                End,
+                Start,
+            },
             root::GraphRoot,
         },
         mutators::{
@@ -17,41 +21,30 @@ use context_trace::{
             simplify::PathSimplify,
         },
         structs::rooted::{
+            index_range::IndexRangePath,
             role_path::IndexStartPath,
             split_path::RootedSplitPathRef,
         },
         RolePathUtils,
     },
     trace::{
-        cache::{
-            key::{
-                directed::{
-                    up::UpKey,
-                    DirectedKey,
-                },
-                props::{
-                    CursorPosition,
-                    RootKey,
-                    TargetKey,
-                },
+        cache::key::{
+            directed::{
+                down::DownKey,
+                up::UpKey,
+                DirectedKey,
             },
-            //new::NewEnd,
+            props::{
+                CursorPosition,
+                RootKey,
+                TargetKey,
+            },
         },
         has_graph::HasGraph,
         traceable::Traceable,
         StateDirection,
         TraceContext,
     },
-};
-use context_trace::{
-    path::{
-        accessors::{
-            has_path::HasRootedRolePath,
-            role::End,
-        },
-        structs::rooted::index_range::IndexRangePath,
-    },
-    trace::cache::key::directed::down::DownKey,
 };
 use postfix::PostfixEnd;
 use prefix::PrefixEnd;
@@ -61,6 +54,10 @@ use crate::{
     compare::parent::ParentCompareState,
     traversal::state::cursor::PatternCursor,
 };
+
+pub mod postfix;
+pub mod prefix;
+pub mod range;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EndKind {
@@ -113,13 +110,7 @@ impl EndKind {
             path.role_path.raw_child_path().is_empty(),
         ) {
             (true, true) => EndKind::Complete(path.root_parent()),
-            _ => {
-                EndKind::Postfix(PostfixEnd {
-                    path,
-                    //inner_width: path.get_post_width(trav),
-                    root_pos,
-                })
-            },
+            _ => EndKind::Postfix(PostfixEnd { path, root_pos }),
         }
     }
 }
@@ -137,14 +128,33 @@ pub enum EndReason {
     QueryEnd,
     Mismatch,
 }
-pub mod postfix;
-pub mod prefix;
-pub mod range;
 // End types:
 // - top down match-mismatch
 // - top down match-query end
 // - bottom up-no matching parents
 
+#[derive(Clone, Debug)]
+pub struct TraceStart<'a>(pub &'a EndState, pub usize);
+
+impl<'a> Traceable for TraceStart<'a> {
+    fn trace<G: HasGraph>(
+        self,
+        ctx: &mut TraceContext<G>,
+    ) {
+        match &self.0.kind {
+            EndKind::Postfix(p) => Some(p.clone()),
+            EndKind::Range(p) => Some(PostfixEnd {
+                path: p.path.rooted_role_path(),
+                root_pos: p.root_pos,
+            }),
+            _ => None,
+        }
+        .map(|mut p| {
+            p.path.role_path.sub_path.path.drain(0..self.1);
+            p.trace(ctx)
+        });
+    }
+}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EndState {
     pub reason: EndReason,
@@ -166,28 +176,6 @@ impl Traceable for &EndState {
             EndKind::Postfix(p) => p.trace(ctx),
             _ => {},
         }
-    }
-}
-#[derive(Clone, Debug)]
-pub struct TraceStart<'a>(pub &'a EndState, pub usize);
-
-impl<'a> Traceable for TraceStart<'a> {
-    fn trace<G: HasGraph>(
-        self,
-        ctx: &mut TraceContext<G>,
-    ) {
-        match &self.0.kind {
-            EndKind::Postfix(p) => Some(p.clone()),
-            EndKind::Range(p) => Some(PostfixEnd {
-                path: p.path.rooted_role_path(),
-                root_pos: p.root_pos,
-            }),
-            _ => None,
-        }
-        .map(|mut p| {
-            p.path.role_path.sub_path.path.drain(0..self.1);
-            p.trace(ctx)
-        });
     }
 }
 impl EndState {

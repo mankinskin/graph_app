@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use crate::traversal::EndState;
+use crate::traversal::state::end::EndState;
 use context_trace::{
     graph::vertex::{
         child::Child,

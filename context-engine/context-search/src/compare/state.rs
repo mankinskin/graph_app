@@ -5,11 +5,6 @@ use crate::traversal::state::{
         EndReason,
         EndState,
     },
-    ChildMatchState::{
-        self,
-        Match,
-        Mismatch,
-    },
 };
 use context_trace::{
     graph::vertex::wide::Wide,
@@ -62,6 +57,12 @@ pub enum PathPairMode {
     GraphMajor,
     QueryMajor,
 }
+#[derive(Clone, Debug)]
+pub enum ChildMatchState {
+    Mismatch(EndState),
+    Match(CompareState),
+}
+use ChildMatchState::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deref, DerefMut)]
 pub struct CompareState {

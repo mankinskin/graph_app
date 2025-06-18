@@ -2,21 +2,18 @@ use crate::{
     compare::{
         iterator::CompareIterator,
         parent::ParentCompareState,
-        state::CompareState,
+        state::{
+            ChildMatchState::*,
+            CompareState,
+        },
     },
     r#match::end::CompareParentBatch,
     traversal::{
-        iterator::policy::DirectedTraversalPolicy,
-        state::{
-            end::{
-                EndKind,
-                EndReason,
-                EndState,
-            },
-            ChildMatchState::{
-                Match,
-                Mismatch,
-            },
+        policy::DirectedTraversalPolicy,
+        state::end::{
+            EndKind,
+            EndReason,
+            EndState,
         },
         TraversalKind,
     },

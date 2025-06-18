@@ -29,9 +29,12 @@ use context_trace::{
         mutators::append::PathAppend,
         structs::{
             role_path::RolePath,
-            rooted::role_path::{
-                PatternEndPath,
-                RootedRolePath,
+            rooted::{
+                pattern_range::PatternRangePath,
+                role_path::{
+                    PatternEndPath,
+                    RootedRolePath,
+                },
             },
         },
     },
@@ -123,7 +126,7 @@ impl<'a> Iterator for ExpansionIterator<'a> {
 impl<'a> ExpansionIterator<'a> {
     pub fn new(
         trav: ReadContext,
-        cursor: &'a mut PatternEndPath,
+        cursor: &'a mut PatternRangePath,
         chain: LinkedBands,
     ) -> Self {
         Self {

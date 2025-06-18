@@ -9,20 +9,22 @@ use context_trace::{
     },
 };
 
-use crate::traversal::{
-    result::{
+use crate::{
+    fold::result::{
         FinishedKind,
         FinishedState,
     },
-    state::{
-        cursor::{
-            PatternCursor,
-            PatternRangeCursor,
-            ToCursor,
+    traversal::{
+        state::{
+            cursor::{
+                PatternCursor,
+                PatternRangeCursor,
+                ToCursor,
+            },
+            start::StartCtx,
         },
-        start::StartCtx,
+        TraversalKind,
     },
-    TraversalKind,
 };
 use context_trace::graph::vertex::pattern::Pattern;
 use std::fmt::Debug;

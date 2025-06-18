@@ -1,8 +1,10 @@
-use crate::traversal::{
-    container::bft::BftQueue,
-    iterator::policy::DirectedTraversalPolicy,
-    result::FinishedState,
-    TraversalKind,
+use crate::{
+    fold::result::FinishedState,
+    traversal::{
+        container::bft::BftQueue,
+        policy::DirectedTraversalPolicy,
+        TraversalKind,
+    },
 };
 use context_trace::{
     graph::getters::ErrorReason,

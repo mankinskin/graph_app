@@ -4,7 +4,7 @@ use crate::split::{
     context::SplitCacheContext,
     trace::states::context::SplitTraceStatesContext,
 };
-use context_search::traversal::result::IncompleteState;
+use context_search::fold::result::IncompleteState;
 use context_trace::{
     graph::vertex::{
         child::Child,

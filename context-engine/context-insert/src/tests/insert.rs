@@ -2,11 +2,11 @@ use std::collections::HashSet;
 
 use crate::insert::ToInsertContext;
 use context_search::{
-    search::Searchable,
-    traversal::result::{
+    fold::result::{
         FinishedKind,
         FinishedState,
     },
+    search::Searchable,
 };
 use context_trace::{
     graph::{

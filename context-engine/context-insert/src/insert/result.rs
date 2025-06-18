@@ -3,7 +3,7 @@ use std::{
     fmt::Debug,
 };
 
-use context_search::traversal::result::IncompleteState;
+use context_search::fold::result::IncompleteState;
 use context_trace::{
     graph::vertex::child::Child,
     path::structs::rooted::pattern_range::PatternRangePath,

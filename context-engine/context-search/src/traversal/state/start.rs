@@ -1,10 +1,12 @@
 use super::cursor::PatternCursor;
 use crate::{
+    fold::{
+        foldable::ErrorState,
+        result::FinishedKind,
+    },
     r#match::end::CompareParentBatch,
     traversal::{
-        fold::foldable::ErrorState,
-        iterator::policy::DirectedTraversalPolicy,
-        result::FinishedKind,
+        policy::DirectedTraversalPolicy,
         TraversalKind,
     },
 };

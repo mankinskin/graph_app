@@ -19,8 +19,8 @@ use crate::{
     },
 };
 use context_search::{
+    fold::result::IncompleteState,
     search::Searchable,
-    traversal::result::IncompleteState,
 };
 use context_trace::{
     HashMap,

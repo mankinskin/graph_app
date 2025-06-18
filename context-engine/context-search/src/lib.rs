@@ -13,6 +13,7 @@
 extern crate test;
 
 pub mod compare;
+pub mod fold;
 pub mod r#match;
 pub mod search;
 pub mod traversal;

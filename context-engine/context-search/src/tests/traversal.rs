@@ -24,8 +24,8 @@ use pretty_assertions::assert_eq;
 use std::convert::TryInto;
 
 use crate::{
+    fold::result::IncompleteState,
     search::Searchable,
-    traversal::result::IncompleteState,
 };
 use context_trace::{
     trace::has_graph::HasGraph,

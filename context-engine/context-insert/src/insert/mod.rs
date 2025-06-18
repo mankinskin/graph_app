@@ -2,7 +2,7 @@ use context::*;
 use result::InsertResult;
 
 use crate::interval::init::InitInterval;
-use context_search::traversal::fold::foldable::{
+use context_search::fold::foldable::{
     ErrorState,
     Foldable,
 };

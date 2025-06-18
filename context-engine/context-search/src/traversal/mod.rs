@@ -1,7 +1,10 @@
-use crate::r#match::{
-    end::MatchIterator,
-    MatchContext,
-    TraceNode::Parent,
+use crate::{
+    fold::foldable::ErrorState,
+    r#match::{
+        end::MatchIterator,
+        MatchContext,
+        TraceNode::Parent,
+    },
 };
 use container::StateContainer;
 use context_trace::trace::{
@@ -14,8 +17,7 @@ use context_trace::trace::{
     TraceContext,
 };
 use derive_new::new;
-use fold::foldable::ErrorState;
-use iterator::policy::DirectedTraversalPolicy;
+use policy::DirectedTraversalPolicy;
 use state::{
     end::{
         EndKind,
@@ -30,10 +32,7 @@ use std::{
     ops::ControlFlow,
 };
 pub mod container;
-pub mod fold;
-pub mod iterator;
-pub mod result;
-pub mod root_cursor;
+pub mod policy;
 pub mod state;
 
 pub trait TraversalKind: Debug + Default {

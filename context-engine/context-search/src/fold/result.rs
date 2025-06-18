@@ -4,7 +4,7 @@ use context_trace::{
     trace::cache::TraceCache,
 };
 
-use super::state::end::{
+use crate::traversal::state::end::{
     EndKind,
     EndState,
 };
