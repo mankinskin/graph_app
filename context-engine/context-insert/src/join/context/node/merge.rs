@@ -13,7 +13,7 @@ use derive_new::new;
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 
-use super::context::NodeJoinContext;
+use super::context::NodeJoinCtx;
 use crate::{
     interval::partition::{
         Infix,
@@ -32,7 +32,7 @@ use crate::{
         },
         vertex::{
             ChildTracePositions,
-            PosSplitContext,
+            PosSplitCtx,
         },
     },
 };
@@ -45,11 +45,11 @@ use context_trace::{
 };
 
 #[derive(Debug, new)]
-pub struct NodeMergeContext<'a: 'b, 'b> {
-    pub ctx: &'b mut NodeJoinContext<'a>,
+pub struct NodeMergeCtx<'a: 'b, 'b> {
+    pub ctx: &'b mut NodeJoinCtx<'a>,
 }
 
-impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b> {
+impl<'a: 'b, 'b: 'c, 'c> NodeMergeCtx<'a, 'b> {
     pub fn merge_node(
         &'c mut self,
         partitions: &Vec<Child>,
@@ -102,12 +102,12 @@ impl<'a: 'b, 'b: 'c, 'c> NodeMergeContext<'a, 'b> {
 
                 let lo = offsets
                     .iter()
-                    .map(PosSplitContext::from)
+                    .map(PosSplitCtx::from)
                     .nth(start)
                     .unwrap();
                 let ro = offsets
                     .iter()
-                    .map(PosSplitContext::from)
+                    .map(PosSplitCtx::from)
                     .nth(start + len)
                     .unwrap();
 

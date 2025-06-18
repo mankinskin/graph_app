@@ -8,7 +8,7 @@ use context_trace::{
         command::PostfixCommand,
         has_graph::HasGraph,
         traceable::Traceable,
-        TraceContext,
+        TraceCtx,
     },
 };
 
@@ -20,7 +20,7 @@ pub struct PostfixEnd {
 impl Traceable for &'_ PostfixEnd {
     fn trace<G: HasGraph>(
         self,
-        ctx: &mut TraceContext<G>,
+        ctx: &mut TraceCtx<G>,
     ) {
         PostfixCommand::from(self).trace(ctx)
     }

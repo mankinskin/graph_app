@@ -96,7 +96,7 @@ pub trait TraceRole<Role: PathRole> {
 }
 pub type RoleEdit<R> = NewTraceEdge<<R as PathRole>::Direction>;
 
-impl<'a, G: HasGraph, Role: PathRole> TraceRole<Role> for TraceContext<G>
+impl<'a, G: HasGraph, Role: PathRole> TraceRole<Role> for TraceCtx<G>
 where
     EditKind: From<NewTraceEdge<<Role as PathRole>::Direction>>,
 {
@@ -129,11 +129,11 @@ where
 }
 
 #[derive(Debug)]
-pub struct TraceContext<G: HasGraph> {
+pub struct TraceCtx<G: HasGraph> {
     pub trav: G,
     pub cache: TraceCache,
 }
-impl<G: HasGraph> TraceContext<G> {
+impl<G: HasGraph> TraceCtx<G> {
     //fn skip_key(
     //    &mut self,
     //    root_entry: usize, // sub index

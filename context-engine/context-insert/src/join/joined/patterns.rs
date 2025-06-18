@@ -12,7 +12,7 @@ use crate::{
     },
     join::{
         context::{
-            node::context::NodeJoinContext,
+            node::context::NodeJoinCtx,
             pattern::borders::JoinBorders,
         },
         partition::{
@@ -45,7 +45,7 @@ where
 {
     pub fn from_partition_info<'c>(
         info: JoinPartitionInfo<R>,
-        ctx: &'c mut NodeJoinContext<'a>,
+        ctx: &'c mut NodeJoinCtx<'a>,
     ) -> Self
     where
         'b: 'c,
@@ -82,7 +82,7 @@ where
     }
     pub fn to_joined_partition(
         self,
-        ctx: &'b mut NodeJoinContext<'a>,
+        ctx: &'b mut NodeJoinCtx<'a>,
     ) -> JoinedPartition<R> {
         JoinedPartition::from_joined_patterns(self, ctx)
     }

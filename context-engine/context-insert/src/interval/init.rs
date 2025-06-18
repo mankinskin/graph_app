@@ -1,8 +1,8 @@
 use std::fmt::Debug;
 
 use crate::split::{
-    context::SplitCacheContext,
-    trace::states::context::SplitTraceStatesContext,
+    context::SplitCacheCtx,
+    trace::states::context::SplitTraceStatesCtx,
 };
 use context_search::fold::result::IncompleteState;
 use context_trace::{
@@ -11,7 +11,7 @@ use context_trace::{
         wide::Wide,
     },
     trace::{
-        TraceContext,
+        TraceCtx,
         cache::TraceCache,
         has_graph::HasGraphMut,
     },
@@ -44,8 +44,8 @@ impl<'a, G: HasGraphMut + 'a> From<(&'a mut G, InitInterval)>
             end_bound,
             ..
         } = init;
-        let ctx = TraceContext { trav, cache };
-        let iter = SplitTraceStatesContext::new(ctx, root, end_bound);
-        Self::from(SplitCacheContext::init(iter))
+        let ctx = TraceCtx { trav, cache };
+        let iter = SplitTraceStatesCtx::new(ctx, root, end_bound);
+        Self::from(SplitCacheCtx::init(iter))
     }
 }

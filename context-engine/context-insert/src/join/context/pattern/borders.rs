@@ -18,7 +18,7 @@ use crate::{
         },
     },
     join::{
-        context::pattern::PatternJoinContext,
+        context::pattern::PatternJoinCtx,
         partition::Join,
     },
     split::cache::position::PosKey,
@@ -34,7 +34,7 @@ pub trait JoinBorders<R: RangeRole<Mode = Join>>: TraceBorders<R> {
 impl JoinBorders<Post<Join>> for BorderInfo {
     fn get_child_splits(
         &self,
-        ctx: &PatternJoinContext<'_>,
+        ctx: &PatternJoinCtx<'_>,
     ) -> Option<ChildrenOf<Post<Join>>> {
         self.inner_offset.map(|o| {
             ctx.splits
@@ -48,7 +48,7 @@ impl JoinBorders<Post<Join>> for BorderInfo {
 impl JoinBorders<Pre<Join>> for BorderInfo {
     fn get_child_splits(
         &self,
-        ctx: &PatternJoinContext<'_>,
+        ctx: &PatternJoinCtx<'_>,
     ) -> Option<ChildrenOf<Pre<Join>>> {
         self.inner_offset.map(|o| {
             ctx.splits
@@ -62,7 +62,7 @@ impl JoinBorders<Pre<Join>> for BorderInfo {
 impl JoinBorders<In<Join>> for (BorderInfo, BorderInfo) {
     fn get_child_splits(
         &self,
-        ctx: &PatternJoinContext<'_>,
+        ctx: &PatternJoinCtx<'_>,
     ) -> Option<ChildrenOf<In<Join>>> {
         let (lc, rc) =
             (ctx.pattern[self.0.sub_index], ctx.pattern[self.1.sub_index]);

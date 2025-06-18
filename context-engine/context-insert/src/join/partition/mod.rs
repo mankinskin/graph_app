@@ -7,7 +7,7 @@ use crate::{
             mode::{
                 InVisitMode,
                 ModeChildren,
-                ModeContext,
+                ModeCtx,
                 ModeInfo,
                 PostVisitMode,
                 PreVisitMode,
@@ -15,7 +15,7 @@ use crate::{
             role::RangeRole,
         },
     },
-    join::context::node::context::NodeJoinContext,
+    join::context::node::context::NodeJoinCtx,
 };
 use context_trace::graph::vertex::child::Child;
 use info::{
@@ -25,7 +25,7 @@ use info::{
 
 use super::{
     context::pattern::{
-        PatternJoinContext,
+        PatternJoinCtx,
         borders::JoinBorders,
     },
     joined::partition::JoinedPartition,
@@ -37,7 +37,7 @@ where
 {
     fn join_partition<'a: 'b, 'b: 'c, 'c>(
         self,
-        ctx: &'c mut NodeJoinContext<'a>,
+        ctx: &'c mut NodeJoinCtx<'a>,
     ) -> Result<JoinedPartition<R>, Child>
     where
         Self: 'c,
@@ -59,9 +59,9 @@ impl<R: RangeRole<Mode = Join>, P: InfoPartition<R>> JoinPartition<R> for P wher
 #[derive(Debug, Clone, Copy)]
 pub struct Join;
 
-impl ModeContext for Join {
-    type NodeContext<'a: 'b, 'b> = NodeJoinContext<'a>;
-    type PatternResult<'a> = PatternJoinContext<'a>;
+impl ModeCtx for Join {
+    type NodeCtx<'a: 'b, 'b> = NodeJoinCtx<'a>;
+    type PatternResult<'a> = PatternJoinCtx<'a>;
 }
 
 impl<R: RangeRole<Mode = Join>> ModeChildren<R> for Join {

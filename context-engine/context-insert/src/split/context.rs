@@ -9,7 +9,7 @@ use super::{
         position::SplitPositionCache,
         vertex::SplitVertexCache,
     },
-    trace::states::context::SplitTraceStatesContext,
+    trace::states::context::SplitTraceStatesCtx,
     vertex::output::RootNode,
 };
 use crate::split::trace::SplitTraceState;
@@ -22,15 +22,15 @@ use context_trace::{
 };
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct SplitCacheContext<G: HasGraph> {
+pub struct SplitCacheCtx<G: HasGraph> {
     #[deref]
     #[deref_mut]
-    pub states_ctx: SplitTraceStatesContext<G>,
+    pub states_ctx: SplitTraceStatesCtx<G>,
 
     pub cache: SplitCache,
 }
-impl<'a, G: HasGraph> SplitCacheContext<G> {
-    pub fn init(mut states_ctx: SplitTraceStatesContext<G>) -> Self {
+impl<'a, G: HasGraph> SplitCacheCtx<G> {
+    pub fn init(mut states_ctx: SplitTraceStatesCtx<G>) -> Self {
         let (offsets, root_mode) =
             states_ctx.completed_splits::<RootNode>(&states_ctx.ctx.root);
         let pos_splits = states_ctx

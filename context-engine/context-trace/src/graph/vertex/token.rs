@@ -128,26 +128,26 @@ impl<T: Tokenize> AsToken<T> for T {
 }
 
 #[derive(Debug, Clone)]
-pub struct ContextInfo<T: Tokenize> {
+pub struct CtxInfo<T: Tokenize> {
     pub token: Token<T>,
     pub incoming_groups: Vec<Vec<Token<T>>>,
     pub outgoing_groups: Vec<Vec<Token<T>>>,
 }
 
-pub trait ContextLink: Sized + Clone {
+pub trait CtxLink: Sized + Clone {
     fn index(&self) -> &EdgeIndex;
     fn into_index(self) -> EdgeIndex {
         *self.index()
     }
 }
 
-impl ContextLink for EdgeIndex {
+impl CtxLink for EdgeIndex {
     fn index(&self) -> &EdgeIndex {
         self
     }
 }
 
-pub trait ContextMapping<E: ContextLink> {
+pub trait CtxMapping<E: CtxLink> {
     /// Get distance groups for incoming edges
     fn incoming(&self) -> &Vec<E>;
     fn outgoing(&self) -> &Vec<E>;
@@ -156,20 +156,20 @@ pub trait ContextMapping<E: ContextLink> {
     //fn incoming_distance_groups(
     //    &self,
     //    graph: &SequenceGraph<T>,
-    //) -> Vec<Vec<Self::Context>> {
+    //) -> Vec<Vec<Self::Ctx>> {
     //    graph.distance_group_source_weights(self.incoming().iter().map(|e| e.into_index()))
     //}
     ///// Get distance groups for outgoing edges
     //fn outgoing_distance_groups(
     //    &self,
     //    graph: &SequenceGraph<T>,
-    //) -> Vec<Vec<Self::Context>> {
+    //) -> Vec<Vec<Self::Ctx>> {
     //    graph.distance_group_target_weights(self.outgoing().iter().map(|e| e.into_index()))
     //}
 }
 
-pub trait TokenContext<T: Tokenize, E: ContextLink>: Sized {
-    type Mapping: ContextMapping<E>;
+pub trait TokenCtx<T: Tokenize, E: CtxLink>: Sized {
+    type Mapping: CtxMapping<E>;
     fn token(&self) -> &Token<T>;
     fn into_token(self) -> Token<T>;
     fn map_to_tokens(groups: Vec<Vec<Self>>) -> Vec<Vec<Token<T>>> {
@@ -180,11 +180,11 @@ pub trait TokenContext<T: Tokenize, E: ContextLink>: Sized {
     }
     fn mapping(&self) -> &Self::Mapping;
     fn mapping_mut(&mut self) -> &mut Self::Mapping;
-    //fn get_info(&self, graph: &SequenceGraph<T>) -> ContextInfo<T> {
+    //fn get_info(&self, graph: &SequenceGraph<T>) -> CtxInfo<T> {
     //    let mut incoming_groups = self.mapping().incoming_distance_groups(graph);
     //    incoming_groups.reverse();
     //    let outgoing_groups = self.mapping().outgoing_distance_groups(graph);
-    //    ContextInfo {
+    //    CtxInfo {
     //        token: self.token().clone(),
     //        incoming_groups: Self::map_to_tokens(incoming_groups),
     //        outgoing_groups: Self::map_to_tokens(outgoing_groups),
@@ -192,7 +192,7 @@ pub trait TokenContext<T: Tokenize, E: ContextLink>: Sized {
     //}
 }
 
-pub fn groups_to_string<T: Tokenize, E: ContextLink, C: TokenContext<T, E> + Display>(
+pub fn groups_to_string<T: Tokenize, E: CtxLink, C: TokenCtx<T, E> + Display>(
     groups: Vec<Vec<C>>
 ) -> String {
     let mut lines = Vec::new();

@@ -2,7 +2,7 @@ use context_trace::graph::vertex::child::Child;
 use derive_new::new;
 
 use super::{
-    context::ReadContext,
+    context::ReadCtx,
     overlap::bands::generator::ExpansionLink,
 };
 
@@ -15,7 +15,7 @@ pub struct ComplementBuilder {
 impl ComplementBuilder {
     pub fn build_context_index(
         self,
-        _trav: &ReadContext,
+        _trav: &ReadCtx,
     ) -> Child {
         //
         //

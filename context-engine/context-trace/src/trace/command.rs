@@ -2,7 +2,7 @@ use super::{
     BottomUp,
     RoleTraceKey,
     TopDown,
-    TraceContext,
+    TraceCtx,
     TraceRole,
     cache::{
         key::directed::{
@@ -48,7 +48,7 @@ pub enum TraceCommand {
 impl Traceable for TraceCommand {
     fn trace<G: super::has_graph::HasGraph>(
         self,
-        ctx: &mut super::TraceContext<G>,
+        ctx: &mut super::TraceCtx<G>,
     ) {
         match self {
             Self::Postfix(cmd) => cmd.trace(ctx),
@@ -67,7 +67,7 @@ pub struct PostfixCommand {
 impl Traceable for PostfixCommand {
     fn trace<G: HasGraph>(
         self,
-        ctx: &mut TraceContext<G>,
+        ctx: &mut TraceCtx<G>,
     ) {
         let first = self.path.role_leaf_child_location::<Start>().unwrap();
         let start_index = *ctx.trav.graph().expect_child_at(first);
@@ -98,7 +98,7 @@ pub struct PrefixCommand {
 impl Traceable for PrefixCommand {
     fn trace<G: HasGraph>(
         self,
-        ctx: &mut TraceContext<G>,
+        ctx: &mut TraceCtx<G>,
     ) {
         let root_exit = self.path.role_root_child_location::<End>();
         // TODO: implement root_child for prefix/postfix path with most outer root child
@@ -139,7 +139,7 @@ pub struct RangeCommand {
 impl Traceable for RangeCommand {
     fn trace<G: HasGraph>(
         self,
-        ctx: &mut TraceContext<G>,
+        ctx: &mut TraceCtx<G>,
     ) {
         let first = self.path.role_leaf_child_location::<Start>().unwrap();
         let start_index = *ctx.trav.graph().expect_child_at(first);

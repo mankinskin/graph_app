@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use super::SplitTraceContext;
+use super::SplitTraceCtx;
 use crate::split::{
     cache::{
         leaves::Leaves,

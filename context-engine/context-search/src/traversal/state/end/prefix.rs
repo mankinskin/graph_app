@@ -5,7 +5,7 @@ use context_trace::{
         command::PrefixCommand,
         has_graph::HasGraph,
         traceable::Traceable,
-        TraceContext,
+        TraceCtx,
     },
 };
 
@@ -25,7 +25,7 @@ impl From<&PrefixEnd> for PrefixCommand {
 impl Traceable for &PrefixEnd {
     fn trace<G: HasGraph>(
         self,
-        ctx: &mut TraceContext<G>,
+        ctx: &mut TraceCtx<G>,
     ) {
         PrefixCommand::from(self).trace(ctx)
     }

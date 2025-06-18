@@ -13,14 +13,14 @@ use crate::interval::partition::info::range::{
 };
 use context_trace::trace::{
     node::{
-        AsNodeTraceContext,
-        NodeTraceContext,
+        AsNodeTraceCtx,
+        NodeTraceCtx,
     },
     pattern::{
-        GetPatternContext,
-        GetPatternTraceContext,
-        HasPatternTraceContext,
-        PatternTraceContext,
+        GetPatternCtx,
+        GetPatternTraceCtx,
+        HasPatternTraceCtx,
+        PatternTraceCtx,
     },
 };
 
@@ -34,7 +34,7 @@ use super::role::{
 pub struct Trace;
 
 pub trait ModeInfo<R: RangeRole<Mode = Self>>:
-    Debug + Clone + Copy + ModeChildren<R> + ModeContext
+    Debug + Clone + Copy + ModeChildren<R> + ModeCtx
 {
     type PatternInfo: ModeRangeInfo<R>;
 }
@@ -45,21 +45,21 @@ impl<R: RangeRole<Mode = Self>> ModeInfo<R> for Trace {
     type PatternInfo = TraceRangeInfo<R>;
 }
 
-pub trait ModeContext {
-    type NodeContext<'a: 'b, 'b>: AsNodeTraceContext
-        + GetPatternContext<PatternCtx<'b> = Self::PatternResult<'b>>
-        + GetPatternTraceContext
+pub trait ModeCtx {
+    type NodeCtx<'a: 'b, 'b>: AsNodeTraceCtx
+        + GetPatternCtx<PatternCtx<'b> = Self::PatternResult<'b>>
+        + GetPatternTraceCtx
         + 'b
     where
         Self: 'a;
-    type PatternResult<'a>: HasPatternTraceContext + Hash + Eq
+    type PatternResult<'a>: HasPatternTraceCtx + Hash + Eq
     where
         Self: 'a;
 }
 
-impl ModeContext for Trace {
-    type NodeContext<'a: 'b, 'b> = NodeTraceContext<'b>;
-    type PatternResult<'a> = PatternTraceContext<'a>;
+impl ModeCtx for Trace {
+    type NodeCtx<'a: 'b, 'b> = NodeTraceCtx<'b>;
+    type PatternResult<'a> = PatternTraceCtx<'a>;
 }
 
 pub trait ModeChildren<R: RangeRole> {

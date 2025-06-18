@@ -30,8 +30,8 @@ use crate::{
     join::{
         context::{
             frontier::FrontierSplitIterator,
-            node::merge::NodeMergeContext,
-            pattern::PatternJoinContext,
+            node::merge::NodeMergeCtx,
+            pattern::PatternJoinCtx,
         },
         joined::partition::JoinedPartition,
         partition::{
@@ -50,7 +50,7 @@ use crate::{
         position_splits,
         vertex::{
             ChildTracePositions,
-            PosSplitContext,
+            PosSplitCtx,
             VertexSplits,
             output::RootMode,
         },
@@ -71,24 +71,24 @@ use context_trace::{
     trace::{
         has_graph::HasGraphMut,
         node::{
-            AsNodeTraceContext,
-            NodeTraceContext,
+            AsNodeTraceCtx,
+            NodeTraceCtx,
         },
         pattern::{
-            GetPatternContext,
-            GetPatternTraceContext,
-            PatternTraceContext,
+            GetPatternCtx,
+            GetPatternTraceCtx,
+            PatternTraceCtx,
         },
     },
 };
 
 #[derive(Debug)]
-pub struct LockedFrontierContext<'a> {
+pub struct LockedFrontierCtx<'a> {
     pub trav: <HypergraphRef as HasGraphMut>::GuardMut<'a>,
     pub interval: &'a IntervalGraph,
     pub splits: &'a SplitMap,
 }
-impl<'a> LockedFrontierContext<'a> {
+impl<'a> LockedFrontierCtx<'a> {
     pub fn new(ctx: &'a mut FrontierSplitIterator) -> Self {
         Self {
             trav: ctx.trav.graph_mut(),
@@ -98,53 +98,53 @@ impl<'a> LockedFrontierContext<'a> {
     }
 }
 #[derive(Debug, Deref, DerefMut)]
-pub struct NodeJoinContext<'a> {
+pub struct NodeJoinCtx<'a> {
     #[deref]
     #[deref_mut]
-    pub ctx: LockedFrontierContext<'a>,
+    pub ctx: LockedFrontierCtx<'a>,
     pub index: Child,
 }
 
-impl<'a> NodeJoinContext<'a> {
+impl<'a> NodeJoinCtx<'a> {
     pub fn new(
         index: Child,
         ctx: &'a mut FrontierSplitIterator,
     ) -> Self {
-        NodeJoinContext {
+        NodeJoinCtx {
             index,
-            ctx: LockedFrontierContext::new(ctx),
+            ctx: LockedFrontierCtx::new(ctx),
         }
     }
 }
-impl<'a: 'b, 'b> AsNodeTraceContext for NodeJoinContext<'a> {
-    fn as_trace_context<'t>(&'t self) -> NodeTraceContext<'t>
+impl<'a: 'b, 'b> AsNodeTraceCtx for NodeJoinCtx<'a> {
+    fn as_trace_context<'t>(&'t self) -> NodeTraceCtx<'t>
     where
         Self: 't,
         'a: 't,
     {
-        NodeTraceContext {
+        NodeTraceCtx {
             patterns: self.patterns(),
             index: self.borrow().index,
         }
     }
 }
-impl<'a: 'b, 'b> GetPatternTraceContext for NodeJoinContext<'a> {
+impl<'a: 'b, 'b> GetPatternTraceCtx for NodeJoinCtx<'a> {
     fn get_pattern_trace_context<'c>(
         &'c self,
         pattern_id: &PatternId,
-    ) -> PatternTraceContext<'c>
+    ) -> PatternTraceCtx<'c>
     where
         Self: 'c,
     {
-        PatternTraceContext {
+        PatternTraceCtx {
             loc: self.index.to_pattern_location(*pattern_id),
             pattern: self.as_trace_context().patterns.get(pattern_id).unwrap(),
         }
     }
 }
-impl<'a: 'b, 'b> GetPatternContext for NodeJoinContext<'a> {
+impl<'a: 'b, 'b> GetPatternCtx for NodeJoinCtx<'a> {
     type PatternCtx<'c>
-        = PatternJoinContext<'c>
+        = PatternJoinCtx<'c>
     where
         Self: 'c;
 
@@ -157,22 +157,22 @@ impl<'a: 'b, 'b> GetPatternContext for NodeJoinContext<'a> {
     {
         let ctx = self.get_pattern_trace_context(pattern_id);
         //let pos_splits = self.vertex_cache().pos_splits();
-        PatternJoinContext {
+        PatternJoinCtx {
             ctx,
             splits: &self.splits, //pos_splits
                                   //    .iter()
-                                  //    .map(|pos| PosSplitContext::from(pos).fetch_split(&self.ctx.interval))
+                                  //    .map(|pos| PosSplitCtx::from(pos).fetch_split(&self.ctx.interval))
                                   //    .collect(),
         }
     }
 }
-impl<'a: 'b, 'b> NodeJoinContext<'a> {
+impl<'a: 'b, 'b> NodeJoinCtx<'a> {
     pub fn patterns(&self) -> &ChildPatterns {
         self.ctx.trav.expect_child_patterns(self.index)
     }
 }
 
-impl<'a: 'b, 'b> NodeJoinContext<'a> {
+impl<'a: 'b, 'b> NodeJoinCtx<'a> {
     pub fn vertex_cache<'c>(&'c self) -> &'c SplitVertexCache {
         self.interval.cache.get(&self.index.vertex_index()).unwrap()
     }
@@ -184,7 +184,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
         );
         let pos_splits = self.vertex_cache();
         assert_eq!(partitions.len(), pos_splits.len() + 1,);
-        NodeMergeContext::new(self).merge_node(&partitions)
+        NodeMergeCtx::new(self).merge_node(&partitions)
     }
     pub fn index_partitions(&mut self) -> Vec<Child> {
         let pos_splits = self.vertex_cache().clone();
@@ -210,7 +210,7 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
         let root_mode = self.interval.cache.root_mode;
         let index = self.index;
         let offsets = self.vertex_cache().clone();
-        let mut offset_iter = offsets.iter().map(PosSplitContext::from);
+        let mut offset_iter = offsets.iter().map(PosSplitCtx::from);
         let offset = offset_iter.next().unwrap();
 
         let x = match root_mode {
@@ -263,8 +263,8 @@ impl<'a: 'b, 'b> NodeJoinContext<'a> {
     pub fn join_incomplete_infix<'c>(
         &mut self,
         part: JoinedPartition<In<Join>>,
-        loffset: PosSplitContext<'c>,
-        roffset: PosSplitContext<'c>,
+        loffset: PosSplitCtx<'c>,
+        roffset: PosSplitCtx<'c>,
         index: Child,
     ) -> Child {
         let loffset = (*loffset.pos, loffset.split.clone());

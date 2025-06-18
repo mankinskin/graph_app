@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use crate::{
     compare::parent::ParentCompareState,
     r#match::{
-        MatchContext,
+        MatchCtx,
         RootSearchIterator,
         TraceNode::Parent,
     },
@@ -17,7 +17,7 @@ use crate::{
 };
 use context_trace::trace::{
     state::parent::ParentBatch,
-    TraceContext,
+    TraceCtx,
 };
 use derive_more::{
     Deref,
@@ -46,10 +46,7 @@ impl CompareParentBatch {
 }
 
 #[derive(Debug, new)]
-pub struct MatchIterator<K: TraversalKind>(
-    pub TraceContext<K::Trav>,
-    pub MatchContext,
-);
+pub struct MatchIterator<K: TraversalKind>(pub TraceCtx<K::Trav>, pub MatchCtx);
 
 impl<K: TraversalKind> MatchIterator<K> {
     pub fn find_next(&mut self) -> Option<EndState> {

@@ -56,7 +56,7 @@ impl<'it> SequenceIter<'it> {
     }
     pub fn next_block<'g>(
         &mut self,
-        //ctx: &mut ReadContext,
+        //ctx: &mut ReadCtx,
     ) -> Option<(Pattern, Pattern)> {
         let cache = self.take_while(|t| t.is_new());
         let known = self.take_while(|t| t.is_known());

@@ -2,7 +2,7 @@ use crate::split::{
     cache::vertex::SplitVertexCache,
     trace::{
         SplitTraceState,
-        states::context::SplitTraceStatesContext,
+        states::context::SplitTraceStatesCtx,
     },
     vertex::output::RootMode,
 };
@@ -15,7 +15,7 @@ use context_trace::{
     },
     trace::{
         has_graph::HasGraph,
-        node::NodeTraceContext,
+        node::NodeTraceCtx,
     },
 };
 use derive_more::derive::{
@@ -44,7 +44,7 @@ impl SplitCache {
         index: Child,
     ) -> Vec<SplitTraceState> {
         let graph = trav.graph();
-        let ctx = NodeTraceContext::new(&graph, index);
+        let ctx = NodeTraceCtx::new(&graph, index);
         self.get_mut(&index.vertex_index())
             .unwrap()
             .augment_node(ctx)
@@ -56,14 +56,14 @@ impl SplitCache {
         root: Child,
     ) -> Vec<SplitTraceState> {
         let graph = trav.graph();
-        let ctx = NodeTraceContext::new(&graph, root);
+        let ctx = NodeTraceCtx::new(&graph, root);
         let index = root.vertex_index();
         let root_mode = self.root_mode;
         self.get_mut(&index).unwrap().augment_root(ctx, root_mode)
     }
     pub fn augment_nodes<G: HasGraph, I: IntoIterator<Item = Child>>(
         &mut self,
-        ctx: &mut SplitTraceStatesContext<G>,
+        ctx: &mut SplitTraceStatesCtx<G>,
         nodes: I,
     ) {
         for c in nodes {

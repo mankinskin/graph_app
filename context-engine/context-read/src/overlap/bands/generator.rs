@@ -1,10 +1,10 @@
 use crate::{
-    context::ReadContext,
+    context::ReadCtx,
     overlap::bands::LinkedBands,
 };
 use context_insert::insert::{
     result::IndexWithPath,
-    ToInsertContext,
+    ToInsertCtx,
 };
 use context_trace::{
     graph::vertex::{
@@ -73,7 +73,7 @@ pub struct ExpansionLink {
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct ChainGenerator<'a> {
-    pub trav: ReadContext,
+    pub trav: ReadCtx,
     pub cursor: &'a mut PatternRangePath,
     #[deref]
     #[deref_mut]
@@ -89,7 +89,7 @@ impl<'a> Iterator for ChainGenerator<'a> {
 }
 impl<'a> ChainGenerator<'a> {
     pub fn new(
-        trav: ReadContext,
+        trav: ReadCtx,
         cursor: &'a mut PatternRangePath,
         chain: LinkedBands,
     ) -> Self {
@@ -113,7 +113,7 @@ impl<'a> ChainGenerator<'a> {
         let cursor: PatternRangePath = self.cursor.clone();
         let primer = postfix_path.clone();
 
-        match ToInsertContext::<IndexWithPath>::insert_or_get_complete(
+        match ToInsertCtx::<IndexWithPath>::insert_or_get_complete(
             &self.trav.graph,
             cursor,
         ) {

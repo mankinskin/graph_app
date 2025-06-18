@@ -29,7 +29,7 @@ use crate::{
         vertex::output::RootMode,
     },
 };
-use context_trace::trace::node::NodeTraceContext;
+use context_trace::trace::node::NodeTraceCtx;
 use derive_more::derive::{
     Deref,
     DerefMut,
@@ -57,7 +57,7 @@ impl SplitVertexCache {
     }
     pub fn augment_node(
         &mut self,
-        ctx: NodeTraceContext,
+        ctx: NodeTraceCtx,
     ) -> Vec<SplitTraceState> {
         let num_offsets = self.positions.len();
         let mut states = Vec::new();
@@ -74,7 +74,7 @@ impl SplitVertexCache {
     }
     pub fn augment_root(
         &mut self,
-        ctx: NodeTraceContext,
+        ctx: NodeTraceCtx,
         root_mode: RootMode,
     ) -> Vec<SplitTraceState> {
         let (splits, next) = match root_mode {
@@ -112,7 +112,7 @@ impl SplitVertexCache {
         R: RangeRole<Mode = Trace>,
         P: ToPartition<R>,
     >(
-        ctx: NodeTraceContext<'a>,
+        ctx: NodeTraceCtx<'a>,
         part: P,
     ) -> Vec<NonZeroUsize> {
         part.info_partition(&ctx)
@@ -137,7 +137,7 @@ impl SplitVertexCache {
         K: RangeRole<Mode = Trace>,
         P: ToPartition<K>,
     >(
-        ctx: NodeTraceContext<'a>,
+        ctx: NodeTraceCtx<'a>,
         part: P,
     ) -> (
         BTreeMap<NonZeroUsize, SplitPositionCache>,

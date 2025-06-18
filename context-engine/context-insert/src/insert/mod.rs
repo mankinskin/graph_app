@@ -17,8 +17,8 @@ pub mod context;
 pub mod direction;
 pub mod result;
 
-pub trait ToInsertContext<R: InsertResult>: HasGraphMut {
-    fn insert_context(&self) -> InsertContext<R>;
+pub trait ToInsertCtx<R: InsertResult>: HasGraphMut {
+    fn insert_context(&self) -> InsertCtx<R>;
 
     fn insert(
         &self,
@@ -40,13 +40,13 @@ pub trait ToInsertContext<R: InsertResult>: HasGraphMut {
         self.insert_context().insert_or_get_complete(foldable)
     }
 }
-impl<R: InsertResult> ToInsertContext<R> for HypergraphRef {
-    fn insert_context(&self) -> InsertContext<R> {
-        InsertContext::<R>::from(self.clone())
+impl<R: InsertResult> ToInsertCtx<R> for HypergraphRef {
+    fn insert_context(&self) -> InsertCtx<R> {
+        InsertCtx::<R>::from(self.clone())
     }
 }
-impl<R: InsertResult, T: ToInsertContext<R>> ToInsertContext<R> for &'_ mut T {
-    fn insert_context(&self) -> InsertContext<R> {
+impl<R: InsertResult, T: ToInsertCtx<R>> ToInsertCtx<R> for &'_ mut T {
+    fn insert_context(&self) -> InsertCtx<R> {
         (**self).insert_context()
     }
 }

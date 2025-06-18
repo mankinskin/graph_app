@@ -37,7 +37,7 @@ impl<T: HasGraph> DirectedTraversalPolicy for ParentPolicy<T> {
 }
 
 #[derive(Clone, Debug)]
-pub struct SearchContext<T: HasGraph> {
+pub struct SearchCtx<T: HasGraph> {
     pub graph: T,
 }
 
@@ -51,7 +51,7 @@ impl<T: HasGraph> Default for AncestorSearchTraversal<T> {
 }
 
 impl<T: HasGraph> TraversalKind for AncestorSearchTraversal<T> {
-    type Trav = SearchContext<T>;
+    type Trav = SearchCtx<T>;
     type Container = BftQueue;
     type Policy = AncestorPolicy<Self::Trav>;
 }
@@ -64,17 +64,17 @@ impl<T: HasGraph> Default for ParentSearchTraversal<T> {
 }
 
 impl<T: HasGraph> TraversalKind for ParentSearchTraversal<T> {
-    type Trav = SearchContext<T>;
+    type Trav = SearchCtx<T>;
     type Container = BftQueue;
     type Policy = ParentPolicy<Self::Trav>;
 }
-impl<T: HasGraph> SearchContext<T> {
+impl<T: HasGraph> SearchCtx<T> {
     pub fn new(graph: T) -> Self {
         Self { graph }
     }
 }
 
-impl<T: HasGraph> HasGraph for SearchContext<T> {
+impl<T: HasGraph> HasGraph for SearchCtx<T> {
     type Kind = T::Kind;
     type Guard<'a>
         = T::Guard<'a>
@@ -85,7 +85,7 @@ impl<T: HasGraph> HasGraph for SearchContext<T> {
     }
 }
 
-//impl<'g, T: HasGraph> HasGraph for &'g SearchContext<T> {
+//impl<'g, T: HasGraph> HasGraph for &'g SearchCtx<T> {
 //    type Kind = T::Kind;
 //    type Guard<'a> = T::Guard<'a> where T: 'a, 'g: 'a;
 //    fn graph(&self) -> Self::Guard<'_> {

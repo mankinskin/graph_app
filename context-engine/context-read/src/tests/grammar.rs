@@ -161,7 +161,7 @@ impl GraphBuilder {
         k: usize,
     ) -> Hypergraph {
         self.fill_grammar();
-        let mut ctx = RewireContext::new(k, self);
+        let mut ctx = RewireCtx::new(k, self);
         ctx.rewire_grammar();
         ctx.builder.graph
     }
@@ -207,13 +207,13 @@ impl GraphBuilder {
 
 // |0|1|1|0|0|0|1|0| N = 8
 //
-struct RewireContext {
+struct RewireCtx {
     builder: GraphBuilder,
     prefix_counts: HashMap<VertexIndex, usize>,
     k: usize,
 }
 
-impl RewireContext {
+impl RewireCtx {
     pub fn new(
         k: usize,
         builder: GraphBuilder,

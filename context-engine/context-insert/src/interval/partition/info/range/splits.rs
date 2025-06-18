@@ -26,14 +26,14 @@ use crate::{
         position_splits,
         range_splits,
         vertex::{
-            PosSplitContext,
+            PosSplitCtx,
             ToVertexSplits,
         },
     },
 };
 use context_trace::{
     graph::vertex::pattern::pattern_range::PatternRangeIndex,
-    trace::node::AsNodeTraceContext,
+    trace::node::AsNodeTraceCtx,
 };
 
 pub trait OffsetIndexRange<R: RangeRole>: PatternRangeIndex {
@@ -51,13 +51,13 @@ impl<M: InVisitMode> OffsetIndexRange<In<M>> for Range<usize> {
         let lo = vertex
             .positions
             .iter()
-            .map(PosSplitContext::from)
+            .map(PosSplitCtx::from)
             .nth(self.start)
             .unwrap();
         let ro = vertex
             .positions
             .iter()
-            .map(PosSplitContext::from)
+            .map(PosSplitCtx::from)
             .nth(self.end)
             .unwrap();
         (lo.to_vertex_splits(), ro.to_vertex_splits())
@@ -72,7 +72,7 @@ impl<M: PreVisitMode> OffsetIndexRange<Pre<M>> for Range<usize> {
         let ro = vertex
             .positions
             .iter()
-            .map(PosSplitContext::from)
+            .map(PosSplitCtx::from)
             .nth(self.end)
             .unwrap();
         ro.to_vertex_splits()
@@ -87,21 +87,21 @@ impl<M: PostVisitMode> OffsetIndexRange<Post<M>> for RangeFrom<usize> {
         let lo = vertex
             .positions
             .iter()
-            .map(PosSplitContext::from)
+            .map(PosSplitCtx::from)
             .nth(self.start)
             .unwrap();
         lo.to_vertex_splits()
     }
 }
 pub trait RangeOffsets<R: RangeRole>: Debug + Clone + Copy {
-    fn as_splits<C: AsNodeTraceContext>(
+    fn as_splits<C: AsNodeTraceCtx>(
         &self,
         ctx: C,
     ) -> R::Splits;
 }
 
 impl<M: InVisitMode> RangeOffsets<In<M>> for (NonZeroUsize, NonZeroUsize) {
-    fn as_splits<C: AsNodeTraceContext>(
+    fn as_splits<C: AsNodeTraceCtx>(
         &self,
         ctx: C,
     ) -> <In<M> as RangeRole>::Splits {
@@ -110,7 +110,7 @@ impl<M: InVisitMode> RangeOffsets<In<M>> for (NonZeroUsize, NonZeroUsize) {
 }
 
 impl<M: PreVisitMode> RangeOffsets<Pre<M>> for NonZeroUsize {
-    fn as_splits<C: AsNodeTraceContext>(
+    fn as_splits<C: AsNodeTraceCtx>(
         &self,
         ctx: C,
     ) -> <Pre<M> as RangeRole>::Splits {
@@ -119,7 +119,7 @@ impl<M: PreVisitMode> RangeOffsets<Pre<M>> for NonZeroUsize {
 }
 
 impl<M: PostVisitMode> RangeOffsets<Post<M>> for NonZeroUsize {
-    fn as_splits<C: AsNodeTraceContext>(
+    fn as_splits<C: AsNodeTraceCtx>(
         &self,
         ctx: C,
     ) -> <Post<M> as RangeRole>::Splits {

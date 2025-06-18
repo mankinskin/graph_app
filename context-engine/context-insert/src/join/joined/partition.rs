@@ -13,7 +13,7 @@ use crate::{
     },
     join::{
         context::{
-            node::context::NodeJoinContext,
+            node::context::NodeJoinCtx,
             pattern::borders::JoinBorders,
         },
         partition::{
@@ -39,7 +39,7 @@ where
 {
     pub fn from_joined_patterns(
         pats: JoinedPatterns<R>,
-        ctx: &'c mut NodeJoinContext<'a>,
+        ctx: &'c mut NodeJoinCtx<'a>,
     ) -> Self {
         // collect infos about partition in each pattern
         let index = ctx.trav.insert_patterns(pats.patterns);
@@ -56,7 +56,7 @@ where
     }
     pub fn from_partition_info(
         info: JoinPartitionInfo<R>,
-        ctx: &'c mut NodeJoinContext<'a>,
+        ctx: &'c mut NodeJoinCtx<'a>,
     ) -> Self {
         // collect infos about partition in each pattern
         let pats = JoinedPatterns::from_partition_info(info, ctx);

@@ -7,7 +7,7 @@ use crate::{
             CompareState,
         },
     },
-    r#match::end::CompareParentBatch,
+    r#match::iterator::CompareParentBatch,
     traversal::{
         policy::DirectedTraversalPolicy,
         state::end::{

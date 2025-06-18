@@ -30,9 +30,9 @@ use context_trace::{
         pattern::id::PatternId,
     },
     trace::pattern::{
-        GetPatternContext,
-        HasPatternTraceContext,
-        PatternTraceContext,
+        GetPatternCtx,
+        HasPatternTraceCtx,
+        PatternTraceCtx,
     },
 };
 
@@ -41,8 +41,7 @@ pub mod borders;
 pub mod range;
 
 #[derive(Debug, Default)]
-pub struct PartitionInfo<R: RangeRole>
-{
+pub struct PartitionInfo<R: RangeRole> {
     pub patterns: HashMap<PatternId, PatternInfoOf<R>>,
     pub perfect: R::Perfect,
 }
@@ -52,13 +51,11 @@ pub type PatternCtxs<'t, R> = HashMap<PatternId, ModePatternCtxOf<'t, R>>;
 pub trait PartitionBorderKey: Hash + Eq {}
 
 impl<T: Hash + Eq> PartitionBorderKey for T {}
-pub trait InfoPartition<R: RangeRole>: Sized + Clone + ToPartition<R>
-{
+pub trait InfoPartition<R: RangeRole>: Sized + Clone + ToPartition<R> {
     fn info_borders(
         &self,
-        ctx: &PatternTraceContext,
-    ) -> R::Borders
-    {
+        ctx: &PatternTraceCtx,
+    ) -> R::Borders {
         let part = self.clone().to_partition();
         // todo detect if prev offset is in same index (to use inner partition as result)
         let pctx = ctx.pattern_trace_context();
@@ -70,8 +67,7 @@ pub trait InfoPartition<R: RangeRole>: Sized + Clone + ToPartition<R>
     fn pattern_ctxs<'a: 'b, 'b>(
         &'b self,
         ctx: &'b ModeNodeCtxOf<'a, 'b, R>,
-    ) -> PatternCtxs<'b, R>
-    {
+    ) -> PatternCtxs<'b, R> {
         let part = self.clone().to_partition();
         part.offsets
             .ids()
@@ -88,8 +84,7 @@ pub trait InfoPartition<R: RangeRole>: Sized + Clone + ToPartition<R>
     >(
         &'b self,
         ctx: &'b ModeNodeCtxOf<'a, 'b, R>,
-    ) -> PartitionBorders<R, C>
-    {
+    ) -> PartitionBorders<R, C> {
         let ctxs = self.pattern_ctxs(ctx);
         let (borders, perfect): (HashMap<_, _>, R::Perfect) = ctxs
             .into_values()
@@ -107,8 +102,7 @@ pub trait InfoPartition<R: RangeRole>: Sized + Clone + ToPartition<R>
     fn info_partition<'a: 'b, 'b>(
         &'b self,
         ctx: &'b ModeNodeCtxOf<'a, 'b, R>,
-    ) -> Result<PartitionInfo<R>, Child>
-    {
+    ) -> Result<PartitionInfo<R>, Child> {
         self.partition_borders(ctx).into_partition_info()
     }
 }

@@ -201,10 +201,10 @@ lazy_static::lazy_static! {
     pub static ref
         CONTEXT: Arc<RwLock<Env1>> = Arc::new(RwLock::new(Env1::initialize_expected()));
 }
-//pub fn context() -> RwLockReadGuard<'static, Context> {
+//pub fn context() -> RwLockReadGuard<'static, Ctx> {
 //    CONTEXT.read().unwrap()
 //}
 //
-//pub fn context_mut() -> RwLockWriteGuard<'static, Context> {
+//pub fn context_mut() -> RwLockWriteGuard<'static, Ctx> {
 //    CONTEXT.write().unwrap()
 //}

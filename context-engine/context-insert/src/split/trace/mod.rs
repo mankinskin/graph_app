@@ -7,7 +7,7 @@ use derive_more::derive::{
 
 use super::{
     cache::position::PosKey,
-    vertex::VertexSplitContext,
+    vertex::VertexSplitCtx,
 };
 use crate::split::vertex::output::NodeType;
 use context_trace::{
@@ -16,7 +16,7 @@ use context_trace::{
         has_vertex_index::HasVertexIndex,
     },
     trace::{
-        TraceContext,
+        TraceCtx,
         cache::position::Offset,
         has_graph::HasGraph,
     },
@@ -30,24 +30,24 @@ pub struct SplitTraceState {
 }
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct SplitTraceContext<G: HasGraph> {
+pub struct SplitTraceCtx<G: HasGraph> {
     pub root: Child,
     pub end_bound: usize,
 
     #[deref]
     #[deref_mut]
-    pub ctx: TraceContext<G>,
+    pub ctx: TraceCtx<G>,
 }
 
-impl<G: HasGraph> SplitTraceContext<G> {
+impl<G: HasGraph> SplitTraceCtx<G> {
     pub fn get_node<'a, N: NodeType>(
         &'a self,
         index: &Child,
-    ) -> Option<VertexSplitContext<'a>> {
+    ) -> Option<VertexSplitCtx<'a>> {
         self.cache
             .entries
             .get(&index.vertex_index())
-            .map(|vcache| VertexSplitContext::new(vcache))
+            .map(|vcache| VertexSplitCtx::new(vcache))
     }
     pub fn completed_splits<N: NodeType>(
         &self,

@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use super::context::SplitCacheContext;
+use super::context::SplitCacheCtx;
 use crate::interval::IntervalGraph;
 use context_trace::{
     graph::vertex::{
@@ -18,7 +18,7 @@ pub struct SplitRunStep;
 
 #[derive(Debug)]
 pub struct SplitRun<G: HasGraph> {
-    ctx: SplitCacheContext<G>,
+    ctx: SplitCacheCtx<G>,
     incomplete: BTreeSet<Child>,
 }
 impl<'a, G: HasGraph + 'a> SplitRun<G> {
@@ -28,7 +28,7 @@ impl<'a, G: HasGraph + 'a> SplitRun<G> {
             self.ctx.states_ctx.ctx.root,
         );
     }
-    pub fn finish(mut self) -> SplitCacheContext<G> {
+    pub fn finish(mut self) -> SplitCacheCtx<G> {
         self.ctx
             .cache
             .augment_nodes(&mut self.ctx.states_ctx, self.incomplete);
@@ -51,16 +51,16 @@ impl<'a, G: HasGraph + 'a> Iterator for SplitRun<G> {
         })
     }
 }
-impl<'a, G: HasGraph + 'a> From<SplitCacheContext<G>> for SplitRun<G> {
-    fn from(ctx: SplitCacheContext<G>) -> Self {
+impl<'a, G: HasGraph + 'a> From<SplitCacheCtx<G>> for SplitRun<G> {
+    fn from(ctx: SplitCacheCtx<G>) -> Self {
         Self {
             ctx,
             incomplete: Default::default(),
         }
     }
 }
-impl<'a, G: HasGraph + 'a> From<SplitCacheContext<G>> for IntervalGraph {
-    fn from(cache: SplitCacheContext<G>) -> Self {
+impl<'a, G: HasGraph + 'a> From<SplitCacheCtx<G>> for IntervalGraph {
+    fn from(cache: SplitCacheCtx<G>) -> Self {
         Self::from(SplitRun::from(cache))
     }
 }

@@ -45,12 +45,12 @@ use derive_new::new;
 use itertools::Itertools;
 
 #[derive(Debug, Clone, Copy)]
-pub struct PosSplitContext<'a> {
+pub struct PosSplitCtx<'a> {
     pub pos: &'a NonZeroUsize,
     pub split: &'a SplitPositionCache,
 }
 
-impl ToVertexSplits for PosSplitContext<'_> {
+impl ToVertexSplits for PosSplitCtx<'_> {
     fn to_vertex_splits(self) -> VertexSplits {
         VertexSplits {
             pos: *self.pos,
@@ -60,7 +60,7 @@ impl ToVertexSplits for PosSplitContext<'_> {
 }
 
 impl<'a, N: Borrow<(&'a NonZeroUsize, &'a SplitPositionCache)>> From<N>
-    for PosSplitContext<'a>
+    for PosSplitCtx<'a>
 {
     fn from(item: N) -> Self {
         let (pos, split) = item.borrow();
@@ -139,10 +139,10 @@ impl ToVertexSplitPos for VertexSplits {
 }
 
 #[derive(Debug, Copy, Clone, Deref, new)]
-pub struct VertexSplitContext<'a> {
+pub struct VertexSplitCtx<'a> {
     pub cache: &'a VertexCache,
 }
-impl VertexSplitContext<'_> {
+impl VertexSplitCtx<'_> {
     pub fn bottom_up_splits<N: NodeType>(
         &self,
         node: &VertexData,

@@ -6,7 +6,7 @@ use crate::{
     },
     join::{
         context::{
-            node::context::NodeJoinContext,
+            node::context::NodeJoinCtx,
             pattern::borders::JoinBorders,
         },
         partition::{
@@ -17,7 +17,7 @@ use crate::{
 };
 use context_trace::{
     graph::vertex::child::Child,
-    trace::node::AsNodeTraceContext,
+    trace::node::AsNodeTraceCtx,
 };
 use derive_more::derive::{
     Deref,
@@ -38,7 +38,7 @@ where
 {
     pub fn index_pattern_inner<'a: 'b, 'b: 'c, 'c>(
         &self,
-        ctx: &'c mut NodeJoinContext<'a>,
+        ctx: &'c mut NodeJoinCtx<'a>,
     ) -> Child
     where
         Self: 'a,

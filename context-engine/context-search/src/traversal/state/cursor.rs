@@ -41,6 +41,7 @@ use context_trace::{
     },
     trace::has_graph::HasGraph,
 };
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PathCursor<P> {
     pub path: P,

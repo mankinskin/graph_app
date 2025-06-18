@@ -15,7 +15,7 @@ use context_trace::{
         child::Child,
         pattern::id::PatternId,
     },
-    trace::pattern::HasPatternTraceContext,
+    trace::pattern::HasPatternTraceCtx,
 };
 
 use super::border::{

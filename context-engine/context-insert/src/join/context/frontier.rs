@@ -1,4 +1,4 @@
-use super::node::context::NodeJoinContext;
+use super::node::context::NodeJoinCtx;
 use itertools::Itertools;
 use linked_hash_set::LinkedHashSet;
 
@@ -56,8 +56,8 @@ impl FrontierSplitIterator {
     fn node<'a>(
         &'a mut self,
         index: Child,
-    ) -> NodeJoinContext<'a> {
-        NodeJoinContext::new(index, self)
+    ) -> NodeJoinCtx<'a> {
+        NodeJoinCtx::new(index, self)
     }
 }
 impl Iterator for FrontierSplitIterator {

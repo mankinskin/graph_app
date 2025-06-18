@@ -4,14 +4,15 @@ use crate::{
         FinishedState,
     },
     traversal::{
-        state::start::StartCtx,
-        TraversalContext,
+        IntoTraversalCtx,
+        TraversalCtx,
         TraversalKind,
     },
 };
 use context_trace::{
     graph::vertex::{
         child::Child,
+        has_vertex_index::ToChild,
         wide::Wide,
     },
     trace::{
@@ -26,11 +27,14 @@ pub mod foldable;
 pub mod result;
 pub mod state;
 
-impl<K: TraversalKind> TryFrom<StartCtx<K>> for FoldContext<K> {
-    type Error = ErrorState;
-    fn try_from(start: StartCtx<K>) -> Result<Self, Self::Error> {
-        let start_index = start.index;
-        TraversalContext::try_from(start).map(|tctx| Self {
+pub trait IntoFoldCtx<K: TraversalKind> {
+    fn into_fold_context(self) -> Result<FoldCtx<K>, ErrorState>;
+}
+
+impl<K: TraversalKind, S: IntoTraversalCtx<K> + ToChild> IntoFoldCtx<K> for S {
+    fn into_fold_context(self) -> Result<FoldCtx<K>, ErrorState> {
+        let start_index = self.to_child();
+        self.into_traversal_context().map(|tctx| FoldCtx {
             tctx,
             max_width: start_index.width(),
             start_index,
@@ -39,21 +43,20 @@ impl<K: TraversalKind> TryFrom<StartCtx<K>> for FoldContext<K> {
 }
 /// context for running fold traversal
 #[derive(Debug)]
-pub struct FoldContext<K: TraversalKind> {
-    pub tctx: TraversalContext<K>,
+pub struct FoldCtx<K: TraversalKind> {
+    pub tctx: TraversalCtx<K>,
     pub start_index: Child,
     pub max_width: usize,
 }
 
-impl<K: TraversalKind> Iterator for FoldContext<K> {
+impl<K: TraversalKind> Iterator for FoldCtx<K> {
     type Item = ();
-
     fn next(&mut self) -> Option<Self::Item> {
         self.tctx.next()
     }
 }
 
-impl<'a, K: TraversalKind> FoldContext<K> {
+impl<'a, K: TraversalKind> FoldCtx<K> {
     fn fold(mut self) -> Result<FinishedState, ErrorState> {
         (&mut self).for_each(|_| ());
         let end = self.tctx.last_match;

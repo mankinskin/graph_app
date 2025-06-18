@@ -21,7 +21,7 @@ use crate::{
     },
     join::{
         context::{
-            node::context::NodeJoinContext,
+            node::context::NodeJoinCtx,
             pattern::borders::JoinBorders,
         },
         partition::Join,
@@ -36,7 +36,7 @@ use context_trace::{
             id::PatternId,
         },
     },
-    trace::pattern::HasPatternTraceContext,
+    trace::pattern::HasPatternTraceCtx,
 };
 
 use super::inner_range::JoinInnerRangeInfo;
@@ -56,7 +56,7 @@ where
 {
     pub fn join_pattern<'a: 'b, 'b: 'c, 'c>(
         self,
-        ctx: &'c mut NodeJoinContext<'a>,
+        ctx: &'c mut NodeJoinCtx<'a>,
         pattern_id: &PatternId,
     ) -> Pattern
     where

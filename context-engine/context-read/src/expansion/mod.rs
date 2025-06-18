@@ -1,6 +1,6 @@
 use crate::{
     complement::ComplementBuilder,
-    context::ReadContext,
+    context::ReadCtx,
     overlap::{
         bands::{
             band::Band,
@@ -125,7 +125,7 @@ impl<'a> Iterator for ExpansionIterator<'a> {
 }
 impl<'a> ExpansionIterator<'a> {
     pub fn new(
-        trav: ReadContext,
+        trav: ReadCtx,
         cursor: &'a mut PatternRangePath,
         chain: LinkedBands,
     ) -> Self {

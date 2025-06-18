@@ -1,9 +1,9 @@
-use super::TraceContext;
+use super::TraceCtx;
 use crate::trace::HasGraph;
 
 pub trait Traceable {
     fn trace<G: HasGraph>(
         self,
-        ctx: &mut TraceContext<G>,
+        ctx: &mut TraceCtx<G>,
     );
 }

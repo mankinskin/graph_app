@@ -2,7 +2,7 @@ use crate::fold::foldable::Foldable;
 use context::{
     AncestorSearchTraversal,
     ParentSearchTraversal,
-    SearchContext,
+    SearchCtx,
     SearchResult,
 };
 use context_trace::{
@@ -24,7 +24,7 @@ pub mod context;
 
 #[allow(dead_code)]
 pub trait Searchable: HasGraph {
-    fn ctx(&self) -> SearchContext<Self>;
+    fn ctx(&self) -> SearchCtx<Self>;
     fn find_sequence(
         &self,
         pattern: impl IntoIterator<Item = impl AsToken<TokenOf<TravKind<Self>>>>,
@@ -54,13 +54,13 @@ pub trait Searchable: HasGraph {
 }
 
 impl Searchable for &Hypergraph {
-    fn ctx(&self) -> SearchContext<Self> {
-        SearchContext::new(self)
+    fn ctx(&self) -> SearchCtx<Self> {
+        SearchCtx::new(self)
     }
 }
 
 impl Searchable for HypergraphRef {
-    fn ctx(&self) -> SearchContext<Self> {
-        SearchContext::new(self.clone())
+    fn ctx(&self) -> SearchCtx<Self> {
+        SearchCtx::new(self.clone())
     }
 }

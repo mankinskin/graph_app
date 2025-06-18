@@ -54,11 +54,11 @@ impl TraversalKind for InsertTraversal {
 }
 
 #[derive(Debug)]
-pub struct InsertContext<R: InsertResult = Child> {
+pub struct InsertCtx<R: InsertResult = Child> {
     graph: HypergraphRef,
     _ty: std::marker::PhantomData<R>,
 }
-impl<R: InsertResult> From<HypergraphRef> for InsertContext<R> {
+impl<R: InsertResult> From<HypergraphRef> for InsertCtx<R> {
     fn from(graph: HypergraphRef) -> Self {
         Self {
             graph,
@@ -67,7 +67,7 @@ impl<R: InsertResult> From<HypergraphRef> for InsertContext<R> {
     }
 }
 
-impl<R: InsertResult> InsertContext<R> {
+impl<R: InsertResult> InsertCtx<R> {
     pub fn insert(
         &mut self,
         foldable: impl Foldable,
@@ -111,12 +111,12 @@ impl<R: InsertResult> InsertContext<R> {
     }
 }
 impl_has_graph! {
-    impl<R: InsertResult> for InsertContext<R>,
+    impl<R: InsertResult> for InsertCtx<R>,
     self => self.graph.read().unwrap();
     <'a> RwLockReadGuard<'a, Hypergraph>
 }
 impl_has_graph_mut! {
-    impl<R: InsertResult> for InsertContext<R>,
+    impl<R: InsertResult> for InsertCtx<R>,
     self => self.graph.write().unwrap();
     <'a> RwLockWriteGuard<'a, Hypergraph>
 }

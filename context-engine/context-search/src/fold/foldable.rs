@@ -10,9 +10,12 @@ use context_trace::{
 };
 
 use crate::{
-    fold::result::{
-        FinishedKind,
-        FinishedState,
+    fold::{
+        result::{
+            FinishedKind,
+            FinishedState,
+        },
+        IntoFoldCtx,
     },
     traversal::{
         state::{
@@ -29,7 +32,7 @@ use crate::{
 use context_trace::graph::vertex::pattern::Pattern;
 use std::fmt::Debug;
 
-use super::FoldContext;
+use super::FoldCtx;
 
 pub type FoldResult = Result<FinishedState, ErrorState>;
 
@@ -51,7 +54,7 @@ pub trait Foldable: Sized {
     fn to_fold_context<K: TraversalKind>(
         self,
         trav: K::Trav,
-    ) -> Result<FoldContext<K>, ErrorState>;
+    ) -> Result<FoldCtx<K>, ErrorState>;
 
     fn fold<K: TraversalKind>(
         self,
@@ -65,7 +68,7 @@ impl Foldable for &'_ Pattern {
     fn to_fold_context<K: TraversalKind>(
         self,
         trav: K::Trav,
-    ) -> Result<FoldContext<K>, ErrorState> {
+    ) -> Result<FoldCtx<K>, ErrorState> {
         PatternRangePath::from(self).to_fold_context::<K>(trav)
     }
 }
@@ -73,7 +76,7 @@ impl Foldable for Pattern {
     fn to_fold_context<K: TraversalKind>(
         self,
         trav: K::Trav,
-    ) -> Result<FoldContext<K>, ErrorState> {
+    ) -> Result<FoldCtx<K>, ErrorState> {
         PatternRangePath::from(self).to_fold_context::<K>(trav)
     }
 }
@@ -82,7 +85,7 @@ impl Foldable for PatternEndPath {
     fn to_fold_context<K: TraversalKind>(
         self,
         trav: K::Trav,
-    ) -> Result<FoldContext<K>, ErrorState> {
+    ) -> Result<FoldCtx<K>, ErrorState> {
         self.to_range_path()
             .to_cursor(&trav)
             .to_fold_context::<K>(trav)
@@ -92,7 +95,7 @@ impl Foldable for PatternRangePath {
     fn to_fold_context<K: TraversalKind>(
         self,
         trav: K::Trav,
-    ) -> Result<FoldContext<K>, ErrorState> {
+    ) -> Result<FoldCtx<K>, ErrorState> {
         self.to_range_path()
             .to_cursor(&trav)
             .to_fold_context::<K>(trav)
@@ -102,7 +105,7 @@ impl Foldable for PatternRangeCursor {
     fn to_fold_context<K: TraversalKind>(
         self,
         trav: K::Trav,
-    ) -> Result<FoldContext<K>, ErrorState> {
+    ) -> Result<FoldCtx<K>, ErrorState> {
         PatternCursor::from(self).to_fold_context(trav)
     }
 }
@@ -111,12 +114,13 @@ impl Foldable for PatternCursor {
     fn to_fold_context<K: TraversalKind>(
         self,
         trav: K::Trav,
-    ) -> Result<FoldContext<K>, ErrorState> {
+    ) -> Result<FoldCtx<K>, ErrorState> {
         let start_index = self.path.start_index(&trav);
-        TryFrom::try_from(StartCtx {
+        StartCtx {
             index: start_index,
             cursor: self,
             trav,
-        })
+        }
+        .into_fold_context()
     }
 }

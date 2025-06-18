@@ -1,26 +1,13 @@
-use std::fmt::Debug;
 use crate::graph::vertex::{
+    VertexIndex,
     child::Child,
     data::VertexData,
-    VertexIndex,
     wide::Wide,
 };
+use std::fmt::Debug;
 
 pub trait HasVertexIndex: Sized {
     fn vertex_index(&self) -> VertexIndex;
-    //fn expect_child_patterns<Trav: HasGraph>(
-    //    &self,
-    //    trav: &Trav,
-    //) -> ChildPatterns {
-    //    trav.graph().expect_child_patterns(self).clone()
-    //}
-    //fn expect_child_pattern<Trav: HasGraph>(
-    //    &self,
-    //    trav: &Trav,
-    //    pid: PatternId,
-    //) -> Pattern {
-    //    trav.graph().expect_child_pattern(self, pid).clone()
-    //}
 }
 
 impl<I: HasVertexIndex> HasVertexIndex for &'_ I {

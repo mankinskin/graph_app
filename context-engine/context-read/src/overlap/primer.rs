@@ -43,7 +43,7 @@ impl OverlapPrimer {
 }
 //impl Foldable for OverlapPrimer {
 //    fn fold<'a, K: TraversalKind>(self, trav: &'a K::G) -> FoldResult {
-//        FoldContext::<K>::fold_query(trav, self)
+//        FoldCtx::<K>::fold_query(trav, self)
 //    }
 //}
 

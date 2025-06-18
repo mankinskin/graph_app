@@ -1,27 +1,27 @@
 use crate::graph::{
+    Hypergraph,
     getters::vertex::VertexSet,
     kind::GraphKind,
     vertex::{
+        ChildPatterns,
         child::Child,
         pattern::id::PatternId,
-        ChildPatterns,
     },
-    Hypergraph,
 };
 
 use super::pattern::{
-    GetPatternContext,
-    GetPatternTraceContext,
-    PatternTraceContext,
+    GetPatternCtx,
+    GetPatternTraceCtx,
+    PatternTraceCtx,
 };
 
 #[derive(Debug, Clone, Copy)]
-pub struct NodeTraceContext<'p> {
+pub struct NodeTraceCtx<'p> {
     pub patterns: &'p ChildPatterns,
     pub index: Child,
 }
 
-impl<'p> NodeTraceContext<'p> {
+impl<'p> NodeTraceCtx<'p> {
     pub fn new<K: GraphKind>(
         graph: &'p Hypergraph<K>,
         index: Child,
@@ -33,9 +33,9 @@ impl<'p> NodeTraceContext<'p> {
     }
 }
 
-impl GetPatternContext for NodeTraceContext<'_> {
+impl GetPatternCtx for NodeTraceCtx<'_> {
     type PatternCtx<'b>
-        = PatternTraceContext<'b>
+        = PatternTraceCtx<'b>
     where
         Self: 'b;
     fn get_pattern_context<'b>(
@@ -48,29 +48,29 @@ impl GetPatternContext for NodeTraceContext<'_> {
         self.get_pattern_trace_context(pattern_id)
     }
 }
-impl GetPatternTraceContext for NodeTraceContext<'_> {
+impl GetPatternTraceCtx for NodeTraceCtx<'_> {
     fn get_pattern_trace_context<'b>(
         &'b self,
         pattern_id: &PatternId,
-    ) -> PatternTraceContext<'b>
+    ) -> PatternTraceCtx<'b>
     where
         Self: 'b,
     {
-        PatternTraceContext {
+        PatternTraceCtx {
             loc: self.index.to_pattern_location(*pattern_id),
             pattern: self.patterns.get(pattern_id).unwrap(),
         }
     }
 }
 
-pub trait AsNodeTraceContext {
-    fn as_trace_context<'a>(&'a self) -> NodeTraceContext<'a>
+pub trait AsNodeTraceCtx {
+    fn as_trace_context<'a>(&'a self) -> NodeTraceCtx<'a>
     where
         Self: 'a;
 }
 
-impl AsNodeTraceContext for NodeTraceContext<'_> {
-    fn as_trace_context<'b>(&'b self) -> NodeTraceContext<'b>
+impl AsNodeTraceCtx for NodeTraceCtx<'_> {
+    fn as_trace_context<'b>(&'b self) -> NodeTraceCtx<'b>
     where
         Self: 'b,
     {

@@ -42,7 +42,7 @@ use super::{
     mode::{
         InVisitMode,
         ModeChildren,
-        ModeContext,
+        ModeCtx,
         PostVisitMode,
         PreVisitMode,
     },
@@ -64,9 +64,9 @@ pub type ModeOf<R> = <R as RangeRole>::Mode;
 pub type BordersOf<R> = <R as RangeRole>::Borders;
 pub type ModeChildrenOf<R> = <ModeOf<R> as ModeChildren<R>>::Result;
 pub type ModePatternCtxOf<'a, R> =
-    <<R as RangeRole>::Mode as ModeContext>::PatternResult<'a>;
+    <<R as RangeRole>::Mode as ModeCtx>::PatternResult<'a>;
 pub type ModeNodeCtxOf<'a, 'b, R> =
-    <<R as RangeRole>::Mode as ModeContext>::NodeContext<'a, 'b>;
+    <<R as RangeRole>::Mode as ModeCtx>::NodeCtx<'a, 'b>;
 
 pub trait RangeKind: Debug + Clone {}
 

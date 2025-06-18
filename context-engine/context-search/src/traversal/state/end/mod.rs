@@ -43,7 +43,7 @@ use context_trace::{
         has_graph::HasGraph,
         traceable::Traceable,
         StateDirection,
-        TraceContext,
+        TraceCtx,
     },
 };
 use postfix::PostfixEnd;
@@ -139,7 +139,7 @@ pub struct TraceStart<'a>(pub &'a EndState, pub usize);
 impl<'a> Traceable for TraceStart<'a> {
     fn trace<G: HasGraph>(
         self,
-        ctx: &mut TraceContext<G>,
+        ctx: &mut TraceCtx<G>,
     ) {
         match &self.0.kind {
             EndKind::Postfix(p) => Some(p.clone()),
@@ -168,7 +168,7 @@ impl_cursor_pos! {
 impl Traceable for &EndState {
     fn trace<G: HasGraph>(
         self,
-        ctx: &mut TraceContext<G>,
+        ctx: &mut TraceCtx<G>,
     ) {
         match &self.kind {
             EndKind::Range(p) => p.trace(ctx),

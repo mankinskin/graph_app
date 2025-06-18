@@ -12,7 +12,7 @@ use context_trace::{
         command::RangeCommand,
         has_graph::HasGraph,
         traceable::Traceable,
-        TraceContext,
+        TraceCtx,
     },
 };
 
@@ -31,7 +31,7 @@ impl LeafKey for RangeEnd {
 impl Traceable for &RangeEnd {
     fn trace<G: HasGraph>(
         self,
-        ctx: &mut TraceContext<G>,
+        ctx: &mut TraceCtx<G>,
     ) {
         RangeCommand::from(self).trace(ctx)
     }

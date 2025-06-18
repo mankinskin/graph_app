@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::insert::ToInsertContext;
+use crate::insert::ToInsertCtx;
 use context_search::{
     fold::result::{
         FinishedKind,

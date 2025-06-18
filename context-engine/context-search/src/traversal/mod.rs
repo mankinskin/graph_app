@@ -1,8 +1,8 @@
 use crate::{
     fold::foldable::ErrorState,
     r#match::{
-        end::MatchIterator,
-        MatchContext,
+        iterator::MatchIterator,
+        MatchCtx,
         TraceNode::Parent,
     },
 };
@@ -14,7 +14,7 @@ use context_trace::trace::{
         TravKind,
     },
     traceable::Traceable,
-    TraceContext,
+    TraceCtx,
 };
 use derive_new::new;
 use policy::DirectedTraversalPolicy;
@@ -46,25 +46,36 @@ pub enum OptGen<Y> {
     Pass,
 }
 
+pub trait HasTraversalCtx<K: TraversalKind> {
+    fn traversal_context(&self) -> Result<&TraversalCtx<K>, ErrorState>;
+}
+pub trait IntoTraversalCtx<K: TraversalKind> {
+    fn into_traversal_context(self) -> Result<TraversalCtx<K>, ErrorState>;
+}
+
 /// context for generating next states
 #[derive(Debug, new)]
-pub struct TraversalContext<K: TraversalKind> {
+pub struct TraversalCtx<K: TraversalKind> {
     pub match_iter: MatchIterator<K>,
     pub last_match: EndState,
 }
-impl<K: TraversalKind> Unpin for TraversalContext<K> {}
+impl<K: TraversalKind> Unpin for TraversalCtx<K> {}
 
-impl<K: TraversalKind> TryFrom<StartCtx<K>> for TraversalContext<K> {
-    type Error = ErrorState;
-    fn try_from(start: StartCtx<K>) -> Result<Self, Self::Error> {
-        match start.get_parent_batch() {
-            Ok(p) => Ok(Self {
+impl<K: TraversalKind> IntoTraversalCtx<K> for TraversalCtx<K> {
+    fn into_traversal_context(self) -> Result<TraversalCtx<K>, ErrorState> {
+        Ok(self)
+    }
+}
+impl<K: TraversalKind> IntoTraversalCtx<K> for StartCtx<K> {
+    fn into_traversal_context(self) -> Result<TraversalCtx<K>, ErrorState> {
+        match self.get_parent_batch() {
+            Ok(p) => Ok(TraversalCtx {
                 match_iter: MatchIterator::new(
-                    TraceContext {
-                        trav: start.trav,
-                        cache: TraceCache::new(start.index),
+                    TraceCtx {
+                        trav: self.trav,
+                        cache: TraceCache::new(self.index),
                     },
-                    MatchContext {
+                    MatchCtx {
                         nodes: FromIterator::from_iter(
                             p.into_compare_batch().into_iter().map(Parent),
                         ),
@@ -72,16 +83,15 @@ impl<K: TraversalKind> TryFrom<StartCtx<K>> for TraversalContext<K> {
                 ),
                 last_match: EndState {
                     reason: EndReason::QueryEnd,
-                    kind: EndKind::Complete(start.index),
-                    cursor: start.cursor,
+                    kind: EndKind::Complete(self.index),
+                    cursor: self.cursor,
                 },
             }),
             Err(end) => Err(end),
         }
     }
 }
-
-impl<K: TraversalKind> Iterator for TraversalContext<K> {
+impl<K: TraversalKind> Iterator for TraversalCtx<K> {
     type Item = ();
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -97,7 +107,7 @@ impl<K: TraversalKind> Iterator for TraversalContext<K> {
     }
 }
 
-impl<'a, K: TraversalKind> HasGraph for &'a TraversalContext<K> {
+impl<'a, K: TraversalKind> HasGraph for &'a TraversalCtx<K> {
     type Kind = TravKind<K::Trav>;
     type Guard<'g>
         = <K::Trav as HasGraph>::Guard<'g>
@@ -108,7 +118,7 @@ impl<'a, K: TraversalKind> HasGraph for &'a TraversalContext<K> {
     }
 }
 
-impl<'a, K: TraversalKind> HasGraph for &'a mut TraversalContext<K> {
+impl<'a, K: TraversalKind> HasGraph for &'a mut TraversalCtx<K> {
     type Kind = TravKind<K::Trav>;
     type Guard<'g>
         = <K::Trav as HasGraph>::Guard<'g>

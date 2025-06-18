@@ -8,8 +8,8 @@ use crate::split::SplitMap;
 use context_trace::{
     graph::vertex::pattern::id::PatternId,
     trace::pattern::{
-        HasPatternTraceContext,
-        PatternTraceContext,
+        HasPatternTraceCtx,
+        PatternTraceCtx,
     },
 };
 
@@ -17,16 +17,16 @@ pub mod borders;
 
 #[derive(Debug, Deref, DerefMut, Derivative)]
 #[derivative(Hash, PartialEq, Eq)]
-pub struct PatternJoinContext<'p> {
+pub struct PatternJoinCtx<'p> {
     #[deref]
     #[deref_mut]
-    pub ctx: PatternTraceContext<'p>,
+    pub ctx: PatternTraceCtx<'p>,
     #[derivative(Hash = "ignore", PartialEq = "ignore")]
     pub splits: &'p SplitMap,
 }
 
-impl<'a> HasPatternTraceContext for PatternJoinContext<'a> {
-    fn pattern_trace_context<'b>(&'b self) -> PatternTraceContext<'b>
+impl<'a> HasPatternTraceCtx for PatternJoinCtx<'a> {
+    fn pattern_trace_context<'b>(&'b self) -> PatternTraceCtx<'b>
     where
         Self: 'b,
     {
@@ -34,8 +34,8 @@ impl<'a> HasPatternTraceContext for PatternJoinContext<'a> {
     }
 }
 
-impl<'p> From<PatternJoinContext<'p>> for PatternId {
-    fn from(value: PatternJoinContext<'p>) -> Self {
+impl<'p> From<PatternJoinCtx<'p>> for PatternId {
+    fn from(value: PatternJoinCtx<'p>) -> Self {
         Self::from(value.ctx)
     }
 }

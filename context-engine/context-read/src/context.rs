@@ -2,7 +2,7 @@ use std::sync::RwLockWriteGuard;
 
 use context_insert::insert::{
     result::IndexWithPath,
-    ToInsertContext,
+    ToInsertCtx,
 };
 use context_trace::{
     graph::{
@@ -34,8 +34,8 @@ use crate::{
     expansion::ExpansionIterator,
     overlap::bands::LinkedBands,
 };
-//pub trait HasReadContext: ToInsertContext {
-//    fn read_context<'g>(&'g mut self) -> ReadContext;
+//pub trait HasReadCtx: ToInsertCtx {
+//    fn read_context<'g>(&'g mut self) -> ReadCtx;
 //    fn read_sequence(
 //        &mut self,
 //        //sequence: impl IntoIterator<Item = DefaultToken> + std::fmt::Debug + Send + Sync,
@@ -51,24 +51,24 @@ use crate::{
 //    }
 //}
 //
-//impl HasReadContext for ReadContext {
-//    fn read_context(&mut self) -> ReadContext {
+//impl HasReadCtx for ReadCtx {
+//    fn read_context(&mut self) -> ReadCtx {
 //        self.clone()
 //    }
 //}
-//impl<T: HasReadContext> HasReadContext for &'_ mut T {
-//    fn read_context(&mut self) -> ReadContext {
+//impl<T: HasReadCtx> HasReadCtx for &'_ mut T {
+//    fn read_context(&mut self) -> ReadCtx {
 //        (**self).read_context()
 //    }
 //}
-//impl HasReadContext for HypergraphRef {
-//    fn read_context(&mut self) -> ReadContext {
-//        //ReadContext::new(self.graph_mut())
-//        ReadContext::new(self.clone())
+//impl HasReadCtx for HypergraphRef {
+//    fn read_context(&mut self) -> ReadCtx {
+//        //ReadCtx::new(self.graph_mut())
+//        ReadCtx::new(self.clone())
 //    }
 //}
 #[derive(Debug, Clone)]
-pub struct ReadContext {
+pub struct ReadCtx {
     pub graph: HypergraphRef,
     pub sequence: PatternRangePath,
     pub root: Option<Child>,
@@ -78,7 +78,7 @@ pub enum ReadState {
     Continue(Child, PatternEndPath),
     Stop(PatternEndPath),
 }
-impl Iterator for ReadContext {
+impl Iterator for ReadCtx {
     type Item = ();
     fn next(&mut self) -> Option<Self::Item> {
         self.read_next().map(|next| {
@@ -87,7 +87,7 @@ impl Iterator for ReadContext {
         })
     }
 }
-impl ReadContext {
+impl ReadCtx {
     pub fn new(
         graph: HypergraphRef,
         sequence: PatternRangePath,
@@ -111,7 +111,7 @@ impl ReadContext {
         .collect()
     }
     pub fn read_next(&mut self) -> Option<Child> {
-        match ToInsertContext::<IndexWithPath>::insert_or_get_complete(
+        match ToInsertCtx::<IndexWithPath>::insert_or_get_complete(
             &self.graph,
             self.sequence.clone(),
         ) {
@@ -195,8 +195,8 @@ impl ReadContext {
     //        .unwrap(),
     //    }
     //}
-    //pub fn insert_context(&self) -> InsertContext {
-    //    InsertContext::from(self.graph.clone())
+    //pub fn insert_context(&self) -> InsertCtx {
+    //    InsertCtx::from(self.graph.clone())
     //}
     ///// append a pattern of new token indices
     ///// returns index of possible new index
@@ -229,8 +229,8 @@ impl ReadContext {
     //        }
     //    }
     //}
-    //pub fn contexter<Side: SplitSide<D>>(&self) -> Contexter<Side> {
-    //    Contexter::new(self.insert_context())
+    //pub fn contexter<Side: SplitSide<D>>(&self) -> Ctxer<Side> {
+    //    Ctxer::new(self.insert_context())
     //}
     //pub fn splitter<Side: SplitSide<D>>(&self) -> Splitter<Side> {
     //    Splitter::new(self.insert_context())
@@ -241,13 +241,13 @@ impl ReadContext {
     //}
 }
 
-//impl<R: InsertResult> ToInsertContext<R> for ReadContext {
-//    fn insert_context(&self) -> InsertContext<R> {
-//        InsertContext::from(self.graph.clone())
+//impl<R: InsertResult> ToInsertCtx<R> for ReadCtx {
+//    fn insert_context(&self) -> InsertCtx<R> {
+//        InsertCtx::from(self.graph.clone())
 //    }
 //}
 //impl_has_graph_mut! {
-//    impl for &'_ mut ReadContext,
+//    impl for &'_ mut ReadCtx,
 //    //self => self.graph.graph_mut();
 //    //<'a> &'a mut Hypergraph
 //    self => self.graph.write().unwrap();
@@ -255,21 +255,21 @@ impl ReadContext {
 //}
 
 impl_has_graph! {
-    impl for ReadContext,
+    impl for ReadCtx,
     //Self => self.graph.graph();
     //<'a> &'a Hypergraph
     self => self.graph.write().unwrap();
     <'a> RwLockWriteGuard<'a, Hypergraph>
 }
 //impl_has_graph! {
-//    impl for &'_ ReadContext,
+//    impl for &'_ ReadCtx,
 //    //self => self.graph.graph();
 //    //<'a> &'a Hypergraph
 //    self => self.graph.read().unwrap();
 //    <'a> RwLockReadGuard<'a, Hypergraph>
 //}
 //impl_has_graph! {
-//    impl for &'_ mut ReadContext,
+//    impl for &'_ mut ReadCtx,
 //    //self => self.graph.graph();
 //    //<'a> &'a Hypergraph
 //    self => self.graph.read().unwrap();

@@ -21,24 +21,24 @@ use context_trace::{
 };
 
 use derive_new::new;
-pub mod end;
+pub mod iterator;
 pub mod root_cursor;
 
 #[derive(Debug, new)]
-pub struct MatchContext {
+pub struct MatchCtx {
     #[new(default)]
     pub nodes: VecDeque<TraceNode>,
 }
 
 #[derive(Debug)]
 pub struct RootSearchIterator<'a, K: TraversalKind> {
-    pub ctx: &'a mut MatchContext,
+    pub ctx: &'a mut MatchCtx,
     pub trav: &'a K::Trav,
 }
 impl<'a, K: TraversalKind> RootSearchIterator<'a, K> {
     pub fn new(
         trav: &'a K::Trav,
-        ctx: &'a mut MatchContext,
+        ctx: &'a mut MatchCtx,
     ) -> Self {
         Self { ctx, trav }
     }
