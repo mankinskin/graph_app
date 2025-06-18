@@ -9,7 +9,6 @@ use context_insert::insert::{
 use context_trace::{
     graph::vertex::{
         child::Child,
-        location::child::ChildLocation,
         wide::Wide,
     },
     path::{
@@ -104,18 +103,12 @@ impl<'a> ChainGenerator<'a> {
     fn postfix_step(
         &self,
         start_pos: usize,
-        postfix_path: &mut RolePath<End>,
-        postfix_location: ChildLocation,
+        postfix_path: &RolePath<End>,
         postfix: Child,
     ) -> Option<ChainOp> {
-        postfix_path.path_append(postfix_location);
-
-        let cursor: PatternRangePath = self.cursor.clone();
-        let primer = postfix_path.clone();
-
         match ToInsertCtx::<IndexWithPath>::insert_or_get_complete(
             &self.trav.graph,
-            cursor,
+            self.cursor.clone(),
         ) {
             Ok(expansion) => Some(ChainOp::Expansion(start_pos, expansion)),
             Err(_) => match self.chain.ends_at(start_pos) {
@@ -142,12 +135,8 @@ impl<'a> ChainGenerator<'a> {
         postfix_iter.find_map(|(postfix_location, postfix)| {
             let last_end_bound = last.band.end_bound;
             let start_bound = last_end_bound - postfix.width();
-            self.postfix_step(
-                start_bound,
-                &mut postfix_path,
-                postfix_location,
-                postfix,
-            )
+            postfix_path.path_append(postfix_location);
+            self.postfix_step(start_bound, &postfix_path, postfix)
         })
     }
 }

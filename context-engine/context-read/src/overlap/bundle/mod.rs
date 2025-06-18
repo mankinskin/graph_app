@@ -1,5 +1,8 @@
 use context_trace::{
-    graph::vertex::pattern::Pattern,
+    graph::vertex::{
+        child::Child,
+        pattern::Pattern,
+    },
     trace::has_graph::HasGraphMut,
 };
 
@@ -27,18 +30,26 @@ impl<'p> Bundle {
     }
     pub fn wrap_into_band(
         mut self,
-        mut trav: impl HasGraphMut,
+        trav: impl HasGraphMut,
     ) -> Band {
+        let end_bound = self.end_bound;
         assert!(!self.bundle.is_empty());
         let pattern = if self.bundle.len() == 1 {
             self.bundle.pop().unwrap()
         } else {
-            vec![trav.graph_mut().insert_patterns(self.bundle)]
+            vec![self.wrap_into_child(trav)]
         };
         Band {
             pattern,
             start_bound: 0,
-            end_bound: self.end_bound,
+            end_bound,
         }
+    }
+    pub fn wrap_into_child(
+        self,
+        mut trav: impl HasGraphMut,
+    ) -> Child {
+        assert!(!self.bundle.is_empty());
+        trav.graph_mut().insert_patterns(self.bundle)
     }
 }

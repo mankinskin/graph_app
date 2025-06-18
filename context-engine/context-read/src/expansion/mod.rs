@@ -31,10 +31,7 @@ use context_trace::{
             role_path::RolePath,
             rooted::{
                 pattern_range::PatternRangePath,
-                role_path::{
-                    PatternEndPath,
-                    RootedRolePath,
-                },
+                role_path::RootedRolePath,
             },
         },
     },
@@ -124,6 +121,13 @@ impl<'a> Iterator for ExpansionIterator<'a> {
     }
 }
 impl<'a> ExpansionIterator<'a> {
+    pub fn find_largest_bundle(&mut self) -> Option<Bundle> {
+        let mut last = None;
+        while let Some(bundle) = self.next() {
+            last = bundle;
+        }
+        last
+    }
     pub fn new(
         trav: ReadCtx,
         cursor: &'a mut PatternRangePath,

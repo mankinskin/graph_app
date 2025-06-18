@@ -32,7 +32,10 @@ use tracing::instrument;
 
 use crate::{
     expansion::ExpansionIterator,
-    overlap::bands::LinkedBands,
+    overlap::{
+        bands::LinkedBands,
+        bundle::Bundle,
+    },
 };
 //pub trait HasReadCtx: ToInsertCtx {
 //    fn read_context<'g>(&'g mut self) -> ReadCtx;
@@ -103,12 +106,17 @@ impl ReadCtx {
         &mut self,
         first: Child,
     ) -> Child {
-        ExpansionIterator::new(
+        if let Some(bundle) = ExpansionIterator::new(
             self.clone(),
             &mut self.sequence,
             LinkedBands::new(first),
         )
-        .collect()
+        .find_largest_bundle()
+        {
+            bundle.wrap_into_child(&mut self.graph)
+        } else {
+            first
+        }
     }
     pub fn read_next(&mut self) -> Option<Child> {
         match ToInsertCtx::<IndexWithPath>::insert_or_get_complete(
