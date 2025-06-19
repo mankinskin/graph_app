@@ -16,35 +16,33 @@ use derive_more::{
     Deref,
     DerefMut,
 };
-use itertools::{
-    Itertools,
-    PeekingNext,
-};
+use itertools::Itertools;
 
-use std::fmt::Debug;
+use std::{
+    fmt::Debug,
+    str::Chars,
+};
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct SequenceIter<'it> {
     iter: std::iter::Peekable<std::slice::Iter<'it, NewTokenIndex>>,
 }
 
-impl<'it> Iterator for SequenceIter<'it> {
-    type Item = &'it NewTokenIndex;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next()
-    }
+#[derive(Debug, Clone)]
+pub struct NextBlock {
+    pub known: Pattern,
+    pub unknown: Pattern,
 }
-
-impl<'it> PeekingNext for SequenceIter<'it> {
-    fn peeking_next<F>(
-        &mut self,
-        accept: F,
-    ) -> Option<Self::Item>
-    where
-        Self: Sized,
-        F: FnOnce(&Self::Item) -> bool,
-    {
-        self.iter.peeking_next(accept)
+impl<'it> Iterator for SequenceIter<'it> {
+    type Item = NextBlock;
+    fn next(&mut self) -> Option<Self::Item> {
+        let unknown = self.next_pattern_where(|t| t.is_new());
+        let known = self.next_pattern_where(|t| t.is_known());
+        if unknown.is_empty() && known.is_empty() {
+            None
+        } else {
+            Some(NextBlock { unknown, known })
+        }
     }
 }
 
@@ -54,26 +52,11 @@ impl<'it> SequenceIter<'it> {
             iter: sequence.iter().peekable(),
         }
     }
-    pub fn next_block<'g>(
+    fn next_pattern_where(
         &mut self,
-        //ctx: &mut ReadCtx,
-    ) -> Option<(Pattern, Pattern)> {
-        let cache = self.take_while(|t| t.is_new());
-        let known = self.take_while(|t| t.is_known());
-        if cache.is_empty() && known.is_empty() {
-            None
-        } else {
-            Some((cache, known))
-        }
-    }
-    fn take_while(
-        &mut self,
-        f: impl FnMut(&<Self as Iterator>::Item) -> bool,
-    ) -> Pattern
-    where
-        Child: From<<Self as Iterator>::Item>,
-    {
-        self.peeking_take_while(f).map(Child::from).collect()
+        f: impl FnMut(&&NewTokenIndex) -> bool,
+    ) -> Pattern {
+        self.iter.peeking_take_while(f).map(Child::from).collect()
     }
 }
 
@@ -96,12 +79,23 @@ impl ToNewTokenIndices for NewTokenIndices {
         self
     }
 }
+impl ToNewTokenIndices for Chars<'_> {
+    fn to_new_token_indices<
+        'a: 'g,
+        'g,
+        G: HasGraphMut<Kind = BaseGraphKind>,
+    >(
+        self,
+        graph: &'a mut G,
+    ) -> NewTokenIndices {
+        graph.graph_mut().new_token_indices(self)
+    }
+}
 //impl<T: Tokenize> ToNewTokenIndices<T> for Vec<T> {
-//    fn to_new_token_indices<
-//        'a: 'g,
-//        'g,
-//        G: HasGraphMut<T>,
-//        >(self, graph: &'a mut G) -> NewTokenIndices {
+//    fn to_new_token_indices<'a: 'g, 'g, G: HasGraphMut>(
+//        self,
+//        graph: &'a mut G,
+//    ) -> NewTokenIndices {
 //        graph.graph_mut().new_token_indices(self)
 //    }
 //}

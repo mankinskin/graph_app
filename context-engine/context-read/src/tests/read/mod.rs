@@ -3,13 +3,9 @@ use std::{
     iter::FromIterator,
 };
 
-//use tokio::sync::mpsc;
-//use tokio_stream::wrappers::*;
-use maplit::hashset;
-use pretty_assertions::assert_eq;
-
-use crate::search::Searchable;
-use context_search::{
+use crate::context::HasReadCtx;
+use context_search::search::Searchable;
+use context_trace::{
     graph::{
         vertex::{
             has_vertex_data::HasVertexData,
@@ -23,9 +19,11 @@ use context_search::{
         Hypergraph,
         HypergraphRef,
     },
-    traversal::has_graph::HasGraph,
+    trace::has_graph::HasGraph,
     HashMap,
 };
+use maplit::hashset;
+use pretty_assertions::assert_eq;
 
 fn assert_child_of_at(
     graph: &Hypergraph,
@@ -45,14 +43,16 @@ fn assert_child_of_at(
                 pattern_indices: pattern_indices.into_iter().collect(),
                 width: parent.width(),
             }
-        ),])
+        )])
     );
 }
 
 #[test]
 fn sync_read_text1() {
     let mut graph: HypergraphRef = HypergraphRef::from(Hypergraph::default());
-    let result = graph.read_sequence("heldldo world!".chars()).unwrap();
+    let result = (&mut graph, "heldldo world!".chars())
+        .read_sequence()
+        .unwrap();
     let g = graph.graph();
     let h = g.expect_token_child('h');
     let e = g.expect_token_child('e');
@@ -69,7 +69,8 @@ fn sync_read_text1() {
         .unwrap()
         .expect_complete("ld");
     let g = graph.graph();
-    let pats: HashSet<_> = ld.vertex(&g).get_child_pattern_set().into_iter().collect();
+    let pats: HashSet<_> =
+        ld.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![vec![l, d],]);
     let pats: HashSet<_> = result
         .vertex(&g)
@@ -85,7 +86,7 @@ fn sync_read_text1() {
 #[test]
 fn sync_read_text2() {
     let mut graph = HypergraphRef::default();
-    let heldld = graph.read_sequence("heldld".chars()).unwrap();
+    let heldld = (&mut graph, "heldld".chars()).read_sequence().unwrap();
     let g = graph.graph();
     let h = g.expect_token_child('h');
     let e = g.expect_token_child('e');
@@ -97,7 +98,8 @@ fn sync_read_text2() {
         .unwrap()
         .expect_complete("ld");
     let g = graph.graph();
-    let pats: HashSet<_> = ld.vertex(&g).get_child_pattern_set().into_iter().collect();
+    let pats: HashSet<_> =
+        ld.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![vec![l, d],]);
     let pats: HashSet<_> = heldld
         .vertex(&g)
@@ -106,13 +108,14 @@ fn sync_read_text2() {
         .collect();
     assert_eq!(pats, hashset![vec![h, e, ld, ld],]);
     drop(g);
-    let hell = graph.read_sequence("hell".chars()).unwrap();
+    let hell = (&mut graph, "hell".chars()).read_sequence().unwrap();
     let he = graph
         .find_sequence("he".chars())
         .unwrap()
         .expect_complete("he");
     let g = graph.graph();
-    let pats: HashSet<_> = he.vertex(&g).get_child_pattern_set().into_iter().collect();
+    let pats: HashSet<_> =
+        he.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![vec![h, e],]);
     drop(g);
     let hel = graph
@@ -120,7 +123,8 @@ fn sync_read_text2() {
         .unwrap()
         .expect_complete("hel");
     let g = graph.graph();
-    let pats: HashSet<_> = hel.vertex(&g).get_child_pattern_set().into_iter().collect();
+    let pats: HashSet<_> =
+        hel.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![vec![he, l],]);
     let pats: HashSet<_> = hell
         .vertex(&g)
@@ -151,7 +155,8 @@ fn sync_read_text2() {
 #[test]
 fn read_sequence1() {
     let mut graph = HypergraphRef::default();
-    let ind_hypergraph = graph.read_sequence("hypergraph".chars()).unwrap();
+    let ind_hypergraph =
+        (&mut graph, "hypergraph".chars()).read_sequence().unwrap();
     let gr = graph.graph();
     let h = gr.expect_token_child('h');
     let y = gr.expect_token_child('y');
@@ -200,7 +205,7 @@ fn read_sequence1() {
         assert_child_of_at(&gr, a, ind_hypergraph, [PatternIndex::new(pid, 7)]);
         assert_eq!(ind_hypergraph.width(), 10);
     }
-    let hyper = graph.read_sequence("hyper".chars()).unwrap();
+    let hyper = (&mut graph, "hyper".chars()).read_sequence().unwrap();
     {
         let graph = graph.graph();
         let pats: HashSet<_> = hyper
@@ -218,7 +223,7 @@ fn read_sequence1() {
         assert_eq!(pats, hashset![vec![hyper, g, r, a, p, h],]);
         assert_eq!(ind_hypergraph.width(), 10);
     }
-    let ind_graph = graph.read_sequence("graph".chars()).unwrap();
+    let ind_graph = (&mut graph, "graph".chars()).read_sequence().unwrap();
     let graph = graph.graph();
     let pats: HashSet<_> = ind_graph
         .vertex(&graph)
@@ -239,12 +244,15 @@ fn read_sequence1() {
 #[test]
 fn read_sequence2() {
     let mut graph = HypergraphRef::default();
-    let ind_abab = graph.read_sequence("abab".chars()).unwrap();
+    let ind_abab = (&mut graph, "abab".chars()).read_sequence().unwrap();
     let gr = graph.graph();
     let a = gr.expect_token_child('a');
     let b = gr.expect_token_child('b');
     drop(gr);
-    let ab = graph.find_ancestor([a, b]).unwrap().expect_complete("ab");
+    let ab = graph
+        .find_ancestor(vec![a, b])
+        .unwrap()
+        .expect_complete("ab");
     {
         let gr = graph.graph();
         let pats: HashSet<_> = ind_abab
@@ -277,7 +285,7 @@ fn read_sequence2() {
             [PatternIndex::new(pid, 0), PatternIndex::new(pid, 1)],
         );
     }
-    let ind_a = graph.read_sequence("a".chars()).unwrap();
+    let ind_a = (graph, "a".chars()).read_sequence().unwrap();
     assert_eq!(ab.width(), 2);
     assert_eq!(ind_abab.width(), 4);
     assert_eq!(ind_a, a);
@@ -286,7 +294,8 @@ fn read_sequence2() {
 #[test]
 fn read_infix1() {
     let mut graph = HypergraphRef::default();
-    let subdivision = graph.read_sequence("subdivision".chars()).unwrap();
+    let subdivision =
+        (&mut graph, "subdivision".chars()).read_sequence().unwrap();
     assert_eq!(subdivision.width(), 11);
     let s = graph.graph().expect_token_child('s');
     let u = graph.graph().expect_token_child('u');
@@ -333,9 +342,16 @@ fn read_infix1() {
         );
         assert_child_of_at(&graph, v, subdivision, [PatternIndex::new(pid, 5)]);
         assert_child_of_at(&graph, o, subdivision, [PatternIndex::new(pid, 9)]);
-        assert_child_of_at(&graph, n, subdivision, [PatternIndex::new(pid, 10)]);
+        assert_child_of_at(
+            &graph,
+            n,
+            subdivision,
+            [PatternIndex::new(pid, 10)],
+        );
     }
-    let visualization = graph.read_sequence("visualization".chars()).unwrap();
+    let visualization = (&mut graph, "visualization".chars())
+        .read_sequence()
+        .unwrap();
     {
         let g = graph.graph();
         let a = g.expect_token_child('a');
@@ -353,7 +369,8 @@ fn read_infix1() {
             .unwrap()
             .expect_complete("su");
         let g = graph.graph();
-        let pats: HashSet<_> = su.vertex(&g).get_child_pattern_set().into_iter().collect();
+        let pats: HashSet<_> =
+            su.vertex(&g).get_child_pattern_set().into_iter().collect();
         assert_eq!(pats, hashset![vec![s, u],]);
         drop(g);
         let vi = graph
@@ -361,7 +378,8 @@ fn read_infix1() {
             .unwrap()
             .expect_complete("vi");
         let g = graph.graph();
-        let pats: HashSet<_> = vis.vertex(&g).get_child_pattern_set().into_iter().collect();
+        let pats: HashSet<_> =
+            vis.vertex(&g).get_child_pattern_set().into_iter().collect();
         assert_eq!(pats, hashset![vec![vi, s],]);
         drop(g);
 
@@ -404,7 +422,7 @@ fn read_infix1() {
 #[test]
 fn read_infix2() {
     let mut graph = HypergraphRef::default();
-    let subvisu = graph.read_sequence("subvisu".chars()).unwrap();
+    let subvisu = (&mut graph, "subvisu".chars()).read_sequence().unwrap();
     assert_eq!(subvisu.width(), 7);
     let g = graph.graph();
     let s = g.expect_token_child('s');
@@ -419,7 +437,8 @@ fn read_infix2() {
         .unwrap()
         .expect_complete("su");
     let g = graph.graph();
-    let pats: HashSet<_> = su.vertex(&g).get_child_pattern_set().into_iter().collect();
+    let pats: HashSet<_> =
+        su.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![vec![s, u],]);
     let pats: HashSet<_> = subvisu
         .vertex(&g)
@@ -430,7 +449,7 @@ fn read_infix2() {
     assert_eq!(pats, hashset![vec![su, b, v, i, su],]);
     drop(g);
 
-    let visub = graph.read_sequence("visub".chars()).unwrap();
+    let visub = (&mut graph, "visub".chars()).read_sequence().unwrap();
     //let visub_patterns = visub.expect_child_patterns(&graph);
     //println!("{:#?}", graph.graph().pattern_strings(visub_patterns.values()));
     assert_eq!(visub.width(), 5);
@@ -443,7 +462,8 @@ fn read_infix2() {
         .unwrap()
         .expect_complete("sub");
     let g = graph.graph();
-    let pats: HashSet<_> = sub.vertex(&g).get_child_pattern_set().into_iter().collect();
+    let pats: HashSet<_> =
+        sub.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![vec![su, b],]);
     drop(g);
 
@@ -475,7 +495,7 @@ fn read_infix2() {
 #[test]
 fn read_loose_sequence1() {
     let mut graph = HypergraphRef::default();
-    let abxaxxb = graph.read_sequence("abxaxxb".chars()).unwrap();
+    let abxaxxb = (&mut graph, "abxaxxb".chars()).read_sequence().unwrap();
     assert_eq!(abxaxxb.width(), 7);
     let g = graph.graph();
     let a = g.expect_token_child('a');
@@ -494,7 +514,7 @@ fn read_loose_sequence1() {
 #[test]
 fn read_repeating_known1() {
     let mut graph = HypergraphRef::default();
-    let xyyxy = graph.read_sequence("xyyxy".chars()).unwrap();
+    let xyyxy = (&mut graph, "xyyxy".chars()).read_sequence().unwrap();
     assert_eq!(xyyxy.width(), 5);
     let g = graph.graph();
     let x = g.expect_token_child('x');
@@ -507,7 +527,8 @@ fn read_repeating_known1() {
         .expect_complete("xy");
     let g = graph.graph();
 
-    let pats: HashSet<_> = xy.vertex(&g).get_child_pattern_set().into_iter().collect();
+    let pats: HashSet<_> =
+        xy.vertex(&g).get_child_pattern_set().into_iter().collect();
     assert_eq!(pats, hashset![vec![x, y],]);
     let pats: HashSet<_> = xyyxy
         .vertex(&g)
@@ -521,7 +542,7 @@ fn read_repeating_known1() {
 #[test]
 fn read_multiple_overlaps1() {
     let mut graph = HypergraphRef::default();
-    let abcde = graph.read_sequence("abcde".chars()).unwrap();
+    let abcde = (&mut graph, "abcde".chars()).read_sequence().unwrap();
     // abcde
     //  bcde
     //  bcdea
@@ -541,7 +562,7 @@ fn read_multiple_overlaps1() {
         hashset![vec![a, b, c, d, e],]
     );
     drop(g);
-    let bcdea = graph.read_sequence("bcdea".chars()).unwrap();
+    let bcdea = (&mut graph, "bcdea".chars()).read_sequence().unwrap();
     let bcde = graph
         .find_sequence("bcde".chars())
         .unwrap()
@@ -572,7 +593,7 @@ fn read_multiple_overlaps1() {
     );
     drop(g);
 
-    let cdeab = graph.read_sequence("cdeab".chars()).unwrap();
+    let cdeab = (&mut graph, "cdeab".chars()).read_sequence().unwrap();
     // abcde
     //  bcde
     //  bcdea
@@ -645,7 +666,7 @@ fn read_multiple_overlaps1() {
         hashset![vec![cde, ab], vec![cdea, b],]
     );
     drop(g);
-    let deabc = graph.read_sequence("deabc".chars()).unwrap();
+    let deabc = (&mut graph, "deabc".chars()).read_sequence().unwrap();
 
     // abcde
     //  bcde
@@ -764,7 +785,7 @@ fn read_multiple_overlaps1() {
         hashset![vec![de, abc], vec![dea, bc], vec![deab, c],]
     );
     drop(g);
-    let eabcd = graph.read_sequence("eabcd".chars()).unwrap();
+    let eabcd = (&mut graph, "eabcd".chars()).read_sequence().unwrap();
 
     let abcd = graph
         .find_sequence("abcd".chars())
@@ -807,7 +828,8 @@ fn read_multiple_overlaps1() {
         hashset![vec![abc, d], vec![a, bcd],]
     );
     drop(g);
-    let abcdeabcde = graph.read_sequence("abcdeabcde".chars()).unwrap();
+    let abcdeabcde =
+        (&mut graph, "abcdeabcde".chars()).read_sequence().unwrap();
     let g = graph.graph();
     let pats: HashSet<_> = abcdeabcde
         .vertex(&g)
