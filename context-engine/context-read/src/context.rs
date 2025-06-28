@@ -5,7 +5,6 @@ use context_insert::insert::{
     result::InsertResult,
     ToInsertCtx,
 };
-use context_search::traversal::state::cursor::PatternRangeCursor;
 use context_trace::{
     direction::Right,
     graph::{
@@ -21,7 +20,6 @@ use context_trace::{
                 IntoPattern,
                 Pattern,
             },
-            token::NewTokenIndex,
         },
         Hypergraph,
         HypergraphRef,
@@ -41,7 +39,6 @@ use tracing::instrument;
 
 use crate::{
     expansion::ExpansionIterator,
-    overlap::bands::LinkedBands,
     sequence::{
         NextBlock,
         SequenceIter,
@@ -87,44 +84,71 @@ impl<S: ToNewTokenIndices + Clone> HasReadCtx for (&mut HypergraphRef, S) {
 pub struct ReadCtx {
     pub graph: HypergraphRef,
     pub root: Option<Child>,
-    pub sequence: Vec<NewTokenIndex>,
+    pub sequence: SequenceIter,
 }
 pub enum ReadState {
     Continue(Child, PatternEndPath),
     Stop(PatternEndPath),
 }
-//impl Iterator for ReadCtx {
-//    type Item = ();
-//    fn next(&mut self) -> Option<Self::Item> {
-//        self.read_next().map(|next| {
-//            self.read_block(next);
-//            self.append_index(next)
-//        })
-//    }
-//}
+impl Iterator for ReadCtx {
+    type Item = ();
+    fn next(&mut self) -> Option<Self::Item> {
+        self.sequence.next().map(|block| self.append_block(block))
+    }
+}
 impl ReadCtx {
     pub fn new(
         mut graph: HypergraphRef,
         seq: impl ToNewTokenIndices,
     ) -> Self {
-        let sequence = seq.to_new_token_indices(&mut graph.graph_mut());
+        let new_indices = seq.to_new_token_indices(&mut graph.graph_mut());
         Self {
             graph,
-            sequence,
+            sequence: SequenceIter::new(new_indices),
             root: None,
         }
     }
     #[instrument(skip(self))]
     pub fn read_sequence(&mut self) -> Option<Child> {
-        //debug!("start reading: {:?}", self.sequence);
-        let new_indices = self.sequence.clone();
-        let mut sequence = SequenceIter::new(&new_indices);
-        while let Some(NextBlock { unknown, known }) = sequence.next() {
-            // todo: read to result type
-            self.append_pattern(unknown);
-            self.read_known(known)
-        }
+        self.find_map(|_| None as Option<()>);
         self.root
+    }
+    #[instrument(skip(self, known))]
+    pub fn read_known(
+        &mut self,
+        known: Pattern,
+    ) -> Pattern {
+        match PatternEndPath::new_directed::<Right>(known.clone()) {
+            Ok(path) => {
+                let mut cursor = path.into_range(0);
+                let block = self.read_known_overlaps(&mut cursor);
+                assert!(cursor.end_path().is_empty());
+                [&[block], &cursor.root[cursor.end.root_entry + 1..]].concat()
+            },
+            Err((err, _)) => match err {
+                ErrorReason::SingleIndex(c) => vec![c],
+                _ => known,
+            },
+        }
+    }
+    // read one block of new overlaps
+    pub fn read_known_overlaps(
+        &mut self,
+        cursor: &mut PatternRangePath,
+    ) -> Child {
+        ExpansionIterator::new(self.clone(), cursor)
+            .find_largest_bundle()
+            .wrap_into_child(&mut self.graph)
+    }
+    fn append_block(
+        &mut self,
+        block: NextBlock,
+    ) {
+        let NextBlock { unknown, known } = block;
+        // todo: read to result type
+        self.append_pattern(unknown);
+        let minified = self.read_known(known);
+        self.append_pattern(minified);
     }
     /// append a pattern of new token indices
     /// returns index of possible new index
@@ -180,45 +204,6 @@ impl ReadCtx {
             };
         } else {
             self.root = Some(index);
-        }
-    }
-    #[instrument(skip(self, known))]
-    pub fn read_known(
-        &mut self,
-        known: Pattern,
-    ) {
-        match PatternEndPath::new_directed::<Right>(known) {
-            Ok(path) => {
-                let c = self.read_block(path.into_range(0));
-                self.append_index(c);
-            },
-            Err((err, _)) => match err {
-                ErrorReason::SingleIndex(c) => {
-                    self.append_index(c);
-                    Ok(())
-                },
-                ErrorReason::EmptyPatterns => Ok(()),
-                err => Err(err),
-            }
-            .unwrap(),
-        }
-    }
-    // read one block of new overlaps
-    pub fn read_block(
-        &mut self,
-        mut cursor: PatternRangePath,
-    ) -> Child {
-        let first = cursor.start_index(&self.graph);
-        if let Some(bundle) = ExpansionIterator::new(
-            self.clone(),
-            &mut cursor,
-            LinkedBands::new(first),
-        )
-        .find_largest_bundle()
-        {
-            bundle.wrap_into_child(&mut self.graph)
-        } else {
-            first
         }
     }
     //pub fn read_next(&mut self) -> Option<Child> {

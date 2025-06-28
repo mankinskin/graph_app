@@ -1,3 +1,5 @@
+use derive_more::Deref;
+
 use crate::{
     graph::vertex::location::child::ChildLocation,
     impl_root,
@@ -29,9 +31,10 @@ pub struct RootedSplitPath<Root: PathRoot = IndexRoot> {
     pub sub_path: SubPath,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deref)]
 pub struct RootedSplitPathRef<'a, Root: PathRoot = IndexRoot> {
     pub root: &'a Root,
+    #[deref]
     pub sub_path: &'a SubPath,
 }
 

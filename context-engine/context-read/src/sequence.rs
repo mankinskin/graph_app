@@ -23,9 +23,9 @@ use std::{
     str::Chars,
 };
 
-#[derive(Debug, Deref, DerefMut)]
-pub struct SequenceIter<'it> {
-    iter: std::iter::Peekable<std::slice::Iter<'it, NewTokenIndex>>,
+#[derive(Debug, Deref, DerefMut, Clone)]
+pub struct SequenceIter {
+    iter: std::iter::Peekable<std::vec::IntoIter<NewTokenIndex>>,
 }
 
 #[derive(Debug, Clone)]
@@ -33,7 +33,7 @@ pub struct NextBlock {
     pub known: Pattern,
     pub unknown: Pattern,
 }
-impl<'it> Iterator for SequenceIter<'it> {
+impl Iterator for SequenceIter {
     type Item = NextBlock;
     fn next(&mut self) -> Option<Self::Item> {
         let unknown = self.next_pattern_where(|t| t.is_new());
@@ -46,15 +46,15 @@ impl<'it> Iterator for SequenceIter<'it> {
     }
 }
 
-impl<'it> SequenceIter<'it> {
-    pub fn new(sequence: &'it NewTokenIndices) -> Self {
+impl SequenceIter {
+    pub fn new(sequence: NewTokenIndices) -> Self {
         Self {
-            iter: sequence.iter().peekable(),
+            iter: sequence.into_iter().peekable(),
         }
     }
     fn next_pattern_where(
         &mut self,
-        f: impl FnMut(&&NewTokenIndex) -> bool,
+        f: impl FnMut(&NewTokenIndex) -> bool,
     ) -> Pattern {
         self.iter.peeking_take_while(f).map(Child::from).collect()
     }

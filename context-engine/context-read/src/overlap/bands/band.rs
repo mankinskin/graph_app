@@ -60,6 +60,15 @@ impl Band {
 //        band
 //    }
 //}
+impl From<Child> for Band {
+    fn from(first: Child) -> Self {
+        Self {
+            start_bound: 0,
+            end_bound: first.width(),
+            pattern: vec![first],
+        }
+    }
+}
 impl From<(usize, Pattern)> for Band {
     fn from((start_bound, pattern): (usize, Pattern)) -> Self {
         let end_bound = start_bound + pattern_width(&pattern);

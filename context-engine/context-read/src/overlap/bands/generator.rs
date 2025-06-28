@@ -128,15 +128,17 @@ impl<'a> ChainGenerator<'a> {
 
         // TODO: Replace with Child Trace Iter
         let mut postfix_iter = last_end.postfix_iter(self.trav.clone());
-        let mut postfix_path = {
-            let postfix_location = postfix_iter.next().unwrap().0;
-            RolePath::from(SubPath::new(postfix_location.sub_index))
-        };
-        postfix_iter.find_map(|(postfix_location, postfix)| {
-            let last_end_bound = last.band.end_bound;
-            let start_bound = last_end_bound - postfix.width();
-            postfix_path.path_append(postfix_location);
-            self.postfix_step(start_bound, &postfix_path, postfix)
-        })
+        if let Some((postfix_location, _)) = postfix_iter.next() {
+            let mut postfix_path =
+                RolePath::from(SubPath::new(postfix_location.sub_index));
+            postfix_iter.find_map(|(postfix_location, postfix)| {
+                let last_end_bound = last.band.end_bound;
+                let start_bound = last_end_bound - postfix.width();
+                postfix_path.path_append(postfix_location);
+                self.postfix_step(start_bound, &postfix_path, postfix)
+            })
+        } else {
+            None
+        }
     }
 }

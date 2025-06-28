@@ -14,7 +14,10 @@ use crate::{
         bundle::Bundle,
     },
 };
-use context_insert::insert::result::IndexWithPath;
+use context_insert::insert::{
+    result::IndexWithPath,
+    ToInsertCtx,
+};
 use context_trace::{
     graph::vertex::wide::Wide,
     path::{
@@ -28,6 +31,7 @@ use context_trace::{
         },
         mutators::append::PathAppend,
         structs::{
+            query_range_path::FoldablePath,
             role_path::RolePath,
             rooted::{
                 pattern_range::PatternRangePath,
@@ -51,26 +55,19 @@ pub struct ExpansionIterator<'a> {
     #[deref]
     #[deref_mut]
     chain: ChainGenerator<'a>,
-    bundle: Option<Bundle>,
+    bundle: Bundle,
 }
 impl<'a> Iterator for ExpansionIterator<'a> {
-    type Item = Option<Bundle>;
+    type Item = ();
 
     fn next(&mut self) -> Option<Self::Item> {
-        // find expandable postfix, may append postfixes in overlap chain
-        //println!("read next overlap with {:#?}", cache.last);
         if let Some(next_op) = self.chain.next() {
             match next_op {
                 ChainOp::Expansion(start_bound, next) => {
-                    //println!("found overlap at {}: {:?}", start_bound, expansion);
-
-                    // finish current bundle
-                    if let Some(bundle) = self.bundle.take() {
-                        let band = bundle.wrap_into_band(&mut self.trav.graph);
-                        self.chain.append(band);
+                    if self.bundle.len() > 1 {
+                        self.bundle.wrap_into_band(&mut self.chain.trav.graph);
                     }
 
-                    // BACK CONTEXT FROM CACHE
                     // finish back context
                     let link = self.link_expansion(start_bound, &next);
 
@@ -79,8 +76,6 @@ impl<'a> Iterator for ExpansionIterator<'a> {
                     // 2. get furthest back facing overlap with position
                     // 3.
 
-                    // earliest overlap
-                    //
                     let &root = self
                         .chain
                         .bands
@@ -92,27 +87,20 @@ impl<'a> Iterator for ExpansionIterator<'a> {
 
                     let complement = ComplementBuilder::new(root, link)
                         .build_context_index(&self.trav);
-                    //let mut back_pattern = self.back_context_for_link(&next);
 
                     let back_pattern = vec![complement, next.index];
                     let next_band = Band::from((0, back_pattern));
                     let end_bound = start_bound + next.index.width();
                     self.chain.append((end_bound, next_band));
-                    Some(None)
+                    Some(())
                 },
                 ChainOp::Cap(cap) => {
                     // if not expandable, at band boundary -> add to bundle
                     // postfixes should always be first in the chain
                     let mut first_band = self.chain.pop_first().unwrap();
                     first_band.append(cap.expansion);
-                    self.bundle =
-                        Some(if let Some(mut bundle) = self.bundle.take() {
-                            bundle.add_pattern(first_band.pattern);
-                            bundle
-                        } else {
-                            Bundle::new(first_band)
-                        });
-                    Some(None)
+                    self.bundle.add_pattern(first_band.pattern);
+                    Some(())
                 },
             }
         } else {
@@ -121,22 +109,28 @@ impl<'a> Iterator for ExpansionIterator<'a> {
     }
 }
 impl<'a> ExpansionIterator<'a> {
-    pub fn find_largest_bundle(&mut self) -> Option<Bundle> {
-        let mut last = None;
-        while let Some(bundle) = self.next() {
-            last = bundle;
-        }
-        last
-    }
     pub fn new(
         trav: ReadCtx,
         cursor: &'a mut PatternRangePath,
-        chain: LinkedBands,
     ) -> Self {
+        let inner_cursor = cursor.clone();
+        let first = match trav.insert_or_get_complete(inner_cursor) {
+            Ok(IndexWithPath { index, path }) => {
+                *cursor = path;
+                index
+            },
+            Err(_) => cursor.start_index(&trav),
+        };
+
+        let chain = LinkedBands::new(first);
         Self {
             chain: ChainGenerator::new(trav, cursor, chain),
-            bundle: None,
+            bundle: Bundle::new(Band::from(first)),
         }
+    }
+    pub fn find_largest_bundle(mut self) -> Bundle {
+        self.find(|_| false);
+        self.bundle
     }
     fn link_expansion(
         &self,

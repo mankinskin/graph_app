@@ -5,13 +5,15 @@ use context_trace::{
     },
     trace::has_graph::HasGraphMut,
 };
+use derive_more::Deref;
 
 use super::bands::band::Band;
 
 //pub mod iterator;
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, Deref)]
 pub struct Bundle {
+    #[deref]
     bundle: Vec<Pattern>,
     end_bound: usize,
 }
@@ -28,10 +30,17 @@ impl<'p> Bundle {
     ) {
         self.bundle.push(pattern)
     }
-    pub fn wrap_into_band(
+    pub fn wrapped_into_band(
         mut self,
         trav: impl HasGraphMut,
     ) -> Band {
+        self.wrap_into_band(trav);
+        Band::from((self.end_bound, self.bundle.into_iter().next().unwrap()))
+    }
+    pub fn wrap_into_band(
+        &mut self,
+        trav: impl HasGraphMut,
+    ) {
         let end_bound = self.end_bound;
         assert!(!self.bundle.is_empty());
         let pattern = if self.bundle.len() == 1 {
@@ -39,17 +48,17 @@ impl<'p> Bundle {
         } else {
             vec![self.wrap_into_child(trav)]
         };
-        Band {
+        *self = Bundle::new(Band {
             pattern,
             start_bound: 0,
             end_bound,
-        }
+        });
     }
     pub fn wrap_into_child(
-        self,
+        &mut self,
         mut trav: impl HasGraphMut,
     ) -> Child {
         assert!(!self.bundle.is_empty());
-        trav.graph_mut().insert_patterns(self.bundle)
+        trav.graph_mut().insert_patterns(self.bundle.drain(..))
     }
 }
