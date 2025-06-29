@@ -74,6 +74,7 @@ impl<R: InsertResult> InsertCtx<R> {
     ) -> Result<R, ErrorState> {
         match foldable.fold::<InsertTraversal>(self.graph.clone()) {
             Ok(result) => match CompleteState::try_from(result) {
+                // TODO: find better return value, allowing to show that something was inserted
                 Ok(state) => R::try_init(state.root)
                     .map_err(|index| ErrorReason::SingleIndex(index).into()),
                 Err(state) => Ok(self.insert_init(

@@ -101,7 +101,7 @@ impl<'a> ChainGenerator<'a> {
 
     /// expand postfix into cursor context
     fn postfix_step(
-        &self,
+        &mut self,
         start_pos: usize,
         postfix_path: &RolePath<End>,
         postfix: Child,
@@ -110,7 +110,10 @@ impl<'a> ChainGenerator<'a> {
             &self.trav.graph,
             self.cursor.clone(),
         ) {
-            Ok(expansion) => Some(ChainOp::Expansion(start_pos, expansion)),
+            Ok(expansion) => {
+                *self.cursor = expansion.path.clone();
+                Some(ChainOp::Expansion(start_pos, expansion))
+            },
             Err(_) => match self.chain.ends_at(start_pos) {
                 Some(_) => Some(ChainOp::Cap(BandCap {
                     postfix_path: postfix_path.clone(),
@@ -132,7 +135,7 @@ impl<'a> ChainGenerator<'a> {
             let mut postfix_path =
                 RolePath::from(SubPath::new(postfix_location.sub_index));
             postfix_iter.find_map(|(postfix_location, postfix)| {
-                let last_end_bound = last.band.end_bound;
+                let last_end_bound = self.chain.last().band.end_bound;
                 let start_bound = last_end_bound - postfix.width();
                 postfix_path.path_append(postfix_location);
                 self.postfix_step(start_bound, &postfix_path, postfix)

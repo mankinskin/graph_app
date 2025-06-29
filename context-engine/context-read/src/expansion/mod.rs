@@ -19,7 +19,10 @@ use context_insert::insert::{
     ToInsertCtx,
 };
 use context_trace::{
-    graph::vertex::wide::Wide,
+    graph::{
+        getters::ErrorReason,
+        vertex::wide::Wide,
+    },
     path::{
         accessors::{
             child::root::PatternRootChild,
@@ -29,7 +32,10 @@ use context_trace::{
                 Start,
             },
         },
-        mutators::append::PathAppend,
+        mutators::{
+            append::PathAppend,
+            move_path::advance::Advance,
+        },
         structs::{
             query_range_path::FoldablePath,
             role_path::RolePath,
@@ -118,6 +124,11 @@ impl<'a> ExpansionIterator<'a> {
             Ok(IndexWithPath { index, path }) => {
                 *cursor = path;
                 index
+            },
+            // TODO: CATCH INSERTED OR NOT INSERTED, EVEN WHEN NO PATH (TryFrom for InsertResult)
+            Err(ErrorReason::SingleIndex(c)) => {
+                cursor.advance(&trav);
+                c
             },
             Err(_) => cursor.start_index(&trav),
         };
