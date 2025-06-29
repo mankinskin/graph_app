@@ -1,6 +1,6 @@
 use crate::{
     context::ReadCtx,
-    overlap::bands::LinkedBands,
+    expansion::bands::LinkedBands,
 };
 use context_insert::insert::{
     result::IndexWithPath,
@@ -106,7 +106,7 @@ impl<'a> ChainGenerator<'a> {
         postfix_path: &RolePath<End>,
         postfix: Child,
     ) -> Option<ChainOp> {
-        match ToInsertCtx::<IndexWithPath>::insert_or_get_complete(
+        match ToInsertCtx::<IndexWithPath>::insert(
             &self.trav.graph,
             self.cursor.clone(),
         ) {

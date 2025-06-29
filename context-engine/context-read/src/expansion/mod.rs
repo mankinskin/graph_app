@@ -1,19 +1,20 @@
+pub mod bands;
+pub mod bundle;
+
 use crate::{
     complement::ComplementBuilder,
     context::ReadCtx,
-    overlap::{
-        bands::{
-            band::Band,
-            generator::{
-                ChainGenerator,
-                ChainOp,
-                ExpansionLink,
-            },
-            LinkedBands,
-        },
-        bundle::Bundle,
-    },
 };
+use bands::{
+    band::Band,
+    generator::{
+        ChainGenerator,
+        ChainOp,
+        ExpansionLink,
+    },
+    LinkedBands,
+};
+use bundle::Bundle;
 use context_insert::insert::{
     result::IndexWithPath,
     ToInsertCtx,
@@ -32,10 +33,7 @@ use context_trace::{
                 Start,
             },
         },
-        mutators::{
-            append::PathAppend,
-            move_path::advance::Advance,
-        },
+        mutators::append::PathAppend,
         structs::{
             query_range_path::FoldablePath,
             role_path::RolePath,
@@ -121,15 +119,12 @@ impl<'a> ExpansionIterator<'a> {
     ) -> Self {
         let inner_cursor = cursor.clone();
         let first = match trav.insert_or_get_complete(inner_cursor) {
-            Ok(IndexWithPath { index, path }) => {
+            Ok(Ok(IndexWithPath { index, path })) => {
                 *cursor = path;
                 index
             },
-            // TODO: CATCH INSERTED OR NOT INSERTED, EVEN WHEN NO PATH (TryFrom for InsertResult)
-            Err(ErrorReason::SingleIndex(c)) => {
-                cursor.advance(&trav);
-                c
-            },
+            Ok(Err(index)) => index,
+            Err(ErrorReason::SingleIndex(c)) => c,
             Err(_) => cursor.start_index(&trav),
         };
 

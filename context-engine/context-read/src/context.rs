@@ -28,10 +28,7 @@ use context_trace::{
     impl_has_graph_mut,
     path::structs::{
         query_range_path::FoldablePath,
-        rooted::{
-            pattern_range::PatternRangePath,
-            role_path::PatternEndPath,
-        },
+        rooted::role_path::PatternEndPath,
     },
     trace::has_graph::HasGraphMut,
 };
@@ -121,7 +118,9 @@ impl ReadCtx {
         match PatternEndPath::new_directed::<Right>(known.clone()) {
             Ok(path) => {
                 let mut cursor = path.into_range(0);
-                let block = self.read_known_overlaps(&mut cursor);
+                let block = ExpansionIterator::new(self.clone(), &mut cursor)
+                    .find_largest_bundle()
+                    .wrap_into_child(&mut self.graph);
                 assert!(cursor.end_path().is_empty());
                 [&[block], &cursor.root[cursor.end.root_entry + 1..]].concat()
             },
@@ -130,15 +129,6 @@ impl ReadCtx {
                 _ => known,
             },
         }
-    }
-    // read one block of new overlaps
-    pub fn read_known_overlaps(
-        &mut self,
-        cursor: &mut PatternRangePath,
-    ) -> Child {
-        ExpansionIterator::new(self.clone(), cursor)
-            .find_largest_bundle()
-            .wrap_into_child(&mut self.graph)
     }
     fn append_block(
         &mut self,

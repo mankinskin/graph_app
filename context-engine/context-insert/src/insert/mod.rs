@@ -36,7 +36,7 @@ pub trait ToInsertCtx<R: InsertResult>: HasGraphMut {
     fn insert_or_get_complete(
         &self,
         foldable: impl Foldable,
-    ) -> Result<R, ErrorReason> {
+    ) -> Result<Result<R, R::Error>, ErrorReason> {
         self.insert_context().insert_or_get_complete(foldable)
     }
 }

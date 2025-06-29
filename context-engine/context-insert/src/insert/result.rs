@@ -3,9 +3,18 @@ use std::{
     fmt::Debug,
 };
 
-use context_search::fold::result::IncompleteState;
+use context_search::fold::{
+    foldable::ErrorState,
+    result::{
+        FinishedKind,
+        IncompleteState,
+    },
+};
 use context_trace::{
-    graph::vertex::child::Child,
+    graph::{
+        getters::ErrorReason,
+        vertex::child::Child,
+    },
     path::structs::rooted::pattern_range::PatternRangePath,
 };
 
@@ -44,8 +53,33 @@ impl TryInitWith<Child> for IndexWithPath {
         Err(value)
     }
 }
+//impl TryInitWith<ErrorState> for Child {
+//    type Error = Child;
+//    fn try_init(value: ErrorState) -> Result<Self, Self::Error> {
+//        match value {
+//            ErrorState {
+//                reason: ErrorReason::SingleIndex(c),
+//                found: Some(FinishedKind::Complete(_)),
+//            } => Ok(c),
+//            ErrorState {
+//                reason: ErrorReason::SingleIndex(c),
+//                found: Some(FinishedKind::Complete(_)),
+//            } => Ok(c),
+//        }
+//    }
+//}
+//impl TryInitWith<ErrorState> for IndexWithPath {
+//    type Error = Child;
+//    fn try_init(value: ErrorState) -> Result<Self, Self::Error> {
+//        Err(value)
+//    }
+//}
 pub trait InsertResult:
-    Debug + Borrow<Child> + TryInitWith<Child, Error = Child> + Into<Child>
+    Debug
+    + Borrow<Child>
+    + TryInitWith<Child, Error = Child>
+    //+ TryInitWith<ErrorState, Error = Child>
+    + Into<Child>
 {
     type Extract: ResultExtraction;
     fn build_with_extract(

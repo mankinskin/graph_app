@@ -5,7 +5,10 @@ use std::{
 };
 
 use crate::{
-    insert::result::ResultExtraction,
+    insert::result::{
+        ResultExtraction,
+        TryInitWith,
+    },
     interval::{
         IntervalGraph,
         init::InitInterval,
@@ -74,7 +77,6 @@ impl<R: InsertResult> InsertCtx<R> {
     ) -> Result<R, ErrorState> {
         match foldable.fold::<InsertTraversal>(self.graph.clone()) {
             Ok(result) => match CompleteState::try_from(result) {
-                // TODO: find better return value, allowing to show that something was inserted
                 Ok(state) => R::try_init(state.root)
                     .map_err(|index| ErrorReason::SingleIndex(index).into()),
                 Err(state) => Ok(self.insert_init(
@@ -98,16 +100,17 @@ impl<R: InsertResult> InsertCtx<R> {
     }
     pub fn insert_or_get_complete(
         &mut self,
-        query: impl Foldable,
-    ) -> Result<R, ErrorReason> {
-        match self.insert(query) {
-            Err(ErrorState {
-                reason: ErrorReason::SingleIndex(c),
-                found: Some(FinishedKind::Complete(_)),
-            }) => R::try_init(c)
-                .map_err(|index| ErrorReason::SingleIndex(index).into()),
+        foldable: impl Foldable,
+    ) -> Result<Result<R, R::Error>, ErrorReason> {
+        match foldable.fold::<InsertTraversal>(self.graph.clone()) {
+            Ok(result) => Ok(match CompleteState::try_from(result) {
+                Ok(state) => R::try_init(state.root),
+                Err(state) => Ok(self.insert_init(
+                    <R::Extract as ResultExtraction>::extract_from(&state),
+                    InitInterval::from(state),
+                )),
+            }),
             Err(err) => Err(err.reason),
-            Ok(r) => Ok(r),
         }
     }
 }

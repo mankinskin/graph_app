@@ -3,7 +3,7 @@ use derive_new::new;
 
 use super::{
     context::ReadCtx,
-    overlap::bands::generator::ExpansionLink,
+    expansion::bands::generator::ExpansionLink,
 };
 
 #[derive(Debug, new)]
