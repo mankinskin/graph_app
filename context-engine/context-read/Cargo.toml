@@ -5,7 +5,7 @@ name = "context-read"
 version = "0.1.0"
 resolver = "2"
 [features]
-default = [] #["log_stdout", "log_gui"]
+default = []      #["log_stdout", "log_gui"]
 test-hashing = []
 
 [[bin]]
@@ -16,7 +16,7 @@ async-std = "1.12"
 async-trait = "^0.1"
 either = "^1.6"
 futures = "^0.3"
-indexmap = { version = "^2.7", features = ["serde"]}
+indexmap = { version = "^2.7", features = ["serde"] }
 lazy_static = "^1.4"
 maplit = "^1"
 num-traits = "^0.2"
@@ -32,7 +32,7 @@ rayon = "^1.5.3"
 tap = "^1"
 replace_with = "0.1.7"
 async-recursion = "1"
-derive_more = {version="2", features=["full"]}
+derive_more = { version = "2", features = ["full"] }
 linked_hash_set = "0.1.4"
 linked-hash-map = "0.5.6"
 derive-new = "0.7"
@@ -51,6 +51,7 @@ tracing = { version = "^0.1", features = ["attributes", "valuable"] }
 uuid = { version = "^1.10", features = ["v4", "fast-rng", "serde"] }
 derive-into-owned = "0.2"
 one-of = "0.2"
+charify = "0.1"
 
 #console-subscriber = "0.2"
 #tracing-mutex = "0.3"
@@ -90,20 +91,11 @@ version = "^1"
 
 [dependencies.tokio]
 version = "^1"
-features = [
-    "sync",
-    "rt",
-    "rt-multi-thread",
-    "macros",
-]
+features = ["sync", "rt", "rt-multi-thread", "macros"]
 
 [dependencies.tokio-stream]
 version = "^0.1"
-features = [
-    "sync",
-    "time",
-    "io-util",
-]
+features = ["sync", "time", "io-util"]
 
 #[dev-dependencies.graph_app]
 #path = "../"
