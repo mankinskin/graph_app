@@ -3,18 +3,9 @@ use std::{
     fmt::Debug,
 };
 
-use context_search::fold::{
-    foldable::ErrorState,
-    result::{
-        FinishedKind,
-        IncompleteState,
-    },
-};
+use context_search::fold::result::IncompleteState;
 use context_trace::{
-    graph::{
-        getters::ErrorReason,
-        vertex::child::Child,
-    },
+    graph::vertex::child::Child,
     path::structs::rooted::pattern_range::PatternRangePath,
 };
 

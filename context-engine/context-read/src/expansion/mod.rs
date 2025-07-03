@@ -1,20 +1,22 @@
-pub mod bands;
 pub mod bundle;
+pub mod chain;
 
 use crate::{
     complement::ComplementBuilder,
     context::ReadCtx,
-};
-use bands::{
-    band::Band,
-    generator::{
-        ChainGenerator,
+    expansion::chain::{
+        generator::ChainCtx,
         ChainOp,
         ExpansionLink,
     },
+};
+use chain::{
+    band::Band,
     LinkedBands,
 };
+
 use bundle::Bundle;
+use chain::generator::ChainGenerator;
 use context_insert::insert::{
     result::IndexWithPath,
     ToInsertCtx,
@@ -55,21 +57,25 @@ use itertools::{
 };
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct ExpansionIterator<'a> {
+pub struct ExpansionIterator<'cursor> {
     #[deref]
     #[deref_mut]
-    chain: ChainGenerator<'a>,
+    ctx: ChainCtx<'cursor>,
     bundle: Bundle,
+    chain: LinkedBands,
 }
 impl<'a> Iterator for ExpansionIterator<'a> {
     type Item = ();
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(next_op) = self.chain.next() {
+        if let Some(next_op) =
+            ChainGenerator::new(&mut self.ctx, self.chain.last().unwrap().band)
+                .next()
+        {
             match next_op {
                 ChainOp::Expansion(start_bound, next) => {
                     if self.bundle.len() > 1 {
-                        self.bundle.wrap_into_band(&mut self.chain.trav.graph);
+                        self.bundle.wrap_into_band(&mut self.ctx.trav.graph);
                     }
 
                     // finish back context
@@ -99,12 +105,18 @@ impl<'a> Iterator for ExpansionIterator<'a> {
                     Some(())
                 },
                 ChainOp::Cap(cap) => {
-                    // if not expandable, at band boundary -> add to bundle
-                    // postfixes should always be first in the chain
-                    let mut first_band = self.chain.pop_first().unwrap();
-                    first_band.append(cap.expansion);
-                    self.bundle.add_pattern(first_band.pattern);
-                    Some(())
+                    match self.chain.ends_at(cap.start_bound) {
+                        Some(_) => {
+                            // if not expandable, at band boundary -> add to bundle
+                            // postfixes should always be first in the chain
+                            let mut first_band =
+                                self.chain.pop_first().unwrap();
+                            first_band.append(cap.expansion);
+                            self.bundle.add_pattern(first_band.pattern);
+                            Some(())
+                        },
+                        _ => None,
+                    }
                 },
             }
         } else {
@@ -128,9 +140,9 @@ impl<'a> ExpansionIterator<'a> {
             Err(_) => cursor.start_index(&trav),
         };
 
-        let chain = LinkedBands::new(first);
         Self {
-            chain: ChainGenerator::new(trav, cursor, chain),
+            chain: LinkedBands::new(first),
+            ctx: ChainCtx::new(trav, cursor),
             bundle: Bundle::new(Band::from(first)),
         }
     }

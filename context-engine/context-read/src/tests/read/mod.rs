@@ -3,7 +3,7 @@ use std::{
     iter::FromIterator,
 };
 
-use crate::context::HasReadCtx;
+use crate::context::has_read_context::HasReadCtx;
 use charify::charify;
 use context_search::search::Searchable;
 use context_trace::{

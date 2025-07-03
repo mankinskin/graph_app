@@ -85,6 +85,7 @@ pub type PrefixIterator<'a, G> = BandExpandingIterator<
     PrefixExpandingPolicy<DirectionOf<<G as HasGraph>::Kind>>,
 >;
 
+#[derive(Debug)]
 pub struct BandExpandingIterator<'a, G, P>
 where
     G: HasGraph + 'a,

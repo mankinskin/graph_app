@@ -24,7 +24,7 @@ use std::{
 };
 
 #[derive(Debug, Deref, DerefMut, Clone)]
-pub struct SequenceIter {
+pub struct BlockIter {
     iter: std::iter::Peekable<std::vec::IntoIter<NewTokenIndex>>,
 }
 
@@ -33,7 +33,7 @@ pub struct NextBlock {
     pub known: Pattern,
     pub unknown: Pattern,
 }
-impl Iterator for SequenceIter {
+impl Iterator for BlockIter {
     type Item = NextBlock;
     fn next(&mut self) -> Option<Self::Item> {
         let unknown = self.next_pattern_where(|t| t.is_new());
@@ -46,7 +46,7 @@ impl Iterator for SequenceIter {
     }
 }
 
-impl SequenceIter {
+impl BlockIter {
     pub fn new(sequence: NewTokenIndices) -> Self {
         Self {
             iter: sequence.into_iter().peekable(),

@@ -7,7 +7,7 @@ use context_trace::{
 };
 use derive_more::Deref;
 
-use super::bands::band::Band;
+use crate::expansion::chain::band::Band;
 
 //pub mod iterator;
 

@@ -1,9 +1,15 @@
+pub mod band;
+pub mod expand;
+pub mod generator;
 use std::collections::{
     BTreeSet,
     VecDeque,
 };
 
+use band::Band;
+use context_insert::insert::result::IndexWithPath;
 use context_trace::{
+    self,
     graph::vertex::{
         child::Child,
         wide::Wide,
@@ -16,85 +22,46 @@ use context_trace::{
         structs::role_path::RolePath,
     },
 };
+use derive_more::From;
 
-use band::{
-    Band,
-    BandCtx,
-};
-use generator::ChainAppendage;
+use crate::expansion::chain::band::BandCtx;
 
-pub mod band;
-pub mod generator;
-
-/// IMPORTANT:
-/// - Use OverlapLinks to build SplitVertices
-/// - yield postfixes when joining partition for front context of each band
-/// - Every new overlap:
-///     - complete back context with interval graph from postfix paths
-/// - every time a band is "surpassed" (next.start_bound >= band.end_bound)
-///     - complete front context with interval graph from prefix paths
-///
-/// BandChain (building bundle)
-///
-/// - list of OverlapBand (Pattern with extra information about last index)
-///     - start_bound, end_bound of last index
-/// - each band is completed up to its end_bound
-/// - bands ordered by start_bound (end_bound required to be at least previous start_bound)
-///
-/// - list of OverlapLink
-///     - path to overlap from two bands
-///         - postfix_path: location of postfix/overlap in prev band
-///         - prefix_path: location of prefix/overlap in next band
-///
-/// - append new band
-///     - if start_bound < some previous end_bound
-///         1. describe back context partition between first band and new index with IntervalGraph
-///             1. get overlap paths from each band to new index
-///             2. build IntervalGraph
-///             3. join partition
-///             4. find front context postfix for each band
-///
-///     - if start_bound = some previous end_bound
-///         1. bundle chain up to end_bound
-///         2. reduce bundle to band
-///         3. append index at start_bound
-///         4. append band to end of chain
-///
-/// - get info about latest band
-///
-/// - bundle chain (take a chain and bake it into a bundle)
-///     - describe postfix partition of latest band with IntervalGraph
-///         1. get overlap paths from each band to new index
-///         2. build IntervalGraph
-///         3. join partition
-///         4. find front context postfix for each band
-///     - join and merge postfix partition
-///     - complete each band with front context
-///     - if multiple bands, insert new bundle
-///     
-/// IntervalBuilder
-/// - build from list of OverlapLink
-/// - build from list of RolePath<R>
-/// - build from FoldState
-/// - build complete IntervalGraph
-///
-/// PatternBundle (completed bundle)
-/// - list of Pattern
-/// - reduce to one pattern by inserting into graph if necessary
-///
-/// OverlapBand
-/// - Pattern
-/// - PostfixInfo
-///
-/// - append new postfix
-///
-/// PostfixInfo
-/// - start_bound, end_bound
-///
-/// OverlapLink
-/// - postfix_path
-/// - prefix_path
-///
+pub trait ChainAppendage: Sized {
+    fn append_to_chain(
+        self,
+        chain: &mut LinkedBands,
+    ) {
+        chain.bands.insert(self.into_band());
+    }
+    fn into_band(self) -> Band;
+}
+impl ChainAppendage for Band {
+    fn into_band(self) -> Band {
+        self
+    }
+}
+impl ChainAppendage for (usize, Band) {
+    fn into_band(self) -> Band {
+        self.1
+    }
+}
+#[derive(Debug, From)]
+pub enum ChainOp {
+    Expansion(usize, IndexWithPath),
+    Cap(BandCap),
+}
+#[derive(Debug)]
+pub struct BandCap {
+    pub postfix_path: RolePath<End>,
+    pub expansion: Child,
+    pub start_bound: usize,
+}
+#[derive(Debug)]
+pub struct ExpansionLink {
+    pub prefix_path: RolePath<Start>,
+    pub expansion: Child,
+    pub start_bound: usize,
+}
 #[derive(Clone, Debug)]
 pub struct OverlapLink {
     pub postfix_path: RolePath<End>, // location of postfix/overlap in first index
@@ -131,13 +98,12 @@ impl LinkedBands {
             front_link: None,
         })
     }
-    pub fn last(&self) -> BandCtx<'_> {
-        let band = self.bands.iter().last().unwrap();
-        BandCtx {
+    pub fn last(&self) -> Option<BandCtx<'_>> {
+        self.bands.iter().last().map(|band| BandCtx {
             band,
             back_link: self.links.iter().last(),
             front_link: None,
-        }
+        })
     }
     pub fn append(
         &mut self,

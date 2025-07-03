@@ -5,10 +5,7 @@ use std::{
 };
 
 use crate::{
-    insert::result::{
-        ResultExtraction,
-        TryInitWith,
-    },
+    insert::result::ResultExtraction,
     interval::{
         IntervalGraph,
         init::InitInterval,
@@ -21,10 +18,7 @@ use context_search::{
             ErrorState,
             Foldable,
         },
-        result::{
-            CompleteState,
-            FinishedKind,
-        },
+        result::CompleteState,
     },
     search::context::AncestorPolicy,
     traversal::{

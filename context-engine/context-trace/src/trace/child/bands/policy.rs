@@ -27,6 +27,7 @@ pub trait BandExpandingPolicy<G: HasGraph> {
         batch.into_iter().collect_vec()
     }
 }
+#[derive(Debug)]
 pub struct PostfixExpandingPolicy<D: PatternDirection> {
     _ty: std::marker::PhantomData<D>,
 }
@@ -53,6 +54,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct PrefixExpandingPolicy<D: Direction> {
     _ty: std::marker::PhantomData<D>,
 }
