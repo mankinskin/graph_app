@@ -1,10 +1,9 @@
 use context_trace::graph::vertex::child::Child;
 use derive_new::new;
 
-use super::{
-    context::ReadCtx,
-    expansion::chain::ExpansionLink,
-};
+use crate::expansion::ExpansionLink;
+
+use super::context::ReadCtx;
 
 #[derive(Debug, new)]
 pub struct ComplementBuilder {

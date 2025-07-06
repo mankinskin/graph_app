@@ -36,8 +36,10 @@ use crate::{
     context::root::RootManager,
     expansion::ExpansionIterator,
     sequence::{
-        BlockIter,
-        NextBlock,
+        block_iter::{
+            BlockIter,
+            NextBlock,
+        },
         ToNewTokenIndices,
     },
 };

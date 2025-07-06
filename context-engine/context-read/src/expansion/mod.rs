@@ -5,18 +5,16 @@ use crate::{
     complement::ComplementBuilder,
     context::ReadCtx,
     expansion::chain::{
-        generator::ChainCtx,
-        ChainOp,
-        ExpansionLink,
+        context::ChainCtx,
+        expand::ChainOp,
     },
 };
 use chain::{
     band::Band,
-    LinkedBands,
+    BandChain,
 };
 
 use bundle::Bundle;
-use chain::generator::ChainGenerator;
 use context_insert::insert::{
     result::IndexWithPath,
     ToInsertCtx,
@@ -24,7 +22,10 @@ use context_insert::insert::{
 use context_trace::{
     graph::{
         getters::ErrorReason,
-        vertex::wide::Wide,
+        vertex::{
+            child::Child,
+            wide::Wide,
+        },
     },
     path::{
         accessors::{
@@ -56,71 +57,80 @@ use itertools::{
     Itertools,
 };
 
+#[derive(Debug)]
+pub struct ExpansionLink {
+    pub prefix_path: RolePath<Start>,
+    pub expansion: Child,
+    pub start_bound: usize,
+}
+
+// # BlockIter
+// | item: new indexed block
+// |--# Expansions
+// |  | item: Expanded/Capped index with location path in current root
+// |  |--# Postfixes
+// |  |  | item: Location Path to Postfix in last expansion
+// |  |  |
+// |  |  |
+
 #[derive(Debug, Deref, DerefMut)]
 pub struct ExpansionIterator<'cursor> {
     #[deref]
     #[deref_mut]
     ctx: ChainCtx<'cursor>,
     bundle: Bundle,
-    chain: LinkedBands,
 }
 impl<'a> Iterator for ExpansionIterator<'a> {
     type Item = ();
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(next_op) =
-            ChainGenerator::new(&mut self.ctx, self.chain.last().unwrap().band)
-                .next()
-        {
-            match next_op {
-                ChainOp::Expansion(start_bound, next) => {
-                    if self.bundle.len() > 1 {
-                        self.bundle.wrap_into_band(&mut self.ctx.trav.graph);
-                    }
+        match self.ctx.next() {
+            Some(Some(ChainOp::Expansion(start_bound, next))) => {
+                if self.bundle.len() > 1 {
+                    self.bundle.wrap_into_band(&mut self.ctx.trav.graph);
+                }
 
-                    // finish back context
-                    let link = self.link_expansion(start_bound, &next);
+                // finish back context
+                let link = self.link_expansion(start_bound, &next);
 
-                    // TODO:
-                    // 1. walk overlaps at position
-                    // 2. get furthest back facing overlap with position
-                    // 3.
+                // TODO:
+                // 1. walk overlaps at position
+                // 2. get furthest back facing overlap with position
+                // 3.
 
-                    let &root = self
-                        .chain
-                        .bands
-                        .first()
-                        .expect("no overlaps in chain")
-                        .pattern
-                        .last()
-                        .expect("empty pattern");
+                let &root = self
+                    .chain
+                    .bands
+                    .first()
+                    .expect("no overlaps in chain")
+                    .pattern
+                    .last()
+                    .expect("empty pattern");
 
-                    let complement = ComplementBuilder::new(root, link)
-                        .build_context_index(&self.trav);
+                let complement = ComplementBuilder::new(root, link)
+                    .build_context_index(&self.trav);
 
-                    let back_pattern = vec![complement, next.index];
-                    let next_band = Band::from((0, back_pattern));
-                    let end_bound = start_bound + next.index.width();
-                    self.chain.append((end_bound, next_band));
-                    Some(())
-                },
-                ChainOp::Cap(cap) => {
-                    match self.chain.ends_at(cap.start_bound) {
-                        Some(_) => {
-                            // if not expandable, at band boundary -> add to bundle
-                            // postfixes should always be first in the chain
-                            let mut first_band =
-                                self.chain.pop_first().unwrap();
-                            first_band.append(cap.expansion);
-                            self.bundle.add_pattern(first_band.pattern);
-                            Some(())
-                        },
-                        _ => None,
-                    }
-                },
-            }
-        } else {
-            None
+                let back_pattern = vec![complement, next.index];
+                let next_band = Band::from((0, back_pattern));
+                let end_bound = start_bound + next.index.width();
+                self.chain.append((end_bound, next_band));
+                Some(())
+            },
+            Some(Some(ChainOp::Cap(cap))) => {
+                match self.chain.ends_at(cap.start_bound) {
+                    Some(_) => {
+                        // if not expandable, at band boundary -> add to bundle
+                        // postfixes should always be first in the chain
+                        let mut first_band = self.chain.pop_first().unwrap();
+                        first_band.append(cap.expansion);
+                        self.bundle.add_pattern(first_band.pattern);
+                    },
+                    _ => {},
+                }
+                Some(())
+            },
+            Some(None) => Some(()),
+            None => None,
         }
     }
 }
@@ -141,8 +151,7 @@ impl<'a> ExpansionIterator<'a> {
         };
 
         Self {
-            chain: LinkedBands::new(first),
-            ctx: ChainCtx::new(trav, cursor),
+            ctx: ChainCtx::new(trav, cursor, BandChain::new(first)),
             bundle: Bundle::new(Band::from(first)),
         }
     }

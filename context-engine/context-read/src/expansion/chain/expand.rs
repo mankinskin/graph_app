@@ -1,17 +1,16 @@
 use crate::{
     context::ReadCtx,
-    expansion::chain::{
-        generator::ChainGenerator,
-        BandCap,
-        ChainOp,
-    },
+    expansion::chain::context::ChainCtx,
 };
 use context_insert::insert::{
     result::IndexWithPath,
     ToInsertCtx,
 };
 use context_trace::{
-    graph::vertex::wide::Wide,
+    graph::vertex::{
+        child::Child,
+        wide::Wide,
+    },
     path::{
         accessors::role::End,
         mutators::append::PathAppend,
@@ -25,20 +24,21 @@ use context_trace::{
         PostfixIterator,
     },
 };
+use derive_more::From;
 
 #[derive(Debug)]
-pub struct ExpandCtx<'a, 'b> {
-    pub gen: &'a ChainGenerator<'a, 'b>,
+pub struct ExpandCtx<'a> {
+    pub ctx: &'a ChainCtx<'a>,
     pub postfix_path: RolePath<End>,
     pub postfix_iter: PostfixIterator<'a, ReadCtx>,
 }
-impl<'a, 'b> ExpandCtx<'a, 'b> {
-    pub fn try_new(gen: &'a ChainGenerator<'a, 'b>) -> Option<Self> {
-        let last_end = gen.last.postfix();
-        let mut postfix_iter = last_end.postfix_iter(gen.ctx.trav.clone());
+impl<'a> ExpandCtx<'a> {
+    pub fn try_new(ctx: &'a ChainCtx<'a>) -> Option<Self> {
+        let last_end = ctx.last().postfix();
+        let mut postfix_iter = last_end.postfix_iter(ctx.trav.clone());
         if let Some((postfix_location, _)) = postfix_iter.next() {
             Some(Self {
-                gen,
+                ctx,
                 postfix_path: RolePath::from(SubPath::new(
                     postfix_location.sub_index,
                 )),
@@ -49,16 +49,16 @@ impl<'a, 'b> ExpandCtx<'a, 'b> {
         }
     }
 }
-impl Iterator for ExpandCtx<'_, '_> {
+impl Iterator for ExpandCtx<'_> {
     type Item = ChainOp;
     fn next(&mut self) -> Option<Self::Item> {
         self.postfix_iter.next().map(|(postfix_location, postfix)| {
-            let last_end_bound = self.gen.last.end_bound;
+            let last_end_bound = self.ctx.last().end_bound;
             let start_bound = last_end_bound - postfix.width();
             self.postfix_path.path_append(postfix_location);
             match ToInsertCtx::<IndexWithPath>::insert(
-                &self.gen.ctx.trav.graph,
-                self.gen.ctx.cursor.clone(),
+                &self.ctx.trav.graph,
+                self.ctx.cursor.clone(),
             ) {
                 Ok(expansion) => ChainOp::Expansion(start_bound, expansion),
                 Err(_) => ChainOp::Cap(BandCap {
@@ -69,4 +69,16 @@ impl Iterator for ExpandCtx<'_, '_> {
             }
         })
     }
+}
+
+#[derive(Debug, From)]
+pub enum ChainOp {
+    Expansion(usize, IndexWithPath),
+    Cap(BandCap),
+}
+#[derive(Debug)]
+pub struct BandCap {
+    pub postfix_path: RolePath<End>,
+    pub expansion: Child,
+    pub start_bound: usize,
 }
