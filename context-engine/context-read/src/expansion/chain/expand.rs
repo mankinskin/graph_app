@@ -1,16 +1,17 @@
 use crate::{
     context::ReadCtx,
-    expansion::chain::context::ChainCtx,
+    expansion::chain::{
+        context::ChainCtx,
+        BandCap,
+        ChainOp,
+    },
 };
 use context_insert::insert::{
     result::IndexWithPath,
     ToInsertCtx,
 };
 use context_trace::{
-    graph::vertex::{
-        child::Child,
-        wide::Wide,
-    },
+    graph::vertex::wide::Wide,
     path::{
         accessors::role::End,
         mutators::append::PathAppend,
@@ -24,7 +25,6 @@ use context_trace::{
         PostfixIterator,
     },
 };
-use derive_more::From;
 
 #[derive(Debug)]
 pub struct ExpandCtx<'a> {
@@ -69,16 +69,4 @@ impl Iterator for ExpandCtx<'_> {
             }
         })
     }
-}
-
-#[derive(Debug, From)]
-pub enum ChainOp {
-    Expansion(usize, IndexWithPath),
-    Cap(BandCap),
-}
-#[derive(Debug)]
-pub struct BandCap {
-    pub postfix_path: RolePath<End>,
-    pub expansion: Child,
-    pub start_bound: usize,
 }

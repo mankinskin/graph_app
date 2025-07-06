@@ -6,7 +6,7 @@ use crate::{
     context::ReadCtx,
     expansion::chain::{
         context::ChainCtx,
-        expand::ChainOp,
+        ChainOp,
     },
 };
 use chain::{
@@ -84,19 +84,14 @@ impl<'a> Iterator for ExpansionIterator<'a> {
     type Item = ();
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.ctx.next() {
-            Some(Some(ChainOp::Expansion(start_bound, next))) => {
+        match self.ctx.find_next_operation() {
+            Some(ChainOp::Expansion(start_bound, next)) => {
                 if self.bundle.len() > 1 {
                     self.bundle.wrap_into_band(&mut self.ctx.trav.graph);
                 }
 
                 // finish back context
                 let link = self.link_expansion(start_bound, &next);
-
-                // TODO:
-                // 1. walk overlaps at position
-                // 2. get furthest back facing overlap with position
-                // 3.
 
                 let &root = self
                     .chain
@@ -116,20 +111,12 @@ impl<'a> Iterator for ExpansionIterator<'a> {
                 self.chain.append((end_bound, next_band));
                 Some(())
             },
-            Some(Some(ChainOp::Cap(cap))) => {
-                match self.chain.ends_at(cap.start_bound) {
-                    Some(_) => {
-                        // if not expandable, at band boundary -> add to bundle
-                        // postfixes should always be first in the chain
-                        let mut first_band = self.chain.pop_first().unwrap();
-                        first_band.append(cap.expansion);
-                        self.bundle.add_pattern(first_band.pattern);
-                    },
-                    _ => {},
-                }
+            Some(ChainOp::Cap(cap)) => {
+                let mut first_band = self.chain.pop_first().unwrap();
+                first_band.append(cap.expansion);
+                self.bundle.add_pattern(first_band.pattern);
                 Some(())
             },
-            Some(None) => Some(()),
             None => None,
         }
     }

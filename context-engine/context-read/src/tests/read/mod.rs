@@ -28,28 +28,33 @@ use pretty_assertions::assert_eq;
 
 macro_rules! assert_patterns {
     ($graph:ident, $($name:ident => $pats:expr),*) => {
+        let g = $graph.graph();
         $(
-            let g = $graph.graph();
             let pats: HashSet<_> =
                 $name.vertex(&g).get_child_pattern_set().into_iter().collect();
             assert_eq!(pats, $pats);
-            #[allow(dropping_references)]
-            drop(g);
         )*
+        #[allow(dropping_references)]
+        drop(g);
     };
 }
 macro_rules! find_index {
-    ($graph:ident, $name:ident) => {
+    ($graph:ident, $($name:ident),*) => {
+        $(
         let $name = $graph
             .find_sequence(stringify!($name).chars())
             .unwrap()
             .expect_complete(stringify!($name));
+        )*
     };
 }
 macro_rules! expect_tokens {
     ($graph:ident, {$($name:ident),*}) => {
 
-        $(let $name = $graph.expect_token_child(charify!($name));)*
+        let g = $graph.graph();
+        $(let $name = g.expect_token_child(charify!($name));)*
+        #[allow(dropping_references)]
+        drop(g);
     };
 }
 fn assert_parents(
@@ -80,8 +85,8 @@ fn sync_read_text1() {
     let result = (&mut graph, "heldldo world!".chars())
         .read_sequence()
         .unwrap();
+    expect_tokens!(graph, {h, e, l, d, o, w, r});
     let g = graph.graph();
-    expect_tokens!(g, {h, e, l, d, o, w, r});
     let space = g.expect_token_child(' ');
     let exclam = g.expect_token_child('!');
     drop(g);
@@ -100,9 +105,7 @@ fn sync_read_text1() {
 fn sync_read_text2() {
     let mut graph = HypergraphRef::default();
     let heldld = (&mut graph, "heldld".chars()).read_sequence().unwrap();
-    let g = graph.graph();
-    expect_tokens!(g, {h, e, l, d});
-    drop(g);
+    expect_tokens!(graph, {h, e, l, d});
     find_index!(graph, ld);
     assert_patterns!(
         graph,
@@ -115,9 +118,7 @@ fn sync_read_text2() {
 
     let hell = (&mut graph, "hell".chars()).read_sequence().unwrap();
 
-    find_index!(graph, he);
-    find_index!(graph, hel);
-    find_index!(graph, held);
+    find_index!(graph, he, hel, held);
     assert_patterns! {
         graph,
         he => hashset![vec![h, e],],
@@ -134,9 +135,7 @@ fn read_sequence1() {
     let ind_hypergraph =
         (&mut graph, "hypergraph".chars()).read_sequence().unwrap();
 
-    let gr = graph.graph();
-    expect_tokens!(gr, {h, y, p, e, r, g, a});
-    drop(gr);
+    expect_tokens!(graph, {h, y, p, e, r, g, a});
     {
         assert_patterns! {
             graph,
@@ -203,13 +202,8 @@ fn read_sequence1() {
 fn read_sequence2() {
     let mut graph = HypergraphRef::default();
     let ind_abab = (&mut graph, "abab".chars()).read_sequence().unwrap();
-    let gr = graph.graph();
-    expect_tokens!(gr, {a, b});
-    drop(gr);
-    let ab = graph
-        .find_ancestor(vec![a, b])
-        .unwrap()
-        .expect_complete("ab");
+    expect_tokens!(graph, {a, b});
+    find_index!(graph, ab);
     {
         assert_patterns! {
             graph,
@@ -251,15 +245,13 @@ fn read_infix1() {
     let subdivision =
         (&mut graph, "subdivision".chars()).read_sequence().unwrap();
     assert_eq!(subdivision.width(), 11);
-    let g = graph.graph();
-    expect_tokens!(g, {s, u, b, d, i, v, o, n});
-    drop(g);
+    expect_tokens!(graph, {s, u, b, d, i, v, o, n});
     {
-        let graph = graph.graph();
         assert_patterns! {
             graph,
             subdivision => hashset![vec![s, u, b, d, i, v, i, s, i, o, n],]
         };
+        let graph = graph.graph();
         let pid = *subdivision
             .vertex(&graph)
             .get_child_patterns()
@@ -294,15 +286,9 @@ fn read_infix1() {
         .read_sequence()
         .unwrap();
     {
-        let g = graph.graph();
-        expect_tokens!(g, {a, l, z, t});
-        drop(g);
+        expect_tokens!(graph, {a, l, z, t});
 
-        find_index!(graph, vis);
-        find_index!(graph, su);
-        find_index!(graph, vi);
-        find_index!(graph, visu);
-        find_index!(graph, ion);
+        find_index!(graph, vis, su, vi, visu, ion);
         assert_patterns! {
             graph,
             su => hashset![vec![s, u],],
@@ -321,9 +307,7 @@ fn read_infix2() {
     let mut graph = HypergraphRef::default();
     let subvisu = (&mut graph, "subvisu".chars()).read_sequence().unwrap();
     assert_eq!(subvisu.width(), 7);
-    let g = graph.graph();
-    expect_tokens!(g, {s, u, b, v, i});
-    drop(g);
+    expect_tokens!(graph, {s, u, b, v, i});
 
     find_index!(graph, su);
     assert_patterns! {
@@ -336,9 +320,7 @@ fn read_infix2() {
     //let visub_patterns = visub.expect_child_patterns(&graph);
     //println!("{:#?}", graph.graph().pattern_strings(visub_patterns.values()));
     assert_eq!(visub.width(), 5);
-    find_index!(graph, vi);
-    find_index!(graph, sub);
-    find_index!(graph, visu);
+    find_index!(graph, vi, sub, visu);
     assert_patterns! {
         graph,
         su => hashset![vec![s, u],],
@@ -355,8 +337,7 @@ fn read_loose_sequence1() {
     let mut graph = HypergraphRef::default();
     let abxaxxb = (&mut graph, "abxaxxb".chars()).read_sequence().unwrap();
     assert_eq!(abxaxxb.width(), 7);
-    let g = graph.graph();
-    expect_tokens!(g, {a, b, x});
+    expect_tokens!(graph, {a, b, x});
 
     assert_patterns! {
         graph,
@@ -369,10 +350,7 @@ fn read_repeating_known1() {
     let mut graph = HypergraphRef::default();
     let xyyxy = (&mut graph, "xyyxy".chars()).read_sequence().unwrap();
     assert_eq!(xyyxy.width(), 5);
-    let g = graph.graph();
-    expect_tokens!(g, {x, y});
-
-    drop(g);
+    expect_tokens!(graph, {x, y});
     find_index!(graph, xy);
     assert_patterns! {
         graph,
@@ -389,13 +367,11 @@ fn read_multiple_overlaps1() {
     //  bcde
     //  bcdea
 
-    let g = graph.graph();
-    expect_tokens!(g, {a, b, c, d, e});
+    expect_tokens!(graph, {a, b, c, d, e});
     assert_patterns! {
         graph,
         abcde => hashset![vec![a, b, c, d, e],]
     };
-    drop(g);
     let bcdea = (&mut graph, "bcdea".chars()).read_sequence().unwrap();
     find_index!(graph, bcde);
     assert_patterns! {
@@ -411,9 +387,7 @@ fn read_multiple_overlaps1() {
     //  bcdea
     //   cdea
     //   cdeab
-    find_index!(graph, cde);
-    find_index!(graph, ab);
-    find_index!(graph, cdea);
+    find_index!(graph, cde, ab, cdea);
     assert_patterns! {
         graph,
         ab => hashset![vec![a, b],],
@@ -426,11 +400,7 @@ fn read_multiple_overlaps1() {
     };
     let deabc = (&mut graph, "deabc".chars()).read_sequence().unwrap();
 
-    find_index!(graph, de);
-    find_index!(graph, dea);
-    find_index!(graph, bc);
-    find_index!(graph, deab);
-    find_index!(graph, abc);
+    find_index!(graph, de, dea, bc, deab, abc);
     assert_patterns! {
         graph,
         de => hashset![vec![d, e],],
@@ -446,9 +416,7 @@ fn read_multiple_overlaps1() {
         deabc => hashset![vec![de, abc], vec![dea, bc], vec![deab, c],]
     };
     let eabcd = (&mut graph, "eabcd".chars()).read_sequence().unwrap();
-    find_index!(graph, abcd);
-    find_index!(graph, bcd);
-    find_index!(graph, cd);
+    find_index!(graph, abcd, bcd, cd);
     assert_patterns! {
             graph,
             cd => hashset![vec![c, d],],
