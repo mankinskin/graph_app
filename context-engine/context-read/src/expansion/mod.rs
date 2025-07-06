@@ -84,7 +84,7 @@ impl<'a> Iterator for ExpansionIterator<'a> {
     type Item = ();
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.ctx.find_next_operation() {
+        match self.ctx.next() {
             Some(ChainOp::Expansion(start_bound, next)) => {
                 if self.bundle.len() > 1 {
                     self.bundle.wrap_into_band(&mut self.ctx.trav.graph);

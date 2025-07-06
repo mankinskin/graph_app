@@ -24,7 +24,12 @@ impl<'a> ChainCtx<'a> {
     pub fn last(&self) -> &Band {
         &self.chain.last().unwrap().band
     }
-    pub fn find_next_operation(&mut self) -> Option<ChainOp> {
+}
+impl<'a> Iterator for ChainCtx<'a> {
+    type Item = ChainOp;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // find next operation
         if let Some(mut ctx) = ExpandCtx::try_new(self) {
             while let Some(op) = ctx.next() {
                 match &op {
@@ -40,12 +45,5 @@ impl<'a> ChainCtx<'a> {
             }
         }
         None
-    }
-}
-impl<'a> Iterator for ChainCtx<'a> {
-    type Item = ChainOp;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.find_next_operation()
     }
 }
