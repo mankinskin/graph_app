@@ -34,7 +34,7 @@ use tracing::instrument;
 
 use crate::{
     context::root::RootManager,
-    expansion::ExpansionIterator,
+    expansion::ExpansionCtx,
     sequence::{
         block_iter::{
             BlockIter,
@@ -86,9 +86,8 @@ impl ReadCtx {
                 Ok(path) => {
                     let mut cursor = path.into_range(0);
                     let expansion =
-                        ExpansionIterator::new(self.clone(), &mut cursor)
-                            .find_largest_bundle()
-                            .wrap_into_child(&mut self.graph);
+                        ExpansionCtx::new(self.clone(), &mut cursor)
+                            .find_largest_bundle();
                     assert!(cursor.end_path().is_empty());
                     [&[expansion], &cursor.root[cursor.end.root_entry + 1..]]
                         .concat()

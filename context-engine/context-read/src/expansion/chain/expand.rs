@@ -1,9 +1,11 @@
 use crate::{
     context::ReadCtx,
-    expansion::chain::{
-        context::ChainCtx,
-        BandCap,
-        ChainOp,
+    expansion::{
+        chain::{
+            BandCap,
+            ChainOp,
+        },
+        ChainCtx,
     },
 };
 use context_insert::insert::{

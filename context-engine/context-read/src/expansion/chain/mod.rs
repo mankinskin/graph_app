@@ -1,5 +1,4 @@
 pub mod band;
-pub mod context;
 pub mod expand;
 pub mod link;
 
