@@ -2,9 +2,12 @@ pub mod band;
 pub mod expand;
 pub mod link;
 
-use std::collections::{
-    BTreeSet,
-    VecDeque,
+use std::{
+    borrow::Borrow,
+    collections::{
+        BTreeSet,
+        VecDeque,
+    },
 };
 
 use band::Band;
@@ -13,33 +16,60 @@ use context_trace::{
     self,
     graph::vertex::{
         child::Child,
+        has_vertex_index::ToChild,
         wide::Wide,
     },
     path::{
         accessors::role::End,
-        structs::role_path::RolePath,
+        structs::{
+            role_path::RolePath,
+            rooted::role_path::IndexEndPath,
+        },
     },
 };
 use derive_more::From;
 
 use crate::expansion::chain::{
     band::BandCtx,
-    link::{
-        ChainAppendage,
-        OverlapLink,
-    },
+    link::OverlapLink,
 };
 
 #[derive(Debug, From)]
 pub enum ChainOp {
-    Expansion(usize, IndexWithPath),
+    Expansion(BandExpansion),
     Cap(BandCap),
 }
 #[derive(Debug)]
+pub struct BandExpansion {
+    pub expansion: IndexWithPath,
+    pub start_bound: usize,
+    pub postfix_path: IndexEndPath,
+}
+impl StartBound for BandExpansion {
+    fn start_bound(&self) -> usize {
+        self.start_bound
+    }
+}
+#[derive(Debug)]
 pub struct BandCap {
-    pub postfix_path: RolePath<End>,
+    pub postfix_path: IndexEndPath,
     pub expansion: Child,
     pub start_bound: usize,
+}
+
+pub trait StartBound: Sized {
+    fn start_bound(&self) -> usize;
+}
+impl StartBound for (usize, Band) {
+    fn start_bound(&self) -> usize {
+        self.0
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct BoundedBand {
+    pub band: Band,
+    pub end_bound: usize,
 }
 
 #[derive(Default, Clone, Debug)]
@@ -81,9 +111,19 @@ impl BandChain {
     }
     pub fn append(
         &mut self,
-        band: impl ChainAppendage,
+        band: impl Into<Band>,
     ) {
-        band.append_to_chain(self);
+        self.bands.insert(band.into());
+    }
+    pub fn append_front_complement(
+        &mut self,
+        complement: Child,
+        exp: impl ToChild,
+    ) {
+        let index = exp.to_child();
+        let pattern = vec![complement, index];
+        let band = Band::from((0, pattern));
+        self.append(band);
     }
     pub fn pop_first(&mut self) -> Option<Band> {
         self.links.pop_front();

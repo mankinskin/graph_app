@@ -1,5 +1,7 @@
 use std::borrow::Borrow;
 
+use derive_more::Deref;
+
 use crate::{
     graph::{
         getters::ErrorReason,
@@ -128,18 +130,31 @@ pub type IndexEndPath = IndexRolePath<End>;
 pub type PatternStartPath = PatternRolePath<Start>;
 pub type PatternEndPath = PatternRolePath<End>;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Deref)]
 pub struct RootedRolePath<R: PathRole, Root: PathRoot> {
     pub root: Root,
+    #[deref]
     pub role_path: RolePath<R>,
 }
 
 impl<R: PathRole> RootedRolePath<R, IndexRoot> {
     pub fn new(first: ChildLocation) -> Self {
+        Self::from(first)
+    }
+}
+impl<R: PathRole> From<ChildLocation> for IndexRolePath<R> {
+    fn from(first: ChildLocation) -> Self {
         Self {
             role_path: RolePath::from(SubPath::new(first.sub_index)),
             root: IndexRoot::from(first.into_pattern_location()),
         }
+    }
+}
+impl<Root: PathRoot, R: PathRole> From<(Root, RolePath<R>)>
+    for RootedRolePath<R, Root>
+{
+    fn from((root, role_path): (Root, RolePath<R>)) -> Self {
+        Self { root, role_path }
     }
 }
 impl<R: PathRoot> RootedRolePath<Start, R> {

@@ -14,7 +14,29 @@ use crate::{
             },
         },
     },
+    path::{
+        accessors::{
+            child::root::{
+                GraphRootChild,
+                PatternRootChild,
+            },
+            role::Start,
+        },
+        mutators::append::PathAppend,
+        structs::rooted::{
+            pattern_range::PatternRangePath,
+            role_path::{
+                IndexStartPath,
+                PatternStartPath,
+                RootedRolePath,
+            },
+        },
+    },
     trace::has_graph::HasGraph,
+};
+use itertools::{
+    FoldWhile,
+    Itertools,
 };
 use policy::{
     BandExpandingPolicy,
@@ -69,6 +91,35 @@ pub trait HasChildRoleIters: ToChild {
         trav: G,
     ) -> PrefixIterator<'a, G> {
         PrefixIterator::band_iter(trav, self.to_child())
+    }
+
+    /// Calculate the prefix path from this child to the given advanced path
+    fn prefix_path<G>(
+        &self,
+        trav: &G,
+        prefix: Child,
+    ) -> IndexStartPath
+    where
+        G: HasGraph + Clone,
+    {
+        // Find prefix from advanced path in expansion index
+        let mut prefix_iter = self.prefix_iter(trav.clone());
+        let entry = prefix_iter.next().unwrap().0;
+
+        prefix_iter
+            .fold_while(
+                RootedRolePath::new(entry),
+                |mut acc, (prefix_location, pre)| {
+                    acc.path_append(prefix_location);
+                    if pre == prefix {
+                        FoldWhile::Done(acc)
+                    } else {
+                        FoldWhile::Continue(acc)
+                    }
+                },
+            )
+            .into_inner()
+            .into()
     }
 }
 impl<T: ToChild> HasChildRoleIters for T {}

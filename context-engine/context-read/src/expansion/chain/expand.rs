@@ -3,6 +3,7 @@ use crate::{
     expansion::{
         chain::{
             BandCap,
+            BandExpansion,
             ChainOp,
         },
         ChainCtx,
@@ -15,12 +16,8 @@ use context_insert::insert::{
 use context_trace::{
     graph::vertex::wide::Wide,
     path::{
-        accessors::role::End,
         mutators::append::PathAppend,
-        structs::{
-            role_path::RolePath,
-            sub_path::SubPath,
-        },
+        structs::rooted::role_path::IndexEndPath,
     },
     trace::child::bands::{
         HasChildRoleIters,
@@ -31,7 +28,7 @@ use context_trace::{
 #[derive(Debug)]
 pub struct ExpandCtx<'a> {
     pub ctx: &'a ChainCtx<'a>,
-    pub postfix_path: RolePath<End>,
+    pub postfix_path: IndexEndPath,
     pub postfix_iter: PostfixIterator<'a, ReadCtx>,
 }
 impl<'a> ExpandCtx<'a> {
@@ -41,9 +38,7 @@ impl<'a> ExpandCtx<'a> {
         if let Some((postfix_location, _)) = postfix_iter.next() {
             Some(Self {
                 ctx,
-                postfix_path: RolePath::from(SubPath::new(
-                    postfix_location.sub_index,
-                )),
+                postfix_path: IndexEndPath::from(postfix_location),
                 postfix_iter,
             })
         } else {
@@ -62,7 +57,11 @@ impl Iterator for ExpandCtx<'_> {
                 &self.ctx.trav.graph,
                 self.ctx.cursor.clone(),
             ) {
-                Ok(expansion) => ChainOp::Expansion(start_bound, expansion),
+                Ok(expansion) => ChainOp::Expansion(BandExpansion {
+                    start_bound,
+                    expansion,
+                    postfix_path: self.postfix_path.clone(),
+                }),
                 Err(_) => ChainOp::Cap(BandCap {
                     postfix_path: self.postfix_path.clone(),
                     expansion: postfix,

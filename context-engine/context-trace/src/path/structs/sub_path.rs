@@ -28,6 +28,14 @@ impl SubPath {
             path: vec![],
         }
     }
+    pub fn pop_while(
+        &mut self,
+        condition: impl Fn(&ChildLocation) -> bool,
+    ) {
+        while self.path.last().map(&condition).unwrap_or_default() {
+            self.path.pop();
+        }
+    }
 }
 impl<R: PathRole> RootChildIndex<R> for SubPath {
     fn root_child_index(&self) -> usize {

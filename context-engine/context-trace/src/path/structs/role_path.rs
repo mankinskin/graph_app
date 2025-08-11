@@ -66,10 +66,7 @@ impl<R: PathRole> RolePath<R> {
         self,
         root: Root,
     ) -> RootedRolePath<R, Root> {
-        RootedRolePath {
-            root,
-            role_path: self,
-        }
+        RootedRolePath::from((root, self))
     }
 }
 pub trait CalcOffset {

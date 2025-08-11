@@ -69,17 +69,9 @@ impl<R: InsertResult> InsertCtx<R> {
         &mut self,
         foldable: impl Foldable,
     ) -> Result<R, ErrorState> {
-        match foldable.fold::<InsertTraversal>(self.graph.clone()) {
-            Ok(result) => match CompleteState::try_from(result) {
-                Ok(state) => R::try_init(state.root)
-                    .map_err(|index| ErrorReason::SingleIndex(index).into()),
-                Err(state) => Ok(self.insert_init(
-                    <R::Extract as ResultExtraction>::extract_from(&state),
-                    InitInterval::from(state),
-                )),
-            },
-            Err(err) => Err(err),
-        }
+        self.insert_result(foldable).and_then(|res| {
+            res.map_err(|index| ErrorReason::SingleIndex(index).into())
+        })
     }
     pub fn insert_init(
         &mut self,
@@ -92,10 +84,10 @@ impl<R: InsertResult> InsertCtx<R> {
         let joined = ctx.find_map(|joined| joined).unwrap();
         R::build_with_extract(joined, ext)
     }
-    pub fn insert_or_get_complete(
+    fn insert_result(
         &mut self,
         foldable: impl Foldable,
-    ) -> Result<Result<R, R::Error>, ErrorReason> {
+    ) -> Result<Result<R, R::Error>, ErrorState> {
         match foldable.fold::<InsertTraversal>(self.graph.clone()) {
             Ok(result) => Ok(match CompleteState::try_from(result) {
                 Ok(state) => R::try_init(state.root),
@@ -104,8 +96,14 @@ impl<R: InsertResult> InsertCtx<R> {
                     InitInterval::from(state),
                 )),
             }),
-            Err(err) => Err(err.reason),
+            Err(err) => Err(err),
         }
+    }
+    pub fn insert_or_get_complete(
+        &mut self,
+        foldable: impl Foldable,
+    ) -> Result<Result<R, R::Error>, ErrorReason> {
+        self.insert_result(foldable).map_err(|err| err.reason)
     }
 }
 impl_has_graph! {

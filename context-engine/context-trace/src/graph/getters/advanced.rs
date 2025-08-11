@@ -1,22 +1,33 @@
-use std::ops::Range;
-use std::slice::SliceIndex;
-use crate::graph::vertex::has_vertex_data::HasVertexData;
-use crate::graph::vertex::wide::Wide;
-use crate::graph::Hypergraph;
-use crate::graph::kind::GraphKind;
-use crate::graph::vertex::child::Child;
-use crate::graph::vertex::has_vertex_index::{HasVertexIndex, ToChild};
-use crate::graph::vertex::location::pattern::IntoPatternLocation;
-use crate::graph::vertex::parent::PatternIndex;
-use crate::graph::vertex::pattern::pattern_range::PatternRangeIndex;
-use crate::graph::getters::vertex::VertexSet;
+use crate::graph::{
+    Hypergraph,
+    getters::{
+        ErrorReason,
+        vertex::VertexSet,
+    },
+    kind::GraphKind,
+    vertex::{
+        child::Child,
+        has_vertex_data::HasVertexData,
+        has_vertex_index::{
+            HasVertexIndex,
+            ToChild,
+        },
+        location::pattern::IntoPatternLocation,
+        parent::PatternIndex,
+        pattern::pattern_range::PatternRangeIndex,
+        wide::Wide,
+    },
+};
 use itertools::Itertools;
-use crate::graph::getters::ErrorReason;
+use std::{
+    ops::Range,
+    slice::SliceIndex,
+};
 
 impl<G: GraphKind> Hypergraph<G> {
     pub fn get_common_pattern_in_parent(
         &self,
-        pattern: impl IntoIterator<Item=impl HasVertexIndex>,
+        pattern: impl IntoIterator<Item = impl HasVertexIndex>,
         parent: impl HasVertexIndex,
     ) -> Result<PatternIndex, ErrorReason> {
         let mut parents = self
@@ -31,7 +42,10 @@ impl<G: GraphKind> Hypergraph<G> {
                     .iter()
                     .find(|pix| {
                         parents.all(|(i, post)| {
-                            post.exists_at_pos_in_pattern(pix.pattern_id, pix.sub_index + i)
+                            post.exists_at_pos_in_pattern(
+                                pix.pattern_id,
+                                pix.sub_index + i,
+                            )
                         })
                     })
                     .cloned()
@@ -41,7 +55,7 @@ impl<G: GraphKind> Hypergraph<G> {
     #[track_caller]
     pub fn expect_common_pattern_in_parent(
         &self,
-        pattern: impl IntoIterator<Item=impl HasVertexIndex>,
+        pattern: impl IntoIterator<Item = impl HasVertexIndex>,
         parent: impl HasVertexIndex,
     ) -> PatternIndex {
         self.get_common_pattern_in_parent(pattern, parent)
@@ -67,20 +81,19 @@ impl<G: GraphKind> Hypergraph<G> {
             .expect_child_pattern_range(&loc.id, range)
     }
     /// get sub-vertex at range relative to index
+    /// FIXME: can crash if range does not have an exact match in the root vertex
     pub fn get_vertex_subrange(
         &self,
         vertex: impl HasVertexData,
         range: Range<usize>,
-    ) -> Child
-    {
-
+    ) -> Child {
         let mut data = vertex.vertex(&self);
         let mut wrap = 0..data.width();
         assert!(wrap.start <= range.start && wrap.end >= range.end);
 
-        while range != wrap
-        {
-            let next = data.top_down_containment_nodes()
+        while range != wrap {
+            let next = data
+                .top_down_containment_nodes()
                 .into_iter()
                 .map(|(pos, c)| (wrap.start + pos, c))
                 .map(|(pos, c)| (c.vertex_index(), pos..pos + c.width()))
