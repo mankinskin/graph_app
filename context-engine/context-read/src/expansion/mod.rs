@@ -5,18 +5,14 @@ use crate::{
     complement::ComplementBuilder,
     context::ReadCtx,
     expansion::chain::{
-        expand::ExpandCtx,
         BandCap,
         BandExpansion,
+        ChainCtx,
         ChainOp,
     },
 };
-use chain::{
-    band::Band,
-    BandChain,
-};
+use chain::BandChain;
 
-//use bundle::Bundle;
 use context_insert::insert::{
     result::IndexWithPath,
     ToInsertCtx,
@@ -54,46 +50,9 @@ pub struct ExpansionLink {
     pub start_bound: usize,
 }
 
-// # BlockIter
-// | item: new indexed block
-// |--# Expansions
-// |  | item: Expanded/Capped index with location path in current root
-// |  |--# Postfixes
-// |  |  | item: Location Path to Postfix in last expansion
-// |  |  |
-// |  |  |
-
 use context_trace::{
     self,
 };
-use derive_new::new;
-
-#[derive(Debug, new)]
-pub struct ChainCtx<'a> {
-    pub trav: ReadCtx,
-    pub cursor: &'a mut PatternRangePath,
-    pub chain: BandChain,
-}
-impl<'a> ChainCtx<'a> {
-    pub fn last(&self) -> &Band {
-        &self.chain.last().unwrap().band
-    }
-}
-impl<'a> Iterator for ChainCtx<'a> {
-    type Item = ChainOp;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(mut ctx) = ExpandCtx::try_new(self) {
-            ctx.find_map(|op| match &op {
-                ChainOp::Expansion(_) => Some(op),
-                ChainOp::Cap(cap) =>
-                    self.chain.ends_at(cap.start_bound).map(|_| op),
-            })
-        } else {
-            None
-        }
-    }
-}
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct ExpansionCtx<'cursor> {

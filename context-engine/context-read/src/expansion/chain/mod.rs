@@ -16,13 +16,21 @@ use context_trace::{
         has_vertex_index::ToChild,
         wide::Wide,
     },
-    path::structs::rooted::role_path::IndexEndPath,
+    path::structs::rooted::{
+        pattern_range::PatternRangePath,
+        role_path::IndexEndPath,
+    },
 };
 use derive_more::From;
+use derive_new::new;
 
-use crate::expansion::chain::{
-    band::BandCtx,
-    link::OverlapLink,
+use crate::{
+    context::ReadCtx,
+    expansion::chain::{
+        band::BandCtx,
+        expand::ExpandCtx,
+        link::OverlapLink,
+    },
 };
 
 #[derive(Debug, From)]
@@ -119,5 +127,32 @@ impl BandChain {
     pub fn pop_first(&mut self) -> Option<Band> {
         self.links.pop_front();
         self.bands.pop_first()
+    }
+}
+
+#[derive(Debug, new)]
+pub struct ChainCtx<'a> {
+    pub trav: ReadCtx,
+    pub cursor: &'a mut PatternRangePath,
+    pub chain: BandChain,
+}
+impl<'a> ChainCtx<'a> {
+    pub fn last(&self) -> &Band {
+        &self.chain.last().unwrap().band
+    }
+}
+impl<'a> Iterator for ChainCtx<'a> {
+    type Item = ChainOp;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(mut ctx) = ExpandCtx::try_new(self) {
+            ctx.find_map(|op| match &op {
+                ChainOp::Expansion(_) => Some(op),
+                ChainOp::Cap(cap) =>
+                    self.chain.ends_at(cap.start_bound).map(|_| op),
+            })
+        } else {
+            None
+        }
     }
 }
