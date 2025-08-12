@@ -2,12 +2,9 @@ pub mod band;
 pub mod expand;
 pub mod link;
 
-use std::{
-    borrow::Borrow,
-    collections::{
-        BTreeSet,
-        VecDeque,
-    },
+use std::collections::{
+    BTreeSet,
+    VecDeque,
 };
 
 use band::Band;
@@ -19,13 +16,7 @@ use context_trace::{
         has_vertex_index::ToChild,
         wide::Wide,
     },
-    path::{
-        accessors::role::End,
-        structs::{
-            role_path::RolePath,
-            rooted::role_path::IndexEndPath,
-        },
-    },
+    path::structs::rooted::role_path::IndexEndPath,
 };
 use derive_more::From;
 

@@ -15,21 +15,10 @@ use crate::{
         },
     },
     path::{
-        accessors::{
-            child::root::{
-                GraphRootChild,
-                PatternRootChild,
-            },
-            role::Start,
-        },
         mutators::append::PathAppend,
-        structs::rooted::{
-            pattern_range::PatternRangePath,
-            role_path::{
-                IndexStartPath,
-                PatternStartPath,
-                RootedRolePath,
-            },
+        structs::rooted::role_path::{
+            IndexStartPath,
+            RootedRolePath,
         },
     },
     trace::has_graph::HasGraph,

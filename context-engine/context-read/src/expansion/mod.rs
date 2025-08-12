@@ -24,30 +24,17 @@ use context_insert::insert::{
 use context_trace::{
     graph::{
         getters::ErrorReason,
-        vertex::{
-            child::Child,
-            wide::Wide,
-        },
+        vertex::child::Child,
     },
     path::{
-        accessors::{
-            child::root::PatternRootChild,
-            has_path::HasRolePath,
-            role::{
-                End,
-                Start,
-            },
-        },
-        mutators::append::PathAppend,
+        accessors::role::End,
         structs::{
             query_range_path::FoldablePath,
-            role_path::RolePath,
             rooted::{
                 pattern_range::PatternRangePath,
                 role_path::{
                     IndexEndPath,
                     IndexStartPath,
-                    RootedRolePath,
                 },
             },
         },
@@ -58,10 +45,6 @@ use context_trace::{
 use derive_more::{
     Deref,
     DerefMut,
-};
-use itertools::{
-    FoldWhile,
-    Itertools,
 };
 
 #[derive(Debug)]
@@ -166,49 +149,12 @@ impl<'a> ExpansionCtx<'a> {
         exp: BandExpansion,
     ) -> <Self as Iterator>::Item {
         *self.cursor = exp.expansion.path.clone();
-        //if self.bundle.len() > 1 {
-        //    self.bundle.wrap_into_band(&mut self.ctx.trav.graph);
-        //}
 
-        // finish back context
         let link = self.create_expansion_link(&exp);
-        let &root = self.cursor_root_index();
-
-        // back context
-        // what is the back context?
-        // The back context is the complement of the next expansion
-        // in the current root index.
-        // It is the part of the root index that is not covered by the next expansion.
-        // It is used to create a new band that will be appended to the chain.
-        // The back context is used to create a new band that will be appended to the chain
-        // and to create a new expansion link that will be used to link the new band
-        // to the previous band in the chain.
-        //
-        // what is the expansion link?
-        // The expansion link is the link between the new band and the previous band in the chain
-        // It is used to link the new band to the previous band in the chain.
-        // It contains the prefix path, the expansion and the start bound.
-        // The prefix path is the path from the start of the root index to the start of
-        // the next expansion.
-        //
-        // what is a band?
-        // A band is a collection of indices that are adjacent to each other. It has a pattern,
-        // a start bound and an end bound.
-        //
-        // what is a band chain?
-        // A band chain is a collection of bands that are ordered by their end bound.
-        // It is used to keep track of the bands that have been created so far and to finally
-        // create a final index that contains all the bands in the chain.
-        //
-        // Adding an expansion to the chain:
-        // 1.
         let complement = ComplementBuilder::new(link).build(&mut self.trav);
+        self.chain
+            .append_front_complement(complement, exp.expansion.index);
 
-        //BandExpansion
-        //let start_bound = exp.start_bound();
-        //let end_bound = exp.start_bound() + index.width();
-
-        self.chain.append_front_complement(complement, exp);
         exp.expansion.index
     }
     pub fn apply_cap(
