@@ -12,7 +12,7 @@ use crate::traversal::state::end::{
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FinishedKind {
     Complete(Child),
-    Incomplete(EndState),
+    Incomplete(Box<EndState>),
 }
 
 impl From<EndState> for FinishedKind {
@@ -20,7 +20,7 @@ impl From<EndState> for FinishedKind {
         if let EndKind::Complete(c) = &state.kind {
             FinishedKind::Complete(*c) // cursor.path
         } else {
-            FinishedKind::Incomplete(state)
+            FinishedKind::Incomplete(Box::new(state))
         }
     }
 }
@@ -28,7 +28,7 @@ impl FinishedKind {
     pub fn unwrap_complete(self) -> Child {
         self.expect_complete("Unable to unwrap complete FoundRange")
     }
-    pub fn unwrap_incomplete(self) -> EndState {
+    pub fn unwrap_incomplete(self) -> Box<EndState> {
         self.expect_incomplete("Unable to unwrap incomplete FoundRange")
     }
     pub fn expect_complete(
@@ -43,7 +43,7 @@ impl FinishedKind {
     pub fn expect_incomplete(
         self,
         msg: &str,
-    ) -> EndState {
+    ) -> Box<EndState> {
         match self {
             Self::Incomplete(s) => s,
             _ => panic!("{}", msg),
@@ -77,7 +77,7 @@ impl TryFrom<FinishedState> for CompleteState {
                 root,
                 start,
             } => Err(IncompleteState {
-                end_state,
+                end_state: *end_state,
                 cache,
                 root,
                 start,

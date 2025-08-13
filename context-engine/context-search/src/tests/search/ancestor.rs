@@ -226,7 +226,7 @@ fn find_ancestor2() {
     assert_eq!(byz_found.root, xabyz);
     assert_eq!(
         byz_found.kind,
-        FinishedKind::Incomplete(EndState {
+        FinishedKind::Incomplete(Box::new(EndState {
             reason: EndReason::QueryEnd,
             //target: DirectedKey::down(z, 2),
             kind: EndKind::Postfix(PostfixEnd {
@@ -265,7 +265,7 @@ fn find_ancestor2() {
                 },
                 relative_pos: 3.into(),
             },
-        })
+        }))
     );
     assert_eq!(
         byz_found.cache.entries,
@@ -358,7 +358,7 @@ fn find_ancestor3() {
     let aby_found = gr.find_ancestor(&query).unwrap();
     assert_eq!(
         aby_found.kind,
-        FinishedKind::Incomplete(EndState {
+        FinishedKind::Incomplete(Box::new(EndState {
             reason: EndReason::QueryEnd,
             kind: EndKind::Postfix(PostfixEnd {
                 root_pos: 2.into(),
@@ -395,7 +395,7 @@ fn find_ancestor3() {
                 },
                 relative_pos: 3.into(),
             },
-        })
+        }))
     );
     assert_eq!(aby_found.root, xaby);
     assert_eq!(aby_found.start, ab);

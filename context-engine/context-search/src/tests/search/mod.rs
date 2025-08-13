@@ -222,7 +222,7 @@ fn find_pattern1() {
     assert_eq!(aby_found.cache.entries.len(), 5);
     assert_eq!(
         aby_found.kind,
-        FinishedKind::Incomplete(EndState {
+        FinishedKind::Incomplete(Box::new(EndState {
             reason: EndReason::Mismatch,
             kind: EndKind::Range(RangeEnd {
                 root_pos: 2.into(),
@@ -271,6 +271,6 @@ fn find_pattern1() {
                 },
                 relative_pos: 3.into(),
             },
-        })
+        }))
     );
 }

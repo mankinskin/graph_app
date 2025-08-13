@@ -46,7 +46,7 @@ impl<'a, K: TraversalKind> RootSearchIterator<'a, K> {
     pub fn find_root_cursor(mut self) -> Option<RootCursor<&'a K::Trav>> {
         self.find_map(|root| root).map(|state| RootCursor {
             trav: self.trav,
-            state,
+            state: Box::new(state),
         })
     }
 }

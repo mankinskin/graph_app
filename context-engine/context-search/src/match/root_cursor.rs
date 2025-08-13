@@ -47,7 +47,7 @@ use std::{
 };
 #[derive(Debug)]
 pub struct RootCursor<G: HasGraph> {
-    pub state: CompareState,
+    pub state: Box<CompareState>,
     pub trav: G,
 }
 impl<G: HasGraph> Iterator for RootCursor<G> {
@@ -58,11 +58,11 @@ impl<G: HasGraph> Iterator for RootCursor<G> {
         match self.advanced() {
             Continue(_) => Some(
                 // next position
-                match CompareIterator::new(&self.trav, self.state.clone())
+                match CompareIterator::new(&self.trav, *self.state.clone())
                     .compare()
                 {
                     Match(c) => {
-                        self.state = c;
+                        *self.state = c;
                         Continue(())
                     },
                     Mismatch(_) => {
@@ -82,7 +82,7 @@ impl<G: HasGraph> RootCursor<G> {
     pub fn next_parents<K: TraversalKind>(
         self,
         trav: &K::Trav,
-    ) -> Result<(ParentCompareState, CompareParentBatch), EndState> {
+    ) -> Result<(ParentCompareState, CompareParentBatch), Box<EndState>> {
         let mut parent = self.state.parent_state();
         let prev_cursor = parent.cursor.clone();
         if parent.cursor.advance(trav).is_continue() {
@@ -96,10 +96,10 @@ impl<G: HasGraph> RootCursor<G> {
                 Ok((parent, batch))
             } else {
                 parent.cursor = prev_cursor;
-                Err(EndState::mismatch(trav, parent))
+                Err(Box::new(EndState::mismatch(trav, parent)))
             }
         } else {
-            Err(EndState::query_end(trav, parent))
+            Err(Box::new(EndState::query_end(trav, parent)))
         }
     }
     fn advanced(&mut self) -> ControlFlow<Option<EndReason>> {
@@ -137,7 +137,7 @@ impl<G: HasGraph> RootCursor<G> {
                         },
                     cursor,
                     ..
-                } = self.state;
+                } = *self.state;
                 let target_index = path.role_leaf_child::<End, _>(&self.trav);
                 let pos = cursor.relative_pos;
                 let target = DownKey::new(target_index, pos.into());

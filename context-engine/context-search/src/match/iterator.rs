@@ -66,7 +66,7 @@ impl<K: TraversalKind> Iterator for MatchIterator<K> {
                     Ok(end) => end,
                     Err(root_cursor) =>
                         match root_cursor.next_parents::<K>(&self.0.trav) {
-                            Err(end) => end,
+                            Err(end) => *end,
                             Ok((parent, batch)) => {
                                 assert!(!batch.is_empty());
                                 // next batch

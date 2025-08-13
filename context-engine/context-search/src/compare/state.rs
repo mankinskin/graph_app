@@ -80,7 +80,7 @@ pub enum CompareNext {
     Prefixes(ChildQueue<CompareState>),
 }
 impl CompareState {
-    fn mode_prefixes<'a, G: HasGraph>(
+    fn mode_prefixes<G: HasGraph>(
         &self,
         trav: &G,
         mode: PathPairMode,
@@ -164,7 +164,7 @@ impl CompareState {
         }
     }
 
-    fn on_mismatch<'a, G: HasGraph>(
+    fn on_mismatch<G: HasGraph>(
         self,
         trav: &G,
     ) -> EndState {
@@ -218,9 +218,9 @@ impl CompareState {
     }
 }
 
-impl Into<ChildQueue<CompareState>> for CompareState {
-    fn into(self) -> ChildQueue<Self> {
-        VecDeque::from_iter([self])
+impl From<CompareState> for ChildQueue<CompareState> {
+    fn from(val: CompareState) -> Self {
+        VecDeque::from_iter([val])
     }
 }
 
