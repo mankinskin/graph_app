@@ -52,7 +52,7 @@ impl RootManager {
         match new.len() {
             0 => {},
             1 => {
-                let new = new.iter().next().unwrap();
+                let new = new.first().unwrap();
                 self.append_index(new)
             },
             _ => {

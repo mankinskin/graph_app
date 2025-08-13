@@ -7,11 +7,10 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 
 use crate::{
-    HashSet,
     graph::{
         getters::{
-            ErrorReason,
             vertex::VertexSet,
+            ErrorReason,
         },
         kind::GraphKind,
         vertex::{
@@ -31,15 +30,15 @@ use crate::{
             },
             parent::PatternIndex,
             pattern::{
-                IntoPattern,
-                Pattern,
                 id::PatternId,
                 pattern_range::{
-                    PatternRangeIndex,
                     get_child_pattern_range,
+                    PatternRangeIndex,
                 },
                 pattern_width,
                 replace_in_pattern,
+                IntoPattern,
+                Pattern,
             },
             token::{
                 NewTokenIndex,
@@ -48,6 +47,7 @@ use crate::{
             },
         },
     },
+    HashSet,
 };
 
 lazy_static! {
@@ -284,7 +284,7 @@ where
                     patterns.next().expect("Tried to insert no patterns");
                 let node = self.insert_pattern(first);
                 for pat in patterns {
-                    self.add_pattern_with_update(&node, pat);
+                    self.add_pattern_with_update(node, pat);
                 }
                 node
             })

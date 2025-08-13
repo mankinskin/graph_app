@@ -32,7 +32,7 @@ impl From<&'_ PostfixEnd> for PostfixCommand {
             add_edges: true,
             path: value.path.clone(),
             root_up_key: UpKey::new(
-                value.path.root.location.parent.into(),
+                value.path.root.location.parent,
                 value.root_pos.into(),
             ),
         }

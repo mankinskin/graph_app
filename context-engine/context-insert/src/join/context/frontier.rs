@@ -53,10 +53,10 @@ pub struct FrontierSplitIterator {
 }
 
 impl FrontierSplitIterator {
-    fn node<'a>(
-        &'a mut self,
+    fn node(
+        &mut self,
         index: Child,
-    ) -> NodeJoinCtx<'a> {
+    ) -> NodeJoinCtx<'_> {
         NodeJoinCtx::new(index, self)
     }
 }

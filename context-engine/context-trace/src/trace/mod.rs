@@ -96,7 +96,7 @@ pub trait TraceRole<Role: PathRole> {
 }
 pub type RoleEdit<R> = NewTraceEdge<<R as PathRole>::Direction>;
 
-impl<'a, G: HasGraph, Role: PathRole> TraceRole<Role> for TraceCtx<G>
+impl<G: HasGraph, Role: PathRole> TraceRole<Role> for TraceCtx<G>
 where
     EditKind: From<NewTraceEdge<<Role as PathRole>::Direction>>,
 {
@@ -108,7 +108,7 @@ where
     ) -> RoleTraceKey<Role> {
         let graph = self.trav.graph();
 
-        path.raw_child_path().into_iter().cloned().fold(
+        path.raw_child_path().iter().cloned().fold(
             prev_key,
             |prev, location| {
                 let target =

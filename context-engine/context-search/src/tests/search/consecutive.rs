@@ -100,8 +100,8 @@ fn find_consecutive1() {
         ababababcdefghi,
         ..
     } = &*Env1::get_expected();
-    let a_bc_pattern = vec![Child::new(a, 1), Child::new(bc, 2)];
-    let ab_c_pattern = vec![Child::new(ab, 2), Child::new(c, 1)];
+    let a_bc_pattern = [Child::new(a, 1), Child::new(bc, 2)];
+    let ab_c_pattern = [Child::new(ab, 2), Child::new(c, 1)];
     let g_h_i_a_b_c_pattern = vec![
         Child::new(g, 1),
         Child::new(h, 1),

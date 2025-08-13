@@ -127,7 +127,7 @@ impl PathRole for Start {
         index: usize,
     ) -> usize {
         pattern_width(pattern_pre_ctx(
-            pattern.into_iter().map(Borrow::borrow),
+            pattern.iter().map(Borrow::borrow),
             index,
         ))
     }
@@ -136,7 +136,7 @@ impl PathRole for Start {
         index: usize,
     ) -> usize {
         pattern_width(pattern_post_ctx(
-            pattern.into_iter().map(Borrow::borrow),
+            pattern.iter().map(Borrow::borrow),
             index,
         ))
     }

@@ -13,9 +13,7 @@ pub trait ResultExtraction {
     fn extract_from(state: &IncompleteState) -> Self;
 }
 impl ResultExtraction for () {
-    fn extract_from(_: &IncompleteState) -> Self {
-        ()
-    }
+    fn extract_from(_: &IncompleteState) -> Self {}
 }
 impl ResultExtraction for PatternRangePath {
     fn extract_from(state: &IncompleteState) -> Self {
@@ -99,9 +97,9 @@ impl TryFrom<Child> for IndexWithPath {
         Err(value)
     }
 }
-impl Into<Child> for IndexWithPath {
-    fn into(self) -> Child {
-        self.index
+impl From<IndexWithPath> for Child {
+    fn from(val: IndexWithPath) -> Self {
+        val.index
     }
 }
 impl Borrow<Child> for IndexWithPath {

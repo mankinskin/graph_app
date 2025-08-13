@@ -11,7 +11,7 @@ use crate::{
     sequence::ToNewTokenIndices,
 };
 pub trait HasReadCtx {
-    fn read_context<'g>(&'g mut self) -> ReadCtx;
+    fn read_context(&'_ mut self) -> ReadCtx;
     fn read_sequence(&mut self) -> Option<Child> {
         self.read_context().read_sequence()
     }

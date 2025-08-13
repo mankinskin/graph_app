@@ -56,7 +56,7 @@ impl<K: TraversalKind> Iterator for FoldCtx<K> {
     }
 }
 
-impl<'a, K: TraversalKind> FoldCtx<K> {
+impl<K: TraversalKind> FoldCtx<K> {
     fn fold(mut self) -> Result<FinishedState, ErrorState> {
         (&mut self).for_each(|_| ());
         let end = self.tctx.last_match;

@@ -75,7 +75,7 @@ impl Traceable for PostfixCommand {
             ctx,
             &self.path,
             UpKey {
-                index: start_index.clone(),
+                index: start_index,
                 pos: start_index.width().into(),
             },
             self.add_edges,
@@ -83,7 +83,7 @@ impl Traceable for PostfixCommand {
         let location = self.path.role_root_child_location::<Start>();
         debug!("{:#?}", self.root_up_key);
         let new = NewTraceEdge::<BottomUp> {
-            target: self.root_up_key.clone(),
+            target: self.root_up_key,
             prev,
             location,
         };
@@ -115,8 +115,8 @@ impl Traceable for PrefixCommand {
         };
         debug!("{:#?}", target);
         let new = NewTraceEdge::<TopDown> {
-            target: target.clone(),
-            prev: exit_key.clone(),
+            target,
+            prev: exit_key,
             location: root_exit,
         };
         ctx.cache.add_state(new, self.add_edges);
@@ -147,7 +147,7 @@ impl Traceable for RangeCommand {
             ctx,
             &self.path,
             UpKey {
-                index: start_index.clone(),
+                index: start_index,
                 pos: start_index.width().into(),
             },
             self.add_edges,
@@ -162,11 +162,11 @@ impl Traceable for RangeCommand {
         //let root_entry_index = *ctx.trav.graph().expect_child_at(&root_entry);
         let root_up_key = UpKey {
             index: root_entry.parent,
-            pos: self.root_pos.clone(),
+            pos: self.root_pos,
         };
         debug!("{:#?}", root_up_key);
         let new = NewTraceEdge::<BottomUp> {
-            target: root_up_key.clone(),
+            target: root_up_key,
             prev,
             location: root_entry,
         };
@@ -180,14 +180,14 @@ impl Traceable for RangeCommand {
             .into(),
             index: root_exit.parent,
         };
-        let target_key = DownKey {
+        let target = DownKey {
             pos: exit_key.pos,
             index: *ctx.trav.graph().expect_child_at(root_exit.clone()),
         };
-        debug!("{:#?}", target_key);
+        debug!("{:#?}", target);
         let new = NewTraceEdge::<TopDown> {
-            target: target_key.clone(),
-            prev: exit_key.clone(),
+            target,
+            prev: exit_key,
             location: root_exit,
         };
         ctx.cache.add_state(new, self.add_edges);
@@ -195,7 +195,7 @@ impl Traceable for RangeCommand {
         TraceRole::<End>::trace_sub_path(
             ctx,
             &self.path,
-            target_key,
+            target,
             self.add_edges,
         );
     }

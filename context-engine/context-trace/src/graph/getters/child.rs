@@ -24,7 +24,7 @@ impl<G: GraphKind> Hypergraph<G> {
         let location = location.into_child_location();
         let pattern = self.get_pattern_at(location.clone())?;
         pattern
-            .get(location.sub_index.clone())
+            .get(location.sub_index)
             .ok_or(ErrorReason::NoChildPatterns) // todo: better error
     }
     pub fn get_child_mut_at(
@@ -34,7 +34,7 @@ impl<G: GraphKind> Hypergraph<G> {
         let location = location.into_child_location();
         let pattern = self.get_pattern_mut_at(location.clone())?;
         pattern
-            .get_mut(location.sub_index.clone())
+            .get_mut(location.sub_index)
             .ok_or(ErrorReason::NoChildPatterns) // todo: better error
     }
     #[track_caller]

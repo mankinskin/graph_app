@@ -242,13 +242,11 @@ impl RootChild<Start> for IndexRangePath {
         &self,
         trav: &G,
     ) -> Child {
-        trav.graph()
-            .expect_child_at(
-                self.path_root()
-                    .location
-                    .to_child_location(self.start.sub_path.root_entry),
-            )
-            .clone()
+        *trav.graph().expect_child_at(
+            self.path_root()
+                .location
+                .to_child_location(self.start.sub_path.root_entry),
+        )
     }
 }
 
@@ -257,13 +255,11 @@ impl RootChild<End> for IndexRangePath {
         &self,
         trav: &G,
     ) -> Child {
-        trav.graph()
-            .expect_child_at(
-                self.path_root()
-                    .location
-                    .to_child_location(self.end.sub_path.root_entry),
-            )
-            .clone()
+        *trav.graph().expect_child_at(
+            self.path_root()
+                .location
+                .to_child_location(self.end.sub_path.root_entry),
+        )
     }
 }
 impl GraphRootChild<Start> for IndexRangePath {

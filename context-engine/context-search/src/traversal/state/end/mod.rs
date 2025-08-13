@@ -136,23 +136,22 @@ pub enum EndReason {
 #[derive(Clone, Debug)]
 pub struct TraceStart<'a>(pub &'a EndState, pub usize);
 
-impl<'a> Traceable for TraceStart<'a> {
+impl Traceable for TraceStart<'_> {
     fn trace<G: HasGraph>(
         self,
         ctx: &mut TraceCtx<G>,
     ) {
-        match &self.0.kind {
+        if let Some(mut p) = match &self.0.kind {
             EndKind::Postfix(p) => Some(p.clone()),
             EndKind::Range(p) => Some(PostfixEnd {
                 path: p.path.rooted_role_path(),
                 root_pos: p.root_pos,
             }),
             _ => None,
-        }
-        .map(|mut p| {
+        } {
             p.path.role_path.sub_path.path.drain(0..self.1);
-            p.trace(ctx)
-        });
+            p.trace(ctx);
+        }
     }
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -256,9 +255,9 @@ impl EndState {
 impl TargetKey for EndState {
     fn target_key(&self) -> DirectedKey {
         match &self.kind {
-            EndKind::Range(p) => p.target.clone().into(),
+            EndKind::Range(p) => p.target.into(),
             EndKind::Postfix(_) => self.root_key().into(),
-            EndKind::Prefix(p) => p.target.clone().into(),
+            EndKind::Prefix(p) => p.target.into(),
             EndKind::Complete(c) => DirectedKey::up(*c, *self.cursor_pos()),
         }
     }

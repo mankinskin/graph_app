@@ -29,7 +29,7 @@ pub struct SplitCacheCtx<G: HasGraph> {
 
     pub cache: SplitCache,
 }
-impl<'a, G: HasGraph> SplitCacheCtx<G> {
+impl<G: HasGraph> SplitCacheCtx<G> {
     pub fn init(mut states_ctx: SplitTraceStatesCtx<G>) -> Self {
         let (offsets, root_mode) =
             states_ctx.completed_splits::<RootNode>(&states_ctx.ctx.root);

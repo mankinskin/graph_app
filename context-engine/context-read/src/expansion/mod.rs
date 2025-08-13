@@ -38,6 +38,7 @@ use context_trace::{
     },
     trace::child::bands::HasChildRoleIters,
 };
+
 use derive_more::{
     Deref,
     DerefMut,
@@ -50,17 +51,13 @@ pub struct ExpansionLink {
     pub start_bound: usize,
 }
 
-use context_trace::{
-    self,
-};
-
 #[derive(Debug, Deref, DerefMut)]
 pub struct ExpansionCtx<'cursor> {
     #[deref]
     #[deref_mut]
     chain_ops: ChainCtx<'cursor>,
 }
-impl<'a> Iterator for ExpansionCtx<'a> {
+impl Iterator for ExpansionCtx<'_> {
     type Item = Child;
 
     fn next(&mut self) -> Option<Self::Item> {

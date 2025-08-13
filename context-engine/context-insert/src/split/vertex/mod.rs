@@ -91,14 +91,14 @@ impl ToVertexSplits for &VertexSplits {
     }
 }
 
-impl<'a, N: Borrow<NonZeroUsize> + Clone, S: Borrow<SplitPositionCache> + Clone>
+impl<N: Borrow<NonZeroUsize> + Clone, S: Borrow<SplitPositionCache> + Clone>
     ToVertexSplits for (N, S)
 {
     fn to_vertex_splits(self) -> VertexSplits {
         VertexSplits::from(self)
     }
 }
-impl<'a, N: Borrow<NonZeroUsize>, S: Borrow<SplitPositionCache>> From<(N, S)>
+impl<N: Borrow<NonZeroUsize>, S: Borrow<SplitPositionCache>> From<(N, S)>
     for VertexSplits
 {
     fn from(item: (N, S)) -> VertexSplits {

@@ -136,12 +136,12 @@ pub struct ChainCtx<'a> {
     pub cursor: &'a mut PatternRangePath,
     pub chain: BandChain,
 }
-impl<'a> ChainCtx<'a> {
+impl ChainCtx<'_> {
     pub fn last(&self) -> &Band {
-        &self.chain.last().unwrap().band
+        self.chain.last().unwrap().band
     }
 }
-impl<'a> Iterator for ChainCtx<'a> {
+impl Iterator for ChainCtx<'_> {
     type Item = ChainOp;
 
     fn next(&mut self) -> Option<Self::Item> {

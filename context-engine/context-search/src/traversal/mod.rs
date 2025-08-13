@@ -107,7 +107,7 @@ impl<K: TraversalKind> Iterator for TraversalCtx<K> {
     }
 }
 
-impl<'a, K: TraversalKind> HasGraph for &'a TraversalCtx<K> {
+impl<K: TraversalKind> HasGraph for &'_ TraversalCtx<K> {
     type Kind = TravKind<K::Trav>;
     type Guard<'g>
         = <K::Trav as HasGraph>::Guard<'g>
@@ -118,7 +118,7 @@ impl<'a, K: TraversalKind> HasGraph for &'a TraversalCtx<K> {
     }
 }
 
-impl<'a, K: TraversalKind> HasGraph for &'a mut TraversalCtx<K> {
+impl<K: TraversalKind> HasGraph for &mut TraversalCtx<K> {
     type Kind = TravKind<K::Trav>;
     type Guard<'g>
         = <K::Trav as HasGraph>::Guard<'g>

@@ -79,7 +79,7 @@ impl<G: HasGraph> Iterator for RootCursor<G> {
     }
 }
 impl<G: HasGraph> RootCursor<G> {
-    pub fn next_parents<'a, K: TraversalKind>(
+    pub fn next_parents<K: TraversalKind>(
         self,
         trav: &K::Trav,
     ) -> Result<(ParentCompareState, CompareParentBatch), EndState> {
@@ -124,7 +124,7 @@ impl<G: HasGraph> RootCursor<G> {
         self.state.base.path.advance(&self.trav)
     }
     pub fn find_end(mut self) -> Result<EndState, Self> {
-        match (&mut self).find_map(|flow| match flow {
+        match self.find_map(|flow| match flow {
             Continue(()) => None,
             Break(reason) => Some(reason),
         }) {

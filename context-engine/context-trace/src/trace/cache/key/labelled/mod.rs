@@ -14,15 +14,15 @@ use crate::{
     trace::has_graph::HasGraph,
 };
 pub trait Labelling: HasVertexIndex {
-    fn labelled<'a, G: HasGraph>(
+    fn labelled<G: HasGraph>(
         self,
-        trav: &'a G,
+        trav: &'_ G,
     ) -> Labelled<Self>;
 }
 impl<T: HasVertexIndex> Labelling for T {
-    fn labelled<'a, G: HasGraph>(
+    fn labelled<G: HasGraph>(
         self,
-        trav: &'a G,
+        trav: &'_ G,
     ) -> Labelled<Self> {
         #[cfg(any(test, feature = "test-api"))]
         {

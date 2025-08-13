@@ -16,9 +16,9 @@ use crate::direction::{
 )]
 pub struct TokenPosition(pub usize);
 
-impl Into<usize> for TokenPosition {
-    fn into(self) -> usize {
-        self.0
+impl From<TokenPosition> for usize {
+    fn from(val: TokenPosition) -> Self {
+        val.0
     }
 }
 impl From<usize> for TokenPosition {

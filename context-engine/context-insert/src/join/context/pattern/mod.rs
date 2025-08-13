@@ -25,7 +25,7 @@ pub struct PatternJoinCtx<'p> {
     pub splits: &'p SplitMap,
 }
 
-impl<'a> HasPatternTraceCtx for PatternJoinCtx<'a> {
+impl HasPatternTraceCtx for PatternJoinCtx<'_> {
     fn pattern_trace_context<'b>(&'b self) -> PatternTraceCtx<'b>
     where
         Self: 'b,

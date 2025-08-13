@@ -92,18 +92,17 @@ fn find_parent1() {
         abc,
         ..
     } = &*Env1::get_expected();
-    let a_bc_pattern = vec![Child::new(a, 1), Child::new(bc, 2)];
-    let ab_c_pattern = vec![Child::new(ab, 2), Child::new(c, 1)];
+    let a_bc_pattern = [Child::new(a, 1), Child::new(bc, 2)];
+    let ab_c_pattern = [Child::new(ab, 2), Child::new(c, 1)];
     let a_bc_d_pattern =
-        vec![Child::new(a, 1), Child::new(bc, 2), Child::new(d, 1)];
+        [Child::new(a, 1), Child::new(bc, 2), Child::new(d, 1)];
     let b_c_pattern = vec![Child::new(b, 1), Child::new(c, 1)];
-    let bc_pattern = vec![Child::new(bc, 2)];
-    let a_b_c_pattern =
-        vec![Child::new(a, 1), Child::new(b, 1), Child::new(c, 1)];
+    let bc_pattern = [Child::new(bc, 2)];
+    let a_b_c_pattern = [Child::new(a, 1), Child::new(b, 1), Child::new(c, 1)];
 
     let query = bc_pattern;
     assert_eq!(
-        graph.find_parent(&query),
+        graph.find_parent(&query[..]),
         Err(ErrorReason::SingleIndex(*bc)),
         "bc"
     );

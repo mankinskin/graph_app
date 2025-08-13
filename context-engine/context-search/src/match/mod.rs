@@ -51,12 +51,12 @@ impl<'a, K: TraversalKind> RootSearchIterator<'a, K> {
     }
 }
 
-impl<'a, K: TraversalKind> Iterator for RootSearchIterator<'a, K> {
+impl<K: TraversalKind> Iterator for RootSearchIterator<'_, K> {
     type Item = Option<CompareState>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.ctx.nodes.pop_front().and_then(|node| {
-            PolicyNode::<'_, K>::new(node, &self.trav).consume()
+            PolicyNode::<'_, K>::new(node, self.trav).consume()
         }) {
             Some(Append(next)) => {
                 self.ctx.nodes.extend(next);
@@ -90,7 +90,7 @@ use TraceNode::*;
 #[derive(Debug, new)]
 struct PolicyNode<'a, K: TraversalKind>(TraceNode, &'a K::Trav);
 
-impl<'a, K: TraversalKind> PolicyNode<'a, K> {
+impl<K: TraversalKind> PolicyNode<'_, K> {
     fn consume(self) -> Option<TraceStep> {
         match self.0 {
             Parent(parent) => match parent.into_advanced(&self.1) {
@@ -100,7 +100,7 @@ impl<'a, K: TraversalKind> PolicyNode<'a, K> {
                 )
                 .consume(),
                 Err(parent) => Some(Append(
-                    K::Policy::next_batch(&self.1, &parent)
+                    K::Policy::next_batch(self.1, &parent)
                         .into_iter()
                         .flat_map(|batch| batch.parents)
                         .map(|parent_state| ParentCompareState {
@@ -113,7 +113,7 @@ impl<'a, K: TraversalKind> PolicyNode<'a, K> {
             },
             Child(queue) => {
                 let mut compare_iter =
-                    CompareIterator::<&K::Trav>::new(&self.1, queue);
+                    CompareIterator::<&K::Trav>::new(self.1, queue);
                 match compare_iter.next() {
                     Some(Some(ChildMatchState::Match(cs))) => Some(Match(cs)),
                     Some(Some(ChildMatchState::Mismatch(_))) => Some(Pass),

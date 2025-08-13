@@ -57,7 +57,7 @@ pub trait BandIterator<'a, G: HasGraph + 'a>:
                 |(pid, pattern)| {
                     Self::Policy::map_band(
                         PatternLocation::new(index, *pid),
-                        &pattern,
+                        pattern,
                     )
                 },
             ),
@@ -108,7 +108,6 @@ pub trait HasChildRoleIters: ToChild {
                 },
             )
             .into_inner()
-            .into()
     }
 }
 impl<T: ToChild> HasChildRoleIters for T {}
@@ -162,7 +161,7 @@ where
     }
 }
 
-impl<'a, G, P> Iterator for BandExpandingIterator<'a, G, P>
+impl<G, P> Iterator for BandExpandingIterator<'_, G, P>
 where
     G: HasGraph,
     P: BandExpandingPolicy<G>,

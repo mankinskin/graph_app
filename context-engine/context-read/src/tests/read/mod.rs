@@ -145,7 +145,7 @@ fn read_sequence1() {
         let pid = *ind_hypergraph
             .vertex(&gr)
             .get_child_patterns()
-            .into_iter()
+            .iter()
             .next()
             .unwrap()
             .0;
@@ -210,19 +210,13 @@ fn read_sequence2() {
             ind_abab => hashset![vec![ab, ab],]
         };
         let gr = graph.graph();
-        let pid = *ab
-            .vertex(&gr)
-            .get_child_patterns()
-            .into_iter()
-            .next()
-            .unwrap()
-            .0;
+        let pid = *ab.vertex(&gr).get_child_patterns().iter().next().unwrap().0;
         assert_parents(&gr, a, ab, [PatternIndex::new(pid, 0)]);
         assert_parents(&gr, b, ab, [PatternIndex::new(pid, 1)]);
         let pid = *ind_abab
             .vertex(&gr)
             .get_child_patterns()
-            .into_iter()
+            .iter()
             .next()
             .unwrap()
             .0;
@@ -255,7 +249,7 @@ fn read_infix1() {
         let pid = *subdivision
             .vertex(&graph)
             .get_child_patterns()
-            .into_iter()
+            .iter()
             .next()
             .unwrap()
             .0;

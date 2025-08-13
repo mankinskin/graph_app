@@ -1,5 +1,8 @@
 use context_trace::{
-    graph::getters::ErrorReason,
+    graph::{
+        getters::ErrorReason,
+        vertex::child::Child,
+    },
     path::structs::{
         query_range_path::FoldablePath,
         rooted::{
@@ -64,6 +67,22 @@ pub trait Foldable: Sized {
     }
 }
 
+impl<const N: usize> Foldable for &'_ [Child; N] {
+    fn to_fold_context<K: TraversalKind>(
+        self,
+        trav: K::Trav,
+    ) -> Result<FoldCtx<K>, ErrorState> {
+        PatternRangePath::from(self).to_fold_context::<K>(trav)
+    }
+}
+impl Foldable for &'_ [Child] {
+    fn to_fold_context<K: TraversalKind>(
+        self,
+        trav: K::Trav,
+    ) -> Result<FoldCtx<K>, ErrorState> {
+        PatternRangePath::from(self).to_fold_context::<K>(trav)
+    }
+}
 impl Foldable for &'_ Pattern {
     fn to_fold_context<K: TraversalKind>(
         self,

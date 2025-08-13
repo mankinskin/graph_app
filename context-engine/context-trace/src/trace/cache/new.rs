@@ -26,8 +26,8 @@ pub enum EditKind {
 impl TargetKey for EditKind {
     fn target_key(&self) -> DirectedKey {
         match &self {
-            EditKind::Parent(state) => state.target.clone().into(),
-            EditKind::Child(state) => state.target.clone().into(),
+            EditKind::Parent(state) => state.target.into(),
+            EditKind::Child(state) => state.target.into(),
         }
     }
 }

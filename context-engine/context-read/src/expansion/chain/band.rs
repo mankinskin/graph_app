@@ -43,7 +43,7 @@ impl Borrow<usize> for Band {
 }
 impl Band {
     pub fn postfix(&self) -> Child {
-        self.pattern.last().unwrap().clone()
+        *self.pattern.last().unwrap()
     }
     pub fn append(
         &mut self,
@@ -80,8 +80,8 @@ impl From<(usize, Pattern)> for Band {
     }
 }
 
-#[derive(Clone, Debug, Ord, Eq, Derivative, Deref)]
-#[derivative(PartialOrd, PartialEq)]
+#[derive(Clone, Debug, Eq, Derivative, Deref)]
+#[derivative(Ord, PartialOrd, PartialEq)]
 pub struct Overlap {
     #[deref]
     pub index: Child,

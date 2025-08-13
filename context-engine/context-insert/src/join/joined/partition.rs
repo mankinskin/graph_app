@@ -33,7 +33,7 @@ pub struct JoinedPartition<R: RangeRole> {
     pub delta: PatternSubDeltas,
 }
 
-impl<'a: 'b, 'b: 'c, 'c, R: RangeRole<Mode = Join> + 'a> JoinedPartition<R>
+impl<'a, 'c, R: RangeRole<Mode = Join> + 'a> JoinedPartition<R>
 where
     R::Borders: JoinBorders<R>,
 {

@@ -230,12 +230,11 @@ impl<R: PathRole> PathChild<R> for RolePath<R> {}
 
 impl_child! {
     RootChild for IndexRolePath<R>, self,
-    trav => trav.graph().expect_child_at(
+    trav => *trav.graph().expect_child_at(
             self.path_root().location.to_child_location(
                 RootChildIndex::<R>::root_child_index(&self.role_path)
             )
         )
-        .clone()
 }
 impl<R: PathRole> GraphRootChild<R> for RootedRolePath<R, IndexRoot> {
     fn root_child_location(&self) -> ChildLocation {
@@ -254,7 +253,7 @@ impl<R: PathRole, Root: PathRoot> RootChildIndex<R>
 
 impl<R: PathRole> GraphRoot for RootedRolePath<R, IndexRoot> {
     fn root_parent(&self) -> Child {
-        self.root.location.parent.clone()
+        self.root.location.parent
     }
 }
 

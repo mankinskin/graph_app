@@ -47,7 +47,7 @@ impl<G: HasGraph> SplitTraceCtx<G> {
         self.cache
             .entries
             .get(&index.vertex_index())
-            .map(|vcache| VertexSplitCtx::new(vcache))
+            .map(VertexSplitCtx::new)
     }
     pub fn completed_splits<N: NodeType>(
         &self,

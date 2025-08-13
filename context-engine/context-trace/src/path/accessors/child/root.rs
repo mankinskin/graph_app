@@ -49,11 +49,9 @@ pub trait GraphRootChild<R: PathRole>: RootedPath + GraphRootPattern {
         &self,
         trav: &G,
     ) -> Child {
-        trav.graph()
-            .expect_child_at(<_ as GraphRootChild<R>>::root_child_location(
-                self,
-            ))
-            .clone()
+        *trav.graph().expect_child_at(
+            <_ as GraphRootChild<R>>::root_child_location(self),
+        )
     }
     fn get_outer_width<G: HasGraph>(
         &self,

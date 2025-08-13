@@ -41,7 +41,7 @@ where
         location: PatternLocation,
         pattern: &Pattern,
     ) -> (ChildLocation, Child) {
-        let last = D::last_index(&pattern);
+        let last = D::last_index(pattern);
         (location.to_child_location(last), pattern[last])
     }
     fn map_batch(

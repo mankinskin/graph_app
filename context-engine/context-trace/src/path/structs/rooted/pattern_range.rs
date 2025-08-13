@@ -95,7 +95,7 @@ impl<P: IntoPattern> From<P> for PatternRangePath {
     fn from(p: P) -> Self {
         let p = p.into_pattern();
         let entry =
-            <BaseGraphKind as GraphKind>::Direction::head_index(&p.borrow());
+            <BaseGraphKind as GraphKind>::Direction::head_index(p.borrow());
         RootedRangePath {
             root: p,
             start: SubPath::new(entry).into(),

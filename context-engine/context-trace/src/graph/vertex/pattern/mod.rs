@@ -37,6 +37,15 @@ pub trait IntoPattern: Sized
     fn into_pattern(self) -> Pattern;
     fn is_empty(&self) -> bool;
 }
+
+impl<const N: usize> IntoPattern for [Child; N] {
+    fn into_pattern(self) -> Pattern {
+        self.into_iter().collect()
+    }
+    fn is_empty(&self) -> bool {
+        N == 0
+    }
+}
 impl IntoPattern for Child {
     fn into_pattern(self) -> Pattern {
         Some(self).into_iter().collect()
@@ -55,7 +64,7 @@ impl IntoPattern for Child {
 //}
 impl IntoPattern for &'_ [Child] {
     fn into_pattern(self) -> Pattern {
-        self.into_iter().map(Clone::clone).collect()
+        self.iter().map(Clone::clone).collect()
     }
     fn is_empty(&self) -> bool {
         (*self).is_empty()

@@ -166,7 +166,7 @@ fn find_ancestor1() {
         "a_b_c"
     );
 
-    let query = [a, b, a, b, a, b, a, b, c, d, e, f, g, h, i]
+    let query: Vec<_> = [a, b, a, b, a, b, a, b, c, d, e, f, g, h, i]
         .into_iter()
         .cloned()
         .collect();

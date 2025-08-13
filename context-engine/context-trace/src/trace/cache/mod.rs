@@ -63,7 +63,7 @@ impl TraceCache {
         edit: EditKind,
         add_edges: bool,
     ) {
-        let mut ve = VertexCache::from(key.index.clone());
+        let mut ve = VertexCache::from(key.index);
         let pe = PositionCache::new(self, edit, add_edges);
         ve.insert(&key.pos, pe);
         self.entries.insert(key.index.vertex_index(), ve);
@@ -78,7 +78,7 @@ impl TraceCache {
             if let Some(ve) = self.get_vertex_mut(&key.index) {
                 ve.insert(&key.pos, pe);
             } else {
-                let mut ve = VertexCache::from(key.index.clone());
+                let mut ve = VertexCache::from(key.index);
                 ve.insert(&key.pos, pe);
                 self.entries.insert(key.index.vertex_index(), ve);
             }

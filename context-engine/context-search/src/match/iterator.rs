@@ -50,7 +50,7 @@ pub struct MatchIterator<K: TraversalKind>(pub TraceCtx<K::Trav>, pub MatchCtx);
 
 impl<K: TraversalKind> MatchIterator<K> {
     pub fn find_next(&mut self) -> Option<EndState> {
-        self.find_map(|flow| Some(flow))
+        self.find_map(Some)
     }
 }
 

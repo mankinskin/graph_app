@@ -21,7 +21,7 @@ pub struct SplitRun<G: HasGraph> {
     ctx: SplitCacheCtx<G>,
     incomplete: BTreeSet<Child>,
 }
-impl<'a, G: HasGraph + 'a> SplitRun<G> {
+impl<G: HasGraph> SplitRun<G> {
     pub fn init(&mut self) {
         self.ctx.cache.augment_root(
             &self.ctx.states_ctx.trav,
@@ -35,7 +35,7 @@ impl<'a, G: HasGraph + 'a> SplitRun<G> {
         self.ctx
     }
 }
-impl<'a, G: HasGraph + 'a> Iterator for SplitRun<G> {
+impl<G: HasGraph> Iterator for SplitRun<G> {
     type Item = SplitRunStep;
     fn next(&mut self) -> Option<Self::Item> {
         self.ctx.states_ctx.states.next().map(|state| {
@@ -51,7 +51,7 @@ impl<'a, G: HasGraph + 'a> Iterator for SplitRun<G> {
         })
     }
 }
-impl<'a, G: HasGraph + 'a> From<SplitCacheCtx<G>> for SplitRun<G> {
+impl<G: HasGraph> From<SplitCacheCtx<G>> for SplitRun<G> {
     fn from(ctx: SplitCacheCtx<G>) -> Self {
         Self {
             ctx,
@@ -59,12 +59,12 @@ impl<'a, G: HasGraph + 'a> From<SplitCacheCtx<G>> for SplitRun<G> {
         }
     }
 }
-impl<'a, G: HasGraph + 'a> From<SplitCacheCtx<G>> for IntervalGraph {
+impl<G: HasGraph> From<SplitCacheCtx<G>> for IntervalGraph {
     fn from(cache: SplitCacheCtx<G>) -> Self {
         Self::from(SplitRun::from(cache))
     }
 }
-impl<'a, G: HasGraph + 'a> From<SplitRun<G>> for IntervalGraph {
+impl<G: HasGraph> From<SplitRun<G>> for IntervalGraph {
     fn from(mut run: SplitRun<G>) -> Self {
         run.init();
         run.all(|_| true); // run iterator to end

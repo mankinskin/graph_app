@@ -116,7 +116,7 @@ impl<'a> NodeJoinCtx<'a> {
         }
     }
 }
-impl<'a: 'b, 'b> AsNodeTraceCtx for NodeJoinCtx<'a> {
+impl<'a> AsNodeTraceCtx for NodeJoinCtx<'a> {
     fn as_trace_context<'t>(&'t self) -> NodeTraceCtx<'t>
     where
         Self: 't,
@@ -128,7 +128,7 @@ impl<'a: 'b, 'b> AsNodeTraceCtx for NodeJoinCtx<'a> {
         }
     }
 }
-impl<'a: 'b, 'b> GetPatternTraceCtx for NodeJoinCtx<'a> {
+impl GetPatternTraceCtx for NodeJoinCtx<'_> {
     fn get_pattern_trace_context<'c>(
         &'c self,
         pattern_id: &PatternId,
@@ -142,7 +142,7 @@ impl<'a: 'b, 'b> GetPatternTraceCtx for NodeJoinCtx<'a> {
         }
     }
 }
-impl<'a: 'b, 'b> GetPatternCtx for NodeJoinCtx<'a> {
+impl GetPatternCtx for NodeJoinCtx<'_> {
     type PatternCtx<'c>
         = PatternJoinCtx<'c>
     where
@@ -159,21 +159,21 @@ impl<'a: 'b, 'b> GetPatternCtx for NodeJoinCtx<'a> {
         //let pos_splits = self.vertex_cache().pos_splits();
         PatternJoinCtx {
             ctx,
-            splits: &self.splits, //pos_splits
-                                  //    .iter()
-                                  //    .map(|pos| PosSplitCtx::from(pos).fetch_split(&self.ctx.interval))
-                                  //    .collect(),
+            splits: self.splits, //pos_splits
+                                 //    .iter()
+                                 //    .map(|pos| PosSplitCtx::from(pos).fetch_split(&self.ctx.interval))
+                                 //    .collect(),
         }
     }
 }
-impl<'a: 'b, 'b> NodeJoinCtx<'a> {
+impl NodeJoinCtx<'_> {
     pub fn patterns(&self) -> &ChildPatterns {
         self.ctx.trav.expect_child_patterns(self.index)
     }
 }
 
-impl<'a: 'b, 'b> NodeJoinCtx<'a> {
-    pub fn vertex_cache<'c>(&'c self) -> &'c SplitVertexCache {
+impl NodeJoinCtx<'_> {
+    pub fn vertex_cache(&self) -> &SplitVertexCache {
         self.interval.cache.get(&self.index.vertex_index()).unwrap()
     }
     pub fn join_partitions(&mut self) -> LinkedHashMap<PosKey, Split> {
@@ -213,7 +213,7 @@ impl<'a: 'b, 'b> NodeJoinCtx<'a> {
         let mut offset_iter = offsets.iter().map(PosSplitCtx::from);
         let offset = offset_iter.next().unwrap();
 
-        let x = match root_mode {
+        match root_mode {
             RootMode::Prefix => Prefix::new(offset)
                 .join_partition(self)
                 .inspect(|part| {
@@ -256,8 +256,7 @@ impl<'a: 'b, 'b> NodeJoinCtx<'a> {
                     })
             },
         }
-        .unwrap_or_else(|c| c);
-        x
+        .unwrap_or_else(|c| c)
     }
 
     pub fn join_incomplete_infix<'c>(

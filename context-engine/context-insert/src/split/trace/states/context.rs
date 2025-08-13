@@ -39,7 +39,7 @@ pub struct SplitTraceStatesCtx<G: HasGraph> {
     pub ctx: SplitTraceCtx<G>,
     pub states: SplitStates,
 }
-impl<'a, G: HasGraph> SplitTraceStatesCtx<G> {
+impl<G: HasGraph> SplitTraceStatesCtx<G> {
     pub fn new(
         ctx: TraceCtx<G>,
         root: Child,
