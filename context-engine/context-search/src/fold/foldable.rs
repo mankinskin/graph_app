@@ -1,6 +1,9 @@
 use context_trace::{
     graph::{
-        getters::ErrorReason,
+        getters::{
+            ErrorReason,
+            IndexWithPath,
+        },
         vertex::child::Child,
     },
     path::structs::{
@@ -50,6 +53,11 @@ impl From<ErrorReason> for ErrorState {
             reason,
             found: None,
         }
+    }
+}
+impl From<IndexWithPath> for ErrorState {
+    fn from(value: IndexWithPath) -> Self {
+        ErrorReason::SingleIndex(Box::new(value)).into()
     }
 }
 

@@ -37,7 +37,10 @@ use crate::{
 };
 use context_trace::{
     graph::{
-        getters::ErrorReason,
+        getters::{
+            ErrorReason,
+            IndexWithPath,
+        },
         kind::BaseGraphKind,
         vertex::{
             child::Child,
@@ -96,7 +99,10 @@ fn find_sequence() {
     } = &*Env1::get_expected();
     assert_eq!(
         graph.find_sequence("a".chars()),
-        Err(ErrorReason::SingleIndex(*a)),
+        Err(ErrorReason::SingleIndex(Box::new(IndexWithPath {
+            index: *a,
+            path: vec![*a].into(),
+        }))),
     );
     let query = graph.graph().expect_token_children("abc".chars());
     let abc_found = graph.find_ancestor(&query);

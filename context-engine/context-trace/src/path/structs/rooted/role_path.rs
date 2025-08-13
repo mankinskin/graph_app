@@ -348,7 +348,12 @@ impl FoldablePath for PatternEndPath {
         };
         match len {
             0 => Err((ErrorReason::EmptyPatterns, p)),
-            1 => Err((ErrorReason::SingleIndex(*p.root.first().unwrap()), p)),
+            1 => Err((
+                ErrorReason::SingleIndex(Box::new(
+                    PatternRangePath::from(p.clone()).into(),
+                )),
+                p,
+            )),
             _ => Ok(p),
         }
     }

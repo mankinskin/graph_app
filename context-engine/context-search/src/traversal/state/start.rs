@@ -12,7 +12,10 @@ use crate::{
 };
 use context_trace::{
     graph::{
-        getters::ErrorReason,
+        getters::{
+            ErrorReason,
+            IndexWithPath,
+        },
         vertex::{
             child::Child,
             has_vertex_index::HasVertexIndex,
@@ -70,7 +73,10 @@ impl<K: TraversalKind> StartCtx<K> {
             Ok(CompareParentBatch { batch, cursor })
         } else {
             Err(ErrorState {
-                reason: ErrorReason::SingleIndex(self.index),
+                reason: ErrorReason::SingleIndex(Box::new(IndexWithPath {
+                    index: self.index,
+                    path: self.cursor.path.clone().into(),
+                })),
                 found: Some(FinishedKind::Complete(self.index)),
             })
         }

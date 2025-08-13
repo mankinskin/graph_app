@@ -69,9 +69,8 @@ impl<R: InsertResult> InsertCtx<R> {
         &mut self,
         foldable: impl Foldable,
     ) -> Result<R, ErrorState> {
-        self.insert_result(foldable).and_then(|res| {
-            res.map_err(|index| ErrorReason::SingleIndex(index).into())
-        })
+        self.insert_result(foldable)
+            .and_then(|res| res.map_err(|root| root.into()))
     }
     pub fn insert_init(
         &mut self,

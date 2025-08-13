@@ -3,9 +3,15 @@ use std::{
     fmt::Debug,
 };
 
-use context_search::fold::result::IncompleteState;
+use context_search::fold::{
+    foldable::ErrorState,
+    result::IncompleteState,
+};
 use context_trace::{
-    graph::vertex::child::Child,
+    graph::{
+        getters::IndexWithPath,
+        vertex::child::Child,
+    },
     path::structs::rooted::pattern_range::PatternRangePath,
 };
 
@@ -21,7 +27,7 @@ impl ResultExtraction for PatternRangePath {
     }
 }
 pub trait TryInitWith<T>: Sized {
-    type Error;
+    type Error: Into<ErrorState>;
     fn try_init(value: T) -> Result<Self, Self::Error>;
 }
 //impl<T, A: TryFrom<T>> TryInitWith<T> for A {
@@ -30,15 +36,15 @@ pub trait TryInitWith<T>: Sized {
 //        Self::try_from(value)
 //    }
 //}
-impl TryInitWith<Child> for Child {
-    type Error = Child;
-    fn try_init(value: Child) -> Result<Self, Self::Error> {
-        Ok(value)
+impl TryInitWith<IndexWithPath> for Child {
+    type Error = IndexWithPath;
+    fn try_init(value: IndexWithPath) -> Result<Self, Self::Error> {
+        Ok(value.index)
     }
 }
-impl TryInitWith<Child> for IndexWithPath {
-    type Error = Child;
-    fn try_init(value: Child) -> Result<Self, Self::Error> {
+impl TryInitWith<IndexWithPath> for IndexWithPath {
+    type Error = IndexWithPath;
+    fn try_init(value: IndexWithPath) -> Result<Self, Self::Error> {
         Err(value)
     }
 }
@@ -66,7 +72,7 @@ impl TryInitWith<Child> for IndexWithPath {
 pub trait InsertResult:
     Debug
     + Borrow<Child>
-    + TryInitWith<Child, Error = Child>
+    + TryInitWith<IndexWithPath>
     //+ TryInitWith<ErrorState, Error = Child>
     + Into<Child>
 {
@@ -83,28 +89,6 @@ impl InsertResult for Child {
         _: Self::Extract,
     ) -> Self {
         root
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct IndexWithPath {
-    pub index: Child,
-    pub path: PatternRangePath,
-}
-impl TryFrom<Child> for IndexWithPath {
-    type Error = Child;
-    fn try_from(value: Child) -> Result<Self, Self::Error> {
-        Err(value)
-    }
-}
-impl From<IndexWithPath> for Child {
-    fn from(val: IndexWithPath) -> Self {
-        val.index
-    }
-}
-impl Borrow<Child> for IndexWithPath {
-    fn borrow(&self) -> &Child {
-        &self.index
     }
 }
 impl InsertResult for IndexWithPath {

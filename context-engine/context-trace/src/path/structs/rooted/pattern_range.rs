@@ -21,7 +21,10 @@ use crate::{
         pattern::PatternDirection,
     },
     graph::{
-        getters::ErrorReason,
+        getters::{
+            ErrorReason,
+            IndexWithPath,
+        },
         kind::{
             BaseGraphKind,
             GraphKind,
@@ -266,7 +269,9 @@ impl FoldablePath for PatternRangePath {
         match len {
             0 => Err((ErrorReason::EmptyPatterns, query)),
             1 => Err((
-                ErrorReason::SingleIndex(*query.root.first().unwrap()),
+                ErrorReason::SingleIndex(Box::new(IndexWithPath::from(
+                    query.clone(),
+                ))),
                 query,
             )),
             _ => Ok(query),

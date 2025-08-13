@@ -8,13 +8,15 @@ use std::collections::{
 };
 
 use band::Band;
-use context_insert::insert::result::IndexWithPath;
 use context_trace::{
     self,
-    graph::vertex::{
-        child::Child,
-        has_vertex_index::ToChild,
-        wide::Wide,
+    graph::{
+        getters::IndexWithPath,
+        vertex::{
+            child::Child,
+            has_vertex_index::ToChild,
+            wide::Wide,
+        },
     },
     path::structs::rooted::{
         pattern_range::PatternRangePath,

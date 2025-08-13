@@ -31,7 +31,10 @@ use crate::{
 };
 use context_trace::{
     graph::{
-        getters::ErrorReason,
+        getters::{
+            ErrorReason,
+            IndexWithPath,
+        },
         kind::BaseGraphKind,
         vertex::{
             child::Child,
@@ -110,8 +113,11 @@ fn find_ancestor1() {
 
     let query = bc_pattern;
     assert_eq!(
-        graph.find_ancestor(query),
-        Err(ErrorReason::SingleIndex(*bc)),
+        graph.find_ancestor(&query),
+        Err(ErrorReason::SingleIndex(Box::new(IndexWithPath {
+            index: *bc,
+            path: query.into()
+        }))),
         "bc"
     );
 
@@ -223,7 +229,7 @@ fn find_ancestor2() {
     let byz_found = graph.find_ancestor(&query).unwrap();
 
     assert_eq!(byz_found.start, by);
-    assert_eq!(byz_found.root, xabyz);
+    assert_eq!(byz_found.root.index, xabyz);
     assert_eq!(
         byz_found.kind,
         FinishedKind::Incomplete(Box::new(EndState {
@@ -397,7 +403,7 @@ fn find_ancestor3() {
             },
         }))
     );
-    assert_eq!(aby_found.root, xaby);
+    assert_eq!(aby_found.root.index, xaby);
     assert_eq!(aby_found.start, ab);
     assert_eq!(
         aby_found.cache.entries,

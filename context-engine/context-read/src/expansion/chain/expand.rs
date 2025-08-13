@@ -9,12 +9,12 @@ use crate::{
         ChainCtx,
     },
 };
-use context_insert::insert::{
-    result::IndexWithPath,
-    ToInsertCtx,
-};
+use context_insert::insert::ToInsertCtx;
 use context_trace::{
-    graph::vertex::wide::Wide,
+    graph::{
+        getters::IndexWithPath,
+        vertex::wide::Wide,
+    },
     path::{
         mutators::append::PathAppend,
         structs::rooted::role_path::IndexEndPath,

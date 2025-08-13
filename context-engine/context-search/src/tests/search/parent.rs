@@ -31,7 +31,10 @@ use crate::{
 };
 use context_trace::{
     graph::{
-        getters::ErrorReason,
+        getters::{
+            ErrorReason,
+            IndexWithPath,
+        },
         kind::BaseGraphKind,
         vertex::{
             child::Child,
@@ -103,7 +106,10 @@ fn find_parent1() {
     let query = bc_pattern;
     assert_eq!(
         graph.find_parent(&query[..]),
-        Err(ErrorReason::SingleIndex(*bc)),
+        Err(ErrorReason::SingleIndex(Box::new(IndexWithPath {
+            index: *bc,
+            path: query.into()
+        }))),
         "bc"
     );
     let query = b_c_pattern;

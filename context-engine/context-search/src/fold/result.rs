@@ -1,5 +1,8 @@
 use context_trace::{
-    graph::vertex::child::Child,
+    graph::{
+        getters::IndexWithPath,
+        vertex::child::Child,
+    },
     path::accessors::complete::PathComplete,
     trace::cache::TraceCache,
 };
@@ -64,7 +67,7 @@ impl PathComplete for FinishedKind {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CompleteState {
     pub cache: TraceCache,
-    pub root: Child,
+    pub root: IndexWithPath,
     pub start: Child,
 }
 impl TryFrom<FinishedState> for CompleteState {
@@ -96,7 +99,7 @@ impl TryFrom<FinishedState> for CompleteState {
 pub struct IncompleteState {
     pub end_state: EndState,
     pub cache: TraceCache,
-    pub root: Child,
+    pub root: IndexWithPath,
     pub start: Child,
 }
 impl TryFrom<FinishedState> for IncompleteState {
@@ -112,7 +115,7 @@ impl TryFrom<FinishedState> for IncompleteState {
 pub struct FinishedState {
     pub kind: FinishedKind,
     pub cache: TraceCache,
-    pub root: Child,
+    pub root: IndexWithPath,
     pub start: Child,
 }
 

@@ -5,21 +5,49 @@ pub mod pattern;
 pub mod token;
 pub mod vertex;
 
-use crate::graph::{
-    getters::vertex::VertexSet,
-    kind::GraphKind,
-    vertex::{
-        child::Child,
-        has_vertex_index::HasVertexIndex,
-        pattern::{
-            id::PatternId,
-            Pattern,
+use std::borrow::Borrow;
+
+use derive_new::new;
+
+use crate::{
+    graph::{
+        Hypergraph,
+        getters::vertex::VertexSet,
+        kind::GraphKind,
+        vertex::{
+            VertexIndex,
+            child::Child,
+            has_vertex_index::HasVertexIndex,
+            pattern::{
+                Pattern,
+                id::PatternId,
+            },
         },
-        VertexIndex,
     },
-    Hypergraph,
+    path::structs::rooted::pattern_range::PatternRangePath,
 };
 
+#[derive(Debug, Clone, Eq, PartialEq, new)]
+pub struct IndexWithPath {
+    pub index: Child,
+    pub path: PatternRangePath,
+}
+impl From<IndexWithPath> for Child {
+    fn from(val: IndexWithPath) -> Self {
+        val.index
+    }
+}
+impl Borrow<Child> for IndexWithPath {
+    fn borrow(&self) -> &Child {
+        &self.index
+    }
+}
+impl From<PatternRangePath> for IndexWithPath {
+    fn from(path: PatternRangePath) -> Self {
+        let index = *path.root.first().unwrap();
+        IndexWithPath { index, path }
+    }
+}
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ErrorReason {
     EmptyPatterns,
@@ -30,7 +58,7 @@ pub enum ErrorReason {
     InvalidPattern(PatternId),
     InvalidChild(usize),
     InvalidPatternRange(PatternId, Pattern, String),
-    SingleIndex(Child),
+    SingleIndex(Box<IndexWithPath>),
     ParentMatchingPartially,
     UnknownKey,
     UnknownIndex,

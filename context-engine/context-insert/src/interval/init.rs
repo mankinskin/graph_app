@@ -29,7 +29,7 @@ impl From<IncompleteState> for InitInterval {
     fn from(state: IncompleteState) -> Self {
         Self {
             cache: state.cache,
-            root: state.root,
+            root: state.root.index,
             end_bound: state.end_state.cursor.width(),
         }
     }

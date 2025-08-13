@@ -93,7 +93,7 @@ impl ReadCtx {
                         .concat()
                 },
                 Err((err, _)) => match err {
-                    ErrorReason::SingleIndex(c) => vec![c],
+                    ErrorReason::SingleIndex(c) => vec![c.index],
                     _ => known,
                 },
             };

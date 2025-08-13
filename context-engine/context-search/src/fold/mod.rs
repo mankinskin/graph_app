@@ -10,10 +10,13 @@ use crate::{
     },
 };
 use context_trace::{
-    graph::vertex::{
-        child::Child,
-        has_vertex_index::ToChild,
-        wide::Wide,
+    graph::{
+        getters::IndexWithPath,
+        vertex::{
+            child::Child,
+            has_vertex_index::ToChild,
+            wide::Wide,
+        },
     },
     trace::{
         cache::key::props::RootKey,
@@ -63,7 +66,10 @@ impl<K: TraversalKind> FoldCtx<K> {
         end.trace(&mut self.tctx.match_iter.0);
         Ok(FinishedState {
             cache: self.tctx.match_iter.0.cache,
-            root: end.root_key().index,
+            root: IndexWithPath {
+                index: end.root_key().index,
+                path: end.cursor.path.clone().into(),
+            },
             start: self.start_index,
             kind: FinishedKind::from(end),
         })

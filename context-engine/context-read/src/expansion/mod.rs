@@ -13,13 +13,13 @@ use crate::{
 };
 use chain::BandChain;
 
-use context_insert::insert::{
-    result::IndexWithPath,
-    ToInsertCtx,
-};
+use context_insert::insert::ToInsertCtx;
 use context_trace::{
     graph::{
-        getters::ErrorReason,
+        getters::{
+            ErrorReason,
+            IndexWithPath,
+        },
         vertex::child::Child,
     },
     path::{
@@ -76,15 +76,17 @@ impl<'a> ExpansionCtx<'a> {
         cursor: &'a mut PatternRangePath,
     ) -> Self {
         let inner_cursor = cursor.clone();
-        let first = match trav.insert_or_get_complete(inner_cursor) {
-            Ok(Ok(IndexWithPath { index, path })) => {
-                *cursor = path;
-                index
-            },
-            Ok(Err(index)) => index,
-            Err(ErrorReason::SingleIndex(c)) => c,
-            Err(_) => cursor.start_index(&trav),
-        };
+        let IndexWithPath { index: first, path } =
+            match trav.insert_or_get_complete(inner_cursor) {
+                Ok(Ok(root)) => root,
+                Ok(Err(root)) => root,
+                Err(ErrorReason::SingleIndex(c)) => *c,
+                Err(_) => IndexWithPath {
+                    index: cursor.start_index(&trav),
+                    path: cursor.clone(),
+                },
+            };
+        *cursor = path;
 
         Self {
             chain_ops: ChainCtx::new(trav, cursor, BandChain::new(first)),
