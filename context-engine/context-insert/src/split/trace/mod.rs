@@ -22,7 +22,7 @@ use context_trace::{
     },
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SplitTraceState {
     pub index: Child,
     pub offset: Offset,

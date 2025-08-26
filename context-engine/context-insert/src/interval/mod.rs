@@ -18,7 +18,7 @@ use context_trace::graph::vertex::{
 pub mod init;
 pub mod partition;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IntervalGraph {
     pub states: SplitStates,
     pub cache: SplitCache,

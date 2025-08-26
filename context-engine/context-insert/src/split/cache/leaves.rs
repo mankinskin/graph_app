@@ -15,7 +15,7 @@ use derive_more::{
 
 use super::position::PosKey;
 
-#[derive(Default, Debug, Deref, DerefMut, From)]
+#[derive(Default, Debug, Deref, DerefMut, From, Clone, PartialEq, Eq)]
 pub struct Leaves(Vec<PosKey>);
 
 impl Leaves {

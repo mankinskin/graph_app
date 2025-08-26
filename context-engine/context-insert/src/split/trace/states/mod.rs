@@ -22,7 +22,7 @@ use context_trace::{
     },
 };
 pub mod context;
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct SplitStates {
     pub leaves: Leaves,
     pub queue: VecDeque<SplitTraceState>,

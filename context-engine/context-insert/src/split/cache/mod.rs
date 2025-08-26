@@ -30,12 +30,12 @@ pub mod vertex;
 pub mod leaves;
 pub mod position;
 
-#[derive(Debug, Deref, DerefMut, new)]
+#[derive(Debug, Deref, DerefMut, new, Clone, PartialEq, Eq)]
 pub struct SplitCache {
     pub root_mode: RootMode,
     #[deref]
     #[deref_mut]
-    entries: HashMap<VertexIndex, SplitVertexCache>,
+    pub entries: HashMap<VertexIndex, SplitVertexCache>,
 }
 impl SplitCache {
     pub fn augment_node(

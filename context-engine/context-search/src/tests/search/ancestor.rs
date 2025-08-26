@@ -16,8 +16,6 @@ use {
             },
         },
     },
-    context_trace::tests::env::Env1,
-
     context_trace::{
         graph::{
             getters::{
@@ -45,7 +43,10 @@ use {
             },
             sub_path::SubPath,
         },
-        tests::env::TestEnv,
+        tests::env::{
+            Env1,
+            TestEnv,
+        },
         trace::cache::{
             key::directed::DirectedKey,
             position::{
@@ -53,6 +54,7 @@ use {
                 PositionCache,
             },
             vertex::VertexCache,
+            TraceCache,
         },
         HashMap,
         HashSet,
@@ -210,101 +212,105 @@ fn find_ancestor2() {
     let query = vec![by, z];
     let byz_found = graph.find_ancestor(&query).unwrap();
 
-    assert_eq!(byz_found.start, by);
-    assert_eq!(byz_found.root.index, xabyz);
     assert_eq!(
-        byz_found.kind,
-        FinishedKind::Incomplete(Box::new(EndState {
-            reason: EndReason::QueryEnd,
-            //target: DirectedKey::down(z, 2),
-            kind: EndKind::Postfix(PostfixEnd {
-                //inner_width: 2,
-                root_pos: 2.into(),
-                path: RootedRolePath {
-                    root: IndexRoot {
-                        location: PatternLocation {
-                            parent: xabyz,
-                            id: xaby_z_id,
-                        },
-                    },
-                    role_path: RolePath {
-                        sub_path: SubPath {
-                            root_entry: 0,
-                            path: vec![ChildLocation {
-                                parent: xaby,
-                                pattern_id: xa_by_id,
-                                sub_index: 1,
-                            },],
-                        },
-                        _ty: Default::default(),
-                    },
-                },
-            }),
-            cursor: PatternCursor {
-                path: RootedRolePath {
-                    root: query.clone(),
-                    role_path: RolePath {
-                        sub_path: SubPath {
-                            root_entry: 1,
-                            path: vec![],
-                        },
-                        _ty: Default::default(),
-                    },
-                },
-                relative_pos: 3.into(),
+        byz_found.clone(),
+        FinishedState {
+            start: by,
+            root: IndexWithPath {
+                index: xabyz,
+                path: byz_found.root.path.clone(),
             },
-        }))
-    );
-    assert_eq!(
-        byz_found.cache.entries,
-        HashMap::from_iter([
-            (
-                xabyz.index,
-                VertexCache {
-                    index: xabyz,
-                    top_down: FromIterator::from_iter([]),
-                    bottom_up: FromIterator::from_iter([(
-                        2.into(), // width of by
-                        PositionCache {
-                            edges: Edges {
-                                bottom: HashMap::from_iter([(
-                                    DirectedKey::up(xaby, 2), // width of by
-                                    SubLocation::new(xaby_z_id, 0),
-                                ),]),
-                                top: Default::default(),
+            kind: FinishedKind::Incomplete(Box::new(EndState {
+                reason: EndReason::QueryEnd,
+                //target: DirectedKey::down(z, 2),
+                kind: EndKind::Postfix(PostfixEnd {
+                    //inner_width: 2,
+                    root_pos: 2.into(),
+                    path: RootedRolePath {
+                        root: IndexRoot {
+                            location: PatternLocation {
+                                parent: xabyz,
+                                id: xaby_z_id,
                             },
-                        }
-                    )]),
-                }
-            ),
-            (
-                xaby.index,
-                VertexCache {
-                    index: xaby,
-                    top_down: FromIterator::from_iter([]),
-                    bottom_up: FromIterator::from_iter([(
-                        2.into(), // width of by
-                        PositionCache {
-                            edges: Edges {
-                                bottom: HashMap::from_iter([(
-                                    DirectedKey::up(by, 2), // width of by
-                                    SubLocation::new(xa_by_id, 1)
-                                )]),
-                                top: HashSet::from_iter([]),
+                        },
+                        role_path: RolePath {
+                            sub_path: SubPath {
+                                root_entry: 0,
+                                path: vec![ChildLocation {
+                                    parent: xaby,
+                                    pattern_id: xa_by_id,
+                                    sub_index: 1,
+                                },],
                             },
+                            _ty: Default::default(),
+                        },
+                    },
+                }),
+                cursor: PatternCursor {
+                    path: RootedRolePath {
+                        root: query.clone(),
+                        role_path: RolePath {
+                            sub_path: SubPath {
+                                root_entry: 1,
+                                path: vec![],
+                            },
+                            _ty: Default::default(),
+                        },
+                    },
+                    relative_pos: 3.into(),
+                },
+            })),
+            cache: TraceCache {
+                entries: HashMap::from_iter([
+                    (
+                        xabyz.index,
+                        VertexCache {
+                            index: xabyz,
+                            top_down: FromIterator::from_iter([]),
+                            bottom_up: FromIterator::from_iter([(
+                                2.into(), // width of by
+                                PositionCache {
+                                    edges: Edges {
+                                        bottom: HashMap::from_iter([(
+                                            DirectedKey::up(xaby, 2), // width of by
+                                            SubLocation::new(xaby_z_id, 0),
+                                        ),]),
+                                        top: Default::default(),
+                                    },
+                                }
+                            )]),
                         }
-                    )]),
-                }
-            ),
-            (
-                by.index,
-                VertexCache {
-                    index: by,
-                    top_down: FromIterator::from_iter([]),
-                    bottom_up: FromIterator::from_iter([]),
-                }
-            ),
-        ]),
+                    ),
+                    (
+                        xaby.index,
+                        VertexCache {
+                            index: xaby,
+                            top_down: FromIterator::from_iter([]),
+                            bottom_up: FromIterator::from_iter([(
+                                2.into(), // width of by
+                                PositionCache {
+                                    edges: Edges {
+                                        bottom: HashMap::from_iter([(
+                                            DirectedKey::up(by, 2), // width of by
+                                            SubLocation::new(xa_by_id, 1)
+                                        )]),
+                                        top: HashSet::from_iter([]),
+                                    },
+                                }
+                            )]),
+                        }
+                    ),
+                    (
+                        by.index,
+                        VertexCache {
+                            index: by,
+                            top_down: FromIterator::from_iter([]),
+                            bottom_up: FromIterator::from_iter([]),
+                        }
+                    ),
+                ]),
+            }
+        }
     );
 }
 
@@ -345,98 +351,101 @@ fn find_ancestor3() {
     let query = vec![ab, y];
     let aby_found = gr.find_ancestor(&query).unwrap();
     assert_eq!(
-        aby_found.kind,
-        FinishedKind::Incomplete(Box::new(EndState {
-            reason: EndReason::QueryEnd,
-            kind: EndKind::Postfix(PostfixEnd {
-                root_pos: 2.into(),
-                path: RootedRolePath {
-                    root: IndexRoot {
-                        location: PatternLocation {
-                            parent: xaby,
-                            id: xab_y_id,
-                        },
-                    },
-                    role_path: RolePath {
-                        sub_path: SubPath {
-                            root_entry: 0,
-                            path: vec![ChildLocation {
-                                parent: xab,
-                                pattern_id: x_ab_id,
-                                sub_index: 1,
-                            },],
-                        },
-                        _ty: Default::default(),
-                    },
-                },
-            }),
-            cursor: PatternCursor {
-                path: RootedRolePath {
-                    root: query.clone(),
-                    role_path: RolePath {
-                        sub_path: SubPath {
-                            root_entry: 1,
-                            path: vec![],
-                        },
-                        _ty: Default::default(),
-                    },
-                },
-                relative_pos: 3.into(),
+        aby_found.clone(),
+        FinishedState {
+            start: ab,
+            root: IndexWithPath {
+                index: xaby,
+                path: aby_found.root.path.clone(),
             },
-        }))
-    );
-    assert_eq!(aby_found.root.index, xaby);
-    assert_eq!(aby_found.start, ab);
-    assert_eq!(
-        aby_found.cache.entries,
-        HashMap::from_iter([
-            (
-                xaby.index,
-                VertexCache {
-                    index: xaby,
-                    top_down: FromIterator::from_iter([]),
-                    bottom_up: FromIterator::from_iter([(
-                        2.into(),
-                        PositionCache {
-                            edges: Edges {
-                                bottom: HashMap::from_iter([(
-                                    DirectedKey::up(xab, 2),
-                                    SubLocation::new(xab_y_id, 0),
-                                ),]),
-                                top: Default::default(),
+            kind: FinishedKind::Incomplete(Box::new(EndState {
+                reason: EndReason::QueryEnd,
+                kind: EndKind::Postfix(PostfixEnd {
+                    root_pos: 2.into(),
+                    path: RootedRolePath {
+                        root: IndexRoot {
+                            location: PatternLocation {
+                                parent: xaby,
+                                id: xab_y_id,
                             },
-                        }
-                    )]),
-                }
-            ),
-            (
-                xab.index,
-                VertexCache {
-                    index: xab,
-                    top_down: FromIterator::from_iter([]),
-                    bottom_up: FromIterator::from_iter([(
-                        2.into(),
-                        PositionCache {
-                            edges: Edges {
-                                bottom: HashMap::from_iter([(
-                                    DirectedKey::up(ab, 2),
-                                    SubLocation::new(x_ab_id, 1),
-                                )]),
-                                top: HashSet::from_iter([]),
+                        },
+                        role_path: RolePath {
+                            sub_path: SubPath {
+                                root_entry: 0,
+                                path: vec![ChildLocation {
+                                    parent: xab,
+                                    pattern_id: x_ab_id,
+                                    sub_index: 1,
+                                },],
                             },
+                            _ty: Default::default(),
+                        },
+                    },
+                }),
+                cursor: PatternCursor {
+                    path: RootedRolePath {
+                        root: query.clone(),
+                        role_path: RolePath {
+                            sub_path: SubPath {
+                                root_entry: 1,
+                                path: vec![],
+                            },
+                            _ty: Default::default(),
+                        },
+                    },
+                    relative_pos: 3.into(),
+                },
+            })),
+            cache: TraceCache {
+                entries: HashMap::from_iter([
+                    (
+                        xaby.index,
+                        VertexCache {
+                            index: xaby,
+                            top_down: FromIterator::from_iter([]),
+                            bottom_up: FromIterator::from_iter([(
+                                2.into(),
+                                PositionCache {
+                                    edges: Edges {
+                                        bottom: HashMap::from_iter([(
+                                            DirectedKey::up(xab, 2),
+                                            SubLocation::new(xab_y_id, 0),
+                                        ),]),
+                                        top: Default::default(),
+                                    },
+                                }
+                            )]),
                         }
-                    )]),
-                }
-            ),
-            (
-                ab.index,
-                VertexCache {
-                    index: ab,
-                    top_down: FromIterator::from_iter([]),
-                    bottom_up: FromIterator::from_iter([]),
-                }
-            ),
-        ]),
-        "ab_y"
+                    ),
+                    (
+                        xab.index,
+                        VertexCache {
+                            index: xab,
+                            top_down: FromIterator::from_iter([]),
+                            bottom_up: FromIterator::from_iter([(
+                                2.into(),
+                                PositionCache {
+                                    edges: Edges {
+                                        bottom: HashMap::from_iter([(
+                                            DirectedKey::up(ab, 2),
+                                            SubLocation::new(x_ab_id, 1),
+                                        )]),
+                                        top: HashSet::from_iter([]),
+                                    },
+                                }
+                            )]),
+                        }
+                    ),
+                    (
+                        ab.index,
+                        VertexCache {
+                            index: ab,
+                            top_down: FromIterator::from_iter([]),
+                            bottom_up: FromIterator::from_iter([]),
+                        }
+                    ),
+                ]),
+            }
+        }
     );
 }
