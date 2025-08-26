@@ -38,7 +38,6 @@ use crate::{
     },
     trace::cache::key::directed::up::UpKey,
 };
-use tracing::debug;
 #[derive(Debug)]
 pub enum TraceCommand {
     Postfix(PostfixCommand),
@@ -81,7 +80,6 @@ impl Traceable for PostfixCommand {
             self.add_edges,
         );
         let location = self.path.role_root_child_location::<Start>();
-        debug!("{:#?}", self.root_up_key);
         let new = NewTraceEdge::<BottomUp> {
             target: self.root_up_key,
             prev,
@@ -113,7 +111,6 @@ impl Traceable for PrefixCommand {
             index: *ctx.trav.graph().expect_child_at(root_exit.clone()),
             pos: exit_key.pos,
         };
-        debug!("{:#?}", target);
         let new = NewTraceEdge::<TopDown> {
             target,
             prev: exit_key,
@@ -164,7 +161,6 @@ impl Traceable for RangeCommand {
             index: root_entry.parent,
             pos: self.root_pos,
         };
-        debug!("{:#?}", root_up_key);
         let new = NewTraceEdge::<BottomUp> {
             target: root_up_key,
             prev,
@@ -184,7 +180,6 @@ impl Traceable for RangeCommand {
             pos: exit_key.pos,
             index: *ctx.trav.graph().expect_child_at(root_exit.clone()),
         };
-        debug!("{:#?}", target);
         let new = NewTraceEdge::<TopDown> {
             target,
             prev: exit_key,

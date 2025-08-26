@@ -1,85 +1,67 @@
-use std::iter::FromIterator;
-
-use crate::search::Searchable;
-use itertools::*;
-use pretty_assertions::{
-    assert_eq,
-    assert_matches,
-};
-
 #[cfg(test)]
-use context_trace::tests::env::Env1;
+use {
+    crate::{
+        fold::result::{
+            FinishedKind,
+            FinishedState,
+        },
+        search::Searchable,
+        traversal::state::{
+            cursor::PatternCursor,
+            end::{
+                postfix::PostfixEnd,
+                EndKind,
+                EndReason,
+                EndState,
+            },
+        },
+    },
+    context_trace::tests::env::Env1,
 
-use crate::{
-    fold::result::{
-        FinishedKind,
-        FinishedState,
-    },
-    traversal::state::{
-        cursor::{
-            PatternCursor,
-            PatternRangeCursor,
-        },
-        end::{
-            postfix::PostfixEnd,
-            range::RangeEnd,
-            EndKind,
-            EndReason,
-            EndState,
-        },
-    },
-};
-use context_trace::{
-    graph::{
-        getters::{
-            ErrorReason,
-            IndexWithPath,
-        },
-        kind::BaseGraphKind,
-        vertex::{
-            child::Child,
-            location::{
-                child::ChildLocation,
-                pattern::PatternLocation,
-                SubLocation,
+    context_trace::{
+        graph::{
+            getters::{
+                ErrorReason,
+                IndexWithPath,
             },
-            token::Token,
-        },
-        Hypergraph,
-        HypergraphRef,
-    },
-    lab,
-    path::structs::{
-        role_path::RolePath,
-        rooted::{
-            role_path::RootedRolePath,
-            root::IndexRoot,
-            RootedRangePath,
-        },
-        sub_path::SubPath,
-    },
-    tests::env::TestEnv,
-    trace::{
-        cache::{
-            key::directed::{
-                down::DownKey,
-                DirectedKey,
+            kind::BaseGraphKind,
+            vertex::{
+                child::Child,
+                location::{
+                    child::ChildLocation,
+                    pattern::PatternLocation,
+                    SubLocation,
+                },
+                token::Token,
             },
+            Hypergraph,
+            HypergraphRef,
+        },
+        path::structs::{
+            role_path::RolePath,
+            rooted::{
+                role_path::RootedRolePath,
+                root::IndexRoot,
+            },
+            sub_path::SubPath,
+        },
+        tests::env::TestEnv,
+        trace::cache::{
+            key::directed::DirectedKey,
             position::{
                 Edges,
                 PositionCache,
             },
             vertex::VertexCache,
-            TraceCache,
         },
-        has_graph::HasGraph,
+        HashMap,
+        HashSet,
     },
-    HashMap,
-    HashSet,
-};
-use tracing::{
-    info,
-    Level,
+    itertools::*,
+    pretty_assertions::{
+        assert_eq,
+        assert_matches,
+    },
 };
 
 #[test]

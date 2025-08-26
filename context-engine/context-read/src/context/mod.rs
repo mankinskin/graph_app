@@ -30,7 +30,7 @@ use derive_more::{
     Deref,
     DerefMut,
 };
-use tracing::instrument;
+use tracing::debug;
 
 use crate::{
     context::root::RootManager,
@@ -65,18 +65,17 @@ impl ReadCtx {
         mut graph: HypergraphRef,
         seq: impl ToNewTokenIndices,
     ) -> Self {
+        debug!("New ReadCtx");
         let new_indices = seq.to_new_token_indices(&mut graph.graph_mut());
         Self {
             blocks: BlockIter::new(new_indices),
             root: RootManager::new(graph),
         }
     }
-    #[instrument(skip(self))]
     pub fn read_sequence(&mut self) -> Option<Child> {
         self.find_map(|_| None as Option<()>);
         self.root.root
     }
-    #[instrument(skip(self, known))]
     pub fn read_known(
         &mut self,
         known: Pattern,

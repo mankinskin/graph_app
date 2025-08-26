@@ -38,5 +38,3 @@ impl From<&'_ PostfixEnd> for PostfixCommand {
         }
     }
 }
-
-impl PostfixEnd {}

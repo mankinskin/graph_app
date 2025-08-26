@@ -25,9 +25,12 @@ pub use std::collections::{
     HashSet,
 };
 #[cfg(any(test, feature = "test-api"))]
-pub use std::hash::{
-    BuildHasherDefault,
-    DefaultHasher,
+pub use {
+    ::charify,
+    std::hash::{
+        BuildHasherDefault,
+        DefaultHasher,
+    },
 };
 #[cfg(any(test, feature = "test-api"))]
 pub type HashSet<T> =

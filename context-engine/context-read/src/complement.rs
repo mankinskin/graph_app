@@ -9,7 +9,7 @@ use context_trace::{
 };
 use derive_new::new;
 
-use crate::expansion::ExpansionLink;
+use crate::expansion::link::ExpansionLink;
 
 use super::context::ReadCtx;
 

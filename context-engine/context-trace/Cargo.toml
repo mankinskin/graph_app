@@ -10,7 +10,7 @@ test-api = []
 [dependencies]
 
 itertools = "^0.14"
-indexmap = { version = "^2.7", features = ["serde"]}
+indexmap = { version = "^2.7", features = ["serde"] }
 tracing = { version = "^0.1", features = ["attributes", "valuable"] }
 tracing-subscriber = "0.3"
 uuid = { version = "^1.10", features = ["v4", "fast-rng", "serde"] }
@@ -26,6 +26,7 @@ derivative = "2.2"
 linked_hash_set = "0.1"
 linked-hash-map = "0.5"
 one-of = "0.2"
+charify = "0.1"
 
 [dependencies.pretty_assertions]
 features = ["unstable"]

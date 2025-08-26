@@ -1,26 +1,61 @@
 use std::collections::HashSet;
 
-use crate::insert::ToInsertCtx;
+use crate::{
+    insert::{
+        ToInsertCtx,
+        context::InsertTraversal,
+    },
+    interval::init::InitInterval,
+};
 use context_search::{
-    fold::result::{
-        FinishedKind,
-        FinishedState,
+    fold::{
+        foldable::Foldable,
+        result::{
+            CompleteState,
+            FinishedKind,
+            FinishedState,
+        },
     },
     search::Searchable,
 };
 use context_trace::{
+    HashMap,
+    assert_indices,
+    assert_patterns,
     graph::{
         Hypergraph,
         HypergraphRef,
         getters::vertex::VertexSet,
-        kind::BaseGraphKind,
         vertex::{
             child::Child,
+            has_vertex_index::HasVertexIndex,
+            location::SubLocation,
             token::Token,
             wide::Wide,
         },
     },
-    trace::has_graph::HasGraph,
+    insert_tokens,
+    trace::{
+        cache::{
+            TraceCache,
+            key::directed::{
+                DirectedKey,
+                DirectedPosition,
+            },
+            position::{
+                Edges,
+                PositionCache,
+            },
+            vertex::{
+                VertexCache,
+                positions::DirectedPositions,
+            },
+        },
+        has_graph::{
+            HasGraph,
+            HasGraphMut,
+        },
+    },
 };
 use itertools::*;
 use maplit::hashset;
@@ -31,7 +66,7 @@ use pretty_assertions::{
 
 #[test]
 fn index_pattern1() {
-    let mut graph = Hypergraph::<BaseGraphKind>::default();
+    let mut graph = Hypergraph::default();
     let (a, b, _w, x, y, z) = graph
         .insert_tokens([
             Token::Element('a'),
@@ -89,8 +124,7 @@ fn index_pattern1() {
 
 #[test]
 fn index_pattern2() {
-    let mut graph =
-        context_trace::graph::Hypergraph::<BaseGraphKind>::default();
+    let mut graph = Hypergraph::default();
     let (a, b, _w, x, y, z) = graph
         .insert_tokens([
             Token::Element('a'),
@@ -145,8 +179,7 @@ fn index_pattern2() {
 
 #[test]
 fn index_infix1() {
-    let mut graph =
-        context_trace::graph::Hypergraph::<BaseGraphKind>::default();
+    let mut graph = Hypergraph::default();
     let (a, b, w, x, y, z) = graph
         .insert_tokens([
             Token::Element('a'),
@@ -221,21 +254,8 @@ fn index_infix1() {
 
 #[test]
 fn index_infix2() {
-    let mut graph =
-        context_trace::graph::Hypergraph::<BaseGraphKind>::default();
-    let (a, b, c, d, x, y) = graph
-        .insert_tokens([
-            Token::Element('a'),
-            Token::Element('b'),
-            Token::Element('c'),
-            Token::Element('d'),
-            Token::Element('x'),
-            Token::Element('y'),
-            //Token::Element('z'),
-        ])
-        .into_iter()
-        .next_tuple()
-        .unwrap();
+    let mut graph = Hypergraph::default();
+    insert_tokens!(graph, {a, b, c, d, x, y});
     // index 6
     let yy = graph.insert_pattern(vec![y, y]);
     let xx = graph.insert_pattern(vec![x, x]);
@@ -275,4 +295,94 @@ fn index_infix2() {
         hashset![vec![abcd, x],],
         "abcx"
     );
+}
+
+#[test]
+fn index_infix3() {
+    let mut graph = HypergraphRef::default();
+    insert_tokens!(graph, {h, e, l, d});
+    let (ld, ld_id) = graph.graph_mut().insert_pattern_with_id(vec![l, d]);
+    let ld_id = ld_id.unwrap();
+    let (heldld, heldld_id) =
+        graph.graph_mut().insert_pattern_with_id(vec![h, e, ld, ld]);
+    let heldld_id = heldld_id.unwrap();
+    let fold_res =
+        Foldable::fold::<InsertTraversal>(vec![h, e, l, l], graph.clone())
+            .map(CompleteState::try_from);
+    assert_matches!(fold_res, Ok(Err(_)));
+    let state = fold_res.unwrap().unwrap_err();
+    let init = InitInterval::from(state);
+    let ref_init = InitInterval {
+        root: heldld,
+        cache: TraceCache {
+            entries: HashMap::from_iter([
+                (heldld.vertex_index(), VertexCache {
+                    index: heldld,
+                    bottom_up: DirectedPositions::from_iter([]),
+                    top_down: DirectedPositions::from_iter([(
+                        3.into(),
+                        PositionCache {
+                            edges: Edges {
+                                top: Default::default(),
+                                bottom: HashMap::from_iter([(
+                                    DirectedKey {
+                                        index: ld,
+                                        pos: DirectedPosition::TopDown(
+                                            1.into(),
+                                        ),
+                                    },
+                                    SubLocation::new(heldld_id, 2),
+                                )]),
+                            },
+                        },
+                    )]),
+                }),
+                (ld.vertex_index(), VertexCache {
+                    index: ld,
+                    bottom_up: DirectedPositions::from_iter([]),
+                    top_down: DirectedPositions::from_iter([(
+                        3.into(),
+                        PositionCache {
+                            edges: Edges {
+                                top: Default::default(),
+                                bottom: HashMap::from_iter([(
+                                    DirectedKey {
+                                        index: l,
+                                        pos: DirectedPosition::TopDown(
+                                            1.into(),
+                                        ),
+                                    },
+                                    SubLocation::new(ld_id, 0),
+                                )]),
+                            },
+                        },
+                    )]),
+                }),
+                (h.vertex_index(), VertexCache {
+                    index: h,
+                    bottom_up: DirectedPositions::from_iter([]),
+                    top_down: DirectedPositions::from_iter([]),
+                }),
+                (l.vertex_index(), VertexCache {
+                    index: l,
+                    bottom_up: DirectedPositions::from_iter([]),
+                    top_down: DirectedPositions::from_iter([(
+                        3.into(),
+                        PositionCache::default(),
+                    )]),
+                }),
+            ]),
+        },
+        end_bound: 3,
+    };
+    assert_eq!(init, ref_init,);
+    let hel: Child = graph.insert_init((), ref_init);
+    assert_indices!(graph, he, held, heldld);
+    assert_patterns! {
+        graph,
+        he => hashset![vec![h, e],],
+        hel => hashset![vec![he, l],],
+        held => hashset![vec![hel, d], vec![he, ld],],
+        heldld => hashset![vec![held, ld]]
+    };
 }

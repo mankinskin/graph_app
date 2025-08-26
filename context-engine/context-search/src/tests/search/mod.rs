@@ -1,91 +1,72 @@
-#![allow(unused)]
-
 pub mod ancestor;
 pub mod consecutive;
 pub mod parent;
 
-use std::iter::FromIterator;
-
-use crate::search::Searchable;
-use itertools::*;
-use pretty_assertions::{
-    assert_eq,
-    assert_matches,
-};
-
 #[cfg(test)]
-use context_trace::tests::env::Env1;
+use {
+    crate::search::Searchable,
+    crate::{
+        fold::result::FinishedKind,
+        traversal::state::{
+            cursor::PatternCursor,
+            end::{
+                range::RangeEnd,
+                EndKind,
+                EndReason,
+                EndState,
+            },
+        },
+    },
+    context_trace::tests::env::Env1,
 
-use crate::{
-    fold::result::{
-        FinishedKind,
-        FinishedState,
-    },
-    traversal::state::{
-        cursor::{
-            PatternCursor,
-            PatternRangeCursor,
-        },
-        end::{
-            postfix::PostfixEnd,
-            range::RangeEnd,
-            EndKind,
-            EndReason,
-            EndState,
-        },
-    },
-};
-use context_trace::{
-    graph::{
-        getters::{
-            ErrorReason,
-            IndexWithPath,
-        },
-        kind::BaseGraphKind,
-        vertex::{
-            child::Child,
-            location::{
-                child::ChildLocation,
-                pattern::PatternLocation,
-                SubLocation,
+    context_trace::{
+        graph::{
+            getters::{
+                ErrorReason,
+                IndexWithPath,
             },
-            token::Token,
-        },
-        Hypergraph,
-        HypergraphRef,
-    },
-    lab,
-    path::structs::{
-        role_path::RolePath,
-        rooted::{
-            role_path::RootedRolePath,
-            root::IndexRoot,
-            RootedRangePath,
-        },
-        sub_path::SubPath,
-    },
-    tests::env::TestEnv,
-    trace::{
-        cache::{
-            key::directed::{
-                down::DownKey,
-                DirectedKey,
+            kind::BaseGraphKind,
+            vertex::{
+                location::{
+                    child::ChildLocation,
+                    pattern::PatternLocation,
+                    SubLocation,
+                },
+                token::Token,
             },
-            position::{
-                Edges,
-                PositionCache,
-            },
-            vertex::VertexCache,
-            TraceCache,
+            HypergraphRef,
         },
-        has_graph::HasGraph,
+        path::structs::{
+            role_path::RolePath,
+            rooted::{
+                role_path::RootedRolePath,
+                root::IndexRoot,
+                RootedRangePath,
+            },
+            sub_path::SubPath,
+        },
+        tests::env::TestEnv,
+        trace::{
+            cache::{
+                key::directed::{
+                    down::DownKey,
+                    DirectedKey,
+                },
+                position::{
+                    Edges,
+                    PositionCache,
+                },
+                vertex::VertexCache,
+            },
+            has_graph::HasGraph,
+        },
+        HashMap,
+        HashSet,
     },
-    HashMap,
-    HashSet,
-};
-use tracing::{
-    info,
-    Level,
+    itertools::*,
+    pretty_assertions::assert_eq,
+
+    std::iter::FromIterator,
 };
 
 #[test]
@@ -121,13 +102,8 @@ fn find_sequence() {
         "ababababcdefghi"
     );
 }
-
 #[test]
 fn find_pattern1() {
-    tracing_subscriber::fmt()
-        .with_max_level(Level::DEBUG)
-        .with_target(false)
-        .init();
     let mut graph =
         context_trace::graph::Hypergraph::<BaseGraphKind>::default();
     let (a, b, _w, x, y, z) = graph

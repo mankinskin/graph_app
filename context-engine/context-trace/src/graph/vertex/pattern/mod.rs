@@ -24,6 +24,14 @@ pub type Pattern = Vec<Child>;
 pub type PatternView<'a> = &'a [Child];
 pub type Patterns = Vec<Pattern>;
 
+pub trait PatternWidth: IntoPattern {
+    fn pattern_width(&self) -> usize;
+}
+impl PatternWidth for Pattern {
+    fn pattern_width(&self) -> usize {
+        pattern_width(self)
+    }
+}
 /// trait for types which can be converted to a pattern with a known size
 pub trait IntoPattern: Sized
 //IntoIterator<Item = Self::Elem, IntoIter = Self::Iter> + Sized + Borrow<[Child]> + Debug

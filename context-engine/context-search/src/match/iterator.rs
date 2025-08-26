@@ -80,7 +80,6 @@ impl<K: TraversalKind> Iterator for MatchIterator<K> {
                             },
                         },
                 }
-                //debug!("End {:#?}", end);
             }),
             None => None,
         }

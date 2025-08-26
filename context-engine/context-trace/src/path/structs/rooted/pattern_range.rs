@@ -250,6 +250,7 @@ where
             }
     }
 }
+
 impl FoldablePath for PatternRangePath {
     fn to_range_path(self) -> PatternRangePath {
         self

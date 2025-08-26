@@ -11,12 +11,10 @@ use context_trace::graph::vertex::{
 use derivative::Derivative;
 use derive_more::Deref;
 
-use super::OverlapLink;
-
 pub struct BandCtx<'a> {
     pub band: &'a Band,
-    pub back_link: Option<&'a OverlapLink>,
-    pub front_link: Option<&'a OverlapLink>,
+    //pub back_link: Option<&'a OverlapLink>,
+    //pub front_link: Option<&'a OverlapLink>,
 }
 impl From<BandCtx<'_>> for Band {
     fn from(band: BandCtx<'_>) -> Self {
@@ -27,13 +25,8 @@ impl From<BandCtx<'_>> for Band {
 #[derive(Clone, Debug, Derivative)]
 #[derivative(Ord, Eq, PartialEq, PartialOrd)]
 pub struct Band {
-    #[derivative(PartialOrd = "ignore")]
-    #[derivative(PartialEq = "ignore")]
     pub pattern: Pattern,
-    #[derivative(PartialOrd = "ignore")]
-    #[derivative(PartialEq = "ignore")]
     pub start_bound: usize,
-
     pub end_bound: usize, // key for ordering
 }
 impl Borrow<usize> for Band {

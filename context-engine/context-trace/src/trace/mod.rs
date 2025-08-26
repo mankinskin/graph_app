@@ -85,7 +85,6 @@ impl<
 //   Segment    Segment
 //    /^           >\
 // Start         End
-use tracing::debug;
 pub trait TraceRole<Role: PathRole> {
     fn trace_sub_path<P: TraceRolePath<Role>>(
         &mut self,
@@ -113,7 +112,6 @@ where
             |prev, location| {
                 let target =
                     Role::Direction::build_key(&graph, *prev.pos(), &location);
-                debug!("Trace {:#?}", target);
                 self.cache.add_state(
                     RoleEdit::<Role> {
                         target,

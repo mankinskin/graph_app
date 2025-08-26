@@ -2,84 +2,38 @@ pub mod band;
 pub mod expand;
 pub mod link;
 
-use std::collections::{
-    BTreeSet,
-    VecDeque,
-};
+use std::collections::BTreeSet;
 
 use band::Band;
 use context_trace::{
     self,
-    graph::{
-        getters::IndexWithPath,
-        vertex::{
-            child::Child,
-            has_vertex_index::ToChild,
-            wide::Wide,
-        },
-    },
-    path::structs::rooted::{
-        pattern_range::PatternRangePath,
-        role_path::IndexEndPath,
+    graph::vertex::{
+        child::Child,
+        wide::Wide,
     },
 };
-use derive_more::From;
-use derive_new::new;
+use derive_more::{
+    Deref,
+    DerefMut,
+};
+use tracing::debug;
 
-use crate::{
-    context::ReadCtx,
-    expansion::chain::{
-        band::BandCtx,
-        expand::ExpandCtx,
-        link::OverlapLink,
-    },
+use crate::expansion::chain::{
+    band::BandCtx,
+    link::ChainOp,
 };
 
-#[derive(Debug, From)]
-pub enum ChainOp {
-    Expansion(BandExpansion),
-    Cap(BandCap),
-}
-#[derive(Debug)]
-pub struct BandExpansion {
-    pub expansion: IndexWithPath,
-    pub start_bound: usize,
-    pub postfix_path: IndexEndPath,
-}
-impl StartBound for BandExpansion {
-    fn start_bound(&self) -> usize {
-        self.start_bound
-    }
-}
-#[derive(Debug)]
-pub struct BandCap {
-    pub postfix_path: IndexEndPath,
-    pub expansion: Child,
-    pub start_bound: usize,
-}
-
-pub trait StartBound: Sized {
-    fn start_bound(&self) -> usize;
-}
-impl StartBound for (usize, Band) {
-    fn start_bound(&self) -> usize {
-        self.0
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct BoundedBand {
-    pub band: Band,
-    pub end_bound: usize,
-}
-
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, Deref, DerefMut)]
 pub struct BandChain {
+    #[deref]
+    #[deref_mut]
     pub bands: BTreeSet<Band>,
-    pub links: VecDeque<OverlapLink>,
+    // todo: use map for links
+    //pub links: VecDeque<OverlapLink>,
 }
 impl BandChain {
     pub fn new(index: Child) -> Self {
+        debug!("New BandChain");
         Self {
             bands: Some(Band {
                 pattern: vec![index],
@@ -88,26 +42,28 @@ impl BandChain {
             })
             .into_iter()
             .collect(),
-            links: Default::default(),
+            //links: Default::default(),
         }
     }
     pub fn ends_at(
         &self,
         bound: usize,
     ) -> Option<BandCtx<'_>> {
+        debug!("ends_at");
         let band = self.bands.get(&bound)?;
+        debug!("Does end at {:?}", bound);
 
         Some(BandCtx {
             band,
-            back_link: self.links.iter().last(),
-            front_link: None,
+            //back_link: self.links.iter().last(),
+            //front_link: None,
         })
     }
     pub fn last(&self) -> Option<BandCtx<'_>> {
         self.bands.iter().last().map(|band| BandCtx {
             band,
-            back_link: self.links.iter().last(),
-            front_link: None,
+            //back_link: self.links.iter().last(),
+            //front_link: None,
         })
     }
     pub fn append(
@@ -119,42 +75,15 @@ impl BandChain {
     pub fn append_front_complement(
         &mut self,
         complement: Child,
-        exp: impl ToChild,
+        exp: Child,
     ) {
-        let index = exp.to_child();
-        let pattern = vec![complement, index];
+        debug!("append_front_complement");
+        let pattern = vec![complement, exp];
         let band = Band::from((0, pattern));
         self.append(band);
     }
     pub fn pop_first(&mut self) -> Option<Band> {
-        self.links.pop_front();
+        //self.links.pop_front();
         self.bands.pop_first()
-    }
-}
-
-#[derive(Debug, new)]
-pub struct ChainCtx<'a> {
-    pub trav: ReadCtx,
-    pub cursor: &'a mut PatternRangePath,
-    pub chain: BandChain,
-}
-impl ChainCtx<'_> {
-    pub fn last(&self) -> &Band {
-        self.chain.last().unwrap().band
-    }
-}
-impl Iterator for ChainCtx<'_> {
-    type Item = ChainOp;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(mut ctx) = ExpandCtx::try_new(self) {
-            ctx.find_map(|op| match &op {
-                ChainOp::Expansion(_) => Some(op),
-                ChainOp::Cap(cap) =>
-                    self.chain.ends_at(cap.start_bound).map(|_| op),
-            })
-        } else {
-            None
-        }
     }
 }

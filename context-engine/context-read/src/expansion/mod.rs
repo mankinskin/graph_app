@@ -1,14 +1,23 @@
-//pub mod bundle;
 pub mod chain;
+pub mod cursor;
+pub mod link;
+pub mod stack;
 
 use crate::{
     complement::ComplementBuilder,
     context::ReadCtx,
-    expansion::chain::{
-        BandCap,
-        BandExpansion,
-        ChainCtx,
-        ChainOp,
+    expansion::{
+        chain::{
+            band::Band,
+            expand::ExpandCtx,
+            link::{
+                BandCap,
+                BandExpansion,
+                ChainOp,
+            },
+        },
+        cursor::CursorCtx,
+        link::ExpansionLink,
     },
 };
 use chain::BandChain;
@@ -26,13 +35,7 @@ use context_trace::{
         accessors::role::End,
         structs::{
             query_range_path::FoldablePath,
-            rooted::{
-                pattern_range::PatternRangePath,
-                role_path::{
-                    IndexEndPath,
-                    IndexStartPath,
-                },
-            },
+            rooted::pattern_range::PatternRangePath,
         },
         RolePathUtils,
     },
@@ -43,31 +46,31 @@ use derive_more::{
     Deref,
     DerefMut,
 };
-
-#[derive(Debug)]
-pub struct ExpansionLink {
-    pub expansion_prefix: IndexStartPath,
-    pub root_postfix: IndexEndPath,
-    pub start_bound: usize,
-}
+use tracing::debug;
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct ExpansionCtx<'cursor> {
+pub struct ExpansionCtx<'a> {
     #[deref]
     #[deref_mut]
-    chain_ops: ChainCtx<'cursor>,
+    cursor: CursorCtx<'a>,
+    chain: BandChain,
 }
 impl Iterator for ExpansionCtx<'_> {
     type Item = Child;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.chain_ops.next() {
-            Some(op) => match op {
+        ExpandCtx::try_new(self)
+            .and_then(|mut ctx| {
+                ctx.find_map(|op| match &op {
+                    ChainOp::Expansion(_) => Some(op),
+                    ChainOp::Cap(cap) =>
+                        self.chain.ends_at(cap.start_bound).map(|_| op),
+                })
+            })
+            .and_then(|op| match op {
                 ChainOp::Expansion(exp) => Some(self.apply_expansion(exp)),
                 ChainOp::Cap(cap) => self.apply_cap(cap),
-            },
-            None => None,
-        }
+            })
     }
 }
 impl<'a> ExpansionCtx<'a> {
@@ -75,9 +78,9 @@ impl<'a> ExpansionCtx<'a> {
         trav: ReadCtx,
         cursor: &'a mut PatternRangePath,
     ) -> Self {
-        let inner_cursor = cursor.clone();
+        debug!("New ExpansionCtx");
         let IndexWithPath { index: first, path } =
-            match trav.insert_or_get_complete(inner_cursor) {
+            match trav.insert_or_get_complete(cursor.clone()) {
                 Ok(Ok(root)) => root,
                 Ok(Err(root)) => root,
                 Err(ErrorReason::SingleIndex(c)) => *c,
@@ -89,9 +92,17 @@ impl<'a> ExpansionCtx<'a> {
         *cursor = path;
 
         Self {
-            chain_ops: ChainCtx::new(trav, cursor, BandChain::new(first)),
-            //bundle: Bundle::new(Band::from(first)),
+            chain: BandChain::new(first),
+            cursor: CursorCtx::new(trav, cursor),
         }
+    }
+    pub fn last(&self) -> &Band {
+        self.chain.last().unwrap().band
+    }
+    pub fn find_largest_bundle(self) -> <Self as Iterator>::Item {
+        debug!("find_largest_bundle");
+        let first = self.chain.first().unwrap().postfix();
+        self.last().unwrap_or(first)
     }
     pub fn cursor_root_index(&self) -> &Child {
         self.chain
@@ -106,10 +117,14 @@ impl<'a> ExpansionCtx<'a> {
         &mut self,
         exp: BandExpansion,
     ) -> <Self as Iterator>::Item {
-        *self.cursor = exp.expansion.path.clone();
+        debug!("apply_expansion");
+        *self.cursor.cursor = exp.expansion.path.clone();
 
+        // handle case where expansion can be inserted after stack head (first band in current stack)
         let link = self.create_expansion_link(&exp);
-        let complement = ComplementBuilder::new(link).build(&mut self.trav);
+        let complement =
+            ComplementBuilder::new(link).build(&mut self.cursor.ctx);
+        // TODO: Change this to a stack (list of overlaps with back contexts)
         self.chain
             .append_front_complement(complement, exp.expansion.index);
 
@@ -119,23 +134,17 @@ impl<'a> ExpansionCtx<'a> {
         &mut self,
         cap: BandCap,
     ) -> Option<<Self as Iterator>::Item> {
-        let mut first = self.chain_ops.chain.bands.pop_first().unwrap();
+        debug!("apply_cap");
+        let mut first = self.chain.bands.pop_first().unwrap();
         first.append(cap.expansion);
-        self.chain_ops.chain.append(first);
+        self.chain.append(first);
         None
-    }
-    pub fn find_largest_bundle(mut self) -> <Self as Iterator>::Item {
-        // so we have an iterator but only call it once?
-        // should run over all expansions and update a root cache object
-        // when iterator ends, read root cache
-        self.next().unwrap_or_else(|| {
-            self.chain_ops.chain.pop_first().unwrap().postfix()
-        })
     }
     fn create_expansion_link(
         &self,
         exp: &BandExpansion,
     ) -> ExpansionLink {
+        debug!("create_expansion_link");
         let BandExpansion {
             postfix_path,
             expansion:
@@ -145,8 +154,8 @@ impl<'a> ExpansionCtx<'a> {
             start_bound,
         } = exp;
         let start_bound = *start_bound;
-        let overlap = postfix_path.role_leaf_child::<End, _>(&self.trav);
-        let prefix_path = expansion.prefix_path(&self.trav, overlap);
+        let overlap = postfix_path.role_leaf_child::<End, _>(&self.cursor.ctx);
+        let prefix_path = expansion.prefix_path(&self.cursor.ctx, overlap);
 
         ExpansionLink {
             start_bound,

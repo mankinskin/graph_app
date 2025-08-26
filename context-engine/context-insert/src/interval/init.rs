@@ -19,7 +19,7 @@ use context_trace::{
 
 use super::IntervalGraph;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct InitInterval {
     pub root: Child,
     pub cache: TraceCache,
