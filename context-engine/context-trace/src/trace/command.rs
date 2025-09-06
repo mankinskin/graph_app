@@ -15,7 +15,10 @@ use super::{
     traceable::Traceable,
 };
 use crate::{
-    graph::vertex::wide::Wide,
+    graph::vertex::{
+        pattern::pattern_width,
+        wide::Wide,
+    },
     path::{
         RolePathUtils,
         accessors::{
@@ -101,8 +104,10 @@ impl Traceable for PrefixCommand {
         let root_exit = self.path.role_root_child_location::<End>();
         // TODO: implement root_child for prefix/postfix path with most outer root child
         let exit_key = DownKey {
-            pos: (self.path.root_pattern::<G>(&ctx.trav.graph())[0].width()
-                + self.path.calc_offset(&ctx.trav))
+            pos: (pattern_width(
+                &self.path.root_pattern::<G>(&ctx.trav.graph())
+                    [0..self.path.root_entry],
+            ) + self.path.calc_offset(&ctx.trav))
             .into(),
             index: root_exit.parent,
             //*ctx.trav.graph().expect_child_at(root_exit.clone()),

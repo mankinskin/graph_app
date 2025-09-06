@@ -86,7 +86,7 @@ pub trait InfoPartition<R: RangeRole>: Sized + Clone + ToPartition<R> {
         ctx: &'b ModeNodeCtxOf<'a, 'b, R>,
     ) -> PartitionBorders<R, C> {
         let ctxs = self.pattern_ctxs(ctx);
-        let (borders, perfect): (HashMap<_, _>, R::Perfect) = ctxs
+        let (perfect, borders): (R::Perfect, HashMap<_, _>) = ctxs
             .into_values()
             .map(|pctx| {
                 let (perfect, borders) = {
@@ -94,7 +94,7 @@ pub trait InfoPartition<R: RangeRole>: Sized + Clone + ToPartition<R> {
                     let borders = self.info_borders(&pctx);
                     (borders.perfect().then_some(pctx.loc.id), borders)
                 };
-                ((C::from(pctx), borders), perfect)
+                (perfect, (C::from(pctx), borders))
             })
             .unzip();
         PartitionBorders { borders, perfect }

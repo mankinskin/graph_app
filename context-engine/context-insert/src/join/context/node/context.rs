@@ -218,10 +218,12 @@ impl NodeJoinCtx<'_> {
                 .join_partition(self)
                 .inspect(|part| {
                     if part.perfect.is_none() {
-                        let post =
-                            Postfix::new(offset).join_partition(self).unwrap();
+                        let post = Postfix::new(offset)
+                            .join_partition(self)
+                            .map(|part| part.index)
+                            .unwrap_or_else(|full| full);
                         self.ctx.trav.add_pattern_with_update(index, vec![
-                            part.index, post.index,
+                            part.index, post,
                         ]);
                     }
                 })

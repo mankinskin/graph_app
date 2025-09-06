@@ -45,11 +45,11 @@ fn sync_read_text1() {
     assert_indices!(graph, ld);
     assert_patterns!(
         graph,
-        ld => hashset![vec![l, d],]
+        ld => [[l, d]]
     );
     assert_patterns!(
         graph,
-        result => hashset![vec![h, e, ld, ld, o, space, w, o, r, ld, exclam],]
+        result => [[h, e, ld, ld, o, space, w, o, r, ld, exclam]]
     );
 }
 #[test]
@@ -61,8 +61,8 @@ fn sync_read_text2() {
     assert_not_indices!(graph, held, he, hel);
     assert_patterns!(
         graph,
-        ld => hashset![vec![l, d],],
-        heldld => hashset![vec![h, e, ld, ld],]
+        ld => [[l, d]],
+        heldld => [[h, e, ld, ld]]
     );
 
     let hell = (&mut graph, "hell".chars()).read_sequence().unwrap();
@@ -70,11 +70,11 @@ fn sync_read_text2() {
     assert_indices!(graph, he, hel, held);
     assert_patterns! {
         graph,
-        he => hashset![vec![h, e],],
-        hel => hashset![vec![he, l],],
-        hell => hashset![vec![hel, l],],
-        held => hashset![vec![hel, d], vec![he, ld],],
-        heldld => hashset![vec![held, ld]]
+        he => [[h, e]],
+        hel => [[he, l]],
+        hell => [[hel, l]],
+        held => [[hel, d], [he, ld]],
+        heldld => [[held, ld]]
     };
 }
 
@@ -88,7 +88,7 @@ fn read_sequence1() {
     {
         assert_patterns! {
             graph,
-            ind_hypergraph => hashset![vec![h, y, p, e, r, g, r, a, p, h],]
+            ind_hypergraph => [[h, y, p, e, r, g, r, a, p, h]]
         };
         let gr = graph.graph();
         let pid = *ind_hypergraph
@@ -126,24 +126,24 @@ fn read_sequence1() {
         let gr = graph.graph();
         assert_patterns! {
             gr,
-            hyper => hashset![vec![h, y, p, e, r],]
+            hyper => [[h, y, p, e, r]]
         };
         assert_eq!(hyper.width(), 5);
         assert_patterns! {
             gr,
-            ind_hypergraph => hashset![vec![hyper, g, r, a, p, h],]
+            ind_hypergraph => [[hyper, g, r, a, p, h]]
         };
         assert_eq!(ind_hypergraph.width(), 10);
     }
     let ind_graph = (&mut graph, "graph".chars()).read_sequence().unwrap();
     assert_patterns! {
         graph,
-        ind_graph => hashset![vec![g, r, a, p, h],]
+        ind_graph => [[g, r, a, p, h]]
     };
     assert_eq!(ind_graph.width(), 5);
     assert_patterns! {
         graph,
-        ind_hypergraph => hashset![vec![hyper, ind_graph],]
+        ind_hypergraph => [[hyper, ind_graph]]
     };
     assert_eq!(ind_hypergraph.width(), 10);
 }
@@ -156,7 +156,7 @@ fn read_sequence2() {
     {
         assert_patterns! {
             graph,
-            ind_abab => hashset![vec![ab, ab],]
+            ind_abab => [[ab, ab]]
         };
         let gr = graph.graph();
         let pid = *ab.vertex(&gr).get_child_patterns().iter().next().unwrap().0;
@@ -192,7 +192,7 @@ fn read_infix1() {
     {
         assert_patterns! {
             graph,
-            subdivision => hashset![vec![s, u, b, d, i, v, i, s, i, o, n],]
+            subdivision => [[s, u, b, d, i, v, i, s, i, o, n]]
         };
         let graph = graph.graph();
         let pid = *subdivision
@@ -234,13 +234,13 @@ fn read_infix1() {
         assert_indices!(graph, vis, su, vi, visu, ion);
         assert_patterns! {
             graph,
-            su => hashset![vec![s, u],],
-            vi => hashset![vec![v, i],],
-            vis => hashset![vec![vi, s],],
-            visu => hashset![vec![vis, u], vec![vi, su],],
-            ion => hashset![vec![i, o, n],],
-            visualization => hashset![vec![visu, a, l, i, z, a, t, ion],],
-            subdivision => hashset![vec![su, b, d, i, vis, ion],]
+            su => [[s, u]],
+            vi => [[v, i]],
+            vis => [[vi, s]],
+            visu => [[vis, u], [vi, su]],
+            ion => [[i, o, n]],
+            visualization => [[visu, a, l, i, z, a, t, ion]],
+            subdivision => [[su, b, d, i, vis, ion]]
         };
     }
 }
@@ -255,8 +255,8 @@ fn read_infix2() {
     assert_indices!(graph, su);
     assert_patterns! {
         graph,
-        su => hashset![vec![s, u],],
-        subvisu => hashset![vec![su, b, v, i, su],]
+        su => [[s, u]],
+        subvisu => [[su, b, v, i, su]]
     };
 
     let visub = (&mut graph, "visub".chars()).read_sequence().unwrap();
@@ -266,12 +266,12 @@ fn read_infix2() {
     assert_indices!(graph, vi, sub, visu);
     assert_patterns! {
         graph,
-        su => hashset![vec![s, u],],
-        subvisu => hashset![vec![su, b, v, i, su],],
-        sub => hashset![vec![su, b],],
-        visu => hashset![vec![vi, su],],
-        visub => hashset![vec![visu, b], vec![vi, sub],],
-        subvisu => hashset![vec![visu, b], vec![vi, sub],]
+        su => [[s, u]],
+        subvisu => [[su, b, v, i, su]],
+        sub => [[su, b]],
+        visu => [[vi, su]],
+        visub => [[visu, b], [vi, sub]],
+        subvisu => [[visu, b], [vi, sub]]
     };
 }
 
@@ -284,7 +284,8 @@ fn read_loose_sequence1() {
 
     assert_patterns! {
         graph,
-        abxaxxb => hashset![vec![a, b, x, a, x, x, b],]
+        abxaxxb => [
+            [a, b, x, a, x, x, b]]
     };
 }
 
@@ -297,8 +298,8 @@ fn read_repeating_known1() {
     assert_indices!(graph, xy);
     assert_patterns! {
         graph,
-        xy => hashset![vec![x, y],],
-        xyyxy => hashset![vec![xy, y, xy],]
+        xy => [[x, y]],
+        xyyxy => [[xy, y, xy]]
     };
 }
 
@@ -313,15 +314,15 @@ fn read_multiple_overlaps1() {
     expect_tokens!(graph, {a, b, c, d, e});
     assert_patterns! {
         graph,
-        abcde => hashset![vec![a, b, c, d, e],]
+        abcde => [[a, b, c, d, e]]
     };
     let bcdea = (&mut graph, "bcdea".chars()).read_sequence().unwrap();
     assert_indices!(graph, bcde);
     assert_patterns! {
         graph,
-        bcde => hashset![vec![b, c, d, e],],
-        bcdea => hashset![vec![bcde, a],],
-        abcde => hashset![vec![a, bcde],]
+        bcde => [[b, c, d, e]],
+        bcdea => [[bcde, a]],
+        abcde => [[a, bcde]]
     };
 
     let cdeab = (&mut graph, "cdeab".chars()).read_sequence().unwrap();
@@ -333,50 +334,50 @@ fn read_multiple_overlaps1() {
     assert_indices!(graph, cde, ab, cdea);
     assert_patterns! {
         graph,
-        ab => hashset![vec![a, b],],
-        cde => hashset![vec![c, d, e],],
-        cdea => hashset![vec![cde, a],],
-        bcde => hashset![vec![b, cde],],
-        abcde => hashset![vec![a, bcde], vec![ab, cde],],
-        bcdea => hashset![vec![bcde, a], vec![b, cdea],],
-        cdeab => hashset![vec![cde, ab], vec![cdea, b],]
+        ab => [[a, b]],
+        cde => [[c, d, e]],
+        cdea => [[cde, a]],
+        bcde => [[b, cde]],
+        abcde => [[a, bcde], [ab, cde]],
+        bcdea => [[bcde, a], [b, cdea]],
+        cdeab => [[cde, ab], [cdea, b]]
     };
     let deabc = (&mut graph, "deabc".chars()).read_sequence().unwrap();
 
     assert_indices!(graph, de, dea, bc, deab, abc);
     assert_patterns! {
         graph,
-        de => hashset![vec![d, e],],
-        cde => hashset![vec![c, de],],
-        dea => hashset![vec![de, a],],
-        cdea => hashset![vec![cde, a], vec![c, dea],],
-        bc => hashset![vec![b, c],],
-        bcde => hashset![vec![b, cde], vec![bc, de],],
-        bcdea => hashset![vec![bcde, a], vec![b, cdea], vec![bc, dea],],
-        deab => hashset![vec![de, ab], vec![dea, b],],
-        abc => hashset![vec![ab, c], vec![a, bc],],
-        abcde => hashset![vec![abc, de], vec![a, bcde], vec![ab, cde],],
-        deabc => hashset![vec![de, abc], vec![dea, bc], vec![deab, c],]
+        de => [[d, e]],
+        cde => [[c, de]],
+        dea => [[de, a]],
+        cdea => [[cde, a], [c, dea]],
+        bc => [[b, c]],
+        bcde => [[b, cde], [bc, de]],
+        bcdea => [[bcde, a], [b, cdea], [bc, dea]],
+        deab => [[de, ab], [dea, b]],
+        abc => [[ab, c], [a, bc]],
+        abcde => [[abc, de], [a, bcde], [ab, cde]],
+        deabc => [[de, abc], [dea, bc], [deab, c]]
     };
     let eabcd = (&mut graph, "eabcd".chars()).read_sequence().unwrap();
     assert_indices!(graph, abcd, bcd, cd);
     assert_patterns! {
             graph,
-            cd => hashset![vec![c, d],],
-            bcd => hashset![vec![b, cd], vec![bc, d],],
-            abcd => hashset![vec![abc, d], vec![a, bcd],]
+            cd => [[c, d]],
+            bcd => [[b, cd], [bc, d]],
+            abcd => [[abc, d], [a, bcd]]
     };
     let abcdeabcde =
         (&mut graph, "abcdeabcde".chars()).read_sequence().unwrap();
     assert_patterns! {
         graph,
         abcdeabcde =>
-            hashset![
-                vec![abcde, abcde],
-                vec![a, bcdea, bcde],
-                vec![ab, cdeab, cde],
-                vec![abc, deabc, de],
-                vec![abcd, eabcd, e],
+            [
+                [abcde, abcde],
+                [a, bcdea, bcde],
+                [ab, cdeab, cde],
+                [abc, deabc, de],
+                [abcd, eabcd, e],
             ]
     };
 }

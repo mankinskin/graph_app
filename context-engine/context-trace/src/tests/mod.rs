@@ -31,13 +31,19 @@ pub fn init_tracing() {
 
 #[macro_export]
 macro_rules! assert_patterns {
-    ($graph:ident, $($name:ident => $pats:expr),*) => {
+    ($graph:ident,
+        $(
+            $name:ident => [
+                $([$($pat:expr),*]),*$(,)?
+            ]
+        ),*
+    ) => {
 
         let g = $graph.graph();
         $(
             let pats: HashSet<_> =
                 $crate::graph::vertex::has_vertex_data::HasVertexData::vertex(&$name, &g).get_child_pattern_set().into_iter().collect();
-            assert_eq!(pats, $pats);
+            assert_eq!(pats, hashset![$(vec![$($pat),*]),*]);
         )*
         #[allow(dropping_references)]
         drop(g);
