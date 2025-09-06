@@ -5,6 +5,7 @@ use crate::{
         ToInsertCtx,
         context::InsertTraversal,
     },
+    insert_patterns,
     interval::init::InitInterval,
 };
 use context_search::{
@@ -67,26 +68,16 @@ use pretty_assertions::{
 #[test]
 fn index_pattern1() {
     let mut graph = Hypergraph::default();
-    let (a, b, _w, x, y, z) = graph
-        .insert_tokens([
-            Token::Element('a'),
-            Token::Element('b'),
-            Token::Element('w'),
-            Token::Element('x'),
-            Token::Element('y'),
-            Token::Element('z'),
-        ])
-        .into_iter()
-        .next_tuple()
-        .unwrap();
-    // index 6
-    let ab = graph.insert_pattern(vec![a, b]);
-    let by = graph.insert_pattern(vec![b, y]);
-    let yz = graph.insert_pattern(vec![y, z]);
-    let xa = graph.insert_pattern(vec![x, a]);
-    let xab = graph.insert_patterns([vec![x, ab], vec![xa, b]]);
-    let xaby = graph.insert_patterns([vec![xab, y], vec![xa, by]]);
-    let xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
+    insert_tokens!(graph, {a, b, x, y, z});
+    insert_patterns!(graph,
+        ab => [[a, b]],
+        by => [[b, y]],
+        yz => [[y, z]],
+        xa => [[x, a]],
+        xab => [[x, ab], [xa, b]],
+        xaby => [[xab, y], [xa, by]],
+        xabyz => [[xaby, z], [xab, yz]]
+    );
     print!("{:#?}", xabyz);
     // todo: split sub patterns not caught by query search
     let graph = HypergraphRef::from(graph);
@@ -125,24 +116,14 @@ fn index_pattern1() {
 #[test]
 fn index_pattern2() {
     let mut graph = Hypergraph::default();
-    let (a, b, _w, x, y, z) = graph
-        .insert_tokens([
-            Token::Element('a'),
-            Token::Element('b'),
-            Token::Element('w'),
-            Token::Element('x'),
-            Token::Element('y'),
-            Token::Element('z'),
-        ])
-        .into_iter()
-        .next_tuple()
-        .unwrap();
-    // index 6
-    let yz = graph.insert_pattern(vec![y, z]);
-    let xab = graph.insert_pattern(vec![x, a, b]);
-    let _xyz = graph.insert_pattern(vec![x, yz]);
-    let _xabz = graph.insert_pattern(vec![xab, z]);
-    let _xabyz = graph.insert_pattern(vec![xab, yz]);
+    insert_tokens!(graph, {a, b, x, y, z});
+    insert_patterns!(graph,
+        yz => [[y, z]],
+        xab => [[x, a, b]],
+        _xyz => [[x, yz]],
+        _xabz => [[xab, z]],
+        _xabyz => [[xab, yz]],
+    );
 
     let graph_ref = HypergraphRef::from(graph);
 
@@ -180,21 +161,11 @@ fn index_pattern2() {
 #[test]
 fn index_infix1() {
     let mut graph = Hypergraph::default();
-    let (a, b, w, x, y, z) = graph
-        .insert_tokens([
-            Token::Element('a'),
-            Token::Element('b'),
-            Token::Element('w'),
-            Token::Element('x'),
-            Token::Element('y'),
-            Token::Element('z'),
-        ])
-        .into_iter()
-        .next_tuple()
-        .unwrap();
-    // index 6
-    let yz = graph.insert_pattern(vec![y, z]);
-    let xxabyzw = graph.insert_pattern(vec![x, x, a, b, yz, w]);
+    insert_tokens!(graph, {a, b, w, x, y, z});
+    insert_patterns!(graph,
+        yz => [[y, z]],
+        xxabyzw => [[x, x, a, b, yz, w]],
+    );
 
     let graph_ref = HypergraphRef::from(graph);
 
@@ -256,16 +227,16 @@ fn index_infix1() {
 fn index_infix2() {
     let mut graph = Hypergraph::default();
     insert_tokens!(graph, {a, b, c, d, x, y});
-    // index 6
-    let yy = graph.insert_pattern(vec![y, y]);
-    let xx = graph.insert_pattern(vec![x, x]);
-    let xy = graph.insert_pattern(vec![x, y]);
-    let xxy = graph.insert_patterns([vec![xx, y], vec![x, xy]]);
-    let abcdx = graph.insert_pattern(vec![a, b, c, d, x]);
-    let yabcdx = graph.insert_pattern(vec![y, abcdx]);
-    let abcdxx = graph.insert_pattern(vec![abcdx, x]);
-    let _xxyyabcdxxyy = graph
-        .insert_patterns([vec![xx, yy, abcdxx, yy], vec![xxy, yabcdx, xy, y]]);
+    insert_patterns!(graph,
+        yy => [[y, y]],
+        xx => [[x, x]],
+        xy => [[x, y]],
+        xxy => [[xx, y], [x, xy]],
+        abcdx => [[a, b, c, d, x]],
+        yabcdx => [[y, abcdx]],
+        abcdxx => [[abcdx, x]],
+        _xxyyabcdxxyy => [[xx, yy, abcdxx, yy], [xxy, yabcdx, xy, y]],
+    );
 
     let graph_ref = HypergraphRef::from(graph);
 
@@ -301,11 +272,10 @@ fn index_infix2() {
 fn index_prefix1() {
     let mut graph = HypergraphRef::default();
     insert_tokens!(graph, {h, e, l, d});
-    let (ld, ld_id) = graph.graph_mut().insert_pattern_with_id(vec![l, d]);
-    let ld_id = ld_id.unwrap();
-    let (heldld, heldld_id) =
-        graph.graph_mut().insert_pattern_with_id(vec![h, e, ld, ld]);
-    let heldld_id = heldld_id.unwrap();
+    insert_patterns!(graph,
+        (ld, ld_id) => [l, d],
+        (heldld, heldld_id) => [h, e, ld, ld]
+    );
     let fold_res =
         Foldable::fold::<InsertTraversal>(vec![h, e, l, l], graph.clone())
             .map(CompleteState::try_from);
@@ -395,11 +365,11 @@ fn index_prefix1() {
 fn index_postfix1() {
     let mut graph = HypergraphRef::default();
     insert_tokens!(graph, {h, e, l, d});
-    let (ld, ld_id) = graph.graph_mut().insert_pattern_with_id(vec![l, d]);
-    let ld_id = ld_id.unwrap();
-    let (heldld, heldld_id) =
-        graph.graph_mut().insert_pattern_with_id(vec![h, e, ld, ld]);
-    let heldld_id = heldld_id.unwrap();
+
+    insert_patterns!(graph,
+        (ld, ld_id) => [l, d],
+        (heldld, heldld_id) => [h, e, ld, ld]
+    );
     let fold_res =
         Foldable::fold::<InsertTraversal>(vec![h, e, l, l], graph.clone())
             .map(CompleteState::try_from);

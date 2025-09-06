@@ -36,7 +36,7 @@ macro_rules! assert_patterns {
             $name:ident => [
                 $([$($pat:expr),*]),*$(,)?
             ]
-        ),*
+        ),*$(,)?
     ) => {
 
         let g = $graph.graph();
@@ -85,7 +85,6 @@ macro_rules! expect_tokens {
 #[macro_export]
 macro_rules! insert_tokens {
     ($graph:ident, {$($name:ident),*}) => {
-
         let ($($name),*) = $crate::trace::has_graph::HasGraphMut::graph_mut(&mut $graph)
             .insert_tokens([
                 $(
