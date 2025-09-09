@@ -339,21 +339,24 @@ impl VertexData {
     pub fn validate_patterns(&self) {
         self.children.iter().fold(
             Vec::new(),
-            |mut acc: Vec<Vec<usize>>, (_pid, p)| {
+            |mut acc: Vec<Vec<usize>>, (pid, p)| {
                 let mut offset = 0;
-                assert!(!p.is_empty());
+                assert!(!p.is_empty(), "Empty pattern in index {:#?}", self.index);
+                let pattern_width = pattern_width(p);
+                assert_eq!(pattern_width, self.width, "Pattern width mismatch in index {:#?} child pattern:\n {:#?}", self.index, (pid, self.children.get(pid)));
                 let mut p = p.iter().fold(Vec::new(), |mut pa, c| {
                     offset += c.width();
                     assert!(
                         !acc.iter().any(|pr| pr.contains(&offset)),
-                        "Duplicate border in index child patterns"
+                        "Duplicate border in index {:#?} child patterns:\n {:#?}",
+                        self.index,
+                        self.children
                     );
                     pa.push(offset);
                     pa
                 });
-                p.pop().expect("Empty pattern!");
-                assert!(!p.is_empty(), "Single index pattern");
-                assert_eq!(offset, self.width);
+                p.pop().unwrap();
+                assert!(!p.is_empty(), "Single index pattern in index {:#?}:\n {:#?}", self.index, (pid, self.children.get(pid)));
                 acc.push(p);
                 acc
             },

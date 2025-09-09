@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
+    build_trace_cache,
     insert::{
         ToInsertCtx,
         context::InsertTraversal,
@@ -31,34 +32,26 @@ use context_trace::{
             child::Child,
             has_vertex_index::HasVertexIndex,
             location::SubLocation,
-            token::Token,
             wide::Wide,
         },
     },
     insert_tokens,
+    tests::init_tracing,
     trace::{
         cache::{
-            TraceCache,
             key::directed::{
                 DirectedKey,
                 DirectedPosition,
             },
-            position::{
-                Edges,
-                PositionCache,
-            },
+            position::PositionCache,
             vertex::{
                 VertexCache,
                 positions::DirectedPositions,
             },
         },
-        has_graph::{
-            HasGraph,
-            HasGraphMut,
-        },
+        has_graph::HasGraph,
     },
 };
-use itertools::*;
 use maplit::hashset;
 use pretty_assertions::{
     assert_eq,
@@ -228,13 +221,15 @@ fn index_infix2() {
     let mut graph = Hypergraph::default();
     insert_tokens!(graph, {a, b, c, d, x, y});
     insert_patterns!(graph,
-        yy => [[y, y]],
-        xx => [[x, x]],
-        xy => [[x, y]],
+        yy => [y, y],
+        xx => [x, x],
+        xy => [x, y],
+        abcdx => [a, b, c, d, x],
+        yabcdx => [y, abcdx],
+        abcdxx => [abcdx, x],
+    );
+    insert_patterns!(graph,
         xxy => [[xx, y], [x, xy]],
-        abcdx => [[a, b, c, d, x]],
-        yabcdx => [[y, abcdx]],
-        abcdxx => [[abcdx, x]],
         _xxyyabcdxxyy => [[xx, yy, abcdxx, yy], [xxy, yabcdx, xy, y]],
     );
 
@@ -270,6 +265,7 @@ fn index_infix2() {
 
 #[test]
 fn index_prefix1() {
+    init_tracing();
     let mut graph = HypergraphRef::default();
     insert_tokens!(graph, {h, e, l, d});
     insert_patterns!(graph,
@@ -282,76 +278,31 @@ fn index_prefix1() {
     assert_matches!(fold_res, Ok(Err(_)));
     let state = fold_res.unwrap().unwrap_err();
     let init = InitInterval::from(state);
+
     assert_eq!(init, InitInterval {
         root: heldld,
-        cache: TraceCache {
-            entries: HashMap::from_iter([
-                (heldld.vertex_index(), VertexCache {
-                    index: heldld,
-                    bottom_up: DirectedPositions::from_iter([]),
-                    top_down: DirectedPositions::from_iter([(
-                        2.into(),
-                        PositionCache {
-                            edges: Edges {
-                                top: Default::default(),
-                                bottom: HashMap::from_iter([(
-                                    DirectedKey {
-                                        index: ld,
-                                        pos: DirectedPosition::TopDown(
-                                            2.into(),
-                                        ),
-                                    },
-                                    SubLocation::new(heldld_id, 2),
-                                )]),
-                            },
-                        },
-                    )]),
-                }),
-                (ld.vertex_index(), VertexCache {
-                    index: ld,
-                    bottom_up: DirectedPositions::from_iter([]),
-                    top_down: DirectedPositions::from_iter([(
-                        2.into(),
-                        PositionCache {
-                            edges: Edges {
-                                top: Default::default(),
-                                bottom: HashMap::from_iter([(
-                                    DirectedKey {
-                                        index: l,
-                                        pos: DirectedPosition::TopDown(
-                                            2.into(),
-                                        ),
-                                    },
-                                    SubLocation::new(ld_id, 0),
-                                )]),
-                            },
-                        },
-                    )]),
-                }),
-                (h.vertex_index(), VertexCache {
-                    index: h,
-                    bottom_up: DirectedPositions::from_iter([]),
-                    top_down: DirectedPositions::from_iter([]),
-                }),
-                (l.vertex_index(), VertexCache {
-                    index: l,
-                    bottom_up: DirectedPositions::from_iter([]),
-                    top_down: DirectedPositions::from_iter([(
-                        2.into(),
-                        PositionCache {
-                            edges: Edges {
-                                top: Default::default(),
-                                bottom: Default::default(),
-                            }
-                        },
-                    )]),
-                }),
-            ]),
-        },
+        cache: build_trace_cache!(
+            heldld => (
+                BU {},
+                TD {2 => ld -> (heldld_id, 2) },
+            ),
+            ld => (
+                BU {},
+                TD { 2 => l -> (ld_id, 0) },
+            ),
+            h => (
+                BU {},
+                TD {},
+            ),
+            l => (
+                BU {},
+                TD { 2 },
+            ),
+        ),
         end_bound: 3,
     });
     let hel: Child = graph.insert_init((), init);
-    assert_indices!(graph, he, held, heldld);
+    assert_indices!(graph, he, held);
     assert_patterns! {
         graph,
         he => [[h, e]],
@@ -364,93 +315,44 @@ fn index_prefix1() {
 #[test]
 fn index_postfix1() {
     let mut graph = HypergraphRef::default();
-    insert_tokens!(graph, {h, e, l, d});
+    insert_tokens!(graph, {a, b, c, d});
 
     insert_patterns!(graph,
-        (ld, ld_id) => [l, d],
-        (heldld, heldld_id) => [h, e, ld, ld]
+        (ab, ab_id) => [a, b],
+        (ababcd, ababcd_id) => [ab, ab, c, d]
     );
     let fold_res =
-        Foldable::fold::<InsertTraversal>(vec![h, e, l, l], graph.clone())
+        Foldable::fold::<InsertTraversal>(vec![b, c, d, d], graph.clone())
             .map(CompleteState::try_from);
+
     assert_matches!(fold_res, Ok(Err(_)));
     let state = fold_res.unwrap().unwrap_err();
     let init = InitInterval::from(state);
     assert_eq!(init, InitInterval {
-        root: heldld,
-        cache: TraceCache {
-            entries: HashMap::from_iter([
-                (heldld.vertex_index(), VertexCache {
-                    index: heldld,
-                    bottom_up: DirectedPositions::from_iter([]),
-                    top_down: DirectedPositions::from_iter([(
-                        2.into(),
-                        PositionCache {
-                            edges: Edges {
-                                top: Default::default(),
-                                bottom: HashMap::from_iter([(
-                                    DirectedKey {
-                                        index: ld,
-                                        pos: DirectedPosition::TopDown(
-                                            2.into(),
-                                        ),
-                                    },
-                                    SubLocation::new(heldld_id, 2),
-                                )]),
-                            },
-                        },
-                    )]),
-                }),
-                (ld.vertex_index(), VertexCache {
-                    index: ld,
-                    bottom_up: DirectedPositions::from_iter([]),
-                    top_down: DirectedPositions::from_iter([(
-                        2.into(),
-                        PositionCache {
-                            edges: Edges {
-                                top: Default::default(),
-                                bottom: HashMap::from_iter([(
-                                    DirectedKey {
-                                        index: l,
-                                        pos: DirectedPosition::TopDown(
-                                            2.into(),
-                                        ),
-                                    },
-                                    SubLocation::new(ld_id, 0),
-                                )]),
-                            },
-                        },
-                    )]),
-                }),
-                (h.vertex_index(), VertexCache {
-                    index: h,
-                    bottom_up: DirectedPositions::from_iter([]),
-                    top_down: DirectedPositions::from_iter([]),
-                }),
-                (l.vertex_index(), VertexCache {
-                    index: l,
-                    bottom_up: DirectedPositions::from_iter([]),
-                    top_down: DirectedPositions::from_iter([(
-                        2.into(),
-                        PositionCache {
-                            edges: Edges {
-                                top: Default::default(),
-                                bottom: Default::default(),
-                            }
-                        },
-                    )]),
-                }),
-            ]),
-        },
+        root: ababcd,
+        cache: build_trace_cache!(
+            ababcd => (
+                BU { 1 => ab -> (ababcd_id, 1) },
+                TD {},
+            ),
+            ab => (
+                BU { 1 => b -> (ab_id, 1) },
+                TD {},
+            ),
+            b => (
+                BU {},
+                TD {},
+            ),
+        ),
         end_bound: 3,
-    });
-    let hel: Child = graph.insert_init((), init);
-    assert_indices!(graph, he, held, heldld);
+    },);
+    let bcd: Child = graph.insert_init((), init);
+    assert_indices!(graph, cd, abcd);
     assert_patterns! {
         graph,
-        he => [[h, e]],
-        hel => [[he, l]],
-        held => [[hel, d], [he, ld]],
-        heldld => [[held, ld]]
+        cd => [[c, d]],
+        bcd => [[b, cd]],
+        abcd => [[a, bcd], [ab, cd]],
+        ababcd => [[ab, abcd]]
     };
 }

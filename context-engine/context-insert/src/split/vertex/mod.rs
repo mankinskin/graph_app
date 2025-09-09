@@ -152,7 +152,7 @@ impl VertexSplitCtx<'_> {
         // uses inner width of sub split position to calculate node offset
         for (inner_width, pos_cache) in self.bottom_up.iter() {
             // bottom up incoming edge
-            for location in pos_cache.edges.bottom.values() {
+            for location in pos_cache.bottom.values() {
                 // pattern location
                 let child = node.expect_child_at(location);
 
@@ -190,7 +190,7 @@ impl VertexSplitCtx<'_> {
         for (outer_offset, pos_cache) in self.top_down.iter() {
             // outer offset:
             let inner_offset = Offset::new(end_pos.0 - outer_offset.0).unwrap();
-            for location in pos_cache.edges.bottom.values() {
+            for location in pos_cache.bottom.values() {
                 let child = node.expect_child_at(location);
                 let inner_offset =
                     Offset::new(inner_offset.get() % child.width());

@@ -1,5 +1,3 @@
-use std::borrow::Borrow;
-
 use crate::{
     interval::partition::{
         delta::PatternSubDeltas,
@@ -23,6 +21,8 @@ use crate::{
     },
 };
 use context_trace::graph::vertex::child::Child;
+use std::borrow::Borrow;
+use tracing::debug;
 
 use super::patterns::JoinedPatterns;
 
@@ -60,6 +60,7 @@ where
     ) -> Self {
         // collect infos about partition in each pattern
         let pats = JoinedPatterns::from_partition_info(info, ctx);
+        debug!("JoinedPatterns: {:#?}", pats);
         Self::from_joined_patterns(pats, ctx)
     }
 }

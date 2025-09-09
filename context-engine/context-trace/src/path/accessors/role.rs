@@ -4,7 +4,9 @@ use crate::{
         has_vertex_index::ToChild,
         location::child::ChildLocation,
         pattern::{
+            pattern_post,
             pattern_post_ctx,
+            pattern_pre,
             pattern_pre_ctx,
             pattern_width,
             postfix,
@@ -53,6 +55,14 @@ pub trait PathRole: 'static + Debug + PathBorder + Default + Clone {
         index: usize,
     ) -> usize;
     fn inner_ctx_width<T: Borrow<Child>>(
+        pattern: &'_ [T],
+        index: usize,
+    ) -> usize;
+    fn inner_width<T: Borrow<Child>>(
+        pattern: &'_ [T],
+        index: usize,
+    ) -> usize;
+    fn outer_width<T: Borrow<Child>>(
         pattern: &'_ [T],
         index: usize,
     ) -> usize;
@@ -140,6 +150,18 @@ impl PathRole for Start {
             index,
         ))
     }
+    fn inner_width<T: Borrow<Child>>(
+        pattern: &'_ [T],
+        index: usize,
+    ) -> usize {
+        pattern_width(pattern_post(pattern.iter().map(Borrow::borrow), index))
+    }
+    fn outer_width<T: Borrow<Child>>(
+        pattern: &'_ [T],
+        index: usize,
+    ) -> usize {
+        pattern_width(pattern_pre(pattern.iter().map(Borrow::borrow), index))
+    }
 }
 
 impl PathRole for End {
@@ -187,5 +209,17 @@ impl PathRole for End {
         index: usize,
     ) -> usize {
         Start::outer_ctx_width(pattern, index)
+    }
+    fn inner_width<T: Borrow<Child>>(
+        pattern: &'_ [T],
+        index: usize,
+    ) -> usize {
+        Start::outer_width(pattern, index)
+    }
+    fn outer_width<T: Borrow<Child>>(
+        pattern: &'_ [T],
+        index: usize,
+    ) -> usize {
+        Start::inner_width(pattern, index)
     }
 }

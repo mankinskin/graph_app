@@ -85,10 +85,11 @@ macro_rules! expect_tokens {
 #[macro_export]
 macro_rules! insert_tokens {
     ($graph:ident, {$($name:ident),*}) => {
+        use itertools::Itertools;
         let ($($name),*) = $crate::trace::has_graph::HasGraphMut::graph_mut(&mut $graph)
             .insert_tokens([
                 $(
-                    Token::Element($crate::charify::charify!($name))
+                    $crate::graph::vertex::token::Token::Element($crate::charify::charify!($name))
                 ),*
             ])
             .into_iter()

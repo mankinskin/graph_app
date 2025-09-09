@@ -24,6 +24,7 @@ use derive_more::{
     DerefMut,
 };
 use derive_new::new;
+use tracing::debug;
 
 #[derive(Debug, Clone, Deref, DerefMut)]
 pub struct CompareParentBatch {
@@ -62,12 +63,20 @@ impl<K: TraversalKind> Iterator for MatchIterator<K> {
             .find_root_cursor()
         {
             Some(root_cursor) => Some({
+                debug!("Found root cursor {:#?}", root_cursor);
                 match root_cursor.find_end() {
-                    Ok(end) => end,
+                    Ok(end) => {
+                        debug!("Found EndState {:#?}", end);
+                        end
+                    },
                     Err(root_cursor) =>
                         match root_cursor.next_parents::<K>(&self.0.trav) {
-                            Err(end) => *end,
+                            Err(end) => {
+                                debug!("No more parents {:?}", end);
+                                *end
+                            },
                             Ok((parent, batch)) => {
+                                debug!("Next Batch {:?}", (&parent, &batch));
                                 assert!(!batch.is_empty());
                                 // next batch
                                 self.1.nodes.extend(

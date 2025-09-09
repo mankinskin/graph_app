@@ -49,10 +49,7 @@ use {
         },
         trace::cache::{
             key::directed::DirectedKey,
-            position::{
-                Edges,
-                PositionCache,
-            },
+            position::PositionCache,
             vertex::VertexCache,
             TraceCache,
         },
@@ -270,13 +267,11 @@ fn find_ancestor2() {
                             bottom_up: FromIterator::from_iter([(
                                 2.into(), // width of by
                                 PositionCache {
-                                    edges: Edges {
-                                        bottom: HashMap::from_iter([(
-                                            DirectedKey::up(xaby, 2), // width of by
-                                            SubLocation::new(xaby_z_id, 0),
-                                        ),]),
-                                        top: Default::default(),
-                                    },
+                                    bottom: HashMap::from_iter([(
+                                        DirectedKey::up(xaby, 2), // width of by
+                                        SubLocation::new(xaby_z_id, 0),
+                                    ),]),
+                                    top: Default::default(),
                                 }
                             )]),
                         }
@@ -289,13 +284,11 @@ fn find_ancestor2() {
                             bottom_up: FromIterator::from_iter([(
                                 2.into(), // width of by
                                 PositionCache {
-                                    edges: Edges {
-                                        bottom: HashMap::from_iter([(
-                                            DirectedKey::up(by, 2), // width of by
-                                            SubLocation::new(xa_by_id, 1)
-                                        )]),
-                                        top: HashSet::from_iter([]),
-                                    },
+                                    bottom: HashMap::from_iter([(
+                                        DirectedKey::up(by, 2), // width of by
+                                        SubLocation::new(xa_by_id, 1)
+                                    )]),
+                                    top: HashSet::from_iter([]),
                                 }
                             )]),
                         }
@@ -406,13 +399,11 @@ fn find_ancestor3() {
                             bottom_up: FromIterator::from_iter([(
                                 2.into(),
                                 PositionCache {
-                                    edges: Edges {
-                                        bottom: HashMap::from_iter([(
-                                            DirectedKey::up(xab, 2),
-                                            SubLocation::new(xab_y_id, 0),
-                                        ),]),
-                                        top: Default::default(),
-                                    },
+                                    bottom: HashMap::from_iter([(
+                                        DirectedKey::up(xab, 2),
+                                        SubLocation::new(xab_y_id, 0),
+                                    ),]),
+                                    top: Default::default(),
                                 }
                             )]),
                         }
@@ -425,13 +416,11 @@ fn find_ancestor3() {
                             bottom_up: FromIterator::from_iter([(
                                 2.into(),
                                 PositionCache {
-                                    edges: Edges {
-                                        bottom: HashMap::from_iter([(
-                                            DirectedKey::up(ab, 2),
-                                            SubLocation::new(x_ab_id, 1),
-                                        )]),
-                                        top: HashSet::from_iter([]),
-                                    },
+                                    bottom: HashMap::from_iter([(
+                                        DirectedKey::up(ab, 2),
+                                        SubLocation::new(x_ab_id, 1),
+                                    )]),
+                                    top: HashSet::from_iter([]),
                                 }
                             )]),
                         }

@@ -24,14 +24,9 @@ pub struct SubSplitLocation {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
-pub struct Edges {
+pub struct PositionCache {
     pub top: HashSet<DirectedKey>,
     pub bottom: HashMap<DirectedKey, SubLocation>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Default)]
-pub struct PositionCache {
-    pub edges: Edges,
 }
 pub enum AddChildLocation {
     Target(ChildLocation),
@@ -44,51 +39,32 @@ impl PositionCache {
         add_edges: bool,
     ) -> Self {
         // create all bottom edges (created upwards or downwards)
-        let mut edges = Edges::default();
+        let mut bottom = HashMap::default();
         match (add_edges, state) {
             (false, _) => {},
             (_, EditKind::Parent(edit)) => {
                 // created by upwards traversal
-                edges
-                    .bottom
+                bottom
                     .insert(edit.prev.into(), edit.location.to_sub_location());
             },
             (_, EditKind::Child(edit)) => {
                 // created by downwards traversal
                 let prev = cache.force_mut(&(edit.prev.into()));
-                prev.edges.bottom.insert(
+                prev.bottom.insert(
                     edit.target.into(),
                     edit.location.to_sub_location(),
                 );
             },
-            //(_, EditKind::Root(edit)) => {
-            //    //let prev = cache.force_mut(&state.prev);
-            //    //prev.edges
-            //    //    .bottom
-            //    //    .insert(key.clone(), edit.entry.to_sub_location());
-            //},
         }
-        //match (add_edges, state.state_direction(), state.entry_location()) {
-        //    (true, StateDirection::BottomUp, Some(entry)) => {
-        //        edges.bottom.insert(state.prev, entry.to_sub_location());
-        //    },
-        //    (true, StateDirection::TopDown, Some(entry)) => {
-        //        let prev = cache.force_mut(&state.prev);
-        //        prev.edges
-        //            .bottom
-        //            .insert(key.clone(), entry.to_sub_location());
-        //    },
-        //    _ => {},
-        //}
         Self {
-            //index: key.index,
-            edges,
+            bottom,
+            top: HashSet::default(),
         }
     }
     pub fn num_parents(&self) -> usize {
-        self.edges.top.len()
+        self.top.len()
     }
     pub fn num_bu_edges(&self) -> usize {
-        self.edges.bottom.len()
+        self.bottom.len()
     }
 }

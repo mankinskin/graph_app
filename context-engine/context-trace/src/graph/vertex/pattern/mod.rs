@@ -127,7 +127,19 @@ pub fn pattern_post_ctx<T: Borrow<Child>>(
     pat: impl IntoIterator<Item = T>,
     sub_index: usize,
 ) -> impl IntoIterator<Item = T> {
-    pat.into_iter().skip(sub_index + 1)
+    pattern_post(pat, sub_index + 1)
+}
+pub fn pattern_post<T: Borrow<Child>>(
+    pat: impl IntoIterator<Item = T>,
+    sub_index: usize,
+) -> impl IntoIterator<Item = T> {
+    pat.into_iter().skip(sub_index)
+}
+pub fn pattern_pre<T: Borrow<Child>>(
+    pat: impl IntoIterator<Item = T>,
+    sub_index: usize,
+) -> impl IntoIterator<Item = T> {
+    pattern_pre_ctx(pat, sub_index + 1)
 }
 
 pub fn prefix<T: ToChild + Clone>(

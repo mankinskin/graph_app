@@ -69,7 +69,7 @@ pub trait GraphRootChild<R: PathRole>: RootedPath + GraphRootPattern {
         let i = self.root_child_location().sub_index;
         let g = trav.graph();
         let p = self.graph_root_pattern::<G>(&g);
-        R::inner_ctx_width(p, i)
+        R::inner_width(p, i)
     }
 }
 impl<R: PathRole> GraphRootChild<R> for ChildLocation {

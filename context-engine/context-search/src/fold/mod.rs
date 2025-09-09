@@ -25,6 +25,7 @@ use context_trace::{
 };
 use foldable::ErrorState;
 use std::fmt::Debug;
+use tracing::debug;
 
 pub mod foldable;
 pub mod result;
@@ -61,6 +62,7 @@ impl<K: TraversalKind> Iterator for FoldCtx<K> {
 
 impl<K: TraversalKind> FoldCtx<K> {
     fn fold(mut self) -> Result<FinishedState, ErrorState> {
+        debug!("Starting fold {:#?}", self);
         (&mut self).for_each(|_| ());
         let end = self.tctx.last_match;
         end.trace(&mut self.tctx.match_iter.0);

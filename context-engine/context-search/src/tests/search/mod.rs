@@ -52,10 +52,7 @@ use {
                     down::DownKey,
                     DirectedKey,
                 },
-                position::{
-                    Edges,
-                    PositionCache,
-                },
+                position::PositionCache,
                 vertex::VertexCache,
             },
             has_graph::HasGraph,
@@ -140,13 +137,11 @@ fn find_pattern1() {
             bottom_up: FromIterator::from_iter([(
                 1.into(),
                 PositionCache {
-                    edges: Edges {
-                        bottom: HashMap::from_iter([(
-                            DirectedKey::up(a, 1),
-                            SubLocation::new(x_a_b_id.unwrap(), 1)
-                        )]),
-                        top: HashSet::from_iter([]),
-                    },
+                    bottom: HashMap::from_iter([(
+                        DirectedKey::up(a, 1),
+                        SubLocation::new(x_a_b_id.unwrap(), 1)
+                    )]),
+                    top: HashSet::from_iter([]),
                 }
             )]),
             top_down: FromIterator::from_iter([]),
@@ -159,25 +154,21 @@ fn find_pattern1() {
             bottom_up: FromIterator::from_iter([(
                 2.into(),
                 PositionCache {
-                    edges: Edges {
-                        bottom: HashMap::from_iter([(
-                            DirectedKey::up(xab, 1),
-                            SubLocation::new(xab_yz_id.unwrap(), 0)
-                        )]),
-                        top: HashSet::from_iter([]),
-                    },
+                    bottom: HashMap::from_iter([(
+                        DirectedKey::up(xab, 1),
+                        SubLocation::new(xab_yz_id.unwrap(), 0)
+                    )]),
+                    top: HashSet::from_iter([]),
                 }
             )]),
             top_down: FromIterator::from_iter([(
                 2.into(),
                 PositionCache {
-                    edges: Edges {
-                        bottom: HashMap::from_iter([(
-                            DirectedKey::down(yz, 2),
-                            SubLocation::new(xab_yz_id.unwrap(), 1)
-                        )]),
-                        top: HashSet::from_iter([]),
-                    },
+                    bottom: HashMap::from_iter([(
+                        DirectedKey::down(yz, 2),
+                        SubLocation::new(xab_yz_id.unwrap(), 1)
+                    )]),
+                    top: HashSet::from_iter([]),
                 }
             )]),
         }
@@ -190,13 +181,11 @@ fn find_pattern1() {
             top_down: FromIterator::from_iter([(
                 2.into(),
                 PositionCache {
-                    edges: Edges {
-                        bottom: HashMap::from_iter([(
-                            DirectedKey::down(y, 2),
-                            SubLocation::new(y_z_id.unwrap(), 0)
-                        )]),
-                        top: HashSet::from_iter([]),
-                    },
+                    bottom: HashMap::from_iter([(
+                        DirectedKey::down(y, 2),
+                        SubLocation::new(y_z_id.unwrap(), 0)
+                    )]),
+                    top: HashSet::from_iter([]),
                 }
             )]),
         }

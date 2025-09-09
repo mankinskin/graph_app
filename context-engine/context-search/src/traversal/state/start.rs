@@ -70,6 +70,7 @@ impl<K: TraversalKind> StartCtx<K> {
                 self.index,
                 |trav, p| self.index.into_primer(trav, p),
             );
+
             Ok(CompareParentBatch { batch, cursor })
         } else {
             Err(ErrorState {

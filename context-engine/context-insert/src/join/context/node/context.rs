@@ -234,10 +234,7 @@ impl NodeJoinCtx<'_> {
                     if part.perfect.is_none() {
                         let pre = match Prefix::new(offset).join_partition(self)
                         {
-                            Ok(pre) => {
-                                //println!("{:#?}", pre);
-                                pre.index
-                            },
+                            Ok(pre) => pre.index,
                             Err(c) => c,
                         };
                         self.ctx.trav.add_pattern_with_update(index, vec![
