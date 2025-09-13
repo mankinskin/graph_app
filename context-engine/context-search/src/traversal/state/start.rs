@@ -102,7 +102,7 @@ impl IntoPrimer for Child {
             root_pos: width,
             path: RootedRolePath {
                 root: IndexRoot {
-                    location: parent_entry.clone().into_pattern_location(),
+                    location: parent_entry.into_pattern_location(),
                 },
                 role_path: RolePath {
                     sub_path: SubPath {

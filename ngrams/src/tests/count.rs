@@ -2,7 +2,7 @@ use itertools::Itertools;
 use ngram::NGram;
 use tap::Tap;
 
-use seqraph::HashMap;
+use context_trace::HashMap;
 
 pub fn ngram_set(s: String) -> Vec<HashMap<String, usize>>
 {

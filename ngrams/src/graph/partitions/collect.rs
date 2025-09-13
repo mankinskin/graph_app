@@ -1,4 +1,3 @@
-
 use derive_more::{
     Deref,
     DerefMut,
@@ -7,6 +6,7 @@ use derive_more::{
 use derive_new::new;
 use itertools::Itertools;
 use std::collections::VecDeque;
+use tokio_util::sync::CancellationToken;
 
 use crate::graph::{
     labelling::LabellingCtx,
@@ -16,7 +16,11 @@ use crate::graph::{
             TopDown,
             TraversalDirection,
         },
-        pass::TraversalPass, queue::Queue,
+        pass::{
+            RunResult,
+            TraversalPass,
+        },
+        queue::Queue,
     },
     utils::cover::ChildCover,
     vocabulary::{
@@ -28,7 +32,7 @@ use crate::graph::{
         ProcessStatus,
     },
 };
-use seqraph::{
+use context_trace::{
     graph::{
         getters::vertex::VertexSet,
         vertex::{
@@ -53,12 +57,19 @@ use seqraph::{
     HashSet,
 };
 
-use crate::graph::{traversal::{queue::{LayeredQueue, LinearQueue}, visited::VisitTracking}, vocabulary::Vocabulary};
-
+use crate::graph::{
+    traversal::{
+        queue::{
+            LayeredQueue,
+            LinearQueue,
+        },
+        visited::VisitTracking,
+    },
+    vocabulary::Vocabulary,
+};
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct AccumulateCtx<'b>
-{
+pub struct AccumulateCtx<'b> {
     #[deref]
     #[deref_mut]
     pub ctx: &'b mut LabellingCtx,
@@ -67,8 +78,7 @@ pub struct AccumulateCtx<'b>
 }
 
 impl<'b> From<&'b mut LabellingCtx> for AccumulateCtx<'b> {
-    fn from(ctx: &'b mut LabellingCtx) -> Self
-    {
+    fn from(ctx: &'b mut LabellingCtx) -> Self {
         Self {
             ctx,
             result: Default::default(),
@@ -76,47 +86,50 @@ impl<'b> From<&'b mut LabellingCtx> for AccumulateCtx<'b> {
         }
     }
 }
-impl VisitTracking for AccumulateCtx<'_>
-{
+impl VisitTracking for AccumulateCtx<'_> {
     type Collection = HashSet<<Self as TraversalPass>::Node>;
     fn visited_mut(&mut self) -> &mut <Self as VisitTracking>::Collection {
         &mut self.visited
     }
 }
-impl TraversalPass for AccumulateCtx<'_>
-{
+impl TraversalPass for AccumulateCtx<'_> {
     type Node = NGramId;
     type NextNode = NGramId;
     type Queue = LinearQueue<Self>;
-    fn start_queue(&mut self) -> Self::Queue {
-        let queue = Self::Queue::from_iter(
-            TopDown::starting_nodes(&self.vocab)
-        );
-        for vk in queue.iter()
-        {
-            let data = self.vocab.containment.expect_vertex(vk.vertex_key());
+    fn ctx(&self) -> &LabellingCtx {
+        self.ctx
+    }
+    fn start_queue(&mut self) -> RunResult<Self::Queue> {
+        let queue =
+            Self::Queue::from_iter(TopDown::starting_nodes(&self.vocab()));
+        for vk in queue.iter() {
+            let data = self.vocab().containment.expect_vertex(vk.vertex_key());
             let mut builder = VertexDataBuilder::default();
             builder.width(data.width());
             builder.key(**vk);
             self.result.insert_vertex_builder(builder);
         }
-        queue
+        Ok(queue)
     }
-    fn node_condition(&mut self, node: Self::Node) -> bool {
-        (!self.visited_mut().contains(&node)
-            && self.labels.contains(&node))
-            || self.vocab.leaves.contains(&node)
-            .then(|| self.visited_mut().insert(node))
-            .is_some()
+    fn node_condition(
+        &mut self,
+        node: Self::Node,
+    ) -> bool {
+        (!self.visited_mut().contains(&node) && self.labels().contains(&node))
+            || self
+                .vocab()
+                .leaves
+                .contains(&node)
+                .then(|| self.visited_mut().insert(node))
+                .is_some()
     }
     fn on_node(
         &mut self,
         node: &NGramId,
-    ) -> Option<Vec<NGramId>>
-    {
+    ) -> RunResult<Option<Vec<Self::NextNode>>> {
         //let container = PartitionContainer::from_ngram(self, *node);
         //let entry = self.vocab.get_vertex(node).unwrap();
-        
+
         //let pids: Vec<_> = std::iter::repeat_n((), container.len())
         //    .map(|_| PatternId::default())
         //    .collect();
@@ -179,17 +192,18 @@ impl TraversalPass for AccumulateCtx<'_>
         //    )
         //    .collect();
         let next = vec![];
-        Some(next)
+        Ok(Some(next))
     }
     fn begin_run(&mut self) {
         println!("Accumulate Pass");
     }
 
-    fn finish_run(&mut self) {
-        self.vocab.roots.iter().for_each(|key| {
+    fn finish_run(&mut self) -> RunResult<()> {
+        self.vocab().roots.iter().for_each(|key| {
             let _ = self.result.vertex_key_string(key);
         });
         *self.status.pass_mut() = ProcessStatus::Partitions;
         println!("{:#?}", &self.result);
+        Ok(())
     }
 }

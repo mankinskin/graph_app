@@ -1,23 +1,29 @@
-use itertools::Itertools;
-use pretty_assertions::assert_matches;
-use range_ext::intersect::Intersect;
-use seqraph::{
+use context_trace::{
     graph::{
         getters::vertex::VertexSet,
         vertex::{
-            child::Child, data::{
+            child::Child,
+            data::{
                 VertexData,
                 VertexDataBuilder,
-            }, has_vertex_index::{
+            },
+            has_vertex_index::{
                 HasVertexIndex,
                 ToChild,
-            }, has_vertex_key::HasVertexKey, key::VertexKey, wide::Wide, VertexIndex
+            },
+            has_vertex_key::HasVertexKey,
+            key::VertexKey,
+            wide::Wide,
+            VertexIndex,
         },
         Hypergraph,
     },
     HashMap,
     HashSet,
 };
+use itertools::Itertools;
+use pretty_assertions::assert_matches;
+use range_ext::intersect::Intersect;
 use std::{
     cmp::{
         Ordering,
@@ -31,13 +37,14 @@ use std::{
     num::NonZeroUsize,
     ops::Range,
 };
+use tokio_util::sync::CancellationToken;
 
-use derive_new::new;
 use derive_more::{
     Deref,
     DerefMut,
     IntoIterator,
 };
+use derive_new::new;
 
 use crate::graph::{
     labelling::LabellingCtx,
@@ -50,7 +57,15 @@ use crate::graph::{
             TopDown,
             TraversalDirection,
         },
-        pass::TraversalPass, queue::{LayeredQueue, Queue}, visited::VisitTracking,
+        pass::{
+            RunResult,
+            TraversalPass,
+        },
+        queue::{
+            LayeredQueue,
+            Queue,
+        },
+        visited::VisitTracking,
     },
     vocabulary::{
         entry::{
@@ -59,7 +74,8 @@ use crate::graph::{
             VocabEntry,
         },
         NGramId,
-        ProcessStatus, Vocabulary,
+        ProcessStatus,
+        Vocabulary,
     },
 };
 
@@ -72,7 +88,10 @@ pub struct ChildCoverPass<'a> {
     pub cover: ChildCover,
 }
 impl<'a> ChildCoverPass<'a> {
-    pub fn new(ctx: &'a LabellingCtx, root: VertexKey) -> Self {
+    pub fn new(
+        ctx: &'a LabellingCtx,
+        root: VertexKey,
+    ) -> Self {
         Self {
             ctx,
             root,
@@ -84,32 +103,33 @@ impl TraversalPass for ChildCoverPass<'_> {
     type Node = (usize, NGramId);
     type NextNode = (usize, NGramId);
     type Queue = LayeredQueue<Self>;
-    fn start_queue(&mut self) -> Self::Queue {
-        Self::Queue::from_iter(
-            TopDown::next_nodes(&self.ctx.vocab.expect_vertex(&self.root))
-        )
+    fn ctx(&self) -> &LabellingCtx {
+        self.ctx
     }
-    fn on_node(&mut self, node: &Self::Node) -> Option<Vec<Self::NextNode>> {
+    fn start_queue(&mut self) -> RunResult<Self::Queue> {
+        Ok(Self::Queue::from_iter(TopDown::next_nodes(
+            &self.ctx.vocab().expect_vertex(&self.root),
+        )))
+    }
+    fn on_node(
+        &mut self,
+        node: &Self::Node,
+    ) -> RunResult<Option<Vec<Self::NextNode>>> {
         let &(off, node) = node;
         // check if covered
-        if self.cover.any_covers(off, node)
-        {
+        Ok(if self.cover.any_covers(off, node) {
             None
-        }
-        else if self.ctx.labels.contains(&node)
-        {
+        } else if self.ctx.labels().contains(&node) {
             self.cover.insert(off, node);
             None
-        }
-        else
-        {
-            let ne = self.ctx.vocab.get_vertex(&node).unwrap();
+        } else {
+            let ne = self.ctx.vocab().get_vertex(&node).unwrap();
             Some(
                 TopDown::next_nodes(&ne)
                     .into_iter()
                     .map(|(o, c)| (o + off, c))
-                    .collect()
+                    .collect(),
             )
-        }
+        })
     }
 }

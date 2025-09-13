@@ -7,7 +7,7 @@ use itertools::Itertools;
 use pretty_assertions::assert_matches;
 use range_ext::intersect::Intersect;
 use derivative::Derivative;
-use seqraph::{
+use context_trace::{
     graph::{
         getters::vertex::VertexSet,
         vertex::{

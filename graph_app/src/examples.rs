@@ -1,4 +1,4 @@
-use seqraph::graph::{vertex::token::Token, Hypergraph};
+use context_trace::graph::{vertex::token::Token, Hypergraph};
 
 
 pub fn build_graph1() -> Hypergraph

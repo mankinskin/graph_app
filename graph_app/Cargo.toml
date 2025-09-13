@@ -17,9 +17,11 @@ rand_distr = "^0.4"
 itertools = "^0.12"
 async-std = "1.12"
 tracing-mutex = "0.3"
-strum = "0.26.3"
-derive_more = "1.0.0"
+strum = "0.27"
+derive_more = { version = "1.0.0", features = ["full"] }
 derive-getters = "0.5"
+context-read = { path = "../context-engine/context-read" }
+context-trace = { path = "../context-engine/context-trace" }
 
 [dependencies.tracing-egui]
 path = "../tracing-egui"
@@ -40,24 +42,23 @@ path = "../egui/crates/eframe"
 
 [dependencies.tokio]
 version = "^1"
-features = [
-  "macros",
-  "rt-multi-thread",
-]
+features = ["macros", "rt-multi-thread"]
+
+[dependencies.tokio-util]
+version = "^0.7"
 
 [dependencies.petgraph]
 #version = "^0.5"
 path = "../petgraph"
 #git = "https://github.com/mankinskin/petgraph"
-features=["serde-1"]
+features = ["serde-1"]
 
-[dependencies.context-read]
-path = "../context-engine/context-read"
-#git = "https://github.com/mankinskin/web-app"
 
 [dependencies.ngrams]
 path = "../ngrams"
 
 [features]
 default = []
-persistence = ["eframe/persistence"] # Enable if you want to persist app state on shutdown
+persistence = [
+  "eframe/persistence",
+] # Enable if you want to persist app state on shutdown

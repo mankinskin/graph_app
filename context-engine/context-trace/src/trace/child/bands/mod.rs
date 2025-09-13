@@ -175,7 +175,7 @@ where
             self.queue.extend(next);
         }
         self.queue.pop_front().map(|(location, node)| {
-            self.last.0 = Some(location.clone());
+            self.last.0 = Some(location);
             self.last.1 = node;
             (location, node)
         })

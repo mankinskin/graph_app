@@ -91,7 +91,7 @@ pub trait RolePathUtils {
     {
         let graph = trav.graph();
         let location = self.role_root_child_location::<R>();
-        let pattern = graph.expect_pattern_at(location.clone());
+        let pattern = graph.expect_pattern_at(location);
         <R::BorderDirection as PatternDirection>::pattern_index_next(
             pattern,
             location.sub_index,

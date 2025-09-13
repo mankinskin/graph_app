@@ -74,7 +74,7 @@ pub trait GraphRootChild<R: PathRole>: RootedPath + GraphRootPattern {
 }
 impl<R: PathRole> GraphRootChild<R> for ChildLocation {
     fn root_child_location(&self) -> ChildLocation {
-        self.clone()
+        *self
     }
 }
 // used to get a direct child of a pattern

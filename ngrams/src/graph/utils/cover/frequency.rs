@@ -9,13 +9,14 @@ use itertools::Itertools;
 
 use crate::graph::{
     containment::TextLocation,
-    labelling::{
-        LabellingCtx,
-    },
-    traversal::direction::{
-        BottomUp,
-        TopDown,
-        TraversalDirection,
+    labelling::LabellingCtx,
+    traversal::{
+        direction::{
+            BottomUp,
+            TopDown,
+            TraversalDirection,
+        },
+        pass::RunResult,
     },
     vocabulary::{
         entry::{
@@ -27,7 +28,7 @@ use crate::graph::{
         Vocabulary,
     },
 };
-use seqraph::{
+use context_trace::{
     graph::vertex::{
         child::Child,
         has_vertex_index::HasVertexIndex,
@@ -49,13 +50,13 @@ impl FrequencyCover {
     pub fn from_entry(
         ctx: &LabellingCtx,
         entry: &VertexCtx,
-    ) -> Self {
+    ) -> RunResult<Self> {
         let mut cover: HashSet<_> = Default::default();
         let mut occ_set: HashSet<_> = Default::default(); //entry.occurrences.clone();
         let mut queue: VecDeque<_> =
             FromIterator::from_iter(Self::next_parent_offsets(entry));
-        while let Some((off, p)) = queue.pop_front()
-        {
+        while let Some((off, p)) = queue.pop_front() {
+            ctx.check_cancelled()?;
             let pe = entry.vocab.get_vertex(&p).unwrap();
             let diff = Self::new_occurrences(ctx, off, &pe, &occ_set);
             if diff.is_empty() {
@@ -64,18 +65,17 @@ impl FrequencyCover {
                         .into_iter()
                         .map(|(o, p)| (o + off, p)),
                 );
-            }
-            else
-            {
+            } else {
                 cover.insert(p);
                 occ_set.extend(&diff);
             }
         }
-        Self { cover }
+        Ok(Self { cover })
     }
-    fn next_parent_offsets(entry: &VertexCtx) -> Vec<(usize, NGramId)>
-    {
-        entry.data.parents
+    fn next_parent_offsets(entry: &VertexCtx) -> Vec<(usize, NGramId)> {
+        entry
+            .data
+            .parents
             .iter()
             .flat_map(|(&id, p)| {
                 p.pattern_indices.iter().map(move |ploc| {
@@ -101,9 +101,9 @@ impl FrequencyCover {
         offset: usize,
         parent_entry: &VertexCtx,
         occ_set: &HashSet<TextLocation>,
-    ) -> HashSet<TextLocation>
-    {
-        ctx.labels.contains(&parent_entry.vertex_key())
+    ) -> HashSet<TextLocation> {
+        ctx.labels()
+            .contains(&parent_entry.vertex_key())
             .then(|| {
                 let occ: HashSet<_> = parent_entry
                     .occurrences

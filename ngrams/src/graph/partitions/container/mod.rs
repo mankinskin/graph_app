@@ -1,15 +1,7 @@
 mod builder;
 
 use builder::PartitionBuilder;
-use derive_more::{
-    Deref,
-    DerefMut,
-    IntoIterator,
-};
-use itertools::Itertools;
-use pretty_assertions::assert_matches;
-use range_ext::intersect::Intersect;
-use seqraph::{
+use context_trace::{
     graph::{
         getters::vertex::VertexSet,
         vertex::{
@@ -31,6 +23,14 @@ use seqraph::{
     HashMap,
     HashSet,
 };
+use derive_more::{
+    Deref,
+    DerefMut,
+    IntoIterator,
+};
+use itertools::Itertools;
+use pretty_assertions::assert_matches;
+use range_ext::intersect::Intersect;
 use std::{
     cmp::{
         Ordering,
@@ -48,13 +48,17 @@ use std::{
 use derive_new::new;
 
 use crate::graph::{
-    labelling::LabellingCtx, partitions::{
+    labelling::LabellingCtx,
+    partitions::{
         NodePartitionCtx,
         PartitionsCtx,
-    }, traversal::direction::{
+    },
+    traversal::direction::{
         TopDown,
         TraversalDirection,
-    }, utils::cover::ChildCover, vocabulary::{
+    },
+    utils::cover::ChildCover,
+    vocabulary::{
         entry::{
             HasVertexEntries,
             VertexCtx,
@@ -62,62 +66,48 @@ use crate::graph::{
         },
         NGramId,
         ProcessStatus,
-    }
+    },
 };
 
 #[derive(Debug, Copy, Clone)]
-pub enum PartitionCell
-{
+pub enum PartitionCell {
     ChildIndex(Child),
     GapSize(NonZeroUsize),
 }
-impl PartitionCell
-{
-    pub fn width(&self) -> usize
-    {
-        match self
-        {
+impl PartitionCell {
+    pub fn width(&self) -> usize {
+        match self {
             Self::ChildIndex(c) => c.width(),
             Self::GapSize(o) => o.get(),
         }
     }
 }
 #[derive(Debug, IntoIterator, Deref)]
-pub struct PartitionContainer
-{
+pub struct PartitionContainer {
     wall: Vec<Vec<Child>>,
 }
-impl PartitionContainer
-{
+impl PartitionContainer {
     pub fn from_ngram(
         ctx: &PartitionsCtx<'_>,
         ngram: NGramId,
-    ) -> Self
-    {
+    ) -> Self {
         // find all largest children
         let tree = ChildCover::from_key(ctx, ngram.vertex_key());
 
-        assert!(
-            match ngram.width()
-            {
-                1 => tree.is_empty(),
-                _ => !tree.is_empty(),
-            }
-        );
+        assert!(match ngram.width() {
+            1 => tree.is_empty(),
+            _ => !tree.is_empty(),
+        });
 
         // build container with gaps
         //let next = tree.iter().map(|(_, c)| c.vertex_index()).collect();
-        let ctx = NodePartitionCtx::new(
-            ngram,
-            ctx,
-        );
+        let ctx = NodePartitionCtx::new(ngram, ctx);
         Self::from_child_list(&ctx, tree)
     }
     pub fn from_child_list(
         ctx: &NodePartitionCtx,
         list: impl IntoIterator<Item = (usize, NGramId)>,
-    ) -> Self
-    {
+    ) -> Self {
         let child_vec =
             list.into_iter().sorted_by_key(|&(o, _)| o).collect_vec();
         //println!("{:#?}", vec.iter().map(|&(p, c)| (p, p + c.width())).collect_vec());
@@ -136,10 +126,9 @@ impl PartitionContainer
         let first = child_iter.next().unwrap();
         assert_eq!(first.0, 0);
         let mut builder = PartitionBuilder::new(ctx, first.0, first.1);
-        for (pos, key) in child_iter
-        {
+        for (pos, key) in child_iter {
             let index = ctx
-                .vocab
+                .vocab()
                 .containment
                 .expect_index_for_key(&key.vertex_key());
             builder.append_child(pos, Child::new(index, key.width()));
@@ -149,17 +138,13 @@ impl PartitionContainer
         }
     }
 }
-impl Display for PartitionContainer
-{
+impl Display for PartitionContainer {
     fn fmt(
         &self,
         f: &mut Formatter<'_>,
-    ) -> std::fmt::Result
-    {
-        for line in &self.wall
-        {
-            for cell in line
-            {
+    ) -> std::fmt::Result {
+        for line in &self.wall {
+            for cell in line {
                 let (t, s) = ("ch", cell.width());
                 write!(f, "{}({})", t, s);
             }

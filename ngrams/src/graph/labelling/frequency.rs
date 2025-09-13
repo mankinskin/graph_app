@@ -1,4 +1,3 @@
-
 use std::collections::VecDeque;
 
 use derive_more::{
@@ -8,15 +7,28 @@ use derive_more::{
 };
 use derive_new::new;
 use itertools::Itertools;
+use tokio_util::sync::CancellationToken;
 
 use crate::graph::{
-    containment::TextLocation, labelling::LabellingCtx, traversal::{
+    containment::TextLocation,
+    labelling::LabellingCtx,
+    traversal::{
         direction::{
             BottomUp,
             TopDown,
             TraversalDirection,
-        }, pass::TraversalPass, queue::{Queue, SortedQueue}
-    }, utils::cover::frequency::FrequencyCover, vocabulary::{
+        },
+        pass::{
+            RunResult,
+            TraversalPass,
+        },
+        queue::{
+            Queue,
+            SortedQueue,
+        },
+    },
+    utils::cover::frequency::FrequencyCover,
+    vocabulary::{
         entry::{
             HasVertexEntries,
             VertexCtx,
@@ -24,9 +36,9 @@ use crate::graph::{
         NGramId,
         ProcessStatus,
         Vocabulary,
-    }
+    },
 };
-use seqraph::{
+use context_trace::{
     graph::vertex::{
         child::Child,
         has_vertex_index::HasVertexIndex,
@@ -40,68 +52,70 @@ use seqraph::{
 };
 
 #[derive(Debug, Deref, new, DerefMut)]
-pub struct FrequencyCtx<'b>
-{
+pub struct FrequencyCtx<'b> {
     #[deref]
     #[deref_mut]
     pub ctx: &'b mut LabellingCtx,
 }
 
-impl TraversalPass for FrequencyCtx<'_>
-{
+impl TraversalPass for FrequencyCtx<'_> {
     type Node = VertexKey;
     type NextNode = NGramId;
     type Queue = SortedQueue;
-    fn start_queue(&mut self) -> Self::Queue {
-        let start = TopDown::starting_nodes(&self.vocab);
+    fn ctx(&self) -> &LabellingCtx {
+        self.ctx
+    }
+    fn start_queue(&mut self) -> RunResult<Self::Queue> {
+        let start = TopDown::starting_nodes(self.vocab());
 
         let mut queue = SortedQueue::default();
-        for node in start.iter()
-        {
-            queue.extend_layer(
-                self.on_node(node).unwrap_or_default()
-            );
+        for node in start.iter() {
+            queue.extend_layer(self.on_node(node)?.unwrap_or_default());
         }
-        self.labels.extend(start.iter().map(HasVertexKey::vertex_key));
+        self.corpus
+            .image
+            .labels
+            .extend(start.iter().map(HasVertexKey::vertex_key));
 
-        self.status.next_pass(ProcessStatus::Frequency, 0, self.image.vocab.containment.vertex_count());
-        queue
+        self.status.next_pass(
+            ProcessStatus::Frequency,
+            0,
+            self.image.vocab.containment.vertex_count(),
+        );
+        Ok(queue)
     }
     fn on_node(
         &mut self,
         node: &Self::Node,
-    ) -> Option<Vec<Self::NextNode>>
-    {
+    ) -> RunResult<Option<Vec<Self::NextNode>>> {
         *self.status.steps_mut() += 1;
-        self.labels.contains(node)
-            .then_some(None)
-            .unwrap_or_else(|| {
-                let entry = self.vocab.get_vertex(node).unwrap();
-                let next = self.entry_next(&entry);
-                if self.entry_is_frequent(&entry)
-                {
-                    let key = entry.data.vertex_key();
-                    self.labels.insert(key);
-                }
-                Some(next)
-            })
+        Ok(if self.labels().contains(node) {
+            None
+        } else {
+            let entry = self.vocab().get_vertex(node).unwrap();
+            let next = self.entry_next(&entry);
+            if self.entry_is_frequent(&entry)? {
+                let key = entry.data.vertex_key();
+                self.labels_mut().insert(key);
+            }
+            Some(next)
+        })
     }
     fn begin_run(&mut self) {
         println!("Frequency Pass");
     }
-    fn finish_run(&mut self) {
-        let bottom = BottomUp::starting_nodes(&self.vocab);
-        self.labels
+    fn finish_run(&mut self) -> RunResult<()> {
+        let bottom = BottomUp::starting_nodes(self.vocab());
+        self.labels_mut()
             .extend(bottom.iter().map(HasVertexKey::vertex_key));
+        Ok(())
     }
 }
-impl FrequencyCtx<'_>
-{
+impl FrequencyCtx<'_> {
     pub fn entry_next(
         &self,
         entry: &VertexCtx,
-    ) -> Vec<NGramId>
-    {
+    ) -> Vec<NGramId> {
         TopDown::next_nodes(entry)
             .into_iter()
             .map(|(_, c)| c)
@@ -110,14 +124,15 @@ impl FrequencyCtx<'_>
     pub fn entry_is_frequent(
         &self,
         entry: &VertexCtx,
-    ) -> bool
-    {
-        FrequencyCover::from_entry(self, entry)
-            .iter()
-            .any(|p|
-                self.vocab.get_vertex(p).unwrap().count() < entry.count()
-            )
-            .then(|| println!("{}", entry.ngram))
-            .is_some()
+    ) -> RunResult<bool> {
+        FrequencyCover::from_entry(self, entry).map(|cover| {
+            cover
+                .iter()
+                .any(|p| {
+                    self.vocab().get_vertex(p).unwrap().count() < entry.count()
+                })
+                .then(|| println!("{}", entry.ngram))
+                .is_some()
+        })
     }
 }

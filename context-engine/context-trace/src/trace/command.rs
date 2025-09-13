@@ -113,7 +113,7 @@ impl Traceable for PrefixCommand {
             //*ctx.trav.graph().expect_child_at(root_exit.clone()),
         };
         let target = DownKey {
-            index: *ctx.trav.graph().expect_child_at(root_exit.clone()),
+            index: *ctx.trav.graph().expect_child_at(root_exit),
             pos: exit_key.pos,
         };
         let new = NewTraceEdge::<TopDown> {
@@ -183,7 +183,7 @@ impl Traceable for RangeCommand {
         };
         let target = DownKey {
             pos: exit_key.pos,
-            index: *ctx.trav.graph().expect_child_at(root_exit.clone()),
+            index: *ctx.trav.graph().expect_child_at(root_exit),
         };
         let new = NewTraceEdge::<TopDown> {
             target,

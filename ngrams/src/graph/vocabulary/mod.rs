@@ -1,5 +1,8 @@
 use crate::graph::{
-    containment::{CorpusCtx, TextLevelCtx},
+    containment::{
+        CorpusCtx,
+        TextLevelCtx,
+    },
     traversal::direction::{
         TopDown,
         TraversalDirection,
@@ -10,13 +13,7 @@ use crate::graph::{
     },
     Corpus,
 };
-use derive_more::{
-    Deref,
-    From,
-};
-use derive_new::new;
-use itertools::Itertools;
-use seqraph::{
+use context_trace::{
     graph::{
         vertex::{
             child::Child,
@@ -34,6 +31,12 @@ use seqraph::{
     HashMap,
     HashSet,
 };
+use derive_more::{
+    Deref,
+    From,
+};
+use derive_new::new;
+use itertools::Itertools;
 use serde::{
     Deserialize,
     Serialize,
@@ -47,13 +50,20 @@ use std::{
         absolute,
         Path,
         PathBuf,
-    }, sync::{Arc, RwLock},
+    },
+    sync::{
+        Arc,
+        RwLock,
+    },
 };
-use tap::Tap;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
+use tap::Tap;
 
-use super::{Status, StatusHandle};
+use super::{
+    Status,
+    StatusHandle,
+};
 
 pub mod entry;
 
@@ -71,38 +81,31 @@ pub mod entry;
     Serialize,
     Deserialize,
 )]
-pub struct NGramId
-{
+pub struct NGramId {
     #[deref]
     pub key: VertexKey,
     pub width: usize,
 }
-impl From<NGramId> for VertexKey
-{
+impl From<NGramId> for VertexKey {
     fn from(ngram_id: NGramId) -> Self {
         ngram_id.key
     }
 }
-impl HasVertexKey for NGramId
-{
-    fn vertex_key(&self) -> VertexKey
-    {
+impl HasVertexKey for NGramId {
+    fn vertex_key(&self) -> VertexKey {
         self.key
     }
 }
-impl Wide for NGramId
-{
-    fn width(&self) -> usize
-    {
+impl Wide for NGramId {
+    fn width(&self) -> usize {
         self.width
     }
 }
 
 #[derive(
-    Default, Debug, PartialEq, Eq, Copy, Clone, Serialize, Deserialize, EnumIter
+    Default, Debug, PartialEq, Eq, Copy, Clone, Serialize, Deserialize, EnumIter,
 )]
-pub enum ProcessStatus
-{
+pub enum ProcessStatus {
     #[default]
     Empty,
     Containment,
@@ -111,31 +114,26 @@ pub enum ProcessStatus
     Partitions,
     Finished,
 }
-impl PartialOrd for ProcessStatus
-{
+impl PartialOrd for ProcessStatus {
     fn partial_cmp(
         &self,
         other: &Self,
-    ) -> Option<Ordering>
-    {
+    ) -> Option<Ordering> {
         Some((*self as usize).cmp(&(*other as usize)))
     }
 }
-impl Ord for ProcessStatus
-{
+impl Ord for ProcessStatus {
     fn cmp(
         &self,
         other: &Self,
-    ) -> Ordering
-    {
+    ) -> Ordering {
         (*self as usize).cmp(&(*other as usize))
     }
 }
 #[derive(
     Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq, Deref,
 )]
-pub struct Vocabulary
-{
+pub struct Vocabulary {
     //#[deref]
     pub containment: Hypergraph,
     pub name: String,
@@ -146,16 +144,14 @@ pub struct Vocabulary
     pub entries: HashMap<VertexKey, VocabEntry>,
 }
 
-impl Vocabulary
-{
-    pub fn from_corpus(corpus: &Corpus, status: StatusHandle) -> Self
-    {
+impl Vocabulary {
+    pub fn from_corpus(
+        corpus: &Corpus,
+        status: &mut StatusHandle,
+    ) -> Self {
         let mut vocab: Vocabulary = Default::default();
         vocab.name.clone_from(&corpus.name);
-        CorpusCtx {
-            corpus,
-            status,
-        }.on_corpus(&mut vocab);
+        CorpusCtx { corpus, status }.on_corpus(&mut vocab);
         vocab
     }
     //pub fn clean(&mut self) -> HashSet<NGramId> {

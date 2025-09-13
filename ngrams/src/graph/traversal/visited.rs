@@ -10,7 +10,7 @@ use crate::graph::{
         Vocabulary,
     },
 };
-use seqraph::{
+use context_trace::{
     graph::vertex::{
         child::Child,
         key::VertexKey,

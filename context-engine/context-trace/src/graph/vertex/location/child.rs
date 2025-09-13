@@ -4,9 +4,19 @@ use crate::{
     direction::{
         Left,
         Right,
+        pattern::PatternDirection,
     },
     graph::vertex::{
+        ChildPatterns,
+        child::Child,
         has_vertex_index::HasVertexIndex,
+        location::{
+            PatternId,
+            PatternLocation,
+            SubLocation,
+            pattern::IntoPatternLocation,
+        },
+        pattern::Pattern,
         wide::Wide,
     },
     path::mutators::move_path::leaf::MoveLeaf,
@@ -16,19 +26,7 @@ use crate::{
     },
 };
 
-use super::{
-    super::{
-        ChildPatterns,
-        child::Child,
-        pattern::Pattern,
-    },
-    PatternId,
-    PatternLocation,
-    SubLocation,
-    pattern::IntoPatternLocation,
-};
-use crate::direction::pattern::PatternDirection;
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ChildLocation {
     pub parent: Child,
     pub pattern_id: PatternId,
@@ -40,7 +38,7 @@ impl MoveLeaf<Right> for ChildLocation {
         trav: &G,
     ) -> ControlFlow<()> {
         let graph = trav.graph();
-        let pattern = graph.expect_pattern_at(self.clone());
+        let pattern = graph.expect_pattern_at(*self);
         if let Some(next) =
             TravDir::<G>::pattern_index_next(pattern, self.sub_index)
         {
@@ -57,7 +55,7 @@ impl MoveLeaf<Left> for ChildLocation {
         trav: &G,
     ) -> ControlFlow<()> {
         let graph = trav.graph();
-        let pattern = graph.expect_pattern_at(self.clone());
+        let pattern = graph.expect_pattern_at(*self);
         if let Some(prev) =
             TravDir::<G>::pattern_index_prev(pattern, self.sub_index)
         {
@@ -156,7 +154,7 @@ impl IntoChildLocation for ChildLocation {
 
 impl IntoChildLocation for &ChildLocation {
     fn into_child_location(self) -> ChildLocation {
-        self.clone()
+        *self
     }
 }
 

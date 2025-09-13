@@ -155,7 +155,7 @@ where
         let flow = self.path.move_path_segment::<G>(location, trav);
         if let ControlFlow::Continue(()) = flow {
             let graph = trav.graph();
-            self.move_key(graph.expect_child_at(location.clone()).width());
+            self.move_key(graph.expect_child_at(*location).width());
         }
         flow
     }

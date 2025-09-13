@@ -31,6 +31,6 @@ pub trait RootedPath {
 impl RootedPath for ChildLocation {
     type Root = IndexRoot;
     fn path_root(&self) -> Self::Root {
-        IndexRoot::from(self.clone().into_pattern_location())
+        IndexRoot::from(self.into_pattern_location())
     }
 }

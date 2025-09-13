@@ -139,7 +139,7 @@ impl<R: PathRole> PathSimplify for RolePath<R> {
     ) -> Self {
         let graph = trav.graph();
         while let Some(loc) = self.path_mut().pop() {
-            if !<R as PathBorder>::is_at_border(graph.graph(), loc.clone()) {
+            if !<R as PathBorder>::is_at_border(graph.graph(), loc) {
                 self.path_mut().push(loc);
                 break;
             }

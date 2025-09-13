@@ -1,9 +1,9 @@
 use crate::{
     direction::{
+        pattern::PatternDirection,
         Direction,
         Left,
         Right,
-        pattern::PatternDirection,
     },
     graph::vertex::{
         location::child::ChildLocation,
@@ -72,7 +72,7 @@ pub trait PathBorder {
         location: ChildLocation,
     ) -> bool {
         let graph = trav.graph();
-        let pattern = graph.expect_pattern_at(location.clone());
+        let pattern = graph.expect_pattern_at(location);
         <Self::BorderDirection as PatternDirection>::pattern_index_next(
             pattern,
             location.sub_index,

@@ -7,7 +7,7 @@ use crate::graph::{utils::cover::frequency::FrequencyCover, vocabulary::{
     NGramId,
     Vocabulary,
 }};
-use seqraph::graph::vertex::{
+use context_trace::graph::vertex::{
     child::Child,
     key::VertexKey,
     wide::Wide,

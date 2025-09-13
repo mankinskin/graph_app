@@ -25,14 +25,20 @@ derivative = "^2.2"
 strum = "0.27"
 strum_macros = "0.27"
 derive-getters = "0.5"
-
+tokio = { version = "^1", features = ["macros", "rt-multi-thread"] }
 
 [dependencies.derive_more]
 version = "^2"
 features = ["full"]
 
+[dependencies.tokio-util]
+version = "^0.7"
+
 [dependencies.context-read]
 path = "../context-engine/context-read"
+
+[dependencies.context-trace]
+path = "../context-engine/context-trace"
 
 [dev-dependencies.context-read]
 path = "../context-engine/context-read"

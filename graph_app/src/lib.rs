@@ -1,20 +1,20 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::all, rust_2018_idioms)]
 #![allow(clippy::obfuscated_if_else)]
-
 mod app;
 pub use app::App;
 mod examples;
 mod graph;
+mod vis;
 // ----------------------------------------------------------------------------
 // When compiling for web:
 
+use context_trace::graph::HypergraphRef;
 #[cfg(target_arch = "wasm32")]
 use eframe::wasm_bindgen::{
     self,
     prelude::*,
 };
-use seqraph::graph::HypergraphRef;
 pub use tracing::*;
 pub use {
     std::sync::{
@@ -38,14 +38,12 @@ pub use {
 /// You can add more callbacks like this if you want to call in to your code.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
-pub fn start(canvas_id: &str) -> Result<(), eframe::wasm_bindgen::JsValue>
-{
+pub fn start(canvas_id: &str) -> Result<(), eframe::wasm_bindgen::JsValue> {
     let app = App::default();
     eframe::start_web(canvas_id, Box::new(app))
 }
 
-pub async fn open(graph: HypergraphRef) -> Result<(), eframe::Error>
-{
+pub async fn open(graph: HypergraphRef) -> Result<(), eframe::Error> {
     let app = App::from_graph_ref(graph);
     eframe::run_native(
         "Graph App",

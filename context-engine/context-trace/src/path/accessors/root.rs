@@ -30,7 +30,7 @@ impl GraphRootPattern for PatternLocation {
 }
 impl GraphRootPattern for ChildLocation {
     fn root_pattern_location(&self) -> PatternLocation {
-        self.clone().into_pattern_location()
+        self.into_pattern_location()
     }
 }
 pub trait GraphRoot {

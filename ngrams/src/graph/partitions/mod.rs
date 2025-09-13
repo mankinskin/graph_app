@@ -1,5 +1,5 @@
-pub mod container;
 pub mod collect;
+pub mod container;
 
 use derive_more::{
     Deref,
@@ -9,6 +9,7 @@ use derive_more::{
 use derive_new::new;
 use itertools::Itertools;
 use std::collections::VecDeque;
+use tokio_util::sync::CancellationToken;
 
 use crate::graph::{
     labelling::LabellingCtx,
@@ -18,7 +19,11 @@ use crate::graph::{
             TopDown,
             TraversalDirection,
         },
-        pass::TraversalPass, queue::Queue,
+        pass::{
+            RunResult,
+            TraversalPass,
+        },
+        queue::Queue,
     },
     utils::cover::ChildCover,
     vocabulary::{
@@ -30,7 +35,7 @@ use crate::graph::{
         ProcessStatus,
     },
 };
-use seqraph::{
+use context_trace::{
     graph::{
         getters::vertex::VertexSet,
         vertex::{
@@ -55,7 +60,17 @@ use seqraph::{
     HashSet,
 };
 
-use super::{traversal::{queue::{LayeredQueue, LinearQueue}, visited::VisitTracking}, vocabulary::Vocabulary, utils::dedup::ChildDedupPass};
+use super::{
+    traversal::{
+        queue::{
+            LayeredQueue,
+            LinearQueue,
+        },
+        visited::VisitTracking,
+    },
+    utils::dedup::ChildDedupPass,
+    vocabulary::Vocabulary,
+};
 
 // - run top down (smaller nodes to label need to be found)
 // - for each node x:
@@ -65,16 +80,14 @@ use super::{traversal::{queue::{LayeredQueue, LinearQueue}, visited::VisitTracki
 //  - find all nodes describing the gaps (by querying a larger node)
 //  - label all gaps
 #[derive(Debug, Deref, new)]
-pub struct NodePartitionCtx<'a, 'b>
-{
+pub struct NodePartitionCtx<'a, 'b> {
     root: NGramId,
     #[deref]
     ctx: &'a PartitionsCtx<'b>,
 }
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct PartitionsCtx<'b>
-{
+pub struct PartitionsCtx<'b> {
     #[deref]
     #[deref_mut]
     pub ctx: &'b mut LabellingCtx,
@@ -83,8 +96,7 @@ pub struct PartitionsCtx<'b>
 }
 
 impl<'b> From<&'b mut LabellingCtx> for PartitionsCtx<'b> {
-    fn from(ctx: &'b mut LabellingCtx) -> Self
-    {
+    fn from(ctx: &'b mut LabellingCtx) -> Self {
         Self {
             ctx,
             visited: Default::default(),
@@ -92,49 +104,56 @@ impl<'b> From<&'b mut LabellingCtx> for PartitionsCtx<'b> {
         }
     }
 }
-impl VisitTracking for PartitionsCtx<'_>
-{
+impl VisitTracking for PartitionsCtx<'_> {
     type Collection = HashSet<<Self as TraversalPass>::Node>;
     fn visited_mut(&mut self) -> &mut <Self as VisitTracking>::Collection {
         &mut self.visited
     }
 }
-impl TraversalPass for PartitionsCtx<'_>
-{
+impl TraversalPass for PartitionsCtx<'_> {
     type Node = NGramId;
     type NextNode = NGramId;
     type Queue = LinearQueue<Self>;
-    fn start_queue(&mut self) -> Self::Queue {
-        let queue = Self::Queue::from_iter(
-            TopDown::starting_nodes(&self.vocab)
-        );
-        for vk in queue.iter()
-        {
-            let data = self.vocab.containment.expect_vertex(vk.vertex_key());
+    fn ctx(&self) -> &LabellingCtx {
+        self.ctx
+    }
+    fn start_queue(&mut self) -> RunResult<Self::Queue> {
+        let queue =
+            Self::Queue::from_iter(TopDown::starting_nodes(self.vocab()));
+        for vk in queue.iter() {
+            let data = self.vocab().containment.expect_vertex(vk.vertex_key());
             let mut builder = VertexDataBuilder::default();
             builder.width(data.width());
             builder.key(**vk);
             self.graph.insert_vertex_builder(builder);
         }
-        self.status.next_pass(ProcessStatus::Partitions, 0, self.labels.len() + self.vocab.leaves.len());
-        queue
+        self.status.next_pass(
+            ProcessStatus::Partitions,
+            0,
+            self.labels().len() + self.vocab().leaves.len(),
+        );
+        Ok(queue)
     }
-    fn node_condition(&mut self, node: Self::Node) -> bool {
-        (!self.visited_mut().contains(&node)
-            && self.labels.contains(&node))
-            || self.vocab.leaves.contains(&node)
-            .then(|| self.visited_mut().insert(node))
-            .is_some()
+    fn node_condition(
+        &mut self,
+        node: Self::Node,
+    ) -> bool {
+        (!self.visited_mut().contains(&node) && self.labels().contains(&node))
+            || self
+                .vocab()
+                .leaves
+                .contains(&node)
+                .then(|| self.visited_mut().insert(node))
+                .is_some()
     }
     fn on_node(
         &mut self,
         node: &NGramId,
-    ) -> Option<Vec<NGramId>>
-    {
+    ) -> RunResult<Option<Vec<Self::NextNode>>> {
         *self.status.steps_mut() += 1;
         let container = PartitionContainer::from_ngram(self, *node);
-        let entry = self.vocab.get_vertex(node).unwrap();
-        
+        let entry = self.vocab().get_vertex(node).unwrap();
+
         let pids: Vec<_> = std::iter::repeat_n((), container.len())
             .map(|_| PatternId::default())
             .collect();
@@ -153,24 +172,20 @@ impl TraversalPass for PartitionsCtx<'_>
 
         let unlabelled = child_locations
             .iter()
-            .map(|(_, vi)| self.vocab.containment.expect_key_for_index(*vi))
-            .filter(|k| !self.labels.contains(k))
+            .map(|(_, vi)| self.vocab().containment.expect_key_for_index(*vi))
+            .filter(|k| !self.labels().contains(k))
             .collect_vec();
 
         ChildDedupPass::new(self.ctx, unlabelled).run();
 
         // create child nodes in self.graph
         // set child parents and translate child indices to self.graph
-        for (loc, vi) in child_locations.iter().copied()
-        {
-            let key = self.vocab.containment.expect_key_for_index(vi);
-            let out_index = if let Ok(v) = self.graph.get_vertex_mut(key)
-            {
+        for (loc, vi) in child_locations.iter().copied() {
+            let key = self.vocab().containment.expect_key_for_index(vi);
+            let out_index = if let Ok(v) = self.graph.get_vertex_mut(key) {
                 v.add_parent(loc);
                 v.vertex_index()
-            }
-            else
-            {
+            } else {
                 let mut builder = VertexDataBuilder::default();
                 builder.width(vi.width());
                 builder.key(key);
@@ -181,8 +196,12 @@ impl TraversalPass for PartitionsCtx<'_>
                 let out = if vi.width() > 1 {
                     self.graph.insert_vertex_data(data)
                 } else {
-                    self.graph.insert_token_data(*self.vocab.containment.expect_token_by_key(&key), data)
-                }.vertex_index();
+                    self.graph.insert_token_data(
+                        *self.vocab().containment.expect_token_by_key(&key),
+                        data,
+                    )
+                }
+                .vertex_index();
 
                 out
             };
@@ -193,25 +212,26 @@ impl TraversalPass for PartitionsCtx<'_>
             .into_iter()
             .flat_map(|(_, p)| p)
             .filter(|c| c.width() > 1)
-            .map(|c|
+            .map(|c| {
                 NGramId::new(
-                    self.vocab.get_vertex(&c).unwrap().data.vertex_key(),
+                    self.vocab().get_vertex(&c).unwrap().data.vertex_key(),
                     c.width(),
                 )
-            )
+            })
             .collect();
         //let next = vec![];
-        Some(next)
+        Ok(Some(next))
     }
     fn begin_run(&mut self) {
         println!("Partition Pass");
     }
 
-    fn finish_run(&mut self) {
-        self.vocab.roots.iter().for_each(|key| {
+    fn finish_run(&mut self) -> RunResult<()> {
+        self.vocab().roots.iter().for_each(|key| {
             let _ = self.graph.vertex_key_string(key);
         });
-        println!("{:#?}", &self.graph);
+        //println!("{:#?}", &self.graph);
         *self.status.pass_mut() = ProcessStatus::Finished;
+        Ok(())
     }
 }
