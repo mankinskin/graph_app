@@ -24,7 +24,9 @@ impl StateContainer for DftStack {
     }
 }
 impl FromIterator<(usize, TraversalState)> for DftStack {
-    fn from_iter<T: IntoIterator<Item = (usize, TraversalState)>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = (usize, TraversalState)>>(
+        iter: T
+    ) -> Self {
         Self {
             stack: FromIterator::from_iter(iter),
         }

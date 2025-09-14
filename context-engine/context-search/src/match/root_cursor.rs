@@ -106,7 +106,7 @@ impl<G: HasGraph> RootCursor<G> {
         if self.state.base.path.can_advance(&self.trav) {
             match self.query_advanced() {
                 Continue(_) => {
-                    self.path_advanced();
+                    let _ = self.path_advanced();
                     Continue(())
                 },
                 // end of query
