@@ -7,18 +7,18 @@ resolver = "2"
 
 
 [dependencies]
-rfd = "0.14"
+rfd = "0.15"
 serde = { version = "1", features = ["derive"] }
 wasm-bindgen-futures = "0.4.23"
 futures = "0.3"
 lazy_static = "^1.4"
-rand = "^0.8"
-rand_distr = "^0.4"
-itertools = "^0.12"
+rand = "^0.9"
+rand_distr = "^0.5"
+itertools = "^0.14"
 async-std = "1.12"
 tracing-mutex = "0.3"
 strum = "0.27"
-derive_more = { version = "1.0.0", features = ["full"] }
+derive_more = { version = "2.0.0", features = ["full"] }
 derive-getters = "0.5"
 context-read = { path = "../context-engine/context-read" }
 context-trace = { path = "../context-engine/context-trace" }
@@ -37,8 +37,6 @@ features = ["json"]
 
 [dependencies.eframe]
 path = "../egui/crates/eframe"
-#git = "https://github.com/mankinskin/egui"
-#branch = "placer-measure"
 
 [dependencies.tokio]
 version = "^1"

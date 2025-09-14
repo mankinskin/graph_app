@@ -152,7 +152,7 @@ impl App {
             if ui.button("Go").clicked() {
                 self.start_read();
                 //self.ctx_mut().graph.insert_text = String::new();
-                ui.close_menu();
+                ui.close();
             }
             if ui.button("Cancel").clicked() {
                 self.abort();
@@ -160,7 +160,7 @@ impl App {
         });
         if ui.button("Open Inserter").clicked() {
             self.inserter = true;
-            ui.close_menu();
+            ui.close();
         }
         {
             if let Some(ctx) = self.ctx() {
@@ -177,22 +177,22 @@ impl App {
             if let Some(ctx) = self.ctx() {
                 if ui.button("Graph 1").clicked() {
                     ctx.graph.set_graph(build_graph1());
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui.button("Graph 2").clicked() {
                     ctx.graph.set_graph(build_graph2());
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui.button("Graph 3").clicked() {
                     ctx.graph.set_graph(build_graph3());
-                    ui.close_menu();
+                    ui.close();
                 }
             }
         });
         if let Some(mut ctx) = self.ctx_mut() {
             if ui.button("Clear").clicked() {
                 ctx.graph.clear();
-                ui.close_menu();
+                ui.close();
             }
         }
     }

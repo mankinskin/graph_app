@@ -4,7 +4,7 @@
 [submodule "egui"]
 	path = egui
 	url = https://github.com/mankinskin/egui
-	branch = placer-measure
+	branch = main
 [submodule "tracing-egui"]
 	path = tracing-egui
 	url = https://github.com/mankinskin/tracing-egui

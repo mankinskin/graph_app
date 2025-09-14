@@ -4,12 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default = [] #["log_stdout", "log_gui"]
+default = []  #["log_stdout", "log_gui"]
 test-api = []
 
 [dependencies]
 itertools = "^0.14"
-indexmap = { version = "^2.7", features = ["serde"]}
+indexmap = { version = "^2.7", features = ["serde"] }
 tracing = { version = "^0.1", features = ["attributes", "valuable"] }
 tracing-subscriber = "0.3"
 uuid = { version = "^1.10", features = ["v4", "fast-rng", "serde"] }

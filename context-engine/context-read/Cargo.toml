@@ -26,7 +26,7 @@ rand = "^0.9"
 rand_distr = "^0.5"
 itertools = "^0.14"
 function_name = "^0.3"
-indicatif = "^0.17"
+indicatif = "^0.18"
 histo = "^1"
 rayon = "^1.5.3"
 tap = "^1"
@@ -36,7 +36,7 @@ derive_more = { version = "2", features = ["full"] }
 linked_hash_set = "0.1.4"
 linked-hash-map = "0.5.6"
 derive-new = "0.7"
-inquire = "0.7"
+inquire = "0.8"
 auto_impl = "1.2.0"
 nrfind = "1"
 ngram = "0.1"
@@ -75,7 +75,7 @@ version = "^0.1"
 features = ["derive"]
 
 [dependencies.nalgebra]
-version = "^0.32"
+version = "^0.34"
 
 [dependencies.petgraph]
 #git = "https://github.com/mankinskin/petgraph"
