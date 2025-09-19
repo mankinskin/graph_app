@@ -1,4 +1,7 @@
-use context_trace::graph::vertex::wide::Wide;
+use context_trace::{
+    graph::vertex::wide::Wide,
+    HashMap,
+};
 use eframe::egui::{
     self,
     vec2,
@@ -17,10 +20,7 @@ use petgraph::{
     },
     visit::EdgeRef,
 };
-use std::{
-    collections::HashMap,
-    f32::consts::PI,
-};
+use std::f32::consts::PI;
 
 use super::node::NodeVis;
 use crate::graph::Graph;

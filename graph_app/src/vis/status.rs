@@ -18,7 +18,7 @@ impl ShowStatus<'_> {
         ctx: &egui::Context,
     ) {
         egui::Window::new("Status").show(ctx, |ui| {
-            ui.label(format!("Text: \"{}\"", self.insert_text));
+            ui.label(format!("Texts: \"{:#?}\"", self.insert_texts));
             ProcessStatus::iter()
                 .skip(1)
                 .for_each(|pass| self.show_pass(ui, pass))

@@ -53,13 +53,16 @@ impl ReadCtx {
     ) {
         let graph = self.graph.graph.clone();
         let labels = self.graph.labels.clone();
-        let insert_text = self.graph.insert_text.clone();
+        let insert_texts = self.graph.insert_texts.clone();
 
-        let status = StatusHandle::from(Status::new(insert_text.clone()));
+        let status = StatusHandle::from(Status::new(insert_texts.clone()));
         self.status = Some(status.clone());
 
         // Create the corpus and parse future
-        let corpus = ngrams::graph::Corpus::new("", [insert_text]);
+        let corpus = ngrams::graph::Corpus::new(
+            insert_texts.first().cloned().unwrap_or_default(),
+            insert_texts,
+        );
 
         // Add periodic cancellation checks during the parse operation
         let parse_future = ngrams::graph::parse_corpus(
@@ -80,7 +83,7 @@ impl ReadCtx {
         };
 
         if let Ok(res) = result {
-            self.graph.insert_text.clear();
+            self.graph.insert_texts.clear();
             *graph.write().unwrap() = res.graph;
             *labels.write().unwrap() = res.labels;
         }
@@ -147,7 +150,9 @@ impl App {
         ui.horizontal(|ui| {
             ui.label("Quick Insert:");
             if let Some(mut ctx) = self.ctx_mut() {
-                ui.text_edit_singleline(&mut ctx.graph.insert_text);
+                for text in &mut ctx.graph.insert_texts {
+                    ui.text_edit_singleline(text);
+                }
             }
             if ui.button("Go").clicked() {
                 self.start_read();
@@ -314,7 +319,12 @@ impl eframe::App for App {
         if self.inserter {
             egui::Window::new("Inserter").show(ctx, |ui| {
                 if let Some(mut ctx) = self.ctx_mut() {
-                    ui.text_edit_multiline(&mut ctx.graph.insert_text);
+                    for text in &mut ctx.graph.insert_texts {
+                        ui.text_edit_singleline(text);
+                    }
+                    if ui.button("+").clicked() {
+                        ctx.graph.insert_texts.push(String::new());
+                    }
                 }
                 if ui.button("Insert").clicked() && self.read_task.is_none() {
                     self.start_read();

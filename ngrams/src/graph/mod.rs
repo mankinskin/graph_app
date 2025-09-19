@@ -117,7 +117,7 @@ impl StatusHandle {
 #[derive(Debug, Getters)]
 pub struct Status {
     #[getter(skip)]
-    pub insert_text: String,
+    pub insert_texts: Vec<String>,
     pass: ProcessStatus,
     steps: usize,
     steps_total: usize,
@@ -125,7 +125,7 @@ pub struct Status {
 impl Default for Status {
     fn default() -> Self {
         Self {
-            insert_text: Default::default(),
+            insert_texts: Default::default(),
             pass: Default::default(),
             steps: 0,
             steps_total: 1,
@@ -133,9 +133,12 @@ impl Default for Status {
     }
 }
 impl Status {
-    pub fn new(insert_text: impl ToString) -> Self {
+    pub fn new(insert_texts: impl IntoIterator<Item = impl ToString>) -> Self {
         Self {
-            insert_text: insert_text.to_string(),
+            insert_texts: insert_texts
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
             ..Default::default()
         }
     }
@@ -162,7 +165,7 @@ impl Corpus {
         name: impl ToString,
         texts: impl IntoIterator<Item = impl ToString>,
     ) -> Self {
-        let mut s = Status::new(String::new());
+        let mut s = Status::new(Vec::<String>::new());
         s.pass = ProcessStatus::Frequency;
         Self {
             name: name.to_string(),

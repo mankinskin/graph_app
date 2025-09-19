@@ -151,8 +151,30 @@ impl Vocabulary {
     ) -> Self {
         let mut vocab: Vocabulary = Default::default();
         vocab.name.clone_from(&corpus.name);
-        CorpusCtx { corpus, status }.on_corpus(&mut vocab);
+        vocab.containment_pass(&CorpusCtx { corpus, status });
         vocab
+    }
+
+    pub fn containment_pass(
+        &mut self,
+        ctx: &CorpusCtx<'_>,
+    ) {
+        let N: usize = ctx.corpus.iter().map(|t| t.len()).max().unwrap();
+        ctx.status.next_pass(
+            super::vocabulary::ProcessStatus::Containment,
+            0,
+            N * (N - 1),
+        );
+        Itertools::cartesian_product((1..=N), ctx.corpus.iter().enumerate())
+            .for_each(|(n, (i, text))| {
+                TextLevelCtx {
+                    corpus_ctx: ctx,
+                    texti: i,
+                    text,
+                    n,
+                }
+                .on_nlevel(self)
+            })
     }
     //pub fn clean(&mut self) -> HashSet<NGramId> {
     //    let drained: HashSet<_> = self.entries

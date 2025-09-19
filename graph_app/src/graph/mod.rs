@@ -27,7 +27,7 @@ use petgraph::{
 pub struct Graph {
     pub graph: HypergraphRef,
     pub vis: Arc<RwLock<GraphVis>>,
-    pub insert_text: String,
+    pub insert_texts: Vec<String>,
     pub labels: Arc<RwLock<HashSet<VertexKey>>>,
 }
 impl Default for Graph {
@@ -45,7 +45,7 @@ impl Graph {
         let new = Self {
             graph,
             vis,
-            insert_text: String::from("aabbaabbaa"),
+            insert_texts: vec![String::from("aabbaabbaa")],
             labels: Default::default(),
         };
         let g = new.clone();

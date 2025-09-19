@@ -72,29 +72,6 @@ pub struct CorpusCtx<'a> {
     pub corpus: &'a Corpus,
     pub status: &'a mut StatusHandle,
 }
-impl CorpusCtx<'_> {
-    pub fn on_corpus(
-        &self,
-        vocab: &mut Vocabulary,
-    ) {
-        let N: usize = self.corpus.iter().map(|t| t.len()).max().unwrap();
-        self.status.next_pass(
-            super::vocabulary::ProcessStatus::Containment,
-            0,
-            N * (N - 1),
-        );
-        Itertools::cartesian_product((1..=N), self.corpus.iter().enumerate())
-            .for_each(|(n, (i, text))| {
-                TextLevelCtx {
-                    corpus_ctx: self,
-                    texti: i,
-                    text,
-                    n,
-                }
-                .on_nlevel(vocab)
-            })
-    }
-}
 #[derive(Debug, Clone, Copy, From, Deref)]
 pub struct TextLevelCtx<'a> {
     #[deref]
