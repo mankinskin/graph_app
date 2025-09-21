@@ -1,9 +1,9 @@
-use context_trace::{
-    graph::vertex::{
-        data::VertexData,
-        key::VertexKey,
-    },
-    HashMap,
+use std::ops::Range;
+
+use context_trace::graph::vertex::{
+    data::VertexData,
+    key::VertexKey,
+    pattern::id::PatternId,
 };
 use eframe::{
     egui::{
@@ -18,38 +18,16 @@ use eframe::{
     epaint::Shadow,
 };
 use petgraph::graph::NodeIndex;
-use std::sync::{
-    Arc,
-    RwLock,
-    RwLockReadGuard,
-    RwLockWriteGuard,
-};
 
-use super::graph::GraphVis;
 use crate::{
     graph::Graph,
-    vis::pattern::{
-        ChildPatternsResponse,
-        ChildPatternsVis,
-    },
+    vis::pattern::ChildPatternsVis,
 };
 
-#[allow(unused)]
-#[derive(Clone, Debug)]
-pub struct NodeState {
-    split_lower: usize,
-    split_upper: usize,
+pub struct NodeResponse {
+    pub response: Response,
+    pub ranges: Vec<(PatternId, Range<usize>)>,
 }
-
-impl NodeState {
-    pub fn new() -> Self {
-        Self {
-            split_lower: 1,
-            split_upper: 7,
-        }
-    }
-}
-
 #[allow(unused)]
 #[derive(Clone, Debug)]
 pub struct NodeVis {
@@ -58,8 +36,8 @@ pub struct NodeVis {
     name: String,
     data: VertexData,
     pub(crate) child_patterns: ChildPatternsVis,
-    state: Arc<RwLock<NodeState>>,
     graph: Graph,
+    pub selected_range: Option<(PatternId, Range<usize>)>,
 }
 
 impl std::ops::Deref for NodeVis {
@@ -72,48 +50,31 @@ impl std::ops::Deref for NodeVis {
 impl NodeVis {
     pub fn new(
         graph: Graph,
-        node_indices: &HashMap<VertexKey, NodeIndex>,
         idx: NodeIndex,
         key: &VertexKey,
         data: &VertexData,
     ) -> Self {
-        Self::new_impl(
-            graph,
-            node_indices,
-            idx,
-            key,
-            data,
-            Arc::new(RwLock::new(NodeState::new())),
-        )
+        Self::new_impl(graph, idx, key, data, None)
     }
     pub fn from_old(
         old: &NodeVis,
-        node_indices: &HashMap<VertexKey, NodeIndex>,
         idx: NodeIndex,
         data: &VertexData,
+        selected_range: Option<(PatternId, Range<usize>)>,
     ) -> Self {
-        Self::new_impl(
-            old.graph.clone(),
-            node_indices,
-            idx,
-            &old.key,
-            data,
-            old.state.clone(),
-        )
+        Self::new_impl(old.graph.clone(), idx, &old.key, data, selected_range)
     }
     pub fn new_impl(
         graph: Graph,
-        node_indices: &HashMap<VertexKey, NodeIndex>,
         idx: NodeIndex,
         key: &VertexKey,
         data: &VertexData,
-        state: Arc<RwLock<NodeState>>,
+        selected_range: Option<(PatternId, Range<usize>)>,
     ) -> Self {
         let (name, child_patterns) = {
             let graph = &*graph.read();
             let name = graph.vertex_data_string(data);
-            let child_patterns =
-                ChildPatternsVis::new(graph, node_indices, data);
+            let child_patterns = ChildPatternsVis::new(graph, data);
             (name, child_patterns)
         };
         Self {
@@ -123,22 +84,13 @@ impl NodeVis {
             name,
             data: data.clone(),
             child_patterns,
-            state,
+            selected_range,
         }
-    }
-    #[allow(unused)]
-    fn state(&self) -> RwLockReadGuard<'_, NodeState> {
-        self.state.read().unwrap()
-    }
-    #[allow(unused)]
-    fn state_mut(&self) -> RwLockWriteGuard<'_, NodeState> {
-        self.state.write().unwrap()
     }
     pub fn show(
         &self,
         ui: &mut Ui,
-        gvis: &GraphVis,
-    ) -> Option<Response> {
+    ) -> Option<NodeResponse> {
         Window::new(format!("{}({})", self.name, self.idx.index()))
             //Window::new(&self.name)
             .vscroll(true)
@@ -157,17 +109,13 @@ impl NodeVis {
             )
             .show(ui.ctx(), |ui| {
                 ui.spacing_mut().item_spacing = Vec2::splat(0.0);
-                let ChildPatternsResponse { response, ranges } =
-                    self.child_patterns.show(ui, gvis);
-                if ranges.iter().any(|r| r.is_some()) {
-                    Window::new("Ranges").show(ui.ctx(), |ui| {
-                        for r in &ranges {
-                            ui.label(format!("{:?}", r));
-                        }
-                    });
-                }
-                response
+                self.child_patterns.show(ui).ranges
             })
-            .map(|ir| ir.response)
+            .and_then(|ir| {
+                ir.inner.map(|inner| NodeResponse {
+                    response: ir.response,
+                    ranges: inner,
+                })
+            })
     }
 }

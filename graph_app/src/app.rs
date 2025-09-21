@@ -23,10 +23,7 @@ use crate::{
         build_graph2,
         build_graph3,
     },
-    vis::{
-        graph::Layout,
-        status::ShowStatus,
-    },
+    vis::status::ShowStatus,
 };
 use async_std::sync::{
     Arc,
@@ -166,17 +163,6 @@ impl App {
         if ui.button("Open Inserter").clicked() {
             self.inserter = true;
             ui.close();
-        }
-        {
-            if let Some(ctx) = self.ctx() {
-                let mut vis = ctx.graph.vis_mut();
-                ui.menu_button("Layout", |ui| {
-                    ui.radio_value(&mut vis.layout, Layout::Graph, "Graph")
-                        .clicked();
-                    ui.radio_value(&mut vis.layout, Layout::Nested, "Nested")
-                        .clicked();
-                });
-            }
         }
         ui.menu_button("Load preset...", |ui| {
             if let Some(ctx) = self.ctx() {

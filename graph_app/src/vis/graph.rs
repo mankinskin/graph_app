@@ -11,6 +11,7 @@ use eframe::egui::{
     Stroke,
     Ui,
     Vec2,
+    Window,
 };
 #[allow(unused)]
 use petgraph::{
@@ -25,29 +26,9 @@ use std::f32::consts::PI;
 use super::node::NodeVis;
 use crate::graph::Graph;
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Layout {
-    Graph,
-    Nested,
-}
-impl Layout {
-    #[allow(unused)]
-    pub fn is_graph(&self) -> bool {
-        matches!(self, Self::Graph)
-    }
-    pub fn is_nested(&self) -> bool {
-        matches!(self, Self::Nested)
-    }
-}
-impl Default for Layout {
-    fn default() -> Self {
-        Self::Graph
-    }
-}
 #[derive(Default, Debug)]
 pub struct GraphVis {
     pub(crate) graph: DiGraph<NodeVis, ()>,
-    pub layout: Layout,
     handle: Option<Graph>,
 }
 impl GraphVis {
@@ -81,23 +62,22 @@ impl GraphVis {
             },
             |_idx, e| (e.child.width() > 1).then_some(()),
         );
-        let node_indices: HashMap<_, _> = filtered
-            .nodes()
-            .map(|(idx, (key, _node))| (*key, idx))
-            .collect();
-
         self.graph = filtered.map(
             |idx, (key, node)| {
                 if let Some(oid) = old_node_indices.get(key) {
                     let old = self.graph.node_weight(*oid).unwrap();
-                    NodeVis::from_old(old, &node_indices, idx, node)
+                    NodeVis::from_old(
+                        old,
+                        idx,
+                        node,
+                        old.selected_range.clone(),
+                    )
                 } else {
-                    NodeVis::new(self.graph(), &node_indices, idx, key, node)
+                    NodeVis::new(self.graph(), idx, key, node)
                 }
             },
             |_idx, _e| (),
         );
-        //println!("done");
         Some(())
     }
     pub fn show(
@@ -108,26 +88,49 @@ impl GraphVis {
 
         let _events = self.poll_events();
         //println!("{}", self.graph.vertex_count());
-        let rects: HashMap<_, _> = self
+        let node_responses: HashMap<_, _> = self
             .graph
             .nodes()
             .map(|(idx, node)| {
-                let response = node.show(ui, self).unwrap();
-                (idx, response.rect)
+                let response = node.show(ui).unwrap();
+                (idx, response)
             })
             .collect();
         self.graph.edge_references().for_each(|edge| {
-            let a_pos = rects
+            let a_pos = node_responses
                 .get(&edge.source())
                 .expect("No position for edge endpoint.")
+                .response
+                .rect
                 .center();
-            let b = rects
+            let b = &node_responses
                 .get(&edge.target())
-                .expect("No position for edge endpoint.");
+                .expect("No position for edge endpoint.")
+                .response
+                .rect;
 
             let p = Self::border_intersection_point(b, &a_pos);
             Self::edge(ui, &a_pos, &p);
         });
+        for (idx, response) in node_responses.into_iter() {
+            let node = self
+                .graph
+                .node_weight_mut(idx)
+                .expect("Invalid NodeIndex in node_responses!");
+            node.selected_range =
+                response.ranges.into_iter().find_map(|(pid, r)| {
+                    if let Some((spid, _)) = node.selected_range.as_mut() {
+                        (*spid == pid).then(|| (pid, r))
+                    } else {
+                        Some((pid, r))
+                    }
+                });
+            if let Some((pid, r)) = node.selected_range.as_ref() {
+                Window::new("Range").show(ui.ctx(), |ui| {
+                    ui.label(format!("{}: {:?}", pid, r));
+                });
+            }
+        }
     }
     pub fn edge_tip(
         ui: &mut Ui,
