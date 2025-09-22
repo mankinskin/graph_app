@@ -10,4 +10,4 @@ cd context-engine/
 cargo test
 ```
 
-<img width="922" height="1023" alt="image" src="https://github.com/user-attachments/assets/547c7364-df03-4224-bcd0-1a12076e753c" />
+<img width="1853" height="906" alt="image" src="https://github.com/user-attachments/assets/9e81cf71-b5ba-49a5-a872-073372b8711d" />
