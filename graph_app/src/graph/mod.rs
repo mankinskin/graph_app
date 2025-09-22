@@ -26,7 +26,6 @@ use petgraph::{
 #[derive(Clone, Debug)]
 pub struct Graph {
     pub graph: HypergraphRef,
-    pub vis: Arc<RwLock<GraphVis>>,
     pub insert_texts: Vec<String>,
     pub labels: Arc<RwLock<HashSet<VertexKey>>>,
 }
@@ -41,16 +40,11 @@ impl Graph {
         Self::new_from_graph_ref(HypergraphRef::from(graph))
     }
     pub fn new_from_graph_ref(graph: HypergraphRef) -> Self {
-        let vis = Arc::new(RwLock::new(GraphVis::default()));
-        let new = Self {
+        Self {
             graph,
-            vis,
             insert_texts: vec![String::from("aabbaabbaa")],
             labels: Default::default(),
-        };
-        let g = new.clone();
-        new.vis_mut().set_graph(g);
-        new
+        }
     }
     pub fn try_read(&self) -> Option<RwLockReadGuard<'_, Hypergraph>> {
         self.graph.read().ok()
@@ -60,13 +54,6 @@ impl Graph {
     }
     pub fn write(&self) -> RwLockWriteGuard<'_, Hypergraph> {
         self.graph.write().unwrap()
-    }
-    #[allow(unused)]
-    pub fn vis(&self) -> RwLockReadGuard<'_, GraphVis> {
-        self.vis.read().unwrap()
-    }
-    pub fn vis_mut(&self) -> RwLockWriteGuard<'_, GraphVis> {
-        self.vis.write().unwrap()
     }
     pub fn set_graph(
         &self,

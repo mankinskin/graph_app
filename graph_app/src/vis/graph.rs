@@ -30,8 +30,18 @@ use crate::graph::Graph;
 pub struct GraphVis {
     graph: DiGraph<NodeVis, ()>,
     handle: Option<Graph>,
+    pub(crate) graph_pos: Pos2,
 }
 impl GraphVis {
+    pub fn new(graph: Graph) -> Self {
+        let mut new = Self {
+            graph: DiGraph::new(),
+            handle: Some(graph),
+            graph_pos: Pos2::default(),
+        };
+        new.update();
+        new
+    }
     pub fn set_graph(
         &mut self,
         graph: Graph,
@@ -39,12 +49,13 @@ impl GraphVis {
         self.handle = Some(graph);
         self.update();
     }
-    fn graph(&self) -> Graph {
-        self.handle.clone().expect("GraphVis not yet initialized!")
+    fn graph(&self) -> Option<Graph> {
+        self.handle.clone()
     }
     pub fn update(&mut self) -> Option<()> {
         // todo reuse names in nodes
-        let pg = self.graph().read().to_petgraph();
+        let handle = self.graph()?;
+        let pg = handle.read().to_petgraph();
         let old_node_indices: HashMap<_, _> = self
             .graph
             .nodes()
@@ -60,9 +71,11 @@ impl GraphVis {
             },
             |_idx, e| (e.child.width() > 1).then_some(()),
         );
-        let w = 1800.0;
+        let n = filtered.node_count();
+        let c = (n as f32).sqrt().ceil();
+        let s = 200.0;
         let h = 120.0;
-        let s = 180.0;
+        let w = c * s;
         let x = 0.0;
         let y = 0.0;
         let mut pos_generator = (0..).map(|i| {
@@ -78,7 +91,7 @@ impl GraphVis {
                     NodeVis::from_old(old, idx, node)
                 } else {
                     NodeVis::new(
-                        self.graph(),
+                        handle.clone(),
                         idx,
                         key,
                         node,

@@ -23,7 +23,10 @@ use crate::{
         build_graph2,
         build_graph3,
     },
-    vis::status::ShowStatus,
+    vis::{
+        graph::GraphVis,
+        status::ShowStatus,
+    },
 };
 use async_std::sync::{
     Arc,
@@ -41,6 +44,11 @@ use std::{
         DefaultHasher,
         Hash,
         Hasher,
+    },
+    sync::{
+        RwLock as SyncRwLock,
+        RwLockReadGuard as SyncRwLockReadGuard,
+        RwLockWriteGuard as SyncRwLockWriteGuard,
     },
 };
 use tokio_util::sync::CancellationToken;
@@ -116,6 +124,8 @@ pub struct App {
     #[deref]
     #[deref_mut]
     read_ctx: Arc<RwLock<ReadCtx>>,
+
+    pub vis: Arc<SyncRwLock<GraphVis>>,
 }
 
 impl Default for App {
@@ -137,6 +147,7 @@ impl App {
             inserter: true,
             read_task: None,
             cancellation_token: None,
+            vis: Arc::new(SyncRwLock::new(GraphVis::new(graph.clone()))),
             read_ctx: Arc::new(RwLock::new(ReadCtx {
                 graph,
                 status: None,
@@ -246,15 +257,20 @@ impl App {
             })
         });
     }
+    #[allow(unused)]
+    pub fn vis(&self) -> Option<SyncRwLockReadGuard<'_, GraphVis>> {
+        self.vis.read().ok()
+    }
+    pub fn vis_mut(&self) -> Option<SyncRwLockWriteGuard<'_, GraphVis>> {
+        self.vis.write().ok()
+    }
     fn central_panel(
         &mut self,
         ctx: &egui::Context,
     ) {
         egui::CentralPanel::default()
             .show(ctx, |ui| {
-                if let Some(ctx) = self.ctx() {
-                    ctx.graph.vis_mut().show(ui);
-                }
+                self.vis_mut().map(|mut vis| vis.show(ui));
                 //tracing_egui::show(ui.ctx(), &mut true);
                 egui::warn_if_debug_build(ui);
             })
