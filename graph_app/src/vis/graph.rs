@@ -28,7 +28,7 @@ use crate::graph::Graph;
 
 #[derive(Default, Debug)]
 pub struct GraphVis {
-    pub(crate) graph: DiGraph<NodeVis, ()>,
+    graph: DiGraph<NodeVis, ()>,
     handle: Option<Graph>,
 }
 impl GraphVis {
@@ -44,9 +44,7 @@ impl GraphVis {
     }
     pub fn update(&mut self) -> Option<()> {
         // todo reuse names in nodes
-        //println!("update...");
         let pg = self.graph().read().to_petgraph();
-        //println!("updating");
         let old_node_indices: HashMap<_, _> = self
             .graph
             .nodes()
@@ -62,55 +60,65 @@ impl GraphVis {
             },
             |_idx, e| (e.child.width() > 1).then_some(()),
         );
+        let w = 1800.0;
+        let h = 120.0;
+        let s = 180.0;
+        let x = 0.0;
+        let y = 0.0;
+        let mut pos_generator = (0..).map(|i| {
+            Pos2::new(
+                x + (i as f32 * s) % w,
+                y + ((i as f32 * s) / w).floor() * h,
+            )
+        });
         self.graph = filtered.map(
             |idx, (key, node)| {
                 if let Some(oid) = old_node_indices.get(key) {
                     let old = self.graph.node_weight(*oid).unwrap();
-                    NodeVis::from_old(
-                        old,
-                        idx,
-                        node,
-                        old.selected_range.clone(),
-                    )
+                    NodeVis::from_old(old, idx, node)
                 } else {
-                    NodeVis::new(self.graph(), idx, key, node)
+                    NodeVis::new(
+                        self.graph(),
+                        idx,
+                        key,
+                        node,
+                        pos_generator.next().unwrap(),
+                    )
                 }
             },
             |_idx, _e| (),
         );
         Some(())
     }
+    fn initialized(&self) -> bool {
+        self.graph.node_count() > 0 && self.handle.is_some()
+    }
     pub fn show(
         &mut self,
         ui: &mut Ui,
     ) {
-        self.update();
-
+        if !self.initialized() {
+            self.update();
+        }
         let _events = self.poll_events();
         //println!("{}", self.graph.vertex_count());
         let node_responses: HashMap<_, _> = self
             .graph
             .nodes()
-            .map(|(idx, node)| {
-                let response = node.show(ui).unwrap();
-                (idx, response)
+            .filter_map(|(idx, node)| {
+                node.show(ui).map(|response| (idx, response))
             })
             .collect();
         self.graph.edge_references().for_each(|edge| {
-            let a_pos = node_responses
+            node_responses
                 .get(&edge.source())
-                .expect("No position for edge endpoint.")
-                .response
-                .rect
-                .center();
-            let b = &node_responses
-                .get(&edge.target())
-                .expect("No position for edge endpoint.")
-                .response
-                .rect;
-
-            let p = Self::border_intersection_point(b, &a_pos);
-            Self::edge(ui, &a_pos, &p);
+                .zip(node_responses.get(&edge.target()))
+                .map(|(ra, rb)| {
+                    let a_pos = ra.response.rect.center();
+                    let b = rb.response.rect;
+                    let p = Self::border_intersection_point(&b, &a_pos);
+                    Self::edge(ui, &a_pos, &p);
+                });
         });
         for (idx, response) in node_responses.into_iter() {
             let node = self

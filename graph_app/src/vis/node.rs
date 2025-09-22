@@ -1,4 +1,7 @@
-use std::ops::Range;
+use std::{
+    default,
+    ops::Range,
+};
 
 use context_trace::graph::vertex::{
     data::VertexData,
@@ -9,6 +12,7 @@ use eframe::{
     egui::{
         Color32,
         Frame,
+        Pos2,
         Response,
         Style,
         Ui,
@@ -35,6 +39,7 @@ pub struct NodeVis {
     idx: NodeIndex,
     name: String,
     data: VertexData,
+    default_pos: Pos2,
     pub(crate) child_patterns: ChildPatternsVis,
     graph: Graph,
     pub selected_range: Option<(PatternId, Range<usize>)>,
@@ -53,22 +58,30 @@ impl NodeVis {
         idx: NodeIndex,
         key: &VertexKey,
         data: &VertexData,
+        default_pos: Pos2,
     ) -> Self {
-        Self::new_impl(graph, idx, key, data, None)
+        Self::new_impl(graph, idx, key, data, default_pos, None)
     }
     pub fn from_old(
-        old: &NodeVis,
+        old: &Self,
         idx: NodeIndex,
         data: &VertexData,
-        selected_range: Option<(PatternId, Range<usize>)>,
     ) -> Self {
-        Self::new_impl(old.graph.clone(), idx, &old.key, data, selected_range)
+        Self::new_impl(
+            old.graph.clone(),
+            idx,
+            &old.key,
+            data,
+            old.default_pos,
+            old.selected_range.clone(),
+        )
     }
     pub fn new_impl(
         graph: Graph,
         idx: NodeIndex,
         key: &VertexKey,
         data: &VertexData,
+        default_pos: Pos2,
         selected_range: Option<(PatternId, Range<usize>)>,
     ) -> Self {
         let (name, child_patterns) = {
@@ -83,6 +96,7 @@ impl NodeVis {
             idx,
             name,
             data: data.clone(),
+            default_pos,
             child_patterns,
             selected_range,
         }
@@ -92,7 +106,7 @@ impl NodeVis {
         ui: &mut Ui,
     ) -> Option<NodeResponse> {
         Window::new(format!("{}({})", self.name, self.idx.index()))
-            //Window::new(&self.name)
+            .current_pos(self.default_pos)
             .vscroll(true)
             .auto_sized()
             //.default_width(80.0)
@@ -109,6 +123,7 @@ impl NodeVis {
             )
             .show(ui.ctx(), |ui| {
                 ui.spacing_mut().item_spacing = Vec2::splat(0.0);
+                //ui.label(format!("Pos: {}", self.default_pos));
                 self.child_patterns.show(ui).ranges
             })
             .and_then(|ir| {

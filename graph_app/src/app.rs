@@ -35,7 +35,14 @@ use derive_more::{
     Deref,
     DerefMut,
 };
-use std::future::Future;
+use std::{
+    future::Future,
+    hash::{
+        DefaultHasher,
+        Hash,
+        Hasher,
+    },
+};
 use tokio_util::sync::CancellationToken;
 
 #[derive(Debug)]
@@ -48,42 +55,50 @@ impl ReadCtx {
         &mut self,
         cancellation_token: CancellationToken,
     ) {
+        println!("Task running on thread {:?}", std::thread::current().id());
+
         let graph = self.graph.graph.clone();
         let labels = self.graph.labels.clone();
         let insert_texts = self.graph.insert_texts.clone();
 
         let status = StatusHandle::from(Status::new(insert_texts.clone()));
         self.status = Some(status.clone());
+        //let corpus_name = "7547453137468837744".to_string();
+        let corpus_name = {
+            let mut hasher = DefaultHasher::new();
+            insert_texts.hash(&mut hasher);
+            format!("{:?}", hasher.finish())
+        };
+        let corpus = ngrams::graph::Corpus::new(corpus_name, insert_texts);
 
-        // Create the corpus and parse future
-        let corpus = ngrams::graph::Corpus::new(
-            insert_texts.first().cloned().unwrap_or_default(),
-            insert_texts,
-        );
-
-        // Add periodic cancellation checks during the parse operation
-        let parse_future = ngrams::graph::parse_corpus(
+        // Parse has periodic cancellation checks during the parse operation
+        // Use select to race between parsing and cancellation
+        tokio::select! {
+            res = ngrams::graph::parse_corpus(
             corpus,
             status,
             cancellation_token.clone(),
-        );
-
-        // Use select to race between parsing and cancellation
-        let result = tokio::select! {
-            res = parse_future => {
-                res
+        ) => {
+                match res {
+                    Ok(res) => {
+                        self.graph.insert_texts.clear();
+                        *graph.write().unwrap() = res.graph;
+                        *labels.write().unwrap() = res.labels;
+                    },
+                    Err(CancelReason::Cancelled) => {
+                        println!("Parse operation was cancelled via token");
+                    },
+                    Err(CancelReason::Error) => {
+                        println!("Parse operation panicked");
+                    },
+                }
             }
             _ = cancellation_token.cancelled() => {
                 println!("Parse operation was cancelled via token during execution");
-                Err(CancelReason::Cancelled)
             }
         };
 
-        if let Ok(res) = result {
-            self.graph.insert_texts.clear();
-            *graph.write().unwrap() = res.graph;
-            *labels.write().unwrap() = res.labels;
-        }
+        println!("Task done.");
     }
 }
 
@@ -253,13 +268,8 @@ impl App {
 
         let ctx = self.read_ctx.clone();
         let task = tokio::spawn(async move {
-            println!(
-                "Task running on thread {:?}",
-                std::thread::current().id()
-            );
             let mut ctx = ctx.write().await;
             ctx.read_text(cancellation_token).await;
-            println!("Task done.");
         });
         self.read_task = Some(task);
     }
