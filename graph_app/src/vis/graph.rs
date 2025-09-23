@@ -21,6 +21,11 @@ use petgraph::{
     },
     visit::EdgeRef,
 };
+use rerun::{
+    datatypes::Utf8,
+    GraphEdges,
+    GraphNodes,
+};
 use std::f32::consts::PI;
 
 use super::node::NodeVis;
@@ -32,79 +37,116 @@ pub struct GraphVis {
     handle: Option<Graph>,
     pub(crate) graph_pos: Pos2,
 }
+pub enum UpdateError {
+    NoRecordingStream,
+    Stream(rerun::RecordingStreamError),
+    NotInitialized,
+}
+use UpdateError::*;
 impl GraphVis {
-    pub fn new(graph: Graph) -> Self {
-        let mut new = Self {
-            graph: DiGraph::new(),
-            handle: Some(graph),
-            graph_pos: Pos2::default(),
-        };
-        new.update();
-        new
-    }
-    pub fn set_graph(
-        &mut self,
-        graph: Graph,
-    ) {
-        self.handle = Some(graph);
-        self.update();
-    }
-    fn graph(&self) -> Option<Graph> {
-        self.handle.clone()
-    }
-    pub fn update(&mut self) -> Option<()> {
+    pub fn update(&mut self) -> Result<(), UpdateError> {
         // todo reuse names in nodes
-        let handle = self.graph()?;
+        let handle = self.graph().ok_or(NotInitialized)?;
         let pg = handle.read().to_petgraph();
-        let old_node_indices: HashMap<_, _> = self
-            .graph
-            .nodes()
-            .map(|(idx, node)| (node.key, idx))
-            .collect();
+        let rec = handle.rec.as_ref().ok_or(NoRecordingStream)?;
+        //let coordinates = (0..NUM_NODES).cartesian_product(0..NUM_NODES);
+
+        //let (nodes, colors): (Vec<_>, Vec<_>) = coordinates
+        //    .clone()
+        //    .enumerate()
+        //    .map(|(i, (x, y))| {
+        //        use rerun::Color;
+
+        //        let r =
+        //            ((x as f32 / (NUM_NODES - 1) as f32) * 255.0).round() as u8;
+        //        let g =
+        //            ((y as f32 / (NUM_NODES - 1) as f32) * 255.0).round() as u8;
+        //        (i.to_string(), Color::from_rgb(r, g, 0))
+        //    })
+        //    .unzip();
+
+        let nodes = pg.node_weights();
+        let indices = pg.node_indices().map(|i| format!("{:?}", i));
+        let labels = nodes.map(|(i, n)| n.name.clone());
+
+        rec.log_static("/graph", &GraphNodes::new(indices).with_labels(labels))
+            .map_err(Stream)?;
+
+        //let mut edges = Vec::new();
+        //for (x, y) in coordinates {
+        //    if y > 0 {
+        //        let source = (y - 1) * NUM_NODES + x;
+        //        let target = y * NUM_NODES + x;
+        //        edges.push((source.to_string(), target.to_string()));
+        //    }
+        //    if x > 0 {
+        //        let source = y * NUM_NODES + (x - 1);
+        //        let target = y * NUM_NODES + x;
+        //        edges.push((source.to_string(), target.to_string()));
+        //    }
+        //}
+
         let filtered = pg.filter_map(
             |_idx, (_index, node)| {
-                if node.width() <= 1 {
+                if node.data.width() <= 1 {
                     None
                 } else {
-                    Some((node.key, node))
+                    Some((node.data.key, node))
                 }
             },
             |_idx, e| (e.child.width() > 1).then_some(()),
         );
-        let n = filtered.node_count();
-        let c = (n as f32).sqrt().ceil();
-        let s = 200.0;
-        let h = 120.0;
-        let w = c * s;
-        let x = 0.0;
-        let y = 0.0;
-        let mut pos_generator = (0..).map(|i| {
-            Pos2::new(
-                x + (i as f32 * s) % w,
-                y + ((i as f32 * s) / w).floor() * h,
-            )
+        let edges = filtered.edge_references().map(|e| {
+            (format!("{:?}", e.source()), format!("{:?}", e.target()))
         });
-        self.graph = filtered.map(
-            |idx, (key, node)| {
-                if let Some(oid) = old_node_indices.get(key) {
-                    let old = self.graph.node_weight(*oid).unwrap();
-                    NodeVis::from_old(old, idx, node)
-                } else {
-                    NodeVis::new(
-                        handle.clone(),
-                        idx,
-                        key,
-                        node,
-                        pos_generator.next().unwrap(),
-                    )
-                }
-            },
-            |_idx, _e| (),
-        );
-        Some(())
-    }
-    fn initialized(&self) -> bool {
-        self.graph.node_count() > 0 && self.handle.is_some()
+        rec.log_static("/graph", &GraphEdges::new(edges).with_directed_edges())
+            .map_err(Stream)?;
+        //let old_node_indices: HashMap<_, _> = self
+        //    .graph
+        //    .nodes()
+        //    .map(|(idx, node)| (node.key, idx))
+        //    .collect();
+        //let filtered = pg.filter_map(
+        //    |_idx, (_index, node)| {
+        //        if node.width() <= 1 {
+        //            None
+        //        } else {
+        //            Some((node.key, node))
+        //        }
+        //    },
+        //    |_idx, e| (e.child.width() > 1).then_some(()),
+        //);
+        //let n = filtered.node_count();
+        //let c = (n as f32).sqrt().ceil();
+        //let s = 200.0;
+        //let h = 120.0;
+        //let w = c * s;
+        //let x = 0.0;
+        //let y = 0.0;
+        //let mut pos_generator = (0..).map(|i| {
+        //    Pos2::new(
+        //        x + (i as f32 * s) % w,
+        //        y + ((i as f32 * s) / w).floor() * h,
+        //    )
+        //});
+        //self.graph = filtered.map(
+        //    |idx, (key, node)| {
+        //        if let Some(oid) = old_node_indices.get(key) {
+        //            let old = self.graph.node_weight(*oid).unwrap();
+        //            NodeVis::from_old(old, idx, node)
+        //        } else {
+        //            NodeVis::new(
+        //                handle.clone(),
+        //                idx,
+        //                key,
+        //                node,
+        //                pos_generator.next().unwrap(),
+        //            )
+        //        }
+        //    },
+        //    |_idx, _e| (),
+        //);
+        Ok(())
     }
     pub fn show(
         &mut self,
@@ -152,6 +194,28 @@ impl GraphVis {
                 });
             }
         }
+    }
+    fn initialized(&self) -> bool {
+        self.graph.node_count() > 0 && self.handle.is_some()
+    }
+    pub fn new(graph: Graph) -> Self {
+        let mut new = Self {
+            graph: DiGraph::new(),
+            handle: Some(graph),
+            graph_pos: Pos2::default(),
+        };
+        new.update();
+        new
+    }
+    pub fn set_graph(
+        &mut self,
+        graph: Graph,
+    ) {
+        self.handle = Some(graph);
+        self.update();
+    }
+    fn graph(&self) -> Option<Graph> {
+        self.handle.clone()
     }
     pub fn edge_tip(
         ui: &mut Ui,

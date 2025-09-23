@@ -5,10 +5,12 @@ mod app;
 pub use app::App;
 mod examples;
 mod graph;
+mod read;
 mod vis;
 // ----------------------------------------------------------------------------
 // When compiling for web:
 
+use crate::graph::Graph;
 use context_trace::graph::HypergraphRef;
 #[cfg(target_arch = "wasm32")]
 use eframe::wasm_bindgen::{
@@ -16,6 +18,7 @@ use eframe::wasm_bindgen::{
     prelude::*,
 };
 pub use tracing::*;
+
 pub use {
     std::sync::{
         Arc,
@@ -44,7 +47,8 @@ pub fn start(canvas_id: &str) -> Result<(), eframe::wasm_bindgen::JsValue> {
 }
 
 pub async fn open(graph: HypergraphRef) -> Result<(), eframe::Error> {
-    let app = App::from_graph_ref(graph);
+    let graph = Graph::from(graph);
+    let app = App::from(graph);
     eframe::run_native(
         "Graph App",
         eframe::NativeOptions::default(),

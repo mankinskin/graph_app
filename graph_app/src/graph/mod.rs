@@ -5,7 +5,6 @@ use std::sync::{
     RwLockWriteGuard,
 };
 
-use super::vis::graph::GraphVis;
 use context_trace::{
     graph::{
         vertex::key::VertexKey,
@@ -26,26 +25,42 @@ use petgraph::{
 #[derive(Clone, Debug)]
 pub struct Graph {
     pub graph: HypergraphRef,
+    pub rec: Option<rerun::RecordingStream>,
     pub insert_texts: Vec<String>,
     pub labels: Arc<RwLock<HashSet<VertexKey>>>,
 }
 impl Default for Graph {
     fn default() -> Self {
         let graph = Hypergraph::default();
-        Self::new_from_graph(graph)
+        Self::from(graph)
     }
 }
-impl Graph {
-    pub fn new_from_graph(graph: Hypergraph) -> Self {
-        Self::new_from_graph_ref(HypergraphRef::from(graph))
+impl From<Hypergraph> for Graph {
+    fn from(graph: Hypergraph) -> Self {
+        Self::from(HypergraphRef::from(graph))
     }
-    pub fn new_from_graph_ref(graph: HypergraphRef) -> Self {
+}
+impl From<HypergraphRef> for Graph {
+    fn from(graph: HypergraphRef) -> Self {
         Self {
             graph,
             insert_texts: vec![String::from("aabbaabbaa")],
             labels: Default::default(),
+            rec: None,
         }
     }
+}
+impl From<rerun::RecordingStream> for Graph {
+    fn from(rec: rerun::RecordingStream) -> Self {
+        Self {
+            graph: Hypergraph::default().into(),
+            insert_texts: vec![String::from("aabbaabbaa")],
+            labels: Default::default(),
+            rec: Some(rec),
+        }
+    }
+}
+impl Graph {
     pub fn try_read(&self) -> Option<RwLockReadGuard<'_, Hypergraph>> {
         self.graph.read().ok()
     }

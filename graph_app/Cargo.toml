@@ -22,6 +22,8 @@ derive_more = { version = "2.0.0", features = ["full"] }
 derive-getters = "0.5"
 context-read = { path = "../context-engine/context-read" }
 context-trace = { path = "../context-engine/context-trace" }
+rerun = { version = "0.25.1", features = ["clap"] }
+clap = "4.5.48"
 
 [dependencies.tracing-egui]
 path = "../tracing-egui"

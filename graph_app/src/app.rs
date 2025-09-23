@@ -7,11 +7,6 @@ use eframe::{
     },
     CreationContext,
 };
-use ngrams::graph::{
-    traversal::pass::CancelReason,
-    Status,
-    StatusHandle,
-};
 #[cfg(feature = "persistence")]
 use serde::*;
 
@@ -23,6 +18,7 @@ use crate::{
         build_graph2,
         build_graph3,
     },
+    read::ReadCtx,
     vis::{
         graph::GraphVis,
         status::ShowStatus,
@@ -53,74 +49,21 @@ use std::{
 };
 use tokio_util::sync::CancellationToken;
 
-#[derive(Debug)]
-pub struct ReadCtx {
-    graph: Graph,
-    status: Option<ngrams::graph::StatusHandle>,
-}
-impl ReadCtx {
-    pub async fn read_text(
-        &mut self,
-        cancellation_token: CancellationToken,
-    ) {
-        println!("Task running on thread {:?}", std::thread::current().id());
-
-        let graph = self.graph.graph.clone();
-        let labels = self.graph.labels.clone();
-        let insert_texts = self.graph.insert_texts.clone();
-
-        let status = StatusHandle::from(Status::new(insert_texts.clone()));
-        self.status = Some(status.clone());
-        //let corpus_name = "7547453137468837744".to_string();
-        let corpus_name = {
-            let mut hasher = DefaultHasher::new();
-            insert_texts.hash(&mut hasher);
-            format!("{:?}", hasher.finish())
-        };
-        let corpus = ngrams::graph::Corpus::new(corpus_name, insert_texts);
-
-        // Parse has periodic cancellation checks during the parse operation
-        // Use select to race between parsing and cancellation
-        tokio::select! {
-            res = ngrams::graph::parse_corpus(
-            corpus,
-            status,
-            cancellation_token.clone(),
-        ) => {
-                match res {
-                    Ok(res) => {
-                        self.graph.insert_texts.clear();
-                        *graph.write().unwrap() = res.graph;
-                        *labels.write().unwrap() = res.labels;
-                    },
-                    Err(CancelReason::Cancelled) => {
-                        println!("Parse operation was cancelled via token");
-                    },
-                    Err(CancelReason::Error) => {
-                        println!("Parse operation panicked");
-                    },
-                }
-            }
-            _ = cancellation_token.cancelled() => {
-                println!("Parse operation was cancelled via token during execution");
-            }
-        };
-
-        println!("Task done.");
-    }
-}
-
 #[derive(Deref, DerefMut, Debug)]
 #[cfg_attr(feature = "persistence", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "persistence", serde(default))] // if we add new fields, give them default values when deserializing old state
 pub struct App {
     #[allow(unused)]
     graph_file: Option<std::path::PathBuf>,
+
     #[cfg_attr(feature = "persistence", serde(skip))]
     inserter: bool,
+
     read_task: Option<tokio::task::JoinHandle<()>>,
+
     #[cfg_attr(feature = "persistence", serde(skip))]
     cancellation_token: Option<CancellationToken>,
+
     #[deref]
     #[deref_mut]
     read_ctx: Arc<RwLock<ReadCtx>>,
@@ -130,34 +73,26 @@ pub struct App {
 
 impl Default for App {
     fn default() -> Self {
-        Self::from_graph(Graph::default())
+        Self::from(Graph::default())
     }
 }
-impl App {
-    pub fn new(creation_context: &CreationContext<'_>) -> Self {
-        creation_context.egui_ctx.set_theme(ThemePreference::Dark);
-        Self {
-            ..Default::default()
-        }
-    }
-    #[allow(unused)]
-    pub fn from_graph(graph: Graph) -> Self {
+impl From<Graph> for App {
+    fn from(graph: Graph) -> Self {
         Self {
             graph_file: None,
             inserter: true,
             read_task: None,
             cancellation_token: None,
             vis: Arc::new(SyncRwLock::new(GraphVis::new(graph.clone()))),
-            read_ctx: Arc::new(RwLock::new(ReadCtx {
-                graph,
-                status: None,
-            })),
+            read_ctx: Arc::new(RwLock::new(ReadCtx::new(graph))),
         }
     }
-    #[allow(unused)]
-    pub fn from_graph_ref(graph: HypergraphRef) -> Self {
-        Self::from_graph(Graph::new_from_graph_ref(graph))
-    }
+}
+impl App {
+    //#[allow(unused)]
+    //pub fn from_graph_ref(graph: HypergraphRef) -> Self {
+    //    Self::from_graph(Graph::new_from_graph_ref(graph))
+    //}
     #[allow(unused)]
     pub fn ctx(&self) -> Option<RwLockReadGuard<'_, ReadCtx>> {
         self.read_ctx.try_read()
@@ -173,7 +108,7 @@ impl App {
         ui.horizontal(|ui| {
             ui.label("Quick Insert:");
             if let Some(mut ctx) = self.ctx_mut() {
-                for text in &mut ctx.graph.insert_texts {
+                for text in &mut ctx.graph_mut().insert_texts {
                     ui.text_edit_singleline(text);
                 }
             }
@@ -193,22 +128,22 @@ impl App {
         ui.menu_button("Load preset...", |ui| {
             if let Some(ctx) = self.ctx() {
                 if ui.button("Graph 1").clicked() {
-                    ctx.graph.set_graph(build_graph1());
+                    ctx.graph().set_graph(build_graph1());
                     ui.close();
                 }
                 if ui.button("Graph 2").clicked() {
-                    ctx.graph.set_graph(build_graph2());
+                    ctx.graph().set_graph(build_graph2());
                     ui.close();
                 }
                 if ui.button("Graph 3").clicked() {
-                    ctx.graph.set_graph(build_graph3());
+                    ctx.graph().set_graph(build_graph3());
                     ui.close();
                 }
             }
         });
         if let Some(mut ctx) = self.ctx_mut() {
             if ui.button("Clear").clicked() {
-                ctx.graph.clear();
+                ctx.graph_mut().clear();
                 ui.close();
             }
         }
@@ -331,11 +266,11 @@ impl eframe::App for App {
         if self.inserter {
             egui::Window::new("Inserter").show(ctx, |ui| {
                 if let Some(mut ctx) = self.ctx_mut() {
-                    for text in &mut ctx.graph.insert_texts {
+                    for text in &mut ctx.graph_mut().insert_texts {
                         ui.text_edit_singleline(text);
                     }
                     if ui.button("+").clicked() {
-                        ctx.graph.insert_texts.push(String::new());
+                        ctx.graph_mut().insert_texts.push(String::new());
                     }
                 }
                 if ui.button("Insert").clicked() && self.read_task.is_none() {
@@ -347,7 +282,7 @@ impl eframe::App for App {
             });
         }
         if let Some(read_ctx) = self.ctx() {
-            if let Some(status) = read_ctx.status.as_ref() {
+            if let Some(status) = read_ctx.status() {
                 ShowStatus(&*status.read().unwrap()).show(ctx);
             }
         }

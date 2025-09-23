@@ -4,6 +4,7 @@ use std::sync::{
 };
 
 use crate::{
+    HashMap,
     graph::{
         child_strings::ChildStrings,
         getters::vertex::VertexSet,
@@ -16,8 +17,8 @@ use crate::{
             key::VertexKey,
         },
     },
-    HashMap,
 };
+use derive_new::new;
 use itertools::Itertools;
 use petgraph::graph::DiGraph;
 use serde::{
@@ -25,6 +26,7 @@ use serde::{
     Serialize,
 };
 use vertex::{
+    VertexIndex,
     child::Child,
     has_vertex_index::{
         HasVertexIndex,
@@ -33,7 +35,6 @@ use vertex::{
     pattern::IntoPattern,
     token::Token,
     wide::Wide,
-    VertexIndex,
 };
 
 pub(crate) mod child_strings;
@@ -45,7 +46,9 @@ pub(crate) mod validation;
 pub mod vertex;
 
 #[derive(Debug, Clone, Default)]
-pub struct HypergraphRef<G: GraphKind = BaseGraphKind>(pub Arc<RwLock<Hypergraph<G>>>);
+pub struct HypergraphRef<G: GraphKind = BaseGraphKind>(
+    pub Arc<RwLock<Hypergraph<G>>>,
+);
 
 impl<G: GraphKind> HypergraphRef<G> {
     pub fn new(g: Hypergraph<G>) -> Self {
@@ -218,23 +221,32 @@ pub struct Edge {
     pub child: Child,
 }
 
+#[derive(Clone, Debug, new)]
+pub struct Node {
+    pub name: String,
+    pub data: VertexData,
+}
+
 impl<'a, G: GraphKind> Hypergraph<G>
 where
     G::Token: std::fmt::Display,
 {
-    pub fn to_petgraph(&self) -> DiGraph<(VertexIndex, VertexData), Edge> {
-        let mut pg = DiGraph::new();
+    pub fn to_petgraph(&self) -> DiGraph<(VertexIndex, Node), Edge> {
+        let mut pg = DiGraph::new() as DiGraph<(VertexIndex, Node), Edge>;
         // id refers to index in Hypergraph
         // idx refers to index in petgraph
-        let nodes: HashMap<_, (_, &VertexData)> = self
+        let nodes: HashMap<_, (_, Node)> = self
             .vertex_iter()
-            .map(|(_id, node)| {
-                let idx = pg.add_node((node.vertex_index(), node.clone()));
-                (node.vertex_index(), (idx, node))
+            .map(|(_id, data)| {
+                let vi = data.vertex_index();
+                let label = self.index_string(vi);
+                let node = Node::new(label, data.clone());
+                let idx = pg.add_node((vi, node.clone()));
+                (vi, (idx, node))
             })
             .collect();
         nodes.values().for_each(|(idx, node)| {
-            let parents = node.get_parents();
+            let parents = node.data.get_parents();
             for (p_id, parent) in parents {
                 let (p_idx, _p_data) = nodes
                     .get(p_id)
@@ -244,7 +256,7 @@ where
                     *idx,
                     Edge {
                         parent: parent.clone(),
-                        child: node.to_child(),
+                        child: node.data.to_child(),
                     },
                 );
             }
@@ -253,10 +265,9 @@ where
     }
 
     pub fn to_node_child_strings(&self) -> ChildStrings {
-        let nodes = self
-            .graph
-            .iter()
-            .map(|(_, data)| (self.vertex_data_string(data), data.to_pattern_strings(self)));
+        let nodes = self.graph.iter().map(|(_, data)| {
+            (self.vertex_data_string(data), data.to_pattern_strings(self))
+        });
         ChildStrings::from_nodes(nodes)
     }
     pub fn pattern_child_strings(
@@ -297,7 +308,9 @@ where
     }
     pub fn pattern_strings(
         &'a self,
-        patterns: impl IntoIterator<Item = impl IntoIterator<Item = impl HasVertexIndex>>,
+        patterns: impl IntoIterator<
+            Item = impl IntoIterator<Item = impl HasVertexIndex>,
+        >,
     ) -> Vec<String> {
         patterns
             .into_iter()
