@@ -13,6 +13,7 @@ use eframe::egui::{
     Vec2,
     Window,
 };
+use itertools::Itertools;
 #[allow(unused)]
 use petgraph::{
     graph::{
@@ -25,6 +26,7 @@ use rerun::{
     datatypes::Utf8,
     GraphEdges,
     GraphNodes,
+    Vec2D,
 };
 use std::f32::consts::PI;
 
@@ -47,7 +49,8 @@ impl GraphVis {
     pub fn update(&mut self) -> Result<(), UpdateError> {
         // todo reuse names in nodes
         let handle = self.graph().ok_or(NotInitialized)?;
-        let pg = handle.read().to_petgraph();
+        let cg = handle.read();
+        let pg = cg.to_petgraph();
         let rec = handle.rec.as_ref().ok_or(NoRecordingStream)?;
         //let coordinates = (0..NUM_NODES).cartesian_product(0..NUM_NODES);
 
@@ -65,12 +68,51 @@ impl GraphVis {
         //    })
         //    .unzip();
 
+        let pg = pg.filter_map(
+            |_idx, (_index, node)| {
+                if node.data.width() <= 1 {
+                    None
+                } else {
+                    Some((node.data.key, node))
+                }
+            },
+            |_idx, e| (e.child.width() > 1).then_some(()),
+        );
         let nodes = pg.node_weights();
         let indices = pg.node_indices().map(|i| format!("{:?}", i));
-        let labels = nodes.map(|(i, n)| n.name.clone());
+        let labels = nodes
+            .map(|(i, n)| {
+                let name = n.name.clone();
+                let patterns = n.data.to_pattern_strings(&cg);
+                format!(
+                    "{}\n{}",
+                    name,
+                    patterns.into_iter().map(|v| v.join(" ")).join("\n")
+                )
+            })
+            .collect_vec();
 
-        rec.log_static("/graph", &GraphNodes::new(indices).with_labels(labels))
-            .map_err(Stream)?;
+        let n = pg.node_count();
+        let c = (n as f32).sqrt().ceil();
+        let s = 180.0;
+        let h = 120.0;
+        let w = c * s;
+        let x = 0.0;
+        let y = 0.0;
+        let positions = (0..n).map(|i| {
+            Vec2D::new(
+                x + (i as f32 * s) % w,
+                y + ((i as f32 * s) / w).floor() * h,
+            )
+        });
+
+        rec.log_static(
+            "/graph",
+            &GraphNodes::new(indices)
+                .with_labels(labels)
+                .with_positions(positions),
+        )
+        .map_err(Stream)?;
 
         //let mut edges = Vec::new();
         //for (x, y) in coordinates {
@@ -86,17 +128,7 @@ impl GraphVis {
         //    }
         //}
 
-        let filtered = pg.filter_map(
-            |_idx, (_index, node)| {
-                if node.data.width() <= 1 {
-                    None
-                } else {
-                    Some((node.data.key, node))
-                }
-            },
-            |_idx, e| (e.child.width() > 1).then_some(()),
-        );
-        let edges = filtered.edge_references().map(|e| {
+        let edges = pg.edge_references().map(|e| {
             (format!("{:?}", e.source()), format!("{:?}", e.target()))
         });
         rec.log_static("/graph", &GraphEdges::new(edges).with_directed_edges())
@@ -116,19 +148,6 @@ impl GraphVis {
         //    },
         //    |_idx, e| (e.child.width() > 1).then_some(()),
         //);
-        //let n = filtered.node_count();
-        //let c = (n as f32).sqrt().ceil();
-        //let s = 200.0;
-        //let h = 120.0;
-        //let w = c * s;
-        //let x = 0.0;
-        //let y = 0.0;
-        //let mut pos_generator = (0..).map(|i| {
-        //    Pos2::new(
-        //        x + (i as f32 * s) % w,
-        //        y + ((i as f32 * s) / w).floor() * h,
-        //    )
-        //});
         //self.graph = filtered.map(
         //    |idx, (key, node)| {
         //        if let Some(oid) = old_node_indices.get(key) {
