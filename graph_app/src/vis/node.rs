@@ -110,7 +110,7 @@ impl NodeVis {
             //    .map(|vis| vis.graph_pos += state.pointer.delta());
         });
         Window::new(format!("{}({})", self.name, self.idx.index()))
-            .current_pos(self.default_pos)
+            .default_pos(self.default_pos)
             .vscroll(true)
             .auto_sized()
             //.default_width(80.0)

@@ -1,11 +1,6 @@
-use context_trace::graph::HypergraphRef;
-use eframe::{
-    egui::{
-        self,
-        ThemePreference,
-        Ui,
-    },
-    CreationContext,
+use eframe::egui::{
+    self,
+    Ui,
 };
 #[cfg(feature = "persistence")]
 use serde::*;
@@ -36,11 +31,6 @@ use derive_more::{
 };
 use std::{
     future::Future,
-    hash::{
-        DefaultHasher,
-        Hash,
-        Hasher,
-    },
     sync::{
         RwLock as SyncRwLock,
         RwLockReadGuard as SyncRwLockReadGuard,

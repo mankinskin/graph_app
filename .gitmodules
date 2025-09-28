@@ -11,3 +11,7 @@
 [submodule "petgraph"]
 	path = petgraph
 	url = https://github.com/mankinskin/petgraph
+
+[submodule "rerun"]
+	path = rerun
+	url = ./rerun

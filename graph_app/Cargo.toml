@@ -22,7 +22,6 @@ derive_more = { version = "2.0.0", features = ["full"] }
 derive-getters = "0.5"
 context-read = { path = "../context-engine/context-read" }
 context-trace = { path = "../context-engine/context-trace" }
-rerun = { version = "0.25.1", features = ["clap"] }
 clap = "4.5.48"
 
 [dependencies.tracing-egui]
@@ -30,29 +29,33 @@ path = "../tracing-egui"
 #version = "^0.1"
 
 [dependencies.tracing]
-version = "^0.1"
 features = ["attributes"]
+version = "^0.1"
 
 [dependencies.tracing-subscriber]
-version = "^0.3"
 features = ["json"]
+version = "^0.3"
 
 [dependencies.eframe]
 path = "../egui/crates/eframe"
 
 [dependencies.tokio]
-version = "^1"
 features = ["macros", "rt-multi-thread"]
+version = "^1"
 
 [dependencies.tokio-util]
 version = "^0.7"
 
-[dependencies.petgraph]
-#version = "^0.5"
-path = "../petgraph"
-#git = "https://github.com/mankinskin/petgraph"
-features = ["serde-1"]
+[dependencies.rerun]
+features = ["clap"]
+path = "../rerun/crates/top/rerun"
+#version = "0.25.1",
 
+[dependencies.petgraph]
+features = ["serde-1"]
+path = "../petgraph"
+#version = "^0.5"
+#git = "https://github.com/mankinskin/petgraph"
 
 [dependencies.ngrams]
 path = "../ngrams"
