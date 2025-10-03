@@ -125,6 +125,8 @@ where
 pub type IndexRolePath<R> = RootedRolePath<R, IndexRoot>;
 pub type PatternRolePath<R> = RootedRolePath<R, Pattern>;
 
+pub type RootedStartPath<R> = RootedRolePath<Start, R>;
+pub type RootedEndPath<R> = RootedRolePath<End, R>;
 pub type IndexStartPath = IndexRolePath<Start>;
 pub type IndexEndPath = IndexRolePath<End>;
 pub type PatternStartPath = PatternRolePath<Start>;

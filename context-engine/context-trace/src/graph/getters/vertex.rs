@@ -1,21 +1,35 @@
-use std::borrow::Borrow;
-use std::fmt::Display;
+use std::{
+    borrow::Borrow,
+    fmt::Display,
+};
 
-use crate::graph::getters::ErrorReason;
-use crate::graph::vertex::child::Child;
-use crate::graph::vertex::has_vertex_key::HasVertexKey;
-use crate::graph::Hypergraph;
-use crate::graph::kind::GraphKind;
-use crate::graph::vertex::data::VertexData;
-use crate::graph::vertex::has_vertex_index::HasVertexIndex;
-use crate::graph::vertex::{VertexEntry, VertexIndex, VertexPatternView};
-use crate::graph::vertex::key::VertexKey;
+use crate::graph::{
+    Hypergraph,
+    getters::ErrorReason,
+    kind::GraphKind,
+    vertex::{
+        VertexEntry,
+        VertexIndex,
+        VertexPatternView,
+        child::Child,
+        data::VertexData,
+        has_vertex_index::HasVertexIndex,
+        has_vertex_key::HasVertexKey,
+        key::VertexKey,
+    },
+};
 
 pub trait GetVertexKey {
-    fn get_vertex_key<G: GraphKind>(&self, graph: &Hypergraph<G>) -> VertexKey;
+    fn get_vertex_key<G: GraphKind>(
+        &self,
+        graph: &Hypergraph<G>,
+    ) -> VertexKey;
 }
 impl<T: GetVertexKey> GetVertexKey for &'_ T {
-    fn get_vertex_key<G: GraphKind>(&self, g: &Hypergraph<G>) -> VertexKey {
+    fn get_vertex_key<G: GraphKind>(
+        &self,
+        g: &Hypergraph<G>,
+    ) -> VertexKey {
         (*self).get_vertex_key(g)
     }
 }
@@ -42,7 +56,7 @@ macro_rules! impl_GetVertexIndex_with {
     };
 }
 impl_GetVertexKey_with!(
-    (graph, self) => 
+    (graph, self) =>
         graph.expect_key_for_index(self),
     {
         VertexIndex,
@@ -50,7 +64,7 @@ impl_GetVertexKey_with!(
     }
 );
 impl_GetVertexKey_with!(
-    (_graph, self) => 
+    (_graph, self) =>
         self.vertex_key(),
     {
         VertexKey,
@@ -64,8 +78,11 @@ impl_GetVertexIndex_with!(
     }
 );
 
-pub trait GetVertexIndex: GetVertexKey + Display + Clone + Copy  {
-    fn get_vertex_index<G: GraphKind>(&self, graph: &Hypergraph<G>) -> VertexIndex;
+pub trait GetVertexIndex: GetVertexKey + Display + Clone + Copy {
+    fn get_vertex_index<G: GraphKind>(
+        &self,
+        graph: &Hypergraph<G>,
+    ) -> VertexIndex;
 }
 //impl<T: HasVertexIndex + GetVertexKey + Display + Clone + Copy> GetVertexIndex for T {
 //    fn get_vertex_index<G: GraphKind>(&self, _: &Hypergraph<G>) -> VertexIndex {
@@ -73,12 +90,18 @@ pub trait GetVertexIndex: GetVertexKey + Display + Clone + Copy  {
 //    }
 //}
 impl GetVertexIndex for VertexKey {
-    fn get_vertex_index<G: GraphKind>(&self, graph: &Hypergraph<G>) -> VertexIndex {
+    fn get_vertex_index<G: GraphKind>(
+        &self,
+        graph: &Hypergraph<G>,
+    ) -> VertexIndex {
         graph.expect_index_for_key(self)
     }
 }
 impl<T: GetVertexIndex> GetVertexIndex for &'_ T {
-    fn get_vertex_index<G: GraphKind>(&self, g: &Hypergraph<G>) -> VertexIndex {
+    fn get_vertex_index<G: GraphKind>(
+        &self,
+        g: &Hypergraph<G>,
+    ) -> VertexIndex {
         (*self).get_vertex_index(g)
     }
 }
@@ -113,16 +136,14 @@ pub trait VertexSet<I: GetVertexIndex> {
     ) -> VertexEntry<'_>;
     fn get_vertices(
         &self,
-        indices: impl Iterator<Item=I>,
+        indices: impl Iterator<Item = I>,
     ) -> Result<VertexPatternView<'_>, ErrorReason> {
-        indices
-            .map(move |index| self.get_vertex(index))
-            .collect()
+        indices.map(move |index| self.get_vertex(index)).collect()
     }
     #[track_caller]
     fn expect_vertices(
         &self,
-        indices: impl Iterator<Item=I>,
+        indices: impl Iterator<Item = I>,
     ) -> VertexPatternView<'_> {
         indices
             .map(move |index| self.expect_vertex(index))
@@ -137,7 +158,8 @@ pub trait VertexSet<I: GetVertexIndex> {
     }
 }
 impl<'t, G: GraphKind, I: GetVertexIndex> VertexSet<&'t I> for Hypergraph<G>
-    where Hypergraph<G>: VertexSet<I>
+where
+    Hypergraph<G>: VertexSet<I>,
 {
     fn get_vertex(
         &self,
@@ -163,14 +185,16 @@ impl<G: GraphKind> VertexSet<VertexKey> for Hypergraph<G> {
         &self,
         key: VertexKey,
     ) -> Result<&VertexData, ErrorReason> {
-        self.graph.get(key.borrow())
+        self.graph
+            .get(key.borrow())
             .ok_or(ErrorReason::UnknownIndex)
     }
     fn get_vertex_mut(
         &mut self,
         key: VertexKey,
     ) -> Result<&mut VertexData, ErrorReason> {
-        self.graph.get_mut(key.borrow())
+        self.graph
+            .get_mut(key.borrow())
             .ok_or(ErrorReason::UnknownIndex)
     }
     fn vertex_entry(
@@ -185,7 +209,8 @@ impl<G: GraphKind> VertexSet<VertexIndex> for Hypergraph<G> {
         &self,
         key: VertexIndex,
     ) -> Result<&VertexData, ErrorReason> {
-        self.graph.get_index(*key.borrow())
+        self.graph
+            .get_index(*key.borrow())
             .map(|(_, d)| d)
             .ok_or(ErrorReason::UnknownIndex)
     }
@@ -193,7 +218,8 @@ impl<G: GraphKind> VertexSet<VertexIndex> for Hypergraph<G> {
         &mut self,
         key: VertexIndex,
     ) -> Result<&mut VertexData, ErrorReason> {
-        self.graph.get_index_mut(*key.borrow())
+        self.graph
+            .get_index_mut(*key.borrow())
             .map(|(_, d)| d)
             .ok_or(ErrorReason::UnknownIndex)
     }
@@ -231,8 +257,7 @@ impl<G: GraphKind> Hypergraph<G> {
         &self,
         key: &VertexKey,
     ) -> Result<VertexIndex, ErrorReason> {
-        self.graph.get_index_of(key)
-            .ok_or(ErrorReason::UnknownKey)
+        self.graph.get_index_of(key).ok_or(ErrorReason::UnknownKey)
     }
     #[track_caller]
     pub fn expect_index_for_key(
@@ -245,7 +270,8 @@ impl<G: GraphKind> Hypergraph<G> {
         &self,
         index: impl HasVertexIndex,
     ) -> Result<VertexKey, ErrorReason> {
-        self.graph.get_index(index.vertex_index())
+        self.graph
+            .get_index(index.vertex_index())
             .map(|(k, _)| *k)
             .ok_or(ErrorReason::UnknownKey)
     }
@@ -260,34 +286,22 @@ impl<G: GraphKind> Hypergraph<G> {
     pub fn next_vertex_index(&self) -> VertexIndex {
         self.graph.len()
     }
-    //pub fn get_vertex_key(
-    //    &self,
-    //    index: impl Indexed,
-    //) -> Result<&VertexIndex, ErrorReason> {
-    //    self.get_vertex(index).map(|entry| entry.0)
-    //}
-    //#[track_caller]
-    //pub fn expect_vertex_key(
-    //    &self,
-    //    index: impl Indexed,
-    //) -> &VertexIndex {
-    //    self.expect_vertex(index).0
-    //}
-    pub fn vertex_iter(&self) -> impl Iterator<Item=(&VertexKey, &VertexData)> {
+    pub fn vertex_iter(
+        &self
+    ) -> impl Iterator<Item = (&VertexKey, &VertexData)> {
         self.graph.iter()
     }
-    pub fn vertex_iter_mut(&mut self) -> impl Iterator<Item=(&VertexKey, &mut VertexData)> {
+    pub fn vertex_iter_mut(
+        &mut self
+    ) -> impl Iterator<Item = (&VertexKey, &mut VertexData)> {
         self.graph.iter_mut()
     }
-    //pub fn vertex_key_iter(&self) -> impl Iterator<Item = &VertexKey> {
-    // todo make keys from data and index
-    //    self.graph.keys()
-    //}
-    pub fn vertex_data_iter(&self) -> impl Iterator<Item=&VertexData> {
+    pub fn vertex_data_iter(&self) -> impl Iterator<Item = &VertexData> {
         self.graph.values()
     }
-    pub fn vertex_data_iter_mut(&mut self) -> impl Iterator<Item=&mut VertexData> {
+    pub fn vertex_data_iter_mut(
+        &mut self
+    ) -> impl Iterator<Item = &mut VertexData> {
         self.graph.values_mut()
     }
-
 }

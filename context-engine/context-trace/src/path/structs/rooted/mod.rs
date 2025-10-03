@@ -21,7 +21,7 @@ use crate::path::{
             pattern_range::PatternRangePath,
             role_path::{
                 PatternStartPath,
-                RootedRolePath,
+                RootedEndPath,
             },
         },
     },
@@ -39,8 +39,8 @@ impl<R: PathRoot> RootedPath for RootedRangePath<R> {
         self.root.clone()
     }
 }
-impl<R: PathRoot> From<RootedRolePath<End, R>> for RootedRangePath<R> {
-    fn from(value: RootedRolePath<End, R>) -> Self {
+impl<R: PathRoot> From<RootedEndPath<R>> for RootedRangePath<R> {
+    fn from(value: RootedEndPath<R>) -> Self {
         Self {
             root: value.root,
             start: Default::default(),

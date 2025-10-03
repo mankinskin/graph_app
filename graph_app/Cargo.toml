@@ -23,6 +23,7 @@ derive-getters = "0.5"
 context-read = { path = "../context-engine/context-read" }
 context-trace = { path = "../context-engine/context-trace" }
 clap = "4.5.48"
+indexmap = "2.11"
 
 [dependencies.tracing-egui]
 path = "../tracing-egui"

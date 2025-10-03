@@ -60,10 +60,10 @@ impl ReadCtx {
         // Use select to race between parsing and cancellation
         tokio::select! {
             res = ngrams::graph::parse_corpus(
-            corpus,
-            status,
-            cancellation_token.clone(),
-        ) => {
+                corpus,
+                status,
+                cancellation_token.clone(),
+            ) => {
                 match res {
                     Ok(res) => {
                         self.graph.insert_texts.clear();
@@ -77,7 +77,7 @@ impl ReadCtx {
                         println!("Parse operation panicked");
                     },
                 }
-            }
+            },
             _ = cancellation_token.cancelled() => {
                 println!("Parse operation was cancelled via token during execution");
             }

@@ -83,7 +83,6 @@ use crate::{
 };
 
 pub type IndexRangePath = RootedRangePath<IndexRoot>;
-
 impl RangePath for IndexRangePath {
     fn new_range(
         root: Self::Root,
@@ -94,6 +93,16 @@ impl RangePath for IndexRangePath {
             root,
             start: SubPath::new(entry).into(),
             end: SubPath::new(exit).into(),
+        }
+    }
+}
+
+impl From<IndexRoot> for IndexRangePath {
+    fn from(value: IndexRoot) -> Self {
+        Self {
+            root: value,
+            start: Default::default(),
+            end: Default::default(),
         }
     }
 }

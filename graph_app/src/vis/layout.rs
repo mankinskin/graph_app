@@ -1,9 +1,6 @@
 use context_trace::{
     graph::{
-        vertex::{
-            has_vertex_index::HasVertexIndex,
-            key::VertexKey,
-        },
+        vertex::key::VertexKey,
         Hypergraph,
     },
     HashMap,
@@ -57,7 +54,7 @@ impl GraphLayout {
             nodes.into_iter().map(|node| node.weight).collect();
         let indices = nodes
             .iter()
-            .map(|(k, (i, n))| format!("{:?}", i))
+            .map(|(_k, (i, _n))| format!("{:?}", i))
             .collect_vec();
         let labels = nodes
             .iter()

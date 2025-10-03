@@ -1,12 +1,12 @@
-use std::{
-    default,
-    ops::Range,
-};
+use std::ops::Range;
 
-use context_trace::graph::vertex::{
-    data::VertexData,
-    key::VertexKey,
-    pattern::id::PatternId,
+use context_trace::{
+    graph::vertex::{
+        data::VertexData,
+        key::VertexKey,
+        pattern::id::PatternId,
+    },
+    path::structs::rooted::index_range::IndexRangePath,
 };
 use eframe::{
     egui::{
@@ -21,6 +21,7 @@ use eframe::{
     },
     epaint::Shadow,
 };
+use indexmap::IndexMap;
 use petgraph::graph::NodeIndex;
 
 use crate::{
@@ -30,7 +31,14 @@ use crate::{
 
 pub struct NodeResponse {
     pub response: Response,
-    pub ranges: Vec<(PatternId, Range<usize>)>,
+    pub ranges: IndexMap<PatternId, Range<usize>>,
+}
+#[allow(unused)]
+#[derive(Clone, Debug)]
+pub struct SelectionState {
+    pub pattern_id: PatternId,
+    pub range: Range<usize>,
+    pub trace: IndexRangePath,
 }
 #[allow(unused)]
 #[derive(Clone, Debug)]
@@ -38,11 +46,11 @@ pub struct NodeVis {
     key: VertexKey,
     idx: NodeIndex,
     name: String,
-    data: VertexData,
+    pub data: VertexData,
     default_pos: Pos2,
     pub(crate) child_patterns: ChildPatternsVis,
     graph: Graph,
-    pub selected_range: Option<(PatternId, Range<usize>)>,
+    pub selected_range: Option<SelectionState>,
 }
 
 impl std::ops::Deref for NodeVis {
@@ -82,7 +90,7 @@ impl NodeVis {
         key: &VertexKey,
         data: &VertexData,
         default_pos: Pos2,
-        selected_range: Option<(PatternId, Range<usize>)>,
+        selected_range: Option<SelectionState>,
     ) -> Self {
         let (name, child_patterns) = {
             let graph = &*graph.read();
@@ -105,7 +113,7 @@ impl NodeVis {
         &self,
         ui: &mut Ui,
     ) -> Option<NodeResponse> {
-        ui.input(|state| {
+        ui.input(|_state| {
             //self.vis_mut()
             //    .map(|vis| vis.graph_pos += state.pointer.delta());
         });

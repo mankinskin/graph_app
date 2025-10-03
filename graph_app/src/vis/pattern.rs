@@ -18,6 +18,7 @@ use eframe::egui::{
     Ui,
     Vec2,
 };
+use indexmap::IndexMap;
 
 #[derive(Clone, Debug)]
 struct ChildVis {
@@ -112,10 +113,11 @@ impl PatternVis {
 pub struct ChildPatternsVis {
     patterns: Vec<(PatternId, PatternVis)>,
 }
+#[allow(unused)]
 #[derive(Clone, Debug)]
 pub struct ChildPatternsResponse {
     pub response: Response,
-    pub ranges: Vec<(PatternId, Range<usize>)>,
+    pub ranges: IndexMap<PatternId, Range<usize>>,
 }
 
 impl ChildPatternsVis {
@@ -177,7 +179,7 @@ impl ChildPatternsVis {
                     self.find_selected_range(&cpat.pattern, ranges)
                         .map(|r| (*pid, r))
                 })
-                .collect::<Vec<_>>()
+                .collect::<IndexMap<_, _>>()
         });
         ChildPatternsResponse {
             response: response.response,

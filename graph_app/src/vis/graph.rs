@@ -1,11 +1,15 @@
 use context_trace::{
-    graph::{
-        vertex::{
-            has_vertex_index::HasVertexIndex,
-            key::VertexKey,
-            wide::Wide,
+    graph::vertex::{
+        has_vertex_index::ToChild,
+        location::pattern::PatternLocation,
+        wide::Wide,
+    },
+    path::structs::{
+        query_range_path::RangePath,
+        rooted::{
+            index_range::IndexRangePath,
+            root::IndexRoot,
         },
-        Hypergraph,
     },
     HashMap,
 };
@@ -20,7 +24,6 @@ use eframe::egui::{
     Vec2,
     Window,
 };
-use itertools::Itertools;
 #[allow(unused)]
 use petgraph::{
     graph::{
@@ -29,18 +32,15 @@ use petgraph::{
     },
     visit::EdgeRef,
 };
-use rerun::{
-    GraphEdges,
-    GraphNodes,
-};
+
 use std::f32::consts::PI;
 
 use super::node::NodeVis;
 use crate::{
     graph::Graph,
-    vis::layout::{
-        self,
-        GraphLayout,
+    vis::{
+        layout::GraphLayout,
+        node::SelectionState,
     },
 };
 
@@ -89,10 +89,10 @@ impl GraphVis {
             self.layout = GraphLayout::generate(&cg, pg);
         }
         self.update_rerun(&handle)?;
-        self.update_old_ui(&handle);
+        self.update_egui(&handle);
         Ok(())
     }
-    fn update_old_ui(
+    fn update_egui(
         &mut self,
         handle: &Graph,
     ) {
@@ -109,7 +109,7 @@ impl GraphVis {
                             .nodes
                             .iter_mut()
                             .zip(self.layout.positions.iter())
-                            .find(|((key, (id, n)), _pos)| *id == i)
+                            .find(|((_key, (id, _n)), _pos)| *id == i)
                             .unwrap()
                             .1,
                     );
@@ -118,11 +118,6 @@ impl GraphVis {
                 |_, e| e,
             );
         }
-        //let old_node_indices: HashMap<_, _> = self
-        //    .graph
-        //    .nodes()
-        //    .map(|(idx, node)| (node.key, idx))
-        //    .collect();
         for ((key, (i, node)), pos) in self
             .layout
             .nodes
@@ -172,17 +167,31 @@ impl GraphVis {
                 .graph
                 .node_weight_mut(idx)
                 .expect("Invalid NodeIndex in node_responses!");
-            node.selected_range =
-                response.ranges.into_iter().find_map(|(pid, r)| {
-                    if let Some((spid, _)) = node.selected_range.as_mut() {
-                        (*spid == pid).then(|| (pid, r))
+            node.selected_range = response
+                .ranges
+                .into_iter()
+                .find_map(|(pid, r)| {
+                    if let Some(state) = node.selected_range.as_mut() {
+                        (state.pattern_id == pid).then(|| (pid, r))
                     } else {
                         Some((pid, r))
                     }
+                })
+                .map(|(pid, range)| SelectionState {
+                    pattern_id: pid,
+                    trace: IndexRangePath::new_range(
+                        IndexRoot::from(PatternLocation {
+                            parent: node.data.to_child(),
+                            id: pid,
+                        }),
+                        range.start,
+                        range.end,
+                    ),
+                    range,
                 });
-            if let Some((pid, r)) = node.selected_range.as_ref() {
+            if let Some(state) = node.selected_range.as_ref() {
                 Window::new("Range").show(ui.ctx(), |ui| {
-                    ui.label(format!("{}: {:?}", pid, r));
+                    ui.label(format!("{:#?}", state));
                 });
             }
         }
@@ -197,12 +206,6 @@ impl GraphVis {
             layout: GraphLayout::default(),
         }
     }
-    //pub fn set_graph(
-    //    &mut self,
-    //    graph: Graph,
-    //) {
-    //    self.handle = Some(graph);
-    //}
     fn graph(&self) -> Option<Graph> {
         self.handle.clone()
     }
