@@ -18,7 +18,10 @@ use syn::{
     File,
 };
 
-use crate::import_parser::ImportInfo;
+use crate::{
+    import_parser::ImportInfo,
+    item_info::ItemInfo,
+};
 
 pub struct RefactorEngine {
     source_crate_name: String,
@@ -172,11 +175,15 @@ impl RefactorEngine {
         })?;
 
         // Collect existing pub use statements to avoid duplicates
-        let existing_pub_uses = self.collect_existing_pub_uses(&syntax_tree);
+        let (existing_pub_uses, conditional_items) =
+            self.collect_existing_pub_uses(&syntax_tree);
 
         // Generate nested pub use statements
-        let nested_pub_use =
-            self.generate_nested_pub_use(imported_items, &existing_pub_uses);
+        let nested_pub_use = self.generate_nested_pub_use(
+            imported_items,
+            &existing_pub_uses,
+            &conditional_items,
+        );
 
         if nested_pub_use.is_empty() {
             if self.verbose {
@@ -224,9 +231,11 @@ impl RefactorEngine {
         &self,
         imported_items: &BTreeSet<String>,
         existing_pub_uses: &BTreeSet<String>,
+        conditional_items: &BTreeMap<String, Option<syn::Attribute>>,
     ) -> String {
         // Build a tree structure for the imports using a simplified approach
         let mut paths_to_export = Vec::new();
+        let mut conditional_exports = Vec::new();
 
         for item in imported_items {
             if item.starts_with(&format!("{}::", &self.source_crate_name)) {
@@ -234,42 +243,111 @@ impl RefactorEngine {
                     .strip_prefix(&format!("{}::", &self.source_crate_name))
                     .unwrap_or(item);
 
-                // Skip if already exists
+                // Extract the final identifier to check for conflicts and conditions
+                let final_ident =
+                    relative_path.split("::").last().unwrap_or(relative_path);
+
+                // Skip if already exists as a use statement
                 if existing_pub_uses
                     .contains(&format!("pub use crate::{};", relative_path))
                 {
+                    if self.verbose {
+                        println!(
+                            "  ⚠️  Skipping '{}' - already exists as pub use",
+                            final_ident
+                        );
+                    }
                     continue;
                 }
 
-                paths_to_export.push(relative_path.to_string());
+                // Skip if this identifier already exists in the crate
+                if existing_pub_uses.contains(final_ident) {
+                    if self.verbose {
+                        println!("  ⚠️  Skipping '{}' - already exists in source crate", final_ident);
+                    }
+                    continue;
+                }
+
+                // Check if this item has conditional compilation
+                if let Some(cfg_attr) = conditional_items.get(final_ident) {
+                    if let Some(attr) = cfg_attr {
+                        // This is a conditionally compiled item
+                        conditional_exports
+                            .push((relative_path.to_string(), attr.clone()));
+                        if self.verbose {
+                            println!(
+                                "  📝 Found conditional item '{}' with cfg: {}",
+                                final_ident,
+                                quote::quote!(#attr)
+                            );
+                        }
+                    } else {
+                        paths_to_export.push(relative_path.to_string());
+                    }
+                } else {
+                    paths_to_export.push(relative_path.to_string());
+                }
             } else if item != "*"
                 && !item.contains(" as ")
                 && !item.contains("::")
             {
                 // Handle simple items
-                if !existing_pub_uses
-                    .contains(&format!("pub use crate::{};", item))
-                {
+                if existing_pub_uses.contains(item) {
+                    if self.verbose {
+                        println!("  ⚠️  Skipping '{}' - already exists in source crate", item);
+                    }
+                    continue;
+                }
+
+                // Check if this item has conditional compilation
+                if let Some(cfg_attr) = conditional_items.get(item) {
+                    if let Some(attr) = cfg_attr {
+                        // This is a conditionally compiled item
+                        conditional_exports.push((item.clone(), attr.clone()));
+                        if self.verbose {
+                            println!(
+                                "  📝 Found conditional item '{}' with cfg: {}",
+                                item,
+                                quote::quote!(#attr)
+                            );
+                        }
+                    } else {
+                        paths_to_export.push(item.clone());
+                    }
+                } else {
                     paths_to_export.push(item.clone());
                 }
             }
         }
 
-        if paths_to_export.is_empty() {
-            return String::new();
+        // Generate the combined result
+        let mut result = String::new();
+
+        // First add conditional exports
+        for (path, cfg_attr) in conditional_exports {
+            result.push_str(&format!(
+                "{}\npub use crate::{};\n",
+                quote::quote!(#cfg_attr),
+                path
+            ));
         }
 
-        // Sort and deduplicate
-        paths_to_export.sort();
-        paths_to_export.dedup();
+        // Then add unconditional exports if any
+        if !paths_to_export.is_empty() {
+            // Sort and deduplicate
+            paths_to_export.sort();
+            paths_to_export.dedup();
 
-        // Generate nested structure
-        self.build_nested_structure(paths_to_export)
+            // Generate nested structure for unconditional items
+            result.push_str(&self.build_nested_structure(paths_to_export));
+        }
+
+        result
     }
 
     fn build_nested_structure(
         &self,
-        mut paths: Vec<String>,
+        paths: Vec<String>,
     ) -> String {
         if paths.is_empty() {
             return String::new();
@@ -403,20 +481,48 @@ impl RefactorEngine {
     fn collect_existing_pub_uses(
         &self,
         syntax_tree: &File,
-    ) -> BTreeSet<String> {
+    ) -> (BTreeSet<String>, BTreeMap<String, Option<syn::Attribute>>) {
         let mut existing = BTreeSet::new();
+        let mut conditional_items = BTreeMap::new();
 
         for item in &syntax_tree.items {
+            // Handle pub use statements separately
             if let syn::Item::Use(use_item) = item {
                 if matches!(use_item.vis, syn::Visibility::Public(_)) {
-                    // Extract the use path - this is simplified
                     let use_str = quote::quote!(#use_item).to_string();
                     existing.insert(use_str);
+                }
+                continue;
+            }
+
+            // Process other public items using the trait
+            if item.is_public() {
+                if let Some(name) = item.get_identifier() {
+                    existing.insert(name.clone());
+
+                    // Check for conditional compilation attributes
+                    let cfg_attr =
+                        self.extract_cfg_attribute(item.get_attributes());
+                    if cfg_attr.is_some() {
+                        conditional_items.insert(name, cfg_attr);
+                    }
                 }
             }
         }
 
-        existing
+        (existing, conditional_items)
+    }
+
+    fn extract_cfg_attribute(
+        &self,
+        attrs: &[syn::Attribute],
+    ) -> Option<syn::Attribute> {
+        for attr in attrs {
+            if attr.path().is_ident("cfg") {
+                return Some(attr.clone());
+            }
+        }
+        None
     }
 
     fn replace_target_imports(
@@ -439,10 +545,10 @@ impl RefactorEngine {
         }
 
         // Process each file
-        for (file_path, file_imports) in imports_by_file {
+        for (file_path, file_imports) in &imports_by_file {
             self.replace_imports_in_file(
-                &file_path,
-                file_imports,
+                file_path,
+                file_imports.clone(),
                 workspace_root,
             )?;
         }

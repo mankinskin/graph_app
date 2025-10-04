@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 mod crate_analyzer;
 mod import_parser;
+mod item_info;
 mod refactor_engine;
 
 use crate_analyzer::CrateAnalyzer;

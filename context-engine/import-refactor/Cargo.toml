@@ -22,3 +22,6 @@ clap = { version = "4.0", features = ["derive"] }
 toml = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 walkdir = "2.0"
+
+[dev-dependencies]
+tempfile = "3.0"
