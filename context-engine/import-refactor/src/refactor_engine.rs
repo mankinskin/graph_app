@@ -1,3 +1,7 @@
+use crate::item_info::{
+    has_macro_export_attribute,
+    ItemInfo,
+};
 use anyhow::{
     Context,
     Result,
@@ -18,10 +22,7 @@ use syn::{
     File,
 };
 
-use crate::{
-    import_parser::ImportInfo,
-    item_info::ItemInfo,
-};
+use crate::import_parser::ImportInfo;
 
 pub struct RefactorEngine {
     source_crate_name: String,
@@ -495,9 +496,45 @@ impl RefactorEngine {
                 continue;
             }
 
+            // Debug: Check if this is a macro
+            if let syn::Item::Macro(macro_item) = item {
+                let macro_name = macro_item
+                    .ident
+                    .as_ref()
+                    .map(|i| i.to_string())
+                    .unwrap_or("unnamed".to_string());
+                let path_name = if macro_item.mac.path.is_ident("macro_rules") {
+                    "macro_rules!"
+                } else {
+                    "macro_invocation"
+                };
+                eprintln!("DEBUG: Found {} macro '{}', is_public: {}, has_macro_export: {}", 
+                         path_name,
+                         macro_name,
+                         macro_item.is_public(),
+                         has_macro_export_attribute(&macro_item.attrs));
+            }
+
             // Process other public items using the trait
+            eprintln!(
+                "DEBUG: Checking if item is public for: {:?}",
+                match item {
+                    syn::Item::Macro(m) => format!(
+                        "Macro({})",
+                        m.ident
+                            .as_ref()
+                            .map(|i| i.to_string())
+                            .unwrap_or("None".to_string())
+                    ),
+                    syn::Item::Fn(f) => format!("Function({})", f.sig.ident),
+                    syn::Item::Struct(s) => format!("Struct({})", s.ident),
+                    _ => "Other".to_string(),
+                }
+            );
             if item.is_public() {
+                eprintln!("DEBUG: Item is public, getting identifier...");
                 if let Some(name) = item.get_identifier() {
+                    eprintln!("DEBUG: Adding existing public item: {}", name);
                     existing.insert(name.clone());
 
                     // Check for conditional compilation attributes
@@ -506,7 +543,22 @@ impl RefactorEngine {
                     if cfg_attr.is_some() {
                         conditional_items.insert(name, cfg_attr);
                     }
+                } else {
+                    eprintln!(
+                        "DEBUG: Public item but no identifier (type: {})",
+                        match item {
+                            syn::Item::Macro(_) => "Macro",
+                            syn::Item::Fn(_) => "Function",
+                            syn::Item::Struct(_) => "Struct",
+                            syn::Item::Enum(_) => "Enum",
+                            syn::Item::Trait(_) => "Trait",
+                            syn::Item::Impl(_) => "Impl",
+                            _ => "Other",
+                        }
+                    );
                 }
+            } else {
+                eprintln!("DEBUG: Item is not public");
             }
         }
 

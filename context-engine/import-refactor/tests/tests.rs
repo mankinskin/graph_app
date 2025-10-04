@@ -117,17 +117,32 @@ fn test_macro_handling() -> Result<()> {
         TestFormatter::format_test_results(scenario.name, &result, &validation);
     println!("{}", formatted_output);
 
-    // Assert overall success
-    assert!(validation.passed, "Test validation failed");
-    assert!(result.success, "Refactor execution failed");
+    // The tool MUST handle macro scenarios correctly by detecting existing #[macro_export] items
+    // and NOT attempting to re-export them with pub use statements
+
+    // Assert that the refactor completed successfully
+    assert!(result.success, "Refactor tool should handle macro scenarios correctly, but failed to complete");
+
+    // Assert that both crates compile after refactoring
     assert!(
         result.compilation_results.source_compiles,
-        "Source crate compilation failed"
+        "Source crate must compile after refactoring. Compilation errors indicate a bug in macro handling:\n{}",
+        result.compilation_results.source_errors.as_deref().unwrap_or("No error details available")
     );
+
     assert!(
         result.compilation_results.target_compiles,
-        "Target crate compilation failed"
+        "Target crate must compile after refactoring. Compilation errors indicate a bug in macro handling:\n{}",
+        result.compilation_results.target_errors.as_deref().unwrap_or("No error details available")
     );
+
+    // Assert that validation passes
+    assert!(
+        validation.passed,
+        "Test validation failed - the refactoring tool has a bug"
+    );
+
+    println!("✅ Macro handling test passed with correct refactoring");
 
     Ok(())
 }
@@ -216,7 +231,7 @@ fn test_no_imports_scenario() -> Result<()> {
         false => {
             // Tool failed - this is also acceptable behavior for this edge case
             println!("⚠️  Tool failed on no-imports scenario - this may be expected behavior");
-        }
+        },
     }
 
     // Verify both crates still compile regardless of tool success/failure

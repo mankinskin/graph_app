@@ -153,15 +153,34 @@ impl ItemInfo for syn::ItemMacro {
     fn get_identifier(&self) -> Option<String> {
         // Only include if it has macro_export
         if has_macro_export_attribute(&self.attrs) {
-            self.ident.as_ref().map(|i| i.to_string())
+            // For macro_rules! and other macros, use the ident field if available
+            let result = self.ident.as_ref().map(|i| i.to_string());
+            let name = result.as_deref().unwrap_or("unnamed");
+            eprintln!("DEBUG: ItemMacro.get_identifier() - macro '{}' has_macro_export: true, returning: Some({})", 
+                     name, name);
+            result
         } else {
+            let name = self
+                .ident
+                .as_ref()
+                .map(|i| i.to_string())
+                .unwrap_or("unnamed".to_string());
+            eprintln!("DEBUG: ItemMacro.get_identifier() - macro '{}' has_macro_export: false, returning None", name);
             None
         }
     }
 
     fn is_public(&self) -> bool {
         // Macros are considered public only if they have macro_export
-        has_macro_export_attribute(&self.attrs)
+        let result = has_macro_export_attribute(&self.attrs);
+        let name = self
+            .ident
+            .as_ref()
+            .map(|i| i.to_string())
+            .unwrap_or("unnamed".to_string());
+        eprintln!("DEBUG: ItemMacro.is_public() - macro '{}' has_macro_export: {}, returning: {}", 
+                 name, result, result);
+        result
     }
 }
 
@@ -213,6 +232,22 @@ impl ItemInfo for syn::Item {
             _ => None,
         }
     }
+
+    fn is_public(&self) -> bool {
+        match self {
+            syn::Item::Fn(item) => item.is_public(),
+            syn::Item::Struct(item) => item.is_public(),
+            syn::Item::Enum(item) => item.is_public(),
+            syn::Item::Type(item) => item.is_public(),
+            syn::Item::Const(item) => item.is_public(),
+            syn::Item::Static(item) => item.is_public(),
+            syn::Item::Mod(item) => item.is_public(),
+            syn::Item::Trait(item) => item.is_public(),
+            syn::Item::Use(item) => item.is_public(),
+            syn::Item::Macro(item) => item.is_public(),
+            _ => false,
+        }
+    }
 }
 
 // Helper function to check for macro_export attribute
@@ -223,4 +258,22 @@ pub fn has_macro_export_attribute(attrs: &[syn::Attribute]) -> bool {
         }
     }
     false
+}
+
+// Helper function to extract the macro name from macro_rules! tokens
+// For "macro_rules! debug_print { ... }", this extracts "debug_print"
+fn extract_macro_rules_name(
+    tokens: &proc_macro2::TokenStream
+) -> Option<String> {
+    // Convert tokens to a vector for easier processing
+    let tokens_vec: Vec<_> = tokens.clone().into_iter().collect();
+
+    // The first token should be the macro name
+    if let Some(first_token) = tokens_vec.first() {
+        if let proc_macro2::TokenTree::Ident(ident) = first_token {
+            return Some(ident.to_string());
+        }
+    }
+
+    None
 }
