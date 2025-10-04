@@ -7,10 +7,7 @@ use crate::{
     },
     join::partition::Join,
 };
-use context_trace::{
-    graph::Hypergraph,
-    trace::has_graph::HasGraphMut,
-};
+use context_trace::*;
 use std::fmt::Debug;
 
 pub trait JoinKind: RangeRole<Mode = Join> + Debug + Clone + Copy {

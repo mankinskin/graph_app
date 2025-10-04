@@ -11,24 +11,7 @@ use std::{
 };
 
 use cache::position::PosKey;
-use context_trace::{
-    HashMap,
-    graph::vertex::{
-        child::Child,
-        location::SubLocation,
-        pattern::{
-            Pattern,
-            id::PatternId,
-        },
-    },
-    trace::{
-        cache::position::SubSplitLocation,
-        child::{
-            TraceBack,
-            TraceSide,
-        },
-    },
-};
+use context_trace::*;
 use vertex::VertexSplits;
 
 pub fn position_splits<'a>(

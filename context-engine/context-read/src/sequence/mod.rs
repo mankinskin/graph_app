@@ -1,12 +1,6 @@
 pub mod block_iter;
 
-use context_trace::{
-    graph::{
-        kind::BaseGraphKind,
-        vertex::token::NewTokenIndices,
-    },
-    trace::has_graph::HasGraphMut,
-};
+use context_trace::*;
 
 use std::{
     fmt::Debug,

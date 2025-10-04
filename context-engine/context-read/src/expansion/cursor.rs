@@ -1,4 +1,4 @@
-use context_trace::path::structs::rooted::pattern_range::PatternRangePath;
+use context_trace::*;
 use derive_more::{
     Deref,
     DerefMut,

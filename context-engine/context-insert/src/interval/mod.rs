@@ -10,10 +10,7 @@ use crate::split::{
     },
     trace::states::SplitStates,
 };
-use context_trace::graph::vertex::{
-    child::Child,
-    has_vertex_index::HasVertexIndex,
-};
+use context_trace::*;
 
 pub mod init;
 pub mod partition;

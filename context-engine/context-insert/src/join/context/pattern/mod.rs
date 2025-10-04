@@ -5,13 +5,7 @@ use derive_more::derive::{
 };
 
 use crate::split::SplitMap;
-use context_trace::{
-    graph::vertex::pattern::id::PatternId,
-    trace::pattern::{
-        HasPatternTraceCtx,
-        PatternTraceCtx,
-    },
-};
+use context_trace::*;
 
 pub mod borders;
 

@@ -10,13 +10,7 @@ use role::{
     RangeRole,
 };
 
-use context_trace::{
-    graph::vertex::{
-        child::Child,
-        pattern::id::PatternId,
-    },
-    trace::pattern::HasPatternTraceCtx,
-};
+use context_trace::*;
 
 use super::border::{
     trace::TraceBorders,

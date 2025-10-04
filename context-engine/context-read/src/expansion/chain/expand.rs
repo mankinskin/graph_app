@@ -11,21 +11,8 @@ use crate::{
         ExpansionCtx,
     },
 };
-use context_insert::insert::ToInsertCtx;
-use context_trace::{
-    graph::{
-        getters::IndexWithPath,
-        vertex::wide::Wide,
-    },
-    path::{
-        mutators::append::PathAppend,
-        structs::rooted::role_path::IndexEndPath,
-    },
-    trace::child::bands::{
-        HasChildRoleIters,
-        PostfixIterator,
-    },
-};
+use context_insert::*;
+use context_trace::*;
 use tracing::debug;
 
 #[derive(Debug)]

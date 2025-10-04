@@ -1,26 +1,4 @@
-use context_trace::{
-    HashMap,
-    graph::{
-        HypergraphRef,
-        vertex::{
-            has_vertex_index::HasVertexIndex,
-            location::SubLocation,
-        },
-    },
-    insert_tokens,
-    trace::cache::{
-        TraceCache,
-        key::directed::{
-            DirectedKey,
-            DirectedPosition,
-        },
-        position::PositionCache,
-        vertex::{
-            VertexCache,
-            positions::DirectedPositions,
-        },
-    },
-};
+use context_trace::*;
 
 use crate::{
     build_trace_cache,

@@ -1,12 +1,5 @@
 use crate::split::vertex::output::CompleteLocations;
-use context_trace::{
-    HashMap,
-    graph::vertex::child::Child,
-    trace::cache::position::{
-        Offset,
-        SubSplitLocation,
-    },
-};
+use context_trace::*;
 use derive_more::{
     Deref,
     DerefMut,

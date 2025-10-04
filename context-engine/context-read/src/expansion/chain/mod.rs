@@ -5,13 +5,7 @@ pub mod link;
 use std::collections::BTreeSet;
 
 use band::Band;
-use context_trace::{
-    self,
-    graph::vertex::{
-        child::Child,
-        wide::Wide,
-    },
-};
+use context_trace::*;
 use derive_more::{
     Deref,
     DerefMut,

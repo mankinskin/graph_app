@@ -21,16 +21,7 @@ use crate::split::{
     trace::HasGraph,
     vertex::output::InnerNode,
 };
-use context_trace::{
-    graph::{
-        getters::vertex::VertexSet,
-        vertex::child::Child,
-    },
-    trace::{
-        TraceCtx,
-        cache::position::SubSplitLocation,
-    },
-};
+use context_trace::*;
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct SplitTraceStatesCtx<G: HasGraph> {

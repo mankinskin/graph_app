@@ -6,18 +6,7 @@ use crate::split::{
     },
     vertex::output::RootMode,
 };
-use context_trace::{
-    HashMap,
-    graph::vertex::{
-        VertexIndex,
-        child::Child,
-        has_vertex_index::HasVertexIndex,
-    },
-    trace::{
-        has_graph::HasGraph,
-        node::NodeTraceCtx,
-    },
-};
+use context_trace::*;
 use derive_more::derive::{
     Deref,
     DerefMut,

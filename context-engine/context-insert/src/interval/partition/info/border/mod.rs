@@ -13,14 +13,7 @@ use crate::interval::partition::info::range::{
         RangeRole,
     },
 };
-use context_trace::{
-    graph::vertex::pattern::Pattern,
-    path::accessors::role::{
-        End,
-        PathRole,
-    },
-    trace::child::ChildTracePos,
-};
+use context_trace::*;
 pub mod perfect;
 
 pub mod trace;

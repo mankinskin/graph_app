@@ -21,13 +21,7 @@ use crate::interval::partition::info::{
         },
     },
 };
-use context_trace::{
-    graph::vertex::{
-        pattern::Pattern,
-        wide::Wide,
-    },
-    trace::child::ChildTracePos,
-};
+use context_trace::*;
 
 pub trait VisitBorders<R: RangeRole>: Sized + PartitionBorder<R> {
     type Splits;

@@ -20,7 +20,6 @@ use crate::{
         TraversalKind,
     },
 };
-use context_trace::*;
 use std::fmt::Debug;
 
 use super::FoldCtx;

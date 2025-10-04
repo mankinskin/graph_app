@@ -1,10 +1,6 @@
 use std::collections::VecDeque;
 
-use context_trace::graph::vertex::{
-    child::Child,
-    pattern::Pattern,
-    wide::Wide,
-};
+use context_trace::*;
 
 use crate::expansion::chain::link::StartBound;
 

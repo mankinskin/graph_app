@@ -1,7 +1,4 @@
-use context_trace::path::structs::rooted::role_path::{
-    IndexEndPath,
-    IndexStartPath,
-};
+use context_trace::*;
 
 #[derive(Debug)]
 pub struct ExpansionLink {

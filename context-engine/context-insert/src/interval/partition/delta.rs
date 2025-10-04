@@ -8,10 +8,7 @@ use derive_more::{
     IntoIterator,
 };
 
-use context_trace::{
-    HashMap,
-    graph::vertex::pattern::id::PatternId,
-};
+use context_trace::*;
 
 #[derive(Debug, Default, IntoIterator, DerefMut)]
 pub struct PatternSubDeltas {

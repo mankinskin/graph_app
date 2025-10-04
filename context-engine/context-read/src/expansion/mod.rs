@@ -22,25 +22,8 @@ use crate::{
 };
 use chain::BandChain;
 
-use context_insert::insert::ToInsertCtx;
-use context_trace::{
-    graph::{
-        getters::{
-            ErrorReason,
-            IndexWithPath,
-        },
-        vertex::child::Child,
-    },
-    path::{
-        accessors::role::End,
-        structs::{
-            query_range_path::FoldablePath,
-            rooted::pattern_range::PatternRangePath,
-        },
-        RolePathUtils,
-    },
-    trace::child::bands::HasChildRoleIters,
-};
+use context_insert::*;
+use context_trace::*;
 
 use derive_more::{
     Deref,

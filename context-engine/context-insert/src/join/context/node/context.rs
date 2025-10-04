@@ -56,31 +56,7 @@ use crate::{
         },
     },
 };
-use context_trace::{
-    graph::{
-        HypergraphRef,
-        vertex::{
-            ChildPatterns,
-            child::Child,
-            has_vertex_index::HasVertexIndex,
-            location::SubLocation,
-            pattern::id::PatternId,
-            wide::Wide,
-        },
-    },
-    trace::{
-        has_graph::HasGraphMut,
-        node::{
-            AsNodeTraceCtx,
-            NodeTraceCtx,
-        },
-        pattern::{
-            GetPatternCtx,
-            GetPatternTraceCtx,
-            PatternTraceCtx,
-        },
-    },
-};
+use context_trace::*;
 
 #[derive(Debug)]
 pub struct LockedFrontierCtx<'a> {

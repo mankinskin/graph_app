@@ -1,13 +1,6 @@
 use std::borrow::Borrow;
 
-use context_trace::graph::vertex::{
-    child::Child,
-    pattern::{
-        pattern_width,
-        Pattern,
-    },
-    wide::Wide,
-};
+use context_trace::*;
 use derivative::Derivative;
 use derive_more::Deref;
 

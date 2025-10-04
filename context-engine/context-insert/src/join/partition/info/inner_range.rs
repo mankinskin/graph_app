@@ -15,10 +15,7 @@ use crate::{
         },
     },
 };
-use context_trace::{
-    graph::vertex::child::Child,
-    trace::node::AsNodeTraceCtx,
-};
+use context_trace::*;
 use derive_more::derive::{
     Deref,
     DerefMut,

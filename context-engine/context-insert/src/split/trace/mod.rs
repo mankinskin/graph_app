@@ -10,17 +10,7 @@ use super::{
     vertex::VertexSplitCtx,
 };
 use crate::split::vertex::output::NodeType;
-use context_trace::{
-    graph::vertex::{
-        child::Child,
-        has_vertex_index::HasVertexIndex,
-    },
-    trace::{
-        TraceCtx,
-        cache::position::Offset,
-        has_graph::HasGraph,
-    },
-};
+use context_trace::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SplitTraceState {

@@ -9,13 +9,7 @@ use crate::{
         cache::position::PosKey,
     },
 };
-use context_trace::graph::{
-    HypergraphRef,
-    vertex::{
-        child::Child,
-        wide::Wide,
-    },
-};
+use context_trace::*;
 
 pub struct FrontierIterator {
     pub(crate) frontier: LinkedHashSet<PosKey>,

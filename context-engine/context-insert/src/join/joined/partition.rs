@@ -20,7 +20,7 @@ use crate::{
         },
     },
 };
-use context_trace::graph::vertex::child::Child;
+use context_trace::*;
 use std::borrow::Borrow;
 use tracing::debug;
 

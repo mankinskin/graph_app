@@ -71,7 +71,7 @@ use super::child::SubChild;
 pub fn clone_child_patterns(
     children: &'_ ChildPatterns
 ) -> impl Iterator<Item = Pattern> + '_ {
-    children.iter().map(|(_, p)| p.clone())
+    children.values().cloned()
 }
 pub fn localized_children_iter_for_index(
     parent: impl ToChild,

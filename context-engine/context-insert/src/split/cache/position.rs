@@ -15,15 +15,7 @@ use crate::{
         ToVertexSplitPos,
     },
 };
-use context_trace::{
-    HashSet,
-    graph::vertex::{
-        child::Child,
-        location::SubLocation,
-        wide::Wide,
-    },
-    trace::cache::position::SubSplitLocation,
-};
+use context_trace::*;
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq)]
 pub struct PosKey {

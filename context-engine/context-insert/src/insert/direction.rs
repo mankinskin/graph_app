@@ -1,14 +1,4 @@
-use context_trace::{
-    direction::{
-        Direction,
-        Left,
-        Right,
-    },
-    graph::vertex::{
-        child::Child,
-        pattern::Pattern,
-    },
-};
+use context_trace::*;
 
 pub trait InsertDirection: Direction + Clone + PartialEq + Eq {
     fn context_then_inner(

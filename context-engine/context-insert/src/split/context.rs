@@ -13,13 +13,7 @@ use super::{
     vertex::output::RootNode,
 };
 use crate::split::trace::SplitTraceState;
-use context_trace::{
-    graph::vertex::has_vertex_index::HasVertexIndex,
-    trace::{
-        cache::position::SubSplitLocation,
-        has_graph::HasGraph,
-    },
-};
+use context_trace::*;
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct SplitCacheCtx<G: HasGraph> {

@@ -1,12 +1,6 @@
 use itertools::Itertools;
 
-use context_trace::{
-    HashMap,
-    graph::vertex::{
-        child::Child,
-        pattern::id::PatternId,
-    },
-};
+use context_trace::*;
 
 use super::{
     PartitionBorderKey,

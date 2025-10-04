@@ -3,17 +3,8 @@ use std::{
     fmt::Debug,
 };
 
-use context_search::fold::{
-    foldable::ErrorState,
-    result::IncompleteState,
-};
-use context_trace::{
-    graph::{
-        getters::IndexWithPath,
-        vertex::child::Child,
-    },
-    path::structs::rooted::pattern_range::PatternRangePath,
-};
+use context_search::*;
+use context_trace::*;
 
 pub trait ResultExtraction {
     fn extract_from(state: &IncompleteState) -> Self;

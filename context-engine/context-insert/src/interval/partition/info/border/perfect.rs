@@ -9,7 +9,7 @@ use derive_more::{
     Into,
 };
 
-use context_trace::graph::vertex::pattern::id::PatternId;
+use context_trace::*;
 
 pub trait BoolPerfect: Default + Debug + Clone {
     type Result: BorderPerfect<Boolean = Self>;

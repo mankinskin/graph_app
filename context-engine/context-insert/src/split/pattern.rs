@@ -1,7 +1,4 @@
-use context_trace::{
-    graph::vertex::pattern::id::PatternId,
-    trace::child::ChildTracePos,
-};
+use context_trace::*;
 
 use super::vertex::VertexSplits;
 use std::fmt::Debug;

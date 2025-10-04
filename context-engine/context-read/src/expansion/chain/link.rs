@@ -1,20 +1,4 @@
-use context_trace::{
-    self,
-    graph::{
-        getters::IndexWithPath,
-        vertex::child::Child,
-    },
-    path::{
-        accessors::role::{
-            End,
-            Start,
-        },
-        structs::{
-            role_path::RolePath,
-            rooted::role_path::IndexEndPath,
-        },
-    },
-};
+use context_trace::*;
 use derive_more::From;
 
 use crate::expansion::chain::band::Band;

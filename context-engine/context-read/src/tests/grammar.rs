@@ -8,26 +8,7 @@ use std::{
 use derive_more::Deref;
 use derive_new::new;
 
-use context_trace::{
-    graph::{
-        getters::vertex::VertexSet,
-        vertex::{
-            child::Child,
-            data::VertexData,
-            has_vertex_index::HasVertexIndex,
-            location::child::ChildLocation,
-            parent::Parent,
-            pattern::{
-                id::PatternId,
-                Pattern,
-            },
-            wide::Wide,
-            VertexIndex,
-        },
-        Hypergraph,
-    },
-    HashMap,
-};
+use context_trace::*;
 type BuildKey = RangeInclusive<usize>;
 
 //#[test]

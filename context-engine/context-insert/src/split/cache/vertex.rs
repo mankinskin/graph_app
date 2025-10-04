@@ -29,7 +29,7 @@ use crate::{
         vertex::output::RootMode,
     },
 };
-use context_trace::trace::node::NodeTraceCtx;
+use context_trace::*;
 use derive_more::derive::{
     Deref,
     DerefMut,

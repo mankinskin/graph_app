@@ -40,14 +40,22 @@ pub type HashMap<K, V> =
     std::collections::HashMap<K, V, BuildHasherDefault<DefaultHasher>>;
 
 #[cfg(any(test, feature = "test-api"))]
-pub use tests::env::{
-    Env1,
-    TestEnv,
+pub use tests::{
+    assert_parents,
+    env::{
+        Env1,
+        TestEnv,
+    },
+    init_tracing,
 };
 
 // Auto-generated pub use statements
 pub use crate::{
-    direction::Direction,
+    direction::{
+        Direction,
+        Left,
+        Right,
+    },
     graph::{
         Hypergraph,
         HypergraphRef,
@@ -56,10 +64,22 @@ pub use crate::{
             IndexWithPath,
             vertex::VertexSet,
         },
-        kind::TokenOf,
+        kind::{
+            BaseGraphKind,
+            TokenOf,
+        },
         vertex::{
+            ChildPatterns,
             VertexIndex,
-            child::Child,
+            child::{
+                Child,
+                ChildWidth,
+            },
+            data::VertexData,
+            has_vertex_data::{
+                HasVertexData,
+                HasVertexDataMut,
+            },
             has_vertex_index::{
                 HasVertexIndex,
                 ToChild,
@@ -69,9 +89,21 @@ pub use crate::{
                 child::ChildLocation,
                 pattern::IntoPatternLocation,
             },
-            pattern::Pattern,
+            parent::{
+                Parent,
+                PatternIndex,
+            },
+            pattern::{
+                IntoPattern,
+                Pattern,
+                id::PatternId,
+                pattern_range::PatternRangeIndex,
+                pattern_width,
+            },
             token::{
                 AsToken,
+                NewTokenIndex,
+                NewTokenIndices,
                 tokenizing_iter,
             },
             wide::Wide,
@@ -117,6 +149,7 @@ pub use crate::{
                     TokenPosition,
                 },
                 path::MovePath,
+                retract::Retract,
                 root::MoveRootIndex,
             },
             pop::PathPop,
@@ -152,6 +185,7 @@ pub use crate::{
             key::{
                 directed::{
                     DirectedKey,
+                    DirectedPosition,
                     down::DownKey,
                     up::UpKey,
                 },
@@ -162,10 +196,24 @@ pub use crate::{
                     TargetKey,
                 },
             },
-            position::PositionCache,
-            vertex::VertexCache,
+            position::{
+                Offset,
+                PositionCache,
+                SubSplitLocation,
+            },
+            vertex::{
+                VertexCache,
+                positions::DirectedPositions,
+            },
         },
         child::{
+            ChildTracePos,
+            TraceBack,
+            TraceSide,
+            bands::{
+                HasChildRoleIters,
+                PostfixIterator,
+            },
             iterator::{
                 ChildIterator,
                 ChildQueue,
@@ -182,7 +230,18 @@ pub use crate::{
         },
         has_graph::{
             HasGraph,
+            HasGraphMut,
             TravKind,
+        },
+        node::{
+            AsNodeTraceCtx,
+            NodeTraceCtx,
+        },
+        pattern::{
+            GetPatternCtx,
+            GetPatternTraceCtx,
+            HasPatternTraceCtx,
+            PatternTraceCtx,
         },
         state::{
             BaseState,

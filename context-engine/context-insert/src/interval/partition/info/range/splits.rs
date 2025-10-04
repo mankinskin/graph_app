@@ -31,10 +31,7 @@ use crate::{
         },
     },
 };
-use context_trace::{
-    graph::vertex::pattern::pattern_range::PatternRangeIndex,
-    trace::node::AsNodeTraceCtx,
-};
+use context_trace::*;
 
 pub trait OffsetIndexRange<R: RangeRole>: PatternRangeIndex {
     fn get_splits(

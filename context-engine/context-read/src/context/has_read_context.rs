@@ -1,10 +1,4 @@
-use context_trace::graph::{
-    vertex::{
-        child::Child,
-        pattern::IntoPattern,
-    },
-    HypergraphRef,
-};
+use context_trace::*;
 
 use crate::{
     context::ReadCtx,

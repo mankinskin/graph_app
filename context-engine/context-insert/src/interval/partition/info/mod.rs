@@ -23,18 +23,7 @@ use crate::{
     },
     split::pattern::PatternSplits,
 };
-use context_trace::{
-    HashMap,
-    graph::vertex::{
-        child::Child,
-        pattern::id::PatternId,
-    },
-    trace::pattern::{
-        GetPatternCtx,
-        HasPatternTraceCtx,
-        PatternTraceCtx,
-    },
-};
+use context_trace::*;
 
 pub mod border;
 pub mod borders;

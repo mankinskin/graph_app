@@ -2,30 +2,8 @@ pub mod has_read_context;
 pub mod root;
 use std::sync::RwLockWriteGuard;
 
-use context_insert::insert::{
-    context::InsertCtx,
-    result::InsertResult,
-    ToInsertCtx,
-};
-use context_trace::{
-    direction::Right,
-    graph::{
-        getters::ErrorReason,
-        vertex::{
-            child::Child,
-            pattern::Pattern,
-        },
-        Hypergraph,
-        HypergraphRef,
-    },
-    impl_has_graph,
-    impl_has_graph_mut,
-    path::structs::{
-        query_range_path::FoldablePath,
-        rooted::role_path::PatternEndPath,
-    },
-    trace::has_graph::HasGraphMut,
-};
+use context_insert::*;
+use context_trace::*;
 use derive_more::{
     Deref,
     DerefMut,

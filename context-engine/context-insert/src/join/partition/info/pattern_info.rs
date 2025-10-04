@@ -27,17 +27,7 @@ use crate::{
         partition::Join,
     },
 };
-use context_trace::{
-    graph::vertex::{
-        child::Child,
-        pattern::{
-            IntoPattern,
-            Pattern,
-            id::PatternId,
-        },
-    },
-    trace::pattern::HasPatternTraceCtx,
-};
+use context_trace::*;
 
 use super::inner_range::JoinInnerRangeInfo;
 

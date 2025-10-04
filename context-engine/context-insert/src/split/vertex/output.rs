@@ -1,13 +1,6 @@
 use std::fmt::Debug;
 
-use context_trace::{
-    HashMap,
-    graph::vertex::location::SubLocation,
-    trace::cache::position::{
-        Offset,
-        SubSplitLocation,
-    },
-};
+use context_trace::*;
 
 pub type OffsetLocations = HashMap<Offset, Vec<SubSplitLocation>>;
 pub type CompleteLocations =
@@ -49,17 +42,12 @@ pub trait NodeType {
     ) -> Self::CompleteSplitOutput;
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub enum RootMode {
     Prefix,
     Postfix,
+    #[default]
     Infix,
-}
-
-impl Default for RootMode {
-    fn default() -> Self {
-        Self::Infix
-    }
 }
 
 pub struct RootNode;

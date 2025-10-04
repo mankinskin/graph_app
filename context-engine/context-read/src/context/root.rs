@@ -1,31 +1,7 @@
 use std::sync::RwLockWriteGuard;
 
-use context_insert::insert::{
-    context::InsertCtx,
-    result::InsertResult,
-    ToInsertCtx,
-};
-use context_trace::{
-    graph::{
-        vertex::{
-            child::Child,
-            has_vertex_data::HasVertexDataMut,
-            has_vertex_index::{
-                HasVertexIndex,
-                ToChild,
-            },
-            pattern::{
-                IntoPattern,
-                Pattern,
-            },
-        },
-        Hypergraph,
-        HypergraphRef,
-    },
-    impl_has_graph,
-    impl_has_graph_mut,
-    trace::has_graph::HasGraphMut,
-};
+use context_insert::*;
+use context_trace::*;
 use derive_more::{
     Deref,
     DerefMut,

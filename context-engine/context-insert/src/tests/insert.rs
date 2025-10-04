@@ -9,49 +9,8 @@ use crate::{
     insert_patterns,
     interval::init::InitInterval,
 };
-use context_search::{
-    fold::{
-        foldable::Foldable,
-        result::{
-            CompleteState,
-            FinishedKind,
-            FinishedState,
-        },
-    },
-    search::Searchable,
-};
-use context_trace::{
-    HashMap,
-    assert_indices,
-    assert_patterns,
-    graph::{
-        Hypergraph,
-        HypergraphRef,
-        getters::vertex::VertexSet,
-        vertex::{
-            child::Child,
-            has_vertex_index::HasVertexIndex,
-            location::SubLocation,
-            wide::Wide,
-        },
-    },
-    insert_tokens,
-    tests::init_tracing,
-    trace::{
-        cache::{
-            key::directed::{
-                DirectedKey,
-                DirectedPosition,
-            },
-            position::PositionCache,
-            vertex::{
-                VertexCache,
-                positions::DirectedPositions,
-            },
-        },
-        has_graph::HasGraph,
-    },
-};
+use context_search::*;
+use context_trace::*;
 use maplit::hashset;
 use pretty_assertions::{
     assert_eq,

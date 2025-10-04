@@ -11,18 +11,7 @@ use crate::interval::partition::info::range::{
         RangeRole,
     },
 };
-use context_trace::trace::{
-    node::{
-        AsNodeTraceCtx,
-        NodeTraceCtx,
-    },
-    pattern::{
-        GetPatternCtx,
-        GetPatternTraceCtx,
-        HasPatternTraceCtx,
-        PatternTraceCtx,
-    },
-};
+use context_trace::*;
 
 use super::role::{
     In,

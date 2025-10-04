@@ -15,31 +15,7 @@ use crate::split::{
         RootMode,
     },
 };
-use context_trace::{
-    HashMap,
-    HashSet,
-    graph::{
-        getters::vertex::VertexSet,
-        vertex::{
-            data::VertexData,
-            location::SubLocation,
-            pattern::id::PatternId,
-            wide::Wide,
-        },
-    },
-    path::mutators::move_path::key::TokenPosition,
-    trace::{
-        cache::{
-            position::{
-                Offset,
-                SubSplitLocation,
-            },
-            vertex::VertexCache,
-        },
-        child::ChildTracePos,
-        has_graph::HasGraph,
-    },
-};
+use context_trace::*;
 use derive_more::derive::Deref;
 use derive_new::new;
 use itertools::Itertools;

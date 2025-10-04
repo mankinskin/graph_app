@@ -1,11 +1,4 @@
-use context_trace::graph::vertex::{
-    child::Child,
-    pattern::Pattern,
-    token::{
-        NewTokenIndex,
-        NewTokenIndices,
-    },
-};
+use context_trace::*;
 use derive_more::{
     Deref,
     DerefMut,

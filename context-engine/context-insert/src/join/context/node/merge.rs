@@ -36,13 +36,7 @@ use crate::{
         },
     },
 };
-use context_trace::{
-    HashMap,
-    graph::vertex::{
-        child::Child,
-        pattern::Pattern,
-    },
-};
+use context_trace::*;
 
 #[derive(Debug, new)]
 pub struct NodeMergeCtx<'a: 'b, 'b> {

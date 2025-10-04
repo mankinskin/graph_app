@@ -30,44 +30,8 @@ use crate::{
         vertex::output::RootMode,
     },
 };
-use context_search::{
-    fold::result::IncompleteState,
-    search::Searchable,
-};
-use context_trace::{
-    HashMap,
-    HashSet,
-    graph::{
-        HypergraphRef,
-        vertex::{
-            has_vertex_index::HasVertexIndex,
-            location::SubLocation,
-        },
-    },
-    insert_tokens,
-    tests::{
-        env::{
-            Env1,
-            TestEnv,
-        },
-        init_tracing,
-    },
-    trace::{
-        cache::{
-            key::directed::{
-                DirectedKey,
-                DirectedPosition,
-            },
-            position::PositionCache,
-            vertex::{
-                VertexCache,
-                positions::DirectedPositions,
-            },
-        },
-        child::ChildTracePos,
-        has_graph::HasGraphMut,
-    },
-};
+use context_search::*;
+use context_trace::*;
 fn build_split_cache1(env: &Env1) -> SplitCache {
     let Env1 {
         def,

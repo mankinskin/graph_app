@@ -20,3 +20,26 @@ pub mod traversal;
 
 #[cfg(any(test, feature = "test-api"))]
 pub mod tests;
+
+pub use crate::{
+    fold::{
+        foldable::{
+            ErrorState,
+            Foldable,
+        },
+        result::{
+            CompleteState,
+            FinishedKind,
+            FinishedState,
+            IncompleteState,
+        },
+    },
+    search::{
+        context::AncestorPolicy,
+        Searchable,
+    },
+    traversal::{
+        container::bft::BftQueue,
+        TraversalKind,
+    },
+};

@@ -24,10 +24,7 @@ use crate::{
         },
     },
 };
-use context_trace::graph::vertex::pattern::{
-    Pattern,
-    id::PatternId,
-};
+use context_trace::*;
 
 use super::partition::JoinedPartition;
 

@@ -13,13 +13,7 @@ use crate::interval::partition::info::range::{
         RangeRole,
     },
 };
-use context_trace::graph::vertex::{
-    child::Child,
-    pattern::{
-        IntoPattern,
-        Pattern,
-    },
-};
+use context_trace::*;
 
 #[derive(Debug, Clone)]
 pub enum InfixChildren {
