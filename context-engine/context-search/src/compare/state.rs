@@ -6,35 +6,7 @@ use crate::traversal::state::{
         EndState,
     },
 };
-use context_trace::{
-    graph::vertex::wide::Wide,
-    path::{
-        accessors::role::{
-            End,
-            Start,
-        },
-        mutators::{
-            adapters::IntoAdvanced,
-            lower::PathLower,
-        },
-        RolePathUtils,
-    },
-    trace::{
-        cache::key::{
-            directed::down::DownKey,
-            props::CursorPosition,
-        },
-        child::{
-            iterator::ChildQueue,
-            state::{
-                ChildState,
-                PrefixStates,
-            },
-        },
-        has_graph::HasGraph,
-        state::BaseState,
-    },
-};
+use context_trace::*;
 use derive_more::{
     Deref,
     DerefMut,

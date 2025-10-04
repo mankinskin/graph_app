@@ -1,21 +1,7 @@
 use std::cmp::Ordering;
 
 use crate::traversal::state::end::EndState;
-use context_trace::{
-    graph::vertex::{
-        child::Child,
-        has_vertex_index::HasVertexIndex,
-        wide::Wide,
-    },
-    trace::cache::{
-        key::{
-            directed::DirectedKey,
-            props::RootKey,
-        },
-        vertex::VertexCache,
-        TraceCache,
-    },
-};
+use context_trace::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct FinalState<'a> {

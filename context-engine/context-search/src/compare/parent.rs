@@ -1,11 +1,5 @@
 use crate::traversal::state::cursor::PatternCursor;
-use context_trace::{
-    path::mutators::adapters::IntoAdvanced,
-    trace::{
-        has_graph::HasGraph,
-        state::parent::ParentState,
-    },
-};
+use context_trace::*;
 use derive_more::{
     Deref,
     DerefMut,

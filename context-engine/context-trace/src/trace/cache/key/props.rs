@@ -6,8 +6,8 @@ pub trait LeafKey {
 use crate::path::mutators::move_path::key::TokenPosition;
 
 use super::directed::{
-    up::UpKey,
     DirectedKey,
+    up::UpKey,
 };
 
 /// get the token position in a query

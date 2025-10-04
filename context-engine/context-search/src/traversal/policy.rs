@@ -2,26 +2,7 @@ use itertools::Itertools;
 use std::fmt::Debug;
 
 use crate::traversal::container::order::TraversalOrder;
-use context_trace::{
-    graph::{
-        getters::vertex::VertexSet,
-        vertex::{
-            child::Child,
-            location::child::ChildLocation,
-        },
-    },
-    path::{
-        accessors::root::GraphRoot,
-        mutators::raise::PathRaise,
-    },
-    trace::{
-        has_graph::HasGraph,
-        state::parent::{
-            ParentBatch,
-            ParentState,
-        },
-    },
-};
+use context_trace::*;
 
 pub trait DirectedTraversalPolicy: Sized + Debug {
     type Trav: HasGraph;

@@ -5,21 +5,7 @@ use context::{
     SearchCtx,
     SearchResult,
 };
-use context_trace::{
-    graph::{
-        kind::TokenOf,
-        vertex::token::{
-            tokenizing_iter,
-            AsToken,
-        },
-        Hypergraph,
-        HypergraphRef,
-    },
-    trace::has_graph::{
-        HasGraph,
-        TravKind,
-    },
-};
+use context_trace::*;
 pub mod context;
 
 #[allow(dead_code)]

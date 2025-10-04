@@ -9,20 +9,7 @@ use crate::{
         TraversalKind,
     },
 };
-use context_trace::{
-    graph::{
-        getters::IndexWithPath,
-        vertex::{
-            child::Child,
-            has_vertex_index::ToChild,
-            wide::Wide,
-        },
-    },
-    trace::{
-        cache::key::props::RootKey,
-        traceable::Traceable,
-    },
-};
+use context_trace::*;
 use foldable::ErrorState;
 use std::fmt::Debug;
 use tracing::debug;

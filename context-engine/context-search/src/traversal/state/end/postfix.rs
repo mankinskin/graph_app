@@ -1,16 +1,4 @@
-use context_trace::{
-    path::{
-        mutators::move_path::key::TokenPosition,
-        structs::rooted::role_path::IndexStartPath,
-    },
-    trace::{
-        cache::key::directed::up::UpKey,
-        command::PostfixCommand,
-        has_graph::HasGraph,
-        traceable::Traceable,
-        TraceCtx,
-    },
-};
+use context_trace::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PostfixEnd {

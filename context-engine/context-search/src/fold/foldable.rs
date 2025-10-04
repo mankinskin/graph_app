@@ -1,19 +1,4 @@
-use context_trace::{
-    graph::{
-        getters::{
-            ErrorReason,
-            IndexWithPath,
-        },
-        vertex::child::Child,
-    },
-    path::structs::{
-        query_range_path::FoldablePath,
-        rooted::{
-            pattern_range::PatternRangePath,
-            role_path::PatternEndPath,
-        },
-    },
-};
+use context_trace::*;
 
 use crate::{
     fold::{
@@ -35,7 +20,7 @@ use crate::{
         TraversalKind,
     },
 };
-use context_trace::graph::vertex::pattern::Pattern;
+use context_trace::*;
 use std::fmt::Debug;
 
 use super::FoldCtx;

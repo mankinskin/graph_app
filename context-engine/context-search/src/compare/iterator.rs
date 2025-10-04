@@ -3,13 +3,7 @@ use crate::compare::state::ChildMatchState::{
     Match,
     Mismatch,
 };
-use context_trace::trace::{
-    child::iterator::{
-        ChildIterator,
-        ChildQueue,
-    },
-    has_graph::HasGraph,
-};
+use context_trace::*;
 
 use std::fmt::Debug;
 

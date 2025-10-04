@@ -1,26 +1,7 @@
 #![allow(unused)]
 use std::iter::FromIterator;
 
-use context_trace::{
-    graph::{
-        getters::IndexWithPath,
-        vertex::{
-            location::SubLocation,
-            wide::Wide,
-        },
-    },
-    lab,
-    tests::env::{
-        Env1,
-        TestEnv,
-    },
-    trace::cache::{
-        key::directed::DirectedKey,
-        position::PositionCache,
-        vertex::VertexCache,
-        TraceCache,
-    },
-};
+use context_trace::*;
 use pretty_assertions::{
     assert_eq,
     assert_matches,

@@ -1,13 +1,4 @@
-use context_trace::{
-    path::structs::rooted::role_path::IndexEndPath,
-    trace::{
-        cache::key::directed::down::DownKey,
-        command::PrefixCommand,
-        has_graph::HasGraph,
-        traceable::Traceable,
-        TraceCtx,
-    },
-};
+use context_trace::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrefixEnd {

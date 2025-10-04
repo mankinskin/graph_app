@@ -10,39 +10,7 @@ use crate::{
         TraversalKind,
     },
 };
-use context_trace::{
-    graph::{
-        getters::{
-            ErrorReason,
-            IndexWithPath,
-        },
-        vertex::{
-            child::Child,
-            has_vertex_index::HasVertexIndex,
-            location::{
-                child::ChildLocation,
-                pattern::IntoPatternLocation,
-            },
-            wide::Wide,
-            VertexIndex,
-        },
-    },
-    path::{
-        mutators::move_path::advance::Advance,
-        structs::{
-            role_path::RolePath,
-            rooted::{
-                role_path::RootedRolePath,
-                root::IndexRoot,
-            },
-            sub_path::SubPath,
-        },
-    },
-    trace::{
-        has_graph::HasGraph,
-        state::parent::ParentState,
-    },
-};
+use context_trace::*;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct StartCtx<K: TraversalKind> {

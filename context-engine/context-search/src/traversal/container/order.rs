@@ -1,9 +1,6 @@
 use std::cmp::Ordering;
 
-use context_trace::graph::vertex::{
-    location::child::ChildLocation,
-    wide::Wide,
-};
+use context_trace::*;
 
 pub trait TraversalOrder: Wide {
     fn sub_index(&self) -> usize;

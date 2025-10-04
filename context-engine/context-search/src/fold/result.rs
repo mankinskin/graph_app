@@ -1,11 +1,4 @@
-use context_trace::{
-    graph::{
-        getters::IndexWithPath,
-        vertex::child::Child,
-    },
-    path::accessors::complete::PathComplete,
-    trace::cache::TraceCache,
-};
+use context_trace::*;
 
 use crate::traversal::state::end::{
     EndKind,

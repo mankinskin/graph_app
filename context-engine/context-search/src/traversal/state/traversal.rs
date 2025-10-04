@@ -1,34 +1,6 @@
 use std::cmp::Ordering;
 
-use context_trace::{
-    graph::vertex::location::child::ChildLocation,
-    path::{
-        accessors::{
-            child::root::GraphRootChild,
-            role::End,
-        },
-        mutators::move_path::key::TokenPosition,
-        RolePathUtils,
-    },
-    trace::{
-        cache::key::{
-            directed::{
-                up::UpKey,
-                DirectedKey,
-            },
-            props::{
-                RootKey,
-                TargetKey,
-            },
-        },
-        child::state::ChildState,
-        state::{
-            parent::ParentState,
-            InnerKind,
-        },
-        StateDirection,
-    },
-};
+use context_trace::*;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TraversalState {
     pub prev: DirectedKey,

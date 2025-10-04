@@ -15,10 +15,7 @@ use crate::{
         TraversalKind,
     },
 };
-use context_trace::{
-    path::mutators::adapters::IntoAdvanced,
-    trace::child::iterator::ChildQueue,
-};
+use context_trace::*;
 
 use derive_new::new;
 pub mod iterator;

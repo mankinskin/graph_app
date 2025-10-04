@@ -7,15 +7,7 @@ use crate::{
     },
 };
 use container::StateContainer;
-use context_trace::trace::{
-    cache::TraceCache,
-    has_graph::{
-        HasGraph,
-        TravKind,
-    },
-    traceable::Traceable,
-    TraceCtx,
-};
+use context_trace::*;
 use derive_new::new;
 use policy::DirectedTraversalPolicy;
 use state::{

@@ -1,46 +1,5 @@
 use crate::traversal::ControlFlow;
-use context_trace::{
-    direction::Direction,
-    graph::vertex::{
-        child::Child,
-        location::child::ChildLocation,
-        wide::Wide,
-    },
-    impl_cursor_pos,
-    path::{
-        accessors::{
-            child::{
-                root::RootChild,
-                PathChild,
-                RootChildIndex,
-            },
-            has_path::HasPath,
-            role::PathRole,
-            root::RootPattern,
-        },
-        mutators::{
-            append::PathAppend,
-            move_path::{
-                key::{
-                    MoveKey,
-                    TokenPosition,
-                },
-                path::MovePath,
-                root::MoveRootIndex,
-            },
-            pop::PathPop,
-        },
-        structs::{
-            query_range_path::FoldablePath,
-            rooted::pattern_range::{
-                PatternPostfixPath,
-                PatternRangePath,
-            },
-        },
-        RolePathUtils,
-    },
-    trace::has_graph::HasGraph,
-};
+use context_trace::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PathCursor<P> {
