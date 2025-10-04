@@ -3,6 +3,7 @@ use crate::item_info::{
     ItemInfo,
 };
 use anyhow::{
+    bail,
     Context,
     Result,
 };
@@ -16,6 +17,7 @@ use std::{
         Path,
         PathBuf,
     },
+    process::Command,
 };
 use syn::{
     parse_file,
@@ -147,6 +149,27 @@ impl RefactorEngine {
             &workspace_root,
         )?;
 
+        // Always check compilation after refactoring to ensure we didn't break anything
+        if !self.dry_run {
+            println!("🔧 Checking compilation after modifications...");
+            let source_compiles =
+                self.check_crate_compilation(source_crate_path)?;
+            let target_compiles =
+                self.check_crate_compilation(target_crate_path)?;
+
+            if !source_compiles {
+                bail!("Source crate failed to compile after refactoring. This indicates a bug in the refactor tool.");
+            }
+
+            if !target_compiles {
+                bail!("Target crate failed to compile after refactoring. This indicates a bug in the refactor tool.");
+            }
+
+            if self.verbose {
+                println!("✅ Both source and target crates compile successfully after refactoring");
+            }
+        }
+
         Ok(())
     }
 
@@ -175,14 +198,72 @@ impl RefactorEngine {
             format!("Failed to parse {}", lib_rs_path.display())
         })?;
 
-        // Collect existing pub use statements to avoid duplicates
-        let (existing_pub_uses, conditional_items) =
+        // Use improved existing pub use collection
+        let existing_exports = self.collect_existing_exports(&syntax_tree);
+
+        if self.verbose {
+            println!(
+                "🔍 Found {} existing exported items:",
+                existing_exports.len()
+            );
+            for item in &existing_exports {
+                println!("  • {}", item);
+            }
+        }
+
+        // Filter out items that are already exported
+        let items_to_add: BTreeSet<String> = imported_items
+            .iter()
+            .filter(|item| {
+                let item_name = if item
+                    .starts_with(&format!("{}::", &self.source_crate_name))
+                {
+                    item.strip_prefix(&format!("{}::", &self.source_crate_name))
+                        .unwrap_or(item)
+                } else {
+                    item
+                };
+
+                // Check if the final identifier is already exported
+                let final_ident =
+                    item_name.split("::").last().unwrap_or(item_name);
+
+                if existing_exports.contains(final_ident) {
+                    if self.verbose {
+                        println!(
+                            "  ⚠️  Skipping '{}' - already exported",
+                            final_ident
+                        );
+                    }
+                    false
+                } else {
+                    true
+                }
+            })
+            .cloned()
+            .collect();
+
+        if items_to_add.is_empty() {
+            if self.verbose {
+                let relative_path = lib_rs_path
+                    .strip_prefix(workspace_root)
+                    .unwrap_or(&lib_rs_path);
+                println!(
+                    "✅ No new pub use statements needed for {} (all items already exported)",
+                    relative_path.display()
+                );
+            }
+            return Ok(());
+        }
+
+        // Collect conditional items for feature flag grouping
+        let (_, conditional_items) =
             self.collect_existing_pub_uses(&syntax_tree);
 
-        // Generate nested pub use statements
+        // Generate nested pub use statements for the filtered items
         let nested_pub_use = self.generate_nested_pub_use(
-            imported_items,
-            &existing_pub_uses,
+            &items_to_add,
+            &BTreeSet::new(), // Empty since we already filtered
             &conditional_items,
         );
 
@@ -192,7 +273,7 @@ impl RefactorEngine {
                     .strip_prefix(workspace_root)
                     .unwrap_or(&lib_rs_path);
                 println!(
-                    "No new pub use statements needed for {}",
+                    "✅ No new pub use statements needed for {}",
                     relative_path.display()
                 );
             }
@@ -470,6 +551,132 @@ impl RefactorEngine {
         result
     }
 
+    /// Improved version that handles feature flags and avoids duplicates better
+    fn generate_nested_pub_use_improved(
+        &self,
+        items_to_add: &BTreeSet<String>,
+        conditional_items: &BTreeMap<String, Option<syn::Attribute>>,
+    ) -> String {
+        if items_to_add.is_empty() {
+            return String::new();
+        }
+
+        // Group items by feature flags
+        let mut unconditional_items = Vec::new();
+        let mut feature_groups: BTreeMap<String, Vec<String>> = BTreeMap::new();
+
+        for item in items_to_add {
+            let final_ident = item.split("::").last().unwrap_or(item);
+
+            if let Some(Some(attr)) = conditional_items.get(final_ident) {
+                // Extract feature flag from attribute
+                let feature_key = format!("{}", quote::quote!(#attr));
+                feature_groups
+                    .entry(feature_key.clone())
+                    .or_default()
+                    .push(item.clone());
+
+                if self.verbose {
+                    println!(
+                        "  📝 Grouping '{}' under feature: {}",
+                        item, feature_key
+                    );
+                }
+            } else {
+                unconditional_items.push(item.clone());
+            }
+        }
+
+        let mut result = String::new();
+
+        // Generate unconditional exports
+        if !unconditional_items.is_empty() {
+            result.push_str(
+                &self.build_nested_export_structure(&unconditional_items),
+            );
+        }
+
+        // Generate conditional exports grouped by feature
+        for (feature, items) in feature_groups {
+            if !items.is_empty() {
+                result.push('\n');
+                result.push_str(&feature);
+                result.push('\n');
+                result.push_str(&self.build_nested_export_structure(&items));
+            }
+        }
+
+        result
+    }
+
+    /// Build nested export structure for a list of items
+    fn build_nested_export_structure(
+        &self,
+        items: &[String],
+    ) -> String {
+        let mut groups: BTreeMap<String, Vec<String>> = BTreeMap::new();
+        let mut direct_exports = Vec::new();
+
+        // Group items by their module hierarchy
+        for item in items {
+            if item.contains("::") {
+                let components: Vec<&str> = item.split("::").collect();
+                if components.len() > 1 {
+                    let first = components[0].to_string();
+                    let rest = components[1..].join("::");
+                    groups.entry(first).or_default().push(rest);
+                }
+            } else {
+                direct_exports.push(item.clone());
+            }
+        }
+
+        let mut result = String::new();
+        result.push_str("pub use crate::{\n");
+
+        // Add direct exports first
+        for (i, export) in direct_exports.iter().enumerate() {
+            result.push_str("    ");
+            result.push_str(export);
+            if i < direct_exports.len() - 1 || !groups.is_empty() {
+                result.push(',');
+            }
+            result.push('\n');
+        }
+
+        // Add grouped exports
+        let group_entries: Vec<_> = groups.iter().collect();
+        for (i, (module, subpaths)) in group_entries.iter().enumerate() {
+            if subpaths.len() == 1 && !subpaths[0].contains("::") {
+                // Simple case: module::item
+                result.push_str("    ");
+                result.push_str(module);
+                result.push_str("::");
+                result.push_str(&subpaths[0]);
+            } else {
+                // Complex case: nested structure
+                result.push_str("    ");
+                result.push_str(module);
+                result.push_str("::{\n");
+
+                // Recursively handle subpaths
+                let sub_result =
+                    Self::build_nested_substructure(subpaths.to_vec(), 2);
+                result.push_str(&sub_result);
+
+                result.push_str("    }");
+            }
+
+            if i < group_entries.len() - 1 {
+                result.push(',');
+            }
+            result.push('\n');
+        }
+
+        result.push_str("};\n");
+        result
+    }
+
     fn collect_existing_pub_uses(
         &self,
         syntax_tree: &File,
@@ -719,5 +926,124 @@ impl RefactorEngine {
         }
 
         Ok(())
+    }
+
+    /// Collect existing exported items from pub use statements and direct definitions
+    fn collect_existing_exports(
+        &self,
+        syntax_tree: &File,
+    ) -> BTreeSet<String> {
+        let mut exported_items = BTreeSet::new();
+
+        for item in &syntax_tree.items {
+            match item {
+                // Collect from pub use statements
+                syn::Item::Use(use_item) => {
+                    if matches!(use_item.vis, syn::Visibility::Public(_)) {
+                        self.extract_exported_items_from_use_tree(
+                            &use_item.tree,
+                            &mut exported_items,
+                        );
+                    }
+                },
+                // Collect directly defined public items
+                syn::Item::Fn(func) => {
+                    if matches!(func.vis, syn::Visibility::Public(_)) {
+                        exported_items.insert(func.sig.ident.to_string());
+                    }
+                },
+                syn::Item::Struct(s) => {
+                    if matches!(s.vis, syn::Visibility::Public(_)) {
+                        exported_items.insert(s.ident.to_string());
+                    }
+                },
+                syn::Item::Enum(e) => {
+                    if matches!(e.vis, syn::Visibility::Public(_)) {
+                        exported_items.insert(e.ident.to_string());
+                    }
+                },
+                syn::Item::Trait(t) => {
+                    if matches!(t.vis, syn::Visibility::Public(_)) {
+                        exported_items.insert(t.ident.to_string());
+                    }
+                },
+                syn::Item::Const(c) => {
+                    if matches!(c.vis, syn::Visibility::Public(_)) {
+                        exported_items.insert(c.ident.to_string());
+                    }
+                },
+                syn::Item::Static(s) => {
+                    if matches!(s.vis, syn::Visibility::Public(_)) {
+                        exported_items.insert(s.ident.to_string());
+                    }
+                },
+                syn::Item::Type(t) => {
+                    if matches!(t.vis, syn::Visibility::Public(_)) {
+                        exported_items.insert(t.ident.to_string());
+                    }
+                },
+                syn::Item::Mod(m) => {
+                    if matches!(m.vis, syn::Visibility::Public(_)) {
+                        exported_items.insert(m.ident.to_string());
+                    }
+                },
+                _ => {}, // Handle other items as needed
+            }
+        }
+
+        exported_items
+    }
+
+    /// Recursively extract exported item names from a use tree
+    fn extract_exported_items_from_use_tree(
+        &self,
+        tree: &syn::UseTree,
+        exported_items: &mut BTreeSet<String>,
+    ) {
+        match tree {
+            syn::UseTree::Path(path) => {
+                self.extract_exported_items_from_use_tree(
+                    &path.tree,
+                    exported_items,
+                );
+            },
+            syn::UseTree::Name(name) => {
+                exported_items.insert(name.ident.to_string());
+            },
+            syn::UseTree::Rename(rename) => {
+                exported_items.insert(rename.rename.to_string());
+            },
+            syn::UseTree::Glob(_) => {
+                exported_items.insert("*".to_string());
+            },
+            syn::UseTree::Group(group) =>
+                for item in &group.items {
+                    self.extract_exported_items_from_use_tree(
+                        item,
+                        exported_items,
+                    );
+                },
+        }
+    }
+
+    /// Check if a crate compiles, providing detailed error information
+    fn check_crate_compilation(
+        &self,
+        crate_path: &Path,
+    ) -> Result<bool> {
+        let output = Command::new("cargo")
+            .arg("check")
+            .arg("--quiet")
+            .current_dir(crate_path)
+            .output()
+            .context("Failed to execute cargo check")?;
+
+        if !output.status.success() && self.verbose {
+            eprintln!("Compilation failed for crate at {:?}", crate_path);
+            eprintln!("STDERR: {}", String::from_utf8_lossy(&output.stderr));
+            eprintln!("STDOUT: {}", String::from_utf8_lossy(&output.stdout));
+        }
+
+        Ok(output.status.success())
     }
 }

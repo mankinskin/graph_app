@@ -8,7 +8,6 @@ use std::{
         Path,
         PathBuf,
     },
-    process::Command,
 };
 use tempfile::TempDir;
 
@@ -60,16 +59,6 @@ pub struct RefactorResult {
     pub source_analysis_after: AstAnalysis,
     pub target_analysis_before: Option<AstAnalysis>,
     pub target_analysis_after: Option<AstAnalysis>,
-    pub compilation_results: CompilationResults,
-}
-
-/// Compilation test results for both crates
-#[derive(Debug)]
-pub struct CompilationResults {
-    pub source_compiles: bool,
-    pub target_compiles: bool,
-    pub source_errors: Option<String>,
-    pub target_errors: Option<String>,
 }
 
 impl TestWorkspace {
@@ -157,16 +146,12 @@ impl TestWorkspace {
             None
         };
 
-        // Test compilation
-        let compilation_results = self.verify_compilation(scenario)?;
-
         Ok(RefactorResult {
             success: refactor_success,
             source_analysis_before,
             source_analysis_after,
             target_analysis_before,
             target_analysis_after,
-            compilation_results,
         })
     }
 
@@ -188,49 +173,6 @@ impl TestWorkspace {
         )?;
 
         Ok(())
-    }
-
-    /// Verify both crates compile after refactoring
-    fn verify_compilation(
-        &self,
-        scenario: &TestScenario,
-    ) -> Result<CompilationResults> {
-        let source_result = self.check_crate_compilation(scenario.source_crate);
-        let target_result = self.check_crate_compilation(scenario.target_crate);
-
-        Ok(CompilationResults {
-            source_compiles: source_result.as_ref().map_or(false, |r| r.0),
-            target_compiles: target_result.as_ref().map_or(false, |r| r.0),
-            source_errors: source_result.ok().and_then(|(_, err)| err),
-            target_errors: target_result.ok().and_then(|(_, err)| err),
-        })
-    }
-
-    /// Check if a specific crate compiles
-    fn check_crate_compilation(
-        &self,
-        crate_name: &str,
-    ) -> Result<(bool, Option<String>)> {
-        let analyzer = CrateAnalyzer::new(&self.workspace_path)?;
-        let crate_path = analyzer.find_crate(crate_name)?;
-
-        let output = Command::new("cargo")
-            .arg("check")
-            .arg("--quiet")
-            .current_dir(&crate_path)
-            .output()
-            .context("Failed to execute cargo check")?;
-
-        let success = output.status.success();
-        let errors = if success {
-            None
-        } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            Some(format!("STDERR:\n{}\nSTDOUT:\n{}", stderr, stdout))
-        };
-
-        Ok((success, errors))
     }
 
     /// Create workspace manifest with detected members
@@ -310,27 +252,4 @@ pub fn run_refactor(
     )?;
 
     Ok(())
-}
-
-/// Legacy helper function for backward compatibility
-/// Prefer using TestWorkspace::verify_compilation() for new tests  
-pub fn check_compilation(
-    workspace_path: &Path,
-    crate_name: &str,
-) -> Result<bool> {
-    let analyzer = CrateAnalyzer::new(workspace_path)?;
-    let crate_path = analyzer.find_crate(crate_name)?;
-
-    let output = Command::new("cargo")
-        .arg("check")
-        .current_dir(&crate_path)
-        .output()?;
-
-    if !output.status.success() {
-        println!("Compilation failed for {}:", crate_name);
-        println!("STDOUT: {}", String::from_utf8_lossy(&output.stdout));
-        println!("STDERR: {}", String::from_utf8_lossy(&output.stderr));
-    }
-
-    Ok(output.status.success())
 }

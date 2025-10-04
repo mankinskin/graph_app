@@ -37,31 +37,6 @@ impl AstValidator {
                 .push("✅ Refactor tool executed successfully".to_string());
         }
 
-        // Compilation validation
-        if !result.compilation_results.source_compiles {
-            failures.push(
-                "❌ Source crate failed to compile after refactoring"
-                    .to_string(),
-            );
-            if let Some(errors) = &result.compilation_results.source_errors {
-                failures.push(format!("   Compilation errors:\n{}", errors));
-            }
-        } else {
-            successes.push("✅ Source crate compiles successfully".to_string());
-        }
-
-        if !result.compilation_results.target_compiles {
-            failures.push(
-                "❌ Target crate failed to compile after refactoring"
-                    .to_string(),
-            );
-            if let Some(errors) = &result.compilation_results.target_errors {
-                failures.push(format!("   Compilation errors:\n{}", errors));
-            }
-        } else {
-            successes.push("✅ Target crate compiles successfully".to_string());
-        }
-
         // AST structure validation
         Self::validate_ast_preservation(
             &result.source_analysis_before,
@@ -257,25 +232,6 @@ impl TestFormatter {
             output.push_str("   ❌ Refactor tool failed\n");
         }
 
-        // Compilation status
-        output.push_str("\n🔧 Compilation Status:\n");
-        output.push_str(&format!(
-            "   Source crate: {}\n",
-            if result.compilation_results.source_compiles {
-                "✅ Compiles"
-            } else {
-                "❌ Failed"
-            }
-        ));
-        output.push_str(&format!(
-            "   Target crate: {}\n",
-            if result.compilation_results.target_compiles {
-                "✅ Compiles"
-            } else {
-                "❌ Failed"
-            }
-        ));
-
         // AST changes summary
         output.push_str("\n📊 AST Changes Summary:\n");
         output.push_str(&Self::format_ast_comparison(
@@ -290,21 +246,6 @@ impl TestFormatter {
         }
         for failure in &validation.failures {
             output.push_str(&format!("   {}\n", failure));
-        }
-
-        // Error details if any
-        if !result.compilation_results.source_compiles {
-            if let Some(errors) = &result.compilation_results.source_errors {
-                output.push_str("\n🚨 Source Crate Compilation Errors:\n");
-                output.push_str(&Self::format_compilation_errors(errors));
-            }
-        }
-
-        if !result.compilation_results.target_compiles {
-            if let Some(errors) = &result.compilation_results.target_errors {
-                output.push_str("\n🚨 Target Crate Compilation Errors:\n");
-                output.push_str(&Self::format_compilation_errors(errors));
-            }
         }
 
         // Overall result
@@ -380,26 +321,6 @@ impl TestFormatter {
                     use_item.path,
                     use_item.items
                 ));
-            }
-        }
-
-        output
-    }
-
-    /// Format compilation errors with syntax highlighting
-    fn format_compilation_errors(errors: &str) -> String {
-        let mut output = String::new();
-
-        // Add indentation and basic formatting
-        for line in errors.lines() {
-            if line.trim().starts_with("error") {
-                output.push_str(&format!("   🔴 {}\n", line.trim()));
-            } else if line.trim().starts_with("warning") {
-                output.push_str(&format!("   🟡 {}\n", line.trim()));
-            } else if line.trim().starts_with("-->") {
-                output.push_str(&format!("   📍 {}\n", line.trim()));
-            } else if !line.trim().is_empty() {
-                output.push_str(&format!("      {}\n", line));
             }
         }
 
