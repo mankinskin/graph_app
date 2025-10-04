@@ -10,7 +10,6 @@ use std::{
     },
 };
 use syn::{
-    spanned::Spanned,
     visit::Visit,
     UseTree,
 };
@@ -21,7 +20,6 @@ pub struct ImportInfo {
     pub file_path: PathBuf,
     pub import_path: String,
     pub line_number: usize,
-    pub full_use_statement: String,
     pub imported_items: Vec<String>,
 }
 
@@ -50,7 +48,7 @@ impl ImportParser {
         for entry in WalkDir::new(&src_path).into_iter().filter_map(|e| e.ok())
         {
             let path = entry.path();
-            if path.extension().map_or(false, |ext| ext == "rs") {
+            if path.extension().is_some_and(|ext| ext == "rs") {
                 let file_imports = self.parse_file_imports(path)?;
                 imports.extend(file_imports);
             }
@@ -134,11 +132,7 @@ impl ImportVisitor {
             UseTree::Name(name) => {
                 if current_path.starts_with(&self.source_crate_name) {
                     let ident = name.ident.to_string();
-                    let full_path = if current_path == self.source_crate_name {
-                        format!("{}::{}", current_path, ident)
-                    } else {
-                        format!("{}::{}", current_path, ident)
-                    };
+                    let full_path = format!("{}::{}", current_path, ident);
                     Some((full_path.clone(), vec![full_path]))
                 } else {
                     None
@@ -148,11 +142,7 @@ impl ImportVisitor {
                 if current_path.starts_with(&self.source_crate_name) {
                     let ident = rename.ident.to_string();
                     let alias = rename.rename.to_string();
-                    let full_path = if current_path == self.source_crate_name {
-                        format!("{}::{}", current_path, ident)
-                    } else {
-                        format!("{}::{}", current_path, ident)
-                    };
+                    let full_path = format!("{}::{}", current_path, ident);
                     Some((
                         format!("{} as {}", full_path, alias),
                         vec![full_path],
@@ -163,11 +153,7 @@ impl ImportVisitor {
             },
             UseTree::Glob(_) => {
                 if current_path.starts_with(&self.source_crate_name) {
-                    let glob_path = if current_path == self.source_crate_name {
-                        format!("{}::*", current_path)
-                    } else {
-                        format!("{}::*", current_path)
-                    };
+                    let glob_path = format!("{}::*", current_path);
                     Some((glob_path, vec!["*".to_string()]))
                 } else {
                     None
@@ -215,13 +201,12 @@ impl<'ast> Visit<'ast> for ImportVisitor {
         if let Some((import_path, imported_items)) =
             self.extract_use_info(&node.tree)
         {
-            let full_statement = quote::quote!(#node).to_string();
+            //let full_statement = quote::quote!(#node).to_string();
 
             self.imports.push(ImportInfo {
                 file_path: self.file_path.clone(),
                 import_path,
                 line_number: 0, // We'll rely on string matching instead of line numbers
-                full_use_statement: full_statement,
                 imported_items,
             });
         }

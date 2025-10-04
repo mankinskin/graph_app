@@ -124,7 +124,7 @@ impl CrateAnalyzer {
                 && path != self.workspace_root
             {
                 // Skip target directories
-                if path.file_name().map_or(false, |name| name == "target") {
+                if path.file_name().is_some_and(|name| name == "target") {
                     continue;
                 }
 

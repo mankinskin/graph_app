@@ -1,5 +1,3 @@
-use syn;
-
 // Trait for extracting common information from individual item types
 pub trait ItemInfo {
     fn get_visibility(&self) -> &syn::Visibility;
@@ -269,10 +267,8 @@ fn extract_macro_rules_name(
     let tokens_vec: Vec<_> = tokens.clone().into_iter().collect();
 
     // The first token should be the macro name
-    if let Some(first_token) = tokens_vec.first() {
-        if let proc_macro2::TokenTree::Ident(ident) = first_token {
-            return Some(ident.to_string());
-        }
+    if let Some(proc_macro2::TokenTree::Ident(ident)) = tokens_vec.first() {
+        return Some(ident.to_string());
     }
 
     None

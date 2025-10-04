@@ -1,16 +1,15 @@
 use anyhow::Result;
 
+// Import the common module and its items explicitly
 mod common;
-
 use common::{
+    test_utils::{
+        ExpectedChanges,
+        TestScenario,
+    },
     AstValidator,
     TestFormatter,
     TestWorkspace,
-};
-
-use crate::common::test_utils::{
-    ExpectedChanges,
-    TestScenario,
 };
 
 /// Common test scenarios that can be reused

@@ -5,7 +5,7 @@ pub mod ast_analysis;
 pub mod test_utils;
 pub mod validation;
 
-// Re-export only the items actually being used
+// Re-export commonly used items with explicit visibility
 pub use ast_analysis::analyze_ast;
 pub use test_utils::{
     run_refactor,
@@ -16,3 +16,7 @@ pub use validation::{
     AstValidator,
     TestFormatter,
 };
+
+// Mark the module as used for tests to help Rust Analyzer
+#[allow(dead_code)]
+const _: () = ();

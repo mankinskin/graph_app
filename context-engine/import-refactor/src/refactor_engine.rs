@@ -270,20 +270,16 @@ impl RefactorEngine {
                 }
 
                 // Check if this item has conditional compilation
-                if let Some(cfg_attr) = conditional_items.get(final_ident) {
-                    if let Some(attr) = cfg_attr {
-                        // This is a conditionally compiled item
-                        conditional_exports
-                            .push((relative_path.to_string(), attr.clone()));
-                        if self.verbose {
-                            println!(
-                                "  📝 Found conditional item '{}' with cfg: {}",
-                                final_ident,
-                                quote::quote!(#attr)
-                            );
-                        }
-                    } else {
-                        paths_to_export.push(relative_path.to_string());
+                if let Some(Some(attr)) = conditional_items.get(final_ident) {
+                    // This is a conditionally compiled item
+                    conditional_exports
+                        .push((relative_path.to_string(), attr.clone()));
+                    if self.verbose {
+                        println!(
+                            "  📝 Found conditional item '{}' with cfg: {}",
+                            final_ident,
+                            quote::quote!(#attr)
+                        );
                     }
                 } else {
                     paths_to_export.push(relative_path.to_string());
@@ -301,19 +297,15 @@ impl RefactorEngine {
                 }
 
                 // Check if this item has conditional compilation
-                if let Some(cfg_attr) = conditional_items.get(item) {
-                    if let Some(attr) = cfg_attr {
-                        // This is a conditionally compiled item
-                        conditional_exports.push((item.clone(), attr.clone()));
-                        if self.verbose {
-                            println!(
-                                "  📝 Found conditional item '{}' with cfg: {}",
-                                item,
-                                quote::quote!(#attr)
-                            );
-                        }
-                    } else {
-                        paths_to_export.push(item.clone());
+                if let Some(Some(attr)) = conditional_items.get(item) {
+                    // This is a conditionally compiled item
+                    conditional_exports.push((item.clone(), attr.clone()));
+                    if self.verbose {
+                        println!(
+                            "  📝 Found conditional item '{}' with cfg: {}",
+                            item,
+                            quote::quote!(#attr)
+                        );
                     }
                 } else {
                     paths_to_export.push(item.clone());
@@ -365,7 +357,7 @@ impl RefactorEngine {
             } else {
                 let first = components[0].to_string();
                 let rest = components[1..].join("::");
-                groups.entry(first).or_insert_with(Vec::new).push(rest);
+                groups.entry(first).or_default().push(rest);
             }
         }
 
@@ -399,7 +391,7 @@ impl RefactorEngine {
 
                 // Recursively handle subpaths
                 let sub_result =
-                    self.build_nested_substructure(subpaths.to_vec(), 2);
+                    Self::build_nested_substructure(subpaths.to_vec(), 2);
                 result.push_str(&sub_result);
 
                 result.push_str("    }");
@@ -416,7 +408,6 @@ impl RefactorEngine {
     }
 
     fn build_nested_substructure(
-        &self,
         paths: Vec<String>,
         indent_level: usize,
     ) -> String {
@@ -431,7 +422,7 @@ impl RefactorEngine {
             } else {
                 let first = components[0].to_string();
                 let rest = components[1..].join("::");
-                groups.entry(first).or_insert_with(Vec::new).push(rest);
+                groups.entry(first).or_default().push(rest);
             }
         }
 
@@ -460,7 +451,7 @@ impl RefactorEngine {
                 result.push_str(module);
                 result.push_str("::{\n");
 
-                let sub_result = self.build_nested_substructure(
+                let sub_result = Self::build_nested_substructure(
                     subpaths.to_vec(),
                     indent_level + 1,
                 );
@@ -592,7 +583,7 @@ impl RefactorEngine {
         for import in imports {
             imports_by_file
                 .entry(import.file_path.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(import);
         }
 
