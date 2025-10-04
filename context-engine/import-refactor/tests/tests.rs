@@ -41,6 +41,19 @@ pub const TEST_SCENARIOS: &[TestScenario] = &[
             nested_modules: &[],
         }),
     },
+    TestScenario {
+        name: "no_imports_scenario",
+        description: "Test with a crate that has no imports to refactor",
+        source_crate: "source_crate",
+        target_crate: "dummy_target",
+        fixture_name: "no_imports_workspace",
+        expected_changes: Some(ExpectedChanges {
+            source_crate_exports: &[], // No new exports expected
+            target_crate_wildcards: 0, // No wildcards expected
+            preserved_macros: &[],
+            nested_modules: &[],
+        }),
+    },
 ];
 
 #[test]
@@ -161,6 +174,61 @@ fn test_detailed_ast_inspection() -> Result<()> {
         result.source_analysis_after.pub_use_items.len()
             > result.source_analysis_before.pub_use_items.len(),
         "Expected new pub use statements to be added"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_no_imports_scenario() -> Result<()> {
+    let scenario = &TEST_SCENARIOS[2]; // no_imports_scenario
+
+    println!("🚀 Starting test: {}", scenario.description);
+
+    // Setup protected workspace
+    let mut workspace = TestWorkspace::setup(scenario.fixture_name)?;
+
+    // Run refactor with full validation
+    let result = workspace.run_refactor_with_validation(scenario)?;
+
+    // Validate results against expectations
+    let validation = AstValidator::validate_refactor_result(
+        &result,
+        scenario.expected_changes.as_ref(),
+    );
+
+    // Format and display comprehensive results
+    let formatted_output =
+        TestFormatter::format_test_results(scenario.name, &result, &validation);
+    println!("{}", formatted_output);
+
+    // The tool should handle this gracefully - either succeed with no changes or fail gracefully
+    match result.success {
+        true => {
+            // Tool succeeded - verify no changes were made to source crate
+            assert_eq!(
+                result.source_analysis_before.pub_use_items.len(),
+                result.source_analysis_after.pub_use_items.len(),
+                "No new pub use statements should be added when there are no imports"
+            );
+            println!("✅ Tool correctly handled no-imports scenario");
+        },
+        false => {
+            // Tool failed - this is also acceptable behavior for this edge case
+            println!("⚠️  Tool failed on no-imports scenario - this may be expected behavior");
+        }
+    }
+
+    // Verify both crates still compile regardless of tool success/failure
+    assert!(
+        result.compilation_results.source_compiles,
+        "Source crate should still compile: {:?}",
+        result.compilation_results.source_errors
+    );
+    assert!(
+        result.compilation_results.target_compiles,
+        "Target crate should still compile: {:?}",
+        result.compilation_results.target_errors
     );
 
     Ok(())
