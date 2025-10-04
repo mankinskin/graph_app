@@ -15,12 +15,16 @@ use refactor_engine::RefactorEngine;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Name of the source crate (A) that will export items
-    #[arg(short = 'a', long)]
-    source_crate: String,
+    #[arg(short = 'a', long = "source-crate", alias = "source")]
+    source_crate: Option<String>,
 
     /// Name of the target crate (B) that imports from source crate
-    #[arg(short = 'b', long)]
-    target_crate: String,
+    #[arg(short = 'b', long = "target-crate", alias = "target")]
+    target_crate: Option<String>,
+
+    /// Positional arguments: [SOURCE_CRATE] [TARGET_CRATE]
+    #[arg(help = "Positional arguments: [SOURCE_CRATE] [TARGET_CRATE]")]
+    positional: Vec<String>,
 
     /// Workspace root directory
     #[arg(short = 'w', long, default_value = ".")]
@@ -35,17 +39,45 @@ struct Args {
     verbose: bool,
 }
 
+impl Args {
+    /// Get the source crate name, preferring the flag over the positional argument
+    fn get_source_crate(&self) -> Result<String> {
+        if let Some(source) = &self.source_crate {
+            Ok(source.clone())
+        } else if !self.positional.is_empty() {
+            Ok(self.positional[0].clone())
+        } else {
+            Err(anyhow::anyhow!("Source crate must be specified either via --source-crate/--source flag or as the first positional argument"))
+        }
+    }
+
+    /// Get the target crate name, preferring the flag over the positional argument
+    fn get_target_crate(&self) -> Result<String> {
+        if let Some(target) = &self.target_crate {
+            Ok(target.clone())
+        } else if self.positional.len() >= 2 {
+            Ok(self.positional[1].clone())
+        } else {
+            Err(anyhow::anyhow!("Target crate must be specified either via --target-crate/--target flag or as the second positional argument"))
+        }
+    }
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
+
+    // Resolve source and target crates from flags or positional args
+    let source_crate = args.get_source_crate()?;
+    let target_crate = args.get_target_crate()?;
 
     println!("🔧 Import Refactor Tool");
     println!(
         "📦 Source crate (A): {} → will export items via pub use",
-        args.source_crate
+        source_crate
     );
     println!(
         "📦 Target crate (B): {} → imports will be simplified to use A::*",
-        args.target_crate
+        target_crate
     );
     if args.dry_run {
         println!("🔍 Running in dry-run mode (no files will be modified)");
@@ -61,8 +93,8 @@ fn main() -> Result<()> {
 
     // Step 1: Analyze the workspace and find the crates
     let analyzer = CrateAnalyzer::new(&args.workspace_root)?;
-    let source_crate_path = analyzer.find_crate(&args.source_crate)?;
-    let target_crate_path = analyzer.find_crate(&args.target_crate)?;
+    let source_crate_path = analyzer.find_crate(&source_crate)?;
+    let target_crate_path = analyzer.find_crate(&target_crate)?;
 
     if args.verbose {
         let workspace_root = args
@@ -87,18 +119,18 @@ fn main() -> Result<()> {
     }
 
     // Step 2: Parse imports in target crate that reference source crate
-    let parser = ImportParser::new(&args.source_crate);
+    let parser = ImportParser::new(&source_crate);
     let imports = parser.find_imports_in_crate(&target_crate_path)?;
 
     println!(
         "🔎 Scanning for imports of '{}' in '{}'...",
-        args.source_crate, args.target_crate
+        source_crate, target_crate
     );
 
     if imports.is_empty() {
         println!(
             "❌ No imports found from '{}' in crate '{}'",
-            args.source_crate, args.target_crate
+            source_crate, target_crate
         );
         println!("   Nothing to refactor.");
         return Ok(());
@@ -128,7 +160,7 @@ fn main() -> Result<()> {
 
     // Step 3: Refactor the imports
     let mut engine =
-        RefactorEngine::new(&args.source_crate, args.dry_run, args.verbose);
+        RefactorEngine::new(&source_crate, args.dry_run, args.verbose);
     engine.refactor_imports(
         &source_crate_path,
         &target_crate_path,
@@ -143,7 +175,7 @@ fn main() -> Result<()> {
         println!("✅ Refactoring completed successfully!");
         println!(
             "📁 Modified files in both '{}' and '{}'",
-            args.source_crate, args.target_crate
+            source_crate, target_crate
         );
     }
 
