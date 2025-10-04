@@ -1,22 +1,18 @@
 // Common test utilities shared across integration tests
 // This module is accessible by all test files in the tests directory
 
-pub mod assertions;
 pub mod ast_analysis;
 pub mod test_utils;
+pub mod validation;
 
-// Re-export commonly used items for convenience
-pub use assertions::{
-    assert_pub_use_contains,
-    assert_public_items_exist,
-    print_analysis_summary,
-};
-pub use ast_analysis::{
-    analyze_ast,
-    AstAnalysis,
-};
+// Re-export only the items actually being used
+pub use ast_analysis::analyze_ast;
 pub use test_utils::{
     run_refactor,
     setup_test_workspace,
-    TEST_SCENARIOS,
+    TestWorkspace,
+};
+pub use validation::{
+    AstValidator,
+    TestFormatter,
 };
