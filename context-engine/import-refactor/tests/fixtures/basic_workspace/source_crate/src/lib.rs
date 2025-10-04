@@ -1,7 +1,22 @@
 pub mod math;
 pub mod utils;
+pub mod network;
 
 pub use math::calculate;
+
+// Existing nested pub use statements to test merging
+pub use utils::{
+    format_string,
+    string_ops::{
+        capitalize,
+        encoding::Encoder
+    }
+};
+
+pub use network::{
+    Connection,
+    http::status::is_success
+};
 
 pub struct Config {
     pub name: String,
