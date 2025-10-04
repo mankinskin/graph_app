@@ -26,31 +26,75 @@ impl RefactorEngine {
         source_crate_path: &Path,
         target_crate_path: &Path,
         imports: Vec<ImportInfo>,
+        workspace_root: &Path,
     ) -> Result<()> {
-        // Step 1: Collect all unique imported items
+        // Step 1: Analyze and categorize imports
         let mut all_imported_items = BTreeSet::new();
+        let mut glob_imports = 0;
+        let mut specific_imports = 0;
+        let mut import_types = std::collections::HashMap::new();
+        let workspace_root = workspace_root.canonicalize().unwrap_or_else(|_| workspace_root.to_path_buf());
         
         for import in &imports {
-            for item in &import.imported_items {
-                if item != "*" {
-                    all_imported_items.insert(item.clone());
+            if import.imported_items.contains(&"*".to_string()) {
+                glob_imports += 1;
+            } else {
+                specific_imports += 1;
+                for item in &import.imported_items {
+                    if item != "*" {
+                        all_imported_items.insert(item.clone());
+                        // Track which files import this item with relative paths and simplified imports
+                        let relative_path = import.file_path.strip_prefix(&workspace_root)
+                            .unwrap_or(&import.file_path);
+                        
+                        // Make import path relative to source crate
+                        let simplified_import = import.import_path.strip_prefix(&format!("{}::", &self.source_crate_name))
+                            .unwrap_or(&import.import_path);
+                        
+                        import_types.entry(item.clone())
+                            .or_insert_with(Vec::new)
+                            .push(format!("{}:{}", 
+                                relative_path.display(),
+                                simplified_import));
+                    }
                 }
             }
         }
 
-        if self.verbose {
-            println!("Collected {} unique imported items:", all_imported_items.len());
+        // Enhanced output showing analysis results
+        println!("📊 Import Analysis Summary:");
+        println!("  • Total imports found: {}", imports.len());
+        println!("  • Glob imports (use {}::*): {}", self.source_crate_name, glob_imports);
+        println!("  • Specific imports: {}", specific_imports);
+        println!("  • Unique items imported: {}", all_imported_items.len());
+        
+        if !all_imported_items.is_empty() {
+            println!("\n🔍 Detected imported items from '{}':", self.source_crate_name);
             for item in &all_imported_items {
-                println!("  {}", item);
+                if let Some(files) = import_types.get(item) {
+                    println!("  • {}", item);
+                    for file_info in files.iter().take(3) {
+                        println!("    └─ {}", file_info);
+                    }
+                    if files.len() > 3 {
+                        println!("    └─ ... and {} more locations", files.len() - 3);
+                    }
+                } else {
+                    println!("  • {}", item);
+                }
             }
+            println!();
+        } else if glob_imports > 0 {
+            println!("\n💡 Note: Only glob imports (use {}::*) found. No specific items to re-export.", self.source_crate_name);
+            println!("   This means the target crate is already using the most general import pattern.");
             println!();
         }
 
         // Step 2: Update source crate's lib.rs with pub use statements
-        self.update_source_lib_rs(source_crate_path, &all_imported_items)?;
+        self.update_source_lib_rs(source_crate_path, &all_imported_items, &workspace_root)?;
 
         // Step 3: Replace imports in target crate files
-        self.replace_target_imports(target_crate_path, imports)?;
+        self.replace_target_imports(target_crate_path, imports, &workspace_root)?;
 
         Ok(())
     }
@@ -59,6 +103,7 @@ impl RefactorEngine {
         &self,
         source_crate_path: &Path,
         imported_items: &BTreeSet<String>,
+        workspace_root: &Path,
     ) -> Result<()> {
         let lib_rs_path = source_crate_path.join("src").join("lib.rs");
         
@@ -82,15 +127,16 @@ impl RefactorEngine {
         // Generate new pub use statements
         let mut new_pub_uses = Vec::new();
         for item in imported_items {
-            if item.contains("::") {
-                // For qualified imports like "path::Item", we want "pub use path::Item;"
-                if !existing_pub_uses.contains(item) {
-                    new_pub_uses.push(format!("pub use {};", item));
+            if item.starts_with(&format!("{}::", &self.source_crate_name)) {
+                // For full paths like "context_trace::graph::vertex::Child", create "pub use crate::graph::vertex::Child;"
+                let relative_path = item.strip_prefix(&format!("{}::", &self.source_crate_name))
+                    .unwrap_or(item);
+                if !existing_pub_uses.contains(&format!("pub use crate::{};", relative_path)) {
+                    new_pub_uses.push(format!("pub use crate::{};", relative_path));
                 }
-            } else if item != "*" && !item.contains(" as ") {
+            } else if item != "*" && !item.contains(" as ") && !item.contains("::") {
                 // For simple items like "Item", we need to figure out the full path
-                // This is a simplified approach - in a real tool you'd want more sophisticated analysis
-                if !existing_pub_uses.contains(item) {
+                if !existing_pub_uses.contains(&format!("pub use crate::{};", item)) {
                     new_pub_uses.push(format!("pub use crate::{};", item));
                 }
             }
@@ -116,7 +162,9 @@ impl RefactorEngine {
         }
 
         if self.verbose {
-            println!("Adding {} pub use statements to {}", new_pub_uses.len(), lib_rs_path.display());
+            let relative_path = lib_rs_path.strip_prefix(workspace_root)
+                .unwrap_or(&lib_rs_path);
+            println!("Adding {} pub use statements to {}", new_pub_uses.len(), relative_path.display());
             for pub_use in &new_pub_uses {
                 println!("  {}", pub_use);
             }
@@ -150,6 +198,7 @@ impl RefactorEngine {
         &self,
         _target_crate_path: &Path,
         imports: Vec<ImportInfo>,
+        workspace_root: &Path,
     ) -> Result<()> {
         // Group imports by file
         let mut imports_by_file: std::collections::HashMap<PathBuf, Vec<ImportInfo>> = 
@@ -164,7 +213,7 @@ impl RefactorEngine {
 
         // Process each file
         for (file_path, file_imports) in imports_by_file {
-            self.replace_imports_in_file(&file_path, file_imports)?;
+            self.replace_imports_in_file(&file_path, file_imports, workspace_root)?;
         }
 
         Ok(())
@@ -174,6 +223,7 @@ impl RefactorEngine {
         &self,
         file_path: &Path,
         imports: Vec<ImportInfo>,
+        workspace_root: &Path,
     ) -> Result<()> {
         let original_content = fs::read_to_string(file_path)
             .with_context(|| format!("Failed to read {}", file_path.display()))?;
@@ -249,7 +299,9 @@ impl RefactorEngine {
 
         if replacements_made > 0 {
             if self.verbose {
-                println!("Made {} replacements in {}", replacements_made, file_path.display());
+                let relative_path = file_path.strip_prefix(workspace_root)
+                    .unwrap_or(file_path);
+                println!("Made {} replacements in {}", replacements_made, relative_path.display());
             }
 
             if !self.dry_run {

@@ -37,14 +37,26 @@ struct Args {
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    if args.verbose {
-        println!("Import Refactor Tool");
-        println!("Source crate (A): {}", args.source_crate);
-        println!("Target crate (B): {}", args.target_crate);
-        println!("Workspace root: {}", args.workspace_root.display());
-        println!("Dry run: {}", args.dry_run);
-        println!();
+    println!("🔧 Import Refactor Tool");
+    println!(
+        "📦 Source crate (A): {} → will export items via pub use",
+        args.source_crate
+    );
+    println!(
+        "📦 Target crate (B): {} → imports will be simplified to use A::*",
+        args.target_crate
+    );
+    if args.dry_run {
+        println!("🔍 Running in dry-run mode (no files will be modified)");
     }
+    println!(
+        "📂 Workspace: {}",
+        args.workspace_root
+            .canonicalize()
+            .unwrap_or_else(|_| args.workspace_root.clone())
+            .display()
+    );
+    println!();
 
     // Step 1: Analyze the workspace and find the crates
     let analyzer = CrateAnalyzer::new(&args.workspace_root)?;
@@ -52,8 +64,24 @@ fn main() -> Result<()> {
     let target_crate_path = analyzer.find_crate(&args.target_crate)?;
 
     if args.verbose {
-        println!("Found source crate at: {}", source_crate_path.display());
-        println!("Found target crate at: {}", target_crate_path.display());
+        let workspace_root = args
+            .workspace_root
+            .canonicalize()
+            .unwrap_or_else(|_| args.workspace_root.clone());
+        println!(
+            "Found source crate at: {}",
+            source_crate_path
+                .strip_prefix(&workspace_root)
+                .unwrap_or(&source_crate_path)
+                .display()
+        );
+        println!(
+            "Found target crate at: {}",
+            target_crate_path
+                .strip_prefix(&workspace_root)
+                .unwrap_or(&target_crate_path)
+                .display()
+        );
         println!();
     }
 
@@ -61,39 +89,61 @@ fn main() -> Result<()> {
     let parser = ImportParser::new(&args.source_crate);
     let imports = parser.find_imports_in_crate(&target_crate_path)?;
 
-    if args.verbose {
+    println!(
+        "🔎 Scanning for imports of '{}' in '{}'...",
+        args.source_crate, args.target_crate
+    );
+
+    if imports.is_empty() {
         println!(
-            "Found {} import statements referencing '{}':",
-            imports.len(),
-            args.source_crate
+            "❌ No imports found from '{}' in crate '{}'",
+            args.source_crate, args.target_crate
         );
+        println!("   Nothing to refactor.");
+        return Ok(());
+    }
+
+    println!("✅ Found {} import statements", imports.len());
+
+    if args.verbose {
+        let workspace_root = args
+            .workspace_root
+            .canonicalize()
+            .unwrap_or_else(|_| args.workspace_root.clone());
+        println!("\n📝 Detailed import list:");
         for import in &imports {
+            let relative_path = import
+                .file_path
+                .strip_prefix(&workspace_root)
+                .unwrap_or(&import.file_path);
             println!(
-                "  {} in {}",
+                "  • {} in {}",
                 import.import_path,
-                import.file_path.display()
+                relative_path.display()
             );
         }
         println!();
     }
 
-    if imports.is_empty() {
-        println!(
-            "No imports found from '{}' in crate '{}'",
-            args.source_crate, args.target_crate
-        );
-        return Ok(());
-    }
-
     // Step 3: Refactor the imports
     let mut engine =
         RefactorEngine::new(&args.source_crate, args.dry_run, args.verbose);
-    engine.refactor_imports(&source_crate_path, &target_crate_path, imports)?;
+    engine.refactor_imports(
+        &source_crate_path,
+        &target_crate_path,
+        imports,
+        &args.workspace_root,
+    )?;
 
     if args.dry_run {
-        println!("\nDry run completed. No files were modified.");
+        println!("🔍 Dry run completed. No files were modified.");
+        println!("💡 Run without --dry-run to apply these changes.");
     } else {
-        println!("\nRefactoring completed successfully!");
+        println!("✅ Refactoring completed successfully!");
+        println!(
+            "📁 Modified files in both '{}' and '{}'",
+            args.source_crate, args.target_crate
+        );
     }
 
     Ok(())
