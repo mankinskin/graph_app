@@ -1,6 +1,13 @@
 use anyhow::Result;
-use std::collections::{BTreeMap, BTreeSet};
-use syn::{File, Item, UseTree};
+use std::collections::{
+    BTreeMap,
+    BTreeSet,
+};
+use syn::{
+    File,
+    Item,
+    UseTree,
+};
 
 /// Information about existing pub use statements in a crate
 #[derive(Default)]
@@ -14,7 +21,10 @@ pub struct ExistingExports {
 }
 
 impl std::fmt::Debug for ExistingExports {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
         f.debug_struct("ExistingExports")
             .field("exported_items", &self.exported_items)
             .field("conditional_exports_count", &self.conditional_exports.len())
@@ -28,7 +38,9 @@ pub struct ExistingExportParser;
 
 impl ExistingExportParser {
     /// Parse existing pub use statements from a syntax tree
-    pub fn parse_existing_exports(syntax_tree: &File) -> Result<ExistingExports> {
+    pub fn parse_existing_exports(
+        syntax_tree: &File
+    ) -> Result<ExistingExports> {
         let mut exports = ExistingExports::default();
 
         for item in &syntax_tree.items {
@@ -39,7 +51,10 @@ impl ExistingExportParser {
                     exports.raw_statements.push(raw_stmt);
 
                     // Extract all exported items from this use statement
-                    Self::extract_exported_items(&use_item.tree, &mut exports.exported_items, &use_item.attrs);
+                    Self::extract_exported_items(
+                        &use_item.tree,
+                        &mut exports.exported_items,
+                    );
                 }
             }
         }
@@ -51,34 +66,33 @@ impl ExistingExportParser {
     fn extract_exported_items(
         tree: &UseTree,
         exported_items: &mut BTreeSet<String>,
-        attrs: &[syn::Attribute],
     ) {
         match tree {
             UseTree::Path(path) => {
                 // Handle paths like `utils::string_ops::capitalize`
-                Self::extract_exported_items(&path.tree, exported_items, attrs);
-            }
+                Self::extract_exported_items(&path.tree, exported_items);
+            },
             UseTree::Name(name) => {
                 // Handle simple names like `format_string`
                 let item_name = name.ident.to_string();
                 exported_items.insert(item_name);
-            }
+            },
             UseTree::Rename(rename) => {
                 // Handle renames like `format_string as fmt`
                 let renamed = rename.rename.to_string();
                 exported_items.insert(renamed);
-            }
+            },
             UseTree::Glob(_) => {
                 // Handle glob imports like `module::*`
                 // These are harder to track, but we can note them
                 exported_items.insert("*".to_string());
-            }
+            },
             UseTree::Group(group) => {
                 // Handle groups like `{capitalize, encoding::Encoder}`
                 for item in &group.items {
-                    Self::extract_exported_items(item, exported_items, attrs);
+                    Self::extract_exported_items(item, exported_items);
                 }
-            }
+            },
         }
     }
 
@@ -89,10 +103,7 @@ impl ExistingExportParser {
         exports: &ExistingExports,
     ) -> bool {
         // Extract the final identifier from the path
-        let final_ident = item_path
-            .split("::")
-            .last()
-            .unwrap_or(item_path);
+        let final_ident = item_path.split("::").last().unwrap_or(item_path);
 
         // Check if this identifier is already exported
         if exports.exported_items.contains(final_ident) {
@@ -104,10 +115,13 @@ impl ExistingExportParser {
             let relative_path = item_path
                 .strip_prefix(&format!("{}::", source_crate_name))
                 .unwrap_or(item_path);
-            
+
             // Check various forms of the path
-            if exports.exported_items.contains(relative_path) ||
-               exports.exported_items.contains(&format!("crate::{}", relative_path)) {
+            if exports.exported_items.contains(relative_path)
+                || exports
+                    .exported_items
+                    .contains(&format!("crate::{}", relative_path))
+            {
                 return true;
             }
         }

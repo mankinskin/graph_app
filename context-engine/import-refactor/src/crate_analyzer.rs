@@ -149,8 +149,4 @@ impl CrateAnalyzer {
             )
         })
     }
-
-    pub fn list_crates(&self) -> Vec<&String> {
-        self.crate_paths.keys().collect()
-    }
 }

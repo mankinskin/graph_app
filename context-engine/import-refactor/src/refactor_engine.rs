@@ -70,8 +70,12 @@ impl RefactorEngine {
                     if item != "*" {
                         all_imported_items.insert(item.clone());
                         // Track which files import this item with relative paths and simplified imports
-                        let relative_path = import
+                        let canonical_file_path = import
                             .file_path
+                            .canonicalize()
+                            .unwrap_or_else(|_| import.file_path.clone());
+
+                        let relative_path = canonical_file_path
                             .strip_prefix(&workspace_root)
                             .unwrap_or(&import.file_path);
 
@@ -116,11 +120,11 @@ impl RefactorEngine {
                 if let Some(files) = import_types.get(item) {
                     println!("  • {}", item);
                     for file_info in files.iter().take(3) {
-                        println!("    └─ {}", file_info);
+                        println!("      └─ {}", file_info);
                     }
                     if files.len() > 3 {
                         println!(
-                            "    └─ ... and {} more locations",
+                            "      └─ ... and {} more locations",
                             files.len() - 3
                         );
                     }
@@ -199,7 +203,8 @@ impl RefactorEngine {
         })?;
 
         // Use improved existing pub use collection
-        let existing_exports = self.collect_existing_exports(&syntax_tree);
+        let existing_exports =
+            self.collect_existing_exports(&syntax_tree, source_crate_path);
 
         if self.verbose {
             println!(
@@ -551,132 +556,6 @@ impl RefactorEngine {
         result
     }
 
-    /// Improved version that handles feature flags and avoids duplicates better
-    fn generate_nested_pub_use_improved(
-        &self,
-        items_to_add: &BTreeSet<String>,
-        conditional_items: &BTreeMap<String, Option<syn::Attribute>>,
-    ) -> String {
-        if items_to_add.is_empty() {
-            return String::new();
-        }
-
-        // Group items by feature flags
-        let mut unconditional_items = Vec::new();
-        let mut feature_groups: BTreeMap<String, Vec<String>> = BTreeMap::new();
-
-        for item in items_to_add {
-            let final_ident = item.split("::").last().unwrap_or(item);
-
-            if let Some(Some(attr)) = conditional_items.get(final_ident) {
-                // Extract feature flag from attribute
-                let feature_key = format!("{}", quote::quote!(#attr));
-                feature_groups
-                    .entry(feature_key.clone())
-                    .or_default()
-                    .push(item.clone());
-
-                if self.verbose {
-                    println!(
-                        "  📝 Grouping '{}' under feature: {}",
-                        item, feature_key
-                    );
-                }
-            } else {
-                unconditional_items.push(item.clone());
-            }
-        }
-
-        let mut result = String::new();
-
-        // Generate unconditional exports
-        if !unconditional_items.is_empty() {
-            result.push_str(
-                &self.build_nested_export_structure(&unconditional_items),
-            );
-        }
-
-        // Generate conditional exports grouped by feature
-        for (feature, items) in feature_groups {
-            if !items.is_empty() {
-                result.push('\n');
-                result.push_str(&feature);
-                result.push('\n');
-                result.push_str(&self.build_nested_export_structure(&items));
-            }
-        }
-
-        result
-    }
-
-    /// Build nested export structure for a list of items
-    fn build_nested_export_structure(
-        &self,
-        items: &[String],
-    ) -> String {
-        let mut groups: BTreeMap<String, Vec<String>> = BTreeMap::new();
-        let mut direct_exports = Vec::new();
-
-        // Group items by their module hierarchy
-        for item in items {
-            if item.contains("::") {
-                let components: Vec<&str> = item.split("::").collect();
-                if components.len() > 1 {
-                    let first = components[0].to_string();
-                    let rest = components[1..].join("::");
-                    groups.entry(first).or_default().push(rest);
-                }
-            } else {
-                direct_exports.push(item.clone());
-            }
-        }
-
-        let mut result = String::new();
-        result.push_str("pub use crate::{\n");
-
-        // Add direct exports first
-        for (i, export) in direct_exports.iter().enumerate() {
-            result.push_str("    ");
-            result.push_str(export);
-            if i < direct_exports.len() - 1 || !groups.is_empty() {
-                result.push(',');
-            }
-            result.push('\n');
-        }
-
-        // Add grouped exports
-        let group_entries: Vec<_> = groups.iter().collect();
-        for (i, (module, subpaths)) in group_entries.iter().enumerate() {
-            if subpaths.len() == 1 && !subpaths[0].contains("::") {
-                // Simple case: module::item
-                result.push_str("    ");
-                result.push_str(module);
-                result.push_str("::");
-                result.push_str(&subpaths[0]);
-            } else {
-                // Complex case: nested structure
-                result.push_str("    ");
-                result.push_str(module);
-                result.push_str("::{\n");
-
-                // Recursively handle subpaths
-                let sub_result =
-                    Self::build_nested_substructure(subpaths.to_vec(), 2);
-                result.push_str(&sub_result);
-
-                result.push_str("    }");
-            }
-
-            if i < group_entries.len() - 1 {
-                result.push(',');
-            }
-            result.push('\n');
-        }
-
-        result.push_str("};\n");
-        result
-    }
-
     fn collect_existing_pub_uses(
         &self,
         syntax_tree: &File,
@@ -694,45 +573,9 @@ impl RefactorEngine {
                 continue;
             }
 
-            // Debug: Check if this is a macro
-            if let syn::Item::Macro(macro_item) = item {
-                let macro_name = macro_item
-                    .ident
-                    .as_ref()
-                    .map(|i| i.to_string())
-                    .unwrap_or("unnamed".to_string());
-                let path_name = if macro_item.mac.path.is_ident("macro_rules") {
-                    "macro_rules!"
-                } else {
-                    "macro_invocation"
-                };
-                eprintln!("DEBUG: Found {} macro '{}', is_public: {}, has_macro_export: {}", 
-                         path_name,
-                         macro_name,
-                         macro_item.is_public(),
-                         has_macro_export_attribute(&macro_item.attrs));
-            }
-
             // Process other public items using the trait
-            eprintln!(
-                "DEBUG: Checking if item is public for: {:?}",
-                match item {
-                    syn::Item::Macro(m) => format!(
-                        "Macro({})",
-                        m.ident
-                            .as_ref()
-                            .map(|i| i.to_string())
-                            .unwrap_or("None".to_string())
-                    ),
-                    syn::Item::Fn(f) => format!("Function({})", f.sig.ident),
-                    syn::Item::Struct(s) => format!("Struct({})", s.ident),
-                    _ => "Other".to_string(),
-                }
-            );
             if item.is_public() {
-                eprintln!("DEBUG: Item is public, getting identifier...");
                 if let Some(name) = item.get_identifier() {
-                    eprintln!("DEBUG: Adding existing public item: {}", name);
                     existing.insert(name.clone());
 
                     // Check for conditional compilation attributes
@@ -741,22 +584,7 @@ impl RefactorEngine {
                     if cfg_attr.is_some() {
                         conditional_items.insert(name, cfg_attr);
                     }
-                } else {
-                    eprintln!(
-                        "DEBUG: Public item but no identifier (type: {})",
-                        match item {
-                            syn::Item::Macro(_) => "Macro",
-                            syn::Item::Fn(_) => "Function",
-                            syn::Item::Struct(_) => "Struct",
-                            syn::Item::Enum(_) => "Enum",
-                            syn::Item::Trait(_) => "Trait",
-                            syn::Item::Impl(_) => "Impl",
-                            _ => "Other",
-                        }
-                    );
                 }
-            } else {
-                eprintln!("DEBUG: Item is not public");
             }
         }
 
@@ -932,77 +760,143 @@ impl RefactorEngine {
     fn collect_existing_exports(
         &self,
         syntax_tree: &File,
+        source_crate_path: &Path,
     ) -> BTreeSet<String> {
         let mut exported_items = BTreeSet::new();
 
-        for item in &syntax_tree.items {
-            match item {
-                // Collect from pub use statements
-                syn::Item::Use(use_item) => {
-                    if matches!(use_item.vis, syn::Visibility::Public(_)) {
-                        self.extract_exported_items_from_use_tree(
-                            &use_item.tree,
-                            &mut exported_items,
-                        );
-                    }
-                },
-                // Collect directly defined public items
-                syn::Item::Fn(func) => {
-                    if matches!(func.vis, syn::Visibility::Public(_)) {
-                        exported_items.insert(func.sig.ident.to_string());
-                    }
-                },
-                syn::Item::Struct(s) => {
-                    if matches!(s.vis, syn::Visibility::Public(_)) {
-                        exported_items.insert(s.ident.to_string());
-                    }
-                },
-                syn::Item::Enum(e) => {
-                    if matches!(e.vis, syn::Visibility::Public(_)) {
-                        exported_items.insert(e.ident.to_string());
-                    }
-                },
-                syn::Item::Trait(t) => {
-                    if matches!(t.vis, syn::Visibility::Public(_)) {
-                        exported_items.insert(t.ident.to_string());
-                    }
-                },
-                syn::Item::Const(c) => {
-                    if matches!(c.vis, syn::Visibility::Public(_)) {
-                        exported_items.insert(c.ident.to_string());
-                    }
-                },
-                syn::Item::Static(s) => {
-                    if matches!(s.vis, syn::Visibility::Public(_)) {
-                        exported_items.insert(s.ident.to_string());
-                    }
-                },
-                syn::Item::Type(t) => {
-                    if matches!(t.vis, syn::Visibility::Public(_)) {
-                        exported_items.insert(t.ident.to_string());
-                    }
-                },
-                syn::Item::Mod(m) => {
-                    if matches!(m.vis, syn::Visibility::Public(_)) {
-                        exported_items.insert(m.ident.to_string());
-                    }
-                },
-                _ => {}, // Handle other items as needed
+        // Collect from lib.rs (direct definitions and pub use statements)
+        self.collect_exports_from_file(syntax_tree, &mut exported_items);
+
+        // Scan all source files for exported macros
+        if let Ok(crate_exported_macros) =
+            self.scan_crate_for_exported_macros(source_crate_path)
+        {
+            for macro_name in crate_exported_macros {
+                exported_items.insert(macro_name);
             }
         }
 
         exported_items
     }
 
+    /// Collect exported items from a single file's syntax tree
+    fn collect_exports_from_file(
+        &self,
+        syntax_tree: &File,
+        exported_items: &mut BTreeSet<String>,
+    ) {
+        for item in &syntax_tree.items {
+            match item {
+                // Collect from pub use statements
+                syn::Item::Use(use_item) =>
+                    if use_item.is_public() {
+                        Self::extract_exported_items_from_use_tree(
+                            &use_item.tree,
+                            exported_items,
+                        );
+                    },
+                item =>
+                    if let Some(ident) = item
+                        .is_public()
+                        .then(|| item.get_identifier())
+                        .flatten()
+                    {
+                        exported_items.insert(ident);
+                    },
+            }
+        }
+    }
+
+    /// Scan all .rs files in the source crate for exported macros
+    fn scan_crate_for_exported_macros(
+        &self,
+        source_crate_path: &Path,
+    ) -> Result<BTreeSet<String>> {
+        let mut exported_macros = BTreeSet::new();
+        let src_dir = source_crate_path.join("src");
+
+        if !src_dir.exists() {
+            return Ok(exported_macros);
+        }
+
+        self.scan_directory_for_macros(&src_dir, &mut exported_macros)?;
+
+        if self.verbose {
+            println!(
+                "🔍 Found {} exported macros across source crate: {:?}",
+                exported_macros.len(),
+                exported_macros
+            );
+        }
+
+        Ok(exported_macros)
+    }
+
+    /// Recursively scan a directory for .rs files and extract exported macros
+    fn scan_directory_for_macros(
+        &self,
+        dir_path: &Path,
+        exported_macros: &mut BTreeSet<String>,
+    ) -> Result<()> {
+        for entry in fs::read_dir(dir_path)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_dir() {
+                // Recursively scan subdirectories
+                self.scan_directory_for_macros(&path, exported_macros)?;
+            } else if let Some(extension) = path.extension() {
+                if extension == "rs" {
+                    self.scan_file_for_exported_macros(&path, exported_macros)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Scan a single .rs file for exported macros
+    fn scan_file_for_exported_macros(
+        &self,
+        file_path: &Path,
+        exported_macros: &mut BTreeSet<String>,
+    ) -> Result<()> {
+        let content = fs::read_to_string(file_path)
+            .with_context(|| format!("Failed to read file: {:?}", file_path))?;
+
+        let syntax_tree: syn::File =
+            syn::parse_file(&content).with_context(|| {
+                format!("Failed to parse file: {:?}", file_path)
+            })?;
+
+        for item in &syntax_tree.items {
+            if let syn::Item::Macro(macro_item) = item {
+                if has_macro_export_attribute(&macro_item.attrs) {
+                    if let Some(ident) = &macro_item.ident {
+                        exported_macros.insert(ident.to_string());
+                        if self.verbose {
+                            println!(
+                                "  📝 Found exported macro '{}' in {}",
+                                ident,
+                                file_path.display()
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// Recursively extract exported item names from a use tree
     fn extract_exported_items_from_use_tree(
-        &self,
         tree: &syn::UseTree,
         exported_items: &mut BTreeSet<String>,
     ) {
         match tree {
             syn::UseTree::Path(path) => {
-                self.extract_exported_items_from_use_tree(
+                Self::extract_exported_items_from_use_tree(
                     &path.tree,
                     exported_items,
                 );
@@ -1018,7 +912,7 @@ impl RefactorEngine {
             },
             syn::UseTree::Group(group) =>
                 for item in &group.items {
-                    self.extract_exported_items_from_use_tree(
+                    Self::extract_exported_items_from_use_tree(
                         item,
                         exported_items,
                     );

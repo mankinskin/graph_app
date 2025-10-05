@@ -1,3 +1,9 @@
+// Module declarations
+pub mod macros;
+
+// Re-export some items from macros module
+pub use macros::format_internal;
+
 // Exported macro
 #[macro_export]
 macro_rules! debug_print {
