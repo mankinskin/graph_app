@@ -38,6 +38,17 @@ export ANTHROPIC_MODEL="claude-3-5-sonnet-20241022"
 export ANTHROPIC_BASE_URL="https://api.anthropic.com/v1"  # Custom endpoint
 ```
 
+#### Local LLMs (Ollama/llama.cpp)
+```bash
+# Using Ollama (recommended for local models)
+export OLLAMA_BASE_URL="http://localhost:11434"
+export OLLAMA_MODEL="codellama:13b"  # or llama3.1, qwen2.5-coder, etc.
+
+# Using llama.cpp server
+export LLAMACPP_BASE_URL="http://localhost:8080"
+export LLAMACPP_MODEL="codellama-13b-instruct"
+```
+
 ## Usage
 
 ### Basic Analysis (No AI)
@@ -57,6 +68,7 @@ import-refactor --analyze --ai
 # Specify AI provider explicitly
 import-refactor --analyze --ai --ai-provider openai
 import-refactor --analyze --ai --ai-provider claude
+import-refactor --analyze --ai --ai-provider ollama
 
 # Limit functions analyzed (to control API costs)
 import-refactor --analyze --ai --ai-max-functions 10
@@ -64,6 +76,7 @@ import-refactor --analyze --ai --ai-max-functions 10
 # Specify AI model
 import-refactor --analyze --ai --ai-model gpt-4
 import-refactor --analyze --ai --ai-model claude-3-5-sonnet-20241022
+import-refactor --analyze --ai --ai-model codellama:13b  # for Ollama
 ```
 
 ### Combined with Import Refactoring
@@ -146,6 +159,119 @@ The AI analysis includes several cost control features:
 - **Complexity threshold**: Only analyzes functions above minimum complexity
 - **Smart sampling**: Prioritizes functions most likely to benefit from refactoring
 - **Batch processing**: Groups similar functions to minimize API calls
+
+## Local LLM Setup (Ollama)
+
+For privacy, unlimited usage, or offline analysis, you can use local models via Ollama:
+
+### Installation
+```bash
+# Install Ollama (Windows/macOS/Linux)
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Or download from: https://ollama.ai/download
+```
+
+### Setup Code Models
+```bash
+# Install recommended code analysis models
+ollama pull codellama:13b          # Best balance of size/performance
+ollama pull codellama:34b          # Better quality (requires 32GB+ RAM)
+ollama pull qwen2.5-coder:14b      # Alternative code model
+ollama pull llama3.1:8b            # Smaller general model
+
+# Check installed models
+ollama list
+```
+
+### Configuration
+```bash
+# Configure for local LLM
+export OLLAMA_MODEL="codellama:13b"           # Model to use
+export OLLAMA_BASE_URL="http://localhost:11434"  # Ollama server (default)
+
+# Start Ollama server (if not auto-started)
+ollama serve
+```
+
+### Usage Examples
+```bash
+# Use local LLM for analysis
+import-refactor --analyze --ai --ai-provider ollama
+
+# Specify different model
+import-refactor --analyze --ai --ai-provider ollama --ai-model qwen2.5-coder:14b
+
+# Analyze more functions (no API costs with local models)
+import-refactor --analyze --ai --ai-provider ollama --ai-max-functions 50
+```
+
+### Hardware Requirements
+
+#### Minimum (7B-8B models)
+- **RAM**: 8GB system + 8GB VRAM/swap
+- **GPU**: Optional, speeds up inference
+- **Speed**: ~5-10 seconds per analysis
+
+#### Recommended (13B-14B models)  
+- **RAM**: 16GB system + 16GB VRAM/swap
+- **GPU**: RTX 4060/4070 or equivalent
+- **Speed**: ~3-5 seconds per analysis
+
+#### Optimal (34B+ models)
+- **RAM**: 32GB+ system + 32GB VRAM/swap  
+- **GPU**: RTX 4080/4090 or equivalent
+- **Speed**: ~2-3 seconds per analysis
+
+### Model Comparison for Code Analysis
+
+| Model | Size | Quality | Speed | Best For |
+|-------|------|---------|-------|----------|
+| `codellama:7b` | 4GB | Good | Fast | Quick analysis, limited hardware |
+| `codellama:13b` | 8GB | Very Good | Medium | **Recommended balance** |
+| `codellama:34b` | 20GB | Excellent | Slow | High-quality analysis |
+| `qwen2.5-coder:14b` | 9GB | Very Good | Medium | Alternative to CodeLlama |
+| `llama3.1:8b` | 5GB | Good | Fast | General purpose with some code ability |
+
+### Troubleshooting
+
+#### Connection Issues
+```bash
+# Check if Ollama is running
+curl http://localhost:11434/api/tags
+
+# Start Ollama server manually
+ollama serve
+
+# Check logs
+journalctl -u ollama  # Linux
+# Or check Ollama app logs on Windows/macOS
+```
+
+#### Model Not Found
+```bash
+# List available models
+ollama list
+
+# Pull missing model
+ollama pull codellama:13b
+
+# Remove old/unused models to free space
+ollama rm old-model:version
+```
+
+#### Performance Issues
+```bash
+# Use smaller model for faster analysis
+export OLLAMA_MODEL="codellama:7b"
+
+# Limit analysis scope  
+import-refactor --analyze --ai --ai-provider ollama --ai-max-functions 10
+
+# Check system resources
+htop  # Linux/macOS
+# Task Manager on Windows
+```
 
 ## Error Handling
 

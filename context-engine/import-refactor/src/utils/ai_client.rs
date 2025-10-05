@@ -9,6 +9,9 @@ use serde::{
 };
 use std::env;
 
+#[cfg(feature = "embedded-llm")]
+use super::candle_server::CandleServer;
+
 /// Trait for AI clients that can analyze code similarity
 #[async_trait::async_trait]
 pub trait AiClient {
@@ -490,6 +493,250 @@ Provide your analysis in the following JSON format:
     }
 }
 
+/// Ollama local LLM client for code analysis
+pub struct OllamaClient {
+    client: Client,
+    model: String,
+    base_url: String,
+}
+
+impl OllamaClient {
+    pub fn new() -> Result<Self> {
+        let model = env::var("OLLAMA_MODEL")
+            .unwrap_or_else(|_| "codellama:13b".to_string());
+        let base_url = env::var("OLLAMA_BASE_URL")
+            .unwrap_or_else(|_| "http://localhost:11434".to_string());
+
+        Ok(Self {
+            client: Client::new(),
+            model,
+            base_url,
+        })
+    }
+
+    pub fn with_config(
+        model: String,
+        base_url: Option<String>,
+    ) -> Self {
+        Self {
+            client: Client::new(),
+            model,
+            base_url: base_url.unwrap_or("http://localhost:11434".to_string()),
+        }
+    }
+
+    async fn test_connection(&self) -> Result<()> {
+        // Test if Ollama is running and model is available
+        let response = self
+            .client
+            .get(&format!("{}/api/tags", self.base_url))
+            .send()
+            .await
+            .context("Failed to connect to Ollama server. Make sure Ollama is running.")?;
+
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!(
+                "Ollama server returned error: {}",
+                response.status()
+            ));
+        }
+
+        let tags_response: serde_json::Value = response
+            .json()
+            .await
+            .context("Failed to parse Ollama tags response")?;
+
+        // Check if our model is available
+        if let Some(models) = tags_response["models"].as_array() {
+            let model_available = models.iter().any(|model| {
+                model["name"]
+                    .as_str()
+                    .map(|name| name.starts_with(&self.model))
+                    .unwrap_or(false)
+            });
+
+            if !model_available {
+                return Err(anyhow::anyhow!(
+                    "Model '{}' not found in Ollama. Available models: {}",
+                    self.model,
+                    models
+                        .iter()
+                        .filter_map(|m| m["name"].as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ));
+            }
+        }
+
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl AiClient for OllamaClient {
+    async fn analyze_code_similarity(
+        &self,
+        code_snippets: &[CodeSnippet],
+        analysis_prompt: &str,
+    ) -> Result<SimilarityAnalysis> {
+        // Test connection first
+        self.test_connection().await?;
+
+        let prompt = format!(
+            r#"{analysis_prompt}
+
+Please analyze the following Rust code snippets for similarity and duplication patterns:
+
+{}
+
+Provide your analysis in the following JSON format (respond ONLY with valid JSON):
+{{
+    "similar_groups": [
+        {{
+            "snippet_indices": [0, 1],
+            "similarity_score": 0.8,
+            "common_patterns": ["similar control flow", "shared functionality"],
+            "differences": ["parameter types", "return values"]
+        }}
+    ],
+    "confidence_score": 0.9,
+    "reasoning": "Detailed explanation of the analysis",
+    "suggested_refactoring": "Optional refactoring suggestion"
+}}
+"#,
+            code_snippets
+                .iter()
+                .enumerate()
+                .map(|(i, snippet)| format!(
+                    "## Snippet {} ({}:{})\n```rust\n{}\n```\n",
+                    i, snippet.file_path, snippet.line_number, snippet.content
+                ))
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+
+        let request_body = serde_json::json!({
+            "model": self.model,
+            "prompt": prompt,
+            "stream": false,
+            "options": {
+                "temperature": 0.1,
+                "num_predict": 2000
+            }
+        });
+
+        let response = self
+            .client
+            .post(&format!("{}/api/generate", self.base_url))
+            .header("Content-Type", "application/json")
+            .json(&request_body)
+            .send()
+            .await
+            .context("Failed to send request to Ollama API")?;
+
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(anyhow::anyhow!("Ollama API error: {}", error_text));
+        }
+
+        let response_json: serde_json::Value = response
+            .json()
+            .await
+            .context("Failed to parse Ollama API response")?;
+
+        let content = response_json["response"]
+            .as_str()
+            .context("Invalid response format from Ollama API")?;
+
+        // Extract JSON from the response (it might have extra text)
+        let json_start = content.find('{').unwrap_or(0);
+        let json_end =
+            content.rfind('}').map(|i| i + 1).unwrap_or(content.len());
+        let json_content = &content[json_start..json_end];
+
+        serde_json::from_str(json_content)
+            .context("Failed to parse similarity analysis from Ollama response")
+    }
+
+    async fn suggest_refactoring(
+        &self,
+        code_context: &str,
+        analysis_prompt: &str,
+    ) -> Result<RefactoringAnalysis> {
+        // Test connection first
+        self.test_connection().await?;
+
+        let prompt = format!(
+            r#"{analysis_prompt}
+
+Please analyze the following Rust code for refactoring opportunities:
+
+```rust
+{code_context}
+```
+
+Provide your analysis in the following JSON format (respond ONLY with valid JSON):
+{{
+    "suggestions": [
+        {{
+            "suggestion_type": "extract_function",
+            "description": "Extract common functionality into a shared function",
+            "affected_functions": ["func1", "func2"],
+            "estimated_benefit": "Reduces code duplication by 30 lines",
+            "implementation_notes": "Create a generic function with parameters"
+        }}
+    ],
+    "confidence_score": 0.85,
+    "reasoning": "Detailed explanation of the refactoring analysis"
+}}
+"#
+        );
+
+        let request_body = serde_json::json!({
+            "model": self.model,
+            "prompt": prompt,
+            "stream": false,
+            "options": {
+                "temperature": 0.1,
+                "num_predict": 2000
+            }
+        });
+
+        let response = self
+            .client
+            .post(&format!("{}/api/generate", self.base_url))
+            .header("Content-Type", "application/json")
+            .json(&request_body)
+            .send()
+            .await
+            .context("Failed to send request to Ollama API")?;
+
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(anyhow::anyhow!("Ollama API error: {}", error_text));
+        }
+
+        let response_json: serde_json::Value = response
+            .json()
+            .await
+            .context("Failed to parse Ollama API response")?;
+
+        let content = response_json["response"]
+            .as_str()
+            .context("Invalid response format from Ollama API")?;
+
+        // Extract JSON from the response
+        let json_start = content.find('{').unwrap_or(0);
+        let json_end =
+            content.rfind('}').map(|i| i + 1).unwrap_or(content.len());
+        let json_content = &content[json_start..json_end];
+
+        serde_json::from_str(json_content).context(
+            "Failed to parse refactoring analysis from Ollama response",
+        )
+    }
+}
+
 /// Factory for creating AI clients based on configuration
 pub struct AiClientFactory;
 
@@ -502,8 +749,32 @@ impl AiClientFactory {
         Ok(Box::new(ClaudeClient::new()?))
     }
 
+    pub fn create_ollama_client() -> Result<Box<dyn AiClient + Send + Sync>> {
+        Ok(Box::new(OllamaClient::new()?))
+    }
+
+    pub fn create_ollama_client_with_config(
+        base_url: String,
+        model: Option<String>,
+    ) -> Result<Box<dyn AiClient + Send + Sync>> {
+        let model = model.unwrap_or_else(|| "codellama:7b".to_string());
+        Ok(Box::new(OllamaClient::with_config(model, Some(base_url))))
+    }
+
+    #[cfg(feature = "embedded-llm")]
+    pub async fn create_embedded_client() -> Result<Box<dyn AiClient + Send + Sync>> {
+        Ok(Box::new(CandleServer::new().await?))
+    }
+
+    #[cfg(not(feature = "embedded-llm"))]
+    pub fn create_embedded_client() -> Result<Box<dyn AiClient + Send + Sync>> {
+        Err(anyhow::anyhow!(
+            "Embedded LLM support not compiled. Rebuild with --features embedded-llm to enable."
+        ))
+    }
+
     pub fn create_client_from_env() -> Result<Box<dyn AiClient + Send + Sync>> {
-        // Try OpenAI/Copilot first, then Claude
+        // Try OpenAI/Copilot first, then Claude, then Ollama, finally embedded
         if env::var("OPENAI_API_KEY").is_ok()
             || env::var("COPILOT_API_KEY").is_ok()
         {
@@ -511,9 +782,27 @@ impl AiClientFactory {
         } else if env::var("ANTHROPIC_API_KEY").is_ok() {
             Self::create_claude_client()
         } else {
-            Err(anyhow::anyhow!(
-                "No AI API key found. Set OPENAI_API_KEY, COPILOT_API_KEY, or ANTHROPIC_API_KEY"
-            ))
+            // Try Ollama as fallback (no API key needed, just check if server is running)
+            match Self::create_ollama_client() {
+                Ok(client) => Ok(client),
+                Err(_) => {
+                    // If Ollama fails, try embedded as last resort
+                    #[cfg(feature = "embedded-llm")]
+                    {
+                        // Since this is not an async function but create_embedded_client is async,
+                        // we need to use a different approach or make this function async
+                        Err(anyhow::anyhow!(
+                            "No AI providers available. Ollama failed and embedded client requires async initialization. Please set up OpenAI or Claude API keys."
+                        ))
+                    }
+                    #[cfg(not(feature = "embedded-llm"))]
+                    {
+                        Err(anyhow::anyhow!(
+                            "No AI providers available. Please set up OpenAI, Claude, Ollama, or compile with embedded LLM support."
+                        ))
+                    }
+                },
+            }
         }
     }
 }

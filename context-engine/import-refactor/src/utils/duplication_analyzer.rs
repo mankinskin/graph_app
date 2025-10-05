@@ -10,7 +10,11 @@ use std::{
 };
 
 use super::{
-    ai_client::{AiClientFactory, CodeSnippet, SimilarityAnalysis},
+    ai_client::{
+        AiClientFactory,
+        CodeSnippet,
+        SimilarityAnalysis,
+    },
     common::{
         format_relative_path,
         print_file_location,
@@ -118,6 +122,7 @@ pub struct AnalysisConfig {
     pub ai_provider: AiProvider,
     pub ai_model: Option<String>,
     pub max_functions_for_ai: usize,
+    pub ollama_base_url: Option<String>,
 }
 
 /// Supported AI providers for code analysis
@@ -125,7 +130,9 @@ pub struct AnalysisConfig {
 pub enum AiProvider {
     OpenAI,
     Claude,
-    Auto,  // Automatically detect based on available API keys
+    Ollama,   // Local LLM provider via Ollama server
+    Embedded, // Local embedded LLM using Candle framework
+    Auto,     // Automatically detect based on available API keys/environment
 }
 
 impl Default for AnalysisConfig {
@@ -143,9 +150,10 @@ impl Default for AnalysisConfig {
             max_files_to_scan: None,
             enable_ai_analysis: false,
             ai_api_key: None,
-            ai_provider: AiProvider::Auto,
+            ai_provider: AiProvider::Embedded, // Default to embedded LLM
             ai_model: None,
-            max_functions_for_ai: 20,  // Limit to avoid large API costs
+            max_functions_for_ai: 20, // Limit to avoid large API costs
+            ollama_base_url: None,
         }
     }
 }
@@ -178,7 +186,7 @@ impl CodebaseDuplicationAnalyzer {
 
         // Analyze patterns for duplications
         let mut analysis = self.detect_duplications();
-        
+
         // Perform AI-powered analysis if enabled
         if self.config.enable_ai_analysis {
             println!("🤖 Running AI-powered semantic analysis...");
@@ -186,14 +194,14 @@ impl CodebaseDuplicationAnalyzer {
                 Ok(ai_analysis) => {
                     analysis.ai_analysis = Some(ai_analysis);
                     println!("✅ AI analysis completed successfully");
-                }
+                },
                 Err(e) => {
                     println!("⚠️  AI analysis failed: {}", e);
                     println!("   Continuing with basic analysis...");
-                }
+                },
             }
         }
-        
+
         self.analysis_complete = true;
 
         println!(
@@ -547,7 +555,7 @@ impl CodebaseDuplicationAnalyzer {
             similar_functions,
             repeated_patterns,
             potential_utilities,
-            ai_analysis: None,  // Will be filled by AI analysis if enabled
+            ai_analysis: None, // Will be filled by AI analysis if enabled
         }
     }
 
@@ -634,17 +642,35 @@ impl CodebaseDuplicationAnalyzer {
         if let Some(ai_analysis) = &analysis.ai_analysis {
             println!("\n🤖 AI-POWERED SEMANTIC ANALYSIS");
             println!("--------------------------------");
-            println!("Overall Confidence: {:.1}%", ai_analysis.confidence_score * 100.0);
+            println!(
+                "Overall Confidence: {:.1}%",
+                ai_analysis.confidence_score * 100.0
+            );
             println!("Analysis Reasoning: {}", ai_analysis.reasoning);
 
             if !ai_analysis.semantic_similarities.is_empty() {
-                println!("\n🧠 SEMANTIC SIMILARITY GROUPS ({})", ai_analysis.semantic_similarities.len());
-                for (i, group) in ai_analysis.semantic_similarities.iter().enumerate() {
-                    println!("{}. Similarity Score: {:.1}% ({} functions)", 
-                            i + 1, group.similarity_score * 100.0, group.functions.len());
-                    println!("   Common Patterns: {}", group.common_patterns.join(", "));
-                    println!("   Key Differences: {}", group.differences.join(", "));
-                    
+                println!(
+                    "\n🧠 SEMANTIC SIMILARITY GROUPS ({})",
+                    ai_analysis.semantic_similarities.len()
+                );
+                for (i, group) in
+                    ai_analysis.semantic_similarities.iter().enumerate()
+                {
+                    println!(
+                        "{}. Similarity Score: {:.1}% ({} functions)",
+                        i + 1,
+                        group.similarity_score * 100.0,
+                        group.functions.len()
+                    );
+                    println!(
+                        "   Common Patterns: {}",
+                        group.common_patterns.join(", ")
+                    );
+                    println!(
+                        "   Key Differences: {}",
+                        group.differences.join(", ")
+                    );
+
                     for function in &group.functions {
                         print!("   ");
                         print_file_location(
@@ -658,14 +684,29 @@ impl CodebaseDuplicationAnalyzer {
             }
 
             if !ai_analysis.ai_suggestions.is_empty() {
-                println!("\n🎯 AI REFACTORING SUGGESTIONS ({})", ai_analysis.ai_suggestions.len());
-                for (i, suggestion) in ai_analysis.ai_suggestions.iter().enumerate() {
-                    println!("{}. {} (Confidence: {:.1}%)", 
-                            i + 1, suggestion.description, suggestion.confidence * 100.0);
+                println!(
+                    "\n🎯 AI REFACTORING SUGGESTIONS ({})",
+                    ai_analysis.ai_suggestions.len()
+                );
+                for (i, suggestion) in
+                    ai_analysis.ai_suggestions.iter().enumerate()
+                {
+                    println!(
+                        "{}. {} (Confidence: {:.1}%)",
+                        i + 1,
+                        suggestion.description,
+                        suggestion.confidence * 100.0
+                    );
                     println!("   Type: {}", suggestion.suggestion_type);
                     println!("   Benefit: {}", suggestion.estimated_benefit);
-                    println!("   Implementation: {}", suggestion.implementation_notes);
-                    println!("   Affected Functions: {}", suggestion.affected_functions.join(", "));
+                    println!(
+                        "   Implementation: {}",
+                        suggestion.implementation_notes
+                    );
+                    println!(
+                        "   Affected Functions: {}",
+                        suggestion.affected_functions.join(", ")
+                    );
                     println!();
                 }
             }
@@ -771,7 +812,8 @@ impl CodebaseDuplicationAnalyzer {
             .map(|o| o.estimated_lines_saved)
             .sum::<usize>();
 
-        let ai_estimated_savings = analysis.ai_analysis
+        let ai_estimated_savings = analysis
+            .ai_analysis
             .as_ref()
             .map(|ai| ai.ai_suggestions.len() * 15) // Rough estimate
             .unwrap_or(0);
@@ -811,18 +853,36 @@ impl CodebaseDuplicationAnalyzer {
     }
 
     /// Perform AI-powered semantic analysis on the code patterns
-    async fn perform_ai_analysis(&self) -> Result<AiDuplicationAnalysis, Box<dyn std::error::Error>> {
+    async fn perform_ai_analysis(
+        &self
+    ) -> Result<AiDuplicationAnalysis, Box<dyn std::error::Error>> {
         // Create AI client based on configuration
         let ai_client = match self.config.ai_provider {
             AiProvider::OpenAI => AiClientFactory::create_openai_client()?,
             AiProvider::Claude => AiClientFactory::create_claude_client()?,
+            AiProvider::Ollama => {
+                if let Some(base_url) = &self.config.ollama_base_url {
+                    AiClientFactory::create_ollama_client_with_config(
+                        base_url.clone(),
+                        self.config.ai_model.clone(),
+                    )?
+                } else {
+                    AiClientFactory::create_ollama_client()?
+                }
+            },
+            AiProvider::Embedded => {
+                return Err("Embedded LLM client requires async initialization. Please use an async context or switch to another AI provider.".into());
+            },
             AiProvider::Auto => AiClientFactory::create_client_from_env()?,
         };
 
         // Limit the number of functions to analyze to control API costs
-        let functions_to_analyze: Vec<&MethodPattern> = self.patterns
+        let functions_to_analyze: Vec<&MethodPattern> = self
+            .patterns
             .iter()
-            .filter(|p| p.complexity_score >= self.config.min_complexity_threshold)
+            .filter(|p| {
+                p.complexity_score >= self.config.min_complexity_threshold
+            })
             .take(self.config.max_functions_for_ai)
             .collect();
 
@@ -830,24 +890,32 @@ impl CodebaseDuplicationAnalyzer {
             return Err("No functions meet the criteria for AI analysis".into());
         }
 
-        println!("🔍 Analyzing {} functions with AI (limited from {})", 
-                functions_to_analyze.len(), self.patterns.len());
+        println!(
+            "🔍 Analyzing {} functions with AI (limited from {})",
+            functions_to_analyze.len(),
+            self.patterns.len()
+        );
 
         // Convert method patterns to code snippets for AI analysis
         let mut code_snippets = Vec::new();
         for pattern in &functions_to_analyze {
             if let Ok(content) = std::fs::read_to_string(&pattern.file_path) {
                 // Extract the function from the file content
-                let function_content = self.extract_function_content(&content, &pattern.signature.name)?;
-                
+                let function_content = self.extract_function_content(
+                    &content,
+                    &pattern.signature.name,
+                )?;
+
                 code_snippets.push(CodeSnippet {
                     content: function_content,
                     file_path: pattern.file_path.to_string_lossy().to_string(),
                     function_name: pattern.signature.name.clone(),
                     line_number: pattern.line_number,
-                    context: format!("Function with {} parameters, complexity score: {}", 
-                                   pattern.signature.parameter_count, 
-                                   pattern.complexity_score),
+                    context: format!(
+                        "Function with {} parameters, complexity score: {}",
+                        pattern.signature.parameter_count,
+                        pattern.complexity_score
+                    ),
                 });
             }
         }
@@ -863,12 +931,14 @@ impl CodebaseDuplicationAnalyzer {
             self.config.min_complexity_threshold
         );
 
-        let similarity_analysis = ai_client.analyze_code_similarity(&code_snippets, &analysis_prompt).await?;
+        let similarity_analysis = ai_client
+            .analyze_code_similarity(&code_snippets, &analysis_prompt)
+            .await?;
 
         // Convert AI results to our format
         let semantic_similarities = self.convert_ai_similarity_results(
-            &similarity_analysis, 
-            &functions_to_analyze
+            &similarity_analysis,
+            &functions_to_analyze,
         )?;
 
         // Get additional refactoring suggestions
@@ -885,9 +955,12 @@ impl CodebaseDuplicationAnalyzer {
             code_snippets.len()
         );
 
-        let refactoring_analysis = ai_client.suggest_refactoring(&all_code_context, &refactoring_prompt).await?;
+        let refactoring_analysis = ai_client
+            .suggest_refactoring(&all_code_context, &refactoring_prompt)
+            .await?;
 
-        let ai_suggestions = refactoring_analysis.suggestions
+        let ai_suggestions = refactoring_analysis
+            .suggestions
             .into_iter()
             .map(|s| AiRefactoringSuggestion {
                 suggestion_type: s.suggestion_type,
@@ -917,7 +990,7 @@ impl CodebaseDuplicationAnalyzer {
 
         for group in &ai_analysis.similar_groups {
             let mut functions = Vec::new();
-            
+
             for &index in &group.snippet_indices {
                 if let Some(&pattern) = analyzed_functions.get(index) {
                     functions.push(pattern.clone());
@@ -938,15 +1011,19 @@ impl CodebaseDuplicationAnalyzer {
     }
 
     /// Extract function content from file source code
-    fn extract_function_content(&self, file_content: &str, function_name: &str) -> Result<String, Box<dyn std::error::Error>> {
+    fn extract_function_content(
+        &self,
+        file_content: &str,
+        function_name: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         // Parse the file to find the specific function
         let parsed_file = syn::parse_file(file_content)?;
-        
+
         for item in &parsed_file.items {
             match item {
                 syn::Item::Fn(func) if func.sig.ident == function_name => {
                     return Ok(quote::quote!(#func).to_string());
-                }
+                },
                 syn::Item::Impl(impl_block) => {
                     for impl_item in &impl_block.items {
                         if let syn::ImplItem::Fn(method) = impl_item {
@@ -955,7 +1032,7 @@ impl CodebaseDuplicationAnalyzer {
                             }
                         }
                     }
-                }
+                },
                 _ => continue,
             }
         }
@@ -967,7 +1044,7 @@ impl CodebaseDuplicationAnalyzer {
                 let start = i;
                 let mut end = i;
                 let mut brace_count = 0;
-                
+
                 // Find the end of the function by counting braces
                 for (j, line) in lines.iter().enumerate().skip(i) {
                     for ch in line.chars() {
@@ -979,15 +1056,15 @@ impl CodebaseDuplicationAnalyzer {
                                     end = j;
                                     break;
                                 }
-                            }
-                            _ => {}
+                            },
+                            _ => {},
                         }
                     }
                     if brace_count == 0 && j > i {
                         break;
                     }
                 }
-                
+
                 return Ok(lines[start..=end].join("\n"));
             }
         }

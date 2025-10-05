@@ -1,13 +1,14 @@
 use crate::utils::{
     refactoring_analyzer::{RefactoringAnalyzer, AnalysisConfig},
     duplication_analyzer::{CodebaseDuplicationAnalyzer, AnalysisConfig as DuplicationConfig, AiProvider},
+    ollama_manager::OllamaManager,
 };
 use std::path::PathBuf;
 
 /// Command-line interface for the duplication analyzer
 pub fn run_analyzer(workspace_path: Option<PathBuf>, verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
     let rt = tokio::runtime::Runtime::new()?;
-    rt.block_on(run_analyzer_with_ai(workspace_path, verbose, false, AiProvider::Auto, None, 20))
+    rt.block_on(run_analyzer_with_ai(workspace_path, verbose, false, AiProvider::Auto, None, None, 20))
 }
 
 /// Command-line interface for the duplication analyzer with AI support
@@ -17,6 +18,7 @@ pub async fn run_analyzer_with_ai(
     enable_ai: bool,
     ai_provider: AiProvider,
     ai_model: Option<String>,
+    ollama_host: Option<String>,
     max_functions_for_ai: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let workspace_root = workspace_path.unwrap_or_else(|| std::env::current_dir().unwrap());
@@ -44,15 +46,57 @@ pub async fn run_analyzer_with_ai(
         }
     }
 
+    // Handle Ollama auto-start if needed
+    let mut ollama_manager = if ai_provider == AiProvider::Ollama || ai_provider == AiProvider::Auto {
+        let mut manager = if let Some(host) = &ollama_host {
+            OllamaManager::from_host_string(host)?
+        } else {
+            OllamaManager::new()
+        };
+
+        if verbose {
+            let status = manager.get_status().await;
+            status.print_status();
+        }
+
+        // Auto-start Ollama if needed and possible
+        if enable_ai && (ai_provider == AiProvider::Ollama || ai_provider == AiProvider::Auto) {
+            if let Err(e) = manager.ensure_running().await {
+                if ai_provider == AiProvider::Ollama {
+                    // If explicitly using Ollama, fail hard
+                    return Err(format!("Failed to start Ollama server: {}", e).into());
+                } else {
+                    // If using Auto, warn but continue (will try other providers)
+                    if verbose {
+                        println!("⚠️ Could not start Ollama: {}. Trying other AI providers...", e);
+                    }
+                }
+            }
+        }
+
+        Some(manager)
+    } else {
+        None
+    };
+
     // Run enhanced duplication analysis
-    run_duplication_analysis(
+    let ollama_base_url = ollama_manager.as_ref().map(|m| m.base_url());
+    let analysis_result = run_duplication_analysis(
         &workspace_root, 
         verbose, 
         enable_ai, 
         &ai_provider,  // Pass by reference
         ai_model, 
-        max_functions_for_ai
-    ).await?;
+        max_functions_for_ai,
+        ollama_base_url,
+    ).await;
+
+    // Stop Ollama if we auto-started it
+    if let Some(ref mut manager) = ollama_manager {
+        let _ = manager.stop();
+    }
+
+    analysis_result?;
 
     // Also run the existing refactoring analyzer for additional insights
     if verbose {
@@ -71,6 +115,7 @@ async fn run_duplication_analysis(
     ai_provider: &AiProvider,
     ai_model: Option<String>,
     max_functions_for_ai: usize,
+    ollama_base_url: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let config = DuplicationConfig {
         min_complexity_threshold: 3,
@@ -88,6 +133,7 @@ async fn run_duplication_analysis(
         ai_provider: ai_provider.clone(),
         ai_model,
         max_functions_for_ai,
+        ollama_base_url,
     };
 
     let mut analyzer = CodebaseDuplicationAnalyzer::with_config(workspace_root, config);

@@ -7,6 +7,11 @@ edition = "2021"
 name = "import-refactor"
 path = "src/main.rs"
 
+[[bin]]
+name = "candle-server"
+path = "src/bin/candle_server.rs"
+required-features = ["embedded-llm"]
+
 [dependencies]
 syn = { version = "2.0", features = [
     "full",
@@ -27,5 +32,40 @@ reqwest = { version = "0.11", features = ["json"] }
 tokio = { version = "1.0", features = ["full"] }
 async-trait = "0.1"
 
+# Candle dependencies for embedded LLM support (latest stable version)
+candle-core = { version = "0.9", optional = true }
+candle-nn = { version = "0.9", optional = true }
+candle-transformers = { version = "0.9", optional = true }
+hf-hub = { version = "0.4", optional = true, features = ["tokio"] }
+tokenizers = { version = "0.22", optional = true }
+safetensors = { version = "0.4", optional = true }
+
+# HTTP server dependencies for candle server
+hyper = { version = "0.14", features = ["full"], optional = true }
+chrono = { version = "0.4", features = ["serde"], optional = true }
+log = { version = "0.4", optional = true }
+
+# Additional dependencies for model management and process control
+dirs = "5.0"
+which = "6.0"
+regex = "1.0"
+serde_yaml = "0.9"  # For model configuration
+env_logger = "0.11"
+
+[features]
+default = ["embedded-llm"]
+embedded-llm = [
+    "candle-core",
+    "candle-nn",
+    "candle-transformers",
+    "hf-hub",
+    "tokenizers",
+    "safetensors",
+    "hyper",
+    "chrono",
+    "log",
+]
+
 [dev-dependencies]
 tempfile = "3.0"
+tokio-test = "0.4"
