@@ -8,10 +8,12 @@ use import_refactor::{
         CrateNames,
         CratePaths,
     },
+    import_parser::ImportParser,
     refactor_api::{
         RefactorApi,
         RefactorConfigBuilder,
     },
+    utils::import_analysis::analyze_imports,
 };
 use std::{
     fs,
@@ -166,8 +168,9 @@ pub struct RefactorResult {
     pub success: bool,
     pub source_analysis_before: AstAnalysis,
     pub source_analysis_after: AstAnalysis,
-    //pub target_analysis_before: Option<AstAnalysis>,
-    //pub target_analysis_after: Option<AstAnalysis>,
+    pub target_analysis_before: Option<AstAnalysis>,
+    pub target_analysis_after: Option<AstAnalysis>,
+    pub target_glob_imports_after: u32,
 }
 
 impl Default for TestWorkspaceConfig {
@@ -326,33 +329,44 @@ impl TestWorkspace {
         let source_analysis_after = analyze_ast(&source_lib_path)
             .context("Failed to analyze source crate after refactoring")?;
 
-        //let target_analysis_after = match &self.crate_paths {
-        //    CratePaths::SelfRefactor { .. } => None,
-        //    CratePaths::CrossRefactor {
-        //        target_crate_path, ..
-        //    } => {
-        //        let target_lib_path =
-        //            target_crate_path.join("src").join("lib.rs");
-        //        let target_main_path =
-        //            target_crate_path.join("src").join("main.rs");
-
-        //        if target_lib_path.exists() {
-        //            Some(analyze_ast(&target_lib_path)?)
-        //        } else if target_main_path.exists() {
-        //            Some(analyze_ast(&target_main_path)?)
-        //        } else {
-        //            None
-        //        }
-        //    },
-        //};
+        // Count glob imports in target crate after refactoring
+        let target_glob_imports_after =
+            self.count_target_glob_imports(&scenario.crate_names)?;
 
         Ok(RefactorResult {
             success: refactor_success,
             source_analysis_before,
             source_analysis_after,
-            //target_analysis_before,
-            //target_analysis_after,
+            target_analysis_before: None,
+            target_analysis_after: None,
+            target_glob_imports_after,
         })
+    }
+
+    /// Count glob imports in target crate after refactoring
+    fn count_target_glob_imports(
+        &self,
+        crate_names: &CrateNames,
+    ) -> Result<u32> {
+        let target_crate_path = match &self.crate_paths {
+            CratePaths::SelfRefactor { crate_path } => crate_path,
+            CratePaths::CrossRefactor {
+                target_crate_path, ..
+            } => target_crate_path,
+        };
+
+        // Use the same logic as the refactor tool to find imports
+        let parser = match crate_names {
+            CrateNames::SelfRefactor { .. } => ImportParser::new("crate"),
+            CrateNames::CrossRefactor { source_crate, .. } =>
+                ImportParser::new(source_crate),
+        };
+
+        let imports = parser.find_imports_in_crate(target_crate_path)?;
+        let analysis_result =
+            analyze_imports(&imports, crate_names, &self.workspace_path);
+
+        Ok(analysis_result.glob_imports as u32)
     }
 
     /// Execute the refactor tool

@@ -80,7 +80,7 @@ pub fn get_test_scenarios() -> Vec<TestScenario> {
                     }
                 };
             },
-            1, // target_crate_wildcards
+            11, // target_crate_wildcards - expected glob imports after refactoring (tool correctly consolidates imports)
             &[], // preserved_macros
         )),
         TestScenario::cross_refactor(
@@ -126,7 +126,7 @@ pub fn get_test_scenarios() -> Vec<TestScenario> {
                     }
                 };
             },
-            0, // target_crate_wildcards (not applicable for self-refactor)
+            1, // target_crate_wildcards - expected glob imports after refactoring (one consolidated import)
             &[], // preserved_macros
         )),
     ]

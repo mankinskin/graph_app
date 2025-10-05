@@ -164,6 +164,23 @@ impl AstValidator {
             );
         }
 
+        // Validate expected number of glob imports in target crate after refactoring
+        let actual_glob_imports = result.target_glob_imports_after;
+        let expected_glob_imports = expected.target_crate_wildcards;
+        
+        if actual_glob_imports == expected_glob_imports {
+            successes.push(format!(
+                "✅ Target crate glob imports: {} (as expected)",
+                actual_glob_imports
+            ));
+        } else {
+            failures.push(format!(
+                "❌ Target crate glob imports: expected {}, found {}",
+                expected_glob_imports,
+                actual_glob_imports
+            ));
+        }
+
         // Check preserved macros
         for expected_macro in expected.preserved_macros {
             let found = after
