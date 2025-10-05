@@ -762,8 +762,12 @@ impl AiClientFactory {
     }
 
     #[cfg(feature = "embedded-llm")]
-    pub async fn create_embedded_client() -> Result<Box<dyn AiClient + Send + Sync>> {
-        Ok(Box::new(CandleServer::new().await?))
+    pub async fn create_embedded_client(
+    ) -> Result<Box<dyn AiClient + Send + Sync>> {
+        match CandleServer::new().await? {
+            Some(server) => Ok(Box::new(server)),
+            None => Err(anyhow::anyhow!("User cancelled embedded LLM setup")),
+        }
     }
 
     #[cfg(not(feature = "embedded-llm"))]

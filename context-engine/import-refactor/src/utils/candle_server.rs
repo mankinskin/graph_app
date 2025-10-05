@@ -1,23 +1,97 @@
 // Candle-based LLM server for local model hosting and inference
 // This module provides a local LLM server using the candle crate for efficient inference
 
-use crate::utils::candle_config::ServerConfig;
-use crate::utils::ai_client::{AiClient, CodeSnippet, SimilarityAnalysis, RefactoringAnalysis};
-use anyhow::{Context, Result};
-use candle_core::{Device, Tensor, DType};
+use crate::utils::{
+    ai_client::{
+        AiClient,
+        CodeSnippet,
+        RefactoringAnalysis,
+        SimilarityAnalysis,
+    },
+    candle_config::ServerConfig,
+};
+use anyhow::{
+    Context,
+    Result,
+};
+use candle_core::{
+    DType,
+    Device,
+    Tensor,
+};
 use candle_nn::VarBuilder;
-use candle_transformers::models::llama::{Llama, Cache, Config};
-use hf_hub::api::tokio::Api;
-use hf_hub::{Repo, RepoType};
-use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Method, Request, Response, Server, StatusCode};
-use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
-use std::path::PathBuf;
-use std::sync::Arc;
-use tokio::sync::{Mutex, RwLock};
-use tokio::time::{timeout, Duration};
+use candle_transformers::models::llama::{
+    Cache,
+    Config,
+    Llama,
+};
+use hf_hub::{
+    api::tokio::Api,
+    Repo,
+    RepoType,
+};
+use hyper::{
+    service::{
+        make_service_fn,
+        service_fn,
+    },
+    Body,
+    Method,
+    Request,
+    Response,
+    Server,
+    StatusCode,
+};
+use serde::{
+    Deserialize,
+    Serialize,
+};
+use std::{
+    io::{
+        self,
+        Write,
+    },
+    net::SocketAddr,
+    path::PathBuf,
+    sync::Arc,
+};
 use tokenizers::Tokenizer;
+use tokio::{
+    sync::{
+        Mutex,
+        RwLock,
+    },
+    time::{
+        timeout,
+        Duration,
+    },
+};
+
+/// Result type for server operations that can distinguish between errors and user quit
+#[derive(Debug)]
+pub enum ServerResult<T> {
+    Ok(T),
+    UserQuit,
+    Error(anyhow::Error),
+}
+
+impl<T> ServerResult<T> {
+    pub fn is_user_quit(&self) -> bool {
+        matches!(self, ServerResult::UserQuit)
+    }
+
+    pub fn is_ok(&self) -> bool {
+        matches!(self, ServerResult::Ok(_))
+    }
+
+    pub fn into_result(self) -> Result<Option<T>> {
+        match self {
+            ServerResult::Ok(value) => Ok(Some(value)),
+            ServerResult::UserQuit => Ok(None),
+            ServerResult::Error(err) => Err(err),
+        }
+    }
+}
 
 /// Request/Response types for the HTTP API
 #[derive(Debug, Deserialize)]
@@ -59,7 +133,7 @@ pub struct HealthResponse {
 
 /// Main Candle server struct that manages model loading and inference
 pub struct CandleServer {
-    pub config: ServerConfig,
+    config: Arc<RwLock<ServerConfig>>,
     model: Arc<Mutex<Option<Llama>>>,
     tokenizer: Arc<Mutex<Option<Tokenizer>>>,
     device: Device,
@@ -70,13 +144,13 @@ pub struct CandleServer {
 
 impl CandleServer {
     /// Create a new CandleServer instance
-    pub async fn new() -> Result<Self> {
+    pub async fn new() -> Result<Option<Self>> {
         let config = ServerConfig::default();
         Self::with_config(config).await
     }
 
     /// Create a new CandleServer with custom configuration
-    pub async fn with_config(config: ServerConfig) -> Result<Self> {
+    pub async fn with_config(config: ServerConfig) -> Result<Option<Self>> {
         config.validate()?;
 
         let device = Self::setup_device(&config.model.device)?;
@@ -85,7 +159,7 @@ impl CandleServer {
         let cache = Cache::new(true, DType::F32, &llama_config, &device)?;
 
         let server = Self {
-            config,
+            config: Arc::new(RwLock::new(config)),
             model: Arc::new(Mutex::new(None)),
             tokenizer: Arc::new(Mutex::new(None)),
             device,
@@ -94,10 +168,17 @@ impl CandleServer {
             request_count: Arc::new(RwLock::new(0)),
         };
 
-        // Automatically download and load the model
-        server.ensure_model_ready().await?;
+        // Try to load the model with interactive error handling
+        match server.ensure_model_ready().await {
+            ServerResult::Ok(()) => Ok(Some(server)),
+            ServerResult::UserQuit => Ok(None),
+            ServerResult::Error(err) => Err(err),
+        }
+    }
 
-        Ok(server)
+    /// Get the server configuration
+    pub async fn get_config(&self) -> ServerConfig {
+        self.config.read().await.clone()
     }
 
     /// Setup the compute device (CPU, CUDA, Metal)
@@ -107,25 +188,29 @@ impl CandleServer {
             "cuda" => {
                 #[cfg(feature = "cuda")]
                 {
-                    Device::new_cuda(0).context("Failed to initialize CUDA device")
+                    Device::new_cuda(0)
+                        .context("Failed to initialize CUDA device")
                 }
                 #[cfg(not(feature = "cuda"))]
                 {
-                    log::warn!("CUDA requested but not available, falling back to CPU");
+                    log::warn!(
+                        "CUDA requested but not available, falling back to CPU"
+                    );
                     Ok(Device::Cpu)
                 }
-            }
+            },
             "metal" => {
                 #[cfg(feature = "metal")]
                 {
-                    Device::new_metal(0).context("Failed to initialize Metal device")
+                    Device::new_metal(0)
+                        .context("Failed to initialize Metal device")
                 }
                 #[cfg(not(feature = "metal"))]
                 {
                     log::warn!("Metal requested but not available, falling back to CPU");
                     Ok(Device::Cpu)
                 }
-            }
+            },
             "auto" => {
                 // Auto-detect the best available device
                 #[cfg(feature = "cuda")]
@@ -141,13 +226,88 @@ impl CandleServer {
                     }
                 }
                 Ok(Device::Cpu)
-            }
+            },
             _ => Err(anyhow::anyhow!("Unknown device type: {}", device_str)),
         }
     }
 
-    /// Ensure the model is downloaded and loaded
-    async fn ensure_model_ready(&self) -> Result<()> {
+    /// Ensure the model is downloaded and loaded with interactive error handling
+    async fn ensure_model_ready(&self) -> ServerResult<()> {
+        loop {
+            match self.try_load_model().await {
+                Ok(()) => {
+                    println!("✅ Model loaded successfully!");
+                    return ServerResult::Ok(());
+                },
+                Err(e) => {
+                    println!("❌ Failed to load model: {}", e);
+
+                    // Show available options
+                    println!("\nWhat would you like to do?");
+                    println!("1. List available models in cache");
+                    println!("2. Download a different model");
+
+                    let current_model = {
+                        let config = self.config.read().await;
+                        config.model.model_id.clone()
+                    };
+                    println!("3. Retry with current model ({})", current_model);
+                    println!("4. Quit");
+
+                    print!("\nEnter your choice (1-4): ");
+                    io::stdout().flush().unwrap();
+
+                    let mut input = String::new();
+                    io::stdin().read_line(&mut input).unwrap();
+
+                    match input.trim() {
+                        "1" => {
+                            self.list_cached_models().await;
+                            if let Some(model_id) =
+                                self.prompt_select_cached_model().await
+                            {
+                                // Update config with selected model
+                                {
+                                    let mut config = self.config.write().await;
+                                    config.model.model_id = model_id.clone();
+                                }
+                                println!("🔄 Switching to model: {}", model_id);
+                                continue;
+                            }
+                        },
+                        "2" => {
+                            if let Some(model_id) =
+                                self.prompt_download_model().await
+                            {
+                                // Update config and retry
+                                {
+                                    let mut config = self.config.write().await;
+                                    config.model.model_id = model_id.clone();
+                                }
+                                println!("🔄 Switching to model: {}", model_id);
+                                continue;
+                            }
+                        },
+                        "3" => {
+                            println!("🔄 Retrying with current model...");
+                            continue;
+                        },
+                        "4" => {
+                            println!("👋 Goodbye!");
+                            return ServerResult::UserQuit;
+                        },
+                        _ => {
+                            println!("❌ Invalid choice. Please enter 1, 2, 3, or 4.");
+                            continue;
+                        },
+                    }
+                },
+            }
+        }
+    }
+
+    /// Internal function to attempt model loading without error handling
+    async fn try_load_model(&self) -> Result<()> {
         let model_path = self.get_model_path().await?;
         let tokenizer_path = self.get_tokenizer_path().await?;
 
@@ -168,45 +328,119 @@ impl CandleServer {
         Ok(())
     }
 
+    /// List models available in the cache directory
+    async fn list_cached_models(&self) {
+        println!("\n📁 Models in cache directory:");
+        let cache_dir = {
+            let config = self.config.read().await;
+            config.cache.cache_dir.clone()
+        };
+
+        match std::fs::read_dir(&cache_dir) {
+            Ok(entries) => {
+                let mut found_models = false;
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if let Some(name) =
+                        path.file_name().and_then(|n| n.to_str())
+                    {
+                        if name.ends_with(".safetensors") {
+                            let model_name = name
+                                .trim_end_matches(".safetensors")
+                                .replace("_", "/");
+                            println!("   • {}", model_name);
+                            found_models = true;
+                        }
+                    }
+                }
+                if !found_models {
+                    println!("   (No models found in cache)");
+                }
+            },
+            Err(_) => {
+                println!("   (Could not read cache directory)");
+            },
+        }
+    }
+
+    /// Prompt user to select a cached model
+    async fn prompt_select_cached_model(&self) -> Option<String> {
+        print!("\nEnter model name to use (or press Enter to cancel): ");
+        io::stdout().flush().unwrap();
+
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+        let input = input.trim();
+
+        if input.is_empty() {
+            None
+        } else {
+            Some(input.to_string())
+        }
+    }
+
+    /// Prompt user to download a specific model
+    async fn prompt_download_model(&self) -> Option<String> {
+        println!("\n📥 Popular Llama-compatible models:");
+        println!("   • TinyLlama/TinyLlama-1.1B-Chat-v1.0 (small, fast)");
+        println!("   • microsoft/CodeLlama-7b-Instruct-hf (code-focused)");
+        println!("   • Qwen/Qwen2.5-Coder-7B-Instruct (code-focused)");
+        println!("   • meta-llama/Llama-2-7b-chat-hf (general chat)");
+
+        print!("\nEnter Hugging Face model ID to download (or press Enter to cancel): ");
+        io::stdout().flush().unwrap();
+
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+        let input = input.trim();
+
+        if input.is_empty() {
+            None
+        } else {
+            Some(input.to_string())
+        }
+    }
+
     /// Get the local path for the model file
     async fn get_model_path(&self) -> Result<PathBuf> {
-        let cache_dir = &self.config.cache.cache_dir;
+        let config = self.config.read().await;
+        let cache_dir = &config.cache.cache_dir;
         std::fs::create_dir_all(cache_dir)?;
-        
-        let model_name = self.config.model.model_id
-            .replace("/", "_")
-            .replace("-", "_");
+
+        let model_name =
+            config.model.model_id.replace("/", "_").replace("-", "_");
         Ok(cache_dir.join(format!("{}.safetensors", model_name)))
     }
 
     /// Get the local path for the tokenizer file
     async fn get_tokenizer_path(&self) -> Result<PathBuf> {
-        let cache_dir = &self.config.cache.cache_dir;
-        let model_name = self.config.model.model_id
-            .replace("/", "_")
-            .replace("-", "_");
+        let config = self.config.read().await;
+        let cache_dir = &config.cache.cache_dir;
+        let model_name =
+            config.model.model_id.replace("/", "_").replace("-", "_");
         Ok(cache_dir.join(format!("{}_tokenizer.json", model_name)))
     }
 
     /// Download model from Hugging Face Hub
     async fn download_model(&self) -> Result<()> {
-        log::info!("Downloading model: {}", self.config.model.model_id);
+        let model_id = {
+            let config = self.config.read().await;
+            config.model.model_id.clone()
+        };
+        log::info!("Downloading model: {}", model_id);
 
         let api = Api::new()?;
         let repo = api.repo(Repo::with_revision(
-            self.config.model.model_id.clone(),
+            model_id.clone(),
             RepoType::Model,
             "main".to_string(),
         ));
 
         let model_path = self.get_model_path().await?;
-        
+
         // Try different model file names (safetensors is preferred)
-        let possible_files = vec![
-            "model.safetensors",
-            "pytorch_model.bin",
-            "model.bin",
-        ];
+        let possible_files =
+            vec!["model.safetensors", "pytorch_model.bin", "model.bin"];
 
         let mut downloaded = false;
         for filename in &possible_files {
@@ -222,7 +456,7 @@ impl CandleServer {
         if !downloaded {
             return Err(anyhow::anyhow!(
                 "Could not find model file for {}. Tried: {:?}",
-                self.config.model.model_id,
+                model_id,
                 possible_files
             ));
         }
@@ -233,17 +467,21 @@ impl CandleServer {
 
     /// Download tokenizer from Hugging Face Hub
     async fn download_tokenizer(&self) -> Result<()> {
-        log::info!("Downloading tokenizer: {}", self.config.model.model_id);
+        let model_id = {
+            let config = self.config.read().await;
+            config.model.model_id.clone()
+        };
+        log::info!("Downloading tokenizer: {}", model_id);
 
         let api = Api::new()?;
         let repo = api.repo(Repo::with_revision(
-            self.config.model.model_id.clone(),
+            model_id.clone(),
             RepoType::Model,
             "main".to_string(),
         ));
 
         let tokenizer_path = self.get_tokenizer_path().await?;
-        
+
         if let Ok(tokenizer_file) = repo.get("tokenizer.json").await {
             log::info!("Downloading tokenizer.json to {:?}", tokenizer_path);
             let content = tokio::fs::read(&tokenizer_file).await?;
@@ -251,7 +489,7 @@ impl CandleServer {
         } else {
             return Err(anyhow::anyhow!(
                 "Could not find tokenizer.json for {}",
-                self.config.model.model_id
+                model_id
             ));
         }
 
@@ -260,15 +498,18 @@ impl CandleServer {
     }
 
     /// Load the model from disk
-    async fn load_model(&self, model_path: &PathBuf) -> Result<()> {
+    async fn load_model(
+        &self,
+        model_path: &PathBuf,
+    ) -> Result<()> {
         log::info!("Loading model from {:?}", model_path);
 
         // Load model weights
         let weights = candle_core::safetensors::load(model_path, &self.device)?;
-        
+
         // Create a simple LlamaConfig - in a real implementation you'd load this from config.json
         let config = Config::config_7b_v1(false); // disable flash attention for compatibility
-        
+
         // Create VarBuilder from weights
         let vb = VarBuilder::from_tensors(weights, DType::F32, &self.device);
 
@@ -283,7 +524,10 @@ impl CandleServer {
     }
 
     /// Load the tokenizer from disk
-    async fn load_tokenizer(&self, tokenizer_path: &PathBuf) -> Result<()> {
+    async fn load_tokenizer(
+        &self,
+        tokenizer_path: &PathBuf,
+    ) -> Result<()> {
         log::info!("Loading tokenizer from {:?}", tokenizer_path);
 
         let tokenizer = Tokenizer::from_file(tokenizer_path)
@@ -296,17 +540,24 @@ impl CandleServer {
     }
 
     /// Generate text using the loaded model
-    pub async fn generate(&self, prompt: &str, max_tokens: usize) -> Result<String> {
+    pub async fn generate(
+        &self,
+        prompt: &str,
+        max_tokens: usize,
+    ) -> Result<String> {
         let model_guard = self.model.lock().await;
         let tokenizer_guard = self.tokenizer.lock().await;
 
-        let model = model_guard.as_ref()
+        let model = model_guard
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Model not loaded"))?;
-        let tokenizer = tokenizer_guard.as_ref()
+        let tokenizer = tokenizer_guard
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Tokenizer not loaded"))?;
 
         // Tokenize input
-        let tokens = tokenizer.encode(prompt, true)
+        let tokens = tokenizer
+            .encode(prompt, true)
             .map_err(|e| anyhow::anyhow!("Failed to tokenize input: {}", e))?
             .get_ids()
             .iter()
@@ -314,50 +565,61 @@ impl CandleServer {
             .collect::<Vec<_>>();
 
         // Convert to tensor
-        let input_tensor = Tensor::new(tokens.as_slice(), &self.device)?
-            .unsqueeze(0)?;
+        let input_tensor =
+            Tensor::new(tokens.as_slice(), &self.device)?.unsqueeze(0)?;
 
         // Generate tokens
         let mut output_tokens = Vec::new();
         let mut cache = self.cache.lock().await;
-        
+
         // Simple greedy decoding - in production you'd want better sampling
         let mut current_tensor = input_tensor;
         for _ in 0..max_tokens {
             let logits = model.forward(&current_tensor, 0, &mut cache)?;
-            
+
             // Get last token logits and find the most likely next token
             let logits = logits.squeeze(0)?;
             let next_token = logits.argmax_keepdim(candle_core::D::Minus1)?;
             let next_token_id = next_token.to_scalar::<u32>()?;
-            
+
             output_tokens.push(next_token_id);
-            
+
             // Prepare for next iteration
-            current_tensor = Tensor::new(&[next_token_id], &self.device)?
-                .unsqueeze(0)?;
-                
+            current_tensor =
+                Tensor::new(&[next_token_id], &self.device)?.unsqueeze(0)?;
+
             // Break on end of sequence
-            if next_token_id == tokenizer.token_to_id("<|endoftext|>").unwrap_or(u32::MAX) {
+            if next_token_id
+                == tokenizer.token_to_id("<|endoftext|>").unwrap_or(u32::MAX)
+            {
                 break;
             }
         }
 
         // Decode output
-        let output_text = tokenizer.decode(&output_tokens, true)
-            .map_err(|e| anyhow::anyhow!("Failed to decode output tokens: {}", e))?;
+        let output_text =
+            tokenizer.decode(&output_tokens, true).map_err(|e| {
+                anyhow::anyhow!("Failed to decode output tokens: {}", e)
+            })?;
 
         Ok(output_text)
     }
 
     /// Start the HTTP server
     pub async fn start_server(&self) -> Result<()> {
-        let addr = SocketAddr::new(
-            self.config.host.parse()?,
-            self.config.port,
-        );
+        let (host, port, model_id, device) = {
+            let config = self.config.read().await;
+            (
+                config.host.clone(),
+                config.port,
+                config.model.model_id.clone(),
+                config.model.device.clone(),
+            )
+        };
 
-        let server_clone = Arc::new(self.clone_for_service());
+        let addr = SocketAddr::new(host.parse()?, port);
+
+        let server_clone = Arc::new(self.clone_for_service().await);
 
         let make_svc = make_service_fn(move |_conn| {
             let server = server_clone.clone();
@@ -372,8 +634,8 @@ impl CandleServer {
         let server = Server::bind(&addr).serve(make_svc);
 
         log::info!("Candle LLM server starting on {}", addr);
-        log::info!("Model: {}", self.config.model.model_id);
-        log::info!("Device: {}", self.config.model.device);
+        log::info!("Model: {}", model_id);
+        log::info!("Device: {}", device);
 
         if let Err(e) = server.await {
             log::error!("Server error: {}", e);
@@ -383,7 +645,7 @@ impl CandleServer {
     }
 
     /// Clone necessary data for the service handler
-    fn clone_for_service(&self) -> CandleServerService {
+    async fn clone_for_service(&self) -> CandleServerService {
         CandleServerService {
             config: self.config.clone(),
             model: self.model.clone(),
@@ -400,25 +662,23 @@ impl CandleServer {
         req: Request<Body>,
     ) -> Result<Response<Body>, hyper::Error> {
         let response = match (req.method(), req.uri().path()) {
-            (&Method::POST, "/v1/chat/completions") => {
-                server.handle_chat_completion(req).await
-            }
-            (&Method::GET, "/health") => {
-                server.handle_health().await
-            }
-            (&Method::GET, "/v1/models") => {
-                server.handle_models().await
-            }
+            (&Method::POST, "/v1/chat/completions") =>
+                server.handle_chat_completion(req).await,
+            (&Method::GET, "/health") => server.handle_health().await,
+            (&Method::GET, "/v1/models") => server.handle_models().await,
             _ => {
                 let mut response = Response::new(Body::from("Not Found"));
                 *response.status_mut() = StatusCode::NOT_FOUND;
                 Ok(response)
-            }
+            },
         };
 
         response.or_else(|e| {
             log::error!("Request handling error: {}", e);
-            let mut response = Response::new(Body::from(format!("Internal Server Error: {}", e)));
+            let mut response = Response::new(Body::from(format!(
+                "Internal Server Error: {}",
+                e
+            )));
             *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
             Ok(response)
         })
@@ -428,7 +688,7 @@ impl CandleServer {
 /// Service struct for handling HTTP requests (needed to work around borrow checker)
 #[derive(Clone)]
 struct CandleServerService {
-    config: ServerConfig,
+    config: Arc<RwLock<ServerConfig>>,
     model: Arc<Mutex<Option<Llama>>>,
     tokenizer: Arc<Mutex<Option<Tokenizer>>>,
     device: Device,
@@ -438,7 +698,10 @@ struct CandleServerService {
 
 impl CandleServerService {
     /// Handle chat completion requests
-    async fn handle_chat_completion(&self, req: Request<Body>) -> Result<Response<Body>> {
+    async fn handle_chat_completion(
+        &self,
+        req: Request<Body>,
+    ) -> Result<Response<Body>> {
         // Increment request counter
         {
             let mut count = self.request_count.write().await;
@@ -454,10 +717,20 @@ impl CandleServerService {
         let prompt = self.build_prompt(&chat_request.messages)?;
 
         // Generate response with timeout
-        let max_tokens = chat_request.max_tokens.unwrap_or(self.config.model.max_tokens);
+        let (max_tokens_default, timeout_seconds, model_id, enable_cors) = {
+            let config = self.config.read().await;
+            (
+                config.model.max_tokens,
+                config.server.request_timeout_seconds,
+                config.model.model_id.clone(),
+                config.server.enable_cors,
+            )
+        };
+
+        let max_tokens = chat_request.max_tokens.unwrap_or(max_tokens_default);
         let generation_future = self.generate(&prompt, max_tokens);
-        let timeout_duration = Duration::from_secs(self.config.server.request_timeout_seconds);
-        
+        let timeout_duration = Duration::from_secs(timeout_seconds);
+
         let generated_text = timeout(timeout_duration, generation_future)
             .await
             .context("Request timed out")?
@@ -469,7 +742,7 @@ impl CandleServerService {
                 role: "assistant".to_string(),
                 content: generated_text,
             },
-            model: self.config.model.model_id.clone(),
+            model: model_id,
             created: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
@@ -488,7 +761,7 @@ impl CandleServerService {
             "application/json".parse().unwrap(),
         );
 
-        if self.config.server.enable_cors {
+        if enable_cors {
             http_response.headers_mut().insert(
                 hyper::header::ACCESS_CONTROL_ALLOW_ORIGIN,
                 "*".parse().unwrap(),
@@ -502,10 +775,15 @@ impl CandleServerService {
     async fn handle_health(&self) -> Result<Response<Body>> {
         let uptime = self.start_time.elapsed().as_secs();
         let request_count = *self.request_count.read().await;
-        
+
+        let model_id = {
+            let config = self.config.read().await;
+            config.model.model_id.clone()
+        };
+
         let health = HealthResponse {
             status: "healthy".to_string(),
-            model: self.config.model.model_id.clone(),
+            model: model_id,
             uptime_seconds: uptime,
             memory_usage_mb: 0.0, // Would implement actual memory tracking
         };
@@ -522,10 +800,15 @@ impl CandleServerService {
 
     /// Handle model list requests
     async fn handle_models(&self) -> Result<Response<Body>> {
+        let model_id = {
+            let config = self.config.read().await;
+            config.model.model_id.clone()
+        };
+
         let models = serde_json::json!({
             "object": "list",
             "data": [{
-                "id": self.config.model.model_id,
+                "id": model_id,
                 "object": "model",
                 "created": self.start_time.elapsed().as_secs(),
                 "owned_by": "candle-server"
@@ -543,15 +826,25 @@ impl CandleServerService {
     }
 
     /// Build a prompt from chat messages
-    fn build_prompt(&self, messages: &[ChatMessage]) -> Result<String> {
+    fn build_prompt(
+        &self,
+        messages: &[ChatMessage],
+    ) -> Result<String> {
         let mut prompt = String::new();
-        
+
         for message in messages {
             match message.role.as_str() {
-                "system" => prompt.push_str(&format!("System: {}\n\n", message.content)),
-                "user" => prompt.push_str(&format!("User: {}\n\n", message.content)),
-                "assistant" => prompt.push_str(&format!("Assistant: {}\n\n", message.content)),
-                _ => return Err(anyhow::anyhow!("Unknown message role: {}", message.role)),
+                "system" =>
+                    prompt.push_str(&format!("System: {}\n\n", message.content)),
+                "user" =>
+                    prompt.push_str(&format!("User: {}\n\n", message.content)),
+                "assistant" => prompt
+                    .push_str(&format!("Assistant: {}\n\n", message.content)),
+                _ =>
+                    return Err(anyhow::anyhow!(
+                        "Unknown message role: {}",
+                        message.role
+                    )),
             }
         }
 
@@ -560,19 +853,28 @@ impl CandleServerService {
     }
 
     /// Generate text using the model (same implementation as in CandleServer)
-    async fn generate(&self, prompt: &str, max_tokens: usize) -> Result<String> {
+    async fn generate(
+        &self,
+        prompt: &str,
+        max_tokens: usize,
+    ) -> Result<String> {
         // This would be the same implementation as CandleServer::generate
         // For brevity, using a simple implementation
         let model_guard = self.model.lock().await;
         let tokenizer_guard = self.tokenizer.lock().await;
 
-        let _model = model_guard.as_ref()
+        let _model = model_guard
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Model not loaded"))?;
-        let _tokenizer = tokenizer_guard.as_ref()
+        let _tokenizer = tokenizer_guard
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Tokenizer not loaded"))?;
 
         // Placeholder - in real implementation would use actual model inference
-        Ok(format!("Generated response for: {}...", &prompt[..prompt.len().min(50)]))
+        Ok(format!(
+            "Generated response for: {}...",
+            &prompt[..prompt.len().min(50)]
+        ))
     }
 }
 
@@ -618,10 +920,11 @@ Provide your analysis in the following JSON format:
         );
 
         let response = self.generate(&prompt, 2000).await?;
-        
+
         // Extract JSON from response
         let json_start = response.find('{').unwrap_or(0);
-        let json_end = response.rfind('}').map(|i| i + 1).unwrap_or(response.len());
+        let json_end =
+            response.rfind('}').map(|i| i + 1).unwrap_or(response.len());
         let json_content = &response[json_start..json_end];
 
         serde_json::from_str(json_content)
@@ -660,10 +963,11 @@ Provide your analysis in the following JSON format:
         );
 
         let response = self.generate(&prompt, 2000).await?;
-        
+
         // Extract JSON from response
         let json_start = response.find('{').unwrap_or(0);
-        let json_end = response.rfind('}').map(|i| i + 1).unwrap_or(response.len());
+        let json_end =
+            response.rfind('}').map(|i| i + 1).unwrap_or(response.len());
         let json_content = &response[json_start..json_end];
 
         serde_json::from_str(json_content)
@@ -683,8 +987,11 @@ mod tests {
             Ok(_) => println!("Server created successfully"),
             Err(e) => {
                 println!("Expected error in test environment: {}", e);
-                assert!(e.to_string().contains("Model") || e.to_string().contains("download"));
-            }
+                assert!(
+                    e.to_string().contains("Model")
+                        || e.to_string().contains("download")
+                );
+            },
         }
     }
 

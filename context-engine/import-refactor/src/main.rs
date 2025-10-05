@@ -306,7 +306,14 @@ async fn run_server(args: &Args) -> Result<()> {
     println!("   Device: {}", server_config.model.device);
 
     // Create and start the server
-    let server = CandleServer::with_config(server_config).await?;
+    let server = match CandleServer::with_config(server_config).await? {
+        Some(server) => server,
+        None => {
+            // User chose to quit gracefully
+            println!("✅ Exited gracefully");
+            return Ok(());
+        }
+    };
 
     println!("🌐 Server starting...");
     println!("   Ctrl+C to stop");
@@ -340,9 +347,15 @@ async fn download_model(
     config.model.model_id = model_id.to_string();
 
     // Create server instance which will download the model
-    let _server = CandleServer::with_config(config).await?;
-
-    println!("✅ Model downloaded successfully!");
+    match CandleServer::with_config(config).await? {
+        Some(_server) => {
+            println!("✅ Model downloaded successfully!");
+        }
+        None => {
+            println!("❌ Download cancelled by user");
+            return Ok(());
+        }
+    }
 
     Ok(())
 }

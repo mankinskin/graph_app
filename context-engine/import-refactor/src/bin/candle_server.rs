@@ -114,8 +114,15 @@ async fn run_server(matches: clap::ArgMatches) -> Result<()> {
 
     // Create server instance
     println!("🤖 Initializing model...");
-    let server = CandleServer::with_config(config).await
-        .context("Failed to create server")?;
+    let server = match CandleServer::with_config(config).await
+        .context("Failed to create server")? {
+        Some(server) => server,
+        None => {
+            // User chose to quit gracefully
+            println!("✅ Exited gracefully");
+            return Ok(());
+        }
+    };
 
     // If download-only mode, exit after model is ready
     if matches.get_flag("download-only") {
@@ -126,12 +133,13 @@ async fn run_server(matches: clap::ArgMatches) -> Result<()> {
 
     // Start the HTTP server
     println!("🌐 Starting HTTP server...");
+    let config = server.get_config().await;
     println!("   OpenAI-compatible API at: http://{}:{}/v1/chat/completions", 
-             server.config.host, server.config.port);
+             config.host, config.port);
     println!("   Health check at: http://{}:{}/health", 
-             server.config.host, server.config.port);
+             config.host, config.port);
     println!("   Model info at: http://{}:{}/v1/models", 
-             server.config.host, server.config.port);
+             config.host, config.port);
     println!();
     println!("Press Ctrl+C to stop the server");
 
