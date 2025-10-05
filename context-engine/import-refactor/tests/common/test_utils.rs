@@ -20,6 +20,7 @@ use std::{
         PathBuf,
     },
 };
+use syn::ItemUse;
 use tempfile::TempDir;
 
 use super::ast_analysis::{
@@ -87,21 +88,76 @@ impl TestScenario {
 }
 
 /// Expected changes after refactoring for validation
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ExpectedChanges {
-    pub source_crate_exports: &'static [&'static str],
+    /// Expected pub use structure using syn::ItemUse directly
+    pub expected_pub_use: Option<ItemUse>,
+    /// Number of wildcard imports expected in target crate
     pub target_crate_wildcards: u32,
+    /// Macros that should be preserved (not converted to pub use)
     pub preserved_macros: &'static [&'static str],
-    pub nested_modules: &'static [&'static str],
 }
 
-/// Comprehensive test execution context
+impl std::fmt::Debug for ExpectedChanges {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
+        f.debug_struct("ExpectedChanges")
+            .field(
+                "expected_pub_use",
+                &self.expected_pub_use.as_ref().map(|_| "<ItemUse>"),
+            )
+            .field("target_crate_wildcards", &self.target_crate_wildcards)
+            .field("preserved_macros", &self.preserved_macros)
+            .finish()
+    }
+}
+
+impl ExpectedChanges {
+    /// Create ExpectedChanges with syn::ItemUse directly
+    pub fn with_pub_use(
+        expected_pub_use: ItemUse,
+        target_wildcards: u32,
+        preserved_macros: &'static [&'static str],
+    ) -> Self {
+        Self {
+            expected_pub_use: Some(expected_pub_use),
+            target_crate_wildcards: target_wildcards,
+            preserved_macros,
+        }
+    }
+
+    /// Create basic ExpectedChanges without specific pub use expectations
+    pub fn basic(
+        target_wildcards: u32,
+        preserved_macros: &'static [&'static str],
+    ) -> Self {
+        Self {
+            expected_pub_use: None,
+            target_crate_wildcards: target_wildcards,
+            preserved_macros,
+        }
+    }
+}
+
+/// Test workspace management for isolated testing
 #[derive(Debug)]
 pub struct TestWorkspace {
     #[allow(dead_code)]
-    pub temp_dir: TempDir,
+    pub temp_dir: Option<TempDir>,
     pub crate_paths: CratePaths,
     pub workspace_path: PathBuf,
+    pub persistent: bool,
+}
+
+/// Configuration for test workspace creation
+#[derive(Debug, Clone)]
+pub struct TestWorkspaceConfig {
+    /// Whether to use a persistent directory instead of temp directory
+    pub persistent: bool,
+    /// Base directory for persistent workspaces (defaults to "./test_workspaces")
+    pub persistent_base_dir: Option<PathBuf>,
 }
 
 /// Results from running the refactor tool
@@ -114,11 +170,71 @@ pub struct RefactorResult {
     //pub target_analysis_after: Option<AstAnalysis>,
 }
 
+impl Default for TestWorkspaceConfig {
+    fn default() -> Self {
+        Self {
+            persistent: false,
+            persistent_base_dir: None,
+        }
+    }
+}
+
 impl TestWorkspace {
-    /// Create a protected test workspace from fixture data
+    /// Create a protected test workspace from fixture data with default config
     pub fn setup(fixture_name: &str) -> Result<Self> {
-        let temp_dir = tempfile::tempdir_in(".")
-            .context("Failed to create temporary directory")?;
+        Self::setup_with_config(fixture_name, TestWorkspaceConfig::default())
+    }
+
+    /// Create a persistent test workspace from fixture data
+    pub fn setup_persistent(fixture_name: &str) -> Result<Self> {
+        Self::setup_with_config(
+            fixture_name,
+            TestWorkspaceConfig {
+                persistent: true,
+                persistent_base_dir: None,
+            },
+        )
+    }
+
+    /// Create a test workspace from fixture data with custom config
+    pub fn setup_with_config(
+        fixture_name: &str,
+        config: TestWorkspaceConfig,
+    ) -> Result<Self> {
+        let (temp_dir, workspace_path) = if config.persistent {
+            // Create persistent directory
+            let base_dir = config
+                .persistent_base_dir
+                .unwrap_or_else(|| PathBuf::from("./test_workspaces"));
+
+            fs::create_dir_all(&base_dir)
+                .context("Failed to create persistent base directory")?;
+
+            // Use process ID and timestamp for uniqueness
+            let timestamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+            let process_id = std::process::id();
+
+            let workspace_path = base_dir
+                .join(format!("{}_{}_{}", fixture_name, timestamp, process_id));
+            fs::create_dir_all(&workspace_path)
+                .context("Failed to create persistent workspace directory")?;
+
+            println!(
+                "📁 Created persistent test workspace: {}",
+                workspace_path.display()
+            );
+
+            (None, workspace_path)
+        } else {
+            // Create temporary directory
+            let temp_dir = tempfile::tempdir_in(".")
+                .context("Failed to create temporary directory")?;
+            let workspace_path = temp_dir.path().to_path_buf();
+            (Some(temp_dir), workspace_path)
+        };
 
         let fixture_path = Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("tests")
@@ -133,10 +249,8 @@ impl TestWorkspace {
             );
         }
 
-        copy_dir_all(&fixture_path, temp_dir.path())
-            .context("Failed to copy fixture to temp workspace")?;
-
-        let workspace_path = temp_dir.path().to_path_buf();
+        copy_dir_all(&fixture_path, &workspace_path)
+            .context("Failed to copy fixture to workspace")?;
 
         // Create workspace Cargo.toml
         Self::create_workspace_manifest(&workspace_path)?;
@@ -150,6 +264,7 @@ impl TestWorkspace {
             temp_dir,
             crate_paths,
             workspace_path,
+            persistent: config.persistent,
         })
     }
 
@@ -294,6 +409,47 @@ impl TestWorkspace {
         fs::write(&workspace_toml, workspace_content)?;
 
         Ok(())
+    }
+
+    /// Get the workspace path for external inspection
+    pub fn workspace_path(&self) -> &Path {
+        &self.workspace_path
+    }
+
+    /// Check if this workspace is persistent (won't be automatically cleaned up)
+    pub fn is_persistent(&self) -> bool {
+        self.persistent
+    }
+
+    /// Manually clean up a persistent workspace (no-op for temp workspaces)
+    pub fn cleanup_persistent(&self) -> Result<()> {
+        if self.persistent && self.workspace_path.exists() {
+            fs::remove_dir_all(&self.workspace_path).with_context(|| {
+                format!(
+                    "Failed to clean up persistent workspace: {}",
+                    self.workspace_path.display()
+                )
+            })?;
+            println!(
+                "🗑️  Cleaned up persistent test workspace: {}",
+                self.workspace_path.display()
+            );
+        }
+        Ok(())
+    }
+}
+
+impl Drop for TestWorkspace {
+    fn drop(&mut self) {
+        if self.persistent && self.workspace_path.exists() {
+            println!(
+                "💾 Persistent test workspace preserved at: {}",
+                self.workspace_path.display()
+            );
+            println!(
+                "   Use TestWorkspace::cleanup_persistent() to remove manually"
+            );
+        }
     }
 }
 

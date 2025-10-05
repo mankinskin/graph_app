@@ -1,5 +1,5 @@
 //! High-level API for running import refactoring operations.
-//! 
+//!
 //! This module provides a unified interface for import refactoring that can be used
 //! by both the CLI application and test frameworks, eliminating code duplication.
 
@@ -7,7 +7,11 @@ use anyhow::Result;
 use std::path::Path;
 
 use crate::{
-    crate_analyzer::{CrateAnalyzer, CrateNames, CratePaths},
+    crate_analyzer::{
+        CrateAnalyzer,
+        CrateNames,
+        CratePaths,
+    },
     import_parser::ImportParser,
     refactor_engine::RefactorEngine,
     utils::common::format_relative_path,
@@ -72,7 +76,7 @@ impl RefactorApi {
 
     /// Internal implementation of the refactoring logic
     fn execute_refactor_internal(
-        config: RefactorConfig,
+        config: RefactorConfig
     ) -> Result<(usize, CratePaths)> {
         let RefactorConfig {
             crate_names,
@@ -90,7 +94,7 @@ impl RefactorApi {
                         "📦 Crate: {} → will move crate:: imports to root-level exports",
                         crate_name
                     );
-                }
+                },
                 CrateNames::CrossRefactor {
                     source_crate,
                     target_crate,
@@ -103,10 +107,12 @@ impl RefactorApi {
                         "📦 Target crate (B): {} → imports will be simplified to use A::*",
                         target_crate
                     );
-                }
+                },
             }
             if dry_run {
-                println!("🔍 Running in dry-run mode (no files will be modified)");
+                println!(
+                    "🔍 Running in dry-run mode (no files will be modified)"
+                );
             }
             println!("📂 Workspace: {}", workspace_root.display());
             println!();
@@ -121,7 +127,7 @@ impl RefactorApi {
             println!();
         }
 
-        // Step 2: Parse imports 
+        // Step 2: Parse imports
         let imports = Self::collect_imports(&crate_names, &paths)?;
 
         if !quiet {
@@ -174,11 +180,13 @@ impl RefactorApi {
 
                 // Collect crate:: imports
                 let crate_parser = ImportParser::new("crate");
-                let crate_imports = crate_parser.find_imports_in_crate(crate_path)?;
+                let crate_imports =
+                    crate_parser.find_imports_in_crate(crate_path)?;
 
                 // Collect external imports that reference the same crate
                 let external_parser = ImportParser::new(crate_name);
-                let mut external_imports = external_parser.find_imports_in_crate(crate_path)?;
+                let mut external_imports =
+                    external_parser.find_imports_in_crate(crate_path)?;
 
                 // Normalize external imports to crate:: format to avoid duplicates
                 for import in &mut external_imports {
@@ -201,12 +209,12 @@ impl RefactorApi {
                 let mut imports = crate_imports;
                 imports.extend(external_imports);
                 Ok(imports)
-            }
+            },
             CrateNames::CrossRefactor { source_crate, .. } => {
                 // For cross-refactor, use the new unified method
                 let parser = ImportParser::new(source_crate);
                 parser.find_imports_in_crates(paths)
-            }
+            },
         }
     }
 
@@ -248,13 +256,17 @@ impl RefactorApi {
     }
 
     /// Print completion message
-    fn print_completion_message(crate_names: &CrateNames, dry_run: bool) {
+    fn print_completion_message(
+        crate_names: &CrateNames,
+        dry_run: bool,
+    ) {
         if dry_run {
             println!("🔍 Dry run completed. No files were modified.");
             println!("💡 Run without --dry-run to apply these changes.");
         } else {
             let modified = match crate_names {
-                CrateNames::SelfRefactor { crate_name } => format!("'{}'", crate_name),
+                CrateNames::SelfRefactor { crate_name } =>
+                    format!("'{}'", crate_name),
                 CrateNames::CrossRefactor {
                     source_crate,
                     target_crate,
@@ -286,27 +298,42 @@ impl RefactorConfigBuilder {
         }
     }
 
-    pub fn crate_names(mut self, crate_names: CrateNames) -> Self {
+    pub fn crate_names(
+        mut self,
+        crate_names: CrateNames,
+    ) -> Self {
         self.crate_names = Some(crate_names);
         self
     }
 
-    pub fn workspace_root(mut self, workspace_root: impl AsRef<Path>) -> Self {
+    pub fn workspace_root(
+        mut self,
+        workspace_root: impl AsRef<Path>,
+    ) -> Self {
         self.workspace_root = Some(workspace_root.as_ref().to_path_buf());
         self
     }
 
-    pub fn dry_run(mut self, dry_run: bool) -> Self {
+    pub fn dry_run(
+        mut self,
+        dry_run: bool,
+    ) -> Self {
         self.dry_run = dry_run;
         self
     }
 
-    pub fn verbose(mut self, verbose: bool) -> Self {
+    pub fn verbose(
+        mut self,
+        verbose: bool,
+    ) -> Self {
         self.verbose = verbose;
         self
     }
 
-    pub fn quiet(mut self, quiet: bool) -> Self {
+    pub fn quiet(
+        mut self,
+        quiet: bool,
+    ) -> Self {
         self.quiet = quiet;
         self
     }

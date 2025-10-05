@@ -3,6 +3,7 @@ pub mod file_operations;
 pub mod import_analysis;
 pub mod import_replacement;
 pub mod pub_use_generation;
+pub mod pub_use_merger;
 
 // Unified modules for improved code reuse
 pub mod analyzer_cli;

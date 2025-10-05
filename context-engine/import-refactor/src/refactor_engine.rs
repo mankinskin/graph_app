@@ -20,10 +20,11 @@ use crate::{
         import_replacement::{
             replace_imports_with_strategy,
             CrossCrateReplacementStrategy,
+            SelfCrateReplacementStrategy,
         },
-        pub_use_generation::{
-            collect_existing_pub_uses,
-            generate_nested_pub_use,
+        pub_use_merger::{
+            merge_pub_uses,
+            parse_existing_pub_uses,
         },
     },
 };
@@ -66,7 +67,12 @@ impl RefactorEngine {
             analyze_imports(&imports, &self.crate_names, workspace_root);
 
         // Enhanced output showing analysis results
-        print_analysis_summary(&analysis_result, &imports, &self.crate_names);
+        print_analysis_summary(
+            &analysis_result,
+            &imports,
+            &self.crate_names,
+            self.verbose,
+        );
 
         let crate_path = match crate_paths {
             CratePaths::SelfRefactor { crate_path } => crate_path,
@@ -83,17 +89,30 @@ impl RefactorEngine {
         )?;
 
         // Step 3: Replace imports in target crate files
-        let strategy = CrossCrateReplacementStrategy {
-            crate_names: self.crate_names.clone(),
-        };
-        //let strategy = SelfCrateReplacementStrategy;
-        replace_imports_with_strategy(
-            imports,
-            strategy,
-            workspace_root,
-            self.dry_run,
-            self.verbose,
-        )?;
+        match &self.crate_names {
+            CrateNames::CrossRefactor { .. } => {
+                let strategy = CrossCrateReplacementStrategy {
+                    crate_names: self.crate_names.clone(),
+                };
+                replace_imports_with_strategy(
+                    imports,
+                    strategy,
+                    workspace_root,
+                    self.dry_run,
+                    self.verbose,
+                )?;
+            },
+            CrateNames::SelfRefactor { .. } => {
+                let strategy = SelfCrateReplacementStrategy;
+                replace_imports_with_strategy(
+                    imports,
+                    strategy,
+                    workspace_root,
+                    self.dry_run,
+                    self.verbose,
+                )?;
+            },
+        }
 
         // Always check compilation after refactoring to ensure we didn't break anything
         if !self.dry_run {
@@ -154,7 +173,11 @@ impl RefactorEngine {
         let (original_content, syntax_tree) =
             read_and_parse_file(&lib_rs_path)?;
 
-        // Use improved existing pub use collection
+        // Parse existing pub use statements into a tree structure
+        let (existing_tree, replaceable_ranges) =
+            parse_existing_pub_uses(&syntax_tree);
+
+        // Use improved existing pub use collection for final identifier checking
         let existing_exports = self
             .exports()
             .collect_existing_exports(&syntax_tree, source_crate_path);
@@ -169,14 +192,16 @@ impl RefactorEngine {
             }
         }
 
-        // Filter out items that are already exported
+        // Filter out items that are already exported as direct items
         let items_to_add: BTreeSet<String> = imported_items
             .iter()
             .filter(|item| {
-                let item_name = self.crate_names.get_prefixes_to_strip().iter().find_map(|prefix|
-                    item.strip_prefix(prefix)
-                )
-                .unwrap_or(item);
+                let item_name = self
+                    .crate_names
+                    .get_prefixes_to_strip()
+                    .iter()
+                    .find_map(|prefix| item.strip_prefix(prefix))
+                    .unwrap_or(item);
 
                 // Check if the final identifier is already exported
                 let final_ident =
@@ -184,15 +209,9 @@ impl RefactorEngine {
 
                 // Only skip if the final identifier is already exported AND
                 // the import path has only one component (i.e., it's a direct import)
-                let path_components: Vec<&str> = item_name.split("::").collect();
+                let path_components: Vec<&str> =
+                    item_name.split("::").collect();
                 let is_direct_import = path_components.len() == 1;
-
-                if self.verbose {
-                    println!(
-                        "  🔍 Analyzing '{}': item_name='{}', final_ident='{}', components={}, is_direct={}, already_exported={}",
-                        item, item_name, final_ident, path_components.len(), is_direct_import, existing_exports.contains(final_ident)
-                    );
-                }
 
                 if existing_exports.contains(final_ident) && is_direct_import {
                     if self.verbose {
@@ -219,37 +238,16 @@ impl RefactorEngine {
             return Ok(());
         }
 
-        // Collect conditional items for feature flag grouping
-        let (_, conditional_items) = collect_existing_pub_uses(&syntax_tree);
+        // Use intelligent merger to combine existing and new pub use statements
+        let crate_name = match &self.crate_names {
+            CrateNames::CrossRefactor { source_crate, .. } => source_crate,
+            CrateNames::SelfRefactor { crate_name } => crate_name,
+        };
 
-        // Generate nested pub use statements for the filtered items
-        let all_items_to_export = items_to_add.clone();
+        let merged_statements =
+            merge_pub_uses(existing_tree, &items_to_add, crate_name);
 
-        // Also add root-level functions that are already exported and used
-        // BUT don't add them if they're already defined in lib.rs to avoid conflicts
-        // Check for hello() function usage in app.rs specifically
-        let app_rs_path = source_crate_path.join("src").join("app.rs");
-        if app_rs_path.exists() && existing_exports.contains("hello") {
-            if let Ok(content) = std::fs::read_to_string(&app_rs_path) {
-                if content.contains("hello()") {
-                    println!("🔍 Debug: Found usage of root-level function 'hello' in app.rs, but NOT adding to pub use (already defined in lib.rs)");
-                    // Don't add to all_items_to_export - it's already defined in lib.rs
-                    // Instead, we need to ensure usage analysis includes it
-                }
-            }
-        }
-
-        println!("🔍 Debug: all_items_to_export before generate_nested_pub_use: {:?}", all_items_to_export);
-
-        let nested_pub_use = generate_nested_pub_use(
-            &all_items_to_export,
-            &BTreeSet::new(), // Empty since we already filtered
-            &conditional_items,
-            &self.crate_names,
-            self.verbose,
-        );
-
-        if nested_pub_use.is_empty() {
+        if merged_statements.is_empty() {
             if self.verbose {
                 println!(
                     "✅ No new pub use statements needed for {}",
@@ -259,21 +257,63 @@ impl RefactorEngine {
             return Ok(());
         }
 
-        // Insert new pub use statements at the end of the file
-        let mut new_content = original_content;
+        // Remove old replaceable pub use statements and add new merged statements
+        let mut new_content = String::new();
+        let lines: Vec<&str> = original_content.lines().collect();
+        let mut skip_until_semicolon = false;
+
+        for line in lines {
+            let trimmed = line.trim();
+
+            // Check if this line starts a replaceable pub use statement
+            if trimmed.starts_with("pub use") && !trimmed.contains("#[cfg") {
+                // Check if it's a local crate import (not external)
+                if trimmed.contains("::") {
+                    let after_use =
+                        trimmed.strip_prefix("pub use").unwrap().trim();
+                    // Skip if it looks like a local crate import
+                    if !is_external_crate_line(after_use) {
+                        skip_until_semicolon = true;
+                        continue; // Skip this line
+                    }
+                } else {
+                    // Simple pub use statement like "pub use math"
+                    skip_until_semicolon = true;
+                    continue;
+                }
+            }
+
+            // If we're skipping a multi-line pub use statement
+            if skip_until_semicolon {
+                if trimmed.ends_with(';') {
+                    skip_until_semicolon = false; // End of statement
+                }
+                continue; // Skip this line
+            }
+
+            new_content.push_str(line);
+            new_content.push('\n');
+        }
+
+        // Add merged pub use statements at the end
         if !new_content.ends_with('\n') {
             new_content.push('\n');
         }
         new_content.push('\n');
-        new_content.push_str("// Auto-generated pub use statements\n");
-        new_content.push_str(&nested_pub_use);
+        new_content.push_str("// Merged pub use statements\n");
+        for statement in &merged_statements {
+            new_content.push_str(statement);
+            new_content.push('\n');
+        }
 
         if self.verbose {
             println!(
-                "Adding nested pub use statement to {}",
+                "🔄 Replacing existing pub use statements in {} with merged statements:",
                 format_relative_path(&lib_rs_path, workspace_root)
             );
-            println!("{}", nested_pub_use.trim());
+            for statement in &merged_statements {
+                println!("  {}", statement.trim());
+            }
         }
 
         if !self.dry_run {
@@ -282,4 +322,45 @@ impl RefactorEngine {
 
         Ok(())
     }
+}
+
+/// Check if a pub use line represents an external crate import
+fn is_external_crate_line(after_use: &str) -> bool {
+    // Common external crate prefixes that should not be merged
+    let external_prefixes = [
+        "std::",
+        "core::",
+        "alloc::",
+        "serde::",
+        "tokio::",
+        "async_std::",
+        "log::",
+        "env_logger::",
+        "clap::",
+        "reqwest::",
+        "hyper::",
+        "tonic::",
+        "diesel::",
+        "sqlx::",
+        "sea_orm::",
+        "actix::",
+        "warp::",
+        "axum::",
+        "anyhow::",
+        "thiserror::",
+        "eyre::",
+        "uuid::",
+        "chrono::",
+        "time::",
+        "rand::",
+        "regex::",
+        "lazy_static::",
+        "once_cell::",
+        "parking_lot::",
+        "crossbeam::",
+    ];
+
+    external_prefixes
+        .iter()
+        .any(|prefix| after_use.starts_with(prefix))
 }

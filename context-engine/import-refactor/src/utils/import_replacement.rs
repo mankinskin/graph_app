@@ -108,20 +108,13 @@ impl ImportReplacementStrategy for SelfCrateReplacementStrategy {
         &self,
         _import: &ImportInfo,
     ) -> Option<String> {
-        None // Remove the import entirely
-    }
-
-    fn should_remove_import(
-        &self,
-        _import: &ImportInfo,
-    ) -> bool {
-        true
+        // For self-refactor mode, replace all crate:: imports with a single glob import
+        Some("use crate::*;".to_string())
     }
 
     fn get_description(&self) -> &str {
-        "Remove crate:: imports, use root-level exports"
+        "Replace crate:: imports with glob import (use crate::*)"
     }
-
     fn format_verbose_message(
         &self,
         _import: &ImportInfo,
@@ -130,6 +123,14 @@ impl ImportReplacementStrategy for SelfCrateReplacementStrategy {
         workspace_root: &Path,
     ) -> String {
         match action {
+            ReplacementAction::Replaced { from, to } => {
+                format!(
+                    "  Replaced crate:: import '{}' -> '{}' in {}",
+                    from,
+                    to,
+                    format_relative_path(file_path, workspace_root)
+                )
+            },
             ReplacementAction::Removed { original } => {
                 format!(
                     "  Removed crate:: import '{}' from {}",
@@ -139,11 +140,10 @@ impl ImportReplacementStrategy for SelfCrateReplacementStrategy {
             },
             ReplacementAction::NotFound { searched_for } => {
                 format!(
-                    "  Warning: Could not find crate:: import to remove: {} in {}",
+                    "  Warning: Could not find crate:: import to replace: {} in {}",
                     searched_for, format_relative_path(file_path, workspace_root)
                 )
             },
-            _ => unreachable!(),
         }
     }
 }

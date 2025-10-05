@@ -116,6 +116,7 @@ pub fn print_analysis_summary(
     result: &ImportAnalysisResult,
     imports: &[ImportInfo],
     crate_names: &CrateNames,
+    verbose: bool,
 ) {
     let _summary_label = crate_names.get_summary_label();
     let glob_pattern = crate_names.get_glob_pattern_description();
@@ -132,7 +133,7 @@ pub fn print_analysis_summary(
         result.all_imported_items.len()
     );
 
-    if !result.all_imported_items.is_empty() {
+    if verbose && !result.all_imported_items.is_empty() {
         match crate_names {
             CrateNames::CrossRefactor { source_crate, .. } => {
                 println!(

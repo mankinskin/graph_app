@@ -1,4 +1,5 @@
 use anyhow::Result;
+use syn::parse_quote;
 
 // Import the common module and its items explicitly
 mod common;
@@ -8,8 +9,10 @@ use common::{
         TestScenario,
         TestWorkspace,
     },
-    AstValidator,
-    TestFormatter,
+    validation::{
+        AstValidator,
+        TestFormatter,
+    },
 };
 
 /// Get common test scenarios that can be reused
@@ -21,68 +24,111 @@ pub fn get_test_scenarios() -> Vec<TestScenario> {
             "source_crate",
             "target_crate",
             "basic_workspace",
-        ).with_expected_changes(ExpectedChanges {
-            source_crate_exports: &["main_function", "Config", "Status"],
-            target_crate_wildcards: 1,
-            preserved_macros: &[],
-            nested_modules: &["math", "utils", "network"],
-        }),
+        ).with_expected_changes(ExpectedChanges::with_pub_use(
+            parse_quote! {
+                pub use crate::{
+                    math::{
+                        add, calculate, subtract,
+                        advanced::{
+                            Calculator,
+                            geometry::{Point, area_circle},
+                            scientific::{
+                                AdvancedCalculator, power,
+                                statistics::{StatEngine, mean}
+                            }
+                        },
+                        operations::{
+                            factorial,
+                            matrix::{MatrixProcessor, transpose}
+                        }
+                    },
+                    network::{
+                        Connection, ping,
+                        http::{
+                            get, post,
+                            headers::{
+                                HeaderBuilder, content_type_json,
+                                security::{SecurityPolicy, cors_headers}
+                            },
+                            status::{StatusCode, is_success}
+                        },
+                        protocols::{
+                            tls::{
+                                Certificate, handshake,
+                                cipher::default_suite
+                            },
+                            websocket::{WebSocketFrame, upgrade_request}
+                        },
+                        tcp::{
+                            TcpStream, connect,
+                            buffer::create_buffer,
+                            listener::{TcpListener, bind}
+                        }
+                    },
+                    utils::{
+                        format_string, validate_input,
+                        file_ops::{
+                            get_extension, join_path,
+                            compression::Compressor,
+                            metadata::{FileInfo, get_size_category}
+                        },
+                        string_ops::{
+                            capitalize, reverse_string,
+                            encoding::{Encoder, base64_encode},
+                            parsing::{Parser, extract_numbers}
+                        }
+                    }
+                };
+            },
+            1, // target_crate_wildcards
+            &[], // preserved_macros
+        )),
         TestScenario::cross_refactor(
             "macro_handling",
             "Handling macro exports and conditional compilation",
             "macro_source",
             "macro_target",
             "macro_workspace",
-        ).with_expected_changes(ExpectedChanges {
-            source_crate_exports: &["MacroHelper", "format_internal"],
-            target_crate_wildcards: 1,
-            // Note: External macros (hashmap, assert_msg from macros.rs) are correctly
-            // detected by the enhanced tool and excluded from pub use generation,
-            // but only appear in AST analysis of lib.rs itself
-            preserved_macros: &["debug_print", "extra_debug"],
-            nested_modules: &[],
-        }),
+        ).with_expected_changes(ExpectedChanges::basic(
+            1, // target_crate_wildcards
+            &["debug_print", "extra_debug"], // preserved_macros
+        )),
         TestScenario::cross_refactor(
             "no_imports_scenario",
             "Test with a crate that has no imports to refactor",
             "source_crate",
             "dummy_target",
             "no_imports_workspace",
-        ).with_expected_changes(ExpectedChanges {
-            source_crate_exports: &[], // No new exports expected
-            target_crate_wildcards: 0, // No wildcards expected
-            preserved_macros: &[],
-            nested_modules: &[],
-        }),
+        ).with_expected_changes(ExpectedChanges::basic(
+            0, // target_crate_wildcards
+            &[], // preserved_macros
+        )),
         TestScenario::self_refactor(
             "self_refactoring",
             "Self-refactor mode: refactor crate:: imports within a single crate",
             "self_refactor_crate",
             "self_refactor_workspace",
-        ).with_expected_changes(ExpectedChanges {
-            source_crate_exports: &[
-                "Config",
-                "load_settings",
-                "save_settings",
-                "validate_user_input",
-                "ValidationResult",
-                "validate_email",
-                "User",
-                "create_user",
-                "find_user_by_email",
-                "update_user_profile",
-                "Session",
-                "SessionManager",
-                "validate_session",
-                "Repository",
-                "InMemoryRepository",
-                "create_user_repository",
-                "backup_data",
-            ],
-            target_crate_wildcards: 0, // No target crate in self-refactor mode
-            preserved_macros: &[],
-            nested_modules: &["core", "services"],
-        }),
+        ).with_expected_changes(ExpectedChanges::with_pub_use(
+            parse_quote! {
+                pub use crate::{
+                    core::{
+                        config::{Config, load_settings, save_settings},
+                        validation::{ValidationResult, validate_email, validate_user_input}
+                    },
+                    services::{
+                        auth::{
+                            session::{Session, SessionManager, validate_session},
+                            user::{User, create_user, find_user_by_email, update_user_profile}
+                        },
+                        data::{
+                            repository::{InMemoryRepository, Repository, backup_data, create_user_repository}
+                        }
+                    }
+                };
+            },
+            0, // target_crate_wildcards (not applicable for self-refactor)
+            &[], // preserved_macros
+        )),
     ]
 }
 
@@ -94,7 +140,7 @@ fn test_basic_refactoring() -> Result<()> {
     println!("🚀 Starting test: {}", scenario.description);
 
     // Setup protected workspace
-    let mut workspace = TestWorkspace::setup(scenario.fixture_name)?;
+    let mut workspace = TestWorkspace::setup_persistent(scenario.fixture_name)?;
 
     // Run refactor with full validation
     let result = workspace.run_refactor_with_validation(scenario)?;
