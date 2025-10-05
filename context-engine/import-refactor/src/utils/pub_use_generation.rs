@@ -22,8 +22,14 @@ pub fn generate_nested_pub_use(
             // For cross-crate mode, strip source crate prefix
             item.strip_prefix(&format!("{}::", source_crate_name))
                 .unwrap_or(item)
+        } else if !item.contains("::") {
+            // This is a root-level item (e.g., "hello")
+            item
         } else {
             // Skip items that don't match expected patterns
+            if verbose {
+                println!("  ⚠️  Skipping '{}' - doesn't match expected patterns", item);
+            }
             continue;
         };
 

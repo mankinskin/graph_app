@@ -147,11 +147,40 @@ fn run_self_refactor(args: &Args) -> Result<()> {
         println!();
     }
 
-    // Step 2: Parse crate:: imports within the same crate
-    let parser = ImportParser::new("crate");
-    let imports = parser.find_imports_in_crate(&crate_path)?;
+    // Step 2: Parse crate:: imports within the same crate and external imports to the same crate
+    println!("🔍 Debug: Creating crate parser for 'crate'");
+    let crate_parser = ImportParser::new("crate");
+    let crate_imports = crate_parser.find_imports_in_crate(&crate_path)?;
+    
+    // Also look for external imports that reference the same crate (e.g., use self_refactor_crate::...)
+    println!("🔍 Debug: Creating external parser for '{}'", crate_name);
+    let external_parser = ImportParser::new(&crate_name);
+    let mut external_imports = external_parser.find_imports_in_crate(&crate_path)?;
+    
+    // Normalize external imports to crate:: format to avoid duplicates
+    for import in &mut external_imports {
+        // Convert "self_refactor_crate::..." to "crate::..."
+        let crate_name_prefix = format!("{}::", crate_name);
+        if import.import_path.starts_with(&crate_name_prefix) {
+            import.import_path = import.import_path.replace(&crate_name_prefix, "crate::");
+        }
+        
+        // Also normalize the imported items
+        for item in &mut import.imported_items {
+            if item.starts_with(&crate_name_prefix) {
+                *item = item.replace(&crate_name_prefix, "crate::");
+            }
+        }
+    }
+    
+    println!("🔍 Debug: Found {} crate:: imports and {} external {} imports", 
+             crate_imports.len(), external_imports.len(), crate_name);
+    
+    // Combine both types of imports
+    let mut imports = crate_imports;
+    imports.extend(external_imports);
 
-    println!("🔎 Scanning for 'crate::' imports in '{}'...", crate_name);
+    println!("🔎 Scanning for 'crate::' and '{}::' imports in '{}'...", crate_name, crate_name);
 
     if imports.is_empty() {
         println!("❌ No 'crate::' imports found in crate '{}'", crate_name);

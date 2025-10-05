@@ -105,11 +105,17 @@ impl TestWorkspace {
         &mut self,
         scenario: &TestScenario,
     ) -> Result<RefactorResult> {
+        // Debug: Print workspace paths
+        println!("🔍 Debug: workspace_path = {:?}", self.workspace_path);
+        
         // Update crate paths based on scenario
         let analyzer = CrateAnalyzer::new(&self.workspace_path)?;
         self.source_crate_path = analyzer
             .find_crate(scenario.source_crate)
             .context("Failed to find source crate")?;
+            
+        // Debug: Print resolved crate path
+        println!("🔍 Debug: source_crate_path = {:?}", self.source_crate_path);
         
         // For self-refactor mode, target_crate might be empty
         let is_self_refactor = scenario.target_crate.is_empty();
@@ -141,7 +147,11 @@ impl TestWorkspace {
         };
 
         // Run refactor tool
-        let refactor_success = self.execute_refactor(scenario).is_ok();
+        let refactor_result = self.execute_refactor(scenario);
+        let refactor_success = refactor_result.is_ok();
+        if let Err(e) = &refactor_result {
+            eprintln!("🚨 Refactor execution failed: {}", e);
+        }
 
         // Analyze final state
         let source_analysis_after = analyze_ast(&source_lib_path)
@@ -179,11 +189,40 @@ impl TestWorkspace {
         let is_self_refactor = scenario.target_crate.is_empty();
         
         if is_self_refactor {
-            // Self-refactor mode: find crate:: imports within the same crate
-            let parser = ImportParser::new("crate");
-            let imports = parser.find_imports_in_crate(&self.source_crate_path)?;
+            // Self-refactor mode: find crate:: imports within the same crate and external imports to the same crate
+            println!("🔍 Debug: Creating crate parser for 'crate'");
+            let crate_parser = ImportParser::new("crate");
+            let crate_imports = crate_parser.find_imports_in_crate(&self.source_crate_path)?;
+            
+            // Also look for external imports that reference the same crate (e.g., use self_refactor_crate::...)
+            println!("🔍 Debug: Creating external parser for '{}'", scenario.source_crate);
+            let external_parser = ImportParser::new(scenario.source_crate);
+            let mut external_imports = external_parser.find_imports_in_crate(&self.source_crate_path)?;
+            
+            // Normalize external imports to crate:: format to avoid duplicates
+            for import in &mut external_imports {
+                // Convert "self_refactor_crate::..." to "crate::..."
+                let crate_name_prefix = format!("{}::", scenario.source_crate);
+                if import.import_path.starts_with(&crate_name_prefix) {
+                    import.import_path = import.import_path.replace(&crate_name_prefix, "crate::");
+                }
+                
+                // Also normalize the imported items
+                for item in &mut import.imported_items {
+                    if item.starts_with(&crate_name_prefix) {
+                        *item = item.replace(&crate_name_prefix, "crate::");
+                    }
+                }
+            }
+            
+            println!("🔍 Debug: Found {} crate:: imports and {} external {} imports", 
+                     crate_imports.len(), external_imports.len(), scenario.source_crate);
+            
+            // Combine both types of imports
+            let mut imports = crate_imports;
+            imports.extend(external_imports);
 
-            let mut engine = RefactorEngine::new(scenario.source_crate, false, false);
+            let mut engine = RefactorEngine::new(scenario.source_crate, false, true);
             engine.refactor_self_imports(
                 &self.source_crate_path,
                 imports,
