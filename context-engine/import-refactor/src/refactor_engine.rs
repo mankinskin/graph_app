@@ -206,9 +206,11 @@ impl RefactorEngine {
         let items_to_add: BTreeSet<String> = imported_items
             .iter()
             .filter(|item| {
-                let item_name = if item
-                    .starts_with(&format!("{}::", &self.source_crate_name))
-                {
+                let item_name = if item.starts_with("crate::") {
+                    // For self-refactor mode, strip "crate::" prefix
+                    item.strip_prefix("crate::").unwrap_or(item)
+                } else if item.starts_with(&format!("{}::", &self.source_crate_name)) {
+                    // For cross-crate mode, strip source crate prefix
                     item.strip_prefix(&format!("{}::", &self.source_crate_name))
                         .unwrap_or(item)
                 } else {
@@ -219,7 +221,19 @@ impl RefactorEngine {
                 let final_ident =
                     item_name.split("::").last().unwrap_or(item_name);
 
-                if existing_exports.contains(final_ident) {
+                // Only skip if the final identifier is already exported AND
+                // the import path has only one component (i.e., it's a direct import)
+                let path_components: Vec<&str> = item_name.split("::").collect();
+                let is_direct_import = path_components.len() == 1;
+
+                if self.verbose {
+                    println!(
+                        "  🔍 Analyzing '{}': item_name='{}', final_ident='{}', components={}, is_direct={}, already_exported={}",
+                        item, item_name, final_ident, path_components.len(), is_direct_import, existing_exports.contains(final_ident)
+                    );
+                }
+
+                if existing_exports.contains(final_ident) && is_direct_import {
                     if self.verbose {
                         println!(
                             "  ⚠️  Skipping '{}' - already exported",

@@ -15,70 +15,53 @@ pub fn generate_nested_pub_use(
     let mut conditional_exports = Vec::new();
 
     for item in imported_items {
-        if item.starts_with(&format!("{}::", source_crate_name)) {
-            let relative_path = item
-                .strip_prefix(&format!("{}::", source_crate_name))
-                .unwrap_or(item);
+        let relative_path = if item.starts_with("crate::") {
+            // For self-refactor mode, strip "crate::" prefix
+            item.strip_prefix("crate::").unwrap_or(item)
+        } else if item.starts_with(&format!("{}::", source_crate_name)) {
+            // For cross-crate mode, strip source crate prefix
+            item.strip_prefix(&format!("{}::", source_crate_name))
+                .unwrap_or(item)
+        } else {
+            // Skip items that don't match expected patterns
+            continue;
+        };
 
-            // Extract the final identifier to check for conflicts and conditions
-            let final_ident = relative_path.split("::").last().unwrap_or(relative_path);
+        // Extract the final identifier to check for conflicts and conditions
+        let final_ident = relative_path.split("::").last().unwrap_or(relative_path);
 
-            // Skip if already exists as a use statement
-            if existing_pub_uses.contains(&format!("pub use crate::{};", relative_path)) {
-                if verbose {
-                    println!(
-                        "  ⚠️  Skipping '{}' - already exists as pub use",
-                        final_ident
-                    );
-                }
-                continue;
+        // Skip if already exists as a use statement
+        if existing_pub_uses.contains(&format!("pub use crate::{};", relative_path)) {
+            if verbose {
+                println!(
+                    "  ⚠️  Skipping '{}' - already exists as pub use",
+                    final_ident
+                );
             }
+            continue;
+        }
 
-            // Skip if this identifier already exists in the crate
-            if existing_pub_uses.contains(final_ident) {
-                if verbose {
-                    println!("  ⚠️  Skipping '{}' - already exists in source crate", final_ident);
-                }
-                continue;
+        // Skip if this identifier already exists in the crate
+        if existing_pub_uses.contains(final_ident) {
+            if verbose {
+                println!("  ⚠️  Skipping '{}' - already exists in source crate", final_ident);
             }
+            continue;
+        }
 
-            // Check if this item has conditional compilation
-            if let Some(Some(attr)) = conditional_items.get(final_ident) {
-                // This is a conditionally compiled item
-                conditional_exports.push((relative_path.to_string(), attr.clone()));
-                if verbose {
-                    println!(
-                        "  📝 Found conditional item '{}' with cfg: {}",
-                        final_ident,
-                        quote::quote!(#attr)
-                    );
-                }
-            } else {
-                paths_to_export.push(relative_path.to_string());
+        // Check if this item has conditional compilation
+        if let Some(Some(attr)) = conditional_items.get(final_ident) {
+            // This is a conditionally compiled item
+            conditional_exports.push((relative_path.to_string(), attr.clone()));
+            if verbose {
+                println!(
+                    "  📝 Found conditional item '{}' with cfg: {}",
+                    final_ident,
+                    quote::quote!(#attr)
+                );
             }
-        } else if item != "*" && !item.contains(" as ") && !item.contains("::") {
-            // Handle simple items
-            if existing_pub_uses.contains(item) {
-                if verbose {
-                    println!("  ⚠️  Skipping '{}' - already exists in source crate", item);
-                }
-                continue;
-            }
-
-            // Check if this item has conditional compilation
-            if let Some(Some(attr)) = conditional_items.get(item) {
-                // This is a conditionally compiled item
-                conditional_exports.push((item.clone(), attr.clone()));
-                if verbose {
-                    println!(
-                        "  📝 Found conditional item '{}' with cfg: {}",
-                        item,
-                        quote::quote!(#attr)
-                    );
-                }
-            } else {
-                paths_to_export.push(item.clone());
-            }
+        } else {
+            paths_to_export.push(relative_path.to_string());
         }
     }
 
