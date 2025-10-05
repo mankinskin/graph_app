@@ -22,8 +22,12 @@ struct Args {
     #[arg(short = 'b', long = "target-crate", alias = "target")]
     target_crate: Option<String>,
 
-    /// Positional arguments: [SOURCE_CRATE] [TARGET_CRATE]
-    #[arg(help = "Positional arguments: [SOURCE_CRATE] [TARGET_CRATE]")]
+    /// Self-refactor mode: refactor internal crate:: imports within a single crate
+    #[arg(long = "self", help = "Refactor crate:: imports within the specified crate to root-level exports")]
+    self_refactor: bool,
+
+    /// Positional arguments: [SOURCE_CRATE] [TARGET_CRATE] or [CRATE] when using --self
+    #[arg(help = "Positional arguments: [SOURCE_CRATE] [TARGET_CRATE] or [CRATE] when using --self")]
     positional: Vec<String>,
 
     /// Workspace root directory
@@ -61,11 +65,124 @@ impl Args {
             Err(anyhow::anyhow!("Target crate must be specified either via --target-crate/--target flag or as the second positional argument"))
         }
     }
+
+    /// Get the crate name for self-refactor mode
+    fn get_self_crate(&self) -> Result<String> {
+        if let Some(source) = &self.source_crate {
+            Ok(source.clone())
+        } else if !self.positional.is_empty() {
+            Ok(self.positional[0].clone())
+        } else {
+            Err(anyhow::anyhow!("Crate must be specified either via --source-crate/--source flag or as the first positional argument when using --self"))
+        }
+    }
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
 
+    if args.self_refactor {
+        // Self-refactor mode: refactor crate:: imports within a single crate
+        return run_self_refactor(&args);
+    } else {
+        // Standard two-crate refactor mode
+        return run_standard_refactor(&args);
+    }
+}
+
+fn run_self_refactor(args: &Args) -> Result<()> {
+    let crate_name = args.get_self_crate()?;
+
+    println!("🔧 Import Refactor Tool (Self-Refactor Mode)");
+    println!("📦 Crate: {} → will move crate:: imports to root-level exports", crate_name);
+    
+    if args.dry_run {
+        println!("🔍 Running in dry-run mode (no files will be modified)");
+    }
+    println!(
+        "📂 Workspace: {}",
+        args.workspace_root
+            .canonicalize()
+            .unwrap_or_else(|_| args.workspace_root.clone())
+            .display()
+    );
+    println!();
+
+    // Step 1: Analyze the workspace and find the crate
+    let analyzer = CrateAnalyzer::new(&args.workspace_root)?;
+    let crate_path = analyzer.find_crate(&crate_name)?;
+
+    if args.verbose {
+        let workspace_root = args
+            .workspace_root
+            .canonicalize()
+            .unwrap_or_else(|_| args.workspace_root.clone());
+        println!(
+            "Found crate at: {}",
+            crate_path
+                .strip_prefix(&workspace_root)
+                .unwrap_or(&crate_path)
+                .display()
+        );
+        println!();
+    }
+
+    // Step 2: Parse crate:: imports within the same crate
+    let parser = ImportParser::new("crate");
+    let imports = parser.find_imports_in_crate(&crate_path)?;
+
+    println!(
+        "🔎 Scanning for 'crate::' imports in '{}'...",
+        crate_name
+    );
+
+    if imports.is_empty() {
+        println!(
+            "❌ No 'crate::' imports found in crate '{}'",
+            crate_name
+        );
+        println!("   Nothing to refactor.");
+        return Ok(());
+    }
+
+    println!("✅ Found {} crate:: import statements", imports.len());
+
+    if args.verbose {
+        let workspace_root = args
+            .workspace_root
+            .canonicalize()
+            .unwrap_or_else(|_| args.workspace_root.clone());
+        println!("\n📝 Detailed import list:");
+        for import in &imports {
+            let relative_path = import
+                .file_path
+                .strip_prefix(&workspace_root)
+                .unwrap_or(&import.file_path);
+            println!(
+                "  • {} in {}",
+                import.import_path,
+                relative_path.display()
+            );
+        }
+        println!();
+    }
+
+    // Step 3: Refactor the imports
+    let mut engine = RefactorEngine::new(&crate_name, args.dry_run, args.verbose);
+    engine.refactor_self_imports(&crate_path, imports, &args.workspace_root)?;
+
+    if args.dry_run {
+        println!("🔍 Dry run completed. No files were modified.");
+        println!("💡 Run without --dry-run to apply these changes.");
+    } else {
+        println!("✅ Self-refactoring completed successfully!");
+        println!("📁 Modified files in '{}'", crate_name);
+    }
+
+    Ok(())
+}
+
+fn run_standard_refactor(args: &Args) -> Result<()> {
     // Resolve source and target crates from flags or positional args
     let source_crate = args.get_source_crate()?;
     let target_crate = args.get_target_crate()?;

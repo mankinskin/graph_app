@@ -177,6 +177,119 @@ impl RefactorEngine {
         Ok(())
     }
 
+    /// Refactor internal crate:: imports within a single crate
+    /// This moves crate:: imports to be pub use exports at the crate root level
+    pub fn refactor_self_imports(
+        &mut self,
+        crate_path: &Path,
+        imports: Vec<ImportInfo>,
+        workspace_root: &Path,
+    ) -> Result<()> {
+        // Step 1: Analyze and categorize crate:: imports
+        let mut all_imported_items = BTreeSet::new();
+        let mut glob_imports = 0;
+        let mut specific_imports = 0;
+        let mut import_types = std::collections::HashMap::new();
+        let workspace_root = workspace_root
+            .canonicalize()
+            .unwrap_or_else(|_| workspace_root.to_path_buf());
+
+        for import in &imports {
+            if import.imported_items.contains(&"*".to_string()) {
+                glob_imports += 1;
+            } else {
+                specific_imports += 1;
+                for item in &import.imported_items {
+                    if item != "*" {
+                        all_imported_items.insert(item.clone());
+                        // Track which files import this item with relative paths and simplified imports
+                        let canonical_file_path = import
+                            .file_path
+                            .canonicalize()
+                            .unwrap_or_else(|_| import.file_path.clone());
+                        
+                        let relative_path = canonical_file_path
+                            .strip_prefix(&workspace_root)
+                            .unwrap_or(&import.file_path);
+
+                        // Make import path relative to crate (remove "crate::" prefix)
+                        let simplified_import = import
+                            .import_path
+                            .strip_prefix("crate::")
+                            .unwrap_or(&import.import_path);
+
+                        import_types
+                            .entry(item.clone())
+                            .or_insert_with(Vec::new)
+                            .push(format!(
+                                "{}:{}",
+                                relative_path.display(),
+                                simplified_import
+                            ));
+                    }
+                }
+            }
+        }
+
+        // Enhanced output showing analysis results
+        println!("📊 Import Analysis Summary:");
+        println!("  • Total imports found: {}", imports.len());
+        println!("  • Glob imports (use crate::*): {}", glob_imports);
+        println!("  • Specific imports: {}", specific_imports);
+        println!("  • Unique items imported: {}", all_imported_items.len());
+
+        if !all_imported_items.is_empty() {
+            println!("\n🔍 Detected crate:: imports:");
+            for item in &all_imported_items {
+                if let Some(files) = import_types.get(item) {
+                    println!("  • {}", item);
+                    for file_info in files.iter().take(3) {
+                        println!("      └─ {}", file_info);
+                    }
+                    if files.len() > 3 {
+                        println!(
+                            "      └─ ... and {} more locations",
+                            files.len() - 3
+                        );
+                    }
+                } else {
+                    println!("  • {}", item);
+                }
+            }
+            println!();
+        } else if glob_imports > 0 {
+            println!("\n💡 Note: Only glob imports (use crate::*) found. No specific items to re-export.");
+            println!("   This means the crate is already using the most general import pattern.");
+            println!();
+        }
+
+        // Step 2: Update the crate's lib.rs with pub use statements  
+        self.update_source_lib_rs(
+            crate_path,
+            &all_imported_items,
+            &workspace_root,
+        )?;
+
+        // Step 3: Replace crate:: imports in the same crate
+        self.replace_crate_imports(crate_path, imports, &workspace_root)?;
+
+        // Always check compilation after refactoring to ensure we didn't break anything
+        if !self.dry_run {
+            println!("🔧 Checking compilation after modifications...");
+            let crate_compiles = self.check_crate_compilation(crate_path)?;
+
+            if !crate_compiles {
+                bail!("Crate failed to compile after self-refactoring. This indicates a bug in the refactor tool.");
+            }
+
+            if self.verbose {
+                println!("✅ Crate compiles successfully after self-refactoring");
+            }
+        }
+
+        Ok(())
+    }
+
     fn update_source_lib_rs(
         &self,
         source_crate_path: &Path,
@@ -741,6 +854,132 @@ impl RefactorEngine {
                     file_path.strip_prefix(workspace_root).unwrap_or(file_path);
                 println!(
                     "Made {} replacements in {}",
+                    replacements_made,
+                    relative_path.display()
+                );
+            }
+
+            if !self.dry_run {
+                fs::write(file_path, new_content).with_context(|| {
+                    format!("Failed to write to {}", file_path.display())
+                })?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Replace crate:: imports within the same crate files (for self-refactor mode)
+    fn replace_crate_imports(
+        &self,
+        crate_path: &Path,
+        imports: Vec<ImportInfo>,
+        workspace_root: &Path,
+    ) -> Result<()> {
+        // Group imports by file
+        let mut imports_by_file: std::collections::HashMap<PathBuf, Vec<ImportInfo>> =
+            std::collections::HashMap::new();
+        
+        for import in imports {
+            imports_by_file
+                .entry(import.file_path.clone())
+                .or_insert_with(Vec::new)
+                .push(import);
+        }
+
+        for (file_path, file_imports) in imports_by_file {
+            self.replace_crate_imports_in_file(&file_path, file_imports, workspace_root)?;
+        }
+
+        Ok(())
+    }
+
+    /// Replace crate:: imports in a specific file (for self-refactor mode)
+    fn replace_crate_imports_in_file(
+        &self,
+        file_path: &Path,
+        imports: Vec<ImportInfo>,
+        workspace_root: &Path,
+    ) -> Result<()> {
+        let original_content =
+            fs::read_to_string(file_path).with_context(|| {
+                format!("Failed to read {}", file_path.display())
+            })?;
+
+        let mut new_content = original_content.clone();
+        let mut replacements_made = 0;
+
+        // Sort imports by line number in reverse order to avoid offset issues
+        let mut sorted_imports = imports;
+        sorted_imports.sort_by(|a, b| b.line_number.cmp(&a.line_number));
+
+        for import in sorted_imports {
+            // For crate:: imports, we want to replace them with direct imports (remove "crate::" prefix)
+            // For example: "use crate::module::Item;" becomes "use module::Item;" or just the item name
+            
+            // Look for the import statement in the content
+            if let Some(import_start) =
+                new_content.find(&format!("use {};", import.import_path))
+            {
+                // Find the end of the line
+                let import_end = new_content[import_start..]
+                    .find('\n')
+                    .map(|pos| import_start + pos + 1)
+                    .unwrap_or(new_content.len());
+
+                // Since we're adding pub use statements to the root, we can remove the crate:: imports
+                // and they'll be available at the root level
+                let relative_path = file_path.strip_prefix(workspace_root).unwrap_or(file_path);
+                
+                if self.verbose {
+                    println!(
+                        "  Removing crate:: import '{}' from {}",
+                        import.import_path,
+                        relative_path.display()
+                    );
+                }
+
+                // Remove the import line entirely since items will be available at root
+                new_content.replace_range(import_start..import_end, "");
+                replacements_made += 1;
+            } else {
+                // Try variations of the import statement format
+                let patterns = [
+                    format!("use {}::{{", import.import_path),
+                    format!("use {{\n    {}", import.import_path),
+                ];
+
+                let mut found = false;
+                for pattern in &patterns {
+                    if let Some(pattern_start) = new_content.find(pattern) {
+                        if self.verbose {
+                            let relative_path = file_path.strip_prefix(workspace_root).unwrap_or(file_path);
+                            println!(
+                                "  Found crate:: import pattern '{}' in {}",
+                                pattern,
+                                relative_path.display()
+                            );
+                        }
+                        found = true;
+                        break;
+                    }
+                }
+
+                if !found && self.verbose {
+                    println!(
+                        "  Warning: Could not find crate:: import to remove: {}",
+                        import.import_path
+                    );
+                }
+            }
+        }
+
+        if replacements_made > 0 {
+            if self.verbose {
+                let relative_path =
+                    file_path.strip_prefix(workspace_root).unwrap_or(file_path);
+                println!(
+                    "Removed {} crate:: imports from {}",
                     replacements_made,
                     relative_path.display()
                 );

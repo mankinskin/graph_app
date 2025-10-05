@@ -70,6 +70,38 @@ pub const TEST_SCENARIOS: &[TestScenario] = &[
             nested_modules: &[],
         }),
     },
+    TestScenario {
+        name: "self_refactoring",
+        description:
+            "Self-refactor mode: refactor crate:: imports within a single crate",
+        source_crate: "self_refactor_crate",
+        target_crate: "", // Not used in self-refactor mode
+        fixture_name: "self_refactor_workspace",
+        expected_changes: Some(ExpectedChanges {
+            source_crate_exports: &[
+                "Config",
+                "load_settings",
+                "save_settings",
+                "validate_user_input",
+                "ValidationResult",
+                "validate_email",
+                "User",
+                "create_user",
+                "find_user_by_email",
+                "update_user_profile",
+                "Session",
+                "SessionManager",
+                "validate_session",
+                "Repository",
+                "InMemoryRepository",
+                "create_user_repository",
+                "backup_data",
+            ],
+            target_crate_wildcards: 0, // No target crate in self-refactor mode
+            preserved_macros: &[],
+            nested_modules: &["core", "services"],
+        }),
+    },
 ];
 
 #[test]
@@ -228,6 +260,32 @@ fn test_no_imports_scenario() -> Result<()> {
             println!("⚠️  Tool failed on no-imports scenario - this may be expected behavior");
         },
     }
+
+    Ok(())
+}
+
+#[test]
+fn test_self_refactoring() -> Result<()> {
+    let scenario = &TEST_SCENARIOS[4]; // self_refactoring
+
+    println!("🚀 Starting test: {}", scenario.description);
+
+    // Setup protected workspace
+    let mut workspace = TestWorkspace::setup(scenario.fixture_name)?;
+
+    // Run refactor with full validation
+    let result = workspace.run_refactor_with_validation(scenario)?;
+
+    // Validate results against expectations
+    let validation = AstValidator::validate_refactor_result(
+        &result,
+        scenario.expected_changes.as_ref(),
+    );
+
+    // Format and display comprehensive results
+    let formatted_output =
+        TestFormatter::format_test_results(scenario.name, &result, &validation);
+    println!("{}", formatted_output);
 
     Ok(())
 }

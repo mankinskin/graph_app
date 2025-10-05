@@ -110,23 +110,32 @@ impl TestWorkspace {
         self.source_crate_path = analyzer
             .find_crate(scenario.source_crate)
             .context("Failed to find source crate")?;
-        self.target_crate_path = analyzer
-            .find_crate(scenario.target_crate)
-            .context("Failed to find target crate")?;
+        
+        // For self-refactor mode, target_crate might be empty
+        let is_self_refactor = scenario.target_crate.is_empty();
+        if !is_self_refactor {
+            self.target_crate_path = analyzer
+                .find_crate(scenario.target_crate)
+                .context("Failed to find target crate")?;
+        }
 
         // Analyze initial state
         let source_lib_path = self.source_crate_path.join("src").join("lib.rs");
-        let target_lib_path = self.target_crate_path.join("src").join("lib.rs");
-        let target_main_path =
-            self.target_crate_path.join("src").join("main.rs");
-
+        
         let source_analysis_before = analyze_ast(&source_lib_path)
             .context("Failed to analyze source crate before refactoring")?;
 
-        let target_analysis_before = if target_lib_path.exists() {
-            Some(analyze_ast(&target_lib_path)?)
-        } else if target_main_path.exists() {
-            Some(analyze_ast(&target_main_path)?)
+        let target_analysis_before = if !is_self_refactor {
+            let target_lib_path = self.target_crate_path.join("src").join("lib.rs");
+            let target_main_path = self.target_crate_path.join("src").join("main.rs");
+            
+            if target_lib_path.exists() {
+                Some(analyze_ast(&target_lib_path)?)
+            } else if target_main_path.exists() {
+                Some(analyze_ast(&target_main_path)?)
+            } else {
+                None
+            }
         } else {
             None
         };
@@ -138,10 +147,17 @@ impl TestWorkspace {
         let source_analysis_after = analyze_ast(&source_lib_path)
             .context("Failed to analyze source crate after refactoring")?;
 
-        let target_analysis_after = if target_lib_path.exists() {
-            Some(analyze_ast(&target_lib_path)?)
-        } else if target_main_path.exists() {
-            Some(analyze_ast(&target_main_path)?)
+        let target_analysis_after = if !is_self_refactor {
+            let target_lib_path = self.target_crate_path.join("src").join("lib.rs");
+            let target_main_path = self.target_crate_path.join("src").join("main.rs");
+            
+            if target_lib_path.exists() {
+                Some(analyze_ast(&target_lib_path)?)
+            } else if target_main_path.exists() {
+                Some(analyze_ast(&target_main_path)?)
+            } else {
+                None
+            }
         } else {
             None
         };
@@ -160,17 +176,32 @@ impl TestWorkspace {
         &self,
         scenario: &TestScenario,
     ) -> Result<()> {
-        let parser = ImportParser::new(scenario.source_crate);
-        let imports = parser.find_imports_in_crate(&self.target_crate_path)?;
+        let is_self_refactor = scenario.target_crate.is_empty();
+        
+        if is_self_refactor {
+            // Self-refactor mode: find crate:: imports within the same crate
+            let parser = ImportParser::new("crate");
+            let imports = parser.find_imports_in_crate(&self.source_crate_path)?;
 
-        let mut engine =
-            RefactorEngine::new(scenario.source_crate, false, false);
-        engine.refactor_imports(
-            &self.source_crate_path,
-            &self.target_crate_path,
-            imports,
-            &self.workspace_path,
-        )?;
+            let mut engine = RefactorEngine::new(scenario.source_crate, false, false);
+            engine.refactor_self_imports(
+                &self.source_crate_path,
+                imports,
+                &self.workspace_path,
+            )?;
+        } else {
+            // Standard two-crate refactor mode
+            let parser = ImportParser::new(scenario.source_crate);
+            let imports = parser.find_imports_in_crate(&self.target_crate_path)?;
+
+            let mut engine = RefactorEngine::new(scenario.source_crate, false, false);
+            engine.refactor_imports(
+                &self.source_crate_path,
+                &self.target_crate_path,
+                imports,
+                &self.workspace_path,
+            )?;
+        }
 
         Ok(())
     }
