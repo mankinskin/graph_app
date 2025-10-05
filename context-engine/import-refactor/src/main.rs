@@ -43,6 +43,36 @@ struct Args {
     )]
     analyze: bool,
 
+    /// Enable AI-powered semantic analysis (requires API key)
+    #[arg(
+        long = "ai",
+        help = "Enable AI-powered semantic code analysis for better duplication detection"
+    )]
+    enable_ai: bool,
+
+    /// AI provider to use (openai, claude, auto)
+    #[arg(
+        long = "ai-provider",
+        help = "AI provider: openai, claude, or auto (detect from environment)",
+        default_value = "auto"
+    )]
+    ai_provider: String,
+
+    /// AI model to use (e.g., gpt-4, claude-3-5-sonnet-20241022)
+    #[arg(
+        long = "ai-model",
+        help = "Specific AI model to use (optional, uses provider default)"
+    )]
+    ai_model: Option<String>,
+
+    /// Maximum number of functions to analyze with AI (to control costs)
+    #[arg(
+        long = "ai-max-functions",
+        help = "Maximum number of functions to analyze with AI",
+        default_value = "20"
+    )]
+    ai_max_functions: usize,
+
     /// Positional arguments: [SOURCE_CRATE] [TARGET_CRATE] or [CRATE] when using --self
     #[arg(
         help = "Positional arguments: [SOURCE_CRATE] [TARGET_CRATE] or [CRATE] when using --self"
@@ -101,8 +131,9 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     if args.analyze {
-        // Analyzer mode: analyze codebase for duplications
-        run_analyzer(&args)
+        // Analyzer mode: analyze codebase for duplications (async for AI support)
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(run_analyzer(&args))
     } else {
         // Import refactor mode (handles both self-refactor and standard modes)
         run_import_refactor(&args)
@@ -150,10 +181,25 @@ fn run_import_refactor(args: &Args) -> Result<()> {
     Ok(())
 }
 
-fn run_analyzer(args: &Args) -> Result<()> {
-    utils::analyzer_cli::run_analyzer(
+async fn run_analyzer(args: &Args) -> Result<()> {
+    let ai_provider = match args.ai_provider.to_lowercase().as_str() {
+        "openai" => utils::duplication_analyzer::AiProvider::OpenAI,
+        "claude" => utils::duplication_analyzer::AiProvider::Claude,
+        "auto" => utils::duplication_analyzer::AiProvider::Auto,
+        _ =>
+            return Err(anyhow::anyhow!(
+                "Invalid AI provider. Use: openai, claude, or auto"
+            )),
+    };
+
+    utils::analyzer_cli::run_analyzer_with_ai(
         Some(args.workspace_root.clone()),
         args.verbose,
+        args.enable_ai,
+        ai_provider,
+        args.ai_model.clone(),
+        args.ai_max_functions,
     )
+    .await
     .map_err(|e| anyhow::anyhow!("Analyzer failed: {}", e))
 }

@@ -10,3 +10,6 @@ pub mod analyzer_cli;
 pub mod common;
 pub mod duplication_analyzer;
 pub mod refactoring_analyzer;
+
+// AI-powered analysis
+pub mod ai_client;

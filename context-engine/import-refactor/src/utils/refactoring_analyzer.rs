@@ -47,7 +47,7 @@ impl RefactoringAnalyzer {
     }
 
     /// Perform comprehensive analysis and generate refactoring recommendations
-    pub fn analyze_and_recommend(
+    pub async fn analyze_and_recommend(
         &self,
         workspace_root: &Path,
     ) -> Result<(), Box<dyn std::error::Error>> {
@@ -62,7 +62,7 @@ impl RefactoringAnalyzer {
 
         // Run duplication analysis
         let mut analyzer = CodebaseDuplicationAnalyzer::new(workspace_root);
-        let analysis = analyzer.analyze_codebase()?;
+        let analysis = analyzer.analyze_codebase().await?;
 
         // Print detailed results
         analyzer.print_analysis_results(&analysis);
