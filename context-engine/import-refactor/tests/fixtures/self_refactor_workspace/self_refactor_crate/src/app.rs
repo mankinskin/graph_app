@@ -6,7 +6,6 @@ use crate::core::validation::{validate_user_input, ValidationResult, validate_em
 use crate::services::auth::user::{User, create_user, find_user_by_email, update_user_profile};
 use crate::services::auth::session::{Session, SessionManager, validate_session};
 use crate::services::data::repository::{Repository, InMemoryRepository, create_user_repository, backup_data};
-use crate::hello;
 
 pub struct Application {
     config: Config,

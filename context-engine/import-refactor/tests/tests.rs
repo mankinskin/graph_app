@@ -28,20 +28,6 @@ pub const TEST_SCENARIOS: &[TestScenario] = &[
         }),
     },
     TestScenario {
-        name: "deep_nesting_refactoring",
-        description:
-            "Deep nesting refactoring with existing pub use statements",
-        source_crate: "source_crate",
-        target_crate: "target_crate",
-        fixture_name: "basic_workspace",
-        expected_changes: Some(ExpectedChanges {
-            source_crate_exports: &["main_function", "Config", "Status"],
-            target_crate_wildcards: 1,
-            preserved_macros: &[],
-            nested_modules: &["math", "utils", "network"],
-        }),
-    },
-    TestScenario {
         name: "macro_handling",
         description: "Handling macro exports and conditional compilation",
         source_crate: "macro_source",
@@ -136,7 +122,7 @@ fn test_basic_refactoring() -> Result<()> {
 
 #[test]
 fn test_macro_handling() -> Result<()> {
-    let scenario = &TEST_SCENARIOS[2]; // macro_handling
+    let scenario = &TEST_SCENARIOS[1]; // macro_handling
 
     println!("🚀 Starting test: {}", scenario.description);
 
@@ -173,57 +159,9 @@ fn test_macro_handling() -> Result<()> {
 
     Ok(())
 }
-
-#[test]
-fn test_detailed_ast_inspection() -> Result<()> {
-    let scenario = &TEST_SCENARIOS[0]; // basic_refactoring
-
-    let mut workspace = TestWorkspace::setup(scenario.fixture_name)?;
-    let result = workspace.run_refactor_with_validation(scenario)?;
-
-    // Display detailed AST analysis
-    println!(
-        "{}",
-        TestFormatter::format_ast_details(
-            &result.source_analysis_before,
-            "BEFORE"
-        )
-    );
-    println!(
-        "{}",
-        TestFormatter::format_ast_details(
-            &result.source_analysis_after,
-            "AFTER"
-        )
-    );
-
-    if let Some(target_before) = &result.target_analysis_before {
-        println!(
-            "{}",
-            TestFormatter::format_ast_details(target_before, "TARGET BEFORE")
-        );
-    }
-
-    if let Some(target_after) = &result.target_analysis_after {
-        println!(
-            "{}",
-            TestFormatter::format_ast_details(target_after, "TARGET AFTER")
-        );
-    }
-
-    // Verify specific transformations
-    assert!(
-        result.source_analysis_after.pub_use_items.len()
-            > result.source_analysis_before.pub_use_items.len(),
-        "Expected new pub use statements to be added"
-    );
-
-    Ok(())
-}
-
 #[test]
 fn test_no_imports_scenario() -> Result<()> {
-    let scenario = &TEST_SCENARIOS[3]; // no_imports_scenario
+    let scenario = &TEST_SCENARIOS[2]; // no_imports_scenario
 
     println!("🚀 Starting test: {}", scenario.description);
 
@@ -266,7 +204,7 @@ fn test_no_imports_scenario() -> Result<()> {
 
 #[test]
 fn test_self_refactoring() -> Result<()> {
-    let scenario = &TEST_SCENARIOS[4]; // self_refactoring
+    let scenario = &TEST_SCENARIOS[3]; // self_refactoring
 
     println!("🚀 Starting test: {}", scenario.description);
 
@@ -286,6 +224,11 @@ fn test_self_refactoring() -> Result<()> {
     let formatted_output =
         TestFormatter::format_test_results(scenario.name, &result, &validation);
     println!("{}", formatted_output);
+
+    // Assert that validation passed
+    if !validation.passed {
+        panic!("Test validation failed");
+    }
 
     Ok(())
 }

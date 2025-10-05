@@ -6,6 +6,7 @@ mod crate_analyzer;
 mod import_parser;
 mod item_info;
 mod refactor_engine;
+mod utils;
 
 use crate_analyzer::CrateAnalyzer;
 use import_parser::ImportParser;
@@ -23,11 +24,16 @@ struct Args {
     target_crate: Option<String>,
 
     /// Self-refactor mode: refactor internal crate:: imports within a single crate
-    #[arg(long = "self", help = "Refactor crate:: imports within the specified crate to root-level exports")]
+    #[arg(
+        long = "self",
+        help = "Refactor crate:: imports within the specified crate to root-level exports"
+    )]
     self_refactor: bool,
 
     /// Positional arguments: [SOURCE_CRATE] [TARGET_CRATE] or [CRATE] when using --self
-    #[arg(help = "Positional arguments: [SOURCE_CRATE] [TARGET_CRATE] or [CRATE] when using --self")]
+    #[arg(
+        help = "Positional arguments: [SOURCE_CRATE] [TARGET_CRATE] or [CRATE] when using --self"
+    )]
     positional: Vec<String>,
 
     /// Workspace root directory
@@ -94,8 +100,11 @@ fn run_self_refactor(args: &Args) -> Result<()> {
     let crate_name = args.get_self_crate()?;
 
     println!("🔧 Import Refactor Tool (Self-Refactor Mode)");
-    println!("📦 Crate: {} → will move crate:: imports to root-level exports", crate_name);
-    
+    println!(
+        "📦 Crate: {} → will move crate:: imports to root-level exports",
+        crate_name
+    );
+
     if args.dry_run {
         println!("🔍 Running in dry-run mode (no files will be modified)");
     }
@@ -131,16 +140,10 @@ fn run_self_refactor(args: &Args) -> Result<()> {
     let parser = ImportParser::new("crate");
     let imports = parser.find_imports_in_crate(&crate_path)?;
 
-    println!(
-        "🔎 Scanning for 'crate::' imports in '{}'...",
-        crate_name
-    );
+    println!("🔎 Scanning for 'crate::' imports in '{}'...", crate_name);
 
     if imports.is_empty() {
-        println!(
-            "❌ No 'crate::' imports found in crate '{}'",
-            crate_name
-        );
+        println!("❌ No 'crate::' imports found in crate '{}'", crate_name);
         println!("   Nothing to refactor.");
         return Ok(());
     }
@@ -168,7 +171,8 @@ fn run_self_refactor(args: &Args) -> Result<()> {
     }
 
     // Step 3: Refactor the imports
-    let mut engine = RefactorEngine::new(&crate_name, args.dry_run, args.verbose);
+    let mut engine =
+        RefactorEngine::new(&crate_name, args.dry_run, args.verbose);
     engine.refactor_self_imports(&crate_path, imports, &args.workspace_root)?;
 
     if args.dry_run {
