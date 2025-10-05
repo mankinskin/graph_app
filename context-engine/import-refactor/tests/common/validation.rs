@@ -327,58 +327,58 @@ impl TestFormatter {
         output
     }
 
-    /// Format detailed AST structure for debugging
-    pub fn format_ast_details(
-        analysis: &AstAnalysis,
-        title: &str,
-    ) -> String {
-        let mut output = String::new();
+    ///// Format detailed AST structure for debugging
+    //pub fn format_ast_details(
+    //    analysis: &AstAnalysis,
+    //    title: &str,
+    //) -> String {
+    //    let mut output = String::new();
 
-        output.push_str(&format!("\n📊 {} AST Analysis:\n", title));
-        output.push_str("─".repeat(40).as_str());
-        output.push('\n');
+    //    output.push_str(&format!("\n📊 {} AST Analysis:\n", title));
+    //    output.push_str("─".repeat(40).as_str());
+    //    output.push('\n');
 
-        if !analysis.public_functions.is_empty() {
-            output.push_str("🔧 Public Functions:\n");
-            for func in &analysis.public_functions {
-                output.push_str(&format!("   • {}\n", func));
-            }
-        }
+    //    if !analysis.public_functions.is_empty() {
+    //        output.push_str("🔧 Public Functions:\n");
+    //        for func in &analysis.public_functions {
+    //            output.push_str(&format!("   • {}\n", func));
+    //        }
+    //    }
 
-        if !analysis.public_structs.is_empty() {
-            output.push_str("📋 Public Structs:\n");
-            for strukt in &analysis.public_structs {
-                output.push_str(&format!("   • {}\n", strukt));
-            }
-        }
+    //    if !analysis.public_structs.is_empty() {
+    //        output.push_str("📋 Public Structs:\n");
+    //        for strukt in &analysis.public_structs {
+    //            output.push_str(&format!("   • {}\n", strukt));
+    //        }
+    //    }
 
-        if !analysis.public_enums.is_empty() {
-            output.push_str("🏷️  Public Enums:\n");
-            for enm in &analysis.public_enums {
-                output.push_str(&format!("   • {}\n", enm));
-            }
-        }
+    //    if !analysis.public_enums.is_empty() {
+    //        output.push_str("🏷️  Public Enums:\n");
+    //        for enm in &analysis.public_enums {
+    //            output.push_str(&format!("   • {}\n", enm));
+    //        }
+    //    }
 
-        if !analysis.macro_exports.is_empty() {
-            output.push_str("🎭 Macro Exports:\n");
-            for mac in &analysis.macro_exports {
-                output.push_str(&format!("   • {}\n", mac));
-            }
-        }
+    //    if !analysis.macro_exports.is_empty() {
+    //        output.push_str("🎭 Macro Exports:\n");
+    //        for mac in &analysis.macro_exports {
+    //            output.push_str(&format!("   • {}\n", mac));
+    //        }
+    //    }
 
-        if !analysis.pub_use_items.is_empty() {
-            output.push_str("🔄 Pub Use Statements:\n");
-            for (i, use_item) in analysis.pub_use_items.iter().enumerate() {
-                output.push_str(&format!(
-                    "   {}. {} → {:?} (nested: {})\n",
-                    i + 1,
-                    use_item.path,
-                    use_item.items,
-                    use_item.is_nested
-                ));
-            }
-        }
+    //    if !analysis.pub_use_items.is_empty() {
+    //        output.push_str("🔄 Pub Use Statements:\n");
+    //        for (i, use_item) in analysis.pub_use_items.iter().enumerate() {
+    //            output.push_str(&format!(
+    //                "   {}. {} → {:?} (nested: {})\n",
+    //                i + 1,
+    //                use_item.path,
+    //                use_item.items,
+    //                use_item.is_nested
+    //            ));
+    //        }
+    //    }
 
-        output
-    }
+    //    output
+    //}
 }

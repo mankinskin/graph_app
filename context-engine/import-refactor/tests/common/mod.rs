@@ -6,12 +6,7 @@ pub mod test_utils;
 pub mod validation;
 
 // Re-export commonly used items with explicit visibility
-pub use ast_analysis::analyze_ast;
-pub use test_utils::{
-    run_refactor,
-    setup_test_workspace,
-    TestWorkspace,
-};
+// pub use ast_analysis::analyze_ast;  // Unused - using new unified API
 pub use validation::{
     AstValidator,
     TestFormatter,

@@ -2,6 +2,17 @@ use anyhow::{
     Context,
     Result,
 };
+use import_refactor::{
+    crate_analyzer::{
+        CrateAnalyzer,
+        CrateNames,
+        CratePaths,
+    },
+    refactor_api::{
+        RefactorApi,
+        RefactorConfigBuilder,
+    },
+};
 use std::{
     fs,
     path::{
@@ -10,12 +21,6 @@ use std::{
     },
 };
 use tempfile::TempDir;
-
-use import_refactor::{
-    crate_analyzer::CrateAnalyzer,
-    import_parser::ImportParser,
-    refactor_engine::RefactorEngine,
-};
 
 use super::ast_analysis::{
     analyze_ast,
@@ -27,10 +32,58 @@ use super::ast_analysis::{
 pub struct TestScenario {
     pub name: &'static str,
     pub description: &'static str,
-    pub source_crate: &'static str,
-    pub target_crate: &'static str,
+    pub crate_names: CrateNames,
     pub fixture_name: &'static str,
     pub expected_changes: Option<ExpectedChanges>,
+}
+
+impl TestScenario {
+    /// Create a self-refactor test scenario
+    pub fn self_refactor(
+        name: &'static str,
+        description: &'static str,
+        crate_name: &'static str,
+        fixture_name: &'static str,
+    ) -> Self {
+        Self {
+            name,
+            description,
+            crate_names: CrateNames::SelfRefactor {
+                crate_name: crate_name.to_string(),
+            },
+            fixture_name,
+            expected_changes: None,
+        }
+    }
+
+    /// Create a cross-refactor test scenario
+    pub fn cross_refactor(
+        name: &'static str,
+        description: &'static str,
+        source_crate: &'static str,
+        target_crate: &'static str,
+        fixture_name: &'static str,
+    ) -> Self {
+        Self {
+            name,
+            description,
+            crate_names: CrateNames::CrossRefactor {
+                source_crate: source_crate.to_string(),
+                target_crate: target_crate.to_string(),
+            },
+            fixture_name,
+            expected_changes: None,
+        }
+    }
+
+    /// Add expected changes to the scenario
+    pub fn with_expected_changes(
+        mut self,
+        expected_changes: ExpectedChanges,
+    ) -> Self {
+        self.expected_changes = Some(expected_changes);
+        self
+    }
 }
 
 /// Expected changes after refactoring for validation
@@ -45,9 +98,9 @@ pub struct ExpectedChanges {
 /// Comprehensive test execution context
 #[derive(Debug)]
 pub struct TestWorkspace {
+    #[allow(dead_code)]
     pub temp_dir: TempDir,
-    pub source_crate_path: PathBuf,
-    pub target_crate_path: PathBuf,
+    pub crate_paths: CratePaths,
     pub workspace_path: PathBuf,
 }
 
@@ -57,14 +110,14 @@ pub struct RefactorResult {
     pub success: bool,
     pub source_analysis_before: AstAnalysis,
     pub source_analysis_after: AstAnalysis,
-    pub target_analysis_before: Option<AstAnalysis>,
-    pub target_analysis_after: Option<AstAnalysis>,
+    //pub target_analysis_before: Option<AstAnalysis>,
+    //pub target_analysis_after: Option<AstAnalysis>,
 }
 
 impl TestWorkspace {
     /// Create a protected test workspace from fixture data
     pub fn setup(fixture_name: &str) -> Result<Self> {
-        let temp_dir = tempfile::tempdir()
+        let temp_dir = tempfile::tempdir_in(".")
             .context("Failed to create temporary directory")?;
 
         let fixture_path = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -88,14 +141,14 @@ impl TestWorkspace {
         // Create workspace Cargo.toml
         Self::create_workspace_manifest(&workspace_path)?;
 
-        // Find crate paths (will be populated by scenario)
-        let source_crate_path = workspace_path.clone();
-        let target_crate_path = workspace_path.clone();
+        // Initialize with placeholder paths (will be populated by scenario)
+        let crate_paths = CratePaths::SelfRefactor {
+            crate_path: workspace_path.clone(),
+        };
 
         Ok(Self {
             temp_dir,
-            source_crate_path,
-            target_crate_path,
+            crate_paths,
             workspace_path,
         })
     }
@@ -107,44 +160,45 @@ impl TestWorkspace {
     ) -> Result<RefactorResult> {
         // Debug: Print workspace paths
         println!("🔍 Debug: workspace_path = {:?}", self.workspace_path);
-        
+
         // Update crate paths based on scenario
         let analyzer = CrateAnalyzer::new(&self.workspace_path)?;
-        self.source_crate_path = analyzer
-            .find_crate(scenario.source_crate)
-            .context("Failed to find source crate")?;
-            
-        // Debug: Print resolved crate path
-        println!("🔍 Debug: source_crate_path = {:?}", self.source_crate_path);
-        
-        // For self-refactor mode, target_crate might be empty
-        let is_self_refactor = scenario.target_crate.is_empty();
-        if !is_self_refactor {
-            self.target_crate_path = analyzer
-                .find_crate(scenario.target_crate)
-                .context("Failed to find target crate")?;
-        }
+        self.crate_paths = analyzer.find_crates(&scenario.crate_names)?;
+
+        // Debug: Print resolved crate paths
+        println!("🔍 Debug: crate_paths = {:?}", self.crate_paths);
 
         // Analyze initial state
-        let source_lib_path = self.source_crate_path.join("src").join("lib.rs");
-        
+        let source_crate_path = match &self.crate_paths {
+            CratePaths::SelfRefactor { crate_path } => crate_path,
+            CratePaths::CrossRefactor {
+                source_crate_path, ..
+            } => source_crate_path,
+        };
+        let source_lib_path = source_crate_path.join("src").join("lib.rs");
+
         let source_analysis_before = analyze_ast(&source_lib_path)
             .context("Failed to analyze source crate before refactoring")?;
 
-        let target_analysis_before = if !is_self_refactor {
-            let target_lib_path = self.target_crate_path.join("src").join("lib.rs");
-            let target_main_path = self.target_crate_path.join("src").join("main.rs");
-            
-            if target_lib_path.exists() {
-                Some(analyze_ast(&target_lib_path)?)
-            } else if target_main_path.exists() {
-                Some(analyze_ast(&target_main_path)?)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+        //let target_analysis_before = match &self.crate_paths {
+        //    CratePaths::SelfRefactor { .. } => None,
+        //    CratePaths::CrossRefactor {
+        //        target_crate_path, ..
+        //    } => {
+        //        let target_lib_path =
+        //            target_crate_path.join("src").join("lib.rs");
+        //        let target_main_path =
+        //            target_crate_path.join("src").join("main.rs");
+
+        //        if target_lib_path.exists() {
+        //            Some(analyze_ast(&target_lib_path)?)
+        //        } else if target_main_path.exists() {
+        //            Some(analyze_ast(&target_main_path)?)
+        //        } else {
+        //            None
+        //        }
+        //    },
+        //};
 
         // Run refactor tool
         let refactor_result = self.execute_refactor(scenario);
@@ -157,27 +211,32 @@ impl TestWorkspace {
         let source_analysis_after = analyze_ast(&source_lib_path)
             .context("Failed to analyze source crate after refactoring")?;
 
-        let target_analysis_after = if !is_self_refactor {
-            let target_lib_path = self.target_crate_path.join("src").join("lib.rs");
-            let target_main_path = self.target_crate_path.join("src").join("main.rs");
-            
-            if target_lib_path.exists() {
-                Some(analyze_ast(&target_lib_path)?)
-            } else if target_main_path.exists() {
-                Some(analyze_ast(&target_main_path)?)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+        //let target_analysis_after = match &self.crate_paths {
+        //    CratePaths::SelfRefactor { .. } => None,
+        //    CratePaths::CrossRefactor {
+        //        target_crate_path, ..
+        //    } => {
+        //        let target_lib_path =
+        //            target_crate_path.join("src").join("lib.rs");
+        //        let target_main_path =
+        //            target_crate_path.join("src").join("main.rs");
+
+        //        if target_lib_path.exists() {
+        //            Some(analyze_ast(&target_lib_path)?)
+        //        } else if target_main_path.exists() {
+        //            Some(analyze_ast(&target_main_path)?)
+        //        } else {
+        //            None
+        //        }
+        //    },
+        //};
 
         Ok(RefactorResult {
             success: refactor_success,
             source_analysis_before,
             source_analysis_after,
-            target_analysis_before,
-            target_analysis_after,
+            //target_analysis_before,
+            //target_analysis_after,
         })
     }
 
@@ -186,60 +245,24 @@ impl TestWorkspace {
         &self,
         scenario: &TestScenario,
     ) -> Result<()> {
-        let is_self_refactor = scenario.target_crate.is_empty();
-        
-        if is_self_refactor {
-            // Self-refactor mode: find crate:: imports within the same crate and external imports to the same crate
-            println!("🔍 Debug: Creating crate parser for 'crate'");
-            let crate_parser = ImportParser::new("crate");
-            let crate_imports = crate_parser.find_imports_in_crate(&self.source_crate_path)?;
-            
-            // Also look for external imports that reference the same crate (e.g., use self_refactor_crate::...)
-            println!("🔍 Debug: Creating external parser for '{}'", scenario.source_crate);
-            let external_parser = ImportParser::new(scenario.source_crate);
-            let mut external_imports = external_parser.find_imports_in_crate(&self.source_crate_path)?;
-            
-            // Normalize external imports to crate:: format to avoid duplicates
-            for import in &mut external_imports {
-                // Convert "self_refactor_crate::..." to "crate::..."
-                let crate_name_prefix = format!("{}::", scenario.source_crate);
-                if import.import_path.starts_with(&crate_name_prefix) {
-                    import.import_path = import.import_path.replace(&crate_name_prefix, "crate::");
-                }
-                
-                // Also normalize the imported items
-                for item in &mut import.imported_items {
-                    if item.starts_with(&crate_name_prefix) {
-                        *item = item.replace(&crate_name_prefix, "crate::");
-                    }
-                }
+        let config = RefactorConfigBuilder::new()
+            .crate_names(scenario.crate_names.clone())
+            .workspace_root(&self.workspace_path)
+            .dry_run(false)
+            .verbose(true)
+            .quiet(false) // Keep output for debugging in tests
+            .build()?;
+
+        let result = RefactorApi::execute_refactor(config);
+
+        if !result.success {
+            if let Some(error) = result.error {
+                return Err(error);
+            } else {
+                return Err(anyhow::anyhow!(
+                    "Refactoring failed for unknown reason"
+                ));
             }
-            
-            println!("🔍 Debug: Found {} crate:: imports and {} external {} imports", 
-                     crate_imports.len(), external_imports.len(), scenario.source_crate);
-            
-            // Combine both types of imports
-            let mut imports = crate_imports;
-            imports.extend(external_imports);
-
-            let mut engine = RefactorEngine::new(scenario.source_crate, false, true);
-            engine.refactor_self_imports(
-                &self.source_crate_path,
-                imports,
-                &self.workspace_path,
-            )?;
-        } else {
-            // Standard two-crate refactor mode
-            let parser = ImportParser::new(scenario.source_crate);
-            let imports = parser.find_imports_in_crate(&self.target_crate_path)?;
-
-            let mut engine = RefactorEngine::new(scenario.source_crate, false, false);
-            engine.refactor_imports(
-                &self.source_crate_path,
-                &self.target_crate_path,
-                imports,
-                &self.workspace_path,
-            )?;
         }
 
         Ok(())
@@ -292,34 +315,44 @@ pub fn copy_dir_all(
     Ok(())
 }
 
-/// Legacy helper function for backward compatibility
-/// Prefer using TestWorkspace::setup() for new tests
-pub fn setup_test_workspace(fixture_name: &str) -> Result<TempDir> {
-    let workspace = TestWorkspace::setup(fixture_name)?;
-    Ok(workspace.temp_dir)
-}
+///// Legacy helper function for backward compatibility
+///// Prefer using TestWorkspace::setup() for new tests
+//pub fn setup_test_workspace(fixture_name: &str) -> Result<TempDir> {
+//    let workspace = TestWorkspace::setup(fixture_name)?;
+//    Ok(workspace.temp_dir)
+//}
 
-/// Legacy helper function for backward compatibility
-/// Prefer using TestWorkspace::run_refactor_with_validation() for new tests
-pub fn run_refactor(
-    workspace_path: &Path,
-    source_crate: &str,
-    target_crate: &str,
-) -> Result<()> {
-    let analyzer = CrateAnalyzer::new(workspace_path)?;
-    let source_crate_path = analyzer.find_crate(source_crate)?;
-    let target_crate_path = analyzer.find_crate(target_crate)?;
-
-    let parser = ImportParser::new(source_crate);
-    let imports = parser.find_imports_in_crate(&target_crate_path)?;
-
-    let mut engine = RefactorEngine::new(source_crate, false, false);
-    engine.refactor_imports(
-        &source_crate_path,
-        &target_crate_path,
-        imports,
-        workspace_path,
-    )?;
-
-    Ok(())
-}
+///// Legacy helper function for backward compatibility
+///// Prefer using TestWorkspace::run_refactor_with_validation() for new tests
+//pub fn run_refactor(
+//    workspace_path: &Path,
+//    source_crate: &str,
+//    target_crate: &str,
+//) -> Result<()> {
+//    let crate_names = CrateNames::CrossRefactor {
+//        source_crate: source_crate.to_string(),
+//        target_crate: target_crate.to_string(),
+//    };
+//
+//    let config = RefactorConfigBuilder::new()
+//        .crate_names(crate_names)
+//        .workspace_root(workspace_path)
+//        .dry_run(false)
+//        .verbose(false)
+//        .quiet(true)
+//        .build()?;
+//
+//    let result = RefactorApi::execute_refactor(config);
+//
+//    if !result.success {
+//        if let Some(error) = result.error {
+//            return Err(error);
+//        } else {
+//            return Err(anyhow::anyhow!(
+//                "Refactoring failed for unknown reason"
+//            ));
+//        }
+//    }
+//
+//    Ok(())
+//}

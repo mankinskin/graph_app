@@ -1,10 +1,9 @@
 use crate::{
+    crate_analyzer::CrateNames,
     import_parser::ImportInfo,
     utils::{
         common::format_relative_path,
-        file_operations::{
-            write_file,
-        },
+        file_operations::write_file,
     },
 };
 use anyhow::{
@@ -30,60 +29,72 @@ pub enum ReplacementAction {
 /// Strategy for determining how to replace import statements
 pub trait ImportReplacementStrategy {
     /// Create replacement text for an import, or None to remove it
-    fn create_replacement(&self, import: &ImportInfo) -> Option<String>;
-    
+    fn create_replacement(
+        &self,
+        import: &ImportInfo,
+    ) -> Option<String>;
+
     /// Whether this import should be removed entirely
-    fn should_remove_import(&self, import: &ImportInfo) -> bool {
+    fn should_remove_import(
+        &self,
+        import: &ImportInfo,
+    ) -> bool {
         self.create_replacement(import).is_none()
     }
-    
+
     /// Description of this replacement strategy
     fn get_description(&self) -> &str;
-    
+
     /// Format verbose log message for this replacement
     fn format_verbose_message(
-        &self, 
-        import: &ImportInfo, 
-        action: ReplacementAction, 
-        file_path: &Path, 
-        workspace_root: &Path
+        &self,
+        import: &ImportInfo,
+        action: ReplacementAction,
+        file_path: &Path,
+        workspace_root: &Path,
     ) -> String;
 }
 
 /// Cross-crate replacement: A::module::Item -> A::*
 pub struct CrossCrateReplacementStrategy {
-    pub source_crate_name: String,
+    pub crate_names: CrateNames,
 }
 
 impl ImportReplacementStrategy for CrossCrateReplacementStrategy {
-    fn create_replacement(&self, _import: &ImportInfo) -> Option<String> {
-        Some(format!("use {}::*;", self.source_crate_name))
+    fn create_replacement(
+        &self,
+        _import: &ImportInfo,
+    ) -> Option<String> {
+        Some(format!("use {}::*;", self.crate_names.source_crate()))
     }
-    
+
     fn get_description(&self) -> &str {
         "Replace with glob import from source crate"
     }
-    
+
     fn format_verbose_message(
-        &self, 
-        import: &ImportInfo, 
-        action: ReplacementAction, 
-        file_path: &Path, 
-        workspace_root: &Path
+        &self,
+        _import: &ImportInfo,
+        action: ReplacementAction,
+        file_path: &Path,
+        workspace_root: &Path,
     ) -> String {
         match action {
             ReplacementAction::Replaced { from, to } => {
                 format!(
                     "  Replaced: {} -> {} in {}",
-                    from, to, format_relative_path(file_path, workspace_root)
+                    from,
+                    to,
+                    format_relative_path(file_path, workspace_root)
                 )
-            }
+            },
             ReplacementAction::NotFound { searched_for } => {
                 format!(
                     "  Warning: Could not find import to replace: {} in {}",
-                    searched_for, format_relative_path(file_path, workspace_root)
+                    searched_for,
+                    format_relative_path(file_path, workspace_root)
                 )
-            }
+            },
             _ => unreachable!(),
         }
     }
@@ -93,38 +104,45 @@ impl ImportReplacementStrategy for CrossCrateReplacementStrategy {
 pub struct SelfCrateReplacementStrategy;
 
 impl ImportReplacementStrategy for SelfCrateReplacementStrategy {
-    fn create_replacement(&self, _import: &ImportInfo) -> Option<String> {
+    fn create_replacement(
+        &self,
+        _import: &ImportInfo,
+    ) -> Option<String> {
         None // Remove the import entirely
     }
-    
-    fn should_remove_import(&self, _import: &ImportInfo) -> bool {
+
+    fn should_remove_import(
+        &self,
+        _import: &ImportInfo,
+    ) -> bool {
         true
     }
-    
+
     fn get_description(&self) -> &str {
         "Remove crate:: imports, use root-level exports"
     }
-    
+
     fn format_verbose_message(
-        &self, 
-        import: &ImportInfo, 
-        action: ReplacementAction, 
-        file_path: &Path, 
-        workspace_root: &Path
+        &self,
+        _import: &ImportInfo,
+        action: ReplacementAction,
+        file_path: &Path,
+        workspace_root: &Path,
     ) -> String {
         match action {
             ReplacementAction::Removed { original } => {
                 format!(
                     "  Removed crate:: import '{}' from {}",
-                    original, format_relative_path(file_path, workspace_root)
+                    original,
+                    format_relative_path(file_path, workspace_root)
                 )
-            }
+            },
             ReplacementAction::NotFound { searched_for } => {
                 format!(
                     "  Warning: Could not find crate:: import to remove: {} in {}",
                     searched_for, format_relative_path(file_path, workspace_root)
                 )
-            }
+            },
             _ => unreachable!(),
         }
     }
@@ -190,7 +208,7 @@ fn replace_imports_in_file_with_strategy<S: ImportReplacementStrategy>(
             workspace_root,
             verbose,
         );
-        
+
         if replacement_result {
             replacements_made += 1;
         }
@@ -226,14 +244,24 @@ fn process_import_replacement<S: ImportReplacementStrategy>(
     let exact_pattern = format!("use {};", import.import_path);
     if let Some(import_start) = content.find(&exact_pattern) {
         return apply_replacement_at_position(
-            content, import_start, &exact_pattern, import, strategy, file_path, workspace_root, verbose
+            content,
+            import_start,
+            &exact_pattern,
+            import,
+            strategy,
+            file_path,
+            workspace_root,
+            verbose,
         );
     }
 
     // Try pattern variations (UNIFIED LOGIC FROM BOTH PREVIOUS FUNCTIONS)
     let patterns = vec![
         format!("use {}", import.import_path),
-        format!("use {}::", import.import_path.split("::").next().unwrap_or("")),
+        format!(
+            "use {}::",
+            import.import_path.split("::").next().unwrap_or("")
+        ),
     ];
 
     for pattern in patterns {
@@ -241,7 +269,14 @@ fn process_import_replacement<S: ImportReplacementStrategy>(
             if let Some(semicolon_pos) = content[pattern_start..].find(';') {
                 let use_end = pattern_start + semicolon_pos + 1;
                 return apply_replacement_in_range(
-                    content, pattern_start, use_end, import, strategy, file_path, workspace_root, verbose
+                    content,
+                    pattern_start,
+                    use_end,
+                    import,
+                    strategy,
+                    file_path,
+                    workspace_root,
+                    verbose,
                 );
             }
         }
@@ -249,10 +284,18 @@ fn process_import_replacement<S: ImportReplacementStrategy>(
 
     // Not found
     if verbose {
-        let action = ReplacementAction::NotFound { 
-            searched_for: import.import_path.clone() 
+        let action = ReplacementAction::NotFound {
+            searched_for: import.import_path.clone(),
         };
-        println!("{}", strategy.format_verbose_message(import, action, file_path, workspace_root));
+        println!(
+            "{}",
+            strategy.format_verbose_message(
+                import,
+                action,
+                file_path,
+                workspace_root
+            )
+        );
     }
     false
 }
@@ -268,34 +311,54 @@ fn apply_replacement_at_position<S: ImportReplacementStrategy>(
     verbose: bool,
 ) -> bool {
     let end = start + original_text.len();
-    
+
     if let Some(replacement) = strategy.create_replacement(import) {
         // Replace with new import
         content.replace_range(start..end, &replacement);
-        
+
         if verbose {
             let action = ReplacementAction::Replaced {
                 from: original_text.to_string(),
                 to: replacement,
             };
-            println!("{}", strategy.format_verbose_message(import, action, file_path, workspace_root));
+            println!(
+                "{}",
+                strategy.format_verbose_message(
+                    import,
+                    action,
+                    file_path,
+                    workspace_root
+                )
+            );
         }
     } else {
         // Remove import entirely
         // Find line boundaries to remove the entire line
-        let line_start = content[..start].rfind('\n').map(|pos| pos + 1).unwrap_or(0);
-        let line_end = content[start..].find('\n').map(|pos| start + pos + 1).unwrap_or(content.len());
-        
+        let line_start =
+            content[..start].rfind('\n').map(|pos| pos + 1).unwrap_or(0);
+        let line_end = content[start..]
+            .find('\n')
+            .map(|pos| start + pos + 1)
+            .unwrap_or(content.len());
+
         content.replace_range(line_start..line_end, "");
-        
+
         if verbose {
             let action = ReplacementAction::Removed {
                 original: original_text.to_string(),
             };
-            println!("{}", strategy.format_verbose_message(import, action, file_path, workspace_root));
+            println!(
+                "{}",
+                strategy.format_verbose_message(
+                    import,
+                    action,
+                    file_path,
+                    workspace_root
+                )
+            );
         }
     }
-    
+
     true
 }
 
@@ -310,38 +373,57 @@ fn apply_replacement_in_range<S: ImportReplacementStrategy>(
     verbose: bool,
 ) -> bool {
     let original_text = content[start..end].to_string(); // Clone to avoid borrowing issues
-    
+
     if let Some(replacement) = strategy.create_replacement(import) {
         // Find the start of the line for proper replacement
-        let line_start = content[..start].rfind('\n').map(|pos| pos + 1).unwrap_or(0);
+        let line_start =
+            content[..start].rfind('\n').map(|pos| pos + 1).unwrap_or(0);
         let _whitespace = &content[line_start..start];
-        
+
         content.replace_range(start..end, &replacement);
-        
+
         if verbose {
             let action = ReplacementAction::Replaced {
                 from: original_text,
                 to: replacement,
             };
-            println!("{}", strategy.format_verbose_message(import, action, file_path, workspace_root));
+            println!(
+                "{}",
+                strategy.format_verbose_message(
+                    import,
+                    action,
+                    file_path,
+                    workspace_root
+                )
+            );
         }
     } else {
         // Remove import entirely
         // Find line boundaries to remove the entire line
-        let line_start = content[..start].rfind('\n').map(|pos| pos + 1).unwrap_or(0);
-        let line_end = content[end..].find('\n').map(|pos| end + pos + 1).unwrap_or(content.len());
-        
+        let line_start =
+            content[..start].rfind('\n').map(|pos| pos + 1).unwrap_or(0);
+        let line_end = content[end..]
+            .find('\n')
+            .map(|pos| end + pos + 1)
+            .unwrap_or(content.len());
+
         content.replace_range(line_start..line_end, "");
-        
+
         if verbose {
             let action = ReplacementAction::Removed {
                 original: original_text,
             };
-            println!("{}", strategy.format_verbose_message(import, action, file_path, workspace_root));
+            println!(
+                "{}",
+                strategy.format_verbose_message(
+                    import,
+                    action,
+                    file_path,
+                    workspace_root
+                )
+            );
         }
     }
-    
+
     true
 }
-
-

@@ -6,34 +6,34 @@ use common::{
     test_utils::{
         ExpectedChanges,
         TestScenario,
+        TestWorkspace,
     },
     AstValidator,
     TestFormatter,
-    TestWorkspace,
 };
 
-/// Common test scenarios that can be reused
-pub const TEST_SCENARIOS: &[TestScenario] = &[
-    TestScenario {
-        name: "basic_refactoring",
-        description: "Basic import refactoring with nested modules",
-        source_crate: "source_crate",
-        target_crate: "target_crate",
-        fixture_name: "basic_workspace",
-        expected_changes: Some(ExpectedChanges {
+/// Get common test scenarios that can be reused
+pub fn get_test_scenarios() -> Vec<TestScenario> {
+    vec![
+        TestScenario::cross_refactor(
+            "basic_refactoring",
+            "Basic import refactoring with nested modules",
+            "source_crate",
+            "target_crate",
+            "basic_workspace",
+        ).with_expected_changes(ExpectedChanges {
             source_crate_exports: &["main_function", "Config", "Status"],
             target_crate_wildcards: 1,
             preserved_macros: &[],
             nested_modules: &["math", "utils", "network"],
         }),
-    },
-    TestScenario {
-        name: "macro_handling",
-        description: "Handling macro exports and conditional compilation",
-        source_crate: "macro_source",
-        target_crate: "macro_target",
-        fixture_name: "macro_workspace",
-        expected_changes: Some(ExpectedChanges {
+        TestScenario::cross_refactor(
+            "macro_handling",
+            "Handling macro exports and conditional compilation",
+            "macro_source",
+            "macro_target",
+            "macro_workspace",
+        ).with_expected_changes(ExpectedChanges {
             source_crate_exports: &["MacroHelper", "format_internal"],
             target_crate_wildcards: 1,
             // Note: External macros (hashmap, assert_msg from macros.rs) are correctly
@@ -42,28 +42,24 @@ pub const TEST_SCENARIOS: &[TestScenario] = &[
             preserved_macros: &["debug_print", "extra_debug"],
             nested_modules: &[],
         }),
-    },
-    TestScenario {
-        name: "no_imports_scenario",
-        description: "Test with a crate that has no imports to refactor",
-        source_crate: "source_crate",
-        target_crate: "dummy_target",
-        fixture_name: "no_imports_workspace",
-        expected_changes: Some(ExpectedChanges {
+        TestScenario::cross_refactor(
+            "no_imports_scenario",
+            "Test with a crate that has no imports to refactor",
+            "source_crate",
+            "dummy_target",
+            "no_imports_workspace",
+        ).with_expected_changes(ExpectedChanges {
             source_crate_exports: &[], // No new exports expected
             target_crate_wildcards: 0, // No wildcards expected
             preserved_macros: &[],
             nested_modules: &[],
         }),
-    },
-    TestScenario {
-        name: "self_refactoring",
-        description:
+        TestScenario::self_refactor(
+            "self_refactoring",
             "Self-refactor mode: refactor crate:: imports within a single crate",
-        source_crate: "self_refactor_crate",
-        target_crate: "", // Not used in self-refactor mode
-        fixture_name: "self_refactor_workspace",
-        expected_changes: Some(ExpectedChanges {
+            "self_refactor_crate",
+            "self_refactor_workspace",
+        ).with_expected_changes(ExpectedChanges {
             source_crate_exports: &[
                 "Config",
                 "load_settings",
@@ -87,12 +83,13 @@ pub const TEST_SCENARIOS: &[TestScenario] = &[
             preserved_macros: &[],
             nested_modules: &["core", "services"],
         }),
-    },
-];
+    ]
+}
 
 #[test]
 fn test_basic_refactoring() -> Result<()> {
-    let scenario = &TEST_SCENARIOS[0]; // basic_refactoring
+    let scenarios = get_test_scenarios();
+    let scenario = &scenarios[0]; // basic_refactoring
 
     println!("🚀 Starting test: {}", scenario.description);
 
@@ -122,7 +119,8 @@ fn test_basic_refactoring() -> Result<()> {
 
 #[test]
 fn test_macro_handling() -> Result<()> {
-    let scenario = &TEST_SCENARIOS[1]; // macro_handling
+    let scenarios = get_test_scenarios();
+    let scenario = &scenarios[1]; // macro_handling
 
     println!("🚀 Starting test: {}", scenario.description);
 
@@ -161,7 +159,8 @@ fn test_macro_handling() -> Result<()> {
 }
 #[test]
 fn test_no_imports_scenario() -> Result<()> {
-    let scenario = &TEST_SCENARIOS[2]; // no_imports_scenario
+    let scenarios = get_test_scenarios();
+    let scenario = &scenarios[2]; // no_imports_scenario
 
     println!("🚀 Starting test: {}", scenario.description);
 
@@ -204,7 +203,8 @@ fn test_no_imports_scenario() -> Result<()> {
 
 #[test]
 fn test_self_refactoring() -> Result<()> {
-    let scenario = &TEST_SCENARIOS[3]; // self_refactoring
+    let scenarios = get_test_scenarios();
+    let scenario = &scenarios[3]; // self_refactoring
 
     println!("🚀 Starting test: {}", scenario.description);
 

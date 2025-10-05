@@ -1,5 +1,11 @@
-use crate::item_info::ItemInfo;
-use std::collections::{BTreeMap, BTreeSet};
+use crate::{
+    crate_analyzer::CrateNames,
+    item_info::ItemInfo,
+};
+use std::collections::{
+    BTreeMap,
+    BTreeSet,
+};
 use syn::File;
 
 /// Generate nested pub use statements for imported items
@@ -7,7 +13,7 @@ pub fn generate_nested_pub_use(
     imported_items: &BTreeSet<String>,
     existing_pub_uses: &BTreeSet<String>,
     conditional_items: &BTreeMap<String, Option<syn::Attribute>>,
-    source_crate_name: &str,
+    crate_names: &CrateNames,
     verbose: bool,
 ) -> String {
     // Build a tree structure for the imports using a simplified approach
@@ -15,29 +21,20 @@ pub fn generate_nested_pub_use(
     let mut conditional_exports = Vec::new();
 
     for item in imported_items {
-        let relative_path = if item.starts_with("crate::") {
-            // For self-refactor mode, strip "crate::" prefix
-            item.strip_prefix("crate::").unwrap_or(item)
-        } else if item.starts_with(&format!("{}::", source_crate_name)) {
-            // For cross-crate mode, strip source crate prefix
-            item.strip_prefix(&format!("{}::", source_crate_name))
-                .unwrap_or(item)
-        } else if !item.contains("::") {
-            // This is a root-level item (e.g., "hello")
-            item
-        } else {
-            // Skip items that don't match expected patterns
-            if verbose {
-                println!("  ⚠️  Skipping '{}' - doesn't match expected patterns", item);
-            }
-            continue;
-        };
+        let relative_path = crate_names
+            .get_prefixes_to_strip()
+            .iter()
+            .find_map(|prefix| item.strip_prefix(prefix))
+            .unwrap_or(item);
 
         // Extract the final identifier to check for conflicts and conditions
-        let final_ident = relative_path.split("::").last().unwrap_or(relative_path);
+        let final_ident =
+            relative_path.split("::").last().unwrap_or(relative_path);
 
         // Skip if already exists as a use statement
-        if existing_pub_uses.contains(&format!("pub use crate::{};", relative_path)) {
+        if existing_pub_uses
+            .contains(&format!("pub use crate::{};", relative_path))
+        {
             if verbose {
                 println!(
                     "  ⚠️  Skipping '{}' - already exists as pub use",
@@ -50,7 +47,10 @@ pub fn generate_nested_pub_use(
         // Skip if this identifier already exists in the crate
         if existing_pub_uses.contains(final_ident) {
             if verbose {
-                println!("  ⚠️  Skipping '{}' - already exists in source crate", final_ident);
+                println!(
+                    "  ⚠️  Skipping '{}' - already exists in source crate",
+                    final_ident
+                );
             }
             continue;
         }
@@ -163,7 +163,10 @@ pub fn build_nested_structure(paths: Vec<String>) -> String {
 }
 
 /// Build nested substructure for grouped imports
-pub fn build_nested_substructure(paths: Vec<String>, indent_level: usize) -> String {
+pub fn build_nested_substructure(
+    paths: Vec<String>,
+    indent_level: usize,
+) -> String {
     let indent = "    ".repeat(indent_level);
     let mut groups: BTreeMap<String, Vec<String>> = BTreeMap::new();
     let mut direct_exports = Vec::new();
@@ -204,10 +207,8 @@ pub fn build_nested_substructure(paths: Vec<String>, indent_level: usize) -> Str
             result.push_str(module);
             result.push_str("::{\n");
 
-            let sub_result = build_nested_substructure(
-                subpaths.to_vec(),
-                indent_level + 1,
-            );
+            let sub_result =
+                build_nested_substructure(subpaths.to_vec(), indent_level + 1);
             result.push_str(&sub_result);
 
             result.push_str(&indent);
@@ -225,7 +226,7 @@ pub fn build_nested_substructure(paths: Vec<String>, indent_level: usize) -> Str
 
 /// Collect existing pub use statements and conditional items from a syntax tree
 pub fn collect_existing_pub_uses(
-    syntax_tree: &File,
+    syntax_tree: &File
 ) -> (BTreeSet<String>, BTreeMap<String, Option<syn::Attribute>>) {
     let mut existing = BTreeSet::new();
     let mut conditional_items = BTreeMap::new();
@@ -248,37 +249,13 @@ pub fn collect_existing_pub_uses(
 }
 
 /// Extract cfg attribute from a list of attributes
-pub fn extract_cfg_attribute(attrs: &[syn::Attribute]) -> Option<syn::Attribute> {
+pub fn extract_cfg_attribute(
+    attrs: &[syn::Attribute]
+) -> Option<syn::Attribute> {
     for attr in attrs {
         if attr.path().is_ident("cfg") {
             return Some(attr.clone());
         }
     }
     None
-}
-
-/// Recursively extract exported item names from a use tree
-pub fn extract_exported_items_from_use_tree(
-    tree: &syn::UseTree,
-    exported_items: &mut BTreeSet<String>,
-) {
-    match tree {
-        syn::UseTree::Path(path) => {
-            extract_exported_items_from_use_tree(&path.tree, exported_items);
-        }
-        syn::UseTree::Name(name) => {
-            exported_items.insert(name.ident.to_string());
-        }
-        syn::UseTree::Rename(rename) => {
-            exported_items.insert(rename.rename.to_string());
-        }
-        syn::UseTree::Glob(_) => {
-            exported_items.insert("*".to_string());
-        }
-        syn::UseTree::Group(group) => {
-            for item in &group.items {
-                extract_exported_items_from_use_tree(item, exported_items);
-            }
-        }
-    }
 }

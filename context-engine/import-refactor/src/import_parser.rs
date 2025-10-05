@@ -15,6 +15,8 @@ use syn::{
 };
 use walkdir::WalkDir;
 
+use crate::crate_analyzer::CratePaths;
+
 #[derive(Debug, Clone)]
 pub struct ImportInfo {
     pub file_path: PathBuf,
@@ -24,16 +26,29 @@ pub struct ImportInfo {
 }
 
 pub struct ImportParser {
-    source_crate_name: String,
+    crate_name: String,
 }
 
 impl ImportParser {
     pub fn new(source_crate_name: &str) -> Self {
         Self {
-            source_crate_name: source_crate_name.replace('-', "_"), // Convert hyphens to underscores for import matching
+            crate_name: source_crate_name.replace('-', "_"), // Convert hyphens to underscores for import matching
         }
     }
 
+    pub fn find_imports_in_crates(
+        &self,
+        crate_paths: &CratePaths,
+    ) -> Result<Vec<ImportInfo>> {
+        match crate_paths {
+            CratePaths::SelfRefactor { crate_path } =>
+                self.find_imports_in_crate(crate_path),
+            CratePaths::CrossRefactor {
+                source_crate_path: _,
+                target_crate_path,
+            } => self.find_imports_in_crate(target_crate_path),
+        }
+    }
     pub fn find_imports_in_crate(
         &self,
         crate_path: &Path,
@@ -69,10 +84,8 @@ impl ImportParser {
             format!("Failed to parse Rust file: {}", file_path.display())
         })?;
 
-        let mut visitor = ImportVisitor::new(
-            &self.source_crate_name,
-            file_path.to_path_buf(),
-        );
+        let mut visitor =
+            ImportVisitor::new(&self.crate_name, file_path.to_path_buf());
         visitor.visit_file(&syntax_tree);
 
         Ok(visitor.imports)

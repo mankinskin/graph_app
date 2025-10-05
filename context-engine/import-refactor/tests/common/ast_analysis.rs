@@ -22,23 +22,23 @@ pub struct AstAnalysis {
     pub public_statics: Vec<String>,
     pub public_modules: Vec<String>,
     pub macro_exports: Vec<String>,
-    pub conditional_items: Vec<ConditionalItem>,
+    //pub conditional_items: Vec<ConditionalItem>,
 }
 
 #[derive(Debug)]
 pub struct UseAnalysis {
     pub path: String,
     pub items: Vec<String>,
-    pub is_nested: bool,
-    pub has_conditions: bool,
+    //pub is_nested: bool,
+    //pub has_conditions: bool,
 }
 
-#[derive(Debug)]
-pub struct ConditionalItem {
-    pub condition: String,
-    pub item_type: String,
-    pub name: String,
-}
+//#[derive(Debug)]
+//pub struct ConditionalItem {
+//    pub condition: String,
+//    pub item_type: String,
+//    pub name: String,
+//}
 
 /// Parse a Rust source file and extract AST information
 pub fn analyze_ast(file_path: &Path) -> Result<AstAnalysis> {
@@ -128,54 +128,54 @@ pub fn analyze_item(
         _ => {},
     }
 
-    // Check for conditional compilation attributes
-    let attrs = match item {
-        Item::Fn(item_fn) => &item_fn.attrs,
-        Item::Struct(item_struct) => &item_struct.attrs,
-        Item::Enum(item_enum) => &item_enum.attrs,
-        Item::Trait(item_trait) => &item_trait.attrs,
-        Item::Const(item_const) => &item_const.attrs,
-        Item::Static(item_static) => &item_static.attrs,
-        Item::Mod(item_mod) => &item_mod.attrs,
-        Item::Macro(item_macro) => &item_macro.attrs,
-        _ => return,
-    };
+    //// Check for conditional compilation attributes
+    //let attrs = match item {
+    //    Item::Fn(item_fn) => &item_fn.attrs,
+    //    Item::Struct(item_struct) => &item_struct.attrs,
+    //    Item::Enum(item_enum) => &item_enum.attrs,
+    //    Item::Trait(item_trait) => &item_trait.attrs,
+    //    Item::Const(item_const) => &item_const.attrs,
+    //    Item::Static(item_static) => &item_static.attrs,
+    //    Item::Mod(item_mod) => &item_mod.attrs,
+    //    Item::Macro(item_macro) => &item_macro.attrs,
+    //    _ => return,
+    //};
 
-    for attr in attrs {
-        if attr.path().is_ident("cfg") {
-            let condition = "cfg".to_string(); // Simplified for now
-            let item_type = match item {
-                Item::Fn(_) => "function",
-                Item::Struct(_) => "struct",
-                Item::Enum(_) => "enum",
-                Item::Trait(_) => "trait",
-                Item::Const(_) => "const",
-                Item::Static(_) => "static",
-                Item::Mod(_) => "module",
-                Item::Macro(_) => "macro",
-                _ => "item",
-            };
+    //for attr in attrs {
+    //    if attr.path().is_ident("cfg") {
+    //        let condition = "cfg".to_string(); // Simplified for now
+    //        let item_type = match item {
+    //            Item::Fn(_) => "function",
+    //            Item::Struct(_) => "struct",
+    //            Item::Enum(_) => "enum",
+    //            Item::Trait(_) => "trait",
+    //            Item::Const(_) => "const",
+    //            Item::Static(_) => "static",
+    //            Item::Mod(_) => "module",
+    //            Item::Macro(_) => "macro",
+    //            _ => "item",
+    //        };
 
-            let name = match item {
-                Item::Fn(f) => f.sig.ident.to_string(),
-                Item::Struct(s) => s.ident.to_string(),
-                Item::Enum(e) => e.ident.to_string(),
-                Item::Trait(t) => t.ident.to_string(),
-                Item::Const(c) => c.ident.to_string(),
-                Item::Static(s) => s.ident.to_string(),
-                Item::Mod(m) => m.ident.to_string(),
-                Item::Macro(m) =>
-                    m.ident.as_ref().map(|i| i.to_string()).unwrap_or_default(),
-                _ => "unknown".to_string(),
-            };
+    //        let name = match item {
+    //            Item::Fn(f) => f.sig.ident.to_string(),
+    //            Item::Struct(s) => s.ident.to_string(),
+    //            Item::Enum(e) => e.ident.to_string(),
+    //            Item::Trait(t) => t.ident.to_string(),
+    //            Item::Const(c) => c.ident.to_string(),
+    //            Item::Static(s) => s.ident.to_string(),
+    //            Item::Mod(m) => m.ident.to_string(),
+    //            Item::Macro(m) =>
+    //                m.ident.as_ref().map(|i| i.to_string()).unwrap_or_default(),
+    //            _ => "unknown".to_string(),
+    //        };
 
-            analysis.conditional_items.push(ConditionalItem {
-                condition,
-                item_type: item_type.to_string(),
-                name: format!("{}{}", module_prefix, name),
-            });
-        }
-    }
+    //        analysis.conditional_items.push(ConditionalItem {
+    //            condition,
+    //            item_type: item_type.to_string(),
+    //            name: format!("{}{}", module_prefix, name),
+    //        });
+    //    }
+    //}
 }
 
 /// Analyze use statements
@@ -204,20 +204,20 @@ fn extract_use_info(
         UseTree::Name(name) => UseAnalysis {
             path: prefix.to_string(),
             items: vec![name.ident.to_string()],
-            is_nested: false,
-            has_conditions: false,
+            //is_nested: false,
+            //has_conditions: false,
         },
         UseTree::Rename(rename) => UseAnalysis {
             path: prefix.to_string(),
             items: vec![rename.rename.to_string()],
-            is_nested: false,
-            has_conditions: false,
+            //is_nested: false,
+            //has_conditions: false,
         },
         UseTree::Glob(_) => UseAnalysis {
             path: prefix.to_string(),
             items: vec!["*".to_string()],
-            is_nested: false,
-            has_conditions: false,
+            //is_nested: false,
+            //has_conditions: false,
         },
         UseTree::Group(group) => {
             let mut items = Vec::new();
@@ -228,8 +228,8 @@ fn extract_use_info(
             UseAnalysis {
                 path: prefix.to_string(),
                 items,
-                is_nested: true,
-                has_conditions: false,
+                //is_nested: true,
+                //has_conditions: false,
             }
         },
     }
