@@ -2,21 +2,21 @@ use crate::{
     import_parser::ImportInfo,
     item_info::ItemInfo,
     utils::{
+        common::format_relative_path,
         file_operations::{
             check_crate_compilation,
-            get_relative_path_for_display,
             read_and_parse_file,
             write_file,
         },
         import_analysis::{
-            analyze_crate_imports,
             analyze_imports,
-            print_crate_analysis_summary,
-            print_import_analysis_summary,
+            print_analysis_summary,
+            ImportContext,
         },
         import_replacement::{
-            replace_crate_imports,
-            replace_target_imports,
+            replace_imports_with_strategy,
+            CrossCrateReplacementStrategy,
+            SelfCrateReplacementStrategy,
         },
         macro_scanning::scan_crate_for_exported_macros,
         pub_use_generation::{
@@ -62,14 +62,17 @@ impl RefactorEngine {
         workspace_root: &Path,
     ) -> Result<()> {
         // Step 1: Analyze and categorize imports
+        let context = ImportContext::CrossCrate { 
+            source_crate_name: self.source_crate_name.clone() 
+        };
         let analysis_result =
-            analyze_imports(&imports, &self.source_crate_name, workspace_root);
+            analyze_imports(&imports, context.clone(), workspace_root);
 
         // Enhanced output showing analysis results
-        print_import_analysis_summary(
+        print_analysis_summary(
             &analysis_result,
             &imports,
-            &self.source_crate_name,
+            &context,
         );
 
         // Step 2: Update source crate's lib.rs with pub use statements
@@ -80,9 +83,12 @@ impl RefactorEngine {
         )?;
 
         // Step 3: Replace imports in target crate files
-        replace_target_imports(
+        let strategy = CrossCrateReplacementStrategy {
+            source_crate_name: self.source_crate_name.clone(),
+        };
+        replace_imports_with_strategy(
             imports,
-            &self.source_crate_name,
+            strategy,
             workspace_root,
             self.dry_run,
             self.verbose,
@@ -121,10 +127,11 @@ impl RefactorEngine {
         workspace_root: &Path,
     ) -> Result<()> {
         // Step 1: Analyze and categorize crate:: imports
-        let analysis_result = analyze_crate_imports(&imports, workspace_root);
+        let context = ImportContext::SelfCrate;
+        let analysis_result = analyze_imports(&imports, context.clone(), workspace_root);
 
         // Enhanced output showing analysis results
-        print_crate_analysis_summary(&analysis_result, &imports);
+        print_analysis_summary(&analysis_result, &imports, &context);
 
         // Step 2: Update the crate's lib.rs with pub use statements
         self.update_source_lib_rs(
@@ -134,8 +141,10 @@ impl RefactorEngine {
         )?;
 
         // Step 3: Replace crate:: imports in the same crate
-        replace_crate_imports(
+        let strategy = SelfCrateReplacementStrategy;
+        replace_imports_with_strategy(
             imports,
+            strategy,
             workspace_root,
             self.dry_run,
             self.verbose,
@@ -227,11 +236,9 @@ impl RefactorEngine {
 
         if items_to_add.is_empty() {
             if self.verbose {
-                let relative_path =
-                    get_relative_path_for_display(&lib_rs_path, workspace_root);
                 println!(
                     "✅ No new pub use statements needed for {} (all items already exported)",
-                    relative_path.display()
+                    format_relative_path(&lib_rs_path, workspace_root)
                 );
             }
             return Ok(());
@@ -251,11 +258,9 @@ impl RefactorEngine {
 
         if nested_pub_use.is_empty() {
             if self.verbose {
-                let relative_path =
-                    get_relative_path_for_display(&lib_rs_path, workspace_root);
                 println!(
                     "✅ No new pub use statements needed for {}",
-                    relative_path.display()
+                    format_relative_path(&lib_rs_path, workspace_root)
                 );
             }
             return Ok(());
@@ -271,11 +276,9 @@ impl RefactorEngine {
         new_content.push_str(&nested_pub_use);
 
         if self.verbose {
-            let relative_path =
-                get_relative_path_for_display(&lib_rs_path, workspace_root);
             println!(
                 "Adding nested pub use statement to {}",
-                relative_path.display()
+                format_relative_path(&lib_rs_path, workspace_root)
             );
             println!("{}", nested_pub_use.trim());
         }

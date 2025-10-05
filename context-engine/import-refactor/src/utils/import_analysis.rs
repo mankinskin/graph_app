@@ -1,8 +1,50 @@
 use crate::import_parser::ImportInfo;
+use crate::utils::common::format_relative_path;
 use std::{
     collections::BTreeSet,
     path::Path,
 };
+
+/// Context for import analysis - defines how imports should be processed
+#[derive(Debug, Clone)]
+pub enum ImportContext {
+    /// Cross-crate imports: source_crate::module::Item
+    CrossCrate { 
+        source_crate_name: String 
+    },
+    /// Self-crate imports: crate::module::Item  
+    SelfCrate,
+}
+
+impl ImportContext {
+    /// Get the prefix to strip from import paths
+    fn get_prefix_to_strip(&self) -> String {
+        match self {
+            ImportContext::CrossCrate { source_crate_name } => 
+                format!("{}::", source_crate_name),
+            ImportContext::SelfCrate => 
+                "crate::".to_string(),
+        }
+    }
+    
+    /// Get label for summary display
+    pub fn get_summary_label(&self) -> String {
+        match self {
+            ImportContext::CrossCrate { source_crate_name } => source_crate_name.clone(),
+            ImportContext::SelfCrate => "crate".to_string(),
+        }
+    }
+    
+    /// Get glob import pattern description
+    pub fn get_glob_pattern_description(&self) -> String {
+        match self {
+            ImportContext::CrossCrate { source_crate_name } => 
+                format!("use {}::*", source_crate_name),
+            ImportContext::SelfCrate => 
+                "use crate::*".to_string(),
+        }
+    }
+}
 
 pub struct ImportAnalysisResult {
     pub all_imported_items: BTreeSet<String>,
@@ -11,10 +53,10 @@ pub struct ImportAnalysisResult {
     pub import_types: std::collections::HashMap<String, Vec<String>>,
 }
 
-/// Analyze and categorize imports, building a map of imported items and their locations
+/// Unified import analysis supporting multiple import contexts
 pub fn analyze_imports(
     imports: &[ImportInfo],
-    source_crate_name: &str,
+    context: ImportContext,
     workspace_root: &Path,
 ) -> ImportAnalysisResult {
     let mut all_imported_items = BTreeSet::new();
@@ -25,6 +67,8 @@ pub fn analyze_imports(
     let workspace_root = workspace_root
         .canonicalize()
         .unwrap_or_else(|_| workspace_root.to_path_buf());
+
+    let prefix_to_strip = context.get_prefix_to_strip();
 
     for import in imports {
         if import.imported_items.contains(&"*".to_string()) {
@@ -41,14 +85,12 @@ pub fn analyze_imports(
                         .canonicalize()
                         .unwrap_or_else(|_| import.file_path.clone());
 
-                    let relative_path = canonical_file_path
-                        .strip_prefix(&workspace_root)
-                        .unwrap_or(&import.file_path);
+                    let relative_path = format_relative_path(&canonical_file_path, &workspace_root);
 
-                    // Make import path relative to source crate
+                    // Context-specific prefix stripping (THE ONLY DIFFERENCE!)
                     let simplified_import = import
                         .import_path
-                        .strip_prefix(&format!("{}::", source_crate_name))
+                        .strip_prefix(&prefix_to_strip)
                         .unwrap_or(&import.import_path);
 
                     import_types
@@ -56,7 +98,7 @@ pub fn analyze_imports(
                         .or_insert_with(Vec::new)
                         .push(format!(
                             "{}:{}",
-                            relative_path.display(),
+                            relative_path,
                             simplified_import
                         ));
                 }
@@ -72,116 +114,42 @@ pub fn analyze_imports(
     }
 }
 
-/// Analyze crate:: imports within a single crate
-pub fn analyze_crate_imports(
-    imports: &[ImportInfo],
-    workspace_root: &Path,
-) -> ImportAnalysisResult {
-    let mut all_imported_items = BTreeSet::new();
-    let mut glob_imports = 0;
-    let mut specific_imports = 0;
-    let mut import_types = std::collections::HashMap::new();
-
-    let workspace_root = workspace_root
-        .canonicalize()
-        .unwrap_or_else(|_| workspace_root.to_path_buf());
-
-    for import in imports {
-        if import.imported_items.contains(&"*".to_string()) {
-            glob_imports += 1;
-        } else {
-            specific_imports += 1;
-            for item in &import.imported_items {
-                if item != "*" {
-                    all_imported_items.insert(item.clone());
-
-                    // Track which files import this item with relative paths and simplified imports
-                    let canonical_file_path = import
-                        .file_path
-                        .canonicalize()
-                        .unwrap_or_else(|_| import.file_path.clone());
-
-                    let relative_path = canonical_file_path
-                        .strip_prefix(&workspace_root)
-                        .unwrap_or(&import.file_path);
-
-                    // Make import path relative to crate (remove "crate::" prefix)
-                    let simplified_import = import
-                        .import_path
-                        .strip_prefix("crate::")
-                        .unwrap_or(&import.import_path);
-
-                    import_types
-                        .entry(item.clone())
-                        .or_insert_with(Vec::new)
-                        .push(format!(
-                            "{}:{}",
-                            relative_path.display(),
-                            simplified_import
-                        ));
-                }
-            }
-        }
-    }
-
-    ImportAnalysisResult {
-        all_imported_items,
-        glob_imports,
-        specific_imports,
-        import_types,
-    }
-}
-
-/// Print analysis summary for regular imports
-pub fn print_import_analysis_summary(
+/// Unified summary printing for any import context
+pub fn print_analysis_summary(
     result: &ImportAnalysisResult,
     imports: &[ImportInfo],
-    source_crate_name: &str,
+    context: &ImportContext,
 ) {
+    let _summary_label = context.get_summary_label();
+    let glob_pattern = context.get_glob_pattern_description();
+    
     println!("📊 Import Analysis Summary:");
     println!("  • Total imports found: {}", imports.len());
-    println!(
-        "  • Glob imports (use {}::*): {}",
-        source_crate_name, result.glob_imports
-    );
+    println!("  • Glob imports ({}): {}", glob_pattern, result.glob_imports);
     println!("  • Specific imports: {}", result.specific_imports);
-    println!(
-        "  • Unique items imported: {}",
-        result.all_imported_items.len()
-    );
+    println!("  • Unique items imported: {}", result.all_imported_items.len());
 
     if !result.all_imported_items.is_empty() {
-        println!("\n🔍 Detected imported items from '{}':", source_crate_name);
+        match context {
+            ImportContext::CrossCrate { source_crate_name } => {
+                println!("\n🔍 Detected imported items from '{}':", source_crate_name);
+            }
+            ImportContext::SelfCrate => {
+                println!("\n🔍 Detected crate:: imports:");
+            }
+        }
         print_imported_items(&result.all_imported_items, &result.import_types);
         println!();
     } else if result.glob_imports > 0 {
-        println!("\n💡 Note: Only glob imports (use {}::*) found. No specific items to re-export.", source_crate_name);
+        match context {
+            ImportContext::CrossCrate { source_crate_name } => {
+                println!("\n💡 Note: Only glob imports (use {}::*) found. No specific items to re-export.", source_crate_name);
+            }
+            ImportContext::SelfCrate => {
+                println!("\n💡 Note: Only glob imports (use crate::*) found. No specific items to re-export.");
+            }
+        }
         println!("   This means the target crate is already using the most general import pattern.");
-        println!();
-    }
-}
-
-/// Print analysis summary for crate:: imports
-pub fn print_crate_analysis_summary(
-    result: &ImportAnalysisResult,
-    imports: &[ImportInfo],
-) {
-    println!("📊 Import Analysis Summary:");
-    println!("  • Total imports found: {}", imports.len());
-    println!("  • Glob imports (use crate::*): {}", result.glob_imports);
-    println!("  • Specific imports: {}", result.specific_imports);
-    println!(
-        "  • Unique items imported: {}",
-        result.all_imported_items.len()
-    );
-
-    if !result.all_imported_items.is_empty() {
-        println!("\n🔍 Detected crate:: imports:");
-        print_imported_items(&result.all_imported_items, &result.import_types);
-        println!();
-    } else if result.glob_imports > 0 {
-        println!("\n💡 Note: Only glob imports (use crate::*) found. No specific items to re-export.");
-        println!("   This means the crate is already using the most general import pattern.");
         println!();
     }
 }

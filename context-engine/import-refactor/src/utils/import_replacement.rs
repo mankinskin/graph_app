@@ -1,8 +1,10 @@
 use crate::{
     import_parser::ImportInfo,
-    utils::file_operations::{
-        get_relative_path_for_display,
-        write_file,
+    utils::{
+        common::format_relative_path,
+        file_operations::{
+            write_file,
+        },
     },
 };
 use anyhow::{
@@ -18,17 +20,126 @@ use std::{
     },
 };
 
-/// Replace imports in target crate files
-pub fn replace_target_imports(
+#[derive(Debug)]
+pub enum ReplacementAction {
+    Replaced { from: String, to: String },
+    Removed { original: String },
+    NotFound { searched_for: String },
+}
+
+/// Strategy for determining how to replace import statements
+pub trait ImportReplacementStrategy {
+    /// Create replacement text for an import, or None to remove it
+    fn create_replacement(&self, import: &ImportInfo) -> Option<String>;
+    
+    /// Whether this import should be removed entirely
+    fn should_remove_import(&self, import: &ImportInfo) -> bool {
+        self.create_replacement(import).is_none()
+    }
+    
+    /// Description of this replacement strategy
+    fn get_description(&self) -> &str;
+    
+    /// Format verbose log message for this replacement
+    fn format_verbose_message(
+        &self, 
+        import: &ImportInfo, 
+        action: ReplacementAction, 
+        file_path: &Path, 
+        workspace_root: &Path
+    ) -> String;
+}
+
+/// Cross-crate replacement: A::module::Item -> A::*
+pub struct CrossCrateReplacementStrategy {
+    pub source_crate_name: String,
+}
+
+impl ImportReplacementStrategy for CrossCrateReplacementStrategy {
+    fn create_replacement(&self, _import: &ImportInfo) -> Option<String> {
+        Some(format!("use {}::*;", self.source_crate_name))
+    }
+    
+    fn get_description(&self) -> &str {
+        "Replace with glob import from source crate"
+    }
+    
+    fn format_verbose_message(
+        &self, 
+        import: &ImportInfo, 
+        action: ReplacementAction, 
+        file_path: &Path, 
+        workspace_root: &Path
+    ) -> String {
+        match action {
+            ReplacementAction::Replaced { from, to } => {
+                format!(
+                    "  Replaced: {} -> {} in {}",
+                    from, to, format_relative_path(file_path, workspace_root)
+                )
+            }
+            ReplacementAction::NotFound { searched_for } => {
+                format!(
+                    "  Warning: Could not find import to replace: {} in {}",
+                    searched_for, format_relative_path(file_path, workspace_root)
+                )
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
+/// Self-crate replacement: crate::module::Item -> (remove, use root exports)
+pub struct SelfCrateReplacementStrategy;
+
+impl ImportReplacementStrategy for SelfCrateReplacementStrategy {
+    fn create_replacement(&self, _import: &ImportInfo) -> Option<String> {
+        None // Remove the import entirely
+    }
+    
+    fn should_remove_import(&self, _import: &ImportInfo) -> bool {
+        true
+    }
+    
+    fn get_description(&self) -> &str {
+        "Remove crate:: imports, use root-level exports"
+    }
+    
+    fn format_verbose_message(
+        &self, 
+        import: &ImportInfo, 
+        action: ReplacementAction, 
+        file_path: &Path, 
+        workspace_root: &Path
+    ) -> String {
+        match action {
+            ReplacementAction::Removed { original } => {
+                format!(
+                    "  Removed crate:: import '{}' from {}",
+                    original, format_relative_path(file_path, workspace_root)
+                )
+            }
+            ReplacementAction::NotFound { searched_for } => {
+                format!(
+                    "  Warning: Could not find crate:: import to remove: {} in {}",
+                    searched_for, format_relative_path(file_path, workspace_root)
+                )
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
+/// Unified import replacement using strategy pattern
+pub fn replace_imports_with_strategy<S: ImportReplacementStrategy>(
     imports: Vec<ImportInfo>,
-    source_crate_name: &str,
+    strategy: S,
     workspace_root: &Path,
     dry_run: bool,
     verbose: bool,
 ) -> Result<()> {
-    // Group imports by file
+    // Group imports by file (EXACT SAME LOGIC AS BEFORE)
     let mut imports_by_file: HashMap<PathBuf, Vec<ImportInfo>> = HashMap::new();
-
     for import in imports {
         imports_by_file
             .entry(import.file_path.clone())
@@ -37,41 +148,11 @@ pub fn replace_target_imports(
     }
 
     // Process each file
-    for (file_path, file_imports) in &imports_by_file {
-        replace_imports_in_file(
-            file_path,
-            file_imports.clone(),
-            source_crate_name,
-            workspace_root,
-            dry_run,
-            verbose,
-        )?;
-    }
-
-    Ok(())
-}
-
-/// Replace crate:: imports within the same crate files (for self-refactor mode)
-pub fn replace_crate_imports(
-    imports: Vec<ImportInfo>,
-    workspace_root: &Path,
-    dry_run: bool,
-    verbose: bool,
-) -> Result<()> {
-    // Group imports by file
-    let mut imports_by_file: HashMap<PathBuf, Vec<ImportInfo>> = HashMap::new();
-
-    for import in imports {
-        imports_by_file
-            .entry(import.file_path.clone())
-            .or_default()
-            .push(import);
-    }
-
     for (file_path, file_imports) in imports_by_file {
-        replace_crate_imports_in_file(
+        replace_imports_in_file_with_strategy(
             &file_path,
             file_imports,
+            &strategy,
             workspace_root,
             dry_run,
             verbose,
@@ -81,11 +162,11 @@ pub fn replace_crate_imports(
     Ok(())
 }
 
-/// Replace imports in a specific file with glob imports
-fn replace_imports_in_file(
+/// Unified file-level replacement with strategy
+fn replace_imports_in_file_with_strategy<S: ImportReplacementStrategy>(
     file_path: &Path,
     imports: Vec<ImportInfo>,
-    source_crate_name: &str,
+    strategy: &S,
     workspace_root: &Path,
     dry_run: bool,
     verbose: bool,
@@ -101,96 +182,26 @@ fn replace_imports_in_file(
     sorted_imports.sort_by(|a, b| b.line_number.cmp(&a.line_number));
 
     for import in sorted_imports {
-        // Look for the import statement in the content
-        if let Some(import_start) =
-            new_content.find(&format!("use {};", import.import_path))
-        {
-            // Find the end of the line
-            let import_end = new_content[import_start..]
-                .find('\n')
-                .map(|pos| import_start + pos + 1)
-                .unwrap_or(new_content.len());
-
-            // Replace with the new import
-            let replacement = format!("use {}::*;", source_crate_name);
-            new_content.replace_range(
-                import_start..import_end,
-                &format!("{}\n", replacement),
-            );
+        let replacement_result = process_import_replacement(
+            &mut new_content,
+            &import,
+            strategy,
+            file_path,
+            workspace_root,
+            verbose,
+        );
+        
+        if replacement_result {
             replacements_made += 1;
-
-            if verbose {
-                println!(
-                    "  Replaced: use {}; -> {}",
-                    import.import_path, replacement
-                );
-            }
-        } else {
-            // Try to find a more general pattern
-            let patterns = [
-                format!("use {}", import.import_path),
-                format!("use {}::", source_crate_name),
-            ];
-
-            let mut found = false;
-            for pattern in &patterns {
-                if let Some(pattern_start) = new_content.find(pattern) {
-                    // Find the semicolon that ends this use statement
-                    if let Some(semicolon_pos) =
-                        new_content[pattern_start..].find(';')
-                    {
-                        let use_end = pattern_start + semicolon_pos + 1;
-
-                        // Find the start of the line
-                        let line_start = new_content[..pattern_start]
-                            .rfind('\n')
-                            .map(|pos| pos + 1)
-                            .unwrap_or(0);
-
-                        // Replace the entire use statement
-                        let replacement =
-                            format!("use {}::*;", source_crate_name);
-                        let full_replacement = format!(
-                            "{}{}",
-                            &new_content[line_start..pattern_start],
-                            replacement
-                        );
-
-                        new_content.replace_range(
-                            line_start..use_end,
-                            &full_replacement,
-                        );
-                        replacements_made += 1;
-                        found = true;
-
-                        if verbose {
-                            println!(
-                                "  Replaced pattern: {} -> {}",
-                                pattern, replacement
-                            );
-                        }
-                        break;
-                    }
-                }
-            }
-
-            if !found && verbose {
-                println!(
-                    "  Warning: Could not find import to replace: {}",
-                    import.import_path
-                );
-            }
         }
     }
 
     if replacements_made > 0 {
         if verbose {
-            let relative_path =
-                get_relative_path_for_display(file_path, workspace_root);
             println!(
                 "Made {} replacements in {}",
                 replacements_made,
-                relative_path.display()
+                format_relative_path(file_path, workspace_root)
             );
         }
 
@@ -202,104 +213,135 @@ fn replace_imports_in_file(
     Ok(())
 }
 
-/// Replace crate:: imports in a specific file (for self-refactor mode)
-fn replace_crate_imports_in_file(
+/// Process a single import replacement using strategy
+fn process_import_replacement<S: ImportReplacementStrategy>(
+    content: &mut String,
+    import: &ImportInfo,
+    strategy: &S,
     file_path: &Path,
-    imports: Vec<ImportInfo>,
     workspace_root: &Path,
-    dry_run: bool,
     verbose: bool,
-) -> Result<()> {
-    let original_content = fs::read_to_string(file_path)
-        .with_context(|| format!("Failed to read {}", file_path.display()))?;
+) -> bool {
+    // Try exact match first
+    let exact_pattern = format!("use {};", import.import_path);
+    if let Some(import_start) = content.find(&exact_pattern) {
+        return apply_replacement_at_position(
+            content, import_start, &exact_pattern, import, strategy, file_path, workspace_root, verbose
+        );
+    }
 
-    let mut new_content = original_content.clone();
-    let mut replacements_made = 0;
+    // Try pattern variations (UNIFIED LOGIC FROM BOTH PREVIOUS FUNCTIONS)
+    let patterns = vec![
+        format!("use {}", import.import_path),
+        format!("use {}::", import.import_path.split("::").next().unwrap_or("")),
+    ];
 
-    // Sort imports by line number in reverse order to avoid offset issues
-    let mut sorted_imports = imports;
-    sorted_imports.sort_by(|a, b| b.line_number.cmp(&a.line_number));
-
-    for import in sorted_imports {
-        // For crate:: imports, we want to replace them with direct imports (remove "crate::" prefix)
-        // For example: "use crate::module::Item;" becomes "use module::Item;" or just the item name
-
-        // Look for the import statement in the content
-        if let Some(import_start) =
-            new_content.find(&format!("use {};", import.import_path))
-        {
-            // Find the end of the line
-            let import_end = new_content[import_start..]
-                .find('\n')
-                .map(|pos| import_start + pos + 1)
-                .unwrap_or(new_content.len());
-
-            // Since we're adding pub use statements to the root, we can remove the crate:: imports
-            // and they'll be available at the root level
-            let relative_path =
-                get_relative_path_for_display(file_path, workspace_root);
-
-            if verbose {
-                println!(
-                    "  Removing crate:: import '{}' from {}",
-                    import.import_path,
-                    relative_path.display()
-                );
-            }
-
-            // Remove the import line entirely since items will be available at root
-            new_content.replace_range(import_start..import_end, "");
-            replacements_made += 1;
-        } else {
-            // Try variations of the import statement format
-            let patterns = [
-                format!("use {}::{{", import.import_path),
-                format!("use {{\n    {}", import.import_path),
-            ];
-
-            let mut found = false;
-            for pattern in &patterns {
-                if let Some(_pattern_start) = new_content.find(pattern) {
-                    if verbose {
-                        let relative_path = get_relative_path_for_display(
-                            file_path,
-                            workspace_root,
-                        );
-                        println!(
-                            "  Found crate:: import pattern '{}' in {}",
-                            pattern,
-                            relative_path.display()
-                        );
-                    }
-                    found = true;
-                    break;
-                }
-            }
-
-            if !found && verbose {
-                println!(
-                    "  Warning: Could not find crate:: import to remove: {}",
-                    import.import_path
+    for pattern in patterns {
+        if let Some(pattern_start) = content.find(&pattern) {
+            if let Some(semicolon_pos) = content[pattern_start..].find(';') {
+                let use_end = pattern_start + semicolon_pos + 1;
+                return apply_replacement_in_range(
+                    content, pattern_start, use_end, import, strategy, file_path, workspace_root, verbose
                 );
             }
         }
     }
 
-    if replacements_made > 0 {
-        if verbose {
-            let relative_path =
-                get_relative_path_for_display(file_path, workspace_root);
-            println!(
-                "Removed {} crate:: imports from {}",
-                replacements_made,
-                relative_path.display()
-            );
-        }
-
-        if !dry_run {
-            write_file(file_path, &new_content)?;
-        }
+    // Not found
+    if verbose {
+        let action = ReplacementAction::NotFound { 
+            searched_for: import.import_path.clone() 
+        };
+        println!("{}", strategy.format_verbose_message(import, action, file_path, workspace_root));
     }
-
-    Ok(())
+    false
 }
+
+fn apply_replacement_at_position<S: ImportReplacementStrategy>(
+    content: &mut String,
+    start: usize,
+    original_text: &str,
+    import: &ImportInfo,
+    strategy: &S,
+    file_path: &Path,
+    workspace_root: &Path,
+    verbose: bool,
+) -> bool {
+    let end = start + original_text.len();
+    
+    if let Some(replacement) = strategy.create_replacement(import) {
+        // Replace with new import
+        content.replace_range(start..end, &replacement);
+        
+        if verbose {
+            let action = ReplacementAction::Replaced {
+                from: original_text.to_string(),
+                to: replacement,
+            };
+            println!("{}", strategy.format_verbose_message(import, action, file_path, workspace_root));
+        }
+    } else {
+        // Remove import entirely
+        // Find line boundaries to remove the entire line
+        let line_start = content[..start].rfind('\n').map(|pos| pos + 1).unwrap_or(0);
+        let line_end = content[start..].find('\n').map(|pos| start + pos + 1).unwrap_or(content.len());
+        
+        content.replace_range(line_start..line_end, "");
+        
+        if verbose {
+            let action = ReplacementAction::Removed {
+                original: original_text.to_string(),
+            };
+            println!("{}", strategy.format_verbose_message(import, action, file_path, workspace_root));
+        }
+    }
+    
+    true
+}
+
+fn apply_replacement_in_range<S: ImportReplacementStrategy>(
+    content: &mut String,
+    start: usize,
+    end: usize,
+    import: &ImportInfo,
+    strategy: &S,
+    file_path: &Path,
+    workspace_root: &Path,
+    verbose: bool,
+) -> bool {
+    let original_text = content[start..end].to_string(); // Clone to avoid borrowing issues
+    
+    if let Some(replacement) = strategy.create_replacement(import) {
+        // Find the start of the line for proper replacement
+        let line_start = content[..start].rfind('\n').map(|pos| pos + 1).unwrap_or(0);
+        let _whitespace = &content[line_start..start];
+        
+        content.replace_range(start..end, &replacement);
+        
+        if verbose {
+            let action = ReplacementAction::Replaced {
+                from: original_text,
+                to: replacement,
+            };
+            println!("{}", strategy.format_verbose_message(import, action, file_path, workspace_root));
+        }
+    } else {
+        // Remove import entirely
+        // Find line boundaries to remove the entire line
+        let line_start = content[..start].rfind('\n').map(|pos| pos + 1).unwrap_or(0);
+        let line_end = content[end..].find('\n').map(|pos| end + pos + 1).unwrap_or(content.len());
+        
+        content.replace_range(line_start..line_end, "");
+        
+        if verbose {
+            let action = ReplacementAction::Removed {
+                original: original_text,
+            };
+            println!("{}", strategy.format_verbose_message(import, action, file_path, workspace_root));
+        }
+    }
+    
+    true
+}
+
+

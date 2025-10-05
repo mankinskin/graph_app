@@ -11,6 +11,7 @@ mod utils;
 use crate_analyzer::CrateAnalyzer;
 use import_parser::ImportParser;
 use refactor_engine::RefactorEngine;
+use utils::common::format_relative_path;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -29,6 +30,13 @@ struct Args {
         help = "Refactor crate:: imports within the specified crate to root-level exports"
     )]
     self_refactor: bool,
+
+    /// Run duplication analyzer on the codebase
+    #[arg(
+        long = "analyze",
+        help = "Analyze the codebase for duplicate and similar functions"
+    )]
+    analyze: bool,
 
     /// Positional arguments: [SOURCE_CRATE] [TARGET_CRATE] or [CRATE] when using --self
     #[arg(
@@ -87,7 +95,10 @@ impl Args {
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    if args.self_refactor {
+    if args.analyze {
+        // Analyzer mode: analyze codebase for duplications
+        return run_analyzer(&args);
+    } else if args.self_refactor {
         // Self-refactor mode: refactor crate:: imports within a single crate
         return run_self_refactor(&args);
     } else {
@@ -157,14 +168,10 @@ fn run_self_refactor(args: &Args) -> Result<()> {
             .unwrap_or_else(|_| args.workspace_root.clone());
         println!("\n📝 Detailed import list:");
         for import in &imports {
-            let relative_path = import
-                .file_path
-                .strip_prefix(&workspace_root)
-                .unwrap_or(&import.file_path);
             println!(
                 "  • {} in {}",
                 import.import_path,
-                relative_path.display()
+                format_relative_path(&import.file_path, &workspace_root)
             );
         }
         println!();
@@ -266,14 +273,10 @@ fn run_standard_refactor(args: &Args) -> Result<()> {
             .unwrap_or_else(|_| args.workspace_root.clone());
         println!("\n📝 Detailed import list:");
         for import in &imports {
-            let relative_path = import
-                .file_path
-                .strip_prefix(&workspace_root)
-                .unwrap_or(&import.file_path);
             println!(
                 "  • {} in {}",
                 import.import_path,
-                relative_path.display()
+                format_relative_path(&import.file_path, &workspace_root)
             );
         }
         println!();
@@ -301,4 +304,9 @@ fn run_standard_refactor(args: &Args) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn run_analyzer(args: &Args) -> Result<()> {
+    utils::analyzer_cli::run_analyzer(Some(args.workspace_root.clone()), args.verbose)
+        .map_err(|e| anyhow::anyhow!("Analyzer failed: {}", e))
 }

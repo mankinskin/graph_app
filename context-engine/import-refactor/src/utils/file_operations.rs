@@ -40,11 +40,3 @@ pub fn check_crate_compilation(crate_path: &Path, verbose: bool) -> Result<bool>
 
     Ok(output.status.success())
 }
-
-/// Helper to get relative path for display purposes
-pub fn get_relative_path_for_display<'a>(
-    file_path: &'a Path,
-    workspace_root: &Path,
-) -> &'a Path {
-    file_path.strip_prefix(workspace_root).unwrap_or(file_path)
-}
