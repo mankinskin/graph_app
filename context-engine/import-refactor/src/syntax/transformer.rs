@@ -1,10 +1,8 @@
 use crate::{
     analysis::crates::CrateNames,
-    syntax::parser::ImportInfo,
-    common::{
-        path::format_relative_path,
-    },
+    common::path::format_relative_path,
     io::files::write_file,
+    syntax::parser::ImportInfo,
 };
 use anyhow::{
     Context,
@@ -82,7 +80,7 @@ impl ImportReplacementStrategy for CrossCrateReplacementStrategy {
         match action {
             ReplacementAction::Replaced { from, to } => {
                 format!(
-                    "  Replaced: {} -> {} in {}",
+                    "Replaced: {} -> {}\n\tin {}",
                     from,
                     to,
                     format_relative_path(file_path)
@@ -90,7 +88,7 @@ impl ImportReplacementStrategy for CrossCrateReplacementStrategy {
             },
             ReplacementAction::NotFound { searched_for } => {
                 format!(
-                    "  Warning: Could not find import to replace: {} in {}",
+                    "Warning: Could not find import to replace:\n\t{} in {}",
                     searched_for,
                     format_relative_path(file_path)
                 )
@@ -194,6 +192,13 @@ fn replace_imports_in_file_with_strategy<S: ImportReplacementStrategy>(
 
     let mut new_content = original_content.clone();
     let mut replacements_made = 0;
+
+    // Check if this is a main.rs file where crate::* is invalid
+    let is_main_rs = file_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .map(|name| name == "main.rs")
+        .unwrap_or(false);
 
     // Sort imports by line number in reverse order to avoid offset issues
     let mut sorted_imports = imports;

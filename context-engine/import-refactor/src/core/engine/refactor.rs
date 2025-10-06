@@ -273,11 +273,9 @@ impl RefactorEngine {
                 if trimmed.contains("::") {
                     let after_use =
                         trimmed.strip_prefix("pub use").unwrap().trim();
-                    // Skip if it looks like a local crate import
-                    if !is_external_crate_line(after_use) {
-                        skip_until_semicolon = true;
-                        continue; // Skip this line
-                    }
+                    // Skip this pub use statement to avoid duplicates
+                    skip_until_semicolon = true;
+                    continue;
                 } else {
                     // Simple pub use statement like "pub use math"
                     skip_until_semicolon = true;
@@ -324,45 +322,4 @@ impl RefactorEngine {
 
         Ok(())
     }
-}
-
-/// Check if a pub use line represents an external crate import
-fn is_external_crate_line(after_use: &str) -> bool {
-    // Common external crate prefixes that should not be merged
-    let external_prefixes = [
-        "std::",
-        "core::",
-        "alloc::",
-        "serde::",
-        "tokio::",
-        "async_std::",
-        "log::",
-        "env_logger::",
-        "clap::",
-        "reqwest::",
-        "hyper::",
-        "tonic::",
-        "diesel::",
-        "sqlx::",
-        "sea_orm::",
-        "actix::",
-        "warp::",
-        "axum::",
-        "anyhow::",
-        "thiserror::",
-        "eyre::",
-        "uuid::",
-        "chrono::",
-        "time::",
-        "rand::",
-        "regex::",
-        "lazy_static::",
-        "once_cell::",
-        "parking_lot::",
-        "crossbeam::",
-    ];
-
-    external_prefixes
-        .iter()
-        .any(|prefix| after_use.starts_with(prefix))
 }

@@ -127,15 +127,49 @@ impl RefactorApi {
         // Parse imports based on the type of refactoring
         match &crate_names {
             CrateNames::SelfRefactor { .. } => {
-                // For self-refactoring, parse crate:: imports in the target crate
+                // For self-refactoring, parse both crate:: imports and explicit crate name imports
                 let source_path = crate_paths.source_path();
                 let crate_name = match &crate_names {
                     CrateNames::SelfRefactor { crate_name } => crate_name,
                     _ => unreachable!(),
                 };
-                let import_parser = ImportParser::new(crate_name);
-                let imports =
-                    import_parser.find_imports_in_crate(source_path)?;
+
+                // Parse crate:: imports
+                let crate_parser = ImportParser::new("crate");
+                let crate_imports =
+                    crate_parser.find_imports_in_crate(source_path)?;
+
+                // Parse explicit crate name imports
+                let explicit_parser = ImportParser::new(crate_name);
+                let explicit_imports =
+                    explicit_parser.find_imports_in_crate(source_path)?;
+
+                // Combine both types of imports, normalizing explicit imports to crate:: format
+                let mut imports = crate_imports;
+                for mut import in explicit_imports {
+                    // Normalize explicit crate name imports to crate:: format to avoid duplicates
+                    let crate_name_prefix = format!("{}::", crate_name);
+                    if import.import_path.starts_with(&crate_name_prefix) {
+                        import.import_path = import
+                            .import_path
+                            .replace(&crate_name_prefix, "crate::");
+                    }
+
+                    // Also normalize the imported items
+                    for item in &mut import.imported_items {
+                        if item.starts_with(&crate_name_prefix) {
+                            *item = item.replace(&crate_name_prefix, "crate::");
+                        }
+                    }
+
+                    // Only add if we don't already have this import (avoid duplicates)
+                    if !imports.iter().any(|existing| {
+                        existing.import_path == import.import_path
+                            && existing.file_path == import.file_path
+                    }) {
+                        imports.push(import);
+                    }
+                }
 
                 if !quiet {
                     println!("📊 Analysis Results:");
