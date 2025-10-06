@@ -1,10 +1,58 @@
 #![feature(iter_intersperse)]
 
-pub mod compilation_checker;
-pub mod crate_analyzer;
-pub mod existing_export_parser;
-pub mod import_parser;
-pub mod item_info;
-pub mod refactor_api;
-pub mod refactor_engine;
-pub mod utils;
+// Import-Refactor Crate - Modular Architecture
+//
+// This crate provides tools for refactoring Rust import statements and analyzing
+// code duplications with optional AI assistance.
+
+// Core refactoring functionality - always available
+pub use crate::{
+    analysis::{
+        analyze_imports,
+        CrateAnalyzer,
+        CrateNames,
+        CratePaths,
+    },
+    common::{
+        Error,
+        Result,
+    },
+    core::{
+        RefactorApi,
+        RefactorConfig,
+        RefactorConfigBuilder,
+        RefactorResult,
+    },
+    syntax::parser::ImportParser,
+};
+
+// Feature-gated APIs
+#[cfg(feature = "ai")]
+pub use crate::ai::{
+    AiClient,
+    AiClientFactory,
+};
+
+#[cfg(feature = "embedded-llm")]
+pub use crate::server::{
+    CandleServer,
+    ServerConfig,
+};
+
+// Module declarations
+mod analysis;
+mod common;
+mod core;
+mod io;
+mod syntax;
+
+// Feature-gated modules
+#[cfg(feature = "ai")]
+mod ai;
+
+#[cfg(feature = "embedded-llm")]
+pub mod server;
+
+// CLI module is private - only used by main.rs
+#[cfg(not(test))]
+mod cli;

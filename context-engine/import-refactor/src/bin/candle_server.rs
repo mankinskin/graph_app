@@ -1,13 +1,19 @@
 // Candle Server Binary - Start the local LLM server
 // This binary starts the candle-based LLM server for local model hosting
 
-use anyhow::{Context, Result};
-use clap::{Arg, Command};
-use import_refactor::utils::candle_config::ServerConfig;
+use anyhow::{
+    Context,
+    Result,
+};
+use clap::{
+    Arg,
+    Command,
+};
+use import_refactor::server::config::ServerConfig;
 use std::path::PathBuf;
 
 #[cfg(feature = "embedded-llm")]
-use import_refactor::utils::candle_server::CandleServer;
+use import_refactor::server::candle::CandleServer;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -65,7 +71,9 @@ async fn main() -> Result<()> {
     #[cfg(not(feature = "embedded-llm"))]
     {
         eprintln!("❌ Embedded LLM feature not compiled.");
-        eprintln!("   Rebuild with: cargo build --release --features embedded-llm");
+        eprintln!(
+            "   Rebuild with: cargo build --release --features embedded-llm"
+        );
         std::process::exit(1);
     }
 
@@ -80,9 +88,10 @@ async fn run_server(matches: clap::ArgMatches) -> Result<()> {
     println!("🚀 Starting Candle LLM Server...");
 
     // Load configuration
-    let config_path = matches.get_one::<String>("config")
+    let config_path = matches
+        .get_one::<String>("config")
         .map(|s| PathBuf::from(s));
-    
+
     let mut config = ServerConfig::load_or_default(config_path.as_ref())
         .context("Failed to load configuration")?;
 
@@ -91,8 +100,7 @@ async fn run_server(matches: clap::ArgMatches) -> Result<()> {
         config.host = host.clone();
     }
     if let Some(port_str) = matches.get_one::<String>("port") {
-        config.port = port_str.parse()
-            .context("Invalid port number")?;
+        config.port = port_str.parse().context("Invalid port number")?;
     }
     if let Some(model) = matches.get_one::<String>("model") {
         config.model.model_id = model.clone();
@@ -102,7 +110,8 @@ async fn run_server(matches: clap::ArgMatches) -> Result<()> {
     }
 
     // Validate configuration
-    config.validate()
+    config
+        .validate()
         .context("Configuration validation failed")?;
 
     println!("📋 Configuration:");
@@ -114,14 +123,16 @@ async fn run_server(matches: clap::ArgMatches) -> Result<()> {
 
     // Create server instance
     println!("🤖 Initializing model...");
-    let server = match CandleServer::with_config(config).await
-        .context("Failed to create server")? {
+    let server = match CandleServer::with_config(config)
+        .await
+        .context("Failed to create server")?
+    {
         Some(server) => server,
         None => {
             // User chose to quit gracefully
             println!("✅ Exited gracefully");
             return Ok(());
-        }
+        },
     };
 
     // If download-only mode, exit after model is ready
@@ -134,12 +145,18 @@ async fn run_server(matches: clap::ArgMatches) -> Result<()> {
     // Start the HTTP server
     println!("🌐 Starting HTTP server...");
     let config = server.get_config().await;
-    println!("   OpenAI-compatible API at: http://{}:{}/v1/chat/completions", 
-             config.host, config.port);
-    println!("   Health check at: http://{}:{}/health", 
-             config.host, config.port);
-    println!("   Model info at: http://{}:{}/v1/models", 
-             config.host, config.port);
+    println!(
+        "   OpenAI-compatible API at: http://{}:{}/v1/chat/completions",
+        config.host, config.port
+    );
+    println!(
+        "   Health check at: http://{}:{}/health",
+        config.host, config.port
+    );
+    println!(
+        "   Model info at: http://{}:{}/v1/models",
+        config.host, config.port
+    );
     println!();
     println!("Press Ctrl+C to stop the server");
 
@@ -153,10 +170,10 @@ async fn run_server(matches: clap::ArgMatches) -> Result<()> {
     // Wait for Ctrl+C
     tokio::signal::ctrl_c().await?;
     println!("\n🛑 Shutdown signal received...");
-    
+
     // Cancel the server task
     server_task.abort();
-    
+
     println!("✅ Server stopped gracefully");
     Ok(())
 }

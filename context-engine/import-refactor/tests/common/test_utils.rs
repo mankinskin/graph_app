@@ -3,17 +3,13 @@ use anyhow::{
     Result,
 };
 use import_refactor::{
-    crate_analyzer::{
-        CrateAnalyzer,
-        CrateNames,
-        CratePaths,
-    },
-    import_parser::ImportParser,
-    refactor_api::{
-        RefactorApi,
-        RefactorConfigBuilder,
-    },
-    utils::import_analysis::analyze_imports,
+    CrateAnalyzer,
+    CrateNames,
+    CratePaths,
+    ImportParser,
+    RefactorApi,
+    RefactorConfigBuilder,
+    analyze_imports,
 };
 use std::{
     fs,
