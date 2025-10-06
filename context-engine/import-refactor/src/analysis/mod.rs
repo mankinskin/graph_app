@@ -1,16 +1,26 @@
 // Code analysis functionality
 
-pub use self::crates::{CrateAnalyzer, CrateNames, CratePaths};
-pub use self::imports::{analyze_imports};
-pub use self::exports_analyzer::ExportAnalyzer;
+pub use self::{
+    crates::{
+        CrateAnalyzer,
+        CrateNames,
+        CratePaths,
+    },
+    exports::ExportAnalyzer,
+    imports::analyze_imports,
+};
 
 // Conditional public interface for AI features
 #[cfg(feature = "ai")]
-pub use self::duplication::{CodebaseDuplicationAnalyzer, DuplicationAnalysis, AiProvider};
+pub use self::duplication::{
+    AiProvider,
+    CodebaseDuplicationAnalyzer,
+    DuplicationAnalysis,
+};
 
-pub mod crates;
-pub mod imports;
-pub mod exports_analyzer;
-pub mod duplication;
-pub mod macro_scanning;
 mod compilation;
+pub mod crates;
+pub mod duplication;
+pub mod exports;
+pub mod imports;
+pub mod macro_scanning;

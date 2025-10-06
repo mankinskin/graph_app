@@ -233,13 +233,29 @@ impl CandleServer {
 
     /// Ensure the model is downloaded and loaded with interactive error handling
     async fn ensure_model_ready(&self) -> ServerResult<()> {
-        loop {
-            match self.try_load_model().await {
-                Ok(()) => {
-                    println!("✅ Model loaded successfully!");
-                    return ServerResult::Ok(());
-                },
-                Err(e) => {
+        let is_interactive = {
+            let config = self.config.read().await;
+            config.server.interactive_mode
+        };
+
+        match self.try_load_model().await {
+            Ok(()) => {
+                println!("✅ Model loaded successfully!");
+                return ServerResult::Ok(());
+            },
+            Err(e) => {
+                if !is_interactive {
+                    // Non-interactive mode: just report the error and quit gracefully
+                    println!(
+                        "❌ Failed to load model in non-interactive mode: {}",
+                        e
+                    );
+                    println!("💡 To configure a model, run the server in interactive mode or provide a valid configuration file.");
+                    return ServerResult::UserQuit;
+                }
+
+                // Interactive mode: show user options
+                loop {
                     println!("❌ Failed to load model: {}", e);
 
                     // Show available options
@@ -272,7 +288,20 @@ impl CandleServer {
                                     config.model.model_id = model_id.clone();
                                 }
                                 println!("🔄 Switching to model: {}", model_id);
-                                continue;
+
+                                // Try loading the new model
+                                match self.try_load_model().await {
+                                    Ok(()) => {
+                                        println!(
+                                            "✅ Model loaded successfully!"
+                                        );
+                                        return ServerResult::Ok(());
+                                    },
+                                    Err(new_e) => {
+                                        println!("❌ Failed to load selected model: {}", new_e);
+                                        continue; // Continue the loop to show options again
+                                    },
+                                }
                             }
                         },
                         "2" => {
@@ -285,12 +314,37 @@ impl CandleServer {
                                     config.model.model_id = model_id.clone();
                                 }
                                 println!("🔄 Switching to model: {}", model_id);
-                                continue;
+
+                                // Try loading the new model
+                                match self.try_load_model().await {
+                                    Ok(()) => {
+                                        println!(
+                                            "✅ Model loaded successfully!"
+                                        );
+                                        return ServerResult::Ok(());
+                                    },
+                                    Err(new_e) => {
+                                        println!("❌ Failed to load downloaded model: {}", new_e);
+                                        continue; // Continue the loop to show options again
+                                    },
+                                }
                             }
                         },
                         "3" => {
                             println!("🔄 Retrying with current model...");
-                            continue;
+                            match self.try_load_model().await {
+                                Ok(()) => {
+                                    println!("✅ Model loaded successfully!");
+                                    return ServerResult::Ok(());
+                                },
+                                Err(retry_e) => {
+                                    println!(
+                                        "❌ Failed to load model on retry: {}",
+                                        retry_e
+                                    );
+                                    continue; // Continue the loop to show options again
+                                },
+                            }
                         },
                         "4" => {
                             println!("👋 Goodbye!");
@@ -301,8 +355,8 @@ impl CandleServer {
                             continue;
                         },
                     }
-                },
-            }
+                }
+            },
         }
     }
 
@@ -981,16 +1035,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_server_creation() {
-        // This would fail without actual model files, which is expected in tests
-        let result = CandleServer::new().await;
+        // Test server creation in non-interactive mode without model files
+        let config = ServerConfig::test_config(); // Use non-interactive config
+        let result = CandleServer::with_config(config).await;
+
         match result {
-            Ok(_) => println!("Server created successfully"),
+            Ok(None) => {
+                // Expected: server should gracefully exit when no model is available in non-interactive mode
+                println!("✅ Server correctly exited gracefully in non-interactive mode");
+            },
+            Ok(Some(_)) => {
+                panic!("❌ Unexpected: Server should not have loaded without model files in test environment");
+            },
             Err(e) => {
-                println!("Expected error in test environment: {}", e);
-                assert!(
-                    e.to_string().contains("Model")
-                        || e.to_string().contains("download")
-                );
+                panic!("❌ Unexpected error during server creation: {}", e);
             },
         }
     }

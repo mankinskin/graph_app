@@ -4,6 +4,10 @@ use anyhow::{
 };
 use std::{
     fs,
+    hash::{
+        Hash,
+        Hasher,
+    },
     path::{
         Path,
         PathBuf,
@@ -14,7 +18,10 @@ use walkdir::WalkDir;
 
 use crate::{
     analysis::crates::CratePaths,
-    syntax::navigator::{UseTreeNavigator, UseTreeItemCollector},
+    syntax::navigator::{
+        UseTreeItemCollector,
+        UseTreeNavigator,
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -23,6 +30,55 @@ pub struct ImportInfo {
     pub import_path: String,
     pub line_number: usize,
     pub imported_items: Vec<String>,
+}
+
+impl PartialEq for ImportInfo {
+    fn eq(
+        &self,
+        other: &Self,
+    ) -> bool {
+        // Only compare file_path and import_path for deduplication
+        self.file_path == other.file_path
+            && self.import_path == other.import_path
+    }
+}
+
+impl Eq for ImportInfo {}
+
+impl Hash for ImportInfo {
+    fn hash<H: Hasher>(
+        &self,
+        state: &mut H,
+    ) {
+        // Only hash file_path and import_path for deduplication
+        // This allows ImportInfo to be used directly in IndexSet
+        self.file_path.hash(state);
+        self.import_path.hash(state);
+    }
+}
+
+impl ImportInfo {
+    /// Normalize explicit crate name imports to crate:: format
+    /// This converts imports like `my_crate::module::Item` to `crate::module::Item`
+    pub fn normalize_to_crate_format(
+        &mut self,
+        crate_name: &str,
+    ) {
+        let crate_name_prefix = format!("{}::", crate_name);
+
+        // Normalize the import path
+        if self.import_path.starts_with(&crate_name_prefix) {
+            self.import_path =
+                self.import_path.replace(&crate_name_prefix, "crate::");
+        }
+
+        // Normalize the imported items
+        for item in &mut self.imported_items {
+            if item.starts_with(&crate_name_prefix) {
+                *item = item.replace(&crate_name_prefix, "crate::");
+            }
+        }
+    }
 }
 
 pub struct ImportParser {
@@ -129,40 +185,54 @@ impl CrateFilteredCollector {
 }
 
 impl UseTreeItemCollector for CrateFilteredCollector {
-    fn collect_name(&mut self, name: &str, path: &[String]) {
+    fn collect_name(
+        &mut self,
+        name: &str,
+        path: &[String],
+    ) {
         if path.is_empty() || path[0] != self.target_crate {
             return;
         }
-        
+
         let full_path = if path.len() == 1 {
             format!("{}::{}", path[0], name)
         } else {
             format!("{}::{}::{}", path[0], path[1..].join("::"), name)
         };
-        
-        self.collected_imports.push((full_path.clone(), vec![full_path]));
+
+        self.collected_imports
+            .push((full_path.clone(), vec![full_path]));
     }
 
-    fn collect_glob(&mut self, path: &[String]) {
+    fn collect_glob(
+        &mut self,
+        path: &[String],
+    ) {
         if path.is_empty() || path[0] != self.target_crate {
             return;
         }
-        
+
         let glob_path = format!("{}::*", path.join("::"));
-        self.collected_imports.push((glob_path, vec!["*".to_string()]));
+        self.collected_imports
+            .push((glob_path, vec!["*".to_string()]));
     }
 
-    fn collect_rename(&mut self, original: &str, renamed: &str, path: &[String]) {
+    fn collect_rename(
+        &mut self,
+        original: &str,
+        renamed: &str,
+        path: &[String],
+    ) {
         if path.is_empty() || path[0] != self.target_crate {
             return;
         }
-        
+
         let full_path = if path.len() == 1 {
             format!("{}::{}", path[0], original)
         } else {
             format!("{}::{}::{}", path[0], path[1..].join("::"), original)
         };
-        
+
         let display_path = format!("{} as {}", full_path, renamed);
         self.collected_imports.push((display_path, vec![full_path]));
     }
@@ -174,9 +244,10 @@ impl<'ast> Visit<'ast> for ImportVisitor {
         node: &'ast syn::ItemUse,
     ) {
         // Use the navigator to collect imports filtered by crate
-        let mut collector = CrateFilteredCollector::new(&self.source_crate_name);
+        let mut collector =
+            CrateFilteredCollector::new(&self.source_crate_name);
         self.navigator.extract_items(&node.tree, &mut collector);
-        
+
         // Convert collected imports to ImportInfo objects
         for (import_path, imported_items) in collector.collected_imports {
             self.imports.push(ImportInfo {
@@ -186,5 +257,149 @@ impl<'ast> Visit<'ast> for ImportVisitor {
                 imported_items,
             });
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_normalize_to_crate_format() {
+        let mut import_info = ImportInfo {
+            file_path: PathBuf::from("test.rs"),
+            import_path: "my_crate::module::Item".to_string(),
+            line_number: 1,
+            imported_items: vec![
+                "my_crate::module::Item".to_string(),
+                "other_crate::Item".to_string(),
+                "my_crate::other::Thing".to_string(),
+            ],
+        };
+
+        import_info.normalize_to_crate_format("my_crate");
+
+        assert_eq!(import_info.import_path, "crate::module::Item");
+        assert_eq!(
+            import_info.imported_items,
+            vec![
+                "crate::module::Item",
+                "other_crate::Item", // Should remain unchanged
+                "crate::other::Thing",
+            ]
+        );
+    }
+
+    #[test]
+    fn test_normalize_to_crate_format_no_match() {
+        let mut import_info = ImportInfo {
+            file_path: PathBuf::from("test.rs"),
+            import_path: "other_crate::module::Item".to_string(),
+            line_number: 1,
+            imported_items: vec!["other_crate::module::Item".to_string()],
+        };
+
+        import_info.normalize_to_crate_format("my_crate");
+
+        // Should remain unchanged
+        assert_eq!(import_info.import_path, "other_crate::module::Item");
+        assert_eq!(
+            import_info.imported_items,
+            vec!["other_crate::module::Item"]
+        );
+    }
+
+    #[test]
+    fn test_import_info_equality_and_hashing() {
+        use indexmap::IndexSet;
+
+        let import1 = ImportInfo {
+            file_path: PathBuf::from("test.rs"),
+            import_path: "crate::module::Item".to_string(),
+            line_number: 1,
+            imported_items: vec!["Item".to_string()],
+        };
+
+        let import2 = ImportInfo {
+            file_path: PathBuf::from("test.rs"),
+            import_path: "crate::module::Item".to_string(),
+            line_number: 2, // Different line number
+            imported_items: vec!["Item".to_string(), "Other".to_string()], // Different imported items
+        };
+
+        let import3 = ImportInfo {
+            file_path: PathBuf::from("other.rs"), // Different file
+            import_path: "crate::module::Item".to_string(),
+            line_number: 1,
+            imported_items: vec!["Item".to_string()],
+        };
+
+        // Same file and import path should be equal (ignoring line number and imported items)
+        assert_eq!(import1, import2);
+
+        // Different file should not be equal
+        assert_ne!(import1, import3);
+
+        // Test that they work correctly in IndexSet
+        let mut set = IndexSet::new();
+        set.insert(import1);
+        set.insert(import2); // Should not be inserted (duplicate)
+        set.insert(import3); // Should be inserted (different file)
+
+        assert_eq!(set.len(), 2);
+    }
+
+    #[test]
+    fn test_efficient_deduplication() {
+        use indexmap::IndexSet;
+
+        // Create test imports with duplicates
+        let imports = vec![
+            ImportInfo {
+                file_path: PathBuf::from("lib.rs"),
+                import_path: "crate::module::Item".to_string(),
+                line_number: 1,
+                imported_items: vec!["Item".to_string()],
+            },
+            ImportInfo {
+                file_path: PathBuf::from("lib.rs"),
+                import_path: "crate::module::Item".to_string(), // Duplicate
+                line_number: 5,
+                imported_items: vec!["Item".to_string(), "Other".to_string()],
+            },
+            ImportInfo {
+                file_path: PathBuf::from("lib.rs"),
+                import_path: "crate::other::Thing".to_string(),
+                line_number: 10,
+                imported_items: vec!["Thing".to_string()],
+            },
+            ImportInfo {
+                file_path: PathBuf::from("main.rs"),
+                import_path: "crate::module::Item".to_string(), // Not a duplicate (different file)
+                line_number: 2,
+                imported_items: vec!["Item".to_string()],
+            },
+        ];
+
+        // Use IndexSet for automatic deduplication
+        let deduplicated: IndexSet<ImportInfo> = imports.into_iter().collect();
+
+        // Should have 3 unique imports (original had 1 duplicate in same file)
+        assert_eq!(deduplicated.len(), 3);
+
+        // Convert to Vec for assertions (IndexSet maintains insertion order)
+        let deduplicated_vec: Vec<_> = deduplicated.into_iter().collect();
+
+        // Verify the right ones were kept (first occurrence of each unique import)
+        assert_eq!(deduplicated_vec[0].file_path, PathBuf::from("lib.rs"));
+        assert_eq!(deduplicated_vec[0].import_path, "crate::module::Item");
+        assert_eq!(deduplicated_vec[0].line_number, 1); // First occurrence kept
+
+        assert_eq!(deduplicated_vec[1].file_path, PathBuf::from("lib.rs"));
+        assert_eq!(deduplicated_vec[1].import_path, "crate::other::Thing");
+
+        assert_eq!(deduplicated_vec[2].file_path, PathBuf::from("main.rs"));
+        assert_eq!(deduplicated_vec[2].import_path, "crate::module::Item");
     }
 }

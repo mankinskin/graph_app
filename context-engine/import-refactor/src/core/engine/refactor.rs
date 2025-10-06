@@ -256,10 +256,7 @@ impl RefactorEngine {
         }
 
         // Use intelligent merger to combine existing and new pub use statements
-        let crate_name = match &self.crate_names {
-            CrateNames::CrossRefactor { source_crate, .. } => source_crate,
-            CrateNames::SelfRefactor { crate_name } => crate_name,
-        };
+        let crate_name = self.crate_names.source_crate();
 
         let merged_statements =
             merge_pub_uses(existing_tree, &items_to_add, crate_name);

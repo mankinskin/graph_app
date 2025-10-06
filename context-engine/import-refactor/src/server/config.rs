@@ -1,8 +1,14 @@
 // Configuration management for Candle LLM server
 // Handles server settings, model configurations, and system capabilities
 
-use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
+use anyhow::{
+    Context,
+    Result,
+};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 use std::path::PathBuf;
 
 /// Server configuration for the Candle LLM server
@@ -31,6 +37,7 @@ pub struct ServerSettings {
     pub request_timeout_seconds: u64,
     pub enable_cors: bool,
     pub log_level: String,
+    pub interactive_mode: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,6 +80,7 @@ impl Default for ServerSettings {
             request_timeout_seconds: 300, // 5 minutes
             enable_cors: true,
             log_level: "info".to_string(),
+            interactive_mode: true, // Default to interactive mode for normal usage
         }
     }
 }
@@ -97,12 +105,16 @@ impl ServerConfig {
     pub fn load_or_default(config_path: Option<&PathBuf>) -> Result<Self> {
         if let Some(path) = config_path {
             if path.exists() {
-                let content = std::fs::read_to_string(path)
-                    .with_context(|| format!("Failed to read config file: {:?}", path))?;
-                
+                let content =
+                    std::fs::read_to_string(path).with_context(|| {
+                        format!("Failed to read config file: {:?}", path)
+                    })?;
+
                 let config: ServerConfig = toml::from_str(&content)
-                    .with_context(|| format!("Failed to parse config file: {:?}", path))?;
-                
+                    .with_context(|| {
+                        format!("Failed to parse config file: {:?}", path)
+                    })?;
+
                 Ok(config)
             } else {
                 let default_config = Self::default();
@@ -115,17 +127,21 @@ impl ServerConfig {
     }
 
     /// Save configuration to file
-    pub fn save(&self, path: &PathBuf) -> Result<()> {
+    pub fn save(
+        &self,
+        path: &PathBuf,
+    ) -> Result<()> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
 
         let content = toml::to_string_pretty(self)
             .context("Failed to serialize config")?;
-        
-        std::fs::write(path, content)
-            .with_context(|| format!("Failed to write config file: {:?}", path))?;
-        
+
+        std::fs::write(path, content).with_context(|| {
+            format!("Failed to write config file: {:?}", path)
+        })?;
+
         Ok(())
     }
 
@@ -138,7 +154,9 @@ impl ServerConfig {
 
         // Validate model settings
         if self.model.temperature < 0.0 || self.model.temperature > 2.0 {
-            return Err(anyhow::anyhow!("Temperature must be between 0.0 and 2.0"));
+            return Err(anyhow::anyhow!(
+                "Temperature must be between 0.0 and 2.0"
+            ));
         }
 
         if self.model.top_p < 0.0 || self.model.top_p > 1.0 {
@@ -152,7 +170,10 @@ impl ServerConfig {
         // Validate device
         match self.model.device.to_lowercase().as_str() {
             "cpu" | "cuda" | "metal" | "auto" => {},
-            _ => return Err(anyhow::anyhow!("Device must be one of: cpu, cuda, metal, auto")),
+            _ =>
+                return Err(anyhow::anyhow!(
+                    "Device must be one of: cpu, cuda, metal, auto"
+                )),
         }
 
         // Validate cache settings
@@ -162,9 +183,14 @@ impl ServerConfig {
 
         Ok(())
     }
+
+    /// Create a non-interactive configuration for testing
+    pub fn test_config() -> Self {
+        let mut config = Self::default();
+        config.server.interactive_mode = false;
+        config
+    }
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -182,14 +208,14 @@ mod tests {
     #[test]
     fn test_config_validation() {
         let mut config = ServerConfig::default();
-        
+
         // Test invalid temperature
         config.model.temperature = -1.0;
         assert!(config.validate().is_err());
-        
+
         config.model.temperature = 0.1; // Fix it
         assert!(config.validate().is_ok());
-        
+
         // Test invalid port
         config.port = 0;
         assert!(config.validate().is_err());
@@ -199,12 +225,24 @@ mod tests {
     fn test_config_save_load() {
         let temp_file = NamedTempFile::new().unwrap();
         let config_path = temp_file.path().to_path_buf();
-        
+
         let original_config = ServerConfig::default();
         original_config.save(&config_path).unwrap();
-        
-        let loaded_config = ServerConfig::load_or_default(Some(&config_path)).unwrap();
+
+        let loaded_config =
+            ServerConfig::load_or_default(Some(&config_path)).unwrap();
         assert_eq!(original_config.host, loaded_config.host);
         assert_eq!(original_config.port, loaded_config.port);
+    }
+
+    #[test]
+    fn test_interactive_mode_config() {
+        // Test default config has interactive mode enabled
+        let default_config = ServerConfig::default();
+        assert!(default_config.server.interactive_mode);
+
+        // Test test config has interactive mode disabled
+        let test_config = ServerConfig::test_config();
+        assert!(!test_config.server.interactive_mode);
     }
 }

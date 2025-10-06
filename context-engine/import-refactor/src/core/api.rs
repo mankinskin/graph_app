@@ -4,6 +4,7 @@
 //! by both the CLI application and external applications.
 
 use anyhow::Result;
+use indexmap::IndexSet;
 use std::path::Path;
 
 use crate::{
@@ -14,7 +15,10 @@ use crate::{
     },
     common::path::format_relative_path,
     core::engine::RefactorEngine,
-    syntax::parser::ImportParser,
+    syntax::parser::{
+        ImportInfo,
+        ImportParser,
+    },
 };
 
 /// Configuration for a refactoring operation
@@ -126,13 +130,9 @@ impl RefactorApi {
 
         // Parse imports based on the type of refactoring
         match &crate_names {
-            CrateNames::SelfRefactor { .. } => {
+            CrateNames::SelfRefactor { crate_name } => {
                 // For self-refactoring, parse both crate:: imports and explicit crate name imports
                 let source_path = crate_paths.source_path();
-                let crate_name = match &crate_names {
-                    CrateNames::SelfRefactor { crate_name } => crate_name,
-                    _ => unreachable!(),
-                };
 
                 // Parse crate:: imports
                 let crate_parser = ImportParser::new("crate");
@@ -144,32 +144,21 @@ impl RefactorApi {
                 let explicit_imports =
                     explicit_parser.find_imports_in_crate(source_path)?;
 
-                // Combine both types of imports, normalizing explicit imports to crate:: format
-                let mut imports = crate_imports;
+                // Combine both types of imports using IndexSet for automatic deduplication
+                let mut unique_imports: IndexSet<ImportInfo> =
+                    crate_imports.into_iter().collect();
+
                 for mut import in explicit_imports {
                     // Normalize explicit crate name imports to crate:: format to avoid duplicates
-                    let crate_name_prefix = format!("{}::", crate_name);
-                    if import.import_path.starts_with(&crate_name_prefix) {
-                        import.import_path = import
-                            .import_path
-                            .replace(&crate_name_prefix, "crate::");
-                    }
+                    import.normalize_to_crate_format(crate_name);
 
-                    // Also normalize the imported items
-                    for item in &mut import.imported_items {
-                        if item.starts_with(&crate_name_prefix) {
-                            *item = item.replace(&crate_name_prefix, "crate::");
-                        }
-                    }
-
-                    // Only add if we don't already have this import (avoid duplicates)
-                    if !imports.iter().any(|existing| {
-                        existing.import_path == import.import_path
-                            && existing.file_path == import.file_path
-                    }) {
-                        imports.push(import);
-                    }
+                    // IndexSet automatically handles deduplication based on ImportInfo's Hash/Eq implementation
+                    unique_imports.insert(import);
                 }
+
+                // Convert back to Vec to maintain API compatibility
+                let imports: Vec<ImportInfo> =
+                    unique_imports.into_iter().collect();
 
                 if !quiet {
                     println!("📊 Analysis Results:");
