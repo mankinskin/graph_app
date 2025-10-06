@@ -9,16 +9,12 @@ use std::{
         PathBuf,
     },
 };
-use syn::{
-    visit::Visit,
-    UseTree,
-};
+use syn::visit::Visit;
 use walkdir::WalkDir;
 
 use crate::{
     analysis::crates::CratePaths,
     syntax::navigator::{UseTreeNavigator, UseTreeItemCollector},
-    core::path::ImportPath,
 };
 
 #[derive(Debug, Clone)]

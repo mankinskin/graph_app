@@ -17,7 +17,6 @@ use crate::{
     },
     io::files::{
         check_crates_compilation,
-        read_and_parse_file,
         write_file,
         CompileResults,
     },

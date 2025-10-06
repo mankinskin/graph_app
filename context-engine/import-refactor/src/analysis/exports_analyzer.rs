@@ -7,11 +7,11 @@ use std::{
 };
 
 use crate::{
-    syntax::item_info::ItemInfo,
-    analysis::{
-        extract_exported_items_from_use_tree,
-        macro_scanning::scan_crate_for_exported_macros,
+    syntax::{
+        item_info::ItemInfo,
+        navigator::{UseTreeNavigator, ItemNameCollector},
     },
+    analysis::macro_scanning::scan_crate_for_exported_macros,
 };
 pub struct ExportAnalyzer {
     pub verbose: bool,
@@ -52,10 +52,10 @@ impl ExportAnalyzer {
                 // Collect from pub use statements
                 syn::Item::Use(use_item) =>
                     if use_item.is_public() {
-                        extract_exported_items_from_use_tree(
-                            &use_item.tree,
-                            exported_items,
-                        );
+                        let navigator = UseTreeNavigator;
+                        let mut collector = ItemNameCollector::new();
+                        navigator.extract_items(&use_item.tree, &mut collector);
+                        exported_items.extend(collector.items);
                     },
                 item => {
                     if let Some(ident) = item

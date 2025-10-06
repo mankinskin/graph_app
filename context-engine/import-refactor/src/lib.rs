@@ -14,8 +14,7 @@ pub use crate::{
         CratePaths,
     },
     common::{
-        Error,
-        Result,
+        error::{Error, Result},
     },
     core::{
         RefactorApi,

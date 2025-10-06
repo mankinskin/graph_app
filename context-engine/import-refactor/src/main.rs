@@ -14,13 +14,15 @@ mod server;
 mod syntax;
 
 use cli::{
-    download_model,
-    init_config,
-    list_models,
-    run_analysis,
-    run_refactor,
-    run_server,
-    Args,
+    args::Args,
+    commands::{
+        download_model,
+        init_config,
+        list_models,
+        run_analysis,
+        run_refactor,
+        run_server,
+    },
 };
 
 fn main() -> Result<()> {
