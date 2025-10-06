@@ -1,7 +1,7 @@
 use crate::{
     analysis::crates::CrateNames,
+    common::format::format_relative_path,
     syntax::parser::ImportInfo,
-    common::path::format_relative_path,
 };
 use std::{
     collections::BTreeSet,
@@ -59,7 +59,7 @@ pub fn analyze_imports(
     let mut specific_imports = 0;
     let mut import_types = std::collections::HashMap::new();
 
-    let workspace_root = workspace_root
+    let _workspace_root = workspace_root
         .canonicalize()
         .unwrap_or_else(|_| workspace_root.to_path_buf());
 

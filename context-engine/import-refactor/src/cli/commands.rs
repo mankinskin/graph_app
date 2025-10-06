@@ -1,12 +1,15 @@
 use anyhow::Result;
 use std::path::PathBuf;
 
+use crate::cli::args::Args;
+
+#[cfg(not(test))]
 use crate::{
-    core::{RefactorApi, RefactorConfigBuilder},
     analysis::crates::CrateNames,
-    cli::args::Args,
+    core::{RefactorApi, RefactorConfigBuilder},
 };
 
+#[cfg(not(test))]
 pub fn run_refactor(args: &Args) -> Result<()> {
     let workspace_root = args
         .workspace_root
@@ -50,7 +53,7 @@ pub fn run_refactor(args: &Args) -> Result<()> {
 
 #[cfg(feature = "ai")]
 pub async fn run_analysis(args: &Args) -> Result<()> {
-    use crate::analysis::duplication::AiProvider;
+    use crate::analysis::duplication::{AiProvider, AnalysisConfig, CodebaseDuplicationAnalyzer};
 
     let ai_provider = match args.ai_provider.to_lowercase().as_str() {
         "openai" => AiProvider::OpenAI,
@@ -64,8 +67,50 @@ pub async fn run_analysis(args: &Args) -> Result<()> {
             )),
     };
 
-    // Implementation would use the duplication analyzer
-    println!("Analysis functionality temporarily disabled during refactoring");
+    let workspace_root = args
+        .workspace_root
+        .canonicalize()
+        .unwrap_or_else(|_| args.workspace_root.clone());
+
+    // Create analysis configuration
+    let config = AnalysisConfig {
+        enable_ai_analysis: args.enable_ai,
+        ai_provider,
+        ai_model: args.ai_model.clone(),
+        max_functions_for_ai: args.ai_max_functions,
+        ollama_base_url: if args.ai_provider.to_lowercase() == "ollama" {
+            Some(format!("http://{}", args.ollama_host))
+        } else {
+            None
+        },
+        ..AnalysisConfig::default()
+    };
+
+    // Create and run the analyzer
+    let mut analyzer = CodebaseDuplicationAnalyzer::with_config(&workspace_root, config);
+    
+    println!("🚀 Starting duplication analysis...");
+    match analyzer.analyze_codebase().await {
+        Ok(analysis) => {
+            println!("\n📊 Analysis Results:");
+            println!("• Identical function groups: {}", analysis.identical_functions.len());
+            println!("• Similar function groups: {}", analysis.similar_functions.len());
+            println!("• Repeated patterns: {}", analysis.repeated_patterns.len());
+            
+            if let Some(ai_analysis) = analysis.ai_analysis {
+                println!("• AI-identified similarity groups: {}", ai_analysis.semantic_similarities.len());
+                println!("• AI refactoring suggestions: {}", ai_analysis.ai_suggestions.len());
+                println!("• AI confidence score: {:.2}", ai_analysis.confidence_score);
+            }
+            
+            println!("\n✅ Analysis completed successfully!");
+        },
+        Err(e) => {
+            eprintln!("❌ Analysis failed: {}", e);
+            return Err(anyhow::anyhow!("Analysis failed: {}", e));
+        }
+    }
+
     Ok(())
 }
 
@@ -123,7 +168,7 @@ pub async fn run_server(_args: &Args) -> Result<()> {
 }
 
 #[cfg(feature = "embedded-llm")]
-pub async fn download_model(args: &Args, model_id: &str) -> Result<()> {
+pub async fn download_model(_args: &Args, model_id: &str) -> Result<()> {
     use crate::server::{ServerConfig, CandleServer};
 
     println!("📥 Downloading model: {}", model_id);

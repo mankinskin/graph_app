@@ -1,5 +1,6 @@
 // Code analysis functionality
 
+#[allow(unused_imports)] // These are re-exported for public API and used by tests
 pub use self::{
     crates::{
         CrateAnalyzer,
@@ -10,15 +11,6 @@ pub use self::{
     imports::analyze_imports,
 };
 
-// Conditional public interface for AI features
-#[cfg(feature = "ai")]
-pub use self::duplication::{
-    AiProvider,
-    CodebaseDuplicationAnalyzer,
-    DuplicationAnalysis,
-};
-
-mod compilation;
 pub mod crates;
 pub mod duplication;
 pub mod exports;

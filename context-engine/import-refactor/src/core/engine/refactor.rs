@@ -10,7 +10,7 @@ use crate::{
         },
         ExportAnalyzer,
     },
-    common::path::format_relative_path,
+    common::format::format_relative_path,
     core::{
         ast_manager::AstManager,
         path::ImportPath,
@@ -220,7 +220,7 @@ impl RefactorEngine {
                         .or_else(|| import_path.strip_crate_prefix("crate")),
                 };
 
-                if let Some(rel_path) = relative_path {
+                if let Some(_rel_path) = relative_path {
                     // Only skip if the final identifier is already exported AND
                     // the import path is a direct import (no intermediate segments)
                     let final_ident = &import_path.final_item;

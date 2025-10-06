@@ -1,6 +1,6 @@
 use crate::{
     analysis::crates::CrateNames,
-    common::path::format_relative_path,
+    common::format::format_relative_path,
     io::files::write_file,
     syntax::parser::ImportInfo,
 };
@@ -75,7 +75,7 @@ impl ImportReplacementStrategy for CrossCrateReplacementStrategy {
         _import: &ImportInfo,
         action: ReplacementAction,
         file_path: &Path,
-        workspace_root: &Path,
+        _workspace_root: &Path,
     ) -> String {
         match action {
             ReplacementAction::Replaced { from, to } => {
@@ -118,7 +118,7 @@ impl ImportReplacementStrategy for SelfCrateReplacementStrategy {
         _import: &ImportInfo,
         action: ReplacementAction,
         file_path: &Path,
-        workspace_root: &Path,
+        _workspace_root: &Path,
     ) -> String {
         match action {
             ReplacementAction::Replaced { from, to } => {
@@ -194,7 +194,7 @@ fn replace_imports_in_file_with_strategy<S: ImportReplacementStrategy>(
     let mut replacements_made = 0;
 
     // Check if this is a main.rs file where crate::* is invalid
-    let is_main_rs = file_path
+    let _is_main_rs = file_path
         .file_name()
         .and_then(|name| name.to_str())
         .map(|name| name == "main.rs")

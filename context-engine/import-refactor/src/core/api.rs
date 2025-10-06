@@ -13,7 +13,7 @@ use crate::{
         CrateNames,
         CratePaths,
     },
-    common::path::format_relative_path,
+    common::format::format_relative_path,
     core::engine::RefactorEngine,
     syntax::parser::{
         ImportInfo,
@@ -186,7 +186,7 @@ impl RefactorApi {
             },
             CrateNames::CrossRefactor { source_crate, .. } => {
                 // For cross-crate refactoring, parse target crate imports of source crate
-                let source_path = crate_paths.source_path();
+                let _source_path = crate_paths.source_path();
                 let target_path = crate_paths.target_path();
                 let import_parser = ImportParser::new(source_crate);
                 let imports =

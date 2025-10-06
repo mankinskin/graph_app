@@ -1,6 +1,8 @@
 #![feature(iter_intersperse)]
 
+#[cfg(not(test))]
 use anyhow::Result;
+#[cfg(not(test))]
 use clap::Parser;
 
 // Import the new modular structure
@@ -13,18 +15,20 @@ mod io;
 mod server;
 mod syntax;
 
-use cli::{
-    args::Args,
-    commands::{
-        download_model,
-        init_config,
-        list_models,
-        run_analysis,
-        run_refactor,
-        run_server,
-    },
+#[cfg(not(test))]
+use cli::args::Args;
+
+#[cfg(not(test))]
+use cli::commands::{
+    download_model,
+    init_config,
+    list_models,
+    run_analysis,
+    run_refactor,
+    run_server,
 };
 
+#[cfg(not(test))]
 fn main() -> Result<()> {
     let args = Args::parse();
 

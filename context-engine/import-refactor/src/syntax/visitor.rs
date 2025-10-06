@@ -1,16 +1,22 @@
+use crate::syntax::navigator::{
+    ItemNameCollector,
+    UseTreeNavigator,
+};
 use std::collections::BTreeSet;
+#[cfg(test)]
+use syn::UseTree;
 use syn::{
     Attribute,
     File,
     Item,
     ItemUse,
-    UseTree,
 };
-use crate::syntax::navigator::{UseTreeNavigator, ItemNameCollector};
 
 /// Parse existing pub use statements from a syntax tree
 /// Returns (combined items, replaceable ranges) for existing pub use merging
-pub fn parse_existing_pub_uses(syntax_tree: &File) -> (BTreeSet<String>, Vec<(usize, usize)>) {
+pub fn parse_existing_pub_uses(
+    syntax_tree: &File
+) -> (BTreeSet<String>, Vec<(usize, usize)>) {
     let mut combined_items = BTreeSet::new();
     let mut replaceable_ranges = Vec::new();
     let navigator = UseTreeNavigator;
@@ -37,9 +43,7 @@ fn is_pub_use(item_use: &ItemUse) -> bool {
 
 /// Check if attributes contain cfg directives
 fn has_cfg_attribute(attrs: &[Attribute]) -> bool {
-    attrs.iter().any(|attr| {
-        attr.path().is_ident("cfg")
-    })
+    attrs.iter().any(|attr| attr.path().is_ident("cfg"))
 }
 
 /// Merge existing pub use items with new items and generate consolidated statements
@@ -69,7 +73,7 @@ pub fn merge_pub_uses(
 
     // For simplicity, just create one consolidated pub use statement using "crate"
     let items_str = stripped_items.join(", ");
-    
+
     vec![format!("pub use crate::{{{}}};", items_str)]
 }
 
@@ -84,28 +88,28 @@ mod tests {
             pub use crate::math;
             pub use crate::utils::string_ops;
             use crate::private_item; // Not pub, should be ignored
-            
+
             pub struct Config {}
         };
 
         let (items, ranges) = parse_existing_pub_uses(&file);
-        
+
         assert_eq!(items.len(), 2);
         assert!(items.contains("math"));
         assert!(items.contains("string_ops"));
         assert_eq!(ranges.len(), 2);
     }
 
-    #[test] 
+    #[test]
     fn test_extract_use_items() {
-        let use_tree: UseTree = parse_quote! { 
+        let use_tree: UseTree = parse_quote! {
             crate::{math::{add, subtract}, utils::format_string}
         };
-        
+
         let navigator = UseTreeNavigator;
         let mut collector = ItemNameCollector::new();
         navigator.extract_items(&use_tree, &mut collector);
-        
+
         assert_eq!(collector.items.len(), 3);
         assert!(collector.items.contains("add"));
         assert!(collector.items.contains("subtract"));

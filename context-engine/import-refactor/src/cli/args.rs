@@ -1,8 +1,7 @@
+#[cfg(not(test))]
 use anyhow::Result;
 use clap::Parser;
 use std::path::PathBuf;
-
-use crate::analysis::crates::CrateNames;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -139,6 +138,7 @@ pub struct Args {
 
 impl Args {
     /// Get the source crate name, preferring the flag over the positional argument
+    #[cfg(not(test))]
     pub fn get_source_crate(&self) -> Result<String> {
         if let Some(source) = &self.source_crate {
             Ok(source.clone())
@@ -150,6 +150,7 @@ impl Args {
     }
 
     /// Get the target crate name, preferring the flag over the positional argument
+    #[cfg(not(test))]
     pub fn get_target_crate(&self) -> Result<String> {
         if let Some(target) = &self.target_crate {
             Ok(target.clone())
@@ -161,6 +162,7 @@ impl Args {
     }
 
     /// Get the crate name for self-refactor mode
+    #[cfg(not(test))]
     pub fn get_self_crate(&self) -> Result<String> {
         if let Some(source) = &self.source_crate {
             Ok(source.clone())

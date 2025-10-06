@@ -1,42 +1,28 @@
 use std::path::Path;
 
-/// Format Rust code for consistent presentation
-pub fn format_rust_code(code: &str) -> String {
-    // Simple formatting - could be enhanced with rustfmt integration
-    code.trim().to_string()
+/// Format a path relative to workspace root for display purposes
+pub fn format_relative_path(path: &Path) -> String {
+    // For now, just convert to string - could be enhanced to strip workspace root
+    path.display().to_string()
 }
 
-/// Print a summary with consistent formatting
-pub fn print_summary(title: &str, items: &[String]) {
-    println!("📊 {}", title);
-    for item in items {
-        println!("   • {}", item);
-    }
-    if items.is_empty() {
-        println!("   (none)");
-    }
-    println!();
+/// Print file location in a formatted way
+pub fn print_file_location(file_path: &Path, workspace_root: &Path, line_number: usize) {
+    let relative_path = file_path
+        .strip_prefix(workspace_root)
+        .unwrap_or(file_path);
+    println!("  📁 {}:{}", relative_path.display(), line_number);
 }
 
-/// Print file location with line number (common pattern in analysis output)
-pub fn print_file_location(
-    path: &Path,
+/// Print file location with additional info
+pub fn print_file_location_with_info(
+    file_path: &Path,
     workspace_root: &Path,
     line_number: usize,
+    info: String,
 ) {
-    use crate::common::path::relative_path;
-    let relative = relative_path(path, workspace_root);
-    println!("   📁 {}:{}", relative, line_number);
-}
-
-/// Print file location with additional info (used in pattern matching)
-pub fn print_file_location_with_info<T: std::fmt::Display>(
-    path: &Path,
-    workspace_root: &Path,
-    line_number: usize,
-    info: T,
-) {
-    use crate::common::path::relative_path;
-    let relative = relative_path(path, workspace_root);
-    println!("      • {}:{} ({})", relative, line_number, info);
+    let relative_path = file_path
+        .strip_prefix(workspace_root)
+        .unwrap_or(file_path);
+    println!("  📁 {}:{} - {}", relative_path.display(), line_number, info);
 }

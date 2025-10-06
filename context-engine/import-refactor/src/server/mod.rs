@@ -1,10 +1,10 @@
 // Embedded LLM server functionality (feature-gated)
 
 #[cfg(feature = "embedded-llm")]
-pub use self::candle::{CandleServer, ServerResult};
+pub use self::candle::CandleServer;
 
 #[cfg(feature = "embedded-llm")]
-pub use self::config::{ServerConfig, ModelConfig};
+pub use self::config::ServerConfig;
 
 #[cfg(feature = "embedded-llm")]
 pub mod candle;

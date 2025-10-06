@@ -1,4 +1,6 @@
 // Core refactoring functionality and abstractions
+#[allow(unused_imports)]
+// These are re-exported for public API and used by tests
 pub use self::api::{
     RefactorApi,
     RefactorConfig,

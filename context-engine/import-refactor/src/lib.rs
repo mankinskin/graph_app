@@ -13,9 +13,6 @@ pub use crate::{
         CrateNames,
         CratePaths,
     },
-    common::{
-        error::{Error, Result},
-    },
     core::{
         RefactorApi,
         RefactorConfig,

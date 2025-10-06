@@ -828,7 +828,7 @@ impl CandleServerService {
     /// Handle health check requests
     async fn handle_health(&self) -> Result<Response<Body>> {
         let uptime = self.start_time.elapsed().as_secs();
-        let request_count = *self.request_count.read().await;
+        let _request_count = *self.request_count.read().await;
 
         let model_id = {
             let config = self.config.read().await;
@@ -910,7 +910,7 @@ impl CandleServerService {
     async fn generate(
         &self,
         prompt: &str,
-        max_tokens: usize,
+        _max_tokens: usize,
     ) -> Result<String> {
         // This would be the same implementation as CandleServer::generate
         // For brevity, using a simple implementation
