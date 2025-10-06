@@ -1,7 +1,9 @@
 //! AI-powered duplication analysis and refactoring suggestions
 //! This module is only available when the "ai" feature is enabled.
+//!
+//! Note: Items in this module are used through runtime code paths that are not
+//! statically analyzable by Rust's dead code detection, so we suppress warnings.
 
-#[cfg(feature = "ai")]
 use std::{
     collections::{
         HashMap,
@@ -13,14 +15,12 @@ use std::{
     },
 };
 
-#[cfg(feature = "ai")]
 use crate::common::format::{
     format_relative_path,
     print_file_location,
     print_file_location_with_info,
 };
 
-#[cfg(feature = "ai")]
 use crate::ai::{
     AiClientFactory,
     CodeSnippet,
@@ -28,7 +28,6 @@ use crate::ai::{
 };
 
 /// Function signature analysis for detecting similar patterns
-#[cfg(feature = "ai")]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FunctionSignature {
     pub name: String,
@@ -39,7 +38,6 @@ pub struct FunctionSignature {
 }
 
 /// Method pattern for identifying similar logic structures
-#[cfg(feature = "ai")]
 #[derive(Debug, Clone)]
 pub struct MethodPattern {
     pub signature: FunctionSignature,
@@ -50,7 +48,6 @@ pub struct MethodPattern {
 }
 
 /// Duplication analysis result
-#[cfg(feature = "ai")]
 #[derive(Debug)]
 pub struct DuplicationAnalysis {
     pub identical_functions: Vec<Vec<MethodPattern>>,
@@ -61,7 +58,6 @@ pub struct DuplicationAnalysis {
 }
 
 /// AI-powered duplication analysis results
-#[cfg(feature = "ai")]
 #[derive(Debug)]
 pub struct AiDuplicationAnalysis {
     pub semantic_similarities: Vec<SemanticSimilarityGroup>,
@@ -71,7 +67,6 @@ pub struct AiDuplicationAnalysis {
 }
 
 /// Semantic similarity group identified by AI
-#[cfg(feature = "ai")]
 #[derive(Debug)]
 pub struct SemanticSimilarityGroup {
     pub functions: Vec<MethodPattern>,
@@ -81,7 +76,6 @@ pub struct SemanticSimilarityGroup {
 }
 
 /// AI-generated refactoring suggestion
-#[cfg(feature = "ai")]
 #[derive(Debug)]
 pub struct AiRefactoringSuggestion {
     pub suggestion_type: String,
@@ -93,7 +87,6 @@ pub struct AiRefactoringSuggestion {
 }
 
 /// Refactoring opportunity suggestion
-#[cfg(feature = "ai")]
 #[derive(Debug)]
 pub struct RefactoringOpportunity {
     pub opportunity_type: OpportunityType,
@@ -104,7 +97,6 @@ pub struct RefactoringOpportunity {
     pub confidence: f32,
 }
 
-#[cfg(feature = "ai")]
 #[derive(Debug)]
 pub enum OpportunityType {
     ExtractUtilityFunction,
@@ -115,7 +107,6 @@ pub enum OpportunityType {
 }
 
 /// Codebase analyzer for detecting duplication patterns
-#[cfg(feature = "ai")]
 pub struct CodebaseDuplicationAnalyzer {
     workspace_root: PathBuf,
     patterns: Vec<MethodPattern>,
@@ -124,7 +115,6 @@ pub struct CodebaseDuplicationAnalyzer {
 }
 
 /// Configuration for duplication analysis
-#[cfg(feature = "ai")]
 #[derive(Debug, Clone)]
 pub struct AnalysisConfig {
     pub min_complexity_threshold: u32,
@@ -141,7 +131,6 @@ pub struct AnalysisConfig {
 }
 
 /// Supported AI providers for code analysis
-#[cfg(feature = "ai")]
 #[derive(Debug, Clone, PartialEq)]
 pub enum AiProvider {
     OpenAI,
@@ -151,7 +140,6 @@ pub enum AiProvider {
     Auto,     // Automatically detect based on available API keys/environment
 }
 
-#[cfg(feature = "ai")]
 impl Default for AnalysisConfig {
     fn default() -> Self {
         Self {
@@ -175,7 +163,6 @@ impl Default for AnalysisConfig {
     }
 }
 
-#[cfg(feature = "ai")]
 impl CodebaseDuplicationAnalyzer {
     pub fn new(workspace_root: &Path) -> Self {
         Self::with_config(workspace_root, AnalysisConfig::default())
@@ -206,7 +193,6 @@ impl CodebaseDuplicationAnalyzer {
         let mut analysis = self.detect_duplications();
 
         // Perform AI-powered analysis if enabled
-        #[cfg(feature = "ai")]
         {
             if self.config.enable_ai_analysis {
                 println!("🤖 Running AI-powered semantic analysis...");
@@ -871,7 +857,6 @@ impl CodebaseDuplicationAnalyzer {
     }
 
     /// Perform AI-powered semantic analysis on the code patterns
-    #[cfg(feature = "ai")]
     async fn perform_ai_analysis(
         &self
     ) -> Result<AiDuplicationAnalysis, Box<dyn std::error::Error>> {
@@ -1000,7 +985,6 @@ impl CodebaseDuplicationAnalyzer {
     }
 
     /// Convert AI similarity results to our internal format
-    #[cfg(feature = "ai")]
     fn convert_ai_similarity_results(
         &self,
         ai_analysis: &SimilarityAnalysis,

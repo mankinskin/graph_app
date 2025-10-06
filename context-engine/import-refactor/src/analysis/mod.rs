@@ -1,6 +1,5 @@
 // Code analysis functionality
 
-#[allow(unused_imports)] // These are re-exported for public API and used by tests
 pub use self::{
     crates::{
         CrateAnalyzer,
@@ -12,6 +11,7 @@ pub use self::{
 };
 
 pub mod crates;
+#[cfg(feature = "ai")]
 pub mod duplication;
 pub mod exports;
 pub mod imports;

@@ -10,7 +10,7 @@ path = "src/main.rs"
 [[bin]]
 name = "candle-server"
 path = "src/bin/candle_server.rs"
-required-features = ["embedded-llm"]
+required-features = ["ai", "embedded-llm"]
 
 [dependencies]
 syn = { version = "2.0", features = [
