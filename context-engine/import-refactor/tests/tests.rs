@@ -255,7 +255,7 @@ fn test_self_refactoring() -> Result<()> {
     println!("🚀 Starting test: {}", scenario.description);
 
     // Setup protected workspace
-    let mut workspace = TestWorkspace::setup_persistent(scenario.fixture_name)?;
+    let mut workspace = TestWorkspace::setup(scenario.fixture_name)?;
 
     // Run refactor with full validation
     let result = workspace.run_refactor_with_validation(scenario)?;
