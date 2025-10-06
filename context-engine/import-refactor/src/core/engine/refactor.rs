@@ -11,6 +11,10 @@ use crate::{
         ExportAnalyzer,
     },
     common::path::format_relative_path,
+    core::{
+        ast_manager::AstManager,
+        path::ImportPath,
+    },
     io::files::{
         check_crates_compilation,
         read_and_parse_file,
@@ -43,6 +47,7 @@ pub struct RefactorEngine {
     crate_names: CrateNames,
     dry_run: bool,
     verbose: bool,
+    ast_manager: AstManager,
 }
 
 impl RefactorEngine {
@@ -55,6 +60,7 @@ impl RefactorEngine {
             crate_names: crate_names.unhyphen(), // Convert hyphens to underscores for import matching
             dry_run,
             verbose,
+            ast_manager: AstManager::new(verbose),
         }
     }
 
@@ -158,10 +164,10 @@ impl RefactorEngine {
         }
     }
     fn update_source_lib_rs(
-        &self,
+        &mut self,
         source_crate_path: &Path,
         imported_items: &BTreeSet<String>,
-        workspace_root: &Path,
+        _workspace_root: &Path,
     ) -> Result<()> {
         let lib_rs_path = source_crate_path.join("src").join("lib.rs");
 
@@ -172,17 +178,19 @@ impl RefactorEngine {
             return Ok(());
         }
 
-        let (original_content, syntax_tree) =
-            read_and_parse_file(&lib_rs_path)?;
+        // Get exports analyzer first to avoid borrowing conflicts
+        let exports_analyzer = self.exports();
+
+        // Use AST manager for cached parsing
+        let syntax_tree = self.ast_manager.get_or_parse(&lib_rs_path)?;
 
         // Parse existing pub use statements into a tree structure
-        let (existing_tree, replaceable_ranges) =
-            parse_existing_pub_uses(&syntax_tree);
+        let (existing_tree, _replaceable_ranges) =
+            parse_existing_pub_uses(syntax_tree);
 
         // Use improved existing pub use collection for final identifier checking
-        let existing_exports = self
-            .exports()
-            .collect_existing_exports(&syntax_tree, source_crate_path);
+        let existing_exports = exports_analyzer
+            .collect_existing_exports(syntax_tree, source_crate_path);
 
         if self.verbose {
             println!(
@@ -194,40 +202,48 @@ impl RefactorEngine {
             }
         }
 
-        // Filter out items that are already exported as direct items
-        let items_to_add: BTreeSet<String> = imported_items
+        // Convert string items to structured ImportPath objects for better processing
+        let import_paths: Vec<ImportPath> = imported_items
             .iter()
-            .filter(|item| {
-                let item_name = self
-                    .crate_names
-                    .get_prefixes_to_strip()
-                    .iter()
-                    .find_map(|prefix| item.strip_prefix(prefix))
-                    .unwrap_or(item);
+            .filter_map(|item| ImportPath::parse(item).ok())
+            .collect();
 
-                // Check if the final identifier is already exported
-                let final_ident =
-                    item_name.split("::").last().unwrap_or(item_name);
+        // Filter out items that are already exported using structured path analysis
+        let items_to_add: BTreeSet<String> = import_paths
+            .iter()
+            .filter(|import_path| {
+                // Strip the crate prefix to get relative path
+                let relative_path = match &self.crate_names {
+                    CrateNames::CrossRefactor { source_crate, .. } =>
+                        import_path.strip_crate_prefix(source_crate),
+                    CrateNames::SelfRefactor { crate_name } => import_path
+                        .strip_crate_prefix(crate_name)
+                        .or_else(|| import_path.strip_crate_prefix("crate")),
+                };
 
-                // Only skip if the final identifier is already exported AND
-                // the import path has only one component (i.e., it's a direct import)
-                let path_components: Vec<&str> =
-                    item_name.split("::").collect();
-                let is_direct_import = path_components.len() == 1;
+                if let Some(rel_path) = relative_path {
+                    // Only skip if the final identifier is already exported AND
+                    // the import path is a direct import (no intermediate segments)
+                    let final_ident = &import_path.final_item;
 
-                if existing_exports.contains(final_ident) && is_direct_import {
-                    if self.verbose {
-                        println!(
-                            "  ⚠️  Skipping '{}' - already exported",
-                            final_ident
-                        );
+                    if existing_exports.contains(final_ident)
+                        && import_path.is_direct_import()
+                    {
+                        if self.verbose {
+                            println!(
+                                "  ⚠️  Skipping '{}' - already exported",
+                                final_ident
+                            );
+                        }
+                        false
+                    } else {
+                        true
                     }
-                    false
                 } else {
-                    true
+                    true // Keep items we can't parse properly
                 }
             })
-            .cloned()
+            .map(|path| path.full_path())
             .collect();
 
         if items_to_add.is_empty() {
@@ -259,7 +275,8 @@ impl RefactorEngine {
             return Ok(());
         }
 
-        // Remove old replaceable pub use statements and add new merged statements
+        // Read original content for modification (since AST manager only gives parsed form)
+        let original_content = std::fs::read_to_string(&lib_rs_path)?;
         let mut new_content = String::new();
         let lines: Vec<&str> = original_content.lines().collect();
         let mut skip_until_semicolon = false;
@@ -271,7 +288,7 @@ impl RefactorEngine {
             if trimmed.starts_with("pub use") && !trimmed.contains("#[cfg") {
                 // Check if it's a local crate import (not external)
                 if trimmed.contains("::") {
-                    let after_use =
+                    let _after_use =
                         trimmed.strip_prefix("pub use").unwrap().trim();
                     // Skip this pub use statement to avoid duplicates
                     skip_until_semicolon = true;
@@ -318,6 +335,8 @@ impl RefactorEngine {
 
         if !self.dry_run {
             write_file(&lib_rs_path, &new_content)?;
+            // Invalidate AST cache since we modified the file
+            self.ast_manager.invalidate(&lib_rs_path);
         }
 
         Ok(())

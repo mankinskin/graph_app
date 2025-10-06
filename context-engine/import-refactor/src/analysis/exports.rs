@@ -8,6 +8,7 @@ use syn::{
     Item,
     UseTree,
 };
+use crate::syntax::navigator::{UseTreeNavigator, ItemNameCollector};
 
 /// Information about existing pub use statements in a crate
 #[derive(Default)]
@@ -78,33 +79,10 @@ impl ExistingExportParser {
         tree: &UseTree,
         exported_items: &mut BTreeSet<String>,
     ) {
-        match tree {
-            UseTree::Path(path) => {
-                // Handle paths like `utils::string_ops::capitalize`
-                Self::extract_exported_items(&path.tree, exported_items);
-            },
-            UseTree::Name(name) => {
-                // Handle simple names like `format_string`
-                let item_name = name.ident.to_string();
-                exported_items.insert(item_name);
-            },
-            UseTree::Rename(rename) => {
-                // Handle renames like `format_string as fmt`
-                let renamed = rename.rename.to_string();
-                exported_items.insert(renamed);
-            },
-            UseTree::Glob(_) => {
-                // Handle glob imports like `module::*`
-                // These are harder to track, but we can note them
-                exported_items.insert("*".to_string());
-            },
-            UseTree::Group(group) => {
-                // Handle groups like `{capitalize, encoding::Encoder}`
-                for item in &group.items {
-                    Self::extract_exported_items(item, exported_items);
-                }
-            },
-        }
+        let navigator = UseTreeNavigator;
+        let mut collector = ItemNameCollector::new();
+        navigator.extract_items(tree, &mut collector);
+        exported_items.extend(collector.items);
     }
 
     /// Check if an item is already exported (considering nested paths)

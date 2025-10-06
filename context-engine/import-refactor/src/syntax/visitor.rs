@@ -6,18 +6,22 @@ use syn::{
     ItemUse,
     UseTree,
 };
+use crate::syntax::navigator::{UseTreeNavigator, ItemNameCollector};
 
 /// Parse existing pub use statements from a syntax tree
 /// Returns (combined items, replaceable ranges) for existing pub use merging
 pub fn parse_existing_pub_uses(syntax_tree: &File) -> (BTreeSet<String>, Vec<(usize, usize)>) {
     let mut combined_items = BTreeSet::new();
     let mut replaceable_ranges = Vec::new();
+    let navigator = UseTreeNavigator;
 
     for (i, item) in syntax_tree.items.iter().enumerate() {
         if let Item::Use(item_use) = item {
             if is_pub_use(item_use) && !has_cfg_attribute(&item_use.attrs) {
-                // Extract items from this pub use statement
-                extract_use_items(&item_use.tree, &mut combined_items);
+                // Use navigator to extract items from this pub use statement
+                let mut collector = ItemNameCollector::new();
+                navigator.extract_items(&item_use.tree, &mut collector);
+                combined_items.extend(collector.items);
                 replaceable_ranges.push((i, i + 1));
             }
         }
@@ -36,29 +40,6 @@ fn has_cfg_attribute(attrs: &[Attribute]) -> bool {
     attrs.iter().any(|attr| {
         attr.path().is_ident("cfg")
     })
-}
-
-/// Extract all items from a use tree recursively
-fn extract_use_items(use_tree: &UseTree, items: &mut BTreeSet<String>) {
-    match use_tree {
-        UseTree::Path(path) => {
-            extract_use_items(&path.tree, items);
-        }
-        UseTree::Name(name) => {
-            items.insert(name.ident.to_string());
-        }
-        UseTree::Group(group) => {
-            for item in &group.items {
-                extract_use_items(item, items);
-            }
-        }
-        UseTree::Glob(_) => {
-            // Glob imports don't add specific items
-        }
-        UseTree::Rename(rename) => {
-            items.insert(rename.rename.to_string());
-        }
-    }
 }
 
 /// Merge existing pub use items with new items and generate consolidated statements
@@ -121,12 +102,13 @@ mod tests {
             crate::{math::{add, subtract}, utils::format_string}
         };
         
-        let mut items = BTreeSet::new();
-        extract_use_items(&use_tree, &mut items);
+        let navigator = UseTreeNavigator;
+        let mut collector = ItemNameCollector::new();
+        navigator.extract_items(&use_tree, &mut collector);
         
-        assert_eq!(items.len(), 3);
-        assert!(items.contains("add"));
-        assert!(items.contains("subtract"));
-        assert!(items.contains("format_string"));
+        assert_eq!(collector.items.len(), 3);
+        assert!(collector.items.contains("add"));
+        assert!(collector.items.contains("subtract"));
+        assert!(collector.items.contains("format_string"));
     }
 }

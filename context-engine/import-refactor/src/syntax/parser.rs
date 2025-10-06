@@ -15,7 +15,11 @@ use syn::{
 };
 use walkdir::WalkDir;
 
-use crate::analysis::crates::CratePaths;
+use crate::{
+    analysis::crates::CratePaths,
+    syntax::navigator::{UseTreeNavigator, UseTreeItemCollector},
+    core::path::ImportPath,
+};
 
 #[derive(Debug, Clone)]
 pub struct ImportInfo {
@@ -96,6 +100,7 @@ struct ImportVisitor {
     source_crate_name: String,
     file_path: PathBuf,
     imports: Vec<ImportInfo>,
+    navigator: UseTreeNavigator,
 }
 
 impl ImportVisitor {
@@ -107,102 +112,63 @@ impl ImportVisitor {
             source_crate_name: source_crate_name.to_string(),
             file_path,
             imports: Vec::new(),
+            navigator: UseTreeNavigator,
         }
     }
+}
 
-    fn extract_use_info(
-        &self,
-        use_tree: &UseTree,
-    ) -> Option<(String, Vec<String>)> {
-        self.extract_use_info_recursive(use_tree, "")
+/// Collector that filters for specific crate imports and creates ImportInfo
+struct CrateFilteredCollector {
+    target_crate: String,
+    collected_imports: Vec<(String, Vec<String>)>,
+}
+
+impl CrateFilteredCollector {
+    fn new(crate_name: &str) -> Self {
+        Self {
+            target_crate: crate_name.replace('-', "_"),
+            collected_imports: Vec::new(),
+        }
+    }
+}
+
+impl UseTreeItemCollector for CrateFilteredCollector {
+    fn collect_name(&mut self, name: &str, path: &[String]) {
+        if path.is_empty() || path[0] != self.target_crate {
+            return;
+        }
+        
+        let full_path = if path.len() == 1 {
+            format!("{}::{}", path[0], name)
+        } else {
+            format!("{}::{}::{}", path[0], path[1..].join("::"), name)
+        };
+        
+        self.collected_imports.push((full_path.clone(), vec![full_path]));
     }
 
-    fn extract_use_info_recursive(
-        &self,
-        use_tree: &UseTree,
-        current_path: &str,
-    ) -> Option<(String, Vec<String>)> {
-        match use_tree {
-            UseTree::Path(path) => {
-                let ident = path.ident.to_string();
-                let new_path = if current_path.is_empty() {
-                    ident.clone()
-                } else {
-                    format!("{}::{}", current_path, ident)
-                };
-
-                // Check if we've found our source crate
-                if current_path.is_empty() && ident == self.source_crate_name {
-                    // This is the root of our source crate, continue parsing
-                    self.extract_use_info_recursive(&path.tree, &ident)
-                } else if current_path.starts_with(&self.source_crate_name) {
-                    // We're already inside the source crate path, continue
-                    self.extract_use_info_recursive(&path.tree, &new_path)
-                } else {
-                    None
-                }
-            },
-            UseTree::Name(name) => {
-                if current_path.starts_with(&self.source_crate_name) {
-                    let ident = name.ident.to_string();
-                    let full_path = format!("{}::{}", current_path, ident);
-                    Some((full_path.clone(), vec![full_path]))
-                } else {
-                    None
-                }
-            },
-            UseTree::Rename(rename) => {
-                if current_path.starts_with(&self.source_crate_name) {
-                    let ident = rename.ident.to_string();
-                    let alias = rename.rename.to_string();
-                    let full_path = format!("{}::{}", current_path, ident);
-                    Some((
-                        format!("{} as {}", full_path, alias),
-                        vec![full_path],
-                    ))
-                } else {
-                    None
-                }
-            },
-            UseTree::Glob(_) => {
-                if current_path.starts_with(&self.source_crate_name) {
-                    let glob_path = format!("{}::*", current_path);
-                    Some((glob_path, vec!["*".to_string()]))
-                } else {
-                    None
-                }
-            },
-            UseTree::Group(group) => {
-                if current_path.starts_with(&self.source_crate_name) {
-                    let mut all_items = Vec::new();
-                    let mut all_paths = Vec::new();
-
-                    for item in &group.items {
-                        if let Some((path, items)) =
-                            self.extract_use_info_recursive(item, current_path)
-                        {
-                            all_paths.push(path);
-                            all_items.extend(items);
-                        }
-                    }
-
-                    if !all_paths.is_empty() {
-                        Some((
-                            format!(
-                                "{}::{{{}}}",
-                                current_path,
-                                all_paths.join(", ")
-                            ),
-                            all_items,
-                        ))
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            },
+    fn collect_glob(&mut self, path: &[String]) {
+        if path.is_empty() || path[0] != self.target_crate {
+            return;
         }
+        
+        let glob_path = format!("{}::*", path.join("::"));
+        self.collected_imports.push((glob_path, vec!["*".to_string()]));
+    }
+
+    fn collect_rename(&mut self, original: &str, renamed: &str, path: &[String]) {
+        if path.is_empty() || path[0] != self.target_crate {
+            return;
+        }
+        
+        let full_path = if path.len() == 1 {
+            format!("{}::{}", path[0], original)
+        } else {
+            format!("{}::{}::{}", path[0], path[1..].join("::"), original)
+        };
+        
+        let display_path = format!("{} as {}", full_path, renamed);
+        self.collected_imports.push((display_path, vec![full_path]));
     }
 }
 
@@ -211,11 +177,12 @@ impl<'ast> Visit<'ast> for ImportVisitor {
         &mut self,
         node: &'ast syn::ItemUse,
     ) {
-        if let Some((import_path, imported_items)) =
-            self.extract_use_info(&node.tree)
-        {
-            //let full_statement = quote::quote!(#node).to_string();
-
+        // Use the navigator to collect imports filtered by crate
+        let mut collector = CrateFilteredCollector::new(&self.source_crate_name);
+        self.navigator.extract_items(&node.tree, &mut collector);
+        
+        // Convert collected imports to ImportInfo objects
+        for (import_path, imported_items) in collector.collected_imports {
             self.imports.push(ImportInfo {
                 file_path: self.file_path.clone(),
                 import_path,
