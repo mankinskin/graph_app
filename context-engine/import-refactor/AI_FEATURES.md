@@ -1,6 +1,6 @@
 # AI-Powered Code Analysis Features
 
-The import-refactor tool now includes AI-powered semantic code analysis to enhance duplication detection and provide intelligent refactoring suggestions.
+The refactor-tool now includes AI-powered semantic code analysis to enhance duplication detection and provide intelligent refactoring suggestions.
 
 ## Features
 
@@ -54,38 +54,38 @@ export LLAMACPP_MODEL="codellama-13b-instruct"
 ### Basic Analysis (No AI)
 ```bash
 # Traditional duplication analysis
-import-refactor --analyze
+refactor-tool --analyze
 
 # Verbose output with additional insights
-import-refactor --analyze --verbose
+refactor-tool --analyze --verbose
 ```
 
 ### AI-Enhanced Analysis
 ```bash
 # Enable AI analysis (auto-detects provider from environment)
-import-refactor --analyze --ai
+refactor-tool --analyze --ai
 
 # Specify AI provider explicitly
-import-refactor --analyze --ai --ai-provider openai
-import-refactor --analyze --ai --ai-provider claude
-import-refactor --analyze --ai --ai-provider ollama
+refactor-tool --analyze --ai --ai-provider openai
+refactor-tool --analyze --ai --ai-provider claude
+refactor-tool --analyze --ai --ai-provider ollama
 
 # Limit functions analyzed (to control API costs)
-import-refactor --analyze --ai --ai-max-functions 10
+refactor-tool --analyze --ai --ai-max-functions 10
 
 # Specify AI model
-import-refactor --analyze --ai --ai-model gpt-4
-import-refactor --analyze --ai --ai-model claude-3-5-sonnet-20241022
-import-refactor --analyze --ai --ai-model codellama:13b  # for Ollama
+refactor-tool --analyze --ai --ai-model gpt-4
+refactor-tool --analyze --ai --ai-model claude-3-5-sonnet-20241022
+refactor-tool --analyze --ai --ai-model codellama:13b  # for Ollama
 ```
 
 ### Combined with Import Refactoring
 ```bash
 # Standard import refactoring (unchanged)
-import-refactor source_crate target_crate
+refactor-tool source_crate target_crate
 
 # Self-refactor with AI analysis
-import-refactor --self my_crate --analyze --ai
+refactor-tool --self my_crate --analyze --ai
 ```
 
 ## Example Output
@@ -197,13 +197,13 @@ ollama serve
 ### Usage Examples
 ```bash
 # Use local LLM for analysis
-import-refactor --analyze --ai --ai-provider ollama
+refactor-tool --analyze --ai --ai-provider ollama
 
 # Specify different model
-import-refactor --analyze --ai --ai-provider ollama --ai-model qwen2.5-coder:14b
+refactor-tool --analyze --ai --ai-provider ollama --ai-model qwen2.5-coder:14b
 
 # Analyze more functions (no API costs with local models)
-import-refactor --analyze --ai --ai-provider ollama --ai-max-functions 50
+refactor-tool --analyze --ai --ai-provider ollama --ai-max-functions 50
 ```
 
 ### Hardware Requirements
@@ -266,7 +266,7 @@ ollama rm old-model:version
 export OLLAMA_MODEL="codellama:7b"
 
 # Limit analysis scope  
-import-refactor --analyze --ai --ai-provider ollama --ai-max-functions 10
+refactor-tool --analyze --ai --ai-provider ollama --ai-max-functions 10
 
 # Check system resources
 htop  # Linux/macOS
@@ -304,7 +304,7 @@ If AI analysis fails (network issues, API limits, etc.), the tool gracefully fal
 ```bash
 export COPILOT_API_KEY="ghp_xxxxxxxxxxxx"
 export OPENAI_BASE_URL="https://api.githubcopilot.com/v1"
-import-refactor --analyze --ai --ai-provider openai
+refactor-tool --analyze --ai --ai-provider openai
 ```
 
 ### Custom OpenAI-Compatible API
@@ -312,14 +312,14 @@ import-refactor --analyze --ai --ai-provider openai
 export OPENAI_API_KEY="your-key"
 export OPENAI_BASE_URL="https://your-custom-endpoint.com/v1"
 export OPENAI_MODEL="your-model"
-import-refactor --analyze --ai --ai-provider openai
+refactor-tool --analyze --ai --ai-provider openai
 ```
 
 ### Azure OpenAI
 ```bash
 export OPENAI_API_KEY="your-azure-key"
 export OPENAI_BASE_URL="https://your-resource.openai.azure.com/openai/deployments/your-deployment/chat/completions?api-version=2023-05-15"
-import-refactor --analyze --ai
+refactor-tool --analyze --ai
 ```
 
 ## Integration with CI/CD
@@ -330,7 +330,7 @@ import-refactor --analyze --ai
   env:
     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   run: |
-    import-refactor --analyze --ai --ai-max-functions 30 > analysis.md
+    refactor-tool --analyze --ai --ai-max-functions 30 > analysis.md
     # Add analysis.md to PR comment or artifact
 ```
 

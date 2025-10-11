@@ -1,27 +1,34 @@
 use anyhow::Result;
 use std::path::PathBuf;
 
-use crate::cli::args::Args;
+use crate::cli::args::{
+    AnalysisArgs,
+    ImportArgs,
+    ServerArgs,
+};
 
 #[cfg(not(test))]
 use crate::{
     analysis::crates::CrateNames,
-    core::{RefactorApi, RefactorConfigBuilder},
+    core::{
+        RefactorApi,
+        RefactorConfigBuilder,
+    },
 };
 
 #[cfg(not(test))]
-pub fn run_refactor(args: &Args) -> Result<()> {
-    let workspace_root = args
+pub fn run_refactor(import_args: &ImportArgs) -> Result<()> {
+    let workspace_root = import_args
         .workspace_root
         .canonicalize()
-        .unwrap_or_else(|_| args.workspace_root.clone());
+        .unwrap_or_else(|_| import_args.workspace_root.clone());
 
-    let crate_names = if args.self_refactor {
-        let crate_name = args.get_self_crate()?;
+    let crate_names = if import_args.self_refactor {
+        let crate_name = import_args.get_self_crate()?;
         CrateNames::SelfRefactor { crate_name }
     } else {
-        let source_crate = args.get_source_crate()?;
-        let target_crate = args.get_target_crate()?;
+        let source_crate = import_args.get_source_crate()?;
+        let target_crate = import_args.get_target_crate()?;
         CrateNames::CrossRefactor {
             source_crate,
             target_crate,
@@ -31,8 +38,8 @@ pub fn run_refactor(args: &Args) -> Result<()> {
     let config = RefactorConfigBuilder::new()
         .crate_names(crate_names)
         .workspace_root(workspace_root)
-        .dry_run(args.dry_run)
-        .verbose(args.verbose)
+        .dry_run(import_args.dry_run)
+        .verbose(import_args.verbose)
         .quiet(false)
         .build()?;
 
@@ -52,10 +59,14 @@ pub fn run_refactor(args: &Args) -> Result<()> {
 }
 
 #[cfg(feature = "ai")]
-pub async fn run_analysis(args: &Args) -> Result<()> {
-    use crate::analysis::duplication::{AiProvider, AnalysisConfig, CodebaseDuplicationAnalyzer};
+pub async fn run_analysis(analysis_args: &AnalysisArgs) -> Result<()> {
+    use crate::analysis::duplication::{
+        AiProvider,
+        AnalysisConfig,
+        CodebaseDuplicationAnalyzer,
+    };
 
-    let ai_provider = match args.ai_provider.to_lowercase().as_str() {
+    let ai_provider = match analysis_args.ai_provider.to_lowercase().as_str() {
         "openai" => AiProvider::OpenAI,
         "claude" => AiProvider::Claude,
         "ollama" => AiProvider::Ollama,
@@ -67,19 +78,20 @@ pub async fn run_analysis(args: &Args) -> Result<()> {
             )),
     };
 
-    let workspace_root = args
+    let workspace_root = analysis_args
         .workspace_root
         .canonicalize()
-        .unwrap_or_else(|_| args.workspace_root.clone());
+        .unwrap_or_else(|_| analysis_args.workspace_root.clone());
 
     // Create analysis configuration
     let config = AnalysisConfig {
-        enable_ai_analysis: args.enable_ai,
+        enable_ai_analysis: analysis_args.enable_ai,
         ai_provider,
-        ai_model: args.ai_model.clone(),
-        max_functions_for_ai: args.ai_max_functions,
-        ollama_base_url: if args.ai_provider.to_lowercase() == "ollama" {
-            Some(format!("http://{}", args.ollama_host))
+        ai_model: analysis_args.ai_model.clone(),
+        max_functions_for_ai: analysis_args.ai_max_functions,
+        ollama_base_url: if analysis_args.ai_provider.to_lowercase() == "ollama"
+        {
+            Some(format!("http://{}", analysis_args.ollama_host))
         } else {
             None
         },
@@ -87,48 +99,70 @@ pub async fn run_analysis(args: &Args) -> Result<()> {
     };
 
     // Create and run the analyzer
-    let mut analyzer = CodebaseDuplicationAnalyzer::with_config(&workspace_root, config);
-    
+    let mut analyzer =
+        CodebaseDuplicationAnalyzer::with_config(&workspace_root, config);
+
     println!("🚀 Starting duplication analysis...");
     match analyzer.analyze_codebase().await {
         Ok(analysis) => {
             println!("\n📊 Analysis Results:");
-            println!("• Identical function groups: {}", analysis.identical_functions.len());
-            println!("• Similar function groups: {}", analysis.similar_functions.len());
-            println!("• Repeated patterns: {}", analysis.repeated_patterns.len());
-            
+            println!(
+                "• Identical function groups: {}",
+                analysis.identical_functions.len()
+            );
+            println!(
+                "• Similar function groups: {}",
+                analysis.similar_functions.len()
+            );
+            println!(
+                "• Repeated patterns: {}",
+                analysis.repeated_patterns.len()
+            );
+
             if let Some(ai_analysis) = analysis.ai_analysis {
-                println!("• AI-identified similarity groups: {}", ai_analysis.semantic_similarities.len());
-                println!("• AI refactoring suggestions: {}", ai_analysis.ai_suggestions.len());
-                println!("• AI confidence score: {:.2}", ai_analysis.confidence_score);
+                println!(
+                    "• AI-identified similarity groups: {}",
+                    ai_analysis.semantic_similarities.len()
+                );
+                println!(
+                    "• AI refactoring suggestions: {}",
+                    ai_analysis.ai_suggestions.len()
+                );
+                println!(
+                    "• AI confidence score: {:.2}",
+                    ai_analysis.confidence_score
+                );
             }
-            
+
             println!("\n✅ Analysis completed successfully!");
         },
         Err(e) => {
             eprintln!("❌ Analysis failed: {}", e);
             return Err(anyhow::anyhow!("Analysis failed: {}", e));
-        }
+        },
     }
 
     Ok(())
 }
 
 #[cfg(not(feature = "ai"))]
-pub async fn run_analysis(_args: &Args) -> Result<()> {
+pub async fn run_analysis(_analysis_args: &AnalysisArgs) -> Result<()> {
     Err(anyhow::anyhow!(
         "Analysis features not available. Rebuild with --features ai to enable."
     ))
 }
 
 #[cfg(feature = "embedded-llm")]
-pub async fn run_server(args: &Args) -> Result<()> {
-    use crate::server::{ServerConfig, CandleServer};
+pub async fn run_server(server_args: &ServerArgs) -> Result<()> {
+    use crate::server::{
+        CandleServer,
+        ServerConfig,
+    };
 
     println!("🚀 Starting Candle LLM Server");
 
     // Load configuration
-    let config_path = args
+    let config_path = server_args
         .config_file
         .as_ref()
         .cloned()
@@ -150,7 +184,7 @@ pub async fn run_server(args: &Args) -> Result<()> {
             // User chose to quit gracefully
             println!("✅ Exited gracefully");
             return Ok(());
-        }
+        },
     };
 
     println!("🌐 Server starting...");
@@ -161,15 +195,18 @@ pub async fn run_server(args: &Args) -> Result<()> {
 }
 
 #[cfg(not(feature = "embedded-llm"))]
-pub async fn run_server(_args: &Args) -> Result<()> {
+pub async fn run_server(_server_args: &ServerArgs) -> Result<()> {
     Err(anyhow::anyhow!(
         "Embedded LLM server not available. Rebuild with --features embedded-llm to enable."
     ))
 }
 
 #[cfg(feature = "embedded-llm")]
-pub async fn download_model(_args: &Args, model_id: &str) -> Result<()> {
-    use crate::server::{ServerConfig, CandleServer};
+pub async fn download_model(model_id: &str) -> Result<()> {
+    use crate::server::{
+        CandleServer,
+        ServerConfig,
+    };
 
     println!("📥 Downloading model: {}", model_id);
 
@@ -181,18 +218,18 @@ pub async fn download_model(_args: &Args, model_id: &str) -> Result<()> {
     match CandleServer::with_config(config).await? {
         Some(_server) => {
             println!("✅ Model downloaded successfully!");
-        }
+        },
         None => {
             println!("❌ Download cancelled by user");
             return Ok(());
-        }
+        },
     }
 
     Ok(())
 }
 
 #[cfg(not(feature = "embedded-llm"))]
-pub async fn download_model(_args: &Args, model_id: &str) -> Result<()> {
+pub async fn download_model(model_id: &str) -> Result<()> {
     Err(anyhow::anyhow!(
         "Model download not available. Rebuild with --features embedded-llm to enable downloading {}.", 
         model_id
@@ -230,8 +267,8 @@ pub fn list_models() -> Result<()> {
     println!("   • Popular choices: CodeLlama, Qwen2.5-Coder, DeepSeek-Coder");
 
     println!("\n🚀 Usage:");
-    println!("   import-refactor --download-model <model-id>");
-    println!("   import-refactor --serve --ai-model <model-id>");
+    println!("   refactor-tool --download-model <model-id>");
+    println!("   refactor-tool --serve --ai-model <model-id>");
 
     Ok(())
 }
@@ -244,14 +281,11 @@ pub fn list_models() -> Result<()> {
 }
 
 #[cfg(feature = "embedded-llm")]
-pub fn init_config(args: &Args) -> Result<()> {
+pub fn init_config(config_path: Option<PathBuf>) -> Result<()> {
     use crate::server::ServerConfig;
 
-    let config_path = args
-        .config_file
-        .as_ref()
-        .cloned()
-        .unwrap_or_else(|| PathBuf::from("candle-server.toml"));
+    let config_path =
+        config_path.unwrap_or_else(|| PathBuf::from("candle-server.toml"));
 
     if config_path.exists() {
         println!("⚠️  Configuration file already exists: {:?}", config_path);
@@ -280,13 +314,13 @@ pub fn init_config(args: &Args) -> Result<()> {
     println!("   • cache.cache_dir - Where to store downloaded models");
 
     println!("\n📋 To see available models, run:");
-    println!("   import-refactor --list-models");
+    println!("   refactor-tool --list-models");
 
     Ok(())
 }
 
 #[cfg(not(feature = "embedded-llm"))]
-pub fn init_config(_args: &Args) -> Result<()> {
+pub fn init_config(_config_path: Option<PathBuf>) -> Result<()> {
     Err(anyhow::anyhow!(
         "Configuration initialization not available. Rebuild with --features embedded-llm to enable."
     ))

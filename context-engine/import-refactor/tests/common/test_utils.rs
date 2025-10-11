@@ -2,7 +2,7 @@ use anyhow::{
     Context,
     Result,
 };
-use import_refactor::{
+use refactor_tool::{
     CrateAnalyzer,
     CrateNames,
     CratePaths,

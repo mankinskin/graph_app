@@ -9,11 +9,11 @@ use clap::{
     Arg,
     Command,
 };
-use import_refactor::server::config::ServerConfig;
+use refactor_tool::server::config::ServerConfig;
 use std::path::PathBuf;
 
 #[cfg(feature = "embedded-llm")]
-use import_refactor::server::candle::CandleServer;
+use refactor_tool::server::candle::CandleServer;
 
 #[tokio::main]
 async fn main() -> Result<()> {

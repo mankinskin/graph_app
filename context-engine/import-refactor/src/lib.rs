@@ -1,6 +1,6 @@
 #![feature(iter_intersperse)]
 
-// Import-Refactor Crate - Modular Architecture
+// Refactor-Tool Crate - Modular Architecture
 //
 // This crate provides tools for refactoring Rust import statements and analyzing
 // code duplications with optional AI assistance.
