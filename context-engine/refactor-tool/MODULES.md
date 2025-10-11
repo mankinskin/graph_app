@@ -2,7 +2,7 @@
 
 ## Current Architecture Analysis
 
-The `import-refactor` crate currently has a relatively flat module structure with significant namespace pollution and unclear separation of concerns. The main issues identified are:
+The `refactor-tool` crate currently has a relatively flat module structure with significant namespace pollution and unclear separation of concerns. The main issues identified are:
 
 ### Current Issues
 1. **Namespace Pollution**: Many internal utilities are exposed as `pub` unnecessarily

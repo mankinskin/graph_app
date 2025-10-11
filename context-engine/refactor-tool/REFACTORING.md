@@ -1,12 +1,12 @@
 # Import Refactor Tool - Comprehensive Duplication Analysis & Refactoring Plan
 
 **Analysis Date**: October 5, 2025  
-**Codebase**: `import-refactor` module within `context-engine`  
+**Codebase**: `refactor-tool` module within `context-engine`  
 **Analysis Tool**: Custom duplication analyzer  
 
 ## 📊 Executive Summary
 
-This analysis identified significant code duplication and opportunities for improved module organization within the import-refactor tool. The current codebase contains **15+ instances of duplicate logic** across 6 files, with an estimated **330+ lines of code that can be eliminated** through strategic refactoring (approximately 15% reduction).
+This analysis identified significant code duplication and opportunities for improved module organization within the refactor-tool tool. The current codebase contains **15+ instances of duplicate logic** across 6 files, with an estimated **330+ lines of code that can be eliminated** through strategic refactoring (approximately 15% reduction).
 
 ### Key Findings
 - ✅ **Well-organized core architecture** with clear separation of concerns

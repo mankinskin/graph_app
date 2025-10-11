@@ -12,8 +12,8 @@ A Rust command-line tool for refactoring import statements across workspace crat
 
 **Usage**:
 ```bash
-import-refactor [OPTIONS] SOURCE_CRATE TARGET_CRATE
-import-refactor --source-crate A --target-crate B
+refactor-tool [OPTIONS] SOURCE_CRATE TARGET_CRATE
+refactor-tool --source-crate A --target-crate B
 ```
 
 **What it does**:
@@ -35,8 +35,8 @@ import-refactor --source-crate A --target-crate B
 
 **Usage**:
 ```bash
-import-refactor --self CRATE_NAME
-import-refactor --self --source-crate CRATE_NAME
+refactor-tool --self CRATE_NAME
+refactor-tool --self --source-crate CRATE_NAME
 ```
 
 **What it does**:
@@ -136,20 +136,20 @@ pub use crate::{
 
 #### Standard Mode
 ```bash
-import-refactor source_crate target_crate
-import-refactor --source source_crate --target target_crate
+refactor-tool source_crate target_crate
+refactor-tool --source source_crate --target target_crate
 ```
 
 #### Self-Refactor Mode
 ```bash
-import-refactor --self my_crate
-import-refactor --self --source my_crate
+refactor-tool --self my_crate
+refactor-tool --self --source my_crate
 ```
 
 #### Analysis Mode
 ```bash
-import-refactor --analyze
-import-refactor --analyze --workspace-root /path/to/workspace
+refactor-tool --analyze
+refactor-tool --analyze --workspace-root /path/to/workspace
 ```
 
 ---

@@ -1,21 +1,21 @@
 # Model Management for Import-Refactor Tool
 
-This document outlines how to add embedded LLM capabilities to your import-refactor tool.
+This document outlines how to add embedded LLM capabilities to your refactor-tool tool.
 
 ## Quick Start
 
 ```bash
 # Download a recommended model
-import-refactor --download-model codellama-7b
+refactor-tool --download-model codellama-7b
 
 # Use embedded model for analysis
-import-refactor --analyze --ai --ai-provider embedded --ai-model codellama-7b
+refactor-tool --analyze --ai --ai-provider embedded --ai-model codellama-7b
 
 # List available models
-import-refactor --list-models
+refactor-tool --list-models
 
 # Check system compatibility
-import-refactor --check-system
+refactor-tool --check-system
 ```
 
 ## Implementation Plan
@@ -69,7 +69,7 @@ embedded-llm = ["llama-cpp-2"]  # or candle dependencies
 ### Phase 3: Model Storage Structure
 
 ```
-~/.import-refactor/
+~/.refactor-tool/
 ├── models/
 │   ├── codellama-7b.gguf
 │   ├── qwen2.5-coder-7b.gguf
@@ -80,12 +80,12 @@ embedded-llm = ["llama-cpp-2"]  # or candle dependencies
 
 ### Phase 4: Configuration
 
-Create `~/.import-refactor/config.toml`:
+Create `~/.refactor-tool/config.toml`:
 
 ```toml
 [embedded]
 default_model = "codellama-7b"
-models_dir = "~/.import-refactor/models"
+models_dir = "~/.refactor-tool/models"
 gpu_layers = 0  # Number of layers to run on GPU
 context_size = 4096
 threads = 4
@@ -140,25 +140,25 @@ min_ram_gb = 8
 ### Scenario 1: Corporate Environment
 ```bash
 # Download models once per team
-import-refactor --download-model codellama-13b
+refactor-tool --download-model codellama-13b
 
 # Use for private code analysis
-import-refactor --analyze --ai --ai-provider embedded --ai-model codellama-13b
+refactor-tool --analyze --ai --ai-provider embedded --ai-model codellama-13b
 ```
 
 ### Scenario 2: Personal Projects
 ```bash
 # Use smaller model for quick analysis
-import-refactor --analyze --ai --ai-provider embedded --ai-model codellama-7b
+refactor-tool --analyze --ai --ai-provider embedded --ai-model codellama-7b
 
 # Unlimited analysis without API costs
-import-refactor --analyze --ai --ai-provider embedded --ai-max-functions 100
+refactor-tool --analyze --ai --ai-provider embedded --ai-max-functions 100
 ```
 
 ### Scenario 3: CI/CD Integration
 ```bash
 # Automated code quality checks
-import-refactor --analyze --ai --ai-provider embedded --quiet > analysis.json
+refactor-tool --analyze --ai --ai-provider embedded --quiet > analysis.json
 ```
 
 ## Next Steps

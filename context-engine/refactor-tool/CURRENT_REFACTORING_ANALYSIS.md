@@ -1,7 +1,7 @@
 # Import Refactor Tool - Current State Duplication Analysis & Refactoring Recommendations
 
 **Analysis Date**: October 5, 2025  
-**Codebase**: `import-refactor` module within `context-engine`  
+**Codebase**: `refactor-tool` module within `context-engine`  
 **Analysis Focus**: Current state after previous refactoring improvements  
 
 ## 📊 Executive Summary
@@ -628,7 +628,7 @@ macro_rules! impl_standard_item_info {
 
 ### **Long-term Vision**
 
-After implementing these recommendations, the import-refactor tool will have:
+After implementing these recommendations, the refactor-tool tool will have:
 - ✅ **17% smaller codebase** with equivalent functionality
 - ✅ **Highly extensible architecture** for future import types and strategies
 - ✅ **Consistent configuration** system across all analyzers

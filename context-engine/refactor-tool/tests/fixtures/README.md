@@ -1,6 +1,6 @@
 # Test Fixtures Directory
 
-This directory contains test fixtures for the import-refactor tool testing framework. Each fixture represents a different testing scenario with carefully crafted Rust code to validate specific aspects of the refactoring tool.
+This directory contains test fixtures for the refactor-tool tool testing framework. Each fixture represents a different testing scenario with carefully crafted Rust code to validate specific aspects of the refactoring tool.
 
 ## Fixture Overview
 

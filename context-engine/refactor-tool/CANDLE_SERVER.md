@@ -1,6 +1,6 @@
 # Candle LLM Server
 
-This document describes the Candle-based LLM server functionality added to the import-refactor tool. The server allows you to download, host, and run large language models locally using the Candle framework.
+This document describes the Candle-based LLM server functionality added to the refactor-tool tool. The server allows you to download, host, and run large language models locally using the Candle framework.
 
 ## Features
 
@@ -22,7 +22,7 @@ cargo build --release --features embedded-llm
 ### 2. Initialize Configuration
 
 ```bash
-./target/release/import-refactor --init-config
+./target/release/refactor-tool --init-config
 ```
 
 This creates a `candle-server.toml` configuration file with sensible defaults.
@@ -30,7 +30,7 @@ This creates a `candle-server.toml` configuration file with sensible defaults.
 ### 3. List Available Models
 
 ```bash
-./target/release/import-refactor --list-models
+./target/release/refactor-tool --list-models
 ```
 
 This shows recommended models and checks your system compatibility.
@@ -38,13 +38,13 @@ This shows recommended models and checks your system compatibility.
 ### 4. Download a Model
 
 ```bash
-./target/release/import-refactor --download-model "microsoft/CodeLlama-7b-Instruct-hf"
+./target/release/refactor-tool --download-model "microsoft/CodeLlama-7b-Instruct-hf"
 ```
 
 ### 5. Start the Server
 
 ```bash
-./target/release/import-refactor --serve
+./target/release/refactor-tool --serve
 ```
 
 The server will start on `http://127.0.0.1:8080` by default.
@@ -181,7 +181,7 @@ The Candle server integrates seamlessly with the existing code analysis features
 
 ```bash
 # Use the local Candle server for AI analysis
-./target/release/import-refactor --analyze --ai --ai-provider embedded
+./target/release/refactor-tool --analyze --ai --ai-provider embedded
 ```
 
 ## Troubleshooting
@@ -230,4 +230,4 @@ cargo test --features embedded-llm candle_config
 
 ## License
 
-This functionality is part of the import-refactor tool and follows the same license terms.
+This functionality is part of the refactor-tool tool and follows the same license terms.

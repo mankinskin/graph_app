@@ -175,7 +175,7 @@ fn add_single_glob_import(content: &mut String, imports: &[ImportInfo], glob_pat
 #### New Arguments Structure:
 ```rust
 #[derive(Parser)]
-#[command(name = "import-refactor")]
+#[command(name = "refactor-tool")]
 pub struct Args {
     #[arg(
         long = "workspace-root",
