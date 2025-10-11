@@ -28,6 +28,10 @@ pub struct Args {
 #[derive(Subcommand, Debug)]
 pub enum Commands {
     /// Refactor import statements between crates
+    #[command(after_help = "EXAMPLES:
+  refactor-tool imports core utils
+  refactor-tool imports --source-crate core --target-crate utils  
+  refactor-tool imports --self my_crate")]
     Imports {
         /// Name of the source crate (A) that will export items
         #[arg(short = 'a', long = "source-crate", alias = "source")]
