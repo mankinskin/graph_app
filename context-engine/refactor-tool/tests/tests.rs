@@ -4,15 +4,8 @@ use syn::parse_quote;
 // Import the common module and its items explicitly
 mod common;
 use common::{
-    test_utils::{
-        ExpectedChanges,
-        TestScenario,
-        TestWorkspace,
-    },
-    validation::{
-        AstValidator,
-        TestFormatter,
-    },
+    test_utils::{ExpectedChanges, TestScenario, TestWorkspace},
+    validation::{AstValidator, TestFormatter},
 };
 
 /// Get common test scenarios that can be reused
@@ -127,6 +120,15 @@ pub fn get_test_scenarios() -> Vec<TestScenario> {
                 };
             },
             1, // target_crate_wildcards - expected glob imports after refactoring (one consolidated import)
+            &[], // preserved_macros
+        )),
+        TestScenario::self_refactor(
+            "super_imports_normalization",
+            "Test super imports normalization: convert super:: imports to crate:: format",
+            "super_imports_crate",
+            "super_imports_workspace",
+        ).with_expected_changes(ExpectedChanges::basic(
+            0, // target_crate_wildcards - no new pub use statements expected, just import normalization
             &[], // preserved_macros
         )),
     ]
@@ -244,6 +246,12 @@ fn test_no_imports_scenario() -> Result<()> {
         },
     }
 
+    // Assert that validation passed regardless of whether the tool succeeded or failed
+    assert!(
+        validation.passed,
+        "Test validation failed for no-imports scenario"
+    );
+
     Ok(())
 }
 
@@ -271,10 +279,48 @@ fn test_self_refactoring() -> Result<()> {
         TestFormatter::format_test_results(scenario.name, &result, &validation);
     println!("{}", formatted_output);
 
-    // Assert that validation passed
-    if !validation.passed {
-        panic!("Test validation failed");
-    }
+    // Assert that validation passed AND refactor tool succeeded
+    assert!(
+        validation.passed,
+        "Test validation failed for self-refactoring scenario"
+    );
+    assert!(
+        result.success,
+        "Refactor execution failed for self-refactoring scenario"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_super_imports_normalization() -> Result<()> {
+    let scenarios = get_test_scenarios();
+    let scenario = &scenarios[4]; // super_imports_normalization
+
+    println!("🚀 Starting test: {}", scenario.description);
+
+    // Setup protected workspace
+    let mut workspace = TestWorkspace::setup(scenario.fixture_name)?;
+
+    // Run refactor with full validation - this should normalize super:: imports to crate:: format
+    let result = workspace.run_refactor_with_validation(scenario)?;
+
+    // Validate results against expectations
+    let validation = AstValidator::validate_refactor_result(
+        &result,
+        scenario.expected_changes.as_ref(),
+    );
+
+    // Format and display comprehensive results
+    let formatted_output =
+        TestFormatter::format_test_results(scenario.name, &result, &validation);
+    println!("{}", formatted_output);
+
+    // Assert that both the refactor tool succeeded AND validation passed
+    assert!(result.success, "Super imports refactor tool execution failed - this indicates a bug in super imports handling");
+    assert!(validation.passed, "Super imports test validation failed - this indicates incorrect refactoring behavior");
+
+    println!("✅ Super imports normalization test passed - super:: imports correctly normalized to crate:: format");
 
     Ok(())
 }

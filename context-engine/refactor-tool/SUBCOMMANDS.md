@@ -2,40 +2,6 @@
 
 The refactor-tool has been restructured to use subcommands for better organization and future extensibility.
 
-## Migration Guide
-
-### Before (old structure):
-```bash
-# Import refactoring (was the default)
-refactor-tool source_crate target_crate
-refactor-tool --self my_crate
-
-# Analysis
-refactor-tool --analyze
-refactor-tool --analyze --ai
-
-# Server operations
-refactor-tool --serve
-refactor-tool --list-models
-```
-
-### After (new subcommand structure):
-```bash
-# Import refactoring (now requires 'imports' subcommand)
-refactor-tool imports source_crate target_crate
-refactor-tool imports --self my_crate
-
-# Analysis (now 'analyze' subcommand)
-refactor-tool analyze
-refactor-tool analyze --ai
-
-# Server operations (now separate subcommands)
-refactor-tool serve
-refactor-tool list-models
-refactor-tool download-model <model-id>
-refactor-tool init-config
-```
-
 ## Available Subcommands
 
 ### `imports` - Import Refactoring

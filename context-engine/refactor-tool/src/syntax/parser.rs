@@ -79,6 +79,54 @@ impl ImportInfo {
             }
         }
     }
+
+    /// Normalize super:: imports to crate:: format by resolving relative paths
+    /// This converts imports like `super::module::Item` to `crate::parent_module::module::Item`
+    pub fn normalize_super_imports(
+        &mut self,
+        crate_root: &Path,
+    ) -> Result<()> {
+        use crate::core::path::{
+            is_super_import,
+            resolve_super_to_crate_path,
+            ImportPath,
+        };
+
+        // Check if this is a super import
+        if !is_super_import(&self.import_path) {
+            return Ok(()); // Not a super import, nothing to do
+        }
+
+        // Parse the super import path
+        let super_path = ImportPath::parse(&self.import_path)?;
+
+        // Resolve to crate:: format
+        let resolved_path = resolve_super_to_crate_path(
+            &self.file_path,
+            crate_root,
+            &super_path.segments,
+            &super_path.final_item,
+        )?;
+
+        // Update the import path
+        self.import_path = resolved_path.full_path();
+
+        // Update imported items - convert any super:: references
+        for item in &mut self.imported_items {
+            if is_super_import(item) {
+                let item_path = ImportPath::parse(item)?;
+                let resolved_item = resolve_super_to_crate_path(
+                    &self.file_path,
+                    crate_root,
+                    &item_path.segments,
+                    &item_path.final_item,
+                )?;
+                *item = resolved_item.full_path();
+            }
+        }
+
+        Ok(())
+    }
 }
 
 pub struct ImportParser {
@@ -126,6 +174,45 @@ impl ImportParser {
         }
 
         Ok(imports)
+    }
+
+    /// Find all super:: imports in a crate
+    pub fn find_super_imports_in_crate(
+        crate_path: &Path
+    ) -> Result<Vec<ImportInfo>> {
+        let mut imports = Vec::new();
+        let src_path = crate_path.join("src");
+
+        if !src_path.exists() {
+            return Ok(imports);
+        }
+
+        for entry in WalkDir::new(&src_path).into_iter().filter_map(|e| e.ok())
+        {
+            let path = entry.path();
+            if path.extension().is_some_and(|ext| ext == "rs") {
+                let file_imports = Self::parse_file_super_imports(path)?;
+                imports.extend(file_imports);
+            }
+        }
+
+        Ok(imports)
+    }
+
+    /// Parse super:: imports from a single file
+    fn parse_file_super_imports(file_path: &Path) -> Result<Vec<ImportInfo>> {
+        let content = fs::read_to_string(file_path).with_context(|| {
+            format!("Failed to read file: {}", file_path.display())
+        })?;
+
+        let syntax_tree = syn::parse_file(&content).with_context(|| {
+            format!("Failed to parse Rust file: {}", file_path.display())
+        })?;
+
+        let mut visitor = SuperImportVisitor::new(file_path.to_path_buf());
+        visitor.visit_file(&syntax_tree);
+
+        Ok(visitor.imports)
     }
 
     fn parse_file_imports(
@@ -246,6 +333,111 @@ impl<'ast> Visit<'ast> for ImportVisitor {
         // Use the navigator to collect imports filtered by crate
         let mut collector =
             CrateFilteredCollector::new(&self.source_crate_name);
+        self.navigator.extract_items(&node.tree, &mut collector);
+
+        // Convert collected imports to ImportInfo objects
+        for (import_path, imported_items) in collector.collected_imports {
+            self.imports.push(ImportInfo {
+                file_path: self.file_path.clone(),
+                import_path,
+                line_number: 0, // We'll rely on string matching instead of line numbers
+                imported_items,
+            });
+        }
+    }
+}
+
+/// Visitor for collecting super:: imports
+struct SuperImportVisitor {
+    file_path: PathBuf,
+    imports: Vec<ImportInfo>,
+    navigator: UseTreeNavigator,
+}
+
+impl SuperImportVisitor {
+    fn new(file_path: PathBuf) -> Self {
+        Self {
+            file_path,
+            imports: Vec::new(),
+            navigator: UseTreeNavigator,
+        }
+    }
+}
+
+/// Collector that filters for super:: imports specifically
+struct SuperImportCollector {
+    collected_imports: Vec<(String, Vec<String>)>,
+}
+
+impl SuperImportCollector {
+    fn new() -> Self {
+        Self {
+            collected_imports: Vec::new(),
+        }
+    }
+}
+
+impl UseTreeItemCollector for SuperImportCollector {
+    fn collect_name(
+        &mut self,
+        name: &str,
+        path: &[String],
+    ) {
+        if path.is_empty() || path[0] != "super" {
+            return;
+        }
+
+        let full_path = if path.len() == 1 {
+            format!("{}::{}", path[0], name)
+        } else {
+            format!("{}::{}::{}", path[0], path[1..].join("::"), name)
+        };
+
+        self.collected_imports
+            .push((full_path.clone(), vec![full_path]));
+    }
+
+    fn collect_glob(
+        &mut self,
+        path: &[String],
+    ) {
+        if path.is_empty() || path[0] != "super" {
+            return;
+        }
+
+        let glob_path = format!("{}::*", path.join("::"));
+        self.collected_imports
+            .push((glob_path, vec!["*".to_string()]));
+    }
+
+    fn collect_rename(
+        &mut self,
+        original: &str,
+        renamed: &str,
+        path: &[String],
+    ) {
+        if path.is_empty() || path[0] != "super" {
+            return;
+        }
+
+        let full_path = if path.len() == 1 {
+            format!("{}::{}", path[0], original)
+        } else {
+            format!("{}::{}::{}", path[0], path[1..].join("::"), original)
+        };
+
+        let display_path = format!("{} as {}", full_path, renamed);
+        self.collected_imports.push((display_path, vec![full_path]));
+    }
+}
+
+impl<'ast> Visit<'ast> for SuperImportVisitor {
+    fn visit_item_use(
+        &mut self,
+        node: &'ast syn::ItemUse,
+    ) {
+        // Use the navigator to collect super:: imports
+        let mut collector = SuperImportCollector::new();
         self.navigator.extract_items(&node.tree, &mut collector);
 
         // Convert collected imports to ImportInfo objects
@@ -401,5 +593,48 @@ mod tests {
 
         assert_eq!(deduplicated_vec[2].file_path, PathBuf::from("main.rs"));
         assert_eq!(deduplicated_vec[2].import_path, "crate::module::Item");
+    }
+
+    #[test]
+    fn test_normalize_super_imports() {
+        use std::path::PathBuf;
+
+        let crate_root = PathBuf::from("/workspace/my_crate");
+        let file_path =
+            PathBuf::from("/workspace/my_crate/src/submodule/file.rs");
+
+        let mut import_info = ImportInfo {
+            file_path: file_path.clone(),
+            import_path: "super::utils::Item".to_string(),
+            line_number: 1,
+            imported_items: vec!["super::utils::Item".to_string()],
+        };
+
+        import_info.normalize_super_imports(&crate_root).unwrap();
+
+        // Should be converted to crate::utils::Item (since we're in submodule, super takes us to crate root)
+        assert_eq!(import_info.import_path, "crate::utils::Item");
+        assert_eq!(import_info.imported_items, vec!["crate::utils::Item"]);
+    }
+
+    #[test]
+    fn test_normalize_super_imports_no_change() {
+        use std::path::PathBuf;
+
+        let crate_root = PathBuf::from("/workspace/my_crate");
+        let file_path = PathBuf::from("/workspace/my_crate/src/file.rs");
+
+        let mut import_info = ImportInfo {
+            file_path: file_path.clone(),
+            import_path: "crate::module::Item".to_string(),
+            line_number: 1,
+            imported_items: vec!["crate::module::Item".to_string()],
+        };
+
+        import_info.normalize_super_imports(&crate_root).unwrap();
+
+        // Should remain unchanged since it's not a super import
+        assert_eq!(import_info.import_path, "crate::module::Item");
+        assert_eq!(import_info.imported_items, vec!["crate::module::Item"]);
     }
 }

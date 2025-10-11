@@ -48,6 +48,13 @@ pub enum Commands {
         )]
         self_refactor: bool,
 
+        /// Keep super:: imports as-is instead of normalizing them to crate:: format
+        #[arg(
+            long = "keep-super",
+            help = "Disable super:: imports normalization (default: normalize super:: to crate:: format)"
+        )]
+        keep_super: bool,
+
         /// Positional arguments: [SOURCE_CRATE] [TARGET_CRATE] or [CRATE] when using --self
         #[arg(
             help = "Positional arguments: [SOURCE_CRATE] [TARGET_CRATE] or [CRATE] when using --self"
@@ -155,11 +162,13 @@ impl Args {
                 source_crate,
                 target_crate,
                 self_refactor,
+                keep_super,
                 positional,
             } => Some(ImportArgs {
                 source_crate: source_crate.clone(),
                 target_crate: target_crate.clone(),
                 self_refactor: *self_refactor,
+                keep_super: *keep_super,
                 positional: positional.clone(),
                 workspace_root: self.workspace_root.clone(),
                 dry_run: self.dry_run,
@@ -220,6 +229,7 @@ pub struct ImportArgs {
     pub source_crate: Option<String>,
     pub target_crate: Option<String>,
     pub self_refactor: bool,
+    pub keep_super: bool,
     pub positional: Vec<String>,
     pub workspace_root: PathBuf,
     pub dry_run: bool,

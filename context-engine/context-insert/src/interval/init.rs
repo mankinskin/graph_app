@@ -7,7 +7,7 @@ use crate::split::{
 use context_search::*;
 use context_trace::*;
 
-use super::IntervalGraph;
+use crate::interval::IntervalGraph;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct InitInterval {

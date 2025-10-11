@@ -22,6 +22,12 @@ This directory contains test fixtures for the refactor-tool tool testing framewo
 **Tests**: `test_no_imports_scenario()`  
 **Status**: ✅ Test passes, validates tool robustness
 
+### 📁 [super_imports_workspace/](super_imports_workspace/)
+**Purpose**: Tests super imports normalization functionality (--keep-super flag)  
+**Contains**: Single crate with complex super:: import patterns across nested modules  
+**Tests**: `test_super_imports_normalization()`  
+**Status**: 🆕 New fixture for testing super:: → crate:: conversion feature
+
 ## Fixture Requirements
 
 ### Compilation Status
@@ -29,6 +35,7 @@ All fixtures are verified to compile successfully:
 - ✅ `basic_workspace`: All crates compile
 - ✅ `macro_workspace`: All crates compile  
 - ✅ `no_imports_workspace`: All crates compile
+- ✅ `super_imports_workspace`: All crates compile
 
 ### Workspace Structure
 Each fixture follows this structure:

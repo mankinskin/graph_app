@@ -1,19 +1,3 @@
-use super::{
-    BottomUp,
-    RoleTraceKey,
-    TopDown,
-    TraceCtx,
-    TraceRole,
-    cache::{
-        key::directed::{
-            down::DownKey,
-            up::UpPosition,
-        },
-        new::NewTraceEdge,
-    },
-    has_graph::HasGraph,
-    traceable::Traceable,
-};
 use crate::{
     graph::vertex::{
         pattern::pattern_width,
@@ -39,7 +23,25 @@ use crate::{
             },
         },
     },
-    trace::cache::key::directed::up::UpKey,
+    trace::{
+        BottomUp,
+        RoleTraceKey,
+        TopDown,
+        TraceCtx,
+        TraceRole,
+        cache::{
+            key::directed::{
+                down::DownKey,
+                up::{
+                    UpKey,
+                    UpPosition,
+                },
+            },
+            new::NewTraceEdge,
+        },
+        has_graph::HasGraph,
+        traceable::Traceable,
+    },
 };
 #[derive(Debug)]
 pub enum TraceCommand {

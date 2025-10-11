@@ -152,6 +152,15 @@ refactor-tool --analyze
 refactor-tool --analyze --workspace-root /path/to/workspace
 ```
 
+#### Super Imports Normalization
+```bash
+# Default behavior: normalize super:: to crate:: format
+refactor-tool imports --self my_crate
+
+# Keep super:: imports as-is
+refactor-tool imports --self my_crate --keep-super
+```
+
 ---
 
 ## Error Handling & Edge Cases

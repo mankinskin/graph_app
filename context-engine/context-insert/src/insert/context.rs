@@ -16,7 +16,7 @@ use context_search::*;
 use context_trace::*;
 use std::sync::RwLockReadGuard;
 
-use super::result::InsertResult;
+use crate::insert::result::InsertResult;
 
 #[derive(Debug, Clone, Default)]
 pub struct InsertTraversal;

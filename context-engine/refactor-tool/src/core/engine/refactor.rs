@@ -46,6 +46,7 @@ pub struct RefactorEngine {
     crate_names: CrateNames,
     dry_run: bool,
     verbose: bool,
+    keep_super: bool,
     ast_manager: AstManager,
 }
 
@@ -54,11 +55,13 @@ impl RefactorEngine {
         crate_names: &CrateNames,
         dry_run: bool,
         verbose: bool,
+        keep_super: bool,
     ) -> Self {
         Self {
             crate_names: crate_names.unhyphen(), // Convert hyphens to underscores for import matching
             dry_run,
             verbose,
+            keep_super,
             ast_manager: AstManager::new(verbose),
         }
     }

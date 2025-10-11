@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use context_trace::*;
 
-use super::{
+use crate::interval::partition::info::{
     PartitionBorderKey,
     PartitionInfo,
     border::{
@@ -10,6 +10,7 @@ use super::{
         perfect::BoolPerfect,
     },
     range::{
+        ModeRangeInfo,
         mode::PatternInfoOf,
         role::{
             ModePatternCtxOf,
@@ -17,17 +18,13 @@ use super::{
         },
     },
 };
-use crate::interval::partition::info::range::ModeRangeInfo;
-pub struct PartitionBorders<R: RangeRole, C: PartitionBorderKey = PatternId>
-{
+pub struct PartitionBorders<R: RangeRole, C: PartitionBorderKey = PatternId> {
     pub borders: HashMap<C, R::Borders>,
     pub perfect: R::Perfect,
 }
 
-impl<R: RangeRole> PartitionBorders<R, ModePatternCtxOf<'_, R>>
-{
-    pub fn into_partition_info(self) -> Result<PartitionInfo<R>, Child>
-    {
+impl<R: RangeRole> PartitionBorders<R, ModePatternCtxOf<'_, R>> {
+    pub fn into_partition_info(self) -> Result<PartitionInfo<R>, Child> {
         let perfect = self.perfect;
         let patterns: Result<_, _> = self
             .borders
@@ -38,11 +35,9 @@ impl<R: RangeRole> PartitionBorders<R, ModePatternCtxOf<'_, R>>
                     .map(Into::into)
             })
             .collect();
-        patterns.map(|infos| {
-            PartitionInfo {
-                patterns: infos,
-                perfect,
-            }
+        patterns.map(|infos| PartitionInfo {
+            patterns: infos,
+            perfect,
         })
     }
 }

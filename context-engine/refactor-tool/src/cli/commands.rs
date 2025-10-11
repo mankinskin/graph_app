@@ -41,6 +41,7 @@ pub fn run_refactor(import_args: &ImportArgs) -> Result<()> {
         .dry_run(import_args.dry_run)
         .verbose(import_args.verbose)
         .quiet(false)
+        .keep_super(import_args.keep_super)
         .build()?;
 
     let result = RefactorApi::execute_refactor(config);

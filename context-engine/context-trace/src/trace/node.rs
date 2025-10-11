@@ -9,7 +9,7 @@ use crate::graph::{
     },
 };
 
-use super::pattern::{
+use crate::trace::pattern::{
     GetPatternCtx,
     GetPatternTraceCtx,
     PatternTraceCtx,

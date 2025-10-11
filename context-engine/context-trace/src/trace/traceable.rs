@@ -1,5 +1,7 @@
-use super::TraceCtx;
-use crate::trace::HasGraph;
+use crate::trace::{
+    HasGraph,
+    TraceCtx,
+};
 
 pub trait Traceable {
     fn trace<G: HasGraph>(

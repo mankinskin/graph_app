@@ -24,12 +24,12 @@ quote = "1.0"
 proc-macro2 = "1.0"
 anyhow = "1.0"
 clap = { version = "4.0", features = ["derive"] }
-toml = "0.8"
+toml = "0.9"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 walkdir = "2.0"
 indexmap = "2.0"
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.12", features = ["json"] }
 tokio = { version = "1.0", features = ["full"] }
 async-trait = "0.1"
 
@@ -39,18 +39,15 @@ candle-nn = { version = "0.9", optional = true }
 candle-transformers = { version = "0.9", optional = true }
 hf-hub = { version = "0.4", optional = true, features = ["tokio"] }
 tokenizers = { version = "0.22", optional = true }
-safetensors = { version = "0.4", optional = true }
+safetensors = { version = "0.6", optional = true }
 
 # HTTP server dependencies for candle server
-hyper = { version = "0.14", features = ["full"], optional = true }
+hyper = { version = "1.7", features = ["full"], optional = true }
 chrono = { version = "0.4", features = ["serde"], optional = true }
 log = { version = "0.4", optional = true }
 
 # Additional dependencies for model management and process control
-dirs = "5.0"
-which = "6.0"
 regex = "1.0"
-serde_yaml = "0.9"  # For model configuration
 env_logger = "0.11"
 
 [features]

@@ -5,3 +5,5 @@ mod common;
 
 // Note: The test_no_imports_scenario has been migrated to tests.rs
 // using TestWorkspace and TestScenario for better consistency and validation
+
+pub mod super_imports;

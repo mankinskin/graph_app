@@ -34,6 +34,8 @@ pub struct RefactorConfig {
     pub verbose: bool,
     /// Whether to suppress progress messages (useful for tests)
     pub quiet: bool,
+    /// Whether to keep super:: imports as-is (default: normalize to crate:: format)
+    pub keep_super: bool,
 }
 
 /// High-level result of a refactoring operation
@@ -88,6 +90,7 @@ impl RefactorApi {
             dry_run,
             verbose,
             quiet,
+            keep_super,
         } = config;
 
         if !quiet {
@@ -126,7 +129,7 @@ impl RefactorApi {
 
         // Step 2: Parse imports and run refactoring engine
         let mut refactor_engine =
-            RefactorEngine::new(&crate_names, dry_run, verbose);
+            RefactorEngine::new(&crate_names, dry_run, verbose, keep_super);
 
         // Parse imports based on the type of refactoring
         match &crate_names {
@@ -154,6 +157,20 @@ impl RefactorApi {
 
                     // IndexSet automatically handles deduplication based on ImportInfo's Hash/Eq implementation
                     unique_imports.insert(import);
+                }
+
+                // Parse super:: imports if not keeping them
+                if !keep_super {
+                    let super_imports =
+                        ImportParser::find_super_imports_in_crate(source_path)?;
+
+                    for mut super_import in super_imports {
+                        // Normalize super:: imports to crate:: format
+                        super_import.normalize_super_imports(source_path)?;
+
+                        // Add to the unique set (will deduplicate automatically)
+                        unique_imports.insert(super_import);
+                    }
                 }
 
                 // Convert back to Vec to maintain API compatibility
@@ -234,6 +251,7 @@ pub struct RefactorConfigBuilder {
     dry_run: bool,
     verbose: bool,
     quiet: bool,
+    keep_super: bool,
 }
 
 impl RefactorConfigBuilder {
@@ -244,6 +262,7 @@ impl RefactorConfigBuilder {
             dry_run: false,
             verbose: false,
             quiet: false,
+            keep_super: false,
         }
     }
 
@@ -287,6 +306,14 @@ impl RefactorConfigBuilder {
         self
     }
 
+    pub fn keep_super(
+        mut self,
+        keep_super: bool,
+    ) -> Self {
+        self.keep_super = keep_super;
+        self
+    }
+
     pub fn build(self) -> Result<RefactorConfig> {
         let crate_names = self
             .crate_names
@@ -301,6 +328,7 @@ impl RefactorConfigBuilder {
             dry_run: self.dry_run,
             verbose: self.verbose,
             quiet: self.quiet,
+            keep_super: self.keep_super,
         })
     }
 }
