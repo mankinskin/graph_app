@@ -1,44 +1,71 @@
 
+# Context-Search
 
-(21.12.24)
+Graph search and traversal capabilities for the context framework. 
+Provides policy-driven search operations over graph structures with 
+pattern matching, folding operations, and configurable traversal strategies.
 
-## Examples
+## Features
+- Search operations (sequences, parents, ancestors)
+- Configurable traversal strategies (BFT, DFT)
+- Early-terminating operations with state management
+- Pattern matching with partial match handling
+- Resumable search operations
 
-```
-let text = "helohelloehllo";
-let model = ContextGraph::from(text);
-
-...
-let index = model.insert(text)?;
-```
-## Insert
-```
-let start = model.insert(text[0]);
-let path = QueryPath::from(start);
-let query_next = text[1..];
-
-match
-path.search_iter(model).find(query_next)
-{
-    Ok(index) => index,
-    Err((path, err, cache)) =>
-        model.join(path, cache)
-}
-
-```
-## Find
-```
-let start = path.start();
-let cache = Cache::new(model, path, query);
-let states = cache.next_states(start);
-bft(
-    states,
-    |state| cache.next_states(state)
-)
-```
-## Join
-```
-
-```
 ## Structure
+- **`search/`**: Searchable trait, find operations
+  - `bft.rs`: Breadth-first traversal implementation
+  - `context.rs`: Search context and ancestor policies
+- **`fold/`**: Foldable trait, early termination
+  - `foldable.rs`: Foldable trait and error states
+  - `result.rs`: CompleteState, FinishedState, IncompleteState
+  - `state.rs`: Folding state management
+- **`traversal/`**: TraversalKind, policies, containers
+  - `policy.rs`: Traversal policies and strategies
+  - `container/`: State containers (BFT, DFT, ordering, extension)
+  - `state/`: Traversal state (start, cursor, end conditions)
+- **`match/`**: Pattern matching, cursors
+  - `iterator.rs`: Match iteration logic
+  - `root_cursor.rs`: Root cursor for search operations
+- **`compare/`**: State comparison, relationships
+  - `iterator.rs`: Compare iteration functionality
+  - `parent.rs`: Parent comparison states
+  - `state.rs`: General comparison state management
 
+## Usage
+```rust
+use context_search::Searchable;
+
+// Search for token sequences
+let result = graph.find_sequence(vec!["hello", "world"])?;
+
+// Find direct parent matches
+let parent_result = graph.find_parent(pattern)?;
+
+// Find ancestor matches
+let ancestor_result = graph.find_ancestor(pattern)?;
+```
+
+## Key Concepts
+- **Foldable Operations**: Early termination for efficient results
+- **Policy-Based Design**: Configurable traversal strategies
+- **State Continuation**: Pausable and resumable operations
+
+## Dependencies
+- **context-trace**: Core graph and tracing functionality
+- **petgraph**: Graph data structures and algorithms
+- **itertools**: Iterator utilities
+- **tracing**: Logging and debugging support
+
+## Development
+```bash
+cargo test          # Run tests
+cargo doc --open    # Generate documentation
+```
+
+**Features**: `test-api` (testing utilities), default (logging)
+
+## Architecture
+Layered design with search operations, foldable operations, 
+configurable traversal policies, pattern matching, and state 
+comparison utilities.
