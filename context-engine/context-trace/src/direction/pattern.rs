@@ -1,10 +1,6 @@
 use crate::graph::vertex::pattern::Pattern;
 
-use super::{
-    Direction,
-    Left,
-    Right,
-};
+use crate::{Direction, Left, Right};
 
 pub trait PatternDirection: Direction {
     //fn pattern_tail<T: ToChild>(pattern: &'_ [T]) -> &'_ [T];

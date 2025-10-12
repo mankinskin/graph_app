@@ -1,6 +1,6 @@
 use std::num::NonZeroUsize;
 
-use super::new::EditKind;
+use crate::trace::new::{EditKind};
 use crate::{
     HashMap,
     HashSet,

@@ -1,7 +1,4 @@
-use super::{
-    append::PathAppend,
-    move_path::root::MoveRootIndex,
-};
+use crate::path::move_path::root::{MoveRootIndex};
 use crate::{
     direction::Right,
     path::{

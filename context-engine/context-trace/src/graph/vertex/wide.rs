@@ -1,10 +1,4 @@
-use super::{
-    child::Child,
-    pattern::{
-        pattern_width,
-        Pattern,
-    },
-};
+use crate::graph::pattern::{pattern_width, Pattern};
 use crate::{
     graph::vertex::data::VertexData,
     trace::cache::key::directed::{

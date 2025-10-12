@@ -16,14 +16,7 @@ use crate::{
     },
 };
 
-use super::{
-    role_path::RootedRolePath,
-    root::{
-        IndexRoot,
-        PathRoot,
-        RootedPath,
-    },
-};
+use crate::path::structs::role_path::{RootedRolePath};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RootedSplitPath<Root: PathRoot = IndexRoot> {

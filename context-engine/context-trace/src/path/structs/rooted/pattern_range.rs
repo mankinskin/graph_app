@@ -3,18 +3,7 @@ use std::{
     ops::ControlFlow,
 };
 
-use super::{
-    RootedRangePath,
-    role_path::{
-        CalcWidth,
-        PatternRolePath,
-        RootedRolePath,
-    },
-    root::{
-        PathRoot,
-        RootedPath,
-    },
-};
+use crate::{RootedRangePath};
 use crate::{
     direction::{
         Right,

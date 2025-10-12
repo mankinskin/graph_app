@@ -1,10 +1,4 @@
-use super::super::{
-    accessors::role::{
-        End,
-        PathRole,
-    },
-    structs::role_path::RolePath,
-};
+use crate::structs::role_path::{RolePath};
 use crate::{
     graph::vertex::location::child::ChildLocation,
     path::structs::{

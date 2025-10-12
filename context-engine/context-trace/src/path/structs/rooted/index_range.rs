@@ -1,17 +1,6 @@
 use std::ops::ControlFlow;
 
-use super::{
-    RootedRangePath,
-    role_path::{
-        IndexRolePath,
-        RootedRolePath,
-    },
-    root::{
-        IndexRoot,
-        PathRoot,
-        RootedPath,
-    },
-};
+use crate::{RootedRangePath};
 use crate::{
     direction::{
         Direction,

@@ -37,10 +37,7 @@ use crate::{
     trace::has_graph::HasGraph,
 };
 
-use super::rooted::{
-    index_range::IndexRangePath,
-    role_path::RootedRolePath,
-};
+use crate::path::rooted::index_range::{IndexRangePath};
 use crate::path::RolePathUtils;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]

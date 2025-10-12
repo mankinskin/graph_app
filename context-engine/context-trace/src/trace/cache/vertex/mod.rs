@@ -4,10 +4,7 @@ use crate::{
 };
 use positions::DirectedPositions;
 
-use super::{
-    key::directed::HasTokenPosition,
-    position::PositionCache,
-};
+use crate::trace::cache::key::directed::{HasTokenPosition};
 
 pub mod positions;
 

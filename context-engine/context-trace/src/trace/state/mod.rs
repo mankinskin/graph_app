@@ -1,6 +1,6 @@
 pub mod parent;
 
-use super::child::state::ChildState;
+use crate::trace::child::state::{ChildState};
 use crate::path::{
     mutators::move_path::key::TokenPosition,
     structs::rooted::root::RootedPath,

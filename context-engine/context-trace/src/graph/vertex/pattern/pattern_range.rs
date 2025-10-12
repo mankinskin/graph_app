@@ -4,10 +4,7 @@ use std::{
     slice::SliceIndex,
 };
 
-use super::{
-    super::child::Child,
-    Pattern,
-};
+use crate::{Pattern};
 use crate::graph::{
     getters::ErrorReason,
     vertex::PatternId,

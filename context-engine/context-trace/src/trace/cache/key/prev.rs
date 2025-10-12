@@ -1,4 +1,4 @@
-use super::directed::DirectedKey;
+use crate::trace::cache::directed::{DirectedKey};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrevKey {

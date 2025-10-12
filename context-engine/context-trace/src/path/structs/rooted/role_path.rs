@@ -61,15 +61,7 @@ use crate::{
     trace::has_graph::HasGraph,
 };
 
-use super::{
-    RootedRangePath,
-    pattern_range::PatternRangePath,
-    root::{
-        IndexRoot,
-        PathRoot,
-        RootedPath,
-    },
-};
+use crate::{RootedRangePath};
 use crate::graph::vertex::wide::Wide;
 
 pub trait CalcWidth: CalcOffset + RootedPath {

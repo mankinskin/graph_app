@@ -35,10 +35,7 @@ use crate::{
     trace::has_graph::HasGraph,
 };
 
-use super::rooted::{
-    pattern_range::PatternRangePath,
-    role_path::CalcWidth,
-};
+use crate::path::rooted::pattern_range::{PatternRangePath};
 
 pub trait FoldablePath:
 BaseQuery

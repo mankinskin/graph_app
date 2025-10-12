@@ -4,7 +4,7 @@ use std::{
     fmt::Debug,
 };
 
-use super::state::ChildState;
+use crate::trace::state::{ChildState};
 
 pub type ChildQueue<S = ChildState> = VecDeque<S>;
 

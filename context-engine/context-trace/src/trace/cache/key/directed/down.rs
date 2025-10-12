@@ -11,10 +11,7 @@ use crate::{
     path::mutators::move_path::key::TokenPosition,
 };
 
-use super::{
-    HasTokenPosition,
-    up::UpPosition,
-};
+use crate::{HasTokenPosition};
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq, From)]
 pub struct DownPosition(pub TokenPosition);

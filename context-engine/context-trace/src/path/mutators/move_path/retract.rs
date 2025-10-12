@@ -6,7 +6,7 @@ use crate::{
     trace::has_graph::HasGraph,
 };
 
-use super::path::MovePath;
+use crate::path::mutators::path::{MovePath};
 pub trait Retract: MovePath<Left, End> {
     fn retract<G: HasGraph>(
         &mut self,

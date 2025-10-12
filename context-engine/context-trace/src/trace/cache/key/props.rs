@@ -5,10 +5,7 @@ pub trait LeafKey {
 }
 use crate::path::mutators::move_path::key::TokenPosition;
 
-use super::directed::{
-    DirectedKey,
-    up::UpKey,
-};
+use crate::trace::cache::directed::{DirectedKey};
 
 /// get the token position in a query
 pub trait CursorPosition {

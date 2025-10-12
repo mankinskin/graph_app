@@ -6,7 +6,7 @@ use std::{
 use child::*;
 use pattern::*;
 
-use super::PatternId;
+use crate::{PatternId};
 
 pub mod child;
 pub mod pattern;

@@ -12,10 +12,7 @@ use crate::graph::vertex::{
     wide::Wide,
 };
 
-use super::{
-    child::Child,
-    has_vertex_index::ToChild,
-};
+use crate::graph::vertex::child::{Child};
 
 pub mod id;
 pub mod pattern_range;

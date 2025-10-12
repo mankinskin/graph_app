@@ -66,7 +66,7 @@ use std::{
     slice::SliceIndex,
 };
 
-use super::child::SubChild;
+use crate::graph::child::{SubChild};
 
 pub fn clone_child_patterns(
     children: &'_ ChildPatterns
