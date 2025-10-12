@@ -1,27 +1,15 @@
-use anyhow::{
-    Context,
-    Result,
-};
+use anyhow::{Context, Result};
 use std::{
     fs,
-    hash::{
-        Hash,
-        Hasher,
-    },
-    path::{
-        Path,
-        PathBuf,
-    },
+    hash::{Hash, Hasher},
+    path::{Path, PathBuf},
 };
 use syn::visit::Visit;
 use walkdir::WalkDir;
 
 use crate::{
     analysis::crates::CratePaths,
-    syntax::navigator::{
-        UseTreeItemCollector,
-        UseTreeNavigator,
-    },
+    syntax::navigator::{UseTreeItemCollector, UseTreeNavigator},
 };
 
 #[derive(Debug, Clone)]
@@ -87,9 +75,7 @@ impl ImportInfo {
         crate_root: &Path,
     ) -> Result<()> {
         use crate::core::path::{
-            is_super_import,
-            resolve_super_to_crate_path,
-            ImportPath,
+            is_super_import, resolve_super_to_crate_path, ImportPath,
         };
 
         // Check if this is a super import
@@ -97,15 +83,11 @@ impl ImportInfo {
             return Ok(()); // Not a super import, nothing to do
         }
 
-        // Parse the super import path
-        let super_path = ImportPath::parse(&self.import_path)?;
-
-        // Resolve to crate:: format
-        let resolved_path = resolve_super_to_crate_path(
+        // Parse and resolve the super import path to its crate:: equivalent
+        let resolved_path = ImportPath::parse_and_resolve_super(
+            &self.import_path,
             &self.file_path,
             crate_root,
-            &super_path.segments,
-            &super_path.final_item,
         )?;
 
         // Update the import path
@@ -145,8 +127,9 @@ impl ImportParser {
         crate_paths: &CratePaths,
     ) -> Result<Vec<ImportInfo>> {
         match crate_paths {
-            CratePaths::SelfRefactor { crate_path } =>
-                self.find_imports_in_crate(crate_path),
+            CratePaths::SelfRefactor { crate_path } => {
+                self.find_imports_in_crate(crate_path)
+            },
             CratePaths::CrossRefactor {
                 source_crate_path: _,
                 target_crate_path,

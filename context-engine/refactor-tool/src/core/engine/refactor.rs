@@ -1,52 +1,30 @@
 use crate::{
     analysis::{
-        crates::{
-            CrateNames,
-            CratePaths,
-        },
-        imports::{
-            analyze_imports,
-            print_analysis_summary,
-        },
+        crates::{CrateNames, CratePaths},
+        imports::{analyze_imports, print_analysis_summary},
         ExportAnalyzer,
     },
     common::format::format_relative_path,
-    core::{
-        ast_manager::AstManager,
-        path::ImportPath,
-    },
-    io::files::{
-        check_crates_compilation,
-        write_file,
-        CompileResults,
-    },
+    core::{ast_manager::AstManager, path::ImportPath},
+    io::files::{check_crates_compilation, write_file, CompileResults},
     syntax::{
         parser::ImportInfo,
         transformer::{
-            replace_imports_with_strategy,
-            CrossCrateReplacementStrategy,
+            replace_imports_with_strategy, CrossCrateReplacementStrategy,
             SelfCrateReplacementStrategy,
         },
-        visitor::{
-            merge_pub_uses,
-            parse_existing_pub_uses,
-        },
+        visitor::{merge_pub_uses, parse_existing_pub_uses},
     },
 };
-use anyhow::{
-    bail,
-    Result,
-};
-use std::{
-    collections::BTreeSet,
-    path::Path,
-};
+use anyhow::{bail, Result};
+use std::{collections::BTreeSet, path::Path};
 
 pub struct RefactorEngine {
     crate_names: CrateNames,
     dry_run: bool,
     verbose: bool,
     keep_super: bool,
+    no_exports: bool,
     ast_manager: AstManager,
 }
 
@@ -56,12 +34,14 @@ impl RefactorEngine {
         dry_run: bool,
         verbose: bool,
         keep_super: bool,
+        no_exports: bool,
     ) -> Self {
         Self {
-            crate_names: crate_names.unhyphen(), // Convert hyphens to underscores for import matching
+            crate_names: crate_names.clone(),
             dry_run,
             verbose,
             keep_super,
+            no_exports,
             ast_manager: AstManager::new(verbose),
         }
     }
@@ -92,11 +72,8 @@ impl RefactorEngine {
             } => source_crate_path,
         };
         // Step 2: Update source crate's lib.rs with pub use statements
-        self.update_source_lib_rs(
-            crate_path,
-            &analysis_result.all_imported_items,
-            workspace_root,
-        )?;
+        // Pass the resolved imports directly instead of re-parsing from item names
+        self.update_source_lib_rs(crate_path, &imports, workspace_root)?;
 
         // Step 3: Replace imports in target crate files
         match &self.crate_names {
@@ -130,8 +107,9 @@ impl RefactorEngine {
             let compile_results =
                 check_crates_compilation(crate_paths, self.verbose)?;
             let (source_compiles, target) = match compile_results {
-                CompileResults::SelfCrate { self_compiles } =>
-                    (self_compiles, None),
+                CompileResults::SelfCrate { self_compiles } => {
+                    (self_compiles, None)
+                },
                 CompileResults::CrossCrate {
                     source_compiles,
                     target_compiles,
@@ -168,9 +146,17 @@ impl RefactorEngine {
     fn update_source_lib_rs(
         &mut self,
         source_crate_path: &Path,
-        imported_items: &BTreeSet<String>,
+        resolved_imports: &[ImportInfo],
         _workspace_root: &Path,
     ) -> Result<()> {
+        // Skip pub use generation if disabled via command line flag
+        if self.no_exports {
+            if self.verbose {
+                println!("🚫 Skipping pub use generation (disabled via --no-exports flag)");
+            }
+            return Ok(());
+        }
+
         let lib_rs_path = source_crate_path.join("src").join("lib.rs");
 
         if !lib_rs_path.exists() {
@@ -204,10 +190,12 @@ impl RefactorEngine {
             }
         }
 
-        // Convert string items to structured ImportPath objects for better processing
-        let import_paths: Vec<ImportPath> = imported_items
+        // Use the resolved ImportPath objects directly from resolved imports
+        let import_paths: Vec<ImportPath> = resolved_imports
             .iter()
-            .filter_map(|item| ImportPath::parse(item).ok())
+            .filter_map(|import_info| {
+                ImportPath::parse(&import_info.import_path).ok()
+            })
             .collect();
 
         // Filter out items that are already exported using structured path analysis
@@ -216,8 +204,9 @@ impl RefactorEngine {
             .filter(|import_path| {
                 // Strip the crate prefix to get relative path
                 let relative_path = match &self.crate_names {
-                    CrateNames::CrossRefactor { source_crate, .. } =>
-                        import_path.strip_crate_prefix(source_crate),
+                    CrateNames::CrossRefactor { source_crate, .. } => {
+                        import_path.strip_crate_prefix(source_crate)
+                    },
                     CrateNames::SelfRefactor { crate_name } => import_path
                         .strip_crate_prefix(crate_name)
                         .or_else(|| import_path.strip_crate_prefix("crate")),

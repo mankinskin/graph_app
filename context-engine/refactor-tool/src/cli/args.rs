@@ -1,9 +1,6 @@
 #[cfg(not(test))]
 use anyhow::Result;
-use clap::{
-    Parser,
-    Subcommand,
-};
+use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -54,6 +51,13 @@ pub enum Commands {
             help = "Disable super:: imports normalization (default: normalize super:: to crate:: format)"
         )]
         keep_super: bool,
+
+        /// Disable automatic export generation for imported items
+        #[arg(
+            long = "no-exports",
+            help = "Disable automatic generation of pub use statements in source crate's lib.rs (default: enabled)"
+        )]
+        no_exports: bool,
 
         /// Positional arguments: [SOURCE_CRATE] [TARGET_CRATE] or [CRATE] when using --self
         #[arg(
@@ -163,12 +167,14 @@ impl Args {
                 target_crate,
                 self_refactor,
                 keep_super,
+                no_exports,
                 positional,
             } => Some(ImportArgs {
                 source_crate: source_crate.clone(),
                 target_crate: target_crate.clone(),
                 self_refactor: *self_refactor,
                 keep_super: *keep_super,
+                no_exports: *no_exports,
                 positional: positional.clone(),
                 workspace_root: self.workspace_root.clone(),
                 dry_run: self.dry_run,
@@ -230,6 +236,7 @@ pub struct ImportArgs {
     pub target_crate: Option<String>,
     pub self_refactor: bool,
     pub keep_super: bool,
+    pub no_exports: bool,
     pub positional: Vec<String>,
     pub workspace_root: PathBuf,
     pub dry_run: bool,

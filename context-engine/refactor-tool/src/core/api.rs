@@ -8,17 +8,10 @@ use indexmap::IndexSet;
 use std::path::Path;
 
 use crate::{
-    analysis::crates::{
-        CrateAnalyzer,
-        CrateNames,
-        CratePaths,
-    },
+    analysis::crates::{CrateAnalyzer, CrateNames, CratePaths},
     common::format::format_relative_path,
     core::engine::RefactorEngine,
-    syntax::parser::{
-        ImportInfo,
-        ImportParser,
-    },
+    syntax::parser::{ImportInfo, ImportParser},
 };
 
 /// Configuration for a refactoring operation
@@ -36,6 +29,8 @@ pub struct RefactorConfig {
     pub quiet: bool,
     /// Whether to keep super:: imports as-is (default: normalize to crate:: format)
     pub keep_super: bool,
+    /// Whether to disable automatic export generation (default: false, exports enabled)
+    pub no_exports: bool,
 }
 
 /// High-level result of a refactoring operation
@@ -91,6 +86,7 @@ impl RefactorApi {
             verbose,
             quiet,
             keep_super,
+            no_exports,
         } = config;
 
         if !quiet {
@@ -128,8 +124,13 @@ impl RefactorApi {
         }
 
         // Step 2: Parse imports and run refactoring engine
-        let mut refactor_engine =
-            RefactorEngine::new(&crate_names, dry_run, verbose, keep_super);
+        let mut refactor_engine = RefactorEngine::new(
+            &crate_names,
+            dry_run,
+            verbose,
+            keep_super,
+            no_exports,
+        );
 
         // Parse imports based on the type of refactoring
         match &crate_names {
@@ -252,6 +253,7 @@ pub struct RefactorConfigBuilder {
     verbose: bool,
     quiet: bool,
     keep_super: bool,
+    no_exports: bool,
 }
 
 impl RefactorConfigBuilder {
@@ -263,6 +265,7 @@ impl RefactorConfigBuilder {
             verbose: false,
             quiet: false,
             keep_super: false,
+            no_exports: false,
         }
     }
 
@@ -314,6 +317,14 @@ impl RefactorConfigBuilder {
         self
     }
 
+    pub fn no_exports(
+        mut self,
+        no_exports: bool,
+    ) -> Self {
+        self.no_exports = no_exports;
+        self
+    }
+
     pub fn build(self) -> Result<RefactorConfig> {
         let crate_names = self
             .crate_names
@@ -329,6 +340,7 @@ impl RefactorConfigBuilder {
             verbose: self.verbose,
             quiet: self.quiet,
             keep_super: self.keep_super,
+            no_exports: self.no_exports,
         })
     }
 }

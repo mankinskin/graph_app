@@ -1,17 +1,7 @@
 //! Structured representation of import paths to replace error-prone string manipulation
 
-use crate::common::format::format_relative_path;
-use anyhow::{
-    anyhow,
-    Result,
-};
-use std::{
-    fmt,
-    path::{
-        Path,
-        PathBuf,
-    },
-};
+use anyhow::{anyhow, Result};
+use std::{fmt, path::Path};
 
 /// A structured representation of an import path like "crate_name::module::submodule::Item"
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -52,6 +42,60 @@ impl ImportPath {
             segments,
             final_item,
         })
+    }
+
+    /// Parse a super:: import path and return the resolved crate:: path
+    pub fn parse_and_resolve_super(
+        path_str: &str,
+        file_path: &Path,
+        crate_root: &Path,
+    ) -> Result<Self> {
+        if !path_str.starts_with("super::") {
+            return Self::parse(path_str);
+        }
+
+        let parts: Vec<&str> = path_str.split("::").collect();
+
+        if parts.len() < 2 {
+            return Err(anyhow!(
+                "Super import path must have at least super::item format: {}",
+                path_str
+            ));
+        }
+
+        // Count consecutive "super" segments at the beginning
+        let mut super_count = 0;
+        let mut non_super_start = 0;
+
+        for (i, part) in parts.iter().enumerate() {
+            if *part == "super" {
+                super_count += 1;
+                non_super_start = i + 1;
+            } else {
+                break;
+            }
+        }
+
+        let final_item = parts.last().unwrap().to_string();
+
+        // Extract non-super path segments (between supers and final item)
+        let remaining_segments = if parts.len() > super_count + 1 {
+            parts[non_super_start..parts.len() - 1]
+                .iter()
+                .map(|s| s.to_string())
+                .collect()
+        } else {
+            Vec::new()
+        };
+
+        // Resolve the super:: path to its crate:: equivalent
+        resolve_super_import_path(
+            file_path,
+            crate_root,
+            super_count,
+            &remaining_segments,
+            &final_item,
+        )
     }
 
     /// Create from components
@@ -150,21 +194,78 @@ impl ImportPath {
             return Ok(()); // Not a super import, nothing to do
         }
 
-        let absolute_path = resolve_super_to_crate_path(
+        // This method is deprecated - super imports should be parsed and resolved
+        // using parse_and_resolve_super() instead of parse() followed by normalize_super_import()
+        // For backward compatibility, we'll assume single super:: level
+        let absolute_path = resolve_super_import_path(
             file_path,
             crate_root,
+            1, // Single super:: level
             &self.segments,
             &self.final_item,
         )?;
 
         // Update this ImportPath to use crate:: instead of super::
         self.crate_name = "crate".to_string();
-        // The segments and final_item are already correct from the resolution
         self.segments = absolute_path.segments;
         self.final_item = absolute_path.final_item;
 
         Ok(())
     }
+}
+
+/// Resolve a super:: import to its equivalent crate:: form
+/// Takes the count of super:: segments and resolves them properly
+pub fn resolve_super_import_path(
+    file_path: &Path,
+    crate_root: &Path,
+    super_count: usize,
+    remaining_segments: &[String],
+    final_item: &str,
+) -> Result<ImportPath> {
+    // Get the directory containing the current file
+    let current_dir = file_path.parent().ok_or_else(|| {
+        anyhow!("Cannot get parent directory of {}", file_path.display())
+    })?;
+
+    // Get the path relative to the crate root
+    let relative_to_crate = current_dir
+        .strip_prefix(crate_root.join("src"))
+        .map_err(|_| {
+            anyhow!(
+                "File {} is not within crate src directory {}",
+                file_path.display(),
+                crate_root.join("src").display()
+            )
+        })?;
+
+    let mut current_segments: Vec<String> =
+        if relative_to_crate.as_os_str().is_empty() {
+            // File is in src/ root (like lib.rs or main.rs)
+            Vec::new()
+        } else {
+            relative_to_crate
+                .components()
+                .map(|c| c.as_os_str().to_string_lossy().to_string())
+                .collect()
+        };
+
+    // Move up one level for each super::
+    for _ in 0..super_count {
+        if current_segments.is_empty() {
+            return Err(anyhow!("Cannot use super:: from crate root - too many super:: segments"));
+        }
+        current_segments.pop();
+    }
+
+    // Add the remaining path segments after the super:: resolution
+    current_segments.extend(remaining_segments.iter().cloned());
+
+    Ok(ImportPath::new(
+        "crate".to_string(),
+        current_segments,
+        final_item.to_string(),
+    ))
 }
 
 /// Resolve a super:: import to its equivalent crate:: form
@@ -225,7 +326,7 @@ pub fn resolve_super_to_crate_path(
 
 /// Check if a path represents a super:: import
 pub fn is_super_import(path: &str) -> bool {
-    path.starts_with("super::")
+    path == "super" || path.starts_with("super::")
 }
 
 impl fmt::Display for ImportPath {

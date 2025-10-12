@@ -1,19 +1,12 @@
 use anyhow::Result;
 use std::path::PathBuf;
 
-use crate::cli::args::{
-    AnalysisArgs,
-    ImportArgs,
-    ServerArgs,
-};
+use crate::cli::args::{AnalysisArgs, ImportArgs, ServerArgs};
 
 #[cfg(not(test))]
 use crate::{
     analysis::crates::CrateNames,
-    core::{
-        RefactorApi,
-        RefactorConfigBuilder,
-    },
+    core::{RefactorApi, RefactorConfigBuilder},
 };
 
 #[cfg(not(test))]
@@ -42,6 +35,7 @@ pub fn run_refactor(import_args: &ImportArgs) -> Result<()> {
         .verbose(import_args.verbose)
         .quiet(false)
         .keep_super(import_args.keep_super)
+        .no_exports(import_args.no_exports)
         .build()?;
 
     let result = RefactorApi::execute_refactor(config);
@@ -62,9 +56,7 @@ pub fn run_refactor(import_args: &ImportArgs) -> Result<()> {
 #[cfg(feature = "ai")]
 pub async fn run_analysis(analysis_args: &AnalysisArgs) -> Result<()> {
     use crate::analysis::duplication::{
-        AiProvider,
-        AnalysisConfig,
-        CodebaseDuplicationAnalyzer,
+        AiProvider, AnalysisConfig, CodebaseDuplicationAnalyzer,
     };
 
     let ai_provider = match analysis_args.ai_provider.to_lowercase().as_str() {
@@ -155,10 +147,7 @@ pub async fn run_analysis(_analysis_args: &AnalysisArgs) -> Result<()> {
 
 #[cfg(feature = "embedded-llm")]
 pub async fn run_server(server_args: &ServerArgs) -> Result<()> {
-    use crate::server::{
-        CandleServer,
-        ServerConfig,
-    };
+    use crate::server::{CandleServer, ServerConfig};
 
     println!("🚀 Starting Candle LLM Server");
 
@@ -204,10 +193,7 @@ pub async fn run_server(_server_args: &ServerArgs) -> Result<()> {
 
 #[cfg(feature = "embedded-llm")]
 pub async fn download_model(model_id: &str) -> Result<()> {
-    use crate::server::{
-        CandleServer,
-        ServerConfig,
-    };
+    use crate::server::{CandleServer, ServerConfig};
 
     println!("📥 Downloading model: {}", model_id);
 

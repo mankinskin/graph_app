@@ -1,8 +1,6 @@
 //! Tests for super imports normalization functionality
 
-use refactor_tool::{
-    core::path::is_super_import, syntax::parser::ImportParser,
-};
+use refactor_tool::{is_super_import, ImportParser};
 use tempfile::TempDir;
 
 fn create_test_crate_structure() -> TempDir {

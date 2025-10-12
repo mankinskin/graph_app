@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 mod common;
 
 // Legacy test functions have been moved to tests.rs using the modern TestWorkspace framework

@@ -1,12 +1,12 @@
 #![feature(iter_intersperse)]
+// Allow unused code during testing and development
+#![cfg_attr(any(test, debug_assertions), allow(unused))]
+#![cfg_attr(any(test, debug_assertions), allow(dead_code))]
 
 #[cfg(not(test))]
 use anyhow::Result;
 #[cfg(not(test))]
-use clap::{
-    CommandFactory,
-    Parser,
-};
+use clap::{CommandFactory, Parser};
 
 // Import the new modular structure
 mod ai;
@@ -16,21 +16,17 @@ mod common;
 mod core;
 mod io;
 mod server;
+#[cfg(test)]
+pub mod syntax;
+#[cfg(not(test))]
 mod syntax;
 
 #[cfg(not(test))]
-use cli::args::{
-    Args,
-    Commands,
-};
+use cli::args::{Args, Commands};
 
 #[cfg(not(test))]
 use cli::commands::{
-    download_model,
-    init_config,
-    list_models,
-    run_analysis,
-    run_refactor,
+    download_model, init_config, list_models, run_analysis, run_refactor,
     run_server,
 };
 
