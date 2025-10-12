@@ -1,20 +1,12 @@
 use crate::{
-    analysis::crates::CrateNames,
-    common::format::format_relative_path,
-    io::files::write_file,
-    syntax::parser::ImportInfo,
+    analysis::crates::CrateNames, common::format::format_relative_path,
+    io::files::write_file, syntax::parser::ImportInfo,
 };
-use anyhow::{
-    Context,
-    Result,
-};
+use anyhow::{Context, Result};
 use std::{
     collections::HashMap,
     fs,
-    path::{
-        Path,
-        PathBuf,
-    },
+    path::{Path, PathBuf},
 };
 
 #[derive(Debug)]
@@ -187,8 +179,18 @@ fn replace_imports_in_file_with_strategy<S: ImportReplacementStrategy>(
     dry_run: bool,
     verbose: bool,
 ) -> Result<()> {
-    let original_content = fs::read_to_string(file_path)
-        .with_context(|| format!("Failed to read {}", file_path.display()))?;
+    if verbose {
+        println!("📁 Processing file: {}", file_path.display());
+    }
+
+    let original_content =
+        fs::read_to_string(file_path).with_context(|| {
+            format!(
+                "Failed to read {} (path: {:?})",
+                file_path.display(),
+                file_path
+            )
+        })?;
 
     let mut new_content = original_content.clone();
     let mut replacements_made = 0;

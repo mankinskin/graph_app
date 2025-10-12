@@ -146,14 +146,23 @@ impl ImportTree {
         imports.extend(self.simple_imports.clone());
         imports.extend(self.super_imports.clone());
 
-        // Convert grouped imports back to ImportInfo
+        // Convert grouped imports to consolidated ImportInfo objects
         for (base_path, items) in &self.grouped_imports {
-            for item in items {
+            if items.len() == 1 {
+                // Single item - create simple import
                 imports.push(ImportInfo {
                     file_path: PathBuf::new(), // Will be set by caller if needed
-                    import_path: format!("{}::{}", base_path, item),
+                    import_path: format!("{}::{}", base_path, &items[0]),
                     line_number: 0,
-                    imported_items: vec![item.clone()],
+                    imported_items: vec![items[0].clone()],
+                });
+            } else {
+                // Multiple items - create grouped import
+                imports.push(ImportInfo {
+                    file_path: PathBuf::new(), // Will be set by caller if needed
+                    import_path: base_path.clone(),
+                    line_number: 0,
+                    imported_items: items.clone(),
                 });
             }
         }
@@ -322,10 +331,12 @@ impl ImportTreeProcessor {
                 }
             }
 
-            // Move normalized super imports to simple imports
+            // Move normalized super imports to simple imports and merge with existing crate:: imports
             let normalized_super: Vec<_> =
                 tree.super_imports.drain(..).collect();
-            tree.simple_imports.extend(normalized_super);
+
+            // Merge normalized super imports with existing crate:: imports
+            self.merge_crate_imports(tree, normalized_super);
         }
 
         // Normalize explicit crate names to crate:: format
@@ -435,6 +446,106 @@ impl ImportTreeProcessor {
             },
         }
         Ok(())
+    }
+
+    /// Merge normalized super imports with existing crate:: imports to avoid duplication
+    fn merge_crate_imports(
+        &self,
+        tree: &mut ImportTree,
+        normalized_imports: Vec<ImportInfo>,
+    ) {
+        use std::collections::HashMap;
+
+        // Group all crate:: imports by their base path
+        let mut crate_imports_by_path: HashMap<String, Vec<String>> =
+            HashMap::new();
+
+        // First, collect existing crate:: imports that can be grouped
+        let mut remaining_simple_imports = Vec::new();
+
+        for import in std::mem::take(&mut tree.simple_imports) {
+            if import.import_path.starts_with("crate::") {
+                // Extract base path and final item
+                if let Some(last_segment) =
+                    import.import_path.split("::").last()
+                {
+                    if let Some(base_path) = import
+                        .import_path
+                        .strip_suffix(&format!("::{}", last_segment))
+                    {
+                        crate_imports_by_path
+                            .entry(base_path.to_string())
+                            .or_default()
+                            .push(last_segment.to_string());
+                    } else {
+                        // Handle simple "crate" imports
+                        remaining_simple_imports.push(import);
+                    }
+                } else {
+                    remaining_simple_imports.push(import);
+                }
+            } else {
+                remaining_simple_imports.push(import);
+            }
+        }
+
+        // Process normalized super imports and group them
+        for import in normalized_imports {
+            if import.import_path.starts_with("crate::") {
+                if let Some(last_segment) =
+                    import.import_path.split("::").last()
+                {
+                    if let Some(base_path) = import
+                        .import_path
+                        .strip_suffix(&format!("::{}", last_segment))
+                    {
+                        crate_imports_by_path
+                            .entry(base_path.to_string())
+                            .or_default()
+                            .push(last_segment.to_string());
+                    } else {
+                        // Handle simple "crate" imports
+                        remaining_simple_imports.push(import);
+                    }
+                } else {
+                    remaining_simple_imports.push(import);
+                }
+            } else {
+                remaining_simple_imports.push(import);
+            }
+        }
+
+        // Reconstruct the import tree with merged imports
+        tree.simple_imports = remaining_simple_imports;
+
+        // Add grouped imports or convert single-item groups back to simple imports
+        for (base_path, mut items) in crate_imports_by_path {
+            // Remove duplicates and sort
+            items.sort();
+            items.dedup();
+
+            if items.len() == 1 {
+                // Single item - keep as simple import
+                tree.simple_imports.push(ImportInfo {
+                    file_path: std::path::PathBuf::new(),
+                    import_path: format!("{}::{}", base_path, items[0]),
+                    line_number: 0,
+                    imported_items: vec![items[0].clone()],
+                });
+            } else {
+                // Multiple items - add to grouped imports
+                tree.grouped_imports
+                    .entry(base_path)
+                    .or_default()
+                    .extend(items);
+            }
+        }
+
+        // Sort and deduplicate grouped imports
+        for items in tree.grouped_imports.values_mut() {
+            items.sort();
+            items.dedup();
+        }
     }
 }
 
@@ -587,15 +698,71 @@ impl ImportExportProcessor {
             .apply_strategy(&import_tree, strategy.as_ref())
             .context("Failed to apply replacement strategy")?;
 
-        // Step 5: Handle super:: import normalization if needed
+        // Apply the changes to files using the transformer
+        if !replacement_results.is_empty() {
+            use crate::syntax::transformer::{
+                replace_imports_with_strategy, CrossCrateReplacementStrategy,
+                SelfCrateReplacementStrategy,
+            };
+            let flat_imports = import_tree.to_flat_imports();
+
+            // Filter out imports without valid file paths (grouped imports lose path info)
+            let valid_imports: Vec<_> = flat_imports
+                .into_iter()
+                .filter(|import| !import.file_path.as_os_str().is_empty())
+                .collect();
+
+            if self.context.verbose {
+                println!(
+                    "🔧 Applying changes to {} files",
+                    valid_imports
+                        .iter()
+                        .map(|i| &i.file_path)
+                        .collect::<std::collections::HashSet<_>>()
+                        .len()
+                );
+            }
+
+            // Skip if no valid imports to process
+            if valid_imports.is_empty() {
+                if self.context.verbose {
+                    println!("⚠️  No imports with valid file paths to process");
+                }
+            } else {
+                // Create concrete strategy based on context
+                match &self.context.crate_names {
+                    CrateNames::SelfCrate { .. } => {
+                        replace_imports_with_strategy(
+                            valid_imports,
+                            SelfCrateReplacementStrategy,
+                            &self.context.workspace_root,
+                            self.context.dry_run,
+                            self.context.verbose,
+                        )
+                        .context("Failed to apply import changes to files")?;
+                    },
+                    CrateNames::CrossCrate { .. } => {
+                        let strategy = CrossCrateReplacementStrategy {
+                            crate_names: self.context.crate_names.clone(),
+                        };
+                        replace_imports_with_strategy(
+                            valid_imports,
+                            strategy,
+                            &self.context.workspace_root,
+                            self.context.dry_run,
+                            self.context.verbose,
+                        )
+                        .context("Failed to apply import changes to files")?;
+                    },
+                }
+            }
+        }
+
+        // Step 5: Handle super:: import normalization (skip - already handled in step 2)
         let super_results = if self.context.normalize_super {
-            let super_strategy =
-                self.replacement_processor.get_super_strategy();
-            Some(
-                self.replacement_processor
-                    .apply_strategy(&import_tree, &super_strategy)
-                    .context("Failed to apply super normalization")?,
-            )
+            // Super imports were already normalized and merged in step 2,
+            // so we don't need a separate replacement phase for them
+            Some(HashMap::new())
         } else {
             None
         };

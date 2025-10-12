@@ -5,8 +5,10 @@ use crate::cli::args::{AnalysisArgs, ImportArgs, ServerArgs};
 
 #[cfg(not(test))]
 use crate::{
-    analysis::crates::CrateNames,
-    core::{RefactorApi, RefactorConfigBuilder},
+    analysis::crates::{CrateNames, CratePaths},
+    syntax::import_export_processor::{
+        ImportExportContext, ImportExportProcessor,
+    },
 };
 
 #[cfg(not(test))]
@@ -32,25 +34,55 @@ pub fn run_refactor(import_args: &ImportArgs) -> Result<()> {
         }
     };
 
-    let config = RefactorConfigBuilder::new()
-        .crate_names(crate_names)
-        .workspace_root(workspace_root)
-        .dry_run(import_args.dry_run)
-        .verbose(import_args.verbose)
-        .quiet(false)
-        .keep_super(import_args.keep_super)
-        .keep_exports(import_args.keep_exports)
-        .build()?;
+    let crate_paths = if import_args.self_refactor {
+        let crate_name = import_args.get_self_crate()?;
+        let crate_path = workspace_root.join(&crate_name);
+        CratePaths::SelfCrate { crate_path }
+    } else {
+        let source_crate = import_args.get_source_crate()?;
+        let target_crate = import_args.get_target_crate()?;
+        let source_path = workspace_root.join(&source_crate);
+        let target_path = workspace_root.join(&target_crate);
+        CratePaths::CrossCrate {
+            source_crate_path: source_path,
+            target_crate_path: target_path,
+        }
+    };
 
-    let result = RefactorApi::execute_refactor(config);
+    // Create context for the unified API
+    let context = ImportExportContext::new(
+        crate_names,
+        crate_paths,
+        workspace_root.clone(),
+    )
+    .with_dry_run(import_args.dry_run)
+    .with_verbose(import_args.verbose)
+    .with_normalize_super(!import_args.keep_super)
+    .with_generate_exports(!import_args.keep_exports);
 
-    if !result.success {
-        if let Some(error) = result.error {
-            return Err(error);
-        } else {
-            return Err(anyhow::anyhow!(
-                "Refactoring failed for unknown reason"
-            ));
+    // Use the unified processor
+    let processor = ImportExportProcessor::new(context);
+    let results = processor.process()?;
+
+    if import_args.verbose {
+        println!("✅ Refactoring completed successfully!");
+        if results.normalization_changes > 0 {
+            println!(
+                "   Normalized {} import paths",
+                results.normalization_changes
+            );
+        }
+
+        let total_imports = results.import_tree.count();
+        println!("   Processed {} imports total", total_imports);
+
+        if !results.replacement_results.is_empty() {
+            let total_replacements: usize = results
+                .replacement_results
+                .values()
+                .map(|actions| actions.len())
+                .sum();
+            println!("   Made {} import replacements", total_replacements);
         }
     }
 
