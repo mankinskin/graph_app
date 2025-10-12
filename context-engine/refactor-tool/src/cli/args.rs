@@ -48,16 +48,26 @@ pub enum Commands {
         /// Keep super:: imports as-is instead of normalizing them to crate:: format
         #[arg(
             long = "keep-super",
-            help = "Disable super:: imports normalization (default: normalize super:: to crate:: format)"
+            help = "Disable super:: imports normalization (default: normalize super:: to crate:: format). Can be used as --keep-super, --keep-super=true, or --keep-super=false",
+            action = clap::ArgAction::Set,
+            value_name = "BOOL",
+            num_args = 0..=1,
+            default_missing_value = "true",
+            require_equals = false
         )]
-        keep_super: bool,
+        keep_super: Option<bool>,
 
-        /// Disable automatic export generation for imported items
+        /// Keep exports unmodified (disable export generation)
         #[arg(
-            long = "no-exports",
-            help = "Disable automatic generation of pub use statements in source crate's lib.rs (default: enabled)"
+            long = "keep-exports",
+            help = "Keep exports unmodified and disable automatic generation of pub use statements (default: false, exports are generated). Can be used as --keep-exports, --keep-exports=true, or --keep-exports=false",
+            action = clap::ArgAction::Set,
+            value_name = "BOOL", 
+            num_args = 0..=1,
+            default_missing_value = "true",
+            require_equals = false
         )]
-        no_exports: bool,
+        keep_exports: Option<bool>,
 
         /// Positional arguments: [SOURCE_CRATE] [TARGET_CRATE] or [CRATE] when using --self
         #[arg(
@@ -167,14 +177,14 @@ impl Args {
                 target_crate,
                 self_refactor,
                 keep_super,
-                no_exports,
+                keep_exports,
                 positional,
             } => Some(ImportArgs {
                 source_crate: source_crate.clone(),
                 target_crate: target_crate.clone(),
                 self_refactor: *self_refactor,
-                keep_super: *keep_super,
-                no_exports: *no_exports,
+                keep_super: keep_super.unwrap_or(false),
+                keep_exports: keep_exports.unwrap_or(false), // Default to false (enable export generation)
                 positional: positional.clone(),
                 workspace_root: self.workspace_root.clone(),
                 dry_run: self.dry_run,
@@ -236,7 +246,7 @@ pub struct ImportArgs {
     pub target_crate: Option<String>,
     pub self_refactor: bool,
     pub keep_super: bool,
-    pub no_exports: bool,
+    pub keep_exports: bool,
     pub positional: Vec<String>,
     pub workspace_root: PathBuf,
     pub dry_run: bool,

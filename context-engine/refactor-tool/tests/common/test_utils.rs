@@ -484,7 +484,7 @@ impl TestWorkspace {
             .dry_run(false)
             .verbose(true)
             .quiet(false) // Keep output for debugging in tests
-            .no_exports(scenario.keep_exports)
+            .no_exports(!scenario.keep_exports)  // Invert keep_exports to no_exports
             .build()?;
         let result = RefactorApi::execute_refactor(config);
 

@@ -152,7 +152,7 @@ impl RefactorEngine {
         // Skip pub use generation if disabled via command line flag
         if self.no_exports {
             if self.verbose {
-                println!("🚫 Skipping pub use generation (disabled via --no-exports flag)");
+                println!("🚫 Skipping pub use generation (disabled via --keep-exports=true flag)");
             }
             return Ok(());
         }

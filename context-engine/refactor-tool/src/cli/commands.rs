@@ -35,7 +35,7 @@ pub fn run_refactor(import_args: &ImportArgs) -> Result<()> {
         .verbose(import_args.verbose)
         .quiet(false)
         .keep_super(import_args.keep_super)
-        .no_exports(import_args.no_exports)
+        .no_exports(!import_args.keep_exports) // Invert keep_exports to no_exports
         .build()?;
 
     let result = RefactorApi::execute_refactor(config);
