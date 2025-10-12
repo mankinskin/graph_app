@@ -10,7 +10,13 @@ pub struct Args {
     pub command: Commands,
 
     /// Workspace root directory
-    #[arg(short = 'w', long, default_value = ".", global = true)]
+    #[arg(
+        short = 'w',
+        long,
+        alias = "workspace",
+        default_value = ".",
+        global = true
+    )]
     pub workspace_root: PathBuf,
 
     /// Dry run - show what would be changed without modifying files
