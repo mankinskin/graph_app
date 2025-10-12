@@ -1,15 +1,8 @@
-use std::{
-    convert::TryFrom,
-    fmt::Debug,
-    sync::RwLockWriteGuard,
-};
+use std::{convert::TryFrom, fmt::Debug, sync::RwLockWriteGuard};
 
 use crate::{
     insert::result::ResultExtraction,
-    interval::{
-        IntervalGraph,
-        init::InitInterval,
-    },
+    interval::{IntervalGraph, init::InitInterval},
     join::context::frontier::FrontierSplitIterator,
 };
 use context_search::*;
