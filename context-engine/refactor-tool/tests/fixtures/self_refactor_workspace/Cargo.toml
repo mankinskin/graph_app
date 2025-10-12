@@ -1,5 +1,0 @@
-[workspace]
-
-resolver = "2"
-
-members = ["self_refactor_crate"]

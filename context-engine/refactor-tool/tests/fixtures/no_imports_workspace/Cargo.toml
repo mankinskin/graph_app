@@ -1,3 +1,0 @@
-[workspace]
-resolver = "2"
-members = ["source_crate", "dummy_target"]

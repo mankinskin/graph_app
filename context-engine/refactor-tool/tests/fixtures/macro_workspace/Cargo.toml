@@ -1,3 +1,0 @@
-[workspace]
-resolver = "2"
-members = ["macro_source", "macro_target"]

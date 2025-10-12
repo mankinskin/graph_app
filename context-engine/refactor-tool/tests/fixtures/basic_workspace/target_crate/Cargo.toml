@@ -1,7 +1,0 @@
-[package]
-name = "target_crate"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-source_crate = { path = "../source_crate" }
