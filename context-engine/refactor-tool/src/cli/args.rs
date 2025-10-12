@@ -260,6 +260,88 @@ pub struct ImportArgs {
 }
 
 impl ImportArgs {
+    /// Infer workspace root from crate paths if not explicitly provided
+    #[cfg(not(test))]
+    pub fn get_workspace_root(&self) -> Result<PathBuf> {
+        // If workspace was explicitly set (not the default "."), use it
+        let current_dir = std::env::current_dir()?;
+        let workspace_canonical = self
+            .workspace_root
+            .canonicalize()
+            .unwrap_or_else(|_| self.workspace_root.clone());
+        let current_canonical =
+            current_dir.canonicalize().unwrap_or(current_dir);
+
+        let workspace_is_default = workspace_canonical == current_canonical;
+
+        if !workspace_is_default {
+            return Ok(self.workspace_root.clone());
+        }
+
+        // Try to infer workspace from crate paths
+        if self.self_refactor {
+            // Self-refactor mode: infer from single crate path
+            let crate_name = self.get_self_crate()?;
+            self.infer_workspace_from_crate_path(&crate_name)
+        } else {
+            // Cross-crate mode: infer from both crate paths and validate they're in same workspace
+            let source_crate = self.get_source_crate()?;
+            let target_crate = self.get_target_crate()?;
+
+            let source_workspace =
+                self.infer_workspace_from_crate_path(&source_crate)?;
+            let target_workspace =
+                self.infer_workspace_from_crate_path(&target_crate)?;
+
+            // Check if both crates are in the same workspace
+            let source_canonical = source_workspace
+                .canonicalize()
+                .unwrap_or_else(|_| source_workspace.clone());
+            let target_canonical = target_workspace
+                .canonicalize()
+                .unwrap_or_else(|_| target_workspace.clone());
+
+            if source_canonical != target_canonical {
+                return Err(anyhow::anyhow!(
+                    "Configuration error: Crates are in different workspaces.\n\
+                     Source crate '{}' workspace: {}\n\
+                     Target crate '{}' workspace: {}\n\
+                     Please specify a common workspace root using --workspace-root or --workspace.",
+                    source_crate, source_canonical.display(),
+                    target_crate, target_canonical.display()
+                ));
+            }
+
+            Ok(source_workspace)
+        }
+    }
+
+    /// Infer workspace root from a single crate path
+    #[cfg(not(test))]
+    fn infer_workspace_from_crate_path(
+        &self,
+        crate_name: &str,
+    ) -> Result<PathBuf> {
+        let crate_path = PathBuf::from(crate_name);
+
+        // If it's just a name (no path separators), assume current directory
+        if crate_path.components().count() == 1 {
+            return Ok(PathBuf::from("."));
+        }
+
+        // If it's a relative path, get the parent directory as workspace
+        if crate_path.is_relative() {
+            if let Some(parent) = crate_path.parent() {
+                Ok(parent.to_path_buf())
+            } else {
+                Ok(PathBuf::from("."))
+            }
+        } else {
+            // For absolute paths, we can't easily infer workspace, use current directory
+            Ok(PathBuf::from("."))
+        }
+    }
+
     /// Get the source crate name, preferring the flag over the positional argument
     #[cfg(not(test))]
     pub fn get_source_crate(&self) -> Result<String> {
@@ -294,6 +376,263 @@ impl ImportArgs {
         } else {
             Err(anyhow::anyhow!("Crate must be specified either via --source-crate/--source flag or as the first positional argument when using --self"))
         }
+    }
+}
+
+#[cfg(test)]
+impl ImportArgs {
+    /// Test version of get_workspace_root
+    pub fn get_workspace_root(&self) -> anyhow::Result<PathBuf> {
+        // For tests, just return the configured workspace_root
+        Ok(self.workspace_root.clone())
+    }
+
+    /// Test version of get_source_crate
+    pub fn get_source_crate(&self) -> anyhow::Result<String> {
+        if let Some(source) = &self.source_crate {
+            Ok(source.clone())
+        } else if !self.positional.is_empty() {
+            Ok(self.positional[0].clone())
+        } else {
+            Err(anyhow::anyhow!("Source crate must be specified"))
+        }
+    }
+
+    /// Test version of get_target_crate
+    pub fn get_target_crate(&self) -> anyhow::Result<String> {
+        if let Some(target) = &self.target_crate {
+            Ok(target.clone())
+        } else if self.positional.len() >= 2 {
+            Ok(self.positional[1].clone())
+        } else {
+            Err(anyhow::anyhow!("Target crate must be specified"))
+        }
+    }
+
+    /// Test version of get_self_crate
+    pub fn get_self_crate(&self) -> anyhow::Result<String> {
+        if let Some(source) = &self.source_crate {
+            Ok(source.clone())
+        } else if !self.positional.is_empty() {
+            Ok(self.positional[0].clone())
+        } else {
+            Err(anyhow::anyhow!("Crate must be specified when using --self"))
+        }
+    }
+
+    /// Test version of infer_workspace_from_crate_path
+    pub fn infer_workspace_from_crate_path(
+        &self,
+        crate_name: &str,
+    ) -> anyhow::Result<PathBuf> {
+        let crate_path = PathBuf::from(crate_name);
+
+        // If it's just a name (no path separators), assume current directory
+        if crate_path.components().count() == 1 {
+            return Ok(PathBuf::from("."));
+        }
+
+        // If it's a relative path, get the parent directory as workspace
+        if crate_path.is_relative() {
+            if let Some(parent) = crate_path.parent() {
+                Ok(parent.to_path_buf())
+            } else {
+                Ok(PathBuf::from("."))
+            }
+        } else {
+            // For absolute paths, we can't easily infer workspace, use current directory
+            Ok(PathBuf::from("."))
+        }
+    }
+
+    /// Test version of get_workspace_root with full inference logic
+    pub fn get_workspace_root_with_inference(&self) -> anyhow::Result<PathBuf> {
+        // If workspace was explicitly set (not the default "."), use it
+        let workspace_is_default = self.workspace_root == PathBuf::from(".");
+
+        if !workspace_is_default {
+            return Ok(self.workspace_root.clone());
+        }
+
+        // Try to infer workspace from crate paths
+        if self.self_refactor {
+            // Self-refactor mode: infer from single crate path
+            let crate_name = self.get_self_crate()?;
+            self.infer_workspace_from_crate_path(&crate_name)
+        } else {
+            // Cross-crate mode: infer from both crate paths and validate they're in same workspace
+            let source_crate = self.get_source_crate()?;
+            let target_crate = self.get_target_crate()?;
+
+            let source_workspace =
+                self.infer_workspace_from_crate_path(&source_crate)?;
+            let target_workspace =
+                self.infer_workspace_from_crate_path(&target_crate)?;
+
+            // Check if both crates are in the same workspace
+            if source_workspace != target_workspace {
+                return Err(anyhow::anyhow!(
+                    "Configuration error: Crates are in different workspaces.\n\
+                     Source crate '{}' workspace: {}\n\
+                     Target crate '{}' workspace: {}\n\
+                     Please specify a common workspace root using --workspace-root or --workspace.",
+                    source_crate, source_workspace.display(),
+                    target_crate, target_workspace.display()
+                ));
+            }
+
+            Ok(source_workspace)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use anyhow::Result;
+
+    fn create_test_import_args(
+        source_crate: Option<String>,
+        target_crate: Option<String>,
+        positional: Vec<String>,
+        workspace_root: PathBuf,
+        self_refactor: bool,
+    ) -> ImportArgs {
+        ImportArgs {
+            source_crate,
+            target_crate,
+            self_refactor,
+            keep_super: false,
+            keep_exports: false,
+            positional,
+            workspace_root,
+            dry_run: false,
+            verbose: false,
+        }
+    }
+
+    #[test]
+    fn test_workspace_inference_from_relative_path() {
+        use std::path::PathBuf;
+
+        // Test case: crate with relative path should infer workspace
+        let args = ImportArgs {
+            source_crate: None,
+            target_crate: None,
+            self_refactor: true,
+            keep_super: false,
+            keep_exports: false,
+            positional: vec!["workspace/my_crate".to_string()],
+            workspace_root: PathBuf::from("."), // default workspace
+            dry_run: false,
+            verbose: false,
+        };
+
+        // Mock the workspace inference for testing
+        let workspace = args
+            .infer_workspace_from_crate_path("workspace/my_crate")
+            .unwrap();
+        assert_eq!(workspace, PathBuf::from("workspace"));
+    }
+
+    #[test]
+    fn test_workspace_inference_single_name() {
+        // Test case: just crate name should use current directory
+        let workspace = ImportArgs {
+            source_crate: None,
+            target_crate: None,
+            self_refactor: true,
+            keep_super: false,
+            keep_exports: false,
+            positional: vec!["my_crate".to_string()],
+            workspace_root: PathBuf::from("."),
+            dry_run: false,
+            verbose: false,
+        }
+        .infer_workspace_from_crate_path("my_crate")
+        .unwrap();
+
+        assert_eq!(workspace, PathBuf::from("."));
+    }
+
+    #[test]
+    fn test_cross_crate_same_workspace() {
+        // Test that cross-crate with same workspace works
+        let args = ImportArgs {
+            source_crate: None,
+            target_crate: None,
+            self_refactor: false,
+            keep_super: false,
+            keep_exports: false,
+            positional: vec![
+                "workspace/crate1".to_string(),
+                "workspace/crate2".to_string(),
+            ],
+            workspace_root: PathBuf::from("."),
+            dry_run: false,
+            verbose: false,
+        };
+
+        let workspace1 = args
+            .infer_workspace_from_crate_path("workspace/crate1")
+            .unwrap();
+        let workspace2 = args
+            .infer_workspace_from_crate_path("workspace/crate2")
+            .unwrap();
+
+        assert_eq!(workspace1, workspace2);
+        assert_eq!(workspace1, PathBuf::from("workspace"));
+    }
+
+    #[test]
+    fn test_cross_crate_different_workspaces_error() {
+        // Test that cross-crate with different workspaces throws error
+        let args = ImportArgs {
+            source_crate: None,
+            target_crate: None,
+            self_refactor: false,
+            keep_super: false,
+            keep_exports: false,
+            positional: vec![
+                "workspace1/crate1".to_string(),
+                "workspace2/crate2".to_string(),
+            ],
+            workspace_root: PathBuf::from("."), // default workspace
+            dry_run: false,
+            verbose: false,
+        };
+
+        let result = args.get_workspace_root_with_inference();
+        assert!(result.is_err());
+
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains(
+            "Configuration error: Crates are in different workspaces"
+        ));
+        assert!(error_msg.contains("workspace1"));
+        assert!(error_msg.contains("workspace2"));
+    }
+
+    #[test]
+    fn test_explicit_workspace_takes_precedence() {
+        // Test that explicit workspace overrides inference
+        let args = ImportArgs {
+            source_crate: None,
+            target_crate: None,
+            self_refactor: false,
+            keep_super: false,
+            keep_exports: false,
+            positional: vec![
+                "workspace1/crate1".to_string(),
+                "workspace2/crate2".to_string(),
+            ],
+            workspace_root: PathBuf::from("/explicit/workspace"), // explicit workspace
+            dry_run: false,
+            verbose: false,
+        };
+
+        let result = args.get_workspace_root_with_inference().unwrap();
+        assert_eq!(result, PathBuf::from("/explicit/workspace"));
     }
 }
 

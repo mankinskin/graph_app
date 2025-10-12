@@ -12,9 +12,13 @@ use crate::{
 #[cfg(not(test))]
 pub fn run_refactor(import_args: &ImportArgs) -> Result<()> {
     let workspace_root = import_args
-        .workspace_root
+        .get_workspace_root()?
         .canonicalize()
-        .unwrap_or_else(|_| import_args.workspace_root.clone());
+        .unwrap_or_else(|_| {
+            import_args
+                .get_workspace_root()
+                .unwrap_or_else(|_| import_args.workspace_root.clone())
+        });
 
     let crate_names = if import_args.self_refactor {
         let crate_name = import_args.get_self_crate()?;
