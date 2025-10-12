@@ -1,16 +1,6 @@
-use anyhow::{
-    Context,
-    Result,
-};
-use std::{
-    fs,
-    path::Path,
-    process::Command,
-};
-use syn::{
-    parse_file,
-    File,
-};
+use anyhow::{Context, Result};
+use std::{fs, path::Path, process::Command};
+use syn::{parse_file, File};
 
 use crate::analysis::crates::CratePaths;
 
@@ -68,11 +58,11 @@ pub fn check_crates_compilation(
     verbose: bool,
 ) -> Result<CompileResults> {
     match crate_paths {
-        CratePaths::SelfRefactor { crate_path } => {
+        CratePaths::SelfCrate { crate_path } => {
             let self_compiles = check_crate_compilation(crate_path, verbose)?;
             Ok(CompileResults::SelfCrate { self_compiles })
         },
-        CratePaths::CrossRefactor {
+        CratePaths::CrossCrate {
             source_crate_path,
             target_crate_path,
         } => {

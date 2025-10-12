@@ -1,18 +1,9 @@
-use anyhow::{
-    bail,
-    Context,
-    Result,
-};
+use anyhow::{bail, Context, Result};
 use serde::Deserialize;
 use std::{
     collections::HashMap,
-    fs::{
-        self,
-    },
-    path::{
-        Path,
-        PathBuf,
-    },
+    fs::{self},
+    path::{Path, PathBuf},
 };
 
 #[derive(Deserialize)]
@@ -33,10 +24,10 @@ struct Workspace {
 
 #[derive(Clone, Debug)]
 pub enum CrateNames {
-    SelfRefactor {
+    SelfCrate {
         crate_name: String,
     },
-    CrossRefactor {
+    CrossCrate {
         source_crate: String,
         target_crate: String,
     },
@@ -44,20 +35,19 @@ pub enum CrateNames {
 impl CrateNames {
     pub fn source_crate(&self) -> &String {
         match self {
-            CrateNames::SelfRefactor { crate_name } => crate_name,
-            CrateNames::CrossRefactor { source_crate, .. } => source_crate,
+            CrateNames::SelfCrate { crate_name } => crate_name,
+            CrateNames::CrossCrate { source_crate, .. } => source_crate,
         }
     }
     pub fn unhyphen(&self) -> Self {
         match self {
-            CrateNames::SelfRefactor { crate_name } =>
-                CrateNames::SelfRefactor {
-                    crate_name: crate_name.replace('-', "_"),
-                },
-            CrateNames::CrossRefactor {
+            CrateNames::SelfCrate { crate_name } => CrateNames::SelfCrate {
+                crate_name: crate_name.replace('-', "_"),
+            },
+            CrateNames::CrossCrate {
                 source_crate,
                 target_crate,
-            } => CrateNames::CrossRefactor {
+            } => CrateNames::CrossCrate {
                 source_crate: source_crate.replace('-', "_"),
                 target_crate: target_crate.replace('-', "_"),
             },
@@ -76,17 +66,17 @@ impl CrateNamesTrait for CrateNames {
         analyzer: &CrateAnalyzer,
     ) -> Result<CratePaths> {
         match self {
-            CrateNames::SelfRefactor { crate_name } => {
+            CrateNames::SelfCrate { crate_name } => {
                 let crate_path = analyzer.find_crate(crate_name)?;
-                Ok(CratePaths::SelfRefactor { crate_path })
+                Ok(CratePaths::SelfCrate { crate_path })
             },
-            CrateNames::CrossRefactor {
+            CrateNames::CrossCrate {
                 source_crate,
                 target_crate,
             } => {
                 let source_crate_path = analyzer.find_crate(source_crate)?;
                 let target_crate_path = analyzer.find_crate(target_crate)?;
-                Ok(CratePaths::CrossRefactor {
+                Ok(CratePaths::CrossCrate {
                     source_crate_path,
                     target_crate_path,
                 })
@@ -96,10 +86,10 @@ impl CrateNamesTrait for CrateNames {
 }
 #[derive(Debug, Clone)]
 pub enum CratePaths {
-    SelfRefactor {
+    SelfCrate {
         crate_path: PathBuf,
     },
-    CrossRefactor {
+    CrossCrate {
         source_crate_path: PathBuf,
         target_crate_path: PathBuf,
     },
@@ -107,15 +97,19 @@ pub enum CratePaths {
 impl CratePaths {
     pub fn source_path(&self) -> &PathBuf {
         match self {
-            CratePaths::SelfRefactor { crate_path } => crate_path,
-            CratePaths::CrossRefactor { source_crate_path, .. } => source_crate_path,
+            CratePaths::SelfCrate { crate_path } => crate_path,
+            CratePaths::CrossCrate {
+                source_crate_path, ..
+            } => source_crate_path,
         }
     }
 
     pub fn target_path(&self) -> &PathBuf {
         match self {
-            CratePaths::SelfRefactor { crate_path } => crate_path,
-            CratePaths::CrossRefactor { target_crate_path, .. } => target_crate_path,
+            CratePaths::SelfCrate { crate_path } => crate_path,
+            CratePaths::CrossCrate {
+                target_crate_path, ..
+            } => target_crate_path,
         }
     }
 
@@ -138,10 +132,10 @@ impl CratePaths {
         workspace_root: &PathBuf,
     ) {
         match self {
-            CratePaths::SelfRefactor { crate_path } => {
+            CratePaths::SelfCrate { crate_path } => {
                 Self::print_found_single("crate", crate_path, workspace_root);
             },
-            CratePaths::CrossRefactor {
+            CratePaths::CrossCrate {
                 source_crate_path,
                 target_crate_path,
             } => {

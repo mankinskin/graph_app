@@ -367,7 +367,7 @@ mod tests {
             generate_exports: false,
             replace_imports: false,
             validate_compilation: false,
-            crate_names: CrateNames::SelfRefactor {
+            crate_names: CrateNames::SelfCrate {
                 crate_name: "test".to_string(),
             },
         };
@@ -384,7 +384,7 @@ mod tests {
             generate_exports: true,
             replace_imports: true,
             validate_compilation: true,
-            crate_names: CrateNames::SelfRefactor {
+            crate_names: CrateNames::SelfCrate {
                 crate_name: "test".to_string(),
             },
         };

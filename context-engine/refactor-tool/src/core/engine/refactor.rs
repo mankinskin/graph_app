@@ -65,28 +65,96 @@ impl RefactorEngine {
         );
 
         let crate_path = match crate_paths {
-            CratePaths::SelfRefactor { crate_path } => crate_path,
-            CratePaths::CrossRefactor {
+            CratePaths::SelfCrate { crate_path } => crate_path,
+            CratePaths::CrossCrate {
                 source_crate_path,
                 target_crate_path: _,
             } => source_crate_path,
         };
 
-        // Skip both export generation and import replacement if disabled via command line flag
-        if self.keep_exports {
+        // Separate handling for super:: normalization and export generation
+        let should_generate_exports = !self.keep_exports;
+        let should_normalize_super = !self.keep_super;
+
+        // Step 2a: Handle super:: imports normalization if needed
+        if should_normalize_super {
+            if self.verbose {
+                println!("🔍 DEBUG: Checking for super:: imports among {} total imports", imports.len());
+                for (i, import) in imports.iter().enumerate().take(5) {
+                    println!(
+                        "   Import {}: {} (from {}:{})",
+                        i,
+                        import.import_path,
+                        import
+                            .file_path
+                            .file_name()
+                            .unwrap_or_default()
+                            .to_string_lossy(),
+                        import.line_number
+                    );
+                }
+                if imports.len() > 5 {
+                    println!("   ... and {} more imports", imports.len() - 5);
+                }
+            }
+
+            // Extract only super:: imports that need normalization
+            let super_imports: Vec<_> = imports
+                .iter()
+                .filter(|import| import.import_path.starts_with("super::"))
+                .cloned()
+                .collect();
+
+            if !super_imports.is_empty() {
+                if self.verbose {
+                    println!(
+                        "🔄 Normalizing {} super:: imports to crate:: format",
+                        super_imports.len()
+                    );
+                }
+
+                // Apply super:: normalization by replacing these specific imports
+                match &self.crate_names {
+                    CrateNames::SelfCrate { .. } => {
+                        let strategy = SelfCrateReplacementStrategy;
+                        replace_imports_with_strategy(
+                            super_imports,
+                            strategy,
+                            workspace_root,
+                            self.dry_run,
+                            self.verbose,
+                        )?;
+                    },
+                    CrateNames::CrossCrate { .. } => {
+                        let strategy = CrossCrateReplacementStrategy {
+                            crate_names: self.crate_names.clone(),
+                        };
+                        replace_imports_with_strategy(
+                            super_imports,
+                            strategy,
+                            workspace_root,
+                            self.dry_run,
+                            self.verbose,
+                        )?;
+                    },
+                }
+            }
+        }
+
+        if !should_generate_exports {
             if self.verbose {
                 println!("🚫 Skipping export generation and import replacement (disabled via --keep-exports=true flag)");
             }
             return Ok(());
         }
 
-        // Step 2: Update source crate's lib.rs with pub use statements
+        // Step 2b: Update source crate's lib.rs with pub use statements
         // Pass the resolved imports directly instead of re-parsing from item names
         self.update_source_lib_rs(crate_path, &imports, workspace_root)?;
 
         // Step 3: Replace imports in target crate files
         match &self.crate_names {
-            CrateNames::CrossRefactor { .. } => {
+            CrateNames::CrossCrate { .. } => {
                 let strategy = CrossCrateReplacementStrategy {
                     crate_names: self.crate_names.clone(),
                 };
@@ -98,7 +166,7 @@ impl RefactorEngine {
                     self.verbose,
                 )?;
             },
-            CrateNames::SelfRefactor { .. } => {
+            CrateNames::SelfCrate { .. } => {
                 let strategy = SelfCrateReplacementStrategy;
                 replace_imports_with_strategy(
                     imports,
@@ -213,10 +281,10 @@ impl RefactorEngine {
             .filter(|import_path| {
                 // Strip the crate prefix to get relative path
                 let relative_path = match &self.crate_names {
-                    CrateNames::CrossRefactor { source_crate, .. } => {
+                    CrateNames::CrossCrate { source_crate, .. } => {
                         import_path.strip_crate_prefix(source_crate)
                     },
-                    CrateNames::SelfRefactor { crate_name } => import_path
+                    CrateNames::SelfCrate { crate_name } => import_path
                         .strip_crate_prefix(crate_name)
                         .or_else(|| import_path.strip_crate_prefix("crate")),
                 };

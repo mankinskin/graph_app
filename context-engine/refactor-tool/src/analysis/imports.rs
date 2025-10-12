@@ -1,39 +1,37 @@
 use crate::{
-    analysis::crates::CrateNames,
-    common::format::format_relative_path,
+    analysis::crates::CrateNames, common::format::format_relative_path,
     syntax::parser::ImportInfo,
 };
-use std::{
-    collections::BTreeSet,
-    path::Path,
-};
+use std::{collections::BTreeSet, path::Path};
 
 impl CrateNames {
     /// Get the prefix to strip from import paths
     pub fn get_prefixes_to_strip(&self) -> Vec<String> {
         match self {
-            CrateNames::CrossRefactor { source_crate, .. } =>
-                vec![format!("{}::", source_crate)],
-            CrateNames::SelfRefactor { crate_name } =>
-                vec![format!("{}::", crate_name), "crate::".to_string()],
+            CrateNames::CrossCrate { source_crate, .. } => {
+                vec![format!("{}::", source_crate)]
+            },
+            CrateNames::SelfCrate { crate_name } => {
+                vec![format!("{}::", crate_name), "crate::".to_string()]
+            },
         }
     }
 
     /// Get label for summary display
     pub fn get_summary_label(&self) -> String {
         match self {
-            CrateNames::CrossRefactor { source_crate, .. } =>
-                source_crate.clone(),
-            CrateNames::SelfRefactor { .. } => "crate".to_string(),
+            CrateNames::CrossCrate { source_crate, .. } => source_crate.clone(),
+            CrateNames::SelfCrate { .. } => "crate".to_string(),
         }
     }
 
     /// Get glob import pattern description
     pub fn get_glob_pattern_description(&self) -> String {
         match self {
-            CrateNames::CrossRefactor { source_crate, .. } =>
-                format!("use {}::*", source_crate),
-            CrateNames::SelfRefactor { .. } => "use crate::*".to_string(),
+            CrateNames::CrossCrate { source_crate, .. } => {
+                format!("use {}::*", source_crate)
+            },
+            CrateNames::SelfCrate { .. } => "use crate::*".to_string(),
         }
     }
 }
@@ -80,7 +78,8 @@ pub fn analyze_imports(
                         .canonicalize()
                         .unwrap_or_else(|_| import.file_path.clone());
 
-                    let relative_path = format_relative_path(&canonical_file_path);
+                    let relative_path =
+                        format_relative_path(&canonical_file_path);
 
                     // Context-specific prefix stripping (THE ONLY DIFFERENCE!)
 
@@ -135,13 +134,13 @@ pub fn print_analysis_summary(
 
     if verbose && !result.all_imported_items.is_empty() {
         match crate_names {
-            CrateNames::CrossRefactor { source_crate, .. } => {
+            CrateNames::CrossCrate { source_crate, .. } => {
                 println!(
                     "\n🔍 Detected imported items from '{}':",
                     source_crate
                 );
             },
-            CrateNames::SelfRefactor { .. } => {
+            CrateNames::SelfCrate { .. } => {
                 println!("\n🔍 Detected crate:: imports:");
             },
         }
@@ -149,10 +148,10 @@ pub fn print_analysis_summary(
         println!();
     } else if result.glob_imports > 0 {
         match crate_names {
-            CrateNames::CrossRefactor { source_crate, .. } => {
+            CrateNames::CrossCrate { source_crate, .. } => {
                 println!("\n💡 Note: Only glob imports (use {}::*) found. No specific items to re-export.", source_crate);
             },
-            CrateNames::SelfRefactor { .. } => {
+            CrateNames::SelfCrate { .. } => {
                 println!("\n💡 Note: Only glob imports (use crate::*) found. No specific items to re-export.");
             },
         }

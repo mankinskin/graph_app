@@ -71,7 +71,7 @@ impl RefactorApi {
             Err(error) => RefactorResult {
                 success: false,
                 imports_processed: 0,
-                crate_paths: CratePaths::SelfRefactor {
+                crate_paths: CratePaths::SelfCrate {
                     crate_path: std::path::PathBuf::new(),
                 },
                 steps_executed: Vec::new(),
@@ -132,13 +132,13 @@ impl RefactorApi {
         if !quiet {
             println!("🔧 Import Refactor Tool");
             match &crate_names {
-                CrateNames::SelfRefactor { crate_name } => {
+                CrateNames::SelfCrate { crate_name } => {
                     println!(
                         "📦 Crate: {} → will move crate:: imports to root-level exports",
                         crate_name
                     );
                 },
-                CrateNames::CrossRefactor {
+                CrateNames::CrossCrate {
                     source_crate,
                     target_crate,
                 } => {
@@ -172,7 +172,7 @@ impl RefactorApi {
         {
             // Parse imports based on the type of refactoring
             let imports = match &crate_names {
-                CrateNames::SelfRefactor { crate_name } => {
+                CrateNames::SelfCrate { crate_name } => {
                     // For self-refactoring, parse both crate:: imports and explicit crate name imports
                     let source_path = crate_paths.source_path();
 
@@ -220,7 +220,7 @@ impl RefactorApi {
                     // Convert back to Vec
                     unique_imports.into_iter().collect()
                 },
-                CrateNames::CrossRefactor { source_crate, .. } => {
+                CrateNames::CrossCrate { source_crate, .. } => {
                     // For cross-crate refactoring, parse target crate imports of source crate
                     let target_path = crate_paths.target_path();
                     let import_parser = ImportParser::new(source_crate);
@@ -263,6 +263,37 @@ impl RefactorApi {
                     imports,
                     &workspace_root,
                 )?;
+            }
+
+            // Step 3b: Handle super:: normalization separately if requested
+            if steps_manager.will_execute(RefactorStep::NormalizeSuperImports)
+                && !steps_manager.will_execute(RefactorStep::GenerateExports)
+                && !steps_manager.will_execute(RefactorStep::ReplaceImports)
+            {
+                // Parse super:: imports WITHOUT normalizing them first
+                let source_path = crate_paths.source_path();
+                let super_imports =
+                    ImportParser::find_super_imports_in_crate(source_path)?;
+
+                if !super_imports.is_empty() {
+                    if verbose {
+                        println!("🔄 Normalizing {} super:: imports to crate:: format", super_imports.len());
+                    }
+
+                    // Create a custom replacement strategy that normalizes during replacement
+                    let strategy = crate::syntax::super_strategy::SuperNormalizationStrategy {
+                        crate_root: source_path.to_path_buf(),
+                    };
+
+                    // Apply the replacement using the super normalization strategy
+                    crate::syntax::transformer::replace_imports_with_strategy(
+                        super_imports,
+                        strategy,
+                        &workspace_root,
+                        dry_run,
+                        verbose,
+                    )?;
+                }
             }
         }
 

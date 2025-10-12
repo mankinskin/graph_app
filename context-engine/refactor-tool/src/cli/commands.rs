@@ -18,11 +18,11 @@ pub fn run_refactor(import_args: &ImportArgs) -> Result<()> {
 
     let crate_names = if import_args.self_refactor {
         let crate_name = import_args.get_self_crate()?;
-        CrateNames::SelfRefactor { crate_name }
+        CrateNames::SelfCrate { crate_name }
     } else {
         let source_crate = import_args.get_source_crate()?;
         let target_crate = import_args.get_target_crate()?;
-        CrateNames::CrossRefactor {
+        CrateNames::CrossCrate {
             source_crate,
             target_crate,
         }

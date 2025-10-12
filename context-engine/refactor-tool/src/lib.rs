@@ -15,10 +15,24 @@ pub use crate::{
         imports::analyze_imports,
     },
     core::{
-        path::is_super_import, RefactorApi, RefactorConfig,
-        RefactorConfigBuilder, RefactorResult,
+        path::is_super_import,
+        unified_adapter::{
+            ComparisonResult, RefactorConfigExt, UnifiedApiAdapter,
+        },
+        RefactorApi, RefactorConfig, RefactorConfigBuilder, RefactorResult,
     },
-    syntax::parser::ImportParser,
+    syntax::{
+        import_export_extensions::{
+            CrateNamesExt, ImportExportContextExt, ImportExportUtils,
+            ImportOptimization, ImportTreeExt, ImportTreeStats,
+            ProcessingResultsExt,
+        },
+        import_export_processor::{
+            ExportAnalysis, ImportExportContext, ImportExportProcessor,
+            ImportTree, ProcessingResults,
+        },
+        parser::ImportParser,
+    },
 };
 
 // Feature-gated APIs

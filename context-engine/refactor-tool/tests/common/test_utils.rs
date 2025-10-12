@@ -53,7 +53,7 @@ impl TestScenario {
         Self {
             name,
             description,
-            crate_names: CrateNames::SelfRefactor {
+            crate_names: CrateNames::SelfCrate {
                 crate_name: crate_name.to_string(),
             },
             fixture_name,
@@ -73,7 +73,7 @@ impl TestScenario {
         Self {
             name,
             description,
-            crate_names: CrateNames::CrossRefactor {
+            crate_names: CrateNames::CrossCrate {
                 source_crate: source_crate.to_string(),
                 target_crate: target_crate.to_string(),
             },
@@ -362,7 +362,7 @@ impl TestWorkspace {
         Self::create_workspace_manifest(&workspace_path)?;
 
         // Initialize with placeholder paths (will be populated by scenario)
-        let crate_paths = CratePaths::SelfRefactor {
+        let crate_paths = CratePaths::SelfCrate {
             crate_path: workspace_path.clone(),
         };
 
@@ -391,8 +391,8 @@ impl TestWorkspace {
 
         // Analyze initial state
         let source_crate_path = match &self.crate_paths {
-            CratePaths::SelfRefactor { crate_path } => crate_path,
-            CratePaths::CrossRefactor {
+            CratePaths::SelfCrate { crate_path } => crate_path,
+            CratePaths::CrossCrate {
                 source_crate_path, ..
             } => source_crate_path,
         };
@@ -402,8 +402,8 @@ impl TestWorkspace {
             .context("Failed to analyze source crate before refactoring")?;
 
         //let target_analysis_before = match &self.crate_paths {
-        //    CratePaths::SelfRefactor { .. } => None,
-        //    CratePaths::CrossRefactor {
+        //    CratePaths::SelfCrate { .. } => None,
+        //    CratePaths::CrossCrate {
         //        target_crate_path, ..
         //    } => {
         //        let target_lib_path =
@@ -452,16 +452,16 @@ impl TestWorkspace {
         crate_names: &CrateNames,
     ) -> Result<u32> {
         let target_crate_path = match &self.crate_paths {
-            CratePaths::SelfRefactor { crate_path } => crate_path,
-            CratePaths::CrossRefactor {
+            CratePaths::SelfCrate { crate_path } => crate_path,
+            CratePaths::CrossCrate {
                 target_crate_path, ..
             } => target_crate_path,
         };
 
         // Use the same logic as the refactor tool to find imports
         let parser = match crate_names {
-            CrateNames::SelfRefactor { .. } => ImportParser::new("crate"),
-            CrateNames::CrossRefactor { source_crate, .. } => {
+            CrateNames::SelfCrate { .. } => ImportParser::new("crate"),
+            CrateNames::CrossCrate { source_crate, .. } => {
                 ImportParser::new(source_crate)
             },
         };
@@ -603,7 +603,7 @@ pub fn copy_dir_all(
 //    source_crate: &str,
 //    target_crate: &str,
 //) -> Result<()> {
-//    let crate_names = CrateNames::CrossRefactor {
+//    let crate_names = CrateNames::CrossCrate {
 //        source_crate: source_crate.to_string(),
 //        target_crate: target_crate.to_string(),
 //    };
