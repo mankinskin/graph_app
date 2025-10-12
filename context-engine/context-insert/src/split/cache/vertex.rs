@@ -1,7 +1,4 @@
-use super::position::{
-    PosKey,
-    SplitPositionCache,
-};
+use crate::split::position::{PosKey, SplitPositionCache};
 use crate::{
     interval::partition::{
         Partition,

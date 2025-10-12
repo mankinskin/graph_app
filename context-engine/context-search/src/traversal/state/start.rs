@@ -1,4 +1,4 @@
-use super::cursor::PatternCursor;
+use crate::traversal::cursor::{PatternCursor};
 use crate::{
     fold::{
         foldable::ErrorState,

@@ -5,10 +5,7 @@ use derive_more::derive::{
     DerefMut,
 };
 
-use super::{
-    SplitStates,
-    SplitTraceCtx,
-};
+use crate::{SplitStates, SplitTraceCtx};
 use crate::split::{
     cache::{
         position::{

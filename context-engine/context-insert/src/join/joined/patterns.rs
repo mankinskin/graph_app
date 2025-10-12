@@ -26,7 +26,7 @@ use crate::{
 };
 use context_trace::*;
 
-use super::partition::JoinedPartition;
+use crate::join::partition::{JoinedPartition};
 
 #[derive(Debug)]
 pub struct JoinedPatterns<R: RangeRole> {

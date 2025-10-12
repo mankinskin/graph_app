@@ -5,10 +5,7 @@ use derive_more::derive::{
     DerefMut,
 };
 
-use super::{
-    cache::position::PosKey,
-    vertex::VertexSplitCtx,
-};
+use crate::split::vertex::{VertexSplitCtx};
 use crate::split::vertex::output::NodeType;
 use context_trace::*;
 

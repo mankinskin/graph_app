@@ -1,4 +1,4 @@
-use super::node::context::NodeJoinCtx;
+use crate::join::node::context::{NodeJoinCtx};
 use itertools::Itertools;
 use linked_hash_set::LinkedHashSet;
 

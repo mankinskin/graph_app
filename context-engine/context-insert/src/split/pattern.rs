@@ -1,6 +1,6 @@
 use context_trace::*;
 
-use super::vertex::VertexSplits;
+use crate::vertex::{VertexSplits};
 use std::fmt::Debug;
 
 pub trait PatternSplits: Debug + Clone {

@@ -22,7 +22,7 @@ use crate::{
 };
 use std::fmt::Debug;
 
-use super::FoldCtx;
+use crate::{FoldCtx};
 
 pub type FoldResult = Result<FinishedState, ErrorState>;
 

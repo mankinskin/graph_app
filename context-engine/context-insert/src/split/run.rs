@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use super::context::SplitCacheCtx;
+use crate::context::{SplitCacheCtx};
 use crate::interval::IntervalGraph;
 use context_trace::*;
 

@@ -38,16 +38,7 @@ use crate::{
 };
 use context_trace::*;
 
-use super::{
-    mode::{
-        InVisitMode,
-        ModeChildren,
-        ModeCtx,
-        PostVisitMode,
-        PreVisitMode,
-    },
-    splits::OffsetIndexRange,
-};
+use crate::interval::partition::info::splits::{OffsetIndexRange};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Outer;

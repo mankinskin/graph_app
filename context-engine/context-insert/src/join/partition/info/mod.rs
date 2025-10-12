@@ -22,7 +22,7 @@ use derive_more::derive::{
 };
 use derive_new::new;
 
-use super::Join;
+use crate::{Join};
 pub mod inner_range;
 pub mod pattern_info;
 

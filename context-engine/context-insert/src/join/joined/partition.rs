@@ -24,7 +24,7 @@ use context_trace::*;
 use std::borrow::Borrow;
 use tracing::debug;
 
-use super::patterns::JoinedPatterns;
+use crate::join::patterns::{JoinedPatterns};
 
 #[derive(Debug)]
 pub struct JoinedPartition<R: RangeRole> {

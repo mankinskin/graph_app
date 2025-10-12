@@ -23,13 +23,7 @@ use info::{
     pattern_info::JoinPatternInfo,
 };
 
-use super::{
-    context::pattern::{
-        PatternJoinCtx,
-        borders::JoinBorders,
-    },
-    joined::partition::JoinedPartition,
-};
+use crate::join::context::pattern::{PatternJoinCtx};
 
 pub trait JoinPartition<R: RangeRole<Mode = Join>>: InfoPartition<R>
 where

@@ -3,15 +3,7 @@ use derive_more::derive::{
     DerefMut,
 };
 
-use super::{
-    cache::{
-        SplitCache,
-        position::SplitPositionCache,
-        vertex::SplitVertexCache,
-    },
-    trace::states::context::SplitTraceStatesCtx,
-    vertex::output::RootNode,
-};
+use crate::trace::states::context::{SplitTraceStatesCtx};
 use crate::split::trace::SplitTraceState;
 use context_trace::*;
 

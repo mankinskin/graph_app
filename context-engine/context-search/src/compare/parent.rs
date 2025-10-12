@@ -6,7 +6,7 @@ use derive_more::{
 };
 use std::fmt::Debug;
 
-use super::state::CompareState;
+use crate::state::{CompareState};
 use crate::compare::state::PathPairMode::GraphMajor;
 use context_trace::{
     graph::vertex::child::Child,

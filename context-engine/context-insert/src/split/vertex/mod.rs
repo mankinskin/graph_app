@@ -5,7 +5,7 @@ use std::{
     num::NonZeroUsize,
 };
 
-use super::cache::position::SplitPositionCache;
+use crate::split::cache::position::{SplitPositionCache};
 
 use crate::split::{
     position_splits,

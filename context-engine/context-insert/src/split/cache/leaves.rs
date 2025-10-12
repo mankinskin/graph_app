@@ -6,7 +6,7 @@ use derive_more::{
     From,
 };
 
-use super::position::PosKey;
+use crate::split::position::{PosKey};
 
 #[derive(Default, Debug, Deref, DerefMut, From, Clone, PartialEq, Eq)]
 pub struct Leaves(Vec<PosKey>);

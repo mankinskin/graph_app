@@ -4,7 +4,7 @@ use derive_new::new;
 
 use crate::expansion::link::ExpansionLink;
 
-use super::context::ReadCtx;
+use crate::context::ReadCtx;
 
 #[derive(Debug, new)]
 pub struct ComplementBuilder {

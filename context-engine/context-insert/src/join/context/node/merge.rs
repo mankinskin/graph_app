@@ -13,7 +13,7 @@ use derive_new::new;
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 
-use super::context::NodeJoinCtx;
+use crate::join::context::context::{NodeJoinCtx};
 use crate::{
     interval::partition::{
         Infix,

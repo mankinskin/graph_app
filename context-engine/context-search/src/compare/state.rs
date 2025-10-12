@@ -19,7 +19,7 @@ use std::{
 use CompareNext::*;
 use PathPairMode::*;
 
-use super::parent::ParentCompareState;
+use crate::parent::{ParentCompareState};
 
 pub type CompareQueue = VecDeque<CompareState>;
 

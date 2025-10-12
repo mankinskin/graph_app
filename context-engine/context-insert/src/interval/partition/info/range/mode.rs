@@ -13,11 +13,7 @@ use crate::interval::partition::info::range::{
 };
 use context_trace::*;
 
-use super::role::{
-    In,
-    Post,
-    Pre,
-};
+use crate::interval::partition::info::role::{In, Post, Pre};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Trace;

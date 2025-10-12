@@ -3,7 +3,7 @@ use crate::traversal::{
     state::traversal::TraversalState,
 };
 
-use super::StateContainer;
+use crate::{StateContainer};
 
 #[derive(Debug, Default)]
 pub struct DftStack {

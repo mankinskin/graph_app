@@ -29,7 +29,7 @@ use crate::{
 };
 use context_trace::*;
 
-use super::inner_range::JoinInnerRangeInfo;
+use crate::join::partition::inner_range::{JoinInnerRangeInfo};
 
 #[derive(Debug, Clone)]
 pub struct JoinPatternInfo<R: RangeRole<Mode = Join>> {

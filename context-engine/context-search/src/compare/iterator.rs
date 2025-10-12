@@ -7,7 +7,7 @@ use context_trace::*;
 
 use std::fmt::Debug;
 
-use super::state::CompareState;
+use crate::state::{CompareState};
 use crate::compare::state::CompareNext::*;
 
 #[derive(Debug)]
