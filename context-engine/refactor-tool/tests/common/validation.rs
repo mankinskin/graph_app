@@ -1,12 +1,9 @@
 use super::{
     ast_analysis::AstAnalysis,
-    test_utils::{
-        ExpectedChanges,
-        RefactorResult,
-    },
+    test_utils::{ExpectedChanges, RefactorResult},
 };
-use syn::ItemUse;
 use quote;
+use syn::ItemUse;
 
 /// Comprehensive AST validation and reporting framework
 pub struct AstValidator;
@@ -33,7 +30,7 @@ impl AstValidator {
 
         // Basic success validation
         if !result.success {
-            failures.push("❌ Refactor tool execution failed".to_string());
+            failures.push("❌ Refactor tool execution failed - the tool encountered errors during processing".to_string());
         } else {
             successes
                 .push("✅ Refactor tool executed successfully".to_string());
@@ -73,8 +70,11 @@ impl AstValidator {
     ) {
         // Check that public items are preserved or increased (not lost)
         if after.public_functions.len() < before.public_functions.len() {
+            let lost =
+                before.public_functions.len() - after.public_functions.len();
             failures.push(format!(
-                "❌ Lost public functions: {} → {} functions",
+                "❌ Lost {} public function(s): {} → {} functions - refactoring should not remove public API",
+                lost,
                 before.public_functions.len(),
                 after.public_functions.len()
             ));
@@ -86,8 +86,10 @@ impl AstValidator {
         }
 
         if after.public_structs.len() < before.public_structs.len() {
+            let lost = before.public_structs.len() - after.public_structs.len();
             failures.push(format!(
-                "❌ Lost public structs: {} → {} structs",
+                "❌ Lost {} public struct(s): {} → {} structs - refactoring should not remove public API",
+                lost,
                 before.public_structs.len(),
                 after.public_structs.len()
             ));
@@ -100,8 +102,10 @@ impl AstValidator {
 
         // Validate macros are preserved
         if after.macro_exports.len() < before.macro_exports.len() {
+            let lost = before.macro_exports.len() - after.macro_exports.len();
             failures.push(format!(
-                "❌ Lost macro exports: {} → {} macros",
+                "❌ Lost {} macro export(s): {} → {} macros - refactoring should not remove macro_export items",
+                lost,
                 before.macro_exports.len(),
                 after.macro_exports.len()
             ));
@@ -115,18 +119,20 @@ impl AstValidator {
         // Check pub use statement changes (note: refactoring may consolidate statements)
         if after.pub_use_items.len() == 0 && before.pub_use_items.len() > 0 {
             failures.push(format!(
-                "❌ All pub use statements removed: {} → 0 statements",
+                "❌ All pub use statements removed: {} → 0 statements - refactoring may have failed to generate expected exports",
                 before.pub_use_items.len()
             ));
         } else if after.pub_use_items.len() < before.pub_use_items.len() {
             successes.push(format!(
-                "✅ Consolidated pub use statements: {} → {} statements",
+                "✅ Consolidated pub use statements: {} → {} statements (expected behavior for refactoring)",
                 before.pub_use_items.len(),
                 after.pub_use_items.len()
             ));
         } else if after.pub_use_items.len() > before.pub_use_items.len() {
+            let added = after.pub_use_items.len() - before.pub_use_items.len();
             successes.push(format!(
-                "✅ Added pub use statements: {} → {} statements",
+                "✅ Added {} pub use statement(s): {} → {} statements (refactor tool generated new exports)",
+                added,
                 before.pub_use_items.len(),
                 after.pub_use_items.len()
             ));
@@ -156,28 +162,35 @@ impl AstValidator {
                 successes,
             );
         } else {
-            Self::validate_pub_use_structure(
-                after,
-                None,
-                failures,
-                successes,
-            );
+            Self::validate_pub_use_structure(after, None, failures, successes);
         }
 
         // Validate expected number of glob imports in target crate after refactoring
         let actual_glob_imports = result.target_glob_imports_after;
         let expected_glob_imports = expected.target_crate_wildcards;
-        
+
         if actual_glob_imports == expected_glob_imports {
             successes.push(format!(
                 "✅ Target crate glob imports: {} (as expected)",
                 actual_glob_imports
             ));
         } else {
+            let violation = if actual_glob_imports > expected_glob_imports {
+                format!(
+                    "too many glob imports (+{})",
+                    actual_glob_imports - expected_glob_imports
+                )
+            } else {
+                format!(
+                    "too few glob imports (-{})",
+                    expected_glob_imports - actual_glob_imports
+                )
+            };
             failures.push(format!(
-                "❌ Target crate glob imports: expected {}, found {}",
+                "❌ Target crate glob imports mismatch: expected {}, found {} - {}",
                 expected_glob_imports,
-                actual_glob_imports
+                actual_glob_imports,
+                violation
             ));
         }
 
@@ -193,9 +206,14 @@ impl AstValidator {
                     expected_macro
                 ));
             } else {
+                let available_macros = if after.macro_exports.is_empty() {
+                    "no macros found".to_string()
+                } else {
+                    format!("available: [{}]", after.macro_exports.join(", "))
+                };
                 failures.push(format!(
-                    "❌ Expected macro '{}' not preserved",
-                    expected_macro
+                    "❌ Expected macro '{}' not preserved - {}",
+                    expected_macro, available_macros
                 ));
             }
         }
@@ -208,30 +226,75 @@ impl AstValidator {
         failures: &mut Vec<String>,
         successes: &mut Vec<String>,
     ) {
-        // For now, do basic validation
         let actual_pub_use_count = source_analysis.pub_use_items.len();
-        
+
         if let Some(expected) = expected_item_use {
             if actual_pub_use_count == 0 {
-                failures.push("❌ Expected pub use statements but found none".to_string());
+                failures.push(format!(
+                    "❌ Expected pub use statements but found none - the refactor tool should have generated at least one pub use statement"
+                ));
                 return;
             }
-            
+
             successes.push(format!(
                 "✅ Found {} pub use statement(s) as expected",
                 actual_pub_use_count
             ));
-            
+
             // Check if the expected ItemUse contains the expected patterns
             let expected_tree_str = quote::quote!(#expected).to_string();
-            
+
             if expected_tree_str.contains("crate::") {
-                successes.push("✅ Expected crate-rooted pub use structure found".to_string());
+                // Validate that actual pub use statements also use crate:: pattern
+                let has_crate_rooted = source_analysis
+                    .pub_use_items
+                    .iter()
+                    .any(|item| item.path.starts_with("crate::"));
+
+                if has_crate_rooted {
+                    successes.push(
+                        "✅ Expected crate-rooted pub use structure found"
+                            .to_string(),
+                    );
+                } else {
+                    let paths = source_analysis
+                        .pub_use_items
+                        .iter()
+                        .map(|item| item.path.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    failures.push(format!(
+                        "❌ Expected crate-rooted pub use structure not found - actual paths: {}",
+                        paths
+                    ));
+                }
             }
-            
+
+            // Validate specific expected patterns exist
+            let expected_patterns =
+                Self::extract_expected_patterns(&expected_tree_str);
+            for pattern in expected_patterns {
+                let found = source_analysis.pub_use_items.iter().any(|item| {
+                    item.path.contains(&pattern)
+                        || item.items.iter().any(|i| i.contains(&pattern))
+                });
+
+                if found {
+                    successes.push(format!(
+                        "✅ Expected pattern '{}' found in pub use statements",
+                        pattern
+                    ));
+                } else {
+                    failures.push(format!(
+                        "❌ Expected pattern '{}' not found in pub use statements",
+                        pattern
+                    ));
+                }
+            }
         } else {
             if actual_pub_use_count == 0 {
-                successes.push("✅ No pub use statements (as expected)".to_string());
+                successes
+                    .push("✅ No pub use statements (as expected)".to_string());
             } else {
                 successes.push(format!(
                     "✅ Found {} pub use statement(s)",
@@ -239,6 +302,30 @@ impl AstValidator {
                 ));
             }
         }
+    }
+
+    /// Extract key patterns from expected ItemUse for validation
+    fn extract_expected_patterns(expected_str: &str) -> Vec<String> {
+        let mut patterns = Vec::new();
+
+        // Extract module names that should appear in the pub use
+        if expected_str.contains("math::") {
+            patterns.push("math".to_string());
+        }
+        if expected_str.contains("network::") {
+            patterns.push("network".to_string());
+        }
+        if expected_str.contains("utils::") {
+            patterns.push("utils".to_string());
+        }
+        if expected_str.contains("core::") {
+            patterns.push("core".to_string());
+        }
+        if expected_str.contains("services::") {
+            patterns.push("services".to_string());
+        }
+
+        patterns
     }
 }
 

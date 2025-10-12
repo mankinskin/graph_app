@@ -1,30 +1,35 @@
-use anyhow::{
-    Context,
-    Result,
-};
+use anyhow::{Context, Result};
 use refactor_tool::{
-    CrateAnalyzer,
-    CrateNames,
-    CratePaths,
-    ImportParser,
-    RefactorApi,
-    RefactorConfigBuilder,
-    analyze_imports,
+    analyze_imports, CrateAnalyzer, CrateNames, CratePaths, ImportParser,
+    RefactorApi, RefactorConfigBuilder,
 };
 use std::{
     fs,
-    path::{
-        Path,
-        PathBuf,
-    },
+    path::{Path, PathBuf},
 };
 use syn::ItemUse;
 use tempfile::TempDir;
 
-use super::ast_analysis::{
-    analyze_ast,
-    AstAnalysis,
-};
+use super::ast_analysis::{analyze_ast, AstAnalysis};
+use super::validation::{AstValidator, TestFormatter};
+
+/// Type alias for custom validation function
+type CustomValidationFn = Box<
+    dyn FnOnce(
+        &TestScenario,
+        &TestWorkspace,
+        &RefactorResult,
+        &super::validation::ValidationResult,
+    ) -> Result<()>,
+>;
+
+/// Validation strategy for test execution
+enum ValidationStrategy {
+    /// Standard validation: assert success and validation passed
+    Standard,
+    /// Custom validation logic provided by the test
+    Custom(CustomValidationFn),
+}
 
 /// Test configuration for common test scenarios
 #[derive(Debug, Clone)]
@@ -34,6 +39,7 @@ pub struct TestScenario {
     pub crate_names: CrateNames,
     pub fixture_name: &'static str,
     pub expected_changes: Option<ExpectedChanges>,
+    pub keep_exports: bool,
 }
 
 impl TestScenario {
@@ -52,6 +58,7 @@ impl TestScenario {
             },
             fixture_name,
             expected_changes: None,
+            keep_exports: false,
         }
     }
 
@@ -72,6 +79,7 @@ impl TestScenario {
             },
             fixture_name,
             expected_changes: None,
+            keep_exports: false,
         }
     }
 
@@ -82,6 +90,105 @@ impl TestScenario {
     ) -> Self {
         self.expected_changes = Some(expected_changes);
         self
+    }
+
+    /// Configure the scenario to disable export generation
+    pub fn with_keep_exports(
+        mut self,
+        keep_exports: bool,
+    ) -> Self {
+        self.keep_exports = keep_exports;
+        self
+    }
+
+    /// Execute the test scenario with standard validation (success + validation passed)
+    pub fn execute(self) -> Result<()> {
+        self.execute_with_strategy(ValidationStrategy::Standard)
+    }
+
+    /// Execute the test scenario with custom validation logic
+    pub fn execute_with_custom_validation<F>(
+        self,
+        custom_validation: F,
+    ) -> Result<()>
+    where
+        F: FnOnce(
+                &TestScenario,
+                &TestWorkspace,
+                &RefactorResult,
+                &super::validation::ValidationResult,
+            ) -> Result<()>
+            + 'static,
+    {
+        self.execute_with_strategy(ValidationStrategy::Custom(Box::new(
+            custom_validation,
+        )))
+    }
+
+    /// Execute the test scenario with configurable validation strategy
+    fn execute_with_strategy(
+        self,
+        validation_strategy: ValidationStrategy,
+    ) -> Result<()> {
+        println!("🚀 Starting test: {}", self.description);
+
+        // Setup protected workspace
+        let mut workspace = TestWorkspace::setup(self.fixture_name)?;
+
+        // Run refactor with full validation
+        let result = workspace.run_refactor_with_validation(&self)?;
+
+        // Validate results against expectations
+        let validation = AstValidator::validate_refactor_result(
+            &result,
+            self.expected_changes.as_ref(),
+        );
+
+        // Format and display comprehensive results
+        let formatted_output =
+            TestFormatter::format_test_results(self.name, &result, &validation);
+        println!("{}", formatted_output);
+
+        // Execute validation strategy
+        match validation_strategy {
+            ValidationStrategy::Standard => {
+                // Show detailed validation failures if any
+                if !validation.passed {
+                    println!("\n❌ VALIDATION FAILURES DETECTED:");
+                    for failure in &validation.failures {
+                        println!("   {}", failure);
+                    }
+                    println!();
+                }
+                
+                // Assert overall success with detailed failure information
+                assert!(
+                    validation.passed, 
+                    "Test validation failed with {} error(s): {}",
+                    validation.failures.len(),
+                    validation.failures.join("; ")
+                );
+                assert!(
+                    result.success, 
+                    "Refactor execution failed - check refactor tool output above for details"
+                );
+            },
+            ValidationStrategy::Custom(custom_validation) => {
+                // Show detailed validation failures for custom validation too
+                if !validation.passed {
+                    println!("\n❌ VALIDATION FAILURES DETECTED:");
+                    for failure in &validation.failures {
+                        println!("   {}", failure);
+                    }
+                    println!();
+                }
+                
+                // Execute custom validation logic
+                custom_validation(&self, &workspace, &result, &validation)?;
+            },
+        }
+
+        Ok(())
     }
 }
 
@@ -354,8 +461,9 @@ impl TestWorkspace {
         // Use the same logic as the refactor tool to find imports
         let parser = match crate_names {
             CrateNames::SelfRefactor { .. } => ImportParser::new("crate"),
-            CrateNames::CrossRefactor { source_crate, .. } =>
-                ImportParser::new(source_crate),
+            CrateNames::CrossRefactor { source_crate, .. } => {
+                ImportParser::new(source_crate)
+            },
         };
 
         let imports = parser.find_imports_in_crate(target_crate_path)?;
@@ -376,8 +484,8 @@ impl TestWorkspace {
             .dry_run(false)
             .verbose(true)
             .quiet(false) // Keep output for debugging in tests
+            .no_exports(scenario.keep_exports)
             .build()?;
-
         let result = RefactorApi::execute_refactor(config);
 
         if !result.success {
