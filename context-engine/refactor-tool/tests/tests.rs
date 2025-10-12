@@ -196,7 +196,7 @@ fn test_super_imports_normalization() -> Result<()> {
         0, // target_crate_wildcards - no new pub use statements expected, just import normalization
         &[], // preserved_macros
     ))
-    .with_keep_exports(true) // Skip export processing for this test - focus only on super import normalization
+    .keep_exports(true) // Skip export processing for this test - focus only on super import normalization
     .execute_with_custom_validation(|_scenario, workspace, result, _validation| {
             println!(
                 "🔍 Debug: workspace_path = {:?}",

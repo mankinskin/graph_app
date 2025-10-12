@@ -93,7 +93,7 @@ impl TestScenario {
     }
 
     /// Configure the scenario to disable export generation
-    pub fn with_keep_exports(
+    pub fn keep_exports(
         mut self,
         keep_exports: bool,
     ) -> Self {
@@ -484,7 +484,7 @@ impl TestWorkspace {
             .dry_run(false)
             .verbose(true)
             .quiet(false) // Keep output for debugging in tests
-            .no_exports(!scenario.keep_exports)  // Invert keep_exports to no_exports
+            .keep_exports(scenario.keep_exports) 
             .build()?;
         let result = RefactorApi::execute_refactor(config);
 

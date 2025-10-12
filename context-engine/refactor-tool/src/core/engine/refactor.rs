@@ -24,7 +24,7 @@ pub struct RefactorEngine {
     dry_run: bool,
     verbose: bool,
     keep_super: bool,
-    no_exports: bool,
+    keep_exports: bool,
     ast_manager: AstManager,
 }
 
@@ -34,14 +34,14 @@ impl RefactorEngine {
         dry_run: bool,
         verbose: bool,
         keep_super: bool,
-        no_exports: bool,
+        keep_exports: bool,
     ) -> Self {
         Self {
             crate_names: crate_names.clone(),
             dry_run,
             verbose,
             keep_super,
-            no_exports,
+            keep_exports,
             ast_manager: AstManager::new(verbose),
         }
     }
@@ -71,6 +71,15 @@ impl RefactorEngine {
                 target_crate_path: _,
             } => source_crate_path,
         };
+
+        // Skip both export generation and import replacement if disabled via command line flag
+        if self.keep_exports {
+            if self.verbose {
+                println!("🚫 Skipping export generation and import replacement (disabled via --keep-exports=true flag)");
+            }
+            return Ok(());
+        }
+
         // Step 2: Update source crate's lib.rs with pub use statements
         // Pass the resolved imports directly instead of re-parsing from item names
         self.update_source_lib_rs(crate_path, &imports, workspace_root)?;
@@ -150,7 +159,7 @@ impl RefactorEngine {
         _workspace_root: &Path,
     ) -> Result<()> {
         // Skip pub use generation if disabled via command line flag
-        if self.no_exports {
+        if self.keep_exports {
             if self.verbose {
                 println!("🚫 Skipping pub use generation (disabled via --keep-exports=true flag)");
             }
