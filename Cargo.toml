@@ -3,21 +3,13 @@
 resolver = "2"
 exclude = [
   "./egui",
+  "./rerun",
   "./egui/crates/eframe",
   "./tracing-egui",
   "./petgraph",
   "./minimal_options",
-  "./rerun",
-  #"./graph_app",
-  #"./ngrams",
-  #"./justlog",
-  #"./seqraph",
 ]
-members = [
-  "graph_app",
-  "ngrams",
-  "justlog",
-]
+members = ["graph_app", "ngrams", "justlog"]
 
 [profile.release]
 opt-level = 2 # fast and small wasm
