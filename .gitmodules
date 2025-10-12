@@ -15,3 +15,6 @@
 [submodule "rerun"]
 	path = rerun
 	url = ./rerun
+[submodule "context-engine"]
+	path = context-engine
+	url = https://github.com/mankinskin/context-engine.git
