@@ -1,6 +1,3 @@
-[submodule "justlog"]
-	path = justlog
-	url = https://github.com/mankinskin/justlog
 [submodule "egui"]
 	path = egui
 	url = https://github.com/mankinskin/egui
@@ -8,10 +5,6 @@
 [submodule "tracing-egui"]
 	path = tracing-egui
 	url = https://github.com/mankinskin/tracing-egui
-[submodule "petgraph"]
-	path = petgraph
-	url = https://github.com/mankinskin/petgraph
-
 [submodule "context-engine"]
 	path = context-engine
 	url = https://github.com/mankinskin/context-engine.git

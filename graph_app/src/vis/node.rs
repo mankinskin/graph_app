@@ -6,7 +6,7 @@ use context_trace::{
         key::VertexKey,
         pattern::id::PatternId,
     },
-    path::structs::rooted::index_range::IndexRangePath,
+    IndexRangePath,
 };
 use eframe::{
     egui::{

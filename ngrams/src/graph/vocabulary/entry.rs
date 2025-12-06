@@ -1,4 +1,3 @@
-use context_trace::graph::vertex::wide::Wide;
 use derive_more::Deref;
 use serde::{
     Deserialize,
@@ -6,22 +5,24 @@ use serde::{
 };
 
 use context_trace::{
-    graph::{
-        getters::vertex::VertexSet,
-        vertex::{
-            child::Child,
-            data::VertexData,
-            has_vertex_index::HasVertexIndex,
-            has_vertex_key::HasVertexKey,
-            key::VertexKey,
-            parent::Parent,
-            IndexedVertexEntry,
-            VertexEntry,
-            VertexIndex,
+    graph::vertex::{
+        data::VertexData,
+        has_vertex_index::HasVertexIndex,
+        has_vertex_key::HasVertexKey,
+        key::VertexKey,
+        parent::Parent,
+        token::{
+            Token,
+            TokenWidth,
         },
+        wide::Wide,
+        IndexedVertexEntry,
+        VertexEntry,
+        VertexIndex,
     },
     HashMap,
     HashSet,
+    VertexSet,
 };
 
 use crate::graph::{
@@ -63,7 +64,7 @@ pub struct VertexCtx<'a> {
     pub vocab: &'a Vocabulary,
 }
 impl Wide for VertexCtx<'_> {
-    fn width(&self) -> usize {
+    fn width(&self) -> TokenWidth {
         self.data.width()
     }
 }
@@ -154,7 +155,7 @@ macro_rules! impl_index_vocab {
 }
 impl_index_vocab!(VertexKey, (self, key) => key.vertex_key());
 impl_index_vocab!(NGramId, (self, key) => key.vertex_key());
-impl_index_vocab!(Child, (self, index) => self.containment.expect_key_for_index(index.vertex_index()));
+impl_index_vocab!(Token, (self, index) => self.containment.expect_key_for_index(index.vertex_index()));
 impl_index_vocab!(VertexIndex, (self, index) => self.containment.expect_key_for_index(index));
 
 macro_rules! impl_index_vocab_str {

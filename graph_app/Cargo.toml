@@ -20,10 +20,11 @@ tracing-mutex = "0.3"
 strum = "0.27"
 derive_more = { version = "2.0.0", features = ["full"] }
 derive-getters = "0.5"
-context-read = { path = "../context-engine/context-read" }
-context-trace = { path = "../context-engine/context-trace" }
 clap = "4.5.48"
 indexmap = "2.11"
+
+context-read = { path = "../context-engine/crates/context-read" }
+context-trace = { path = "../context-engine/crates/context-trace" }
 
 [dependencies.tracing-egui]
 path = "../tracing-egui"
@@ -54,7 +55,7 @@ path = "../rerun/crates/top/rerun"
 
 [dependencies.petgraph]
 features = ["serde-1"]
-path = "../petgraph"
+path = "../context-engine/crates/deps/petgraph"
 #version = "^0.5"
 #git = "https://github.com/mankinskin/petgraph"
 

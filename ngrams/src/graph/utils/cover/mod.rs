@@ -9,20 +9,24 @@ use range_ext::intersect::Intersect;
 use derivative::Derivative;
 use context_trace::{
     graph::{
-        getters::vertex::VertexSet,
         vertex::{
-            child::Child, data::{
+            data::{
                 VertexData,
                 VertexDataBuilder,
-            }, has_vertex_index::{
+            },
+            has_vertex_index::{
                 HasVertexIndex,
-                ToChild,
-            }, has_vertex_key::HasVertexKey, key::VertexKey, wide::Wide, VertexIndex
+                ToToken,
+            },
+            key::VertexKey,
+            wide::Wide,
+            VertexIndex,
         },
         Hypergraph,
     },
     HashMap,
     HashSet,
+    VertexSet,
 };
 use std::{
     cmp::{
@@ -93,7 +97,7 @@ impl ChildCover
     {
         self.entries
             .iter()
-            .map(|(off, id)| *off..(off + id.width()))
+            .map(|(off, id)| *off..(off + id.width().0))
             .collect()
     }
     pub fn any_intersect(&self) -> bool

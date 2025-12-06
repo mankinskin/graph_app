@@ -40,11 +40,11 @@ use crate::graph::{
 };
 use context_trace::{
     graph::vertex::{
-        child::Child,
         has_vertex_index::HasVertexIndex,
         has_vertex_key::HasVertexKey,
         key::VertexKey,
         location::child::ChildLocation,
+        token::Token,
         wide::Wide,
         VertexIndex,
     },

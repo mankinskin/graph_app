@@ -8,8 +8,7 @@ use crate::graph::vocabulary::{
     Vocabulary,
 };
 use context_trace::graph::vertex::{
-    child::Child,
-    key::VertexKey,
+    token::Token,
     wide::Wide,
     VertexIndex,
 };
@@ -46,13 +45,13 @@ impl TraversalDirection for BottomUp
     {
         entry
             .data
-            .parents
+            .parents()
             .iter()
-            .filter(|(&id, p)| p.width == entry.data.width() + 1)
+            .filter(|(&id, p)| p.width() == entry.data.width() + 1)
             .map(|(id, p)| {
                 NGramId::new(
                     entry.vocab.containment.expect_key_for_index(id),
-                    p.width(),
+                    p.width().0,
                 )
             })
             .collect_vec()
@@ -84,7 +83,7 @@ impl TraversalDirection for TopDown
                     subi,
                     NGramId::new(
                         entry.vocab.containment.expect_key_for_index(c),
-                        c.width(),
+                        c.width().0,
                     ),
                 )
             })

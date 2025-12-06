@@ -8,8 +8,7 @@ use crate::graph::{utils::cover::frequency::FrequencyCover, vocabulary::{
     Vocabulary,
 }};
 use context_trace::graph::vertex::{
-    child::Child,
-    key::VertexKey,
+    token::Token,
     wide::Wide,
     VertexIndex,
 };
