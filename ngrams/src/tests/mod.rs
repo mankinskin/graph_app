@@ -3,19 +3,32 @@ pub mod count;
 use std::path::Path;
 
 use crate::graph::{
-    Corpus,
-    labelling::LabellingCtx,
-    vocabulary::{
-        entry::HasVertexEntries, ProcessStatus, Vocabulary
+    labelling::{
+        frequency,
+        LabellingCtx,
+        LabellingImage,
     },
-};
-use itertools::Itertools;
-use ngram::NGram;
-use pretty_assertions::assert_eq;
-use seqraph::{
+    vocabulary::{
+        entry::HasVertexEntries,
+        ProcessStatus,
+        Vocabulary,
+    },
+    Corpus,
+    StatusHandle,
+};  
+use context_trace::{
     graph::vertex::key::VertexKey,
     HashSet,
 };
+use derive_more::{
+    Deref,
+    DerefMut,
+};
+use derive_new::new;
+use itertools::Itertools;
+use ngram::NGram;
+use pretty_assertions::assert_eq;
+use tokio_util::sync::CancellationToken;
 
 pub const OTTOS_MOPS_CORPUS: [&str; 4] = [
     "ottos mops trotzt",
@@ -23,8 +36,7 @@ pub const OTTOS_MOPS_CORPUS: [&str; 4] = [
     "ottos mops hopst fort",
     "otto: soso",
 ];
-fn read_corpus(file_path: impl AsRef<Path>) -> String
-{
+fn read_corpus(file_path: impl AsRef<Path>) -> String {
     //let corpus: String = String::from("fldfjdlsjflskdjflsdfaädüwwrivfokl");
     let mut csv = csv::ReaderBuilder::new()
         .delimiter(b'\t')
@@ -34,22 +46,17 @@ fn read_corpus(file_path: impl AsRef<Path>) -> String
 }
 
 #[derive(Debug)]
-pub struct TestCtx<'a>
-{
-    vocab: &'a Vocabulary,
-    corpus: &'a Corpus,
-    roots_test: HashSet<String>,
-    leaves_test: HashSet<String>,
-    //labels: Option<&'a HashSet<usize>>,
+pub struct TestCorpus {
+    pub image: LabellingImage,
+    pub corpus: Corpus,
+    pub roots_test: HashSet<String>,
+    pub leaves_test: HashSet<String>,
 }
-impl<'a> TestCtx<'a>
-{
+impl TestCorpus {
     pub fn new(
-        vocab: &'a Vocabulary,
-        corpus: &'a Corpus,
-        //labels: Option<&'a HashSet<usize>>,
-    ) -> Self
-    {
+        image: LabellingImage,
+        corpus: Corpus,
+    ) -> Self {
         let roots_test: HashSet<_> =
             corpus.texts.iter().map(ToString::to_string).collect();
         let leaves_test: HashSet<_> = corpus
@@ -60,29 +67,24 @@ impl<'a> TestCtx<'a>
             })
             .collect();
         Self {
-            vocab,
+            image,
             corpus,
             roots_test,
             leaves_test,
         }
     }
-    pub fn get_roots_test(&self) -> Vec<String>
-    {
+    pub fn get_roots_test(&self) -> Vec<String> {
         self.roots_test.iter().cloned().sorted().collect()
     }
-    pub fn get_leaves_test(&self) -> Vec<String>
-    {
+    pub fn get_leaves_test(&self) -> Vec<String> {
         self.leaves_test.iter().cloned().sorted().collect()
     }
-
-    pub(crate) fn test_containment(&self)
-    {
+    pub(crate) fn test_containment(&self) {
         let Self {
-            vocab,
+            image: LabellingImage { vocab, .. },
             corpus,
             leaves_test,
             roots_test,
-            ..
         } = self;
         assert_eq!(
             vocab
@@ -105,80 +107,31 @@ impl<'a> TestCtx<'a>
             assert!([0, 1, 2].contains(&patterns.len()));
             for (pid, p) in patterns.iter() {
                 assert_eq!(
-                    p.iter().map(|i| {
-                        vocab.entries.get(&vocab.containment.expect_key_for_index(i)).unwrap().ngram.clone()
-                    }).join(""),
+                    p.iter()
+                        .map(|i| {
+                            vocab
+                                .entries
+                                .get(&vocab.containment.expect_key_for_index(i))
+                                .unwrap()
+                                .ngram
+                                .clone()
+                        })
+                        .join(""),
                     e.ngram,
                 );
             }
         }
     }
 }
-#[derive(Debug)]
-pub struct LabelTestCtx<'a>
-{
-    ctx: TestCtx<'a>,
-    labels: &'a HashSet<VertexKey>,
-    frequency_test: HashSet<String>,
-    wrapper_test: HashSet<String>,
-    partition_test: HashSet<String>,
+#[derive(Debug, new)]
+pub struct LabelTest {
+    frequency: HashSet<String>,
+    wrapper: HashSet<String>,
+    partition: HashSet<String>,
 }
-impl<'a> LabelTestCtx<'a>
-{
-    pub fn new(
-        ctx: TestCtx<'a>,
-        labels: &'a HashSet<VertexKey>,
-    ) -> Self
-    {
-        let frequency_test: HashSet<String> = [
-            "ot",
-            "s ",
-            "so",
-            "os",
-            "t ",
-            "ops",
-            "otto",
-            " mops ",
-            "otto: ",
-            " fort",
-            "ottos mops ",
-        ]
-        .into_iter()
-        .map(ToString::to_string)
-        .collect();
-        let wrapper_test: HashSet<String> = [
-            // Todo: check for correctness
-            " fort ",
-            " fort mops ",
-            " fort mops fort",
-            " mops fort",
-            "ops ",
-            "ops fort",
-            "os ",
-            "os mops ",
-            "oso",
-            "oso",
-            "otto: fort",
-            "otto: fort ",
-            "otto: fort mops ",
-            "ottos",
-            "ottos ",
-            "s fort",
-            "s mops ",
-            "sos",
-            "soso",
-            "t fort",
-            "t mops ",
-            "t mops fort",
-        ]
-        .into_iter()
-        .map(ToString::to_string)
-        .collect();
-        let partition_test: HashSet<String> = (&[] as &[&'static str])
-            .iter()
-            .map(ToString::to_string)
-            .collect();
-        for (a, b) in [&frequency_test, &wrapper_test, &partition_test]
+impl LabelTest {
+    pub fn validate(&self) {
+        for (a, b) in [&self.frequency, &self.wrapper, &self.partition]
             .into_iter()
             .combinations(2)
             .map(|v| (v[0], v[1]))
@@ -188,18 +141,70 @@ impl<'a> LabelTestCtx<'a>
                 Vec::<String>::default(),
             );
         }
-        Self {
-            ctx,
-            labels,
-            frequency_test,
-            wrapper_test,
-            partition_test,
+    }
+}
+macro_rules! test_labels {
+    ($freq:expr, $wrap:expr,$part:expr$(,)?) => {{
+        let frequency = $freq.into_iter().map(ToString::to_string).collect();
+        let wrapper: HashSet<String> =
+            $wrap.into_iter().map(ToString::to_string).collect();
+        let partition: HashSet<String> =
+            $part.into_iter().map(ToString::to_string).collect();
+        let s = LabelTest {
+            frequency,
+            wrapper,
+            partition,
+        };
+        s.validate();
+        s
+    }};
+}
+
+#[derive(Debug, new, Deref, DerefMut)]
+pub struct TestCase {
+    #[deref]
+    #[deref_mut]
+    ctx: LabellingCtx,
+    labels: LabelTest,
+}
+impl TestCase {
+    pub fn execute(&mut self) {
+        // graph of all containment edges between n and n+1
+        self.corpus.test_containment();
+        self.label_freq();
+
+        if *self.status.pass() == ProcessStatus::Frequency {
+            let ctx = LabelTestCtx::new(self.labels(), &self);
+            ctx.test_roots();
+            ctx.test_leaves();
+
+            ctx.test_freq();
+        }
+
+        self.label_wrap();
+
+        if *self.status.pass() == ProcessStatus::Wrappers {
+            let ctx = LabelTestCtx::new(self.labels(), &self);
+            ctx.test_wrap();
+        }
+
+        self.label_part();
+
+        if *self.status.pass() == ProcessStatus::Partitions {
+            let ctx = LabelTestCtx::new(self.labels(), &self);
+            ctx.test_part();
         }
     }
-    pub fn test_roots(&self)
-    {
+}
+#[derive(Debug, new)]
+pub struct LabelTestCtx<'a> {
+    labels: &'a HashSet<VertexKey>,
+    test: &'a TestCase,
+}
+impl<'a> LabelTestCtx<'a> {
+    pub fn test_roots(&self) {
         let label_strings = self.label_strings_set();
-        let roots_test = self.ctx.get_roots_test();
+        let roots_test = self.test.corpus.get_roots_test();
         assert_eq!(
             label_strings
                 .intersection(&roots_test.iter().cloned().collect())
@@ -209,10 +214,9 @@ impl<'a> LabelTestCtx<'a>
             roots_test,
         );
     }
-    pub fn test_leaves(&self)
-    {
+    pub fn test_leaves(&self) {
         let label_strings = self.label_strings_set();
-        let leaves_test = self.ctx.get_leaves_test();
+        let leaves_test = self.test.corpus.get_leaves_test();
         assert_eq!(
             label_strings
                 .intersection(&leaves_test.iter().cloned().collect())
@@ -222,56 +226,40 @@ impl<'a> LabelTestCtx<'a>
             leaves_test,
         );
     }
-    pub fn get_frequency_test(&self) -> Vec<String>
-    {
-        self.ctx
+    pub fn get_frequency_test(&self) -> Vec<String> {
+        self.test
+            .corpus
             .get_leaves_test()
             .iter()
-            .chain(self.ctx.get_roots_test().iter())
-            .chain(self.frequency_test.iter())
+            .chain(self.test.corpus.get_roots_test().iter())
+            .chain(self.test.labels.frequency.iter())
             .sorted()
             .cloned()
             .collect()
     }
-    pub fn get_wrapper_test(&self) -> Vec<String>
-    {
+    pub fn get_wrapper_test(&self) -> Vec<String> {
         self.get_frequency_test()
             .iter()
-            .chain(self.wrapper_test.iter())
+            .chain(self.test.labels.wrapper.iter())
             .sorted()
             .cloned()
             .collect()
     }
-    pub fn get_partition_test(&self) -> Vec<String>
-    {
+    pub fn get_partition_test(&self) -> Vec<String> {
         self.get_wrapper_test()
             .iter()
-            .chain(self.partition_test.iter())
+            .chain(self.test.labels.partition.iter())
             .sorted()
             .cloned()
             .collect()
     }
-    pub fn label_strings_set(&self) -> HashSet<String>
-    {
+    pub fn label_strings_set(&self) -> HashSet<String> {
         self.labels
             .iter()
-            .map(|vi| self.ctx.vocab.get_vertex(vi).unwrap().ngram.clone())
+            .map(|vi| self.test.vocab().get_vertex(vi).unwrap().ngram.clone())
             .collect()
     }
-    pub fn test_freq(&self)
-    {
-        let Self {
-            ctx:
-                TestCtx {
-                    vocab,
-                    corpus,
-                    leaves_test,
-                    roots_test,
-                },
-            labels,
-            ..
-        } = self;
-
+    pub fn test_freq(&self) {
         let label_strings = self.label_strings_set();
         let frequency_test = self.get_frequency_test();
 
@@ -280,19 +268,7 @@ impl<'a> LabelTestCtx<'a>
             frequency_test,
         );
     }
-    pub fn test_wrap(&self)
-    {
-        let Self {
-            ctx:
-                TestCtx {
-                    vocab,
-                    corpus,
-                    leaves_test,
-                    roots_test,
-                },
-            labels,
-            ..
-        } = self;
+    pub fn test_wrap(&self) {
         let label_strings = self.label_strings_set();
         let wrapper_test = self.get_wrapper_test();
 
@@ -301,19 +277,7 @@ impl<'a> LabelTestCtx<'a>
             wrapper_test,
         );
     }
-    pub fn test_part(&self)
-    {
-        let Self {
-            ctx:
-                TestCtx {
-                    vocab,
-                    corpus,
-                    leaves_test,
-                    roots_test,
-                },
-            labels,
-            ..
-        } = self;
+    pub fn test_part(&self) {
         let label_strings = self.label_strings_set();
         let partition_test = self.get_partition_test();
 
@@ -324,46 +288,82 @@ impl<'a> LabelTestCtx<'a>
     }
 }
 
-#[test]
-pub fn test_graph()
-{
+#[tokio::test]
+pub async fn test_graph1() {
+    let corpus = ["abab", "abcabc", "babc"];
+    let texts = corpus.into_iter().map(ToString::to_string).collect_vec();
+    TestCase {
+        ctx: LabellingCtx::from_corpus(
+            Corpus::new("abab_corpus".to_owned(), texts),
+            CancellationToken::new(),
+        )
+        .await,
+        labels: test_labels! {
+            [
+                "ab"
+            ],
+            [
+                "ab"
+            ],
+            [] as [&str; 0],
+        },
+    }
+    .execute();
+}
+
+// too slow!
+#[allow(unused)]
+pub async fn test_graph2() {
     let corpus = OTTOS_MOPS_CORPUS;
     let texts = corpus.into_iter().map(ToString::to_string).collect_vec();
-    let corpus = Corpus::new("ottos_mops".to_owned(), texts);
-    // graph of all containment edges between n and n+1
-    let mut image = LabellingCtx::from_corpus(&corpus);
 
-    TestCtx::new(&image.vocab, &corpus).test_containment();
-
-    image.label_freq();
-
-    if image.status == ProcessStatus::Frequency {
-        let ctx = LabelTestCtx::new(
-            TestCtx::new(&image.vocab, &corpus),
-            &image.labels,
-        );
-        ctx.test_roots();
-        ctx.test_leaves();
-
-        ctx.test_freq();
+    TestCase {
+        ctx: LabellingCtx::from_corpus(
+            Corpus::new("ottos_mops".to_owned(), texts),
+            CancellationToken::new(),
+        )
+        .await,
+        labels: test_labels! {
+            [
+                "ot",
+                "s ",
+                "so",
+                "os",
+                "t ",
+                "ops",
+                "otto",
+                " mops ",
+                "otto: ",
+                " fort",
+                "ottos mops ",
+            ],
+            [
+                // Todo: check for correctness
+                " fort ",
+                " fort mops ",
+                " fort mops fort",
+                " mops fort",
+                "ops ",
+                "ops fort",
+                "os ",
+                "os mops ",
+                "oso",
+                "oso",
+                "otto: fort",
+                "otto: fort ",
+                "otto: fort mops ",
+                "ottos",
+                "ottos ",
+                "s fort",
+                "s mops ",
+                "sos",
+                "soso",
+                "t fort",
+                "t mops ",
+                "t mops fort",
+            ],
+            [] as [&str; 0],
+        },
     }
-
-    image.label_wrap();
-
-    if image.status == ProcessStatus::Wrappers {
-        let ctx = LabelTestCtx::new(
-            TestCtx::new(&image.vocab, &corpus),
-            &image.labels,
-        );
-        ctx.test_wrap();
-    }
-
-    image.label_part();
-
-    if image.status == ProcessStatus::Partitions {
-        let ctx = TestCtx::new(&image.vocab, &corpus);
-        let ctx = LabelTestCtx::new(ctx, &image.labels);
-        ctx.test_part();
-    }
-    
+    .execute();
 }

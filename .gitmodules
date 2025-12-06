@@ -1,0 +1,13 @@
+[submodule "egui"]
+	path = egui
+	url = https://github.com/mankinskin/egui
+	branch = main
+[submodule "tracing-egui"]
+	path = tracing-egui
+	url = https://github.com/mankinskin/tracing-egui
+[submodule "context-engine"]
+	path = context-engine
+	url = https://github.com/mankinskin/context-engine.git
+[submodule "rerun"]
+	path = rerun
+	url = https://github.com/mankinskin/rerun.git

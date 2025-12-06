@@ -5,21 +5,25 @@ use crate::graph::{
     },
     vocabulary::NGramId,
 };
+use context_trace::graph::{
+    vertex::{
+        token::Token,
+        has_vertex_index::HasVertexIndex,
+        has_vertex_key::HasVertexKey,
+        wide::Wide,
+        VertexIndex,
+        data::VertexData,
+        pattern::Pattern,
+        ChildPatterns,
+    },
+};
+use context_trace::VertexSet;
 use derive_more::{
     Deref,
     DerefMut,
 };
 use itertools::Itertools;
 use ngram::NGram;
-use seqraph::graph::{
-    vertex::{
-        child::Child,
-        has_vertex_index::HasVertexIndex,
-        has_vertex_key::HasVertexKey,
-        wide::Wide,
-    },
-    getters::vertex::VertexSet,
-};
 use std::{
     cmp::{
         Ordering,
@@ -29,18 +33,15 @@ use std::{
 };
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct PartitionLineBuilder<'a, 'b>
-{
+pub struct PartitionLineBuilder<'a, 'b> {
     pos: usize,
     ctx: &'a NodePartitionCtx<'a, 'b>,
     #[deref]
     #[deref_mut]
-    line: Vec<Child>,
+    line: Vec<Token>,
 }
-impl<'a, 'b> PartitionLineBuilder<'a, 'b>
-{
-    pub fn new(ctx: &'a NodePartitionCtx<'a, 'b>) -> Self
-    {
+impl<'a, 'b> PartitionLineBuilder<'a, 'b> {
+    pub fn new(ctx: &'a NodePartitionCtx<'a, 'b>) -> Self {
         Self {
             ctx,
             pos: Default::default(),
@@ -49,29 +50,25 @@ impl<'a, 'b> PartitionLineBuilder<'a, 'b>
     }
     fn push_cell(
         &mut self,
-        cell: Child,
-    )
-    {
-        if let Some(last) = self.line.last()
-        {
-            self.pos += last.width();
+        cell: Token,
+    ) {
+        if let Some(last) = self.line.last() {
+            self.pos += last.width().0;
         }
         self.line.push(cell);
     }
     pub fn append(
         &mut self,
-        index: Child,
-    )
-    {
+        index: Token,
+    ) {
         self.push_cell(index);
     }
     pub fn skip(
         &mut self,
         offset: NonZeroUsize,
-    )
-    {
+    ) {
         let end_pos = self.end_pos();
-        let index = self.ctx.vocab.containment.get_vertex_subrange(
+        let index = self.ctx.vocab().containment.get_vertex_subrange(
             self.ctx.root.vertex_key(),
             end_pos..(end_pos + offset.get()),
         );
@@ -80,11 +77,9 @@ impl<'a, 'b> PartitionLineBuilder<'a, 'b>
     pub fn append_after_offset(
         &mut self,
         offset: Option<NonZeroUsize>,
-        index: Child,
-    )
-    {
-        if let Some(non_zero) = offset
-        {
+        index: Token,
+    ) {
+        if let Some(non_zero) = offset {
             self.skip(non_zero);
         }
         self.append(index);
@@ -92,83 +87,77 @@ impl<'a, 'b> PartitionLineBuilder<'a, 'b>
     pub fn offset_to(
         &self,
         pos: usize,
-    ) -> Option<NonZeroUsize>
-    {
+    ) -> Option<NonZeroUsize> {
         NonZeroUsize::new(pos - self.end_pos())
     }
     pub fn skip_to(
         &mut self,
         end_pos: usize,
-    )
-    {
-        if let Some(o) = self.offset_to(end_pos)
-        {
+    ) {
+        if let Some(o) = self.offset_to(end_pos) {
             self.skip(o);
         }
     }
-    pub fn end_pos(&self) -> usize
-    {
-        self.pos + self.line.last().map(|cell|
-            cell.width()
-        ).unwrap_or_default()
+    pub fn end_pos(&self) -> usize {
+        self.pos
+            + self
+                .line
+                .last()
+                .map(|cell| cell.width().0)
+                .unwrap_or_default()
     }
     pub fn close(
         mut self,
         end_pos: usize,
-    ) -> Vec<Child>
-    {
+    ) -> Vec<Token> {
         self.skip_to(end_pos);
         self.line
     }
 }
 
 #[derive(Debug, Clone, Copy, Hash)]
-struct PartitionCursor
-{
+struct PartitionCursor {
     pub line: usize,
 }
-impl PartitionCursor
-{
+impl PartitionCursor {
     pub fn get_current_line<'a, 'b>(
         &self,
         builder: &'a mut PartitionBuilder<'a, 'b>,
-    ) -> &'a mut PartitionLineBuilder<'a, 'b>
-    {
+    ) -> &'a mut PartitionLineBuilder<'a, 'b> {
         builder.get_line_mut(self.line)
     }
 }
 
 #[derive(Debug)]
-pub struct PartitionBuilder<'a, 'b>
-{
+pub struct PartitionBuilder<'a, 'b> {
     ctx: &'a NodePartitionCtx<'a, 'b>,
     cursor: PartitionCursor,
     wall: Vec<PartitionLineBuilder<'a, 'b>>,
 }
 
-impl<'a, 'b> PartitionBuilder<'a, 'b>
-{
+impl<'a, 'b> PartitionBuilder<'a, 'b> {
     pub fn new(
         ctx: &'a NodePartitionCtx<'a, 'b>,
         offset: usize,
         first: NGramId,
-    ) -> Self
-    {
+    ) -> Self {
         let mut builder = Self {
             ctx,
             cursor: PartitionCursor { line: 0 },
             wall: Default::default(),
         };
-        let index = ctx.vocab.containment.expect_index_for_key(&first.vertex_key());
-        builder.append_child(offset, Child::new(index, first.width()));
+        let index = ctx
+            .vocab()
+            .containment
+            .expect_index_for_key(&first.vertex_key());
+        builder.append_child(offset, Token::new(index, first.width()));
         builder
     }
     pub fn create_line(
         &mut self,
         pos: usize,
-        index: Child,
-    )
-    {
+        index: Token,
+    ) {
         let mut line = PartitionLineBuilder::new(self.ctx);
         line.append_after_offset(NonZeroUsize::new(pos), index);
         self.cursor.line = self.wall.len();
@@ -177,9 +166,8 @@ impl<'a, 'b> PartitionBuilder<'a, 'b>
     pub fn create_and_append_line(
         &mut self,
         pos: usize,
-        index: Child,
-    )
-    {
+        index: Token,
+    ) {
         let mut line = PartitionLineBuilder::new(self.ctx);
         line.append_after_offset(NonZeroUsize::new(pos), index);
         self.cursor.line = self.wall.len();
@@ -188,21 +176,18 @@ impl<'a, 'b> PartitionBuilder<'a, 'b>
     pub fn get_line_mut(
         &mut self,
         index: usize,
-    ) -> &mut PartitionLineBuilder<'a, 'b>
-    {
+    ) -> &mut PartitionLineBuilder<'a, 'b> {
         self.wall.get_mut(index).expect("Invalid PartitionCursor")
     }
-    pub fn get_current_line(&mut self) -> &mut PartitionLineBuilder<'a, 'b>
-    {
+    pub fn get_current_line(&mut self) -> &mut PartitionLineBuilder<'a, 'b> {
         self.get_line_mut(self.cursor.line)
     }
     pub fn append_at_line(
         &mut self,
         line_index: usize,
         pos: usize,
-        index: Child,
-    )
-    {
+        index: Token,
+    ) {
         let line = self.get_line_mut(line_index);
         line.append_after_offset(line.offset_to(pos), index);
         self.cursor.line = line_index;
@@ -211,9 +196,8 @@ impl<'a, 'b> PartitionBuilder<'a, 'b>
     pub fn append_child(
         &mut self,
         pos: usize,
-        index: Child,
-    )
-    {
+        index: Token,
+    ) {
         //println!("Find line to insert {}..{}", pos, pos + index.width());
         let mut sorted_lines = self
             .wall
@@ -233,8 +217,7 @@ impl<'a, 'b> PartitionBuilder<'a, 'b>
                 let end_pos = line.end_pos();
                 //println!("{}", end_pos);
 
-                match end_pos.cmp(&pos)
-                {
+                match end_pos.cmp(&pos) {
                     Ordering::Equal | Ordering::Less => true,
                     Ordering::Greater => false,
                 }
@@ -248,8 +231,7 @@ impl<'a, 'b> PartitionBuilder<'a, 'b>
                 self.create_and_append_line(pos, index)
             })
     }
-    pub fn close(mut self) -> Vec<Vec<Child>>
-    {
+    pub fn close(mut self) -> Vec<Vec<Token>> {
         let end_pos = self.get_current_line().end_pos();
         self.wall
             .into_iter()

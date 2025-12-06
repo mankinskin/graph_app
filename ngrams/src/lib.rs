@@ -1,6 +1,5 @@
 #![allow(non_snake_case, unused)]
-#![feature(hash_extract_if)]
-#![feature(iter_repeat_n)]
+#![feature(mapped_lock_guards)]
 
 use std::path::Path;
 

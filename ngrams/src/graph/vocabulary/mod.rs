@@ -1,8 +1,11 @@
 use crate::graph::{
-    containment::{CorpusCtx, TextLevelCtx},
-    traversal::{
+    containment::{
+        CorpusCtx,
+        TextLevelCtx,
+    },
+    traversal::direction::{
         TopDown,
-        TraversalPolicy,
+        TraversalDirection,
     },
     vocabulary::entry::{
         HasVertexEntries,
@@ -10,22 +13,16 @@ use crate::graph::{
     },
     Corpus,
 };
-use derive_more::{
-    Deref,
-    From,
-};
-use derive_new::new;
-use itertools::Itertools;
-use seqraph::{
+use context_trace::{
     graph::{
         vertex::{
-            child::Child,
             has_vertex_index::{
                 HasVertexIndex,
-                ToChild,
+                ToToken,
             },
             has_vertex_key::HasVertexKey,
             key::VertexKey,
+            token::{Token, TokenWidth},
             wide::Wide,
             VertexIndex,
         },
@@ -34,6 +31,12 @@ use seqraph::{
     HashMap,
     HashSet,
 };
+use derive_more::{
+    Deref,
+    From,
+};
+use derive_new::new;
+use itertools::Itertools;
 use serde::{
     Deserialize,
     Serialize,
@@ -48,8 +51,19 @@ use std::{
         Path,
         PathBuf,
     },
+    sync::{
+        Arc,
+        RwLock,
+    },
 };
+use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
 use tap::Tap;
+
+use super::{
+    Status,
+    StatusHandle,
+};
 
 pub mod entry;
 
@@ -67,64 +81,59 @@ pub mod entry;
     Serialize,
     Deserialize,
 )]
-pub struct NGramId
-{
+pub struct NGramId {
     #[deref]
     pub key: VertexKey,
     pub width: usize,
 }
-impl HasVertexKey for NGramId
-{
-    fn vertex_key(&self) -> VertexKey
-    {
+impl From<NGramId> for VertexKey {
+    fn from(ngram_id: NGramId) -> Self {
+        ngram_id.key
+    }
+}
+impl HasVertexKey for NGramId {
+    fn vertex_key(&self) -> VertexKey {
         self.key
     }
 }
-impl Wide for NGramId
-{
-    fn width(&self) -> usize
-    {
-        self.width
+impl Wide for NGramId {
+    fn width(&self) -> TokenWidth {
+        TokenWidth(self.width)
     }
 }
 
 #[derive(
-    Default, Debug, PartialEq, Eq, Copy, Clone, Serialize, Deserialize,
+    Default, Debug, PartialEq, Eq, Copy, Clone, Serialize, Deserialize, EnumIter,
 )]
-pub enum ProcessStatus
-{
+pub enum ProcessStatus {
     #[default]
     Empty,
     Containment,
     Frequency,
     Wrappers,
     Partitions,
+    Finished,
 }
-impl PartialOrd for ProcessStatus
-{
+impl PartialOrd for ProcessStatus {
     fn partial_cmp(
         &self,
         other: &Self,
-    ) -> Option<Ordering>
-    {
+    ) -> Option<Ordering> {
         Some((*self as usize).cmp(&(*other as usize)))
     }
 }
-impl Ord for ProcessStatus
-{
+impl Ord for ProcessStatus {
     fn cmp(
         &self,
         other: &Self,
-    ) -> Ordering
-    {
+    ) -> Ordering {
         (*self as usize).cmp(&(*other as usize))
     }
 }
 #[derive(
     Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq, Deref,
 )]
-pub struct Vocabulary
-{
+pub struct Vocabulary {
     //#[deref]
     pub containment: Hypergraph,
     pub name: String,
@@ -135,16 +144,37 @@ pub struct Vocabulary
     pub entries: HashMap<VertexKey, VocabEntry>,
 }
 
-impl Vocabulary
-{
-    pub fn from_corpus(corpus: &Corpus) -> Self
-    {
+impl Vocabulary {
+    pub fn from_corpus(
+        corpus: &Corpus,
+        status: &mut StatusHandle,
+    ) -> Self {
         let mut vocab: Vocabulary = Default::default();
         vocab.name.clone_from(&corpus.name);
-        CorpusCtx {
-            corpus,
-        }.on_corpus(&mut vocab);
+        vocab.containment_pass(&CorpusCtx { corpus, status });
         vocab
+    }
+
+    pub fn containment_pass(
+        &mut self,
+        ctx: &CorpusCtx<'_>,
+    ) {
+        let N: usize = ctx.corpus.iter().map(|t| t.len()).max().unwrap();
+        ctx.status.next_pass(
+            super::vocabulary::ProcessStatus::Containment,
+            0,
+            N * (N - 1),
+        );
+        Itertools::cartesian_product((1..=N), ctx.corpus.iter().enumerate())
+            .for_each(|(n, (i, text))| {
+                TextLevelCtx {
+                    corpus_ctx: ctx,
+                    texti: i,
+                    text,
+                    n,
+                }
+                .on_nlevel(self)
+            })
     }
     //pub fn clean(&mut self) -> HashSet<NGramId> {
     //    let drained: HashSet<_> = self.entries

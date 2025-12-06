@@ -1,0 +1,69 @@
+[package]
+name = "graph_app"
+version = "0.1.0"
+authors = ["Linus Behrbohm <linusbehrbohm@web.de>"]
+edition = "2021"
+resolver = "2"
+
+
+[dependencies]
+rfd = "0.15"
+serde = { version = "1", features = ["derive"] }
+wasm-bindgen-futures = "0.4.23"
+futures = "0.3"
+lazy_static = "^1.4"
+rand = "^0.9"
+rand_distr = "^0.5"
+itertools = "^0.14"
+async-std = "1.12"
+tracing-mutex = "0.3"
+strum = "0.27"
+derive_more = { version = "2.0.0", features = ["full"] }
+derive-getters = "0.5"
+clap = "4.5.48"
+indexmap = "2.11"
+
+context-read = { path = "../context-engine/crates/context-read" }
+context-trace = { path = "../context-engine/crates/context-trace" }
+
+[dependencies.tracing-egui]
+path = "../tracing-egui"
+#version = "^0.1"
+
+[dependencies.tracing]
+features = ["attributes"]
+version = "^0.1"
+
+[dependencies.tracing-subscriber]
+features = ["json"]
+version = "^0.3"
+
+[dependencies.eframe]
+path = "../egui/crates/eframe"
+
+[dependencies.tokio]
+features = ["macros", "rt-multi-thread"]
+version = "^1"
+
+[dependencies.tokio-util]
+version = "^0.7"
+
+[dependencies.rerun]
+features = ["clap"]
+path = "../rerun/crates/top/rerun"
+#version = "0.25.1",
+
+[dependencies.petgraph]
+features = ["serde-1"]
+path = "../context-engine/crates/deps/petgraph"
+#version = "^0.5"
+#git = "https://github.com/mankinskin/petgraph"
+
+[dependencies.ngrams]
+path = "../ngrams"
+
+[features]
+default = []
+persistence = [
+  "eframe/persistence",
+] # Enable if you want to persist app state on shutdown
