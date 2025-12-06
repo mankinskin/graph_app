@@ -30,11 +30,12 @@ use crate::graph::{
 };
 use context_trace::{
     graph::vertex::{
-        child::Child,
+        token::Token,
         has_vertex_index::HasVertexIndex,
         has_vertex_key::HasVertexKey,
-        key::VertexKey,
-        location::child::ChildLocation,
+        location::child::{ChildLocation, HasSubIndex},
+        parent::HasPatternId,
+        pattern::Pattern,
         wide::Wide,
         VertexIndex,
     },
@@ -75,21 +76,21 @@ impl FrequencyCover {
     fn next_parent_offsets(entry: &VertexCtx) -> Vec<(usize, NGramId)> {
         entry
             .data
-            .parents
+            .parents()
             .iter()
             .flat_map(|(&id, p)| {
-                p.pattern_indices.iter().map(move |ploc| {
+                p.pattern_indices().iter().map(move |ploc| {
                     (
                         entry.vocab.containment.expect_child_offset(
                             &ChildLocation::new(
-                                Child::new(id, p.width),
-                                ploc.pattern_id,
-                                ploc.sub_index,
+                                Token::new(id, p.width()),
+                                ploc.pattern_id(),
+                                ploc.sub_index(),
                             ),
                         ),
                         NGramId::new(
                             entry.vocab.containment.expect_key_for_index(id),
-                            p.width,
+                            p.width().0,
                         ),
                     )
                 })

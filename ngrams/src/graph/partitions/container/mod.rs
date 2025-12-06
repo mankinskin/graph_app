@@ -3,25 +3,28 @@ mod builder;
 use builder::PartitionBuilder;
 use context_trace::{
     graph::{
-        getters::vertex::VertexSet,
         vertex::{
-            child::Child,
+            token::Token,
             data::{
                 VertexData,
                 VertexDataBuilder,
             },
             has_vertex_index::{
                 HasVertexIndex,
-                ToChild,
+                ToToken,
             },
             has_vertex_key::HasVertexKey,
+            has_vertex_data::HasVertexData,
+            pattern::Pattern,
             wide::Wide,
             VertexIndex,
+            ChildPatterns,
         },
         Hypergraph,
     },
     HashMap,
     HashSet,
+    VertexSet,
 };
 use derive_more::{
     Deref,
@@ -71,20 +74,20 @@ use crate::graph::{
 
 #[derive(Debug, Copy, Clone)]
 pub enum PartitionCell {
-    ChildIndex(Child),
+    ChildIndex(Token),
     GapSize(NonZeroUsize),
 }
 impl PartitionCell {
     pub fn width(&self) -> usize {
         match self {
-            Self::ChildIndex(c) => c.width(),
+            Self::ChildIndex(c) => c.width().0,
             Self::GapSize(o) => o.get(),
         }
     }
 }
 #[derive(Debug, IntoIterator, Deref)]
 pub struct PartitionContainer {
-    wall: Vec<Vec<Child>>,
+    wall: Vec<Vec<Token>>,
 }
 impl PartitionContainer {
     pub fn from_ngram(
@@ -94,7 +97,7 @@ impl PartitionContainer {
         // find all largest children
         let tree = ChildCover::from_key(ctx, ngram.vertex_key());
 
-        assert!(match ngram.width() {
+        assert!(match ngram.width().0 {
             1 => tree.is_empty(),
             _ => !tree.is_empty(),
         });
@@ -131,7 +134,7 @@ impl PartitionContainer {
                 .vocab()
                 .containment
                 .expect_index_for_key(&key.vertex_key());
-            builder.append_child(pos, Child::new(index, key.width()));
+            builder.append_child(pos, Token::new(index, key.width()));
         }
         Self {
             wall: builder.close(),

@@ -1,25 +1,26 @@
 use context_trace::{
     graph::{
-        getters::vertex::VertexSet,
         vertex::{
-            child::Child,
+            token::Token,
             data::{
                 VertexData,
                 VertexDataBuilder,
             },
             has_vertex_index::{
                 HasVertexIndex,
-                ToChild,
+                ToToken,
             },
-            has_vertex_key::HasVertexKey,
             key::VertexKey,
+            pattern::Pattern,
             wide::Wide,
             VertexIndex,
+            ChildPatterns,
         },
         Hypergraph,
     },
     HashMap,
     HashSet,
+    VertexSet,
 };
 use itertools::Itertools;
 use pretty_assertions::assert_matches;

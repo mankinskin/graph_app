@@ -6,10 +6,10 @@ exclude = [
   "./rerun",
   "./egui/crates/eframe",
   "./tracing-egui",
-  "./petgraph",
   "./minimal_options",
+  "./context-engine",
 ]
-members = ["graph_app", "ngrams", "justlog"]
+members = ["graph_app", "ngrams"]
 
 [profile.release]
 opt-level = 2 # fast and small wasm

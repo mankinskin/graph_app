@@ -35,13 +35,13 @@ features = ["full"]
 version = "^0.7"
 
 [dependencies.context-read]
-path = "../context-engine/context-read"
+path = "../context-engine/crates/context-read"
 
 [dependencies.context-trace]
-path = "../context-engine/context-trace"
+path = "../context-engine/crates/context-trace"
 
 [dev-dependencies.context-read]
-path = "../context-engine/context-read"
+path = "../context-engine/crates/context-read"
 features = ["test-hashing"]
 
 #[dev-dependencies.ngrams]

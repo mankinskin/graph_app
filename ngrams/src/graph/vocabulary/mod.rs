@@ -16,13 +16,13 @@ use crate::graph::{
 use context_trace::{
     graph::{
         vertex::{
-            child::Child,
             has_vertex_index::{
                 HasVertexIndex,
-                ToChild,
+                ToToken,
             },
             has_vertex_key::HasVertexKey,
             key::VertexKey,
+            token::{Token, TokenWidth},
             wide::Wide,
             VertexIndex,
         },
@@ -97,8 +97,8 @@ impl HasVertexKey for NGramId {
     }
 }
 impl Wide for NGramId {
-    fn width(&self) -> usize {
-        self.width
+    fn width(&self) -> TokenWidth {
+        TokenWidth(self.width)
     }
 }
 

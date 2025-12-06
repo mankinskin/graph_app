@@ -12,8 +12,7 @@ use crate::graph::{
 };
 use context_trace::{
     graph::vertex::{
-        child::Child,
-        key::VertexKey,
+        token::Token,
         wide::Wide,
         VertexIndex,
     },

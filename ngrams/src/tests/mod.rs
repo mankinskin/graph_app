@@ -15,10 +15,9 @@ use crate::graph::{
     },
     Corpus,
     StatusHandle,
-};
+};  
 use context_trace::{
     graph::vertex::key::VertexKey,
-    trace::cache::key::labelled::test,
     HashSet,
 };
 use derive_more::{

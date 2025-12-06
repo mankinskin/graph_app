@@ -1,17 +1,15 @@
 use context_trace::{
     graph::vertex::{
-        has_vertex_index::ToChild,
+        has_vertex_key::HasVertexKey,
         location::pattern::PatternLocation,
         wide::Wide,
     },
-    path::structs::{
-        query_range_path::RangePath,
-        rooted::{
-            index_range::IndexRangePath,
-            root::IndexRoot,
-        },
-    },
     HashMap,
+    IndexRangePath,
+    IndexRoot,
+    RolePath,
+    Start,
+    End,
 };
 use eframe::egui::{
     self,
@@ -80,10 +78,10 @@ impl GraphVis {
                 if node.data.width() <= 1 {
                     None
                 } else {
-                    Some((node.data.key, node))
+                    Some((node.data.vertex_key(), node))
                 }
             },
-            |_idx, e| (e.child.width() > 1).then_some(()),
+            |_idx, e| (e.token.width() > 1).then_some(()),
         );
         if !self.initialized() {
             self.layout = GraphLayout::generate(&cg, pg);
@@ -179,13 +177,13 @@ impl GraphVis {
                 })
                 .map(|(pid, range)| SelectionState {
                     pattern_id: pid,
-                    trace: IndexRangePath::new_range(
+                    trace: IndexRangePath::new(
                         IndexRoot::from(PatternLocation {
                             parent: node.data.to_child(),
-                            id: pid,
+                            pattern_id: pid,
                         }),
-                        range.start,
-                        range.end,
+                        RolePath::<Start>::new_empty(range.start),
+                        RolePath::<End>::new_empty(range.end),
                     ),
                     range,
                 });

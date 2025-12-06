@@ -34,30 +34,30 @@ use crate::graph::{
         NGramId,
         ProcessStatus,
     },
-};
+};  
 use context_trace::{
     graph::{
-        getters::vertex::VertexSet,
         vertex::{
-            child::Child,
+            token::Token,
             data::{
                 VertexData,
                 VertexDataBuilder,
             },
+            has_vertex_key::HasVertexKey,
             has_vertex_index::{
                 HasVertexIndex,
-                ToChild,
+                ToToken,
             },
-            has_vertex_key::HasVertexKey,
-            key::VertexKey,
-            pattern::id::PatternId,
+            pattern::{Pattern, id::PatternId},
             wide::Wide,
             VertexIndex,
+            ChildPatterns,
         },
         Hypergraph,
     },
     HashMap,
     HashSet,
+    VertexSet,
 };
 
 use super::{
@@ -122,9 +122,9 @@ impl TraversalPass for PartitionsCtx<'_> {
             Self::Queue::from_iter(TopDown::starting_nodes(self.vocab()));
         for vk in queue.iter() {
             let data = self.vocab().containment.expect_vertex(vk.vertex_key());
-            let mut builder = VertexDataBuilder::default();
-            builder.width(data.width());
-            builder.key(**vk);
+            let builder = VertexDataBuilder::default()
+                .width(data.width())
+                .key(**vk);
             self.graph.insert_vertex_builder(builder);
         }
         self.status.next_pass(
@@ -161,7 +161,11 @@ impl TraversalPass for PartitionsCtx<'_> {
         let parent_data = self.graph.expect_vertex_mut(node.vertex_key());
 
         // child patterns with indices in containment
-        parent_data.children = pids.into_iter().zip(container).collect();
+        *parent_data.child_patterns_mut() = pids
+            .into_iter()
+            .zip(container)
+            .map(|(pid, tokens)| (pid, Pattern::from(tokens)))
+            .collect();
 
         // child locations parent in self.graph, children indices in self.vocab.containment
         let child_locations = parent_data
@@ -186,22 +190,14 @@ impl TraversalPass for PartitionsCtx<'_> {
                 v.add_parent(loc);
                 v.vertex_index()
             } else {
-                let mut builder = VertexDataBuilder::default();
-                builder.width(vi.width());
-                builder.key(key);
+                let builder = VertexDataBuilder::default()
+                    .width(vi.width())
+                    .key(key);
                 let mut data = self.graph.finish_vertex_builder(builder);
                 data.add_parent(loc);
 
                 // translate containment index to output index
-                let out = if vi.width() > 1 {
-                    self.graph.insert_vertex_data(data)
-                } else {
-                    self.graph.insert_token_data(
-                        *self.vocab().containment.expect_token_by_key(&key),
-                        data,
-                    )
-                }
-                .vertex_index();
+                let out = self.graph.insert_vertex_data(data).vertex_index();
 
                 out
             };
@@ -215,7 +211,7 @@ impl TraversalPass for PartitionsCtx<'_> {
             .map(|c| {
                 NGramId::new(
                     self.vocab().get_vertex(&c).unwrap().data.vertex_key(),
-                    c.width(),
+                    c.width().0,
                 )
             })
             .collect();

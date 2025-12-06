@@ -2,7 +2,7 @@ use std::ops::Range;
 
 use context_trace::graph::{
     vertex::{
-        child::Child,
+        token::Token,
         data::VertexData,
         has_vertex_index::HasVertexIndex,
         pattern::id::PatternId,
@@ -23,11 +23,11 @@ use indexmap::IndexMap;
 #[derive(Clone, Debug)]
 struct ChildVis {
     name: String,
-    child: Child,
+    child: Token,
 }
 
 impl std::ops::Deref for ChildVis {
-    type Target = Child;
+    type Target = Token;
     fn deref(&self) -> &Self::Target {
         &self.child
     }
@@ -41,7 +41,7 @@ pub struct ChildResponse {
 impl ChildVis {
     fn new(
         graph: &Hypergraph,
-        child: Child,
+        child: Token,
     ) -> Self {
         let name = graph.index_string(child.vertex_index());
         Self { name, child }
@@ -127,7 +127,7 @@ impl ChildPatternsVis {
     ) -> Self {
         Self {
             patterns: data
-                .get_child_patterns()
+                .child_patterns()
                 .iter()
                 .map(|(&id, pat)| {
                     (
@@ -151,7 +151,7 @@ impl ChildPatternsVis {
             .iter()
             .scan(0, |acc, c| {
                 let prev = *acc;
-                *acc += c.child.width();
+                *acc += c.child.width().0;
                 Some(prev)
             })
             .zip(ranges)

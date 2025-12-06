@@ -28,14 +28,13 @@ use crate::graph::{
 };
 use context_trace::{
     graph::vertex::{
-        child::Child,
         data::VertexDataBuilder,
         has_vertex_index::{
             HasVertexIndex,
-            ToChild,
+            ToToken,
         },
         has_vertex_key::HasVertexKey,
-        key::VertexKey,
+        location::child::ChildLocation,
         pattern::id::PatternId,
         token::Token,
         wide::Wide,
@@ -132,20 +131,19 @@ impl NGramFrequencyCtx<'_> {
             occurrences: FromIterator::from_iter([self.occurrence]),
             ngram: self.ngram.clone(),
         };
-        let mut builder = VertexDataBuilder::default();
-        builder.width(self.n);
-        if self.n != 1 {
-            builder.children(children.clone());
-        }
+        let builder = if self.n != 1 {
+            VertexDataBuilder::default()
+                .width(self.n)
+                .children(children.clone())
+        } else {
+            VertexDataBuilder::default().width(self.n)
+        };
         let data = vocab.containment.finish_vertex_builder(builder);
-        let id = NGramId::new(data.key, self.n);
+        let id = NGramId::new(data.vertex_key(), self.n);
         vocab.ids.insert(self.ngram.clone(), id);
         vocab.entries.insert(id.vertex_key(), entry);
         if self.n == 1 {
-            vocab.containment.insert_token_data(
-                Token::Element(self.ngram.chars().next().unwrap()),
-                data,
-            );
+            vocab.containment.insert_vertex_data(data);
             vocab.leaves.insert(id);
         } else {
             vocab.containment.insert_vertex_data(data);
@@ -154,13 +152,14 @@ impl NGramFrequencyCtx<'_> {
             vocab.roots.insert(id);
         }
         for (pid, pat) in children {
-            let child = Child::new(
+            let child = Token::new(
                 vocab.containment.expect_index_for_key(&id),
                 id.width(),
             );
+            let pat_vec: Vec<Token> = pat.into();
             vocab
                 .containment
-                .add_parents_to_pattern_nodes(pat, child, pid);
+                .add_parents_to_pattern_nodes(pat_vec, child, pid);
         }
     }
     pub fn find_children(
@@ -189,7 +188,7 @@ impl NGramFrequencyCtx<'_> {
                         .flatten()
                         .map(|s| {
                             let id = vocab.ids.get(s).unwrap();
-                            Child::new(
+                            Token::new(
                                 vocab.containment.expect_index_for_key(id),
                                 id.width(),
                             )

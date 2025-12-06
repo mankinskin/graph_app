@@ -1,16 +1,16 @@
-use context_trace::graph::{vertex::token::Token, Hypergraph};
+use context_trace::graph::{vertex::atom::Atom, Hypergraph};
 
 
 pub fn build_graph1() -> Hypergraph
 {
     let mut graph = Hypergraph::default();
-    if let [a, b, w, x, y, z] = graph.insert_tokens([
-        Token::Element('a'),
-        Token::Element('b'),
-        Token::Element('w'),
-        Token::Element('x'),
-        Token::Element('y'),
-        Token::Element('z'),
+    if let [a, b, w, x, y, z] = graph.insert_atoms([
+        Atom::Element('a'),
+        Atom::Element('b'),
+        Atom::Element('w'),
+        Atom::Element('x'),
+        Atom::Element('y'),
+        Atom::Element('z'),
     ])[..]
     {
         let ab = graph.insert_pattern([a, b]);
@@ -31,16 +31,16 @@ pub fn build_graph1() -> Hypergraph
 pub fn build_graph2() -> Hypergraph
 {
     let mut graph = Hypergraph::default();
-    if let [a, b, c, d, e, f, g, h, i] = graph.insert_tokens([
-        Token::Element('a'),
-        Token::Element('b'),
-        Token::Element('c'),
-        Token::Element('d'),
-        Token::Element('e'),
-        Token::Element('f'),
-        Token::Element('g'),
-        Token::Element('h'),
-        Token::Element('i'),
+    if let [a, b, c, d, e, f, g, h, i] = graph.insert_atoms([
+        Atom::Element('a'),
+        Atom::Element('b'),
+        Atom::Element('c'),
+        Atom::Element('d'),
+        Atom::Element('e'),
+        Atom::Element('f'),
+        Atom::Element('g'),
+        Atom::Element('h'),
+        Atom::Element('i'),
     ])[..]
     {
         let ab = graph.insert_pattern([a, b]);
@@ -86,23 +86,23 @@ pub fn build_graph3() -> Hypergraph
 {
     let mut graph = Hypergraph::default();
     if let [d, i, e, space, k, a, t, z, m, c, u, r, h, n, w, f] = graph
-        .insert_tokens([
-            Token::Element('d'),
-            Token::Element('i'),
-            Token::Element('e'),
-            Token::Element(' '),
-            Token::Element('k'),
-            Token::Element('a'),
-            Token::Element('t'),
-            Token::Element('z'),
-            Token::Element('m'),
-            Token::Element('c'),
-            Token::Element('u'),
-            Token::Element('r'),
-            Token::Element('h'),
-            Token::Element('n'),
-            Token::Element('w'),
-            Token::Element('f'),
+        .insert_atoms([
+            Atom::Element('d'),
+            Atom::Element('i'),
+            Atom::Element('e'),
+            Atom::Element(' '),
+            Atom::Element('k'),
+            Atom::Element('a'),
+            Atom::Element('t'),
+            Atom::Element('z'),
+            Atom::Element('m'),
+            Atom::Element('c'),
+            Atom::Element('u'),
+            Atom::Element('r'),
+            Atom::Element('h'),
+            Atom::Element('n'),
+            Atom::Element('w'),
+            Atom::Element('f'),
         ])[..]
     {
         let _mach = graph.insert_pattern([space, m, a, c, h]);
