@@ -207,8 +207,18 @@ impl TraversalPass for PartitionsCtx<'_> {
                 let mut data = self.graph.finish_vertex_builder(builder);
                 data.add_parent(loc);
 
-                // translate containment index to output index
-                self.graph.insert_vertex_data(data).vertex_index()
+                // For width=1 vertices (atoms), copy the atom data from containment graph
+                if vi.width() == 1 {
+                    if let Some(atom) =
+                        self.vocab().containment.get_atom_by_key(&key)
+                    {
+                        self.graph.insert_atom_data(atom, data).vertex_index()
+                    } else {
+                        self.graph.insert_vertex_data(data).vertex_index()
+                    }
+                } else {
+                    self.graph.insert_vertex_data(data).vertex_index()
+                }
             };
             // Update the child token in the parent node
             let sub_loc = SubLocation::from(loc);

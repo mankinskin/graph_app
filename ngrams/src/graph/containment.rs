@@ -143,7 +143,9 @@ impl NGramFrequencyCtx<'_> {
         vocab.ids.insert(self.ngram.clone(), id);
         vocab.entries.insert(id.vertex_key(), entry);
         if self.n == 1 {
-            vocab.containment.insert_vertex_data(data);
+            // Store the character as an atom for width=1 vertices
+            let atom = self.ngram.chars().next().unwrap().into();
+            vocab.containment.insert_atom_data(atom, data);
             vocab.leaves.insert(id);
         } else {
             vocab.containment.insert_vertex_data(data);
