@@ -369,3 +369,288 @@ pub async fn test_graph2() {
     .execute()
     .await;
 }
+
+#[tokio::test]
+pub async fn test_parse_corpus() {
+    use crate::graph::{
+        parse_corpus,
+        Status,
+    };
+
+    let corpus = ["hello", "world", "hello world"];
+    let texts = corpus.into_iter().map(ToString::to_string).collect_vec();
+    let corpus_name = "test_parse_corpus".to_owned();
+
+    let status = StatusHandle::from(Status::new(texts.clone()));
+    let cancellation_token = CancellationToken::new();
+
+    let result = parse_corpus(
+        Corpus::new(corpus_name, texts),
+        status,
+        cancellation_token,
+    )
+    .await;
+
+    assert!(result.is_ok(), "parse_corpus should succeed");
+
+    let parse_result = result.unwrap();
+
+    // Verify that the result contains expected data
+    assert!(
+        !parse_result.labels.is_empty(),
+        "Should have some labels after parsing"
+    );
+
+    // Verify the graph has vertices
+    assert!(
+        parse_result.graph.vertex_count() > 0,
+        "Graph should have vertices"
+    );
+
+    // Verify the containment graph has vertices
+    assert!(
+        parse_result.containment.vertex_count() > 0,
+        "Containment graph should have vertices"
+    );
+
+    // Validate ALL vertices in the partition graph can produce string representations
+    let graph_keys: Vec<_> = parse_result.graph.vertex_keys().collect();
+    for key in &graph_keys {
+        let s = parse_result.graph.vertex_key_string(key);
+        assert!(
+            !s.is_empty(),
+            "Vertex {:?} should have non-empty string representation",
+            key
+        );
+    }
+
+    // Validate ALL vertices in the containment graph can produce string representations
+    let containment_keys: Vec<_> =
+        parse_result.containment.vertex_keys().collect();
+    for key in &containment_keys {
+        let s = parse_result.containment.vertex_key_string(key);
+        assert!(!s.is_empty(), "Containment vertex {:?} should have non-empty string representation", key);
+    }
+}
+
+#[tokio::test]
+pub async fn test_parse_corpus_aabbaabbaa() {
+    use crate::graph::{
+        parse_corpus,
+        Status,
+    };
+
+    let texts = vec!["aabbaabbaa".to_string()];
+    let corpus_name = "test_aabbaabbaa".to_owned();
+
+    let status = StatusHandle::from(Status::new(texts.clone()));
+    let cancellation_token = CancellationToken::new();
+
+    let result = parse_corpus(
+        Corpus::new(corpus_name, texts),
+        status,
+        cancellation_token,
+    )
+    .await;
+
+    assert!(result.is_ok(), "parse_corpus should succeed for aabbaabbaa");
+
+    let parse_result = result.unwrap();
+
+    // Verify basic structure
+    assert!(
+        parse_result.graph.vertex_count() > 0,
+        "Graph should have vertices"
+    );
+    assert!(
+        parse_result.containment.vertex_count() > 0,
+        "Containment should have vertices"
+    );
+
+    // The string "aabbaabbaa" has repeating patterns like "aa", "bb", "aabb"
+    // These should appear as frequency labels
+    assert!(
+        !parse_result.labels.is_empty(),
+        "Should have frequency labels"
+    );
+
+    // Validate ALL vertices in the partition graph
+    let graph_keys: Vec<_> = parse_result.graph.vertex_keys().collect();
+    for key in &graph_keys {
+        let s = parse_result.graph.vertex_key_string(key);
+        assert!(
+            !s.is_empty(),
+            "Vertex {:?} should have non-empty string representation",
+            key
+        );
+    }
+
+    // Validate ALL vertices in the containment graph
+    let containment_keys: Vec<_> =
+        parse_result.containment.vertex_keys().collect();
+    for key in &containment_keys {
+        let s = parse_result.containment.vertex_key_string(key);
+        assert!(!s.is_empty(), "Containment vertex {:?} should have non-empty string representation", key);
+    }
+}
+
+#[tokio::test]
+pub async fn test_parse_corpus_single_char() {
+    use crate::graph::{
+        parse_corpus,
+        Status,
+    };
+
+    let texts = vec!["aaaa".to_string()];
+    let corpus_name = "test_single_char".to_owned();
+
+    let status = StatusHandle::from(Status::new(texts.clone()));
+    let cancellation_token = CancellationToken::new();
+
+    let result = parse_corpus(
+        Corpus::new(corpus_name, texts),
+        status,
+        cancellation_token,
+    )
+    .await;
+
+    assert!(result.is_ok(), "parse_corpus should succeed for aaaa");
+
+    let parse_result = result.unwrap();
+    assert!(
+        parse_result.graph.vertex_count() > 0,
+        "Graph should have vertices"
+    );
+
+    // "aaaa" contains "aa" 3 times, so it should be a frequency label
+    assert!(
+        !parse_result.labels.is_empty(),
+        "Should have labels for repeated aa"
+    );
+
+    // Validate ALL vertices in the partition graph
+    let graph_keys: Vec<_> = parse_result.graph.vertex_keys().collect();
+    for key in &graph_keys {
+        let s = parse_result.graph.vertex_key_string(key);
+        assert!(
+            !s.is_empty(),
+            "Vertex {:?} should have non-empty string representation",
+            key
+        );
+    }
+
+    // Validate ALL vertices in the containment graph
+    let containment_keys: Vec<_> =
+        parse_result.containment.vertex_keys().collect();
+    for key in &containment_keys {
+        let s = parse_result.containment.vertex_key_string(key);
+        assert!(!s.is_empty(), "Containment vertex {:?} should have non-empty string representation", key);
+    }
+}
+
+#[tokio::test]
+pub async fn test_parse_corpus_two_texts() {
+    use crate::graph::{
+        parse_corpus,
+        Status,
+    };
+
+    let texts = vec!["abc".to_string(), "bcd".to_string()];
+    let corpus_name = "test_two_texts".to_owned();
+
+    let status = StatusHandle::from(Status::new(texts.clone()));
+    let cancellation_token = CancellationToken::new();
+
+    let result = parse_corpus(
+        Corpus::new(corpus_name, texts),
+        status,
+        cancellation_token,
+    )
+    .await;
+
+    assert!(result.is_ok(), "parse_corpus should succeed for two texts");
+
+    let parse_result = result.unwrap();
+    assert!(
+        parse_result.graph.vertex_count() > 0,
+        "Graph should have vertices"
+    );
+
+    // "bc" appears in both texts, so it should be labeled
+    assert!(
+        !parse_result.labels.is_empty(),
+        "Should have labels for shared bc"
+    );
+
+    // Validate ALL vertices in the partition graph
+    let graph_keys: Vec<_> = parse_result.graph.vertex_keys().collect();
+    for key in &graph_keys {
+        let s = parse_result.graph.vertex_key_string(key);
+        assert!(
+            !s.is_empty(),
+            "Vertex {:?} should have non-empty string representation",
+            key
+        );
+    }
+
+    // Validate ALL vertices in the containment graph
+    let containment_keys: Vec<_> =
+        parse_result.containment.vertex_keys().collect();
+    for key in &containment_keys {
+        let s = parse_result.containment.vertex_key_string(key);
+        assert!(!s.is_empty(), "Containment vertex {:?} should have non-empty string representation", key);
+    }
+}
+
+#[tokio::test]
+pub async fn test_parse_corpus_empty_result() {
+    use crate::graph::{
+        parse_corpus,
+        Status,
+    };
+
+    // A corpus with no repeated n-grams
+    let texts = vec!["xyz".to_string()];
+    let corpus_name = "test_no_repeats".to_owned();
+
+    let status = StatusHandle::from(Status::new(texts.clone()));
+    let cancellation_token = CancellationToken::new();
+
+    let result = parse_corpus(
+        Corpus::new(corpus_name, texts),
+        status,
+        cancellation_token,
+    )
+    .await;
+
+    assert!(
+        result.is_ok(),
+        "parse_corpus should succeed even with no repeats"
+    );
+
+    let parse_result = result.unwrap();
+    // Should still have the basic structure
+    assert!(
+        parse_result.containment.vertex_count() > 0,
+        "Containment should have vertices"
+    );
+
+    // Validate ALL vertices in the partition graph (may be empty or minimal)
+    let graph_keys: Vec<_> = parse_result.graph.vertex_keys().collect();
+    for key in &graph_keys {
+        let s = parse_result.graph.vertex_key_string(key);
+        assert!(
+            !s.is_empty(),
+            "Vertex {:?} should have non-empty string representation",
+            key
+        );
+    }
+
+    // Validate ALL vertices in the containment graph
+    let containment_keys: Vec<_> =
+        parse_result.containment.vertex_keys().collect();
+    for key in &containment_keys {
+        let s = parse_result.containment.vertex_key_string(key);
+        assert!(!s.is_empty(), "Containment vertex {:?} should have non-empty string representation", key);
+    }
+}
