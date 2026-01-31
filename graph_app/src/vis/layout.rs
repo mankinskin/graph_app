@@ -60,7 +60,7 @@ impl GraphLayout {
             .iter()
             .map(|(_k, (_i, n))| {
                 let name = n.name.clone();
-                let patterns = n.data.to_pattern_strings(&cg);
+                let patterns = n.data.to_pattern_strings(cg);
                 format!(
                     "{}\n{}",
                     name,

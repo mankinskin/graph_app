@@ -38,13 +38,12 @@ impl ShowStatus<'_> {
             "{:?}{}",
             pass,
             (pass == ProcessStatus::Finished)
-                .then(|| String::new())
+                .then(String::new)
                 .unwrap_or_else(|| checked
                     .then_some(100)
                     .or_else(|| (pass
                         == ProcessStatus::iter()
-                            .skip_while(|i| *i < *self.pass())
-                            .next()
+                            .find(|i| *i >= *self.pass())
                             .unwrap())
                     // is next
                     .then_some(percent))

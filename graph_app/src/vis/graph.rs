@@ -4,12 +4,12 @@ use context_trace::{
         location::pattern::PatternLocation,
         wide::Wide,
     },
+    End,
     HashMap,
     IndexRangePath,
     IndexRoot,
     RolePath,
     Start,
-    End,
 };
 use eframe::egui::{
     self,
@@ -150,15 +150,15 @@ impl GraphVis {
             })
             .collect();
         self.graph.edge_references().for_each(|edge| {
-            node_responses
+            if let Some((ra, rb)) = node_responses
                 .get(&edge.source())
                 .zip(node_responses.get(&edge.target()))
-                .map(|(ra, rb)| {
-                    let a_pos = ra.response.rect.center();
-                    let b = rb.response.rect;
-                    let p = Self::border_intersection_point(&b, &a_pos);
-                    Self::edge(ui, &a_pos, &p);
-                });
+            {
+                let a_pos = ra.response.rect.center();
+                let b = rb.response.rect;
+                let p = Self::border_intersection_point(&b, &a_pos);
+                Self::edge(ui, &a_pos, &p);
+            }
         });
         for (idx, response) in node_responses.into_iter() {
             let node = self
@@ -170,7 +170,7 @@ impl GraphVis {
                 .into_iter()
                 .find_map(|(pid, r)| {
                     if let Some(state) = node.selected_range.as_mut() {
-                        (state.pattern_id == pid).then(|| (pid, r))
+                        (state.pattern_id == pid).then_some((pid, r))
                     } else {
                         Some((pid, r))
                     }

@@ -2,10 +2,10 @@ use std::ops::Range;
 
 use context_trace::graph::{
     vertex::{
-        token::Token,
         data::VertexData,
         has_vertex_index::HasVertexIndex,
         pattern::id::PatternId,
+        token::Token,
         wide::Wide,
     },
     Hypergraph,
@@ -144,7 +144,7 @@ impl ChildPatternsVis {
     }
     fn find_selected_range(
         &self,
-        pattern: &Vec<ChildVis>,
+        pattern: &[ChildVis],
         ranges: Vec<Option<Range<usize>>>,
     ) -> Option<Range<usize>> {
         pattern

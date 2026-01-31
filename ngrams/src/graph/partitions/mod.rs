@@ -34,24 +34,28 @@ use crate::graph::{
         NGramId,
         ProcessStatus,
     },
-};  
+};
 use context_trace::{
     graph::{
         vertex::{
-            token::Token,
             data::{
                 VertexData,
                 VertexDataBuilder,
             },
-            has_vertex_key::HasVertexKey,
             has_vertex_index::{
                 HasVertexIndex,
                 ToToken,
             },
-            pattern::{Pattern, id::PatternId},
+            has_vertex_key::HasVertexKey,
+            location::SubLocation,
+            pattern::{
+                id::PatternId,
+                Pattern,
+            },
+            token::Token,
             wide::Wide,
-            VertexIndex,
             ChildPatterns,
+            VertexIndex,
         },
         Hypergraph,
     },
@@ -121,10 +125,10 @@ impl TraversalPass for PartitionsCtx<'_> {
         let queue =
             Self::Queue::from_iter(TopDown::starting_nodes(self.vocab()));
         for vk in queue.iter() {
-            let data = self.vocab().containment.expect_vertex(vk.vertex_key());
-            let builder = VertexDataBuilder::default()
-                .width(data.width())
-                .key(**vk);
+            let data =
+                self.vocab().containment.expect_vertex_data(vk.vertex_key());
+            let builder =
+                VertexDataBuilder::default().width(data.width()).key(**vk);
             self.graph.insert_vertex_builder(builder);
         }
         self.status.next_pass(
@@ -158,21 +162,25 @@ impl TraversalPass for PartitionsCtx<'_> {
             .map(|_| PatternId::default())
             .collect();
 
-        let parent_data = self.graph.expect_vertex_mut(node.vertex_key());
+        // Build child patterns and get child locations in one mutation
+        let child_locations = self
+            .graph
+            .with_vertex_mut(node.vertex_key(), |parent_data| {
+                // child patterns with indices in containment
+                *parent_data.child_patterns_mut() = pids
+                    .into_iter()
+                    .zip(container)
+                    .map(|(pid, tokens)| (pid, Pattern::from(tokens)))
+                    .collect();
 
-        // child patterns with indices in containment
-        *parent_data.child_patterns_mut() = pids
-            .into_iter()
-            .zip(container)
-            .map(|(pid, tokens)| (pid, Pattern::from(tokens)))
-            .collect();
-
-        // child locations parent in self.graph, children indices in self.vocab.containment
-        let child_locations = parent_data
-            .all_localized_children_iter()
-            .into_iter()
-            .map(|(l, c)| (l, *c))
-            .collect_vec();
+                // child locations parent in self.graph, children indices in self.vocab.containment
+                parent_data
+                    .all_localized_children_iter()
+                    .into_iter()
+                    .map(|(l, c)| (l, *c))
+                    .collect_vec()
+            })
+            .unwrap();
 
         let unlabelled = child_locations
             .iter()
@@ -186,22 +194,29 @@ impl TraversalPass for PartitionsCtx<'_> {
         // set child parents and translate child indices to self.graph
         for (loc, vi) in child_locations.iter().copied() {
             let key = self.vocab().containment.expect_key_for_index(vi);
-            let out_index = if let Ok(v) = self.graph.get_vertex_mut(key) {
-                v.add_parent(loc);
-                v.vertex_index()
+            let out_index = if self.graph.contains_vertex(key) {
+                self.graph
+                    .with_vertex_mut(key, |v| {
+                        v.add_parent(loc);
+                        v.vertex_index()
+                    })
+                    .unwrap()
             } else {
-                let builder = VertexDataBuilder::default()
-                    .width(vi.width())
-                    .key(key);
+                let builder =
+                    VertexDataBuilder::default().width(vi.width()).key(key);
                 let mut data = self.graph.finish_vertex_builder(builder);
                 data.add_parent(loc);
 
                 // translate containment index to output index
-                let out = self.graph.insert_vertex_data(data).vertex_index();
-
-                out
+                self.graph.insert_vertex_data(data).vertex_index()
             };
-            self.graph.expect_child_mut_at(loc).index = out_index;
+            // Update the child token in the parent node
+            let sub_loc = SubLocation::from(loc);
+            self.graph
+                .with_vertex_mut(node.vertex_key(), |parent_data| {
+                    parent_data.expect_child_mut_at(&sub_loc).index = out_index;
+                })
+                .unwrap();
         }
         let next = child_locations
             .clone()

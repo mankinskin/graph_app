@@ -195,7 +195,9 @@ impl App {
     ) {
         egui::CentralPanel::default()
             .show(ctx, |ui| {
-                self.vis_mut().map(|mut vis| vis.show(ui));
+                if let Some(mut vis) = self.vis_mut() {
+                    vis.show(ui)
+                }
                 //tracing_egui::show(ui.ctx(), &mut true);
                 egui::warn_if_debug_build(ui);
             })
@@ -273,7 +275,7 @@ impl eframe::App for App {
         }
         if let Some(read_ctx) = self.ctx() {
             if let Some(status) = read_ctx.status() {
-                ShowStatus(&*status.read().unwrap()).show(ctx);
+                ShowStatus(&status.read().unwrap()).show(ctx);
             }
         }
         if self

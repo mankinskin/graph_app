@@ -68,8 +68,11 @@ impl<'a, 'b> PartitionLineBuilder<'a, 'b> {
         offset: NonZeroUsize,
     ) {
         let end_pos = self.end_pos();
+        // Get the root data to use its token for get_vertex_subrange
+        let root_data = self.ctx.vocab().containment.expect_vertex_data(self.ctx.root.vertex_key());
+        let root_token = root_data.to_child();
         let index = self.ctx.vocab().containment.get_vertex_subrange(
-            self.ctx.root.vertex_key(),
+            root_token,
             end_pos..(end_pos + offset.get()),
         );
         self.push_cell(index);

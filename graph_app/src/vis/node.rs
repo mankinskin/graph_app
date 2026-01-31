@@ -93,8 +93,8 @@ impl NodeVis {
         selected_range: Option<SelectionState>,
     ) -> Self {
         let (name, child_patterns) = {
-            let graph = &*graph.read();
-            let name = graph.vertex_data_string(data);
+            let graph = &**graph.read();
+            let name = graph.vertex_data_string(data.clone());
             let child_patterns = ChildPatternsVis::new(graph, data);
             (name, child_patterns)
         };

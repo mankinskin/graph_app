@@ -67,7 +67,7 @@ impl ReadCtx {
                 match res {
                     Ok(res) => {
                         self.graph.insert_texts.clear();
-                        *graph.write().unwrap() = res.graph;
+                        *graph.write().unwrap() = res.graph.into();
                         *labels.write().unwrap() = res.labels;
                     },
                     Err(CancelReason::Cancelled) => {

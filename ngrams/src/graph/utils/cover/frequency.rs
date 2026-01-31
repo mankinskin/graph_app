@@ -30,12 +30,15 @@ use crate::graph::{
 };
 use context_trace::{
     graph::vertex::{
-        token::Token,
         has_vertex_index::HasVertexIndex,
         has_vertex_key::HasVertexKey,
-        location::child::{ChildLocation, HasSubIndex},
+        location::child::{
+            ChildLocation,
+            HasSubIndex,
+        },
         parent::HasPatternId,
         pattern::Pattern,
+        token::Token,
         wide::Wide,
         VertexIndex,
     },
@@ -103,16 +106,17 @@ impl FrequencyCover {
         parent_entry: &VertexCtx,
         occ_set: &HashSet<TextLocation>,
     ) -> HashSet<TextLocation> {
-        ctx.labels()
-            .contains(&parent_entry.vertex_key())
-            .then(|| {
+        if ctx.labels().contains(&parent_entry.vertex_key()) {
+            {
                 let occ: HashSet<_> = parent_entry
                     .occurrences
                     .iter()
                     .map(|loc| TextLocation::new(loc.texti, loc.x + offset))
                     .collect();
                 occ.difference(occ_set).copied().collect()
-            })
-            .unwrap_or_default()
+            }
+        } else {
+            Default::default()
+        }
     }
 }

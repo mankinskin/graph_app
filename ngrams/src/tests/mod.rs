@@ -15,7 +15,7 @@ use crate::graph::{
     },
     Corpus,
     StatusHandle,
-};  
+};
 use context_trace::{
     graph::vertex::key::VertexKey,
     HashSet,
@@ -174,7 +174,7 @@ impl TestCase {
         self.label_freq();
 
         if *self.status.pass() == ProcessStatus::Frequency {
-            let ctx = LabelTestCtx::new(self.labels(), &self);
+            let ctx = LabelTestCtx::new(self.labels(), self);
             ctx.test_roots();
             ctx.test_leaves();
 
@@ -184,14 +184,14 @@ impl TestCase {
         self.label_wrap();
 
         if *self.status.pass() == ProcessStatus::Wrappers {
-            let ctx = LabelTestCtx::new(self.labels(), &self);
+            let ctx = LabelTestCtx::new(self.labels(), self);
             ctx.test_wrap();
         }
 
         self.label_part();
 
         if *self.status.pass() == ProcessStatus::Partitions {
-            let ctx = LabelTestCtx::new(self.labels(), &self);
+            let ctx = LabelTestCtx::new(self.labels(), self);
             ctx.test_part();
         }
     }

@@ -31,7 +31,7 @@ use crate::graph::{
         NGramId,
         ProcessStatus,
     },
-};  
+};
 use context_trace::{
     graph::{
         vertex::{
@@ -47,8 +47,8 @@ use context_trace::{
             pattern::id::PatternId,
             token::Token,
             wide::Wide,
-            VertexIndex,
             ChildPatterns,
+            VertexIndex,
         },
         Hypergraph,
     },
@@ -101,12 +101,11 @@ impl TraversalPass for AccumulateCtx<'_> {
     }
     fn start_queue(&mut self) -> RunResult<Self::Queue> {
         let queue =
-            Self::Queue::from_iter(TopDown::starting_nodes(&self.vocab()));
+            Self::Queue::from_iter(TopDown::starting_nodes(self.vocab()));
         for vk in queue.iter() {
-            let data = self.vocab().containment.expect_vertex(vk.vertex_key());
-            let builder = VertexDataBuilder::default()
-                .width(data.width())
-                .key(**vk);
+            let data = self.vocab().containment.expect_vertex_data(vk.vertex_key());
+            let builder =
+                VertexDataBuilder::default().width(data.width()).key(**vk);
             self.result.insert_vertex_builder(builder);
         }
         Ok(queue)

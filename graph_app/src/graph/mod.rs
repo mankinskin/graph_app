@@ -24,7 +24,8 @@ use petgraph::{
 
 #[derive(Clone, Debug)]
 pub struct Graph {
-    pub graph: HypergraphRef,
+    /// Wrapped in RwLock to allow replacing the entire graph
+    pub graph: Arc<RwLock<HypergraphRef>>,
     pub rec: Option<rerun::RecordingStream>,
     pub insert_texts: Vec<String>,
     pub labels: Arc<RwLock<HashSet<VertexKey>>>,
@@ -43,7 +44,7 @@ impl From<Hypergraph> for Graph {
 impl From<HypergraphRef> for Graph {
     fn from(graph: HypergraphRef) -> Self {
         Self {
-            graph,
+            graph: Arc::new(RwLock::new(graph)),
             insert_texts: vec![String::from("aabbaabbaa")],
             labels: Default::default(),
             rec: None,
@@ -53,7 +54,9 @@ impl From<HypergraphRef> for Graph {
 impl From<rerun::RecordingStream> for Graph {
     fn from(rec: rerun::RecordingStream) -> Self {
         Self {
-            graph: Hypergraph::default().into(),
+            graph: Arc::new(RwLock::new(HypergraphRef::from(
+                Hypergraph::default(),
+            ))),
             insert_texts: vec![String::from("aabbaabbaa")],
             labels: Default::default(),
             rec: Some(rec),
@@ -61,20 +64,20 @@ impl From<rerun::RecordingStream> for Graph {
     }
 }
 impl Graph {
-    pub fn try_read(&self) -> Option<RwLockReadGuard<'_, Hypergraph>> {
+    pub fn try_read(&self) -> Option<RwLockReadGuard<'_, HypergraphRef>> {
         self.graph.read().ok()
     }
-    pub fn read(&self) -> RwLockReadGuard<'_, Hypergraph> {
+    pub fn read(&self) -> RwLockReadGuard<'_, HypergraphRef> {
         self.try_read().unwrap()
     }
-    pub fn write(&self) -> RwLockWriteGuard<'_, Hypergraph> {
+    pub fn write(&self) -> RwLockWriteGuard<'_, HypergraphRef> {
         self.graph.write().unwrap()
     }
     pub fn set_graph(
         &self,
         graph: Hypergraph,
     ) {
-        *self.write() = graph;
+        *self.write() = HypergraphRef::from(graph);
     }
     pub fn clear(&mut self) {
         *self = Self::default();

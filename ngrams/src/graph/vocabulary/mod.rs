@@ -22,7 +22,10 @@ use context_trace::{
             },
             has_vertex_key::HasVertexKey,
             key::VertexKey,
-            token::{Token, TokenWidth},
+            token::{
+                Token,
+                TokenWidth,
+            },
             wide::Wide,
             VertexIndex,
         },
@@ -119,7 +122,7 @@ impl PartialOrd for ProcessStatus {
         &self,
         other: &Self,
     ) -> Option<Ordering> {
-        Some((*self as usize).cmp(&(*other as usize)))
+        Some(self.cmp(other))
     }
 }
 impl Ord for ProcessStatus {

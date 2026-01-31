@@ -16,7 +16,6 @@ use context_trace::{
             TokenWidth,
         },
         wide::Wide,
-        IndexedVertexEntry,
         VertexEntry,
         VertexIndex,
     },
@@ -56,9 +55,9 @@ impl VocabEntry {
     //        || self.children.has_overlaps()
     //}
 }
-#[derive(Debug, Deref)]
+#[derive(Debug, Deref, Clone)]
 pub struct VertexCtx<'a> {
-    pub data: &'a VertexData,
+    pub data: VertexData,
     #[deref]
     pub entry: &'a VocabEntry,
     pub vocab: &'a Vocabulary,
@@ -75,7 +74,7 @@ impl HasVertexKey for VertexCtx<'_> {
 }
 #[derive(Debug, Deref)]
 pub struct VertexCtxMut<'a> {
-    pub data: &'a mut VertexData,
+    pub data: VertexData,
     #[deref]
     pub entry: &'a mut VocabEntry,
 }
@@ -85,7 +84,7 @@ pub trait HasVertexEntries<K: ?Sized + Debug> {
     fn entry(
         &mut self,
         key: K,
-    ) -> VertexEntry<'_>;
+    ) -> VertexEntry;
     fn get_vertex(
         &'_ self,
         key: &K,
@@ -119,9 +118,11 @@ macro_rules! impl_index_vocab {
             fn entry(
                 &'_ mut $_self,
                 $ind: $t,
-            ) -> VertexEntry<'_>
+            ) -> VertexEntry
             {
-                $_self.containment.vertex_entry($func)
+                let key = $func;
+                let data = $_self.containment.expect_vertex_data(key);
+                VertexEntry::new(data)
             }
             fn get_vertex(
                 &'_ $_self,
@@ -129,7 +130,7 @@ macro_rules! impl_index_vocab {
             ) -> Option<VertexCtx<'_>>
             {
                 let key = $func;
-                $_self.containment.get_vertex(&key).ok().map(|data| {
+                $_self.containment.get_vertex_data(key).ok().map(|data| {
                     VertexCtx {
                         data,
                         entry: $_self.entries.get(&key).unwrap(),
@@ -143,7 +144,7 @@ macro_rules! impl_index_vocab {
             ) -> Option<VertexCtxMut<'_>>
             {
                 let key = $func;
-                $_self.containment.get_vertex_mut(&key).ok().map(|data| {
+                $_self.containment.get_vertex_data(key).ok().map(|data| {
                     VertexCtxMut {
                         data,
                         entry: $_self.entries.get_mut(&key).unwrap(),
@@ -164,7 +165,7 @@ macro_rules! impl_index_vocab_str {
             fn entry(
                 &'_ mut self,
                 key: $t,
-            ) -> VertexEntry<'_> {
+            ) -> VertexEntry {
                 self.entry(*self.ids.get(key.borrow() as &'_ str).unwrap())
             }
             fn get_vertex(

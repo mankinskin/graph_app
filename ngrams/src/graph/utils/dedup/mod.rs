@@ -1,7 +1,6 @@
 use context_trace::{
     graph::{
         vertex::{
-            token::Token,
             data::{
                 VertexData,
                 VertexDataBuilder,
@@ -13,9 +12,10 @@ use context_trace::{
             has_vertex_key::HasVertexKey,
             key::VertexKey,
             pattern::Pattern,
+            token::Token,
             wide::Wide,
-            VertexIndex,
             ChildPatterns,
+            VertexIndex,
         },
         Hypergraph,
     },
@@ -160,13 +160,14 @@ impl TraversalPass for ChildDedupPass<'_> {
         let other_trees = other_trees.into_iter().map(|(k, v)| v).collect_vec();
 
         // check if covered
-        let next = (node.vertex_key() == root)
-            .then(|| {
+        let next = if node.vertex_key() == root {
+            {
                 tree.cover.insert(off, node);
                 Some(())
-            })
-            .unwrap_or_else(|| {
-                (!tree.cover.any_covers(off, &node))
+            }
+        } else {
+            {
+                (!tree.cover.any_covers(off, node))
                     .then_some(())
                     .and_then(|_| {
                         (!other_trees.iter().any(|r| r.visited.contains(&node)))
@@ -185,7 +186,8 @@ impl TraversalPass for ChildDedupPass<'_> {
                                 None
                             })
                     })
-            });
+            }
+        };
         //self.visited.insert(node.vertex_key());
         Ok(next.map(|_| {
             let ne = self.ctx.vocab().get_vertex(&node).unwrap();
