@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "docs": {
+      "type": "stdio",
+      "command": "${workspaceFolder}\\context-engine\\tools\\mcp-docs-server\\target\\release\\mcp-docs-server.exe",
+      "env": {
+        "AGENTS_DIR": "${workspaceFolder}\\context-engine\\agents"
+      }
+    }
+  }
+}
