@@ -168,10 +168,10 @@ pub struct TestCase {
     labels: LabelTest,
 }
 impl TestCase {
-    pub fn execute(&mut self) {
+    pub async fn execute(&mut self) {
         // graph of all containment edges between n and n+1
         self.corpus.test_containment();
-        self.label_freq();
+        self.label_freq().await;
 
         if *self.status.pass() == ProcessStatus::Frequency {
             let ctx = LabelTestCtx::new(self.labels(), self);
@@ -181,14 +181,14 @@ impl TestCase {
             ctx.test_freq();
         }
 
-        self.label_wrap();
+        self.label_wrap().await;
 
         if *self.status.pass() == ProcessStatus::Wrappers {
             let ctx = LabelTestCtx::new(self.labels(), self);
             ctx.test_wrap();
         }
 
-        self.label_part();
+        self.label_part().await;
 
         if *self.status.pass() == ProcessStatus::Partitions {
             let ctx = LabelTestCtx::new(self.labels(), self);
@@ -300,15 +300,16 @@ pub async fn test_graph1() {
         .await,
         labels: test_labels! {
             [
-                "ab"
+                "ab",
+                "abc",
+                "bab",
             ],
-            [
-                "ab"
-            ],
+            [] as [&str; 0],
             [] as [&str; 0],
         },
     }
-    .execute();
+    .execute()
+    .await;
 }
 
 // too slow!
@@ -365,5 +366,6 @@ pub async fn test_graph2() {
             [] as [&str; 0],
         },
     }
-    .execute();
+    .execute()
+    .await;
 }
