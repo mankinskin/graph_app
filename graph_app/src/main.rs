@@ -2,6 +2,7 @@
 #![warn(clippy::all, rust_2018_idioms)]
 #![allow(clippy::obfuscated_if_else)]
 
+mod algorithm;
 mod app;
 use app::App;
 mod examples;

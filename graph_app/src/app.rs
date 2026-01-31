@@ -8,6 +8,7 @@ use serde::*;
 #[allow(unused)]
 use crate::graph::*;
 use crate::{
+    algorithm::Algorithm,
     examples::{
         build_graph1,
         build_graph2,
@@ -37,6 +38,7 @@ use std::{
         RwLockWriteGuard as SyncRwLockWriteGuard,
     },
 };
+use strum::IntoEnumIterator;
 use tokio_util::sync::CancellationToken;
 
 #[derive(Deref, DerefMut, Debug)]
@@ -48,6 +50,13 @@ pub struct App {
 
     #[cfg_attr(feature = "persistence", serde(skip))]
     inserter: bool,
+
+    /// Whether the settings window is open
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    settings_open: bool,
+
+    /// Currently selected algorithm
+    selected_algorithm: Algorithm,
 
     read_task: Option<tokio::task::JoinHandle<()>>,
 
@@ -71,6 +80,8 @@ impl From<Graph> for App {
         Self {
             graph_file: None,
             inserter: true,
+            settings_open: false,
+            selected_algorithm: Algorithm::default(),
             read_task: None,
             cancellation_token: None,
             vis: Arc::new(SyncRwLock::new(GraphVis::new(graph.clone()))),
@@ -171,6 +182,9 @@ impl App {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.menu_button("Actions...", |ui| self.context_menu(ui));
+                if ui.button("⚙ Settings").clicked() {
+                    self.settings_open = !self.settings_open;
+                }
                 ui.with_layout(
                     egui::Layout::right_to_left(egui::Align::Center),
                     |ui| {
@@ -210,9 +224,10 @@ impl App {
         self.cancellation_token = Some(cancellation_token.clone());
 
         let ctx = self.read_ctx.clone();
+        let algorithm = self.selected_algorithm;
         let task = tokio::spawn(async move {
             let mut ctx = ctx.write().await;
-            ctx.read_text(cancellation_token).await;
+            ctx.run_algorithm(algorithm, cancellation_token).await;
         });
         self.read_task = Some(task);
     }
@@ -255,8 +270,51 @@ impl eframe::App for App {
     ) {
         self.top_panel(ctx, frame);
         self.central_panel(ctx);
+        
+        // Settings window with algorithm dropdown
+        if self.settings_open {
+            egui::Window::new("Settings")
+                .open(&mut self.settings_open)
+                .resizable(true)
+                .default_width(300.0)
+                .show(ctx, |ui| {
+                    ui.heading("Algorithm Selection");
+                    ui.add_space(10.0);
+                    
+                    ui.horizontal(|ui| {
+                        ui.label("Algorithm:");
+                        egui::ComboBox::from_id_salt("algorithm_selector")
+                            .selected_text(self.selected_algorithm.to_string())
+                            .show_ui(ui, |ui| {
+                                for algorithm in Algorithm::iter() {
+                                    ui.selectable_value(
+                                        &mut self.selected_algorithm,
+                                        algorithm,
+                                        algorithm.to_string(),
+                                    );
+                                }
+                            });
+                    });
+                    
+                    ui.add_space(10.0);
+                    ui.separator();
+                    ui.add_space(5.0);
+                    
+                    // Show algorithm description
+                    ui.label("Description:");
+                    ui.label(self.selected_algorithm.description());
+                });
+        }
+        
         if self.inserter {
             egui::Window::new("Inserter").show(ctx, |ui| {
+                // Show currently selected algorithm
+                ui.horizontal(|ui| {
+                    ui.label("Using:");
+                    ui.strong(self.selected_algorithm.to_string());
+                });
+                ui.separator();
+                
                 if let Some(mut ctx) = self.ctx_mut() {
                     for text in &mut ctx.graph_mut().insert_texts {
                         ui.text_edit_singleline(text);
