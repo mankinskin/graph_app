@@ -7,7 +7,6 @@ use itertools::Itertools;
 
 #[cfg(not(debug_assertions))]
 pub use {
-    count::*,
     graph::*,
     shared::*,
 };
