@@ -56,6 +56,8 @@ pub struct NodeVis {
     pub data: VertexData,
     /// Position in world coordinates
     pub world_pos: Pos2,
+    /// Whether this node was manually moved by the user
+    pub manually_moved: bool,
     pub(crate) child_patterns: ChildPatternsVis,
     graph: Graph,
     pub selected_range: Option<SelectionState>,
@@ -90,7 +92,7 @@ impl NodeVis {
         idx: NodeIndex,
         data: &VertexData,
     ) -> Self {
-        Self::new_impl(
+        let mut new = Self::new_impl(
             old.graph.clone(),
             idx,
             &old.key,
@@ -98,7 +100,9 @@ impl NodeVis {
             old.world_pos,
             old.selected_range.clone(),
             old.generation,
-        )
+        );
+        new.manually_moved = old.manually_moved;
+        new
     }
     pub fn new_impl(
         graph: Graph,
@@ -122,6 +126,7 @@ impl NodeVis {
             name,
             data: data.clone(),
             world_pos,
+            manually_moved: false,
             child_patterns,
             selected_range,
             generation,

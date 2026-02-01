@@ -9,6 +9,7 @@ mod examples;
 mod graph;
 mod read;
 mod vis;
+pub(crate) mod widgets;
 // ----------------------------------------------------------------------------
 // When compiling for web:
 

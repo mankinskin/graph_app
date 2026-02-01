@@ -4,14 +4,7 @@ use eframe::egui;
 use strum::IntoEnumIterator;
 
 use super::App;
-use crate::{
-    algorithm::Algorithm,
-    examples::{
-        build_graph1,
-        build_graph2,
-        build_graph3,
-    },
-};
+use crate::algorithm::Algorithm;
 
 impl App {
     pub(crate) fn top_panel(
@@ -75,24 +68,6 @@ impl App {
                     if ui.button("New Tab").clicked() {
                         self.create_new_tab();
                         ui.close();
-                    }
-                });
-
-                // Presets menu
-                ui.menu_button("Presets", |ui| {
-                    if let Some(ctx) = self.ctx() {
-                        if ui.button("Graph 1").clicked() {
-                            ctx.graph().set_graph(build_graph1());
-                            ui.close();
-                        }
-                        if ui.button("Graph 2").clicked() {
-                            ctx.graph().set_graph(build_graph2());
-                            ui.close();
-                        }
-                        if ui.button("Graph 3").clicked() {
-                            ctx.graph().set_graph(build_graph3());
-                            ui.close();
-                        }
                     }
                 });
 

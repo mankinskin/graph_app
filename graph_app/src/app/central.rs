@@ -10,7 +10,15 @@ use super::{
     App,
     GraphTab,
 };
-use crate::algorithm::Algorithm;
+use crate::{
+    algorithm::Algorithm,
+    examples::{
+        build_graph1,
+        build_graph2,
+        build_graph3,
+    },
+    widgets::EditableLabel,
+};
 
 impl App {
     pub(crate) fn central_panel(
@@ -49,24 +57,30 @@ impl App {
         ui.horizontal(|ui| {
             let mut tab_to_close: Option<usize> = None;
             let mut tab_to_select: Option<usize> = None;
+            let mut tab_renamed: Option<(usize, String)> = None;
+            let tab_count = self.tabs.len();
 
-            for tab in &self.tabs {
+            for tab in &mut self.tabs {
                 let is_selected = tab.id == self.selected_tab_id;
+                let is_editing = tab.label_state.editing;
 
                 ui.horizontal(|ui| {
-                    // Tab button
-                    if ui
-                        .selectable_label(
-                            is_selected,
-                            format!("📊 {}", &tab.name),
-                        )
-                        .clicked()
-                    {
+                    let response =
+                        EditableLabel::new(&tab.name, &mut tab.label_state)
+                            .selected(is_selected)
+                            .prefix("📊")
+                            .show(ui);
+
+                    if response.clicked {
                         tab_to_select = Some(tab.id);
                     }
 
-                    // Close button (only show if more than one tab)
-                    if self.tabs.len() > 1 {
+                    if let Some(new_name) = response.renamed {
+                        tab_renamed = Some((tab.id, new_name));
+                    }
+
+                    // Close button (only show if more than one tab and not editing)
+                    if tab_count > 1 && !is_editing {
                         if ui
                             .small_button("x")
                             .on_hover_text("Close tab")
@@ -94,6 +108,13 @@ impl App {
             if let Some(id) = tab_to_close {
                 self.close_tab(id);
             }
+
+            // Handle rename
+            if let Some((id, new_name)) = tab_renamed {
+                if let Some(tab) = self.tabs.iter_mut().find(|t| t.id == id) {
+                    tab.name = new_name;
+                }
+            }
         });
     }
 
@@ -104,6 +125,35 @@ impl App {
         egui::menu::bar(ui, |ui| {
             // Graph menu
             ui.menu_button("Graph", |ui| {
+                // Presets submenu
+                ui.menu_button("Load Preset", |ui| {
+                    if let Some(ctx) = self.ctx() {
+                        if ui.button("Graph 1").clicked() {
+                            ctx.graph().set_graph(build_graph1());
+                            if let Some(mut vis) = self.vis_mut() {
+                                vis.mark_dirty();
+                            }
+                            ui.close();
+                        }
+                        if ui.button("Graph 2").clicked() {
+                            ctx.graph().set_graph(build_graph2());
+                            if let Some(mut vis) = self.vis_mut() {
+                                vis.mark_dirty();
+                            }
+                            ui.close();
+                        }
+                        if ui.button("Graph 3").clicked() {
+                            ctx.graph().set_graph(build_graph3());
+                            if let Some(mut vis) = self.vis_mut() {
+                                vis.mark_dirty();
+                            }
+                            ui.close();
+                        }
+                    }
+                });
+
+                ui.separator();
+
                 if ui.button("Clear").clicked() {
                     if let Some(mut ctx) = self.ctx_mut() {
                         ctx.graph_mut().clear();

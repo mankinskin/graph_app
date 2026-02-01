@@ -2,21 +2,8 @@
 #![warn(clippy::all, rust_2018_idioms)]
 #![allow(clippy::obfuscated_if_else)]
 
-mod algorithm;
-mod app;
-use app::App;
-mod examples;
-mod graph;
-mod read;
-mod vis;
+use graph_app::App;
 
-pub use std::sync::{
-    Arc,
-    RwLock,
-    RwLockReadGuard,
-    RwLockWriteGuard,
-};
-pub use tracing::*;
 #[derive(Debug, clap::Parser)]
 #[clap(author, version, about)]
 pub struct Args {

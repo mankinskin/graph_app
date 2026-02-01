@@ -16,6 +16,7 @@ use crate::{
     graph::Graph,
     read::ReadCtx,
     vis::graph::GraphVis,
+    widgets::EditableLabelState,
 };
 use async_std::sync::{
     Arc,
@@ -38,6 +39,7 @@ use tokio_util::sync::CancellationToken;
 pub struct GraphTab {
     pub id: usize,
     pub name: String,
+    pub label_state: EditableLabelState,
     pub vis: Arc<SyncRwLock<GraphVis>>,
     pub read_ctx: Arc<RwLock<ReadCtx>>,
 }
@@ -51,6 +53,7 @@ impl GraphTab {
         Self {
             id,
             name: name.into(),
+            label_state: EditableLabelState::default(),
             vis: Arc::new(SyncRwLock::new(GraphVis::new(graph.clone()))),
             read_ctx: Arc::new(RwLock::new(ReadCtx::new(graph))),
         }

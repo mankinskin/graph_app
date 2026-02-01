@@ -1,6 +1,7 @@
 use context_trace::{
     graph::vertex::{
         has_vertex_key::HasVertexKey,
+        key::VertexKey,
         location::pattern::PatternLocation,
         wide::Wide,
     },
@@ -107,6 +108,14 @@ impl GraphVis {
             |_idx, e| (e.token.width() > 1).then_some(()),
         );
 
+        // Save manually moved positions before regenerating
+        let saved_positions: HashMap<VertexKey, Pos2> = self
+            .graph
+            .node_weights()
+            .filter(|n| n.manually_moved)
+            .map(|n| (n.key, n.world_pos))
+            .collect();
+
         // Increment generation to reset window positions
         self.generation += 1;
 
@@ -117,24 +126,32 @@ impl GraphVis {
 
         // Try to update rerun, but don't fail if it's not available
         let _ = self.update_rerun(&handle);
-        self.update_egui(&handle);
+        self.update_egui(&handle, &saved_positions);
         Ok(())
     }
     fn update_egui(
         &mut self,
         handle: &Graph,
+        saved_positions: &HashMap<VertexKey, Pos2>,
     ) {
         let generation = self.generation;
         if !self.initialized() {
             self.graph = self.layout.graph.clone().map_owned(
                 |i, (k, n)| {
-                    let pos = self
-                        .layout
-                        .positions
-                        .get(&i)
-                        .copied()
-                        .unwrap_or_default();
-                    let vis = NodeVis::new(
+                    // Use saved position if this node was manually moved, otherwise use layout position
+                    let (pos, manually_moved) =
+                        if let Some(&saved_pos) = saved_positions.get(&k) {
+                            (saved_pos, true)
+                        } else {
+                            let pos = self
+                                .layout
+                                .positions
+                                .get(&i)
+                                .copied()
+                                .unwrap_or_default();
+                            (pos, false)
+                        };
+                    let mut vis = NodeVis::new(
                         handle.clone(),
                         i,
                         &k,
@@ -142,17 +159,27 @@ impl GraphVis {
                         pos,
                         generation,
                     );
+                    vis.manually_moved = manually_moved;
                     vis
                 },
                 |_, e| e,
             );
         }
         for (_key, (i, node)) in self.layout.nodes.iter_mut() {
-            let pos = self.layout.positions.get(i).copied().unwrap_or_default();
+            // Use saved position if this node was manually moved
+            let (pos, manually_moved) = if let Some(&saved_pos) =
+                saved_positions.get(_key)
+            {
+                (saved_pos, true)
+            } else {
+                let pos =
+                    self.layout.positions.get(i).copied().unwrap_or_default();
+                (pos, false)
+            };
             if let Some(old) = self.graph.node_weight_mut(*i) {
                 *old = NodeVis::from_old(old, *i, &node.data);
             } else {
-                let vis = NodeVis::new(
+                let mut vis = NodeVis::new(
                     handle.clone(),
                     *i,
                     _key,
@@ -160,6 +187,7 @@ impl GraphVis {
                     pos,
                     generation,
                 );
+                vis.manually_moved = manually_moved;
                 *i = self.graph.add_node(vis);
             };
         }
@@ -350,6 +378,8 @@ impl GraphVis {
                 // Convert screen delta to world delta
                 let world_delta = delta / zoom;
                 node.world_pos += world_delta;
+                // Mark as manually moved
+                node.manually_moved = true;
             }
         }
     }
