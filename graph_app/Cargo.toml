@@ -63,6 +63,11 @@ path = "../context-engine/crates/deps/petgraph"
 [dependencies.ngrams]
 path = "../ngrams"
 
+[dev-dependencies]
+context-trace = { path = "../context-engine/crates/context-trace", features = [
+  "test-api",
+] }
+
 [features]
 default = []
 persistence = [

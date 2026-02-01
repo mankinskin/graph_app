@@ -142,13 +142,16 @@ impl TraversalPass for PartitionsCtx<'_> {
         &mut self,
         node: Self::Node,
     ) -> bool {
-        (!self.visited_mut().contains(&node) && self.labels().contains(&node))
-            || self
-                .vocab()
-                .leaves
-                .contains(&node)
-                .then(|| self.visited_mut().insert(node))
-                .is_some()
+        // Check if node should be processed and mark as visited
+        if !self.visited_mut().contains(&node) {
+            if self.labels().contains(&node)
+                || self.vocab().leaves.contains(&node)
+            {
+                self.visited_mut().insert(node);
+                return true;
+            }
+        }
+        false
     }
     fn on_node(
         &mut self,
