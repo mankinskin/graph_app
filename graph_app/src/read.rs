@@ -12,6 +12,8 @@ use crate::algorithm::Algorithm;
 #[allow(unused)]
 use crate::graph::*;
 
+#[cfg(target_arch = "wasm32")]
+use context_trace::graph::vertex::has_vertex_index::HasVertexIndex;
 use context_trace::{
     graph::HypergraphRef,
     Token,
@@ -73,7 +75,11 @@ impl ReadCtx {
 
         match algorithm {
             Algorithm::NgramsParseCorpus => {
-                self.run_context_insert_sync(cancelled);
+                // NgramsParseCorpus is not available in wasm - should not be selectable
+                web_sys::console::error_1(
+                    &"NgramsParseCorpus is not available in browser. Please select a different algorithm.".into(),
+                );
+                return;
             },
             Algorithm::ContextRead => {
                 self.run_context_read_sync(cancelled);
@@ -149,7 +155,12 @@ impl ReadCtx {
                 continue;
             }
 
-            let tokens = graph_ref.expect_atom_children(text.chars());
+            // Use new_atom_indices to insert atoms that don't exist yet
+            let atom_indices = graph_ref.new_atom_indices(text.chars());
+            let tokens: Vec<Token> = atom_indices
+                .into_iter()
+                .map(|idx| Token::new(idx.vertex_index(), 1))
+                .collect();
 
             match insert_ctx.insert(tokens) {
                 Ok(_result) => {

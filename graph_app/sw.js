@@ -1,5 +1,5 @@
 // Service Worker for Graph App PWA
-const CACHE_NAME = 'graph-app-v1';
+const CACHE_NAME = 'graph-app-v3';
 
 // Files to cache for offline use
 const urlsToCache = [

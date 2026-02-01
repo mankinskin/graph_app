@@ -100,6 +100,11 @@ impl App {
                     .selected_text(self.selected_algorithm.to_string())
                     .show_ui(ui, |ui| {
                         for algorithm in Algorithm::iter() {
+                            // Skip NgramsParseCorpus in wasm - not supported
+                            #[cfg(target_arch = "wasm32")]
+                            if algorithm == Algorithm::NgramsParseCorpus {
+                                continue;
+                            }
                             ui.selectable_value(
                                 &mut self.selected_algorithm,
                                 algorithm,
@@ -140,13 +145,10 @@ impl App {
                 });
                 #[cfg(target_arch = "wasm32")]
                 ui.horizontal(|ui| {
-                    if ui.button("▶ Run").clicked() && !self.is_running
-                    {
+                    if ui.button("▶ Run").clicked() && !self.is_running {
                         self.start_read();
                     }
-                    if self.is_running
-                        && ui.button("⏹ Cancel").clicked()
-                    {
+                    if self.is_running && ui.button("⏹ Cancel").clicked() {
                         self.abort();
                     }
                 });
