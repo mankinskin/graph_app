@@ -20,6 +20,8 @@ pub struct EditableLabelResponse {
 pub struct EditableLabelState {
     pub editing: bool,
     pub buffer: String,
+    /// True on the first frame of editing, used to request focus once.
+    first_frame: bool,
 }
 
 impl EditableLabelState {
@@ -28,17 +30,20 @@ impl EditableLabelState {
         current_text: &str,
     ) {
         self.editing = true;
+        self.first_frame = true;
         self.buffer = current_text.to_string();
     }
 
     pub fn cancel(&mut self) {
         self.editing = false;
+        self.first_frame = false;
         self.buffer.clear();
     }
 
     pub fn finish(&mut self) -> Option<String> {
         if self.editing {
             self.editing = false;
+            self.first_frame = false;
             let result = if self.buffer.trim().is_empty() {
                 None
             } else {
@@ -99,20 +104,46 @@ impl<'a> EditableLabel<'a> {
         let mut renamed = None;
 
         if self.state.editing {
-            let response = ui.text_edit_singleline(&mut self.state.buffer);
+            // Calculate width based on current buffer content (grows as user types)
+            let font_id = egui::TextStyle::Body.resolve(ui.style());
+            let galley = ui.painter().layout_no_wrap(
+                self.state.buffer.clone(),
+                font_id,
+                egui::Color32::WHITE,
+            );
+            let text_width = galley.size().x.max(50.0) + 16.0; // min width + padding
 
-            // Auto-focus on first frame
-            if !response.has_focus() {
+            let response = ui.add_sized(
+                egui::vec2(text_width, ui.spacing().interact_size.y),
+                egui::TextEdit::singleline(&mut self.state.buffer),
+            );
+
+            // Auto-focus only on the first frame of editing, and set cursor to end
+            if self.state.first_frame {
+                self.state.first_frame = false;
                 response.request_focus();
+                // Set cursor to end of text
+                if let Some(mut state) =
+                    egui::TextEdit::load_state(ui.ctx(), response.id)
+                {
+                    let ccursor =
+                        egui::text::CCursor::new(self.state.buffer.len());
+                    state.cursor.set_char_range(Some(
+                        egui::text::CCursorRange::one(ccursor),
+                    ));
+                    state.store(ui.ctx(), response.id);
+                }
             }
 
-            // Handle completion
-            if response.lost_focus() {
-                if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-                    self.state.cancel();
-                } else {
-                    renamed = self.state.finish();
-                }
+            // Enter confirms the edit
+            if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                renamed = self.state.finish();
+            }
+            // Escape or clicking outside cancels
+            else if response.lost_focus()
+                || ui.input(|i| i.key_pressed(egui::Key::Escape))
+            {
+                self.state.cancel();
             }
         } else {
             let label_text = match self.prefix {
