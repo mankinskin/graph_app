@@ -38,6 +38,14 @@ use std::{
 use strum::IntoEnumIterator;
 use tokio_util::sync::CancellationToken;
 
+/// Tabs available in the central panel
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CentralTab {
+    #[default]
+    Graph,
+    Inserter,
+}
+
 #[derive(Deref, DerefMut, Debug)]
 #[cfg_attr(feature = "persistence", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "persistence", serde(default))] // if we add new fields, give them default values when deserializing old state
@@ -45,8 +53,9 @@ pub struct App {
     #[allow(unused)]
     graph_file: Option<std::path::PathBuf>,
 
+    /// Currently selected tab in the central panel
     #[cfg_attr(feature = "persistence", serde(skip))]
-    inserter: bool,
+    selected_tab: CentralTab,
 
     /// Whether the settings window is open
     #[cfg_attr(feature = "persistence", serde(skip))]
@@ -85,7 +94,7 @@ impl From<Graph> for App {
     fn from(graph: Graph) -> Self {
         Self {
             graph_file: None,
-            inserter: true,
+            selected_tab: CentralTab::default(),
             settings_open: false,
             left_panel_open: true,
             right_panel_open: false,
@@ -132,7 +141,7 @@ impl App {
             }
         });
         if ui.button("Open Inserter").clicked() {
-            self.inserter = true;
+            self.selected_tab = CentralTab::Inserter;
             ui.close();
         }
         ui.menu_button("Load preset...", |ui| {
@@ -233,12 +242,28 @@ impl App {
                         ui.close();
                     }
                     ui.separator();
+                    ui.label("Central Tab:");
                     if ui
-                        .checkbox(&mut self.inserter, "Inserter Window")
+                        .selectable_label(
+                            self.selected_tab == CentralTab::Graph,
+                            "Graph",
+                        )
                         .clicked()
                     {
+                        self.selected_tab = CentralTab::Graph;
                         ui.close();
                     }
+                    if ui
+                        .selectable_label(
+                            self.selected_tab == CentralTab::Inserter,
+                            "Inserter",
+                        )
+                        .clicked()
+                    {
+                        self.selected_tab = CentralTab::Inserter;
+                        ui.close();
+                    }
+                    ui.separator();
                     if ui
                         .checkbox(&mut self.settings_open, "Settings Window")
                         .clicked()
@@ -415,14 +440,121 @@ impl App {
     ) {
         egui::CentralPanel::default()
             .show(ctx, |ui| {
-                if let Some(mut vis) = self.vis_mut() {
-                    vis.show(ui)
+                // Tab bar
+                ui.horizontal(|ui| {
+                    ui.selectable_value(
+                        &mut self.selected_tab,
+                        CentralTab::Graph,
+                        "📊 Graph",
+                    );
+                    ui.selectable_value(
+                        &mut self.selected_tab,
+                        CentralTab::Inserter,
+                        "✏ Inserter",
+                    );
+                });
+                ui.separator();
+
+                // Get viewport rect for constraining windows
+                let viewport_rect = ui.available_rect_before_wrap();
+
+                match self.selected_tab {
+                    CentralTab::Graph =>
+                        if let Some(mut vis) = self.vis_mut() {
+                            vis.show(ui)
+                        },
+                    CentralTab::Inserter => {
+                        self.show_inserter_tab(ui, viewport_rect);
+                    },
                 }
-                //tracing_egui::show(ui.ctx(), &mut true);
+
                 egui::warn_if_debug_build(ui);
             })
             .response
             .context_menu(|ui| self.context_menu(ui));
+    }
+
+    fn show_inserter_tab(
+        &mut self,
+        ui: &mut Ui,
+        _viewport_rect: egui::Rect,
+    ) {
+        ui.heading("Text Inserter");
+        ui.add_space(10.0);
+
+        // Show currently selected algorithm
+        ui.horizontal(|ui| {
+            ui.label("Algorithm:");
+            egui::ComboBox::from_id_salt("inserter_algorithm")
+                .selected_text(self.selected_algorithm.to_string())
+                .show_ui(ui, |ui| {
+                    for algorithm in Algorithm::iter() {
+                        ui.selectable_value(
+                            &mut self.selected_algorithm,
+                            algorithm,
+                            algorithm.to_string(),
+                        );
+                    }
+                });
+        });
+
+        ui.add_space(5.0);
+        ui.label(self.selected_algorithm.description());
+
+        ui.add_space(15.0);
+        ui.separator();
+        ui.add_space(10.0);
+
+        ui.label("Input texts:");
+        ui.add_space(5.0);
+
+        if let Some(mut read_ctx) = self.ctx_mut() {
+            let texts = &mut read_ctx.graph_mut().insert_texts;
+            let mut to_remove = None;
+
+            for (i, text) in texts.iter_mut().enumerate() {
+                ui.horizontal(|ui| {
+                    ui.add(
+                        egui::TextEdit::singleline(text).desired_width(400.0),
+                    );
+                    if ui.button("✖").on_hover_text("Remove").clicked() {
+                        to_remove = Some(i);
+                    }
+                });
+            }
+
+            if let Some(idx) = to_remove {
+                texts.remove(idx);
+            }
+
+            ui.add_space(5.0);
+            if ui.button("+ Add Text").clicked() {
+                texts.push(String::new());
+            }
+        }
+
+        ui.add_space(15.0);
+        ui.separator();
+        ui.add_space(10.0);
+
+        ui.horizontal(|ui| {
+            let is_running = self.read_task.is_some();
+
+            if ui
+                .add_enabled(!is_running, egui::Button::new("▶ Run"))
+                .clicked()
+            {
+                self.start_read();
+            }
+
+            if is_running {
+                if ui.button("⏹ Cancel").clicked() {
+                    self.abort();
+                }
+                ui.spinner();
+                ui.label("Processing...");
+            }
+        });
     }
     fn start_read(&mut self) {
         // Create cancellation token for this operation
@@ -521,40 +653,6 @@ impl eframe::App for App {
                     ui.label(self.selected_algorithm.description());
                 });
         }
-
-        // Floating inserter window (can be toggled from View menu)
-        let mut inserter_open = self.inserter;
-        if inserter_open {
-            egui::Window::new("Inserter").open(&mut inserter_open).show(
-                ctx,
-                |ui| {
-                    // Show currently selected algorithm
-                    ui.horizontal(|ui| {
-                        ui.label("Using:");
-                        ui.strong(self.selected_algorithm.to_string());
-                    });
-                    ui.separator();
-
-                    if let Some(mut ctx) = self.ctx_mut() {
-                        for text in &mut ctx.graph_mut().insert_texts {
-                            ui.text_edit_singleline(text);
-                        }
-                        if ui.button("+").clicked() {
-                            ctx.graph_mut().insert_texts.push(String::new());
-                        }
-                    }
-                    if ui.button("Insert").clicked() && self.read_task.is_none()
-                    {
-                        self.start_read();
-                    }
-                    if self.read_task.is_some() && ui.button("Cancel").clicked()
-                    {
-                        self.abort()
-                    }
-                },
-            );
-        }
-        self.inserter = inserter_open;
 
         // Handle finished tasks
         if self
