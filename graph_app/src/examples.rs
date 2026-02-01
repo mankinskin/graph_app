@@ -1,96 +1,86 @@
-use context_trace::graph::{vertex::atom::Atom, Hypergraph};
+use context_trace::{
+    graph::{
+        vertex::atom::Atom,
+        Hypergraph,
+    },
+    insert_atoms,
+    insert_patterns,
+};
 
-
-pub fn build_graph1() -> Hypergraph
-{
-    let mut graph = Hypergraph::default();
-    if let [a, b, w, x, y, z] = graph.insert_atoms([
-        Atom::Element('a'),
-        Atom::Element('b'),
-        Atom::Element('w'),
-        Atom::Element('x'),
-        Atom::Element('y'),
-        Atom::Element('z'),
-    ])[..]
-    {
-        let ab = graph.insert_pattern([a, b]);
-        let by = graph.insert_pattern([b, y]);
-        let yz = graph.insert_pattern([y, z]);
-        let xa = graph.insert_pattern([x, a]);
-        let xab = graph.insert_patterns([vec![x, ab], vec![xa, b]]);
-        let xaby = graph.insert_patterns([vec![xab, y], vec![xa, by]]);
-        let xabyz = graph.insert_patterns([vec![xaby, z], vec![xab, yz]]);
-        let _wxabyzabbyxabyz = graph.insert_pattern([w, xabyz, ab, by, xabyz]);
-    }
-    else
-    {
-        panic!("Inserting tokens failed!");
-    }
+pub fn build_graph1() -> Hypergraph {
+    let graph = Hypergraph::default();
+    insert_atoms!(graph, {a, b, w, x, y, z});
+    // Single patterns
+    insert_patterns!(graph,
+        ab => [a, b],
+        by => [b, y],
+        yz => [y, z],
+        xa => [x, a]
+    );
+    // Multiple patterns (all with same element count per inner array)
+    insert_patterns!(graph,
+        xab => [[x, ab], [xa, b]],
+        xaby => [[xab, y], [xa, by]],
+        xabyz => [[xaby, z], [xab, yz]]
+    );
+    // Single pattern with 5 elements
+    insert_patterns!(graph,
+        _wxabyzabbyxabyz => [w, xabyz, ab, by, xabyz]
+    );
     graph
 }
-pub fn build_graph2() -> Hypergraph
-{
-    let mut graph = Hypergraph::default();
-    if let [a, b, c, d, e, f, g, h, i] = graph.insert_atoms([
-        Atom::Element('a'),
-        Atom::Element('b'),
-        Atom::Element('c'),
-        Atom::Element('d'),
-        Atom::Element('e'),
-        Atom::Element('f'),
-        Atom::Element('g'),
-        Atom::Element('h'),
-        Atom::Element('i'),
-    ])[..]
-    {
-        let ab = graph.insert_pattern([a, b]);
-        let bc = graph.insert_pattern([b, c]);
-        let ef = graph.insert_pattern([e, f]);
-        let def = graph.insert_pattern([d, ef]);
-        let cdef = graph.insert_pattern([c, def]);
-        let gh = graph.insert_pattern([g, h]);
-        let efgh = graph.insert_pattern([ef, gh]);
-        let ghi = graph.insert_pattern([gh, i]);
-        let abc = graph.insert_patterns([[ab, c], [a, bc]]);
-        let cd = graph.insert_pattern([c, d]);
-        let bcd = graph.insert_patterns([[bc, d], [b, cd]]);
-        let abcd = graph.insert_patterns([[abc, d], [a, bcd]]);
-        let efghi = graph.insert_patterns([[efgh, i], [ef, ghi]]);
-        let abcdefghi =
-            graph.insert_patterns([vec![abcd, efghi], vec![ab, cdef, ghi]]);
-        let aba = graph.insert_pattern([ab, a]);
-        let abab = graph.insert_patterns([[aba, b], [ab, ab]]);
-        let ababab = graph.insert_patterns([[abab, ab], [ab, abab]]);
-        let ababcd =
-            graph.insert_patterns([[ab, abcd], [aba, bcd], [abab, cd]]);
-        let ababababcd = graph.insert_patterns([
-            vec![ababab, abcd],
-            vec![abab, ababcd],
-            vec![ab, ababab, cd],
-        ]);
-        let ababcdefghi =
-            graph.insert_patterns([[ab, abcdefghi], [ababcd, efghi]]);
-        let _ababababcdefghi = graph.insert_patterns([
-            [ababababcd, efghi],
-            [abab, ababcdefghi],
-            [ababab, abcdefghi],
-        ]);
-    }
-    else
-    {
-        panic!("Inserting tokens failed!");
-    }
+pub fn build_graph2() -> Hypergraph {
+    let graph = Hypergraph::default();
+    insert_atoms!(graph, {a, b, c, d, e, f, g, h, i});
+    // Single patterns (2 elements)
+    insert_patterns!(graph,
+        ab => [a, b],
+        bc => [b, c],
+        ef => [e, f],
+        gh => [g, h],
+        cd => [c, d]
+    );
+    // Single patterns (various sizes)
+    insert_patterns!(graph,
+        def => [d, ef],
+        cdef => [c, def],
+        efgh => [ef, gh],
+        ghi => [gh, i],
+        aba => [ab, a]
+    );
+    // Multiple patterns (2 elements each)
+    insert_patterns!(graph,
+        abc => [[ab, c], [a, bc]],
+        bcd => [[bc, d], [b, cd]],
+        abcd => [[abc, d], [a, bcd]],
+        efghi => [[efgh, i], [ef, ghi]],
+        abab => [[aba, b], [ab, ab]],
+        ababab => [[abab, ab], [ab, abab]]
+    );
+    // Use graph methods directly for patterns with mixed element counts
+    let abcdefghi =
+        graph.insert_patterns([vec![abcd, efghi], vec![ab, cdef, ghi]]);
+    // Multiple patterns (3 elements each)
+    insert_patterns!(graph,
+        ababcd => [[ab, abcd], [aba, bcd], [abab, cd]],
+        ababababcd => [[ababab, abcd], [abab, ababcd], [ab, ababab, cd]]
+    );
+    // Patterns depending on abcdefghi
+    insert_patterns!(graph,
+        ababcdefghi => [[ab, abcdefghi], [ababcd, efghi]],
+        _ababababcdefghi => [[ababababcd, efghi], [abab, ababcdefghi], [ababab, abcdefghi]]
+    );
     graph
 }
-pub fn build_graph3() -> Hypergraph
-{
-    let mut graph = Hypergraph::default();
-    if let [d, i, e, space, k, a, t, z, m, c, u, r, h, n, w, f] = graph
-        .insert_atoms([
+pub fn build_graph3() -> Hypergraph {
+    let graph = Hypergraph::default();
+    // Insert atoms manually to avoid tuple size limits (max 12 elements)
+    // Note: 'space' must be inserted manually as it's not a single-character identifier
+    let [d, i, e, k, a, t, z, m, c, u, r, h, n, w, f, sp] =
+        graph.insert_atoms([
             Atom::Element('d'),
             Atom::Element('i'),
             Atom::Element('e'),
-            Atom::Element(' '),
             Atom::Element('k'),
             Atom::Element('a'),
             Atom::Element('t'),
@@ -103,38 +93,49 @@ pub fn build_graph3() -> Hypergraph
             Atom::Element('n'),
             Atom::Element('w'),
             Atom::Element('f'),
+            Atom::Element(' '),
         ])[..]
-    {
-        let _mach = graph.insert_pattern([space, m, a, c, h]);
-        let _macht = graph.insert_pattern([_mach, t]);
-        let t_ = graph.insert_pattern([t, space]);
-        let _macht_ = graph.insert_patterns([[_macht, space], [_mach, t_]]);
-        let en = graph.insert_pattern([e, n]);
-        let _machen = graph.insert_pattern([_mach, en]);
-        let e_mach = graph.insert_pattern([e, _mach]);
-        let e_macht_ = graph.insert_patterns([[e_mach, t_], [e, _macht_]]);
-        let e_machen = graph.insert_patterns([[e_mach, en], [e, _machen]]);
+    else {
+        panic!()
+    };
 
-        let die = graph.insert_pattern([d, i, e]);
-        let die_ = graph.insert_pattern([die, space]);
-
-        let hund = graph.insert_pattern([h, u, n, d]);
-
-        let wuff = graph.insert_pattern([w, u, f, f]);
-        let _wuff = graph.insert_pattern([space, wuff]);
-        let _macht_wuff =
-            graph.insert_patterns([[_macht_, wuff], [_macht, _wuff]]);
-
-        let _hund = graph.insert_pattern([space, hund]);
-        let die_hund = graph.insert_patterns([[die, _hund], [die_, hund]]);
-        let _s1 =
-            graph.insert_pattern([die_, k, a, t, z, e_macht_, m, i, a, u]);
-        let _s2 = graph.insert_pattern([d, e, r, _hund, _macht_wuff]);
-        let _s2 = graph.insert_pattern([die_hund, e_machen, _wuff]);
-    }
-    else
-    {
-        panic!("Inserting tokens failed!");
-    }
+    insert_patterns!(graph,
+        _mach => [sp, m, a, c, h],
+        en => [e, n]
+    );
+    insert_patterns!(graph,
+        _macht => [_mach, t]
+    );
+    insert_patterns!(graph,
+        t_ => [t, sp],
+        _machen => [_mach, en],
+        e_mach => [e, _mach]
+    );
+    insert_patterns!(graph,
+        _macht_ => [[_macht, sp], [_mach, t_]]
+    );
+    insert_patterns!(graph,
+        e_macht_ => [[e_mach, t_], [e, _macht_]],
+        e_machen => [[e_mach, en], [e, _machen]]
+    );
+    insert_patterns!(graph,
+        die => [d, i, e],
+        hund => [h, u, n, d],
+        wuff => [w, u, f, f]
+    );
+    insert_patterns!(graph,
+        die_ => [die, sp],
+        _wuff => [sp, wuff],
+        _hund => [sp, hund]
+    );
+    insert_patterns!(graph,
+        _macht_wuff => [[_macht_, wuff], [_macht, _wuff]],
+        die_hund => [[die, _hund], [die_, hund]]
+    );
+    insert_patterns!(graph,
+        _s1 => [die_, k, a, t, z, e_macht_, m, i, a, u],
+        _s2a => [d, e, r, _hund, _macht_wuff],
+        _s2b => [die_hund, e_machen, _wuff]
+    );
     graph
 }

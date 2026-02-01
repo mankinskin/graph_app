@@ -13,6 +13,7 @@ use eframe::{
         Color32,
         Frame,
         Pos2,
+        Rect,
         Response,
         Style,
         Ui,
@@ -112,6 +113,7 @@ impl NodeVis {
     pub fn show(
         &self,
         ui: &mut Ui,
+        viewport_rect: Rect,
     ) -> Option<NodeResponse> {
         ui.input(|_state| {
             //self.vis_mut()
@@ -119,6 +121,7 @@ impl NodeVis {
         });
         Window::new(format!("{}({})", self.name, self.idx.index()))
             .default_pos(self.default_pos)
+            .constrain_to(viewport_rect)
             .vscroll(true)
             .auto_sized()
             //.default_width(80.0)

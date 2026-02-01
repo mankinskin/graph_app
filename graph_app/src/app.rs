@@ -15,10 +15,7 @@ use crate::{
         build_graph3,
     },
     read::ReadCtx,
-    vis::{
-        graph::GraphVis,
-        status::ShowStatus,
-    },
+    vis::graph::GraphVis,
 };
 use async_std::sync::{
     Arc,
@@ -55,6 +52,15 @@ pub struct App {
     #[cfg_attr(feature = "persistence", serde(skip))]
     settings_open: bool,
 
+    /// Whether the left panel is open
+    left_panel_open: bool,
+
+    /// Whether the right panel is open
+    right_panel_open: bool,
+
+    /// Whether the bottom panel is open
+    bottom_panel_open: bool,
+
     /// Currently selected algorithm
     selected_algorithm: Algorithm,
 
@@ -81,6 +87,9 @@ impl From<Graph> for App {
             graph_file: None,
             inserter: true,
             settings_open: false,
+            left_panel_open: true,
+            right_panel_open: false,
+            bottom_panel_open: true,
             selected_algorithm: Algorithm::default(),
             read_task: None,
             cancellation_token: None,
@@ -179,22 +188,219 @@ impl App {
         ctx: &egui::Context,
         _frame: &mut eframe::Frame,
     ) {
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+        egui::TopBottomPanel::top("top_menu_bar").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.menu_button("Actions...", |ui| self.context_menu(ui));
-                if ui.button("⚙ Settings").clicked() {
-                    self.settings_open = !self.settings_open;
-                }
+                // File menu
+                ui.menu_button("File", |ui| {
+                    if ui.button("Open...").clicked() {
+                        self.open_file_dialog();
+                        ui.close();
+                    }
+                    ui.separator();
+                    if ui.button("Quit").clicked() {
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
+                });
+
+                // Edit menu
+                ui.menu_button("Edit", |ui| {
+                    if ui.button("Clear Graph").clicked() {
+                        if let Some(mut ctx) = self.ctx_mut() {
+                            ctx.graph_mut().clear();
+                        }
+                        ui.close();
+                    }
+                });
+
+                // View menu
+                ui.menu_button("View", |ui| {
+                    if ui
+                        .checkbox(&mut self.left_panel_open, "Left Panel")
+                        .clicked()
+                    {
+                        ui.close();
+                    }
+                    if ui
+                        .checkbox(&mut self.right_panel_open, "Right Panel")
+                        .clicked()
+                    {
+                        ui.close();
+                    }
+                    if ui
+                        .checkbox(&mut self.bottom_panel_open, "Bottom Panel")
+                        .clicked()
+                    {
+                        ui.close();
+                    }
+                    ui.separator();
+                    if ui
+                        .checkbox(&mut self.inserter, "Inserter Window")
+                        .clicked()
+                    {
+                        ui.close();
+                    }
+                    if ui
+                        .checkbox(&mut self.settings_open, "Settings Window")
+                        .clicked()
+                    {
+                        ui.close();
+                    }
+                });
+
+                // Presets menu
+                ui.menu_button("Presets", |ui| {
+                    if let Some(ctx) = self.ctx() {
+                        if ui.button("Graph 1").clicked() {
+                            ctx.graph().set_graph(build_graph1());
+                            ui.close();
+                        }
+                        if ui.button("Graph 2").clicked() {
+                            ctx.graph().set_graph(build_graph2());
+                            ui.close();
+                        }
+                        if ui.button("Graph 3").clicked() {
+                            ctx.graph().set_graph(build_graph3());
+                            ui.close();
+                        }
+                    }
+                });
+
+                // Right-aligned items
                 ui.with_layout(
                     egui::Layout::right_to_left(egui::Align::Center),
                     |ui| {
-                        if ui.button("Quit").clicked() {
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Close)
+                        if ui.button("⚙").on_hover_text("Settings").clicked()
+                        {
+                            self.settings_open = !self.settings_open;
                         }
                     },
-                )
-            })
+                );
+            });
         });
+    }
+
+    fn left_panel(
+        &mut self,
+        ctx: &egui::Context,
+    ) {
+        egui::SidePanel::left("left_panel")
+            .resizable(true)
+            .default_width(200.0)
+            .min_width(150.0)
+            .show_animated(ctx, self.left_panel_open, |ui| {
+                ui.heading("Tools");
+                ui.separator();
+
+                // Algorithm selection
+                ui.label("Algorithm:");
+                egui::ComboBox::from_id_salt("left_panel_algorithm")
+                    .selected_text(self.selected_algorithm.to_string())
+                    .show_ui(ui, |ui| {
+                        for algorithm in Algorithm::iter() {
+                            ui.selectable_value(
+                                &mut self.selected_algorithm,
+                                algorithm,
+                                algorithm.to_string(),
+                            );
+                        }
+                    });
+
+                ui.add_space(10.0);
+                ui.label(self.selected_algorithm.description());
+
+                ui.add_space(20.0);
+                ui.separator();
+
+                // Insert controls
+                ui.heading("Insert");
+                if let Some(mut read_ctx) = self.ctx_mut() {
+                    for text in &mut read_ctx.graph_mut().insert_texts {
+                        ui.text_edit_singleline(text);
+                    }
+                    if ui.button("+ Add Text").clicked() {
+                        read_ctx.graph_mut().insert_texts.push(String::new());
+                    }
+                }
+
+                ui.add_space(10.0);
+                ui.horizontal(|ui| {
+                    if ui.button("▶ Run").clicked() && self.read_task.is_none()
+                    {
+                        self.start_read();
+                    }
+                    if self.read_task.is_some()
+                        && ui.button("⏹ Cancel").clicked()
+                    {
+                        self.abort();
+                    }
+                });
+            });
+    }
+
+    fn right_panel(
+        &mut self,
+        ctx: &egui::Context,
+    ) {
+        egui::SidePanel::right("right_panel")
+            .resizable(true)
+            .default_width(200.0)
+            .min_width(150.0)
+            .show_animated(ctx, self.right_panel_open, |ui| {
+                ui.heading("Properties");
+                ui.separator();
+
+                // Show graph info
+                if let Some(read_ctx) = self.ctx() {
+                    let graph = read_ctx.graph();
+                    if let Some(graph_ref) = graph.try_read() {
+                        ui.label(format!(
+                            "Vertices: {}",
+                            graph_ref.vertex_count()
+                        ));
+                    }
+                }
+
+                ui.add_space(20.0);
+                ui.separator();
+                ui.heading("Selection");
+                ui.label("No selection");
+            });
+    }
+
+    fn bottom_panel(
+        &mut self,
+        ctx: &egui::Context,
+    ) {
+        egui::TopBottomPanel::bottom("bottom_panel")
+            .resizable(false)
+            .exact_height(28.0)
+            .show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    // Show task status
+                    if self.read_task.is_some() {
+                        ui.spinner();
+                        ui.label("Processing...");
+
+                        // Show progress if available
+                        if let Some(read_ctx) = self.ctx() {
+                            if let Some(status) = read_ctx.status() {
+                                let status = status.read().unwrap();
+                                ui.separator();
+                                ui.label(format!("Pass: {:?}", status.pass()));
+                                let progress = *status.steps() as f32
+                                    / *status.steps_total() as f32;
+                                ui.add(
+                                    egui::ProgressBar::new(progress)
+                                        .desired_width(150.0)
+                                        .show_percentage(),
+                                );
+                            }
+                        }
+                    } else {
+                        ui.label("Ready");
+                    }
+                });
+            });
     }
     #[allow(unused)]
     pub fn vis(&self) -> Option<SyncRwLockReadGuard<'_, GraphVis>> {
@@ -268,9 +474,19 @@ impl eframe::App for App {
         ctx: &egui::Context,
         frame: &mut eframe::Frame,
     ) {
+        // Panels must be added in this order: top/bottom first, then sides, then central
         self.top_panel(ctx, frame);
+
+        if self.bottom_panel_open {
+            self.bottom_panel(ctx);
+        }
+
+        // Side panels use show_animated which handles open/closed state internally
+        self.left_panel(ctx);
+        self.right_panel(ctx);
+
         self.central_panel(ctx);
-        
+
         // Settings window with algorithm dropdown
         if self.settings_open {
             egui::Window::new("Settings")
@@ -280,7 +496,7 @@ impl eframe::App for App {
                 .show(ctx, |ui| {
                     ui.heading("Algorithm Selection");
                     ui.add_space(10.0);
-                    
+
                     ui.horizontal(|ui| {
                         ui.label("Algorithm:");
                         egui::ComboBox::from_id_salt("algorithm_selector")
@@ -295,47 +511,52 @@ impl eframe::App for App {
                                 }
                             });
                     });
-                    
+
                     ui.add_space(10.0);
                     ui.separator();
                     ui.add_space(5.0);
-                    
+
                     // Show algorithm description
                     ui.label("Description:");
                     ui.label(self.selected_algorithm.description());
                 });
         }
-        
-        if self.inserter {
-            egui::Window::new("Inserter").show(ctx, |ui| {
-                // Show currently selected algorithm
-                ui.horizontal(|ui| {
-                    ui.label("Using:");
-                    ui.strong(self.selected_algorithm.to_string());
-                });
-                ui.separator();
-                
-                if let Some(mut ctx) = self.ctx_mut() {
-                    for text in &mut ctx.graph_mut().insert_texts {
-                        ui.text_edit_singleline(text);
+
+        // Floating inserter window (can be toggled from View menu)
+        let mut inserter_open = self.inserter;
+        if inserter_open {
+            egui::Window::new("Inserter").open(&mut inserter_open).show(
+                ctx,
+                |ui| {
+                    // Show currently selected algorithm
+                    ui.horizontal(|ui| {
+                        ui.label("Using:");
+                        ui.strong(self.selected_algorithm.to_string());
+                    });
+                    ui.separator();
+
+                    if let Some(mut ctx) = self.ctx_mut() {
+                        for text in &mut ctx.graph_mut().insert_texts {
+                            ui.text_edit_singleline(text);
+                        }
+                        if ui.button("+").clicked() {
+                            ctx.graph_mut().insert_texts.push(String::new());
+                        }
                     }
-                    if ui.button("+").clicked() {
-                        ctx.graph_mut().insert_texts.push(String::new());
+                    if ui.button("Insert").clicked() && self.read_task.is_none()
+                    {
+                        self.start_read();
                     }
-                }
-                if ui.button("Insert").clicked() && self.read_task.is_none() {
-                    self.start_read();
-                }
-                if self.read_task.is_some() && ui.button("Cancel").clicked() {
-                    self.abort()
-                }
-            });
+                    if self.read_task.is_some() && ui.button("Cancel").clicked()
+                    {
+                        self.abort()
+                    }
+                },
+            );
         }
-        if let Some(read_ctx) = self.ctx() {
-            if let Some(status) = read_ctx.status() {
-                ShowStatus(&status.read().unwrap()).show(ctx);
-            }
-        }
+        self.inserter = inserter_open;
+
+        // Handle finished tasks
         if self
             .read_task
             .as_ref()

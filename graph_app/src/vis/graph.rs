@@ -141,14 +141,22 @@ impl GraphVis {
             }
         }
         let _events = self.poll_events();
+
+        // Get the available rect for constraining node windows
+        let viewport_rect = ui.available_rect_before_wrap();
+
         //println!("{}", self.graph.vertex_count());
         let node_responses: HashMap<_, _> = self
             .graph
             .nodes()
             .filter_map(|(idx, node)| {
-                node.show(ui).map(|response| (idx, response))
+                node.show(ui, viewport_rect).map(|response| (idx, response))
             })
             .collect();
+
+        // Use a clipped painter for edges so they don't render over the panels
+        let clipped_painter = ui.painter().with_clip_rect(viewport_rect);
+
         self.graph.edge_references().for_each(|edge| {
             if let Some((ra, rb)) = node_responses
                 .get(&edge.source())
@@ -157,7 +165,7 @@ impl GraphVis {
                 let a_pos = ra.response.rect.center();
                 let b = rb.response.rect;
                 let p = Self::border_intersection_point(&b, &a_pos);
-                Self::edge(ui, &a_pos, &p);
+                Self::edge_clipped(&clipped_painter, &a_pos, &p);
             }
         });
         for (idx, response) in node_responses.into_iter() {
@@ -227,6 +235,26 @@ impl GraphVis {
             Stroke::new(1.0, egui::Color32::WHITE),
         ));
     }
+    fn edge_tip_clipped(
+        painter: &egui::Painter,
+        source: &Pos2,
+        target: &Pos2,
+        size: f32,
+    ) {
+        let angle = (*target - *source).angle();
+        let points = IntoIterator::into_iter([
+            Vec2::new(0.0, 0.0),
+            Vec2::angled(angle - 0.25 * PI),
+            Vec2::angled(angle + 0.25 * PI),
+        ])
+        .map(|p| *target - p * size)
+        .collect();
+        painter.add(Shape::convex_polygon(
+            points,
+            egui::Color32::WHITE,
+            Stroke::new(1.0, egui::Color32::WHITE),
+        ));
+    }
     #[allow(unused)]
     pub fn edge(
         ui: &mut Ui,
@@ -238,6 +266,17 @@ impl GraphVis {
             Stroke::new(1.0, egui::Color32::WHITE),
         ));
         Self::edge_tip(ui, source, target, 10.0);
+    }
+    fn edge_clipped(
+        painter: &egui::Painter,
+        source: &Pos2,
+        target: &Pos2,
+    ) {
+        painter.add(Shape::line_segment(
+            [*source, *target],
+            Stroke::new(1.0, egui::Color32::WHITE),
+        ));
+        Self::edge_tip_clipped(painter, source, target, 10.0);
     }
     #[allow(clippy::many_single_char_names)]
     fn border_intersection_point(
