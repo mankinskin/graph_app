@@ -79,8 +79,9 @@ impl Graph {
     ) {
         *self.write() = HypergraphRef::from(graph);
     }
-    pub fn clear(&mut self) {
-        *self = Self::default();
+    pub fn clear(&self) {
+        // Replace the underlying graph with a new empty one, keeping the same Arc
+        *self.write() = HypergraphRef::from(Hypergraph::default());
     }
     //pub fn read_text(
     //    &mut self,

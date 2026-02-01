@@ -96,6 +96,10 @@ pub struct App {
     #[cfg_attr(feature = "persistence", serde(skip))]
     pub(crate) inserter_open: bool,
 
+    /// Whether the inserter window has been manually moved
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    pub(crate) inserter_manually_moved: bool,
+
     /// Whether the settings window is open
     #[cfg_attr(feature = "persistence", serde(skip))]
     pub(crate) settings_open: bool,
@@ -133,6 +137,7 @@ impl App {
             selected_tab_id: 0,
             next_tab_id: 1,
             inserter_open: true,
+            inserter_manually_moved: false,
             settings_open: false,
             left_panel_open: true,
             right_panel_open: false,

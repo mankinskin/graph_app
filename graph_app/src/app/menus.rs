@@ -1,12 +1,19 @@
 //! Menu bar and context menu logic.
 
-use eframe::egui::{self, Ui};
+use eframe::egui::{
+    self,
+    Ui,
+};
 use strum::IntoEnumIterator;
 
 use super::App;
 use crate::{
     algorithm::Algorithm,
-    examples::{build_graph1, build_graph2, build_graph3},
+    examples::{
+        build_graph1,
+        build_graph2,
+        build_graph3,
+    },
 };
 
 impl App {
@@ -52,11 +59,14 @@ impl App {
             }
         });
 
-        if let Some(mut ctx) = self.ctx_mut() {
-            if ui.button("Clear").clicked() {
+        if ui.button("Clear").clicked() {
+            if let Some(mut ctx) = self.ctx_mut() {
                 ctx.graph_mut().clear();
-                ui.close();
             }
+            if let Some(mut vis) = self.vis_mut() {
+                vis.mark_dirty();
+            }
+            ui.close();
         }
     }
 

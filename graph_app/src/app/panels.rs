@@ -35,12 +35,7 @@ impl App {
 
                 // Edit menu
                 ui.menu_button("Edit", |ui| {
-                    if ui.button("Clear Graph").clicked() {
-                        if let Some(mut ctx) = self.ctx_mut() {
-                            ctx.graph_mut().clear();
-                        }
-                        ui.close();
-                    }
+                    ui.label("(No edit actions)");
                 });
 
                 // View menu

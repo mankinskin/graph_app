@@ -1,9 +1,15 @@
 //! Central panel with closeable graph tabs and inserter window.
 
-use eframe::egui::{self, Ui};
+use eframe::egui::{
+    self,
+    Ui,
+};
 use strum::IntoEnumIterator;
 
-use super::{App, GraphTab};
+use super::{
+    App,
+    GraphTab,
+};
 use crate::algorithm::Algorithm;
 
 impl App {
@@ -15,6 +21,10 @@ impl App {
             .show(ctx, |ui| {
                 // Tab bar with close buttons and new tab button
                 self.show_tab_bar(ui);
+                ui.separator();
+
+                // Tab-specific menu bar
+                self.show_tab_menu_bar(ui);
                 ui.separator();
 
                 // Get viewport rect for constraining windows
@@ -32,18 +42,24 @@ impl App {
             .context_menu(|ui| self.context_menu(ui));
     }
 
-    fn show_tab_bar(&mut self, ui: &mut Ui) {
+    fn show_tab_bar(
+        &mut self,
+        ui: &mut Ui,
+    ) {
         ui.horizontal(|ui| {
             let mut tab_to_close: Option<usize> = None;
             let mut tab_to_select: Option<usize> = None;
 
             for tab in &self.tabs {
                 let is_selected = tab.id == self.selected_tab_id;
-                
+
                 ui.horizontal(|ui| {
                     // Tab button
                     if ui
-                        .selectable_label(is_selected, format!("📊 {}", &tab.name))
+                        .selectable_label(
+                            is_selected,
+                            format!("📊 {}", &tab.name),
+                        )
                         .clicked()
                     {
                         tab_to_select = Some(tab.id);
@@ -81,6 +97,26 @@ impl App {
         });
     }
 
+    fn show_tab_menu_bar(
+        &mut self,
+        ui: &mut Ui,
+    ) {
+        egui::menu::bar(ui, |ui| {
+            // Graph menu
+            ui.menu_button("Graph", |ui| {
+                if ui.button("Clear").clicked() {
+                    if let Some(mut ctx) = self.ctx_mut() {
+                        ctx.graph_mut().clear();
+                    }
+                    if let Some(mut vis) = self.vis_mut() {
+                        vis.mark_dirty();
+                    }
+                    ui.close();
+                }
+            });
+        });
+    }
+
     pub(crate) fn create_new_tab(&mut self) {
         let id = self.next_tab_id;
         self.next_tab_id += 1;
@@ -89,7 +125,10 @@ impl App {
         self.selected_tab_id = id;
     }
 
-    pub(crate) fn close_tab(&mut self, id: usize) {
+    pub(crate) fn close_tab(
+        &mut self,
+        id: usize,
+    ) {
         if self.tabs.len() <= 1 {
             return; // Don't close the last tab
         }
@@ -117,18 +156,43 @@ impl App {
         }
 
         let mut inserter_open = self.inserter_open;
-        egui::Window::new("✏ Inserter")
+        let window_width = 350.0;
+        let right_aligned_pos = egui::pos2(
+            viewport_rect.right() - window_width - 10.0,
+            viewport_rect.top() + 10.0,
+        );
+
+        let mut window = egui::Window::new("✏ Inserter")
             .open(&mut inserter_open)
             .resizable(true)
-            .default_width(350.0)
-            .constrain_to(viewport_rect)
-            .show(ctx, |ui| {
-                self.show_inserter_content(ui);
-            });
+            .default_width(window_width)
+            .constrain_to(viewport_rect);
+
+        // Keep right-aligned unless manually moved
+        if !self.inserter_manually_moved {
+            window = window.current_pos(right_aligned_pos);
+        } else {
+            window = window.default_pos(right_aligned_pos);
+        }
+
+        let response = window.show(ctx, |ui| {
+            self.show_inserter_content(ui);
+        });
+
+        // Detect if window was dragged
+        if let Some(inner) = response {
+            if inner.response.dragged() {
+                self.inserter_manually_moved = true;
+            }
+        }
+
         self.inserter_open = inserter_open;
     }
 
-    fn show_inserter_content(&mut self, ui: &mut Ui) {
+    fn show_inserter_content(
+        &mut self,
+        ui: &mut Ui,
+    ) {
         // Show currently selected algorithm
         ui.horizontal(|ui| {
             ui.label("Algorithm:");
@@ -161,7 +225,9 @@ impl App {
 
             for (i, text) in texts.iter_mut().enumerate() {
                 ui.horizontal(|ui| {
-                    ui.add(egui::TextEdit::singleline(text).desired_width(280.0));
+                    ui.add(
+                        egui::TextEdit::singleline(text).desired_width(280.0),
+                    );
                     if ui.button("✖").on_hover_text("Remove").clicked() {
                         to_remove = Some(i);
                     }
