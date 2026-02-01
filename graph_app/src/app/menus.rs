@@ -3,7 +3,7 @@
 use eframe::egui::{self, Ui};
 use strum::IntoEnumIterator;
 
-use super::{App, CentralTab};
+use super::App;
 use crate::{
     algorithm::Algorithm,
     examples::{build_graph1, build_graph2, build_graph3},
@@ -30,8 +30,8 @@ impl App {
             }
         });
 
-        if ui.button("Open Inserter").clicked() {
-            self.selected_tab = CentralTab::Inserter;
+        if ui.button("Toggle Inserter").clicked() {
+            self.inserter_open = !self.inserter_open;
             ui.close();
         }
 

@@ -48,9 +48,9 @@ pub fn start(canvas_id: &str) -> Result<(), eframe::wasm_bindgen::JsValue> {
     eframe::start_web(canvas_id, Box::new(app))
 }
 
-pub async fn open(graph: HypergraphRef) -> Result<(), eframe::Error> {
-    let graph = Graph::from(graph);
-    let app = App::from(graph);
+pub async fn open(_graph: HypergraphRef) -> Result<(), eframe::Error> {
+    // Each tab manages its own graph internally
+    let app = App::new();
     eframe::run_native(
         "Graph App",
         eframe::NativeOptions::default(),

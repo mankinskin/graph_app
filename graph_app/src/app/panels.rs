@@ -3,7 +3,7 @@
 use eframe::egui;
 use strum::IntoEnumIterator;
 
-use super::{App, CentralTab};
+use super::App;
 use crate::{
     algorithm::Algorithm,
     examples::{build_graph1, build_graph2, build_graph3},
@@ -60,32 +60,21 @@ impl App {
                         ui.close();
                     }
                     ui.separator();
-                    ui.label("Central Tab:");
                     if ui
-                        .selectable_label(
-                            self.selected_tab == CentralTab::Graph,
-                            "Graph",
-                        )
+                        .checkbox(&mut self.inserter_open, "Inserter Window")
                         .clicked()
                     {
-                        self.selected_tab = CentralTab::Graph;
                         ui.close();
                     }
-                    if ui
-                        .selectable_label(
-                            self.selected_tab == CentralTab::Inserter,
-                            "Inserter",
-                        )
-                        .clicked()
-                    {
-                        self.selected_tab = CentralTab::Inserter;
-                        ui.close();
-                    }
-                    ui.separator();
                     if ui
                         .checkbox(&mut self.settings_open, "Settings Window")
                         .clicked()
                     {
+                        ui.close();
+                    }
+                    ui.separator();
+                    if ui.button("New Tab").clicked() {
+                        self.create_new_tab();
                         ui.close();
                     }
                 });

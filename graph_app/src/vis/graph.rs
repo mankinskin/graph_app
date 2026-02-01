@@ -47,6 +47,8 @@ pub struct GraphVis {
     graph: DiGraph<NodeVis, ()>,
     handle: Option<Graph>,
     layout: GraphLayout,
+    /// Flag to indicate the graph needs to be rebuilt
+    dirty: bool,
 }
 #[derive(Debug)]
 #[allow(unused)]
@@ -73,6 +75,7 @@ impl GraphVis {
     pub fn update(&mut self) -> Result<(), UpdateError> {
         let handle = self.graph().ok_or(NotInitialized)?;
         let cg = handle.read();
+
         let pg = cg.to_petgraph().filter_map_owned(
             |_idx, (_index, node)| {
                 if node.data.width() <= 1 {
@@ -83,10 +86,14 @@ impl GraphVis {
             },
             |_idx, e| (e.token.width() > 1).then_some(()),
         );
-        if !self.initialized() {
-            self.layout = GraphLayout::generate(&cg, pg);
-        }
-        self.update_rerun(&handle)?;
+
+        // Regenerate layout
+        self.layout = GraphLayout::generate(&cg, pg);
+        // Clear the old graph to force rebuild in update_egui
+        self.graph = DiGraph::new();
+
+        // Try to update rerun, but don't fail if it's not available
+        let _ = self.update_rerun(&handle);
         self.update_egui(&handle);
         Ok(())
     }
@@ -135,10 +142,12 @@ impl GraphVis {
         &mut self,
         ui: &mut Ui,
     ) {
-        if !self.initialized() {
+        // Update if not initialized OR if marked dirty
+        if !self.initialized() || self.dirty {
             if let Err(err) = self.update() {
                 println!("Error updating graph: {:?}", err);
             }
+            self.dirty = false;
         }
         let _events = self.poll_events();
 
@@ -205,11 +214,18 @@ impl GraphVis {
     fn initialized(&self) -> bool {
         self.graph.node_count() > 0 && self.handle.is_some()
     }
+
+    /// Mark the graph visualization as needing a rebuild
+    pub fn mark_dirty(&mut self) {
+        self.dirty = true;
+    }
+
     pub fn new(graph: Graph) -> Self {
         Self {
             graph: DiGraph::new(),
             handle: Some(graph),
             layout: GraphLayout::default(),
+            dirty: false,
         }
     }
     fn graph(&self) -> Option<Graph> {

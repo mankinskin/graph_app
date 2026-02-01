@@ -13,6 +13,7 @@ use serde::*;
 use crate::graph::*;
 use crate::{
     algorithm::Algorithm,
+    graph::Graph,
     read::ReadCtx,
     vis::graph::GraphVis,
 };
@@ -21,10 +22,6 @@ use async_std::sync::{
     RwLock,
     RwLockReadGuard,
     RwLockWriteGuard,
-};
-use derive_more::{
-    Deref,
-    DerefMut,
 };
 use std::{
     future::Future,
@@ -36,24 +33,68 @@ use std::{
 };
 use tokio_util::sync::CancellationToken;
 
-/// Tabs available in the central panel
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum CentralTab {
-    #[default]
-    Graph,
-    Inserter,
+/// A single graph tab with its own graph state
+#[derive(Debug)]
+pub struct GraphTab {
+    pub id: usize,
+    pub name: String,
+    pub vis: Arc<SyncRwLock<GraphVis>>,
+    pub read_ctx: Arc<RwLock<ReadCtx>>,
 }
 
-#[derive(Deref, DerefMut, Debug)]
+impl GraphTab {
+    pub fn new(
+        id: usize,
+        name: impl Into<String>,
+    ) -> Self {
+        let graph = Graph::default();
+        Self {
+            id,
+            name: name.into(),
+            vis: Arc::new(SyncRwLock::new(GraphVis::new(graph.clone()))),
+            read_ctx: Arc::new(RwLock::new(ReadCtx::new(graph))),
+        }
+    }
+
+    pub fn vis(&self) -> Option<SyncRwLockReadGuard<'_, GraphVis>> {
+        self.vis.read().ok()
+    }
+
+    pub fn vis_mut(&self) -> Option<SyncRwLockWriteGuard<'_, GraphVis>> {
+        self.vis.write().ok()
+    }
+
+    pub fn ctx(&self) -> Option<RwLockReadGuard<'_, ReadCtx>> {
+        self.read_ctx.try_read()
+    }
+
+    pub fn ctx_mut(&self) -> Option<RwLockWriteGuard<'_, ReadCtx>> {
+        self.read_ctx.try_write()
+    }
+}
+
+#[derive(Debug)]
 #[cfg_attr(feature = "persistence", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "persistence", serde(default))]
 pub struct App {
     #[allow(unused)]
     graph_file: Option<std::path::PathBuf>,
 
-    /// Currently selected tab in the central panel
+    /// List of open graph tabs
     #[cfg_attr(feature = "persistence", serde(skip))]
-    pub(crate) selected_tab: CentralTab,
+    pub(crate) tabs: Vec<GraphTab>,
+
+    /// Currently selected tab index
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    pub(crate) selected_tab_id: usize,
+
+    /// Counter for generating unique tab IDs
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    pub(crate) next_tab_id: usize,
+
+    /// Whether the inserter window is open
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    pub(crate) inserter_open: bool,
 
     /// Whether the settings window is open
     #[cfg_attr(feature = "persistence", serde(skip))]
@@ -75,25 +116,23 @@ pub struct App {
 
     #[cfg_attr(feature = "persistence", serde(skip))]
     pub(crate) cancellation_token: Option<CancellationToken>,
-
-    #[deref]
-    #[deref_mut]
-    pub(crate) read_ctx: Arc<RwLock<ReadCtx>>,
-
-    pub vis: Arc<SyncRwLock<GraphVis>>,
 }
 
 impl Default for App {
     fn default() -> Self {
-        Self::from(Graph::default())
+        Self::new()
     }
 }
 
-impl From<Graph> for App {
-    fn from(graph: Graph) -> Self {
+impl App {
+    pub fn new() -> Self {
+        let initial_tab = GraphTab::new(0, "Graph 1");
         Self {
             graph_file: None,
-            selected_tab: CentralTab::default(),
+            tabs: vec![initial_tab],
+            selected_tab_id: 0,
+            next_tab_id: 1,
+            inserter_open: true,
             settings_open: false,
             left_panel_open: true,
             right_panel_open: false,
@@ -101,30 +140,36 @@ impl From<Graph> for App {
             selected_algorithm: Algorithm::default(),
             read_task: None,
             cancellation_token: None,
-            vis: Arc::new(SyncRwLock::new(GraphVis::new(graph.clone()))),
-            read_ctx: Arc::new(RwLock::new(ReadCtx::new(graph))),
         }
     }
-}
 
-impl App {
-    #[allow(unused)]
-    pub fn ctx(&self) -> Option<RwLockReadGuard<'_, ReadCtx>> {
-        self.read_ctx.try_read()
+    /// Get the currently selected tab
+    pub fn current_tab(&self) -> Option<&GraphTab> {
+        self.tabs.iter().find(|t| t.id == self.selected_tab_id)
+    }
+
+    /// Get mutable reference to the currently selected tab
+    pub fn current_tab_mut(&mut self) -> Option<&mut GraphTab> {
+        self.tabs.iter_mut().find(|t| t.id == self.selected_tab_id)
     }
 
     #[allow(unused)]
-    pub fn ctx_mut(&mut self) -> Option<RwLockWriteGuard<'_, ReadCtx>> {
-        self.read_ctx.try_write()
+    pub fn ctx(&self) -> Option<RwLockReadGuard<'_, ReadCtx>> {
+        self.current_tab()?.ctx()
+    }
+
+    #[allow(unused)]
+    pub fn ctx_mut(&self) -> Option<RwLockWriteGuard<'_, ReadCtx>> {
+        self.current_tab()?.ctx_mut()
     }
 
     #[allow(unused)]
     pub fn vis(&self) -> Option<SyncRwLockReadGuard<'_, GraphVis>> {
-        self.vis.read().ok()
+        self.current_tab()?.vis()
     }
 
     pub fn vis_mut(&self) -> Option<SyncRwLockWriteGuard<'_, GraphVis>> {
-        self.vis.write().ok()
+        self.current_tab()?.vis_mut()
     }
 
     #[allow(unused)]

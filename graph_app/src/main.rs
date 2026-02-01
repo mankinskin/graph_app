@@ -29,11 +29,9 @@ pub struct Args {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use clap::Parser as _;
 
-    use crate::graph::Graph;
-    let args = Args::parse();
+    let _args = Args::parse();
 
-    let (rec, _serve_guard) = args.rerun.init("context_graph_app")?;
-    let graph = Graph::from(rec);
+    // let (rec, _serve_guard) = args.rerun.init("context_graph_app")?;
     println!("Main thread {:?}", std::thread::current().id());
     eframe::run_native(
         "Graph App",
@@ -42,7 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             use eframe::egui::ThemePreference;
 
             creation_context.egui_ctx.set_theme(ThemePreference::Dark);
-            Ok(Box::new(App::from(graph)))
+            Ok(Box::new(App::new()))
         }),
     )
     .map_err(|e| e.into())
