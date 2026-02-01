@@ -38,9 +38,18 @@ impl App {
                 // Get viewport rect for constraining windows
                 let viewport_rect = ui.available_rect_before_wrap();
 
-                // Show the graph for the selected tab
+                // Show the graph for the selected tab and handle clicks
+                let mut clicked_node = None;
                 if let Some(mut vis) = self.vis_mut() {
-                    vis.show(ui)
+                    let response = vis.show(ui);
+                    clicked_node = response.clicked_node;
+                }
+                
+                // Update selection if a node was clicked
+                if let Some(key) = clicked_node {
+                    if let Some(tab) = self.current_tab_mut() {
+                        tab.selected_node = Some(key);
+                    }
                 }
 
                 // Show inserter as a floating window within the central panel

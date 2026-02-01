@@ -20,9 +20,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // let (rec, _serve_guard) = args.rerun.init("context_graph_app")?;
     println!("Main thread {:?}", std::thread::current().id());
+
+    let native_options = eframe::NativeOptions {
+        viewport: eframe::egui::ViewportBuilder::default().with_maximized(true),
+        ..Default::default()
+    };
+
     eframe::run_native(
         "Graph App",
-        eframe::NativeOptions::default(),
+        native_options,
         Box::new(|creation_context| {
             use eframe::egui::ThemePreference;
 

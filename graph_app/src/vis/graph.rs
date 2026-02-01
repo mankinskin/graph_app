@@ -43,6 +43,13 @@ use crate::{
     },
 };
 
+/// Response from showing the graph
+#[derive(Debug, Default)]
+pub struct GraphResponse {
+    /// The node that was clicked, if any
+    pub clicked_node: Option<VertexKey>,
+}
+
 #[derive(Debug)]
 pub struct GraphVis {
     graph: DiGraph<NodeVis, ()>,
@@ -215,7 +222,9 @@ impl GraphVis {
     pub fn show(
         &mut self,
         ui: &mut Ui,
-    ) {
+    ) -> GraphResponse {
+        let mut response = GraphResponse::default();
+
         // Update if not initialized OR if marked dirty
         if !self.initialized() || self.dirty {
             if let Err(err) = self.update() {
@@ -286,18 +295,27 @@ impl GraphVis {
         let mut node_screen_rects: HashMap<NodeIndex, Rect> =
             HashMap::default();
         let mut dragged_node: Option<NodeIndex> = None;
+        let mut clicked_node: Option<VertexKey> = None;
 
         for (idx, node) in self.graph.nodes_mut() {
             let screen_pos =
                 viewport_min + (node.world_pos.to_vec2() * zoom) + pan;
 
-            if let Some(response) =
+            if let Some(node_response) =
                 node.show(ui, screen_pos, zoom, viewport_rect)
             {
-                node_screen_rects.insert(idx, response.rect);
+                node_screen_rects.insert(idx, node_response.rect);
 
-                if response.response.dragged_by(egui::PointerButton::Primary) {
+                if node_response
+                    .response
+                    .dragged_by(egui::PointerButton::Primary)
+                {
                     dragged_node = Some(idx);
+                }
+
+                // Detect click (clicked = was pressed and released)
+                if node_response.response.clicked() {
+                    clicked_node = Some(node.key);
                 }
             }
         }
@@ -382,6 +400,10 @@ impl GraphVis {
                 node.manually_moved = true;
             }
         }
+
+        // Set clicked node in response
+        response.clicked_node = clicked_node;
+        response
     }
 
     fn draw_grid(

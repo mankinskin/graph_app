@@ -1,5 +1,7 @@
 //! Panel rendering (top, left, right, bottom).
 
+use context_trace::graph::vertex::has_vertex_key::HasVertexKey;
+use context_trace::VertexSet;
 use eframe::egui;
 use strum::IntoEnumIterator;
 
@@ -148,30 +150,131 @@ impl App {
         &mut self,
         ctx: &egui::Context,
     ) {
+        // Get selected node from current tab
+        let selected_node = self.current_tab().and_then(|t| t.selected_node);
+        
+        // Collect all the display data outside the panel closure
+        let vertex_count = self.ctx()
+            .and_then(|ctx| ctx.graph().try_read().map(|g| g.vertex_count()));
+        
+        // Collect selection info
+        let selection_info = selected_node.and_then(|key| {
+            let read_ctx = self.ctx()?;
+            let graph = read_ctx.graph();
+            let graph_ref = graph.try_read()?;
+            let data = graph_ref.get_vertex_data(key).ok()?;
+            
+            let name = graph_ref.vertex_data_string(data.clone());
+            let width = data.to_child().width.0;
+            
+            // Collect parents
+            let parents = data.parents();
+            let parent_info: Vec<_> = parents.keys()
+                .filter_map(|parent_idx| {
+                    graph_ref.get_vertex_data(*parent_idx).ok().map(|pdata| {
+                        let name = graph_ref.vertex_data_string(pdata.clone());
+                        let key = pdata.vertex_key();
+                        (name, key)
+                    })
+                })
+                .collect();
+            
+            // Collect children
+            let patterns = data.child_patterns();
+            let mut shown_children = std::collections::HashSet::new();
+            let child_info: Vec<_> = patterns.iter()
+                .flat_map(|(_pat_id, pattern)| pattern.iter())
+                .filter_map(|child| {
+                    let child_idx = child.index;
+                    if shown_children.insert(child_idx) {
+                        graph_ref.get_vertex_data(child_idx).ok().map(|cdata| {
+                            let cname = graph_ref.vertex_data_string(cdata.clone());
+                            let ckey = cdata.vertex_key();
+                            (cname, ckey)
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            
+            Some((name, width, parent_info, child_info))
+        });
+        
+        // Track what was clicked
+        let mut new_selection: Option<Option<context_trace::graph::vertex::key::VertexKey>> = None;
+        
         egui::SidePanel::right("right_panel")
             .resizable(true)
-            .default_width(200.0)
-            .min_width(150.0)
+            .default_width(250.0)
+            .min_width(200.0)
             .show_animated(ctx, self.right_panel_open, |ui| {
                 ui.heading("Properties");
                 ui.separator();
 
                 // Show graph info
-                if let Some(read_ctx) = self.ctx() {
-                    let graph = read_ctx.graph();
-                    if let Some(graph_ref) = graph.try_read() {
-                        ui.label(format!(
-                            "Vertices: {}",
-                            graph_ref.vertex_count()
-                        ));
-                    }
+                if let Some(count) = vertex_count {
+                    ui.label(format!("Vertices: {}", count));
                 }
 
                 ui.add_space(20.0);
                 ui.separator();
                 ui.heading("Selection");
-                ui.label("No selection");
+                
+                if let Some((name, width, parent_info, child_info)) = &selection_info {
+                    ui.strong(name);
+                    
+                    ui.add_space(10.0);
+                    
+                    // Show properties
+                    ui.horizontal(|ui| {
+                        ui.label("Width:");
+                        ui.label(format!("{}", width));
+                    });
+                    
+                    // Show parents
+                    ui.add_space(10.0);
+                    ui.label("Parents:");
+                    if parent_info.is_empty() {
+                        ui.label("  (none)");
+                    } else {
+                        for (parent_name, parent_key) in parent_info {
+                            if ui.link(parent_name).clicked() {
+                                new_selection = Some(Some(*parent_key));
+                            }
+                        }
+                    }
+                    
+                    // Show children
+                    ui.add_space(10.0);
+                    ui.label("Children:");
+                    if child_info.is_empty() {
+                        ui.label("  (none)");
+                    } else {
+                        for (child_name, child_key) in child_info {
+                            if ui.link(child_name).clicked() {
+                                new_selection = Some(Some(*child_key));
+                            }
+                        }
+                    }
+                    
+                    ui.add_space(10.0);
+                    if ui.button("Clear Selection").clicked() {
+                        new_selection = Some(None);
+                    }
+                } else if selected_node.is_some() {
+                    ui.label("(Could not load selection)");
+                } else {
+                    ui.label("Click a node to select it");
+                }
             });
+        
+        // Apply selection change after panel is done
+        if let Some(sel) = new_selection {
+            if let Some(tab) = self.current_tab_mut() {
+                tab.selected_node = sel;
+            }
+        }
     }
 
     pub(crate) fn bottom_panel(

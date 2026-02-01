@@ -19,6 +19,7 @@ use crate::{
     vis::graph::GraphVis,
     widgets::EditableLabelState,
 };
+use context_trace::graph::vertex::key::VertexKey;
 use async_std::sync::{
     Arc,
     RwLock,
@@ -43,6 +44,8 @@ pub struct GraphTab {
     pub label_state: EditableLabelState,
     pub vis: Arc<SyncRwLock<GraphVis>>,
     pub read_ctx: Arc<RwLock<ReadCtx>>,
+    /// Currently selected node in the graph
+    pub selected_node: Option<VertexKey>,
 }
 
 impl GraphTab {
@@ -57,6 +60,7 @@ impl GraphTab {
             label_state: EditableLabelState::default(),
             vis: Arc::new(SyncRwLock::new(GraphVis::new(graph.clone()))),
             read_ctx: Arc::new(RwLock::new(ReadCtx::new(graph))),
+            selected_node: None,
         }
     }
 
