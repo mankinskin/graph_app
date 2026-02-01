@@ -40,15 +40,21 @@ impl App {
 
                 // Show the graph for the selected tab and handle clicks
                 let mut clicked_node = None;
+                let mut background_clicked = false;
                 if let Some(mut vis) = self.vis_mut() {
                     let response = vis.show(ui);
                     clicked_node = response.clicked_node;
+                    background_clicked = response.background_clicked;
                 }
-                
-                // Update selection if a node was clicked
+
+                // Update selection if a node was clicked, clear if background was clicked
                 if let Some(key) = clicked_node {
                     if let Some(tab) = self.current_tab_mut() {
                         tab.selected_node = Some(key);
+                    }
+                } else if background_clicked {
+                    if let Some(tab) = self.current_tab_mut() {
+                        tab.selected_node = None;
                     }
                 }
 

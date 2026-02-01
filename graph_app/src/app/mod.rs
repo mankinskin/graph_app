@@ -19,13 +19,13 @@ use crate::{
     vis::graph::GraphVis,
     widgets::EditableLabelState,
 };
-use context_trace::graph::vertex::key::VertexKey;
 use async_std::sync::{
     Arc,
     RwLock,
     RwLockReadGuard,
     RwLockWriteGuard,
 };
+use context_trace::graph::vertex::key::VertexKey;
 use std::{
     future::Future,
     sync::{
@@ -161,7 +161,7 @@ impl App {
             inserter_manually_moved: false,
             settings_open: false,
             left_panel_open: true,
-            right_panel_open: false,
+            right_panel_open: true,
             bottom_panel_open: true,
             bottom_panel_overlaps_left: false,
             bottom_panel_overlaps_right: false,

@@ -1,8 +1,25 @@
 //! Panel rendering (top, left, right, bottom).
 
-use context_trace::graph::vertex::has_vertex_key::HasVertexKey;
-use context_trace::VertexSet;
-use eframe::egui;
+use context_trace::{
+    graph::vertex::{
+        has_vertex_key::HasVertexKey,
+        key::VertexKey,
+    },
+    VertexSet,
+};
+use eframe::egui::{
+    self,
+    Color32,
+    PopupCloseBehavior,
+    Pos2,
+    Rect,
+    Stroke,
+    Vec2,
+};
+use egui::containers::menu::{
+    MenuButton,
+    MenuConfig,
+};
 use strum::IntoEnumIterator;
 
 use super::App;
@@ -28,51 +45,28 @@ impl App {
                     }
                 });
 
-                // View menu
-                ui.menu_button("View", |ui| {
-                    if ui
-                        .checkbox(&mut self.left_panel_open, "Left Panel")
-                        .clicked()
-                    {
-                        ui.close();
-                    }
-                    if ui
-                        .checkbox(&mut self.right_panel_open, "Right Panel")
-                        .clicked()
-                    {
-                        ui.close();
-                    }
-                    if ui
-                        .checkbox(&mut self.bottom_panel_open, "Bottom Panel")
-                        .clicked()
-                    {
-                        ui.close();
-                    }
-                    if ui
-                        .checkbox(&mut self.status_bar_open, "Status Bar")
-                        .clicked()
-                    {
-                        ui.close();
-                    }
-                    ui.separator();
-                    if ui
-                        .checkbox(&mut self.inserter_open, "Inserter Window")
-                        .clicked()
-                    {
-                        ui.close();
-                    }
-                    if ui
-                        .checkbox(&mut self.settings_open, "Settings Window")
-                        .clicked()
-                    {
-                        ui.close();
-                    }
-                    ui.separator();
-                    if ui.button("New Tab").clicked() {
-                        self.create_new_tab();
-                        ui.close();
-                    }
-                });
+                // View menu - use CloseOnClickOutside so checkboxes don't close the menu
+                MenuButton::new("View")
+                    .config(MenuConfig::new().close_behavior(
+                        PopupCloseBehavior::CloseOnClickOutside,
+                    ))
+                    .ui(ui, |ui| {
+                        ui.checkbox(&mut self.left_panel_open, "Left Panel");
+                        ui.checkbox(&mut self.right_panel_open, "Right Panel");
+                        ui.checkbox(
+                            &mut self.bottom_panel_open,
+                            "Bottom Panel",
+                        );
+                        ui.checkbox(&mut self.status_bar_open, "Status Bar");
+                        ui.separator();
+                        ui.checkbox(&mut self.inserter_open, "Inserter Window");
+                        ui.checkbox(&mut self.settings_open, "Settings Window");
+                        ui.separator();
+                        if ui.button("New Tab").clicked() {
+                            self.create_new_tab();
+                            ui.close();
+                        }
+                    });
 
                 // Right-aligned items
                 ui.with_layout(
@@ -152,43 +146,47 @@ impl App {
     ) {
         // Get selected node from current tab
         let selected_node = self.current_tab().and_then(|t| t.selected_node);
-        
+
         // Collect all the display data outside the panel closure
-        let vertex_count = self.ctx()
+        let vertex_count = self
+            .ctx()
             .and_then(|ctx| ctx.graph().try_read().map(|g| g.vertex_count()));
-        
-        // Collect selection info
+
+        // Collect selection info with more detail for rendering
         let selection_info = selected_node.and_then(|key| {
             let read_ctx = self.ctx()?;
             let graph = read_ctx.graph();
             let graph_ref = graph.try_read()?;
             let data = graph_ref.get_vertex_data(key).ok()?;
-            
+
             let name = graph_ref.vertex_data_string(data.clone());
             let width = data.to_child().width.0;
-            
+
             // Collect parents
             let parents = data.parents();
-            let parent_info: Vec<_> = parents.keys()
+            let parent_info: Vec<_> = parents
+                .keys()
                 .filter_map(|parent_idx| {
                     graph_ref.get_vertex_data(*parent_idx).ok().map(|pdata| {
-                        let name = graph_ref.vertex_data_string(pdata.clone());
-                        let key = pdata.vertex_key();
-                        (name, key)
+                        let pname = graph_ref.vertex_data_string(pdata.clone());
+                        let pkey = pdata.vertex_key();
+                        (pname, pkey)
                     })
                 })
                 .collect();
-            
+
             // Collect children
             let patterns = data.child_patterns();
             let mut shown_children = std::collections::HashSet::new();
-            let child_info: Vec<_> = patterns.iter()
+            let child_info: Vec<_> = patterns
+                .iter()
                 .flat_map(|(_pat_id, pattern)| pattern.iter())
                 .filter_map(|child| {
                     let child_idx = child.index;
                     if shown_children.insert(child_idx) {
                         graph_ref.get_vertex_data(child_idx).ok().map(|cdata| {
-                            let cname = graph_ref.vertex_data_string(cdata.clone());
+                            let cname =
+                                graph_ref.vertex_data_string(cdata.clone());
                             let ckey = cdata.vertex_key();
                             (cname, ckey)
                         })
@@ -197,17 +195,17 @@ impl App {
                     }
                 })
                 .collect();
-            
-            Some((name, width, parent_info, child_info))
+
+            Some((name, width, parent_info, child_info, key))
         });
-        
+
         // Track what was clicked
-        let mut new_selection: Option<Option<context_trace::graph::vertex::key::VertexKey>> = None;
-        
+        let mut new_selection: Option<Option<VertexKey>> = None;
+
         egui::SidePanel::right("right_panel")
             .resizable(true)
-            .default_width(250.0)
-            .min_width(200.0)
+            .default_width(300.0)
+            .min_width(250.0)
             .show_animated(ctx, self.right_panel_open, |ui| {
                 ui.heading("Properties");
                 ui.separator();
@@ -217,64 +215,295 @@ impl App {
                     ui.label(format!("Vertices: {}", count));
                 }
 
-                ui.add_space(20.0);
+                ui.add_space(10.0);
                 ui.separator();
                 ui.heading("Selection");
-                
-                if let Some((name, width, parent_info, child_info)) = &selection_info {
-                    ui.strong(name);
-                    
+
+                if let Some((
+                    name,
+                    width,
+                    parent_info,
+                    child_info,
+                    _selected_key,
+                )) = &selection_info
+                {
+                    // Show mini neighborhood graph
+                    ui.add_space(5.0);
+
+                    let graph_height = 200.0;
+                    let (response, painter) = ui.allocate_painter(
+                        Vec2::new(ui.available_width(), graph_height),
+                        egui::Sense::click(),
+                    );
+                    let rect = response.rect;
+
+                    // Draw background
+                    painter.rect_filled(
+                        rect,
+                        4.0,
+                        Color32::from_rgb(30, 33, 38),
+                    );
+                    painter.rect_stroke(
+                        rect,
+                        4.0,
+                        Stroke::new(1.0, Color32::from_rgb(60, 65, 75)),
+                        egui::StrokeKind::Inside,
+                    );
+
+                    // Layout: parents at top, selected in middle, children at bottom
+                    let center_x = rect.center().x;
+                    let selected_y = rect.center().y;
+                    let parent_y = rect.min.y + 35.0;
+                    let child_y = rect.max.y - 35.0;
+
+                    // Selected node (larger, in center)
+                    let selected_size = Vec2::new(120.0, 40.0);
+                    let selected_rect = Rect::from_center_size(
+                        Pos2::new(center_x, selected_y),
+                        selected_size,
+                    );
+
+                    // Draw selected node
+                    painter.rect_filled(
+                        selected_rect,
+                        6.0,
+                        Color32::from_rgb(50, 100, 150),
+                    );
+                    painter.rect_stroke(
+                        selected_rect,
+                        6.0,
+                        Stroke::new(2.0, Color32::from_rgb(100, 150, 200)),
+                        egui::StrokeKind::Inside,
+                    );
+
+                    // Truncate name if too long
+                    let display_name = if name.len() > 14 {
+                        format!("{}...", &name[..11])
+                    } else {
+                        name.clone()
+                    };
+                    painter.text(
+                        selected_rect.center(),
+                        egui::Align2::CENTER_CENTER,
+                        &display_name,
+                        egui::FontId::proportional(12.0),
+                        Color32::WHITE,
+                    );
+
+                    // Draw parent nodes (small, at top)
+                    let parent_count = parent_info.len();
+                    let small_size = Vec2::new(60.0, 24.0);
+                    let spacing = 70.0;
+                    let parent_start_x =
+                        center_x - (parent_count as f32 - 1.0) * spacing / 2.0;
+
+                    for (i, (pname, pkey)) in parent_info.iter().enumerate() {
+                        let px = parent_start_x + i as f32 * spacing;
+                        let parent_rect = Rect::from_center_size(
+                            Pos2::new(px, parent_y),
+                            small_size,
+                        );
+
+                        // Check if clicked
+                        if response.clicked() {
+                            if let Some(pos) = response.interact_pointer_pos() {
+                                if parent_rect.contains(pos) {
+                                    new_selection = Some(Some(*pkey));
+                                }
+                            }
+                        }
+
+                        let is_hovered = response.hovered()
+                            && ui
+                                .input(|i| i.pointer.hover_pos())
+                                .map(|p| parent_rect.contains(p))
+                                .unwrap_or(false);
+
+                        let fill = if is_hovered {
+                            Color32::from_rgb(70, 80, 90)
+                        } else {
+                            Color32::from_rgb(50, 55, 65)
+                        };
+
+                        painter.rect_filled(parent_rect, 4.0, fill);
+                        painter.rect_stroke(
+                            parent_rect,
+                            4.0,
+                            Stroke::new(1.0, Color32::from_rgb(80, 90, 100)),
+                            egui::StrokeKind::Inside,
+                        );
+
+                        let short_name = if pname.len() > 6 {
+                            format!("{}…", &pname[..5])
+                        } else {
+                            pname.clone()
+                        };
+                        painter.text(
+                            parent_rect.center(),
+                            egui::Align2::CENTER_CENTER,
+                            &short_name,
+                            egui::FontId::proportional(10.0),
+                            Color32::LIGHT_GRAY,
+                        );
+
+                        // Draw edge from parent to selected (arrow pointing down)
+                        let edge_start = Pos2::new(px, parent_rect.max.y);
+                        let edge_end = Pos2::new(center_x, selected_rect.min.y);
+                        Self::draw_edge(&painter, edge_start, edge_end);
+                    }
+
+                    // Draw child nodes (small, at bottom)
+                    let child_count = child_info.len();
+                    let child_start_x =
+                        center_x - (child_count as f32 - 1.0) * spacing / 2.0;
+
+                    for (i, (cname, ckey)) in child_info.iter().enumerate() {
+                        let cx = child_start_x + i as f32 * spacing;
+                        let child_rect = Rect::from_center_size(
+                            Pos2::new(cx, child_y),
+                            small_size,
+                        );
+
+                        // Check if clicked
+                        if response.clicked() {
+                            if let Some(pos) = response.interact_pointer_pos() {
+                                if child_rect.contains(pos) {
+                                    new_selection = Some(Some(*ckey));
+                                }
+                            }
+                        }
+
+                        let is_hovered = response.hovered()
+                            && ui
+                                .input(|i| i.pointer.hover_pos())
+                                .map(|p| child_rect.contains(p))
+                                .unwrap_or(false);
+
+                        let fill = if is_hovered {
+                            Color32::from_rgb(70, 80, 90)
+                        } else {
+                            Color32::from_rgb(50, 55, 65)
+                        };
+
+                        painter.rect_filled(child_rect, 4.0, fill);
+                        painter.rect_stroke(
+                            child_rect,
+                            4.0,
+                            Stroke::new(1.0, Color32::from_rgb(80, 90, 100)),
+                            egui::StrokeKind::Inside,
+                        );
+
+                        let short_name = if cname.len() > 6 {
+                            format!("{}…", &cname[..5])
+                        } else {
+                            cname.clone()
+                        };
+                        painter.text(
+                            child_rect.center(),
+                            egui::Align2::CENTER_CENTER,
+                            &short_name,
+                            egui::FontId::proportional(10.0),
+                            Color32::LIGHT_GRAY,
+                        );
+
+                        // Draw edge from selected to child (arrow pointing down)
+                        let edge_start =
+                            Pos2::new(center_x, selected_rect.max.y);
+                        let edge_end = Pos2::new(cx, child_rect.min.y);
+                        Self::draw_edge(&painter, edge_start, edge_end);
+                    }
+
+                    // Show "no parents" or "no children" text
+                    if parent_info.is_empty() {
+                        painter.text(
+                            Pos2::new(center_x, parent_y),
+                            egui::Align2::CENTER_CENTER,
+                            "(no parents)",
+                            egui::FontId::proportional(10.0),
+                            Color32::DARK_GRAY,
+                        );
+                    }
+                    if child_info.is_empty() {
+                        painter.text(
+                            Pos2::new(center_x, child_y),
+                            egui::Align2::CENTER_CENTER,
+                            "(no children)",
+                            egui::FontId::proportional(10.0),
+                            Color32::DARK_GRAY,
+                        );
+                    }
+
                     ui.add_space(10.0);
-                    
-                    // Show properties
+                    ui.separator();
+
+                    // Show properties below the graph
+                    ui.horizontal(|ui| {
+                        ui.label("Name:");
+                        ui.strong(name);
+                    });
                     ui.horizontal(|ui| {
                         ui.label("Width:");
                         ui.label(format!("{}", width));
                     });
-                    
-                    // Show parents
-                    ui.add_space(10.0);
-                    ui.label("Parents:");
-                    if parent_info.is_empty() {
-                        ui.label("  (none)");
-                    } else {
-                        for (parent_name, parent_key) in parent_info {
-                            if ui.link(parent_name).clicked() {
-                                new_selection = Some(Some(*parent_key));
-                            }
-                        }
-                    }
-                    
-                    // Show children
-                    ui.add_space(10.0);
-                    ui.label("Children:");
-                    if child_info.is_empty() {
-                        ui.label("  (none)");
-                    } else {
-                        for (child_name, child_key) in child_info {
-                            if ui.link(child_name).clicked() {
-                                new_selection = Some(Some(*child_key));
-                            }
-                        }
-                    }
-                    
-                    ui.add_space(10.0);
-                    if ui.button("Clear Selection").clicked() {
-                        new_selection = Some(None);
-                    }
+                    ui.horizontal(|ui| {
+                        ui.label("Parents:");
+                        ui.label(format!("{}", parent_info.len()));
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label("Children:");
+                        ui.label(format!("{}", child_info.len()));
+                    });
                 } else if selected_node.is_some() {
                     ui.label("(Could not load selection)");
                 } else {
                     ui.label("Click a node to select it");
                 }
             });
-        
+
         // Apply selection change after panel is done
         if let Some(sel) = new_selection {
             if let Some(tab) = self.current_tab_mut() {
                 tab.selected_node = sel;
             }
         }
+    }
+
+    /// Draw an edge with an arrow
+    fn draw_edge(
+        painter: &egui::Painter,
+        start: Pos2,
+        end: Pos2,
+    ) {
+        let color = Color32::from_rgb(120, 130, 140);
+        painter.line_segment([start, end], Stroke::new(1.5, color));
+
+        // Arrow head
+        let dir = (end - start).normalized();
+        let arrow_size = 6.0;
+        let arrow_angle = std::f32::consts::PI / 6.0;
+
+        let left = Pos2::new(
+            end.x
+                - arrow_size
+                    * (dir.x * arrow_angle.cos() - dir.y * arrow_angle.sin()),
+            end.y
+                - arrow_size
+                    * (dir.y * arrow_angle.cos() + dir.x * arrow_angle.sin()),
+        );
+        let right = Pos2::new(
+            end.x
+                - arrow_size
+                    * (dir.x * arrow_angle.cos() + dir.y * arrow_angle.sin()),
+            end.y
+                - arrow_size
+                    * (dir.y * arrow_angle.cos() - dir.x * arrow_angle.sin()),
+        );
+
+        painter.add(egui::Shape::convex_polygon(
+            vec![end, left, right],
+            color,
+            Stroke::NONE,
+        ));
     }
 
     pub(crate) fn bottom_panel(

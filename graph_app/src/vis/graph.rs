@@ -48,6 +48,8 @@ use crate::{
 pub struct GraphResponse {
     /// The node that was clicked, if any
     pub clicked_node: Option<VertexKey>,
+    /// Whether the background was clicked (no node clicked)
+    pub background_clicked: bool,
 }
 
 #[derive(Debug)]
@@ -403,6 +405,12 @@ impl GraphVis {
 
         // Set clicked node in response
         response.clicked_node = clicked_node;
+
+        // Detect background click (canvas clicked but no node was clicked)
+        if canvas_response.clicked() && clicked_node.is_none() {
+            response.background_clicked = true;
+        }
+
         response
     }
 
