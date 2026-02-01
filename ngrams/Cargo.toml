@@ -25,11 +25,20 @@ derivative = "^2.2"
 strum = "0.27"
 strum_macros = "0.27"
 derive-getters = "0.5"
-tokio = { version = "^1", features = ["macros", "rt-multi-thread"] }
 
 [dependencies.derive_more]
 version = "^2"
 features = ["full"]
+
+# Tokio - use wasm-compatible features by default
+[dependencies.tokio]
+version = "^1"
+features = ["sync", "rt", "macros", "time"]
+
+# Multi-thread runtime only on native
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies.tokio]
+version = "^1"
+features = ["rt-multi-thread"]
 
 [dependencies.tokio-util]
 version = "^0.7"

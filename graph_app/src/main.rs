@@ -44,15 +44,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 // WebAssembly entry point
 #[cfg(target_arch = "wasm32")]
 fn main() {
+    use eframe::wasm_bindgen::JsCast as _;
+
     // Redirect tracing to console.log
-    eframe::WebLogger::init(tracing::log::LevelFilter::Debug).ok();
+    eframe::WebLogger::init(log::LevelFilter::Debug).ok();
 
     let web_options = eframe::WebOptions::default();
 
     wasm_bindgen_futures::spawn_local(async {
+        // Get the canvas element
+        let document = web_sys::window()
+            .expect("No window")
+            .document()
+            .expect("No document");
+
+        let canvas = document
+            .get_element_by_id("graph_app_canvas")
+            .expect("No canvas element with id 'graph_app_canvas'")
+            .dyn_into::<web_sys::HtmlCanvasElement>()
+            .expect("Element is not a canvas");
+
         let start_result = eframe::WebRunner::new()
             .start(
-                "graph_app_canvas",
+                canvas,
                 web_options,
                 Box::new(|creation_context| {
                     use eframe::egui::ThemePreference;
@@ -63,9 +77,7 @@ fn main() {
             .await;
 
         // Remove loading text and show canvas
-        let loading_text = web_sys::window()
-            .and_then(|w| w.document())
-            .and_then(|d| d.get_element_by_id("loading_text"));
+        let loading_text = document.get_element_by_id("loading_text");
         if let Some(loading_text) = loading_text {
             match start_result {
                 Ok(_) => {
@@ -73,7 +85,8 @@ fn main() {
                 },
                 Err(e) => {
                     loading_text.set_inner_html(&format!(
-                        "<p>The app has crashed. Error: {e}</p>"
+                        "<p>The app has crashed. Error: {:?}</p>",
+                        e
                     ));
                 },
             }

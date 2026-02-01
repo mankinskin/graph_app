@@ -16,7 +16,9 @@ pub use output::OutputBuffer;
 // ----------------------------------------------------------------------------
 // When compiling for web:
 
+#[allow(unused)]
 use crate::graph::Graph;
+#[cfg(not(target_arch = "wasm32"))]
 use context_trace::graph::HypergraphRef;
 #[cfg(target_arch = "wasm32")]
 use eframe::wasm_bindgen::{
@@ -25,33 +27,15 @@ use eframe::wasm_bindgen::{
 };
 pub use tracing::*;
 
-pub use {
-    std::sync::{
-        Arc,
-        RwLock,
-        RwLockReadGuard,
-        RwLockWriteGuard,
-    },
-    //tracing_mutex::{
-    //    stdsync::{
-    //        TracingRwLock as RwLock,
-    //        TracingReadGuard as RwLockReadGuard,
-    //        TracingWriteGuard as RwLockWriteGuard,
-    //    },
-    //},
+pub use std::sync::{
+    Arc,
+    RwLock,
+    RwLockReadGuard,
+    RwLockWriteGuard,
 };
 
-/// This is the entry-point for all the web-assembly.
-/// This is called once from the HTML.
-/// It loads the app, installs some callbacks, then returns.
-/// You can add more callbacks like this if you want to call in to your code.
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-pub fn start(canvas_id: &str) -> Result<(), eframe::wasm_bindgen::JsValue> {
-    let app = App::default();
-    eframe::start_web(canvas_id, Box::new(app))
-}
-
+// Native-only open function
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn open(_graph: HypergraphRef) -> Result<(), eframe::Error> {
     // Each tab manages its own graph internally
     let app = App::new();

@@ -73,3 +73,5 @@ persistence = [
 web-sys = "0.3"
 tracing-wasm = "0.2"
 console_error_panic_hook = "0.1"
+getrandom = { version = "0.3", features = ["wasm_js"] }
+log = "0.4"

@@ -84,11 +84,13 @@ impl Default for GraphVis {
 #[allow(unused)]
 pub enum UpdateError {
     NoRecordingStream,
+    #[cfg(not(target_arch = "wasm32"))]
     Stream(rerun::RecordingStreamError),
     NotInitialized,
 }
 use UpdateError::*;
 impl GraphVis {
+    #[cfg(not(target_arch = "wasm32"))]
     fn update_rerun(
         &mut self,
         handle: &Graph,
@@ -133,7 +135,8 @@ impl GraphVis {
         // Clear the old graph to force rebuild in update_egui
         self.graph = DiGraph::new();
 
-        // Try to update rerun, but don't fail if it's not available
+        // Try to update rerun, but don't fail if it's not available (native only)
+        #[cfg(not(target_arch = "wasm32"))]
         let _ = self.update_rerun(&handle);
         self.update_egui(&handle, &saved_positions);
         Ok(())

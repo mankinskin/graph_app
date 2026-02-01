@@ -16,6 +16,7 @@ use petgraph::{
     },
     visit::EdgeRef,
 };
+#[cfg(not(target_arch = "wasm32"))]
 use rerun::{
     GraphEdges,
     GraphNodes,
@@ -156,6 +157,8 @@ impl GraphLayout {
             positions,
         }
     }
+
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn re_nodes(&self) -> GraphNodes {
         // Get positions in the same order as indices
         let positions_vec: Vec<_> = self.indices.iter()
@@ -173,6 +176,8 @@ impl GraphLayout {
             .with_labels(self.labels.clone())
             .with_positions(positions_vec)
     }
+
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn re_edges(&self) -> GraphEdges {
         GraphEdges::new(self.edges.clone()).with_directed_edges()
     }

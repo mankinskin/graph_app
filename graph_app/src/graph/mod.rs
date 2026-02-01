@@ -26,6 +26,7 @@ use petgraph::{
 pub struct Graph {
     /// Wrapped in RwLock to allow replacing the entire graph
     pub graph: Arc<RwLock<HypergraphRef>>,
+    #[cfg(not(target_arch = "wasm32"))]
     pub rec: Option<rerun::RecordingStream>,
     pub insert_texts: Vec<String>,
     pub labels: Arc<RwLock<HashSet<VertexKey>>>,
@@ -47,10 +48,12 @@ impl From<HypergraphRef> for Graph {
             graph: Arc::new(RwLock::new(graph)),
             insert_texts: vec![String::from("aabbaabbaa")],
             labels: Default::default(),
+            #[cfg(not(target_arch = "wasm32"))]
             rec: None,
         }
     }
 }
+#[cfg(not(target_arch = "wasm32"))]
 impl From<rerun::RecordingStream> for Graph {
     fn from(rec: rerun::RecordingStream) -> Self {
         Self {

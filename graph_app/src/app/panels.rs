@@ -126,6 +126,7 @@ impl App {
                 }
 
                 ui.add_space(10.0);
+                #[cfg(not(target_arch = "wasm32"))]
                 ui.horizontal(|ui| {
                     if ui.button("▶ Run").clicked() && self.read_task.is_none()
                     {
@@ -562,6 +563,7 @@ impl App {
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
                     // Show task status
+                    #[cfg(not(target_arch = "wasm32"))]
                     if self.read_task.is_some() {
                         ui.spinner();
                         ui.label("Processing...");
@@ -584,6 +586,9 @@ impl App {
                     } else {
                         ui.label("Ready");
                     }
+
+                    #[cfg(target_arch = "wasm32")]
+                    ui.label("Ready");
 
                     // Debug build warning on the right
                     ui.with_layout(

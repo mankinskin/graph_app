@@ -313,6 +313,7 @@ impl App {
         ui.separator();
         ui.add_space(5.0);
 
+        #[cfg(not(target_arch = "wasm32"))]
         ui.horizontal(|ui| {
             let is_running = self.read_task.is_some();
 

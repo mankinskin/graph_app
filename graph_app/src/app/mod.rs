@@ -3,6 +3,7 @@
 mod central;
 mod menus;
 mod panels;
+#[cfg(not(target_arch = "wasm32"))]
 mod tasks;
 
 use eframe::egui;
@@ -19,21 +20,16 @@ use crate::{
     vis::graph::GraphVis,
     widgets::EditableLabelState,
 };
-use async_std::sync::{
-    Arc,
-    RwLock,
-    RwLockReadGuard,
-    RwLockWriteGuard,
-};
+#[cfg(not(target_arch = "wasm32"))]
+use async_std::sync::RwLock as AsyncRwLock;
+use std::sync::Arc;
 use context_trace::graph::vertex::key::VertexKey;
-use std::{
-    future::Future,
-    sync::{
-        RwLock as SyncRwLock,
-        RwLockReadGuard as SyncRwLockReadGuard,
-        RwLockWriteGuard as SyncRwLockWriteGuard,
-    },
+use std::sync::{
+    RwLock as SyncRwLock,
+    RwLockReadGuard as SyncRwLockReadGuard,
+    RwLockWriteGuard as SyncRwLockWriteGuard,
 };
+#[cfg(not(target_arch = "wasm32"))]
 use tokio_util::sync::CancellationToken;
 
 /// A single graph tab with its own graph state
@@ -43,7 +39,10 @@ pub struct GraphTab {
     pub name: String,
     pub label_state: EditableLabelState,
     pub vis: Arc<SyncRwLock<GraphVis>>,
-    pub read_ctx: Arc<RwLock<ReadCtx>>,
+    #[cfg(not(target_arch = "wasm32"))]
+    pub read_ctx: Arc<AsyncRwLock<ReadCtx>>,
+    #[cfg(target_arch = "wasm32")]
+    pub read_ctx: Arc<SyncRwLock<ReadCtx>>,
     /// Currently selected node in the graph
     pub selected_node: Option<VertexKey>,
 }
@@ -59,7 +58,10 @@ impl GraphTab {
             name: name.into(),
             label_state: EditableLabelState::default(),
             vis: Arc::new(SyncRwLock::new(GraphVis::new(graph.clone()))),
-            read_ctx: Arc::new(RwLock::new(ReadCtx::new(graph))),
+            #[cfg(not(target_arch = "wasm32"))]
+            read_ctx: Arc::new(AsyncRwLock::new(ReadCtx::new(graph))),
+            #[cfg(target_arch = "wasm32")]
+            read_ctx: Arc::new(SyncRwLock::new(ReadCtx::new(graph))),
             selected_node: None,
         }
     }
@@ -72,12 +74,24 @@ impl GraphTab {
         self.vis.write().ok()
     }
 
-    pub fn ctx(&self) -> Option<RwLockReadGuard<'_, ReadCtx>> {
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn ctx(&self) -> Option<async_std::sync::RwLockReadGuard<'_, ReadCtx>> {
         self.read_ctx.try_read()
     }
 
-    pub fn ctx_mut(&self) -> Option<RwLockWriteGuard<'_, ReadCtx>> {
+    #[cfg(target_arch = "wasm32")]
+    pub fn ctx(&self) -> Option<SyncRwLockReadGuard<'_, ReadCtx>> {
+        self.read_ctx.read().ok()
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn ctx_mut(&self) -> Option<async_std::sync::RwLockWriteGuard<'_, ReadCtx>> {
         self.read_ctx.try_write()
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn ctx_mut(&self) -> Option<SyncRwLockWriteGuard<'_, ReadCtx>> {
+        self.read_ctx.write().ok()
     }
 }
 
@@ -133,8 +147,10 @@ pub struct App {
     /// Currently selected algorithm
     pub(crate) selected_algorithm: Algorithm,
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) read_task: Option<tokio::task::JoinHandle<()>>,
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[cfg_attr(feature = "persistence", serde(skip))]
     pub(crate) cancellation_token: Option<CancellationToken>,
 
@@ -167,7 +183,9 @@ impl App {
             bottom_panel_overlaps_right: false,
             status_bar_open: true,
             selected_algorithm: Algorithm::default(),
+            #[cfg(not(target_arch = "wasm32"))]
             read_task: None,
+            #[cfg(not(target_arch = "wasm32"))]
             cancellation_token: None,
             output: OutputBuffer::new(),
         }
@@ -183,13 +201,27 @@ impl App {
         self.tabs.iter_mut().find(|t| t.id == self.selected_tab_id)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[allow(unused)]
-    pub fn ctx(&self) -> Option<RwLockReadGuard<'_, ReadCtx>> {
+    pub fn ctx(&self) -> Option<async_std::sync::RwLockReadGuard<'_, ReadCtx>> {
         self.current_tab()?.ctx()
     }
 
+    #[cfg(target_arch = "wasm32")]
     #[allow(unused)]
-    pub fn ctx_mut(&self) -> Option<RwLockWriteGuard<'_, ReadCtx>> {
+    pub fn ctx(&self) -> Option<SyncRwLockReadGuard<'_, ReadCtx>> {
+        self.current_tab()?.ctx()
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[allow(unused)]
+    pub fn ctx_mut(&self) -> Option<async_std::sync::RwLockWriteGuard<'_, ReadCtx>> {
+        self.current_tab()?.ctx_mut()
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    #[allow(unused)]
+    pub fn ctx_mut(&self) -> Option<SyncRwLockWriteGuard<'_, ReadCtx>> {
         self.current_tab()?.ctx_mut()
     }
 
@@ -211,9 +243,10 @@ impl App {
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[allow(unused)]
     async fn read_graph_file(
-        graph: Arc<RwLock<Option<String>>>,
+        graph: Arc<AsyncRwLock<Option<String>>>,
         file: &rfd::FileHandle,
     ) {
         let content = file.read().await;
@@ -286,7 +319,8 @@ impl eframe::App for App {
         // Settings window
         self.show_settings_window(ctx);
 
-        // Handle finished tasks
+        // Handle finished tasks (native only)
+        #[cfg(not(target_arch = "wasm32"))]
         self.poll_finished_tasks();
     }
 
@@ -294,18 +328,19 @@ impl eframe::App for App {
         &mut self,
         _ctx: Option<&eframe::glow::Context>,
     ) {
-        self.abort()
+        #[cfg(not(target_arch = "wasm32"))]
+        self.abort();
     }
 }
 
 #[allow(unused)]
 #[cfg(not(target_arch = "wasm32"))]
-fn execute<F: Future<Output = ()> + Send + 'static>(f: F) {
+fn execute<F: std::future::Future<Output = ()> + Send + 'static>(f: F) {
     tokio::spawn(f);
 }
 
 #[allow(unused)]
 #[cfg(target_arch = "wasm32")]
-fn execute<F: Future<Output = ()> + 'static>(f: F) {
+fn execute<F: std::future::Future<Output = ()> + 'static>(f: F) {
     wasm_bindgen_futures::spawn_local(f);
 }

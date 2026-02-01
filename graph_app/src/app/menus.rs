@@ -28,10 +28,12 @@ impl App {
                     ui.text_edit_singleline(text);
                 }
             }
+            #[cfg(not(target_arch = "wasm32"))]
             if ui.button("Go").clicked() {
                 self.start_read();
                 ui.close();
             }
+            #[cfg(not(target_arch = "wasm32"))]
             if ui.button("Cancel").clicked() {
                 self.abort();
             }
