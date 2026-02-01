@@ -15,12 +15,10 @@ lazy_static = "^1.4"
 rand = "^0.9"
 rand_distr = "^0.5"
 itertools = "^0.14"
-async-std = "1.12"
 tracing-mutex = "0.3"
 strum = { version = "0.27", features = ["derive"] }
 derive_more = { version = "2.0.0", features = ["full"] }
 derive-getters = "0.5"
-clap = "4.5.48"
 indexmap = "2.11"
 
 context-read = { path = "../context-engine/crates/context-read" }
@@ -42,18 +40,6 @@ version = "^0.3"
 [dependencies.eframe]
 path = "../egui/crates/eframe"
 
-[dependencies.tokio]
-features = ["macros", "rt-multi-thread"]
-version = "^1"
-
-[dependencies.tokio-util]
-version = "^0.7"
-
-[dependencies.rerun]
-features = ["clap"]
-path = "../rerun/crates/top/rerun"
-#version = "0.25.1",
-
 [dependencies.petgraph]
 features = ["serde-1"]
 path = "../context-engine/crates/deps/petgraph"
@@ -62,6 +48,14 @@ path = "../context-engine/crates/deps/petgraph"
 
 [dependencies.ngrams]
 path = "../ngrams"
+
+# Native-only dependencies
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+clap = "4.5.48"
+async-std = "1.12"
+tokio = { version = "^1", features = ["macros", "rt-multi-thread"] }
+tokio-util = "^0.7"
+rerun = { path = "../rerun/crates/top/rerun", features = ["clap"] }
 
 [dev-dependencies]
 context-trace = { path = "../context-engine/crates/context-trace", features = [
@@ -73,3 +67,9 @@ default = []
 persistence = [
   "eframe/persistence",
 ] # Enable if you want to persist app state on shutdown
+
+# WebAssembly dependencies
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-sys = "0.3"
+tracing-wasm = "0.2"
+console_error_panic_hook = "0.1"

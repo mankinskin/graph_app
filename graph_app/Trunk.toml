@@ -1,0 +1,17 @@
+[build]
+# The index HTML file to drive the build
+target = "index.html"
+# Output directory for the build
+dist = "dist"
+
+[watch]
+# Watch these files for changes
+watch = ["src", "index.html", "manifest.json", "sw.js"]
+
+[serve]
+# Address to serve on
+address = "127.0.0.1"
+# Port to serve on
+port = 8080
+# Open browser automatically
+open = true

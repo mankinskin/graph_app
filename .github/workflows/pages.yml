@@ -1,0 +1,67 @@
+name: Deploy to GitHub Pages
+
+# NOTE: This workflow is currently disabled because the project has dependencies
+# (context-read, ngrams, context-trace) that use tokio and other non-wasm-compatible
+# crates unconditionally. To enable wasm builds, these crates need to be updated to:
+# 1. Make tokio and mio dependencies conditional with cfg(not(target_arch = "wasm32"))
+# 2. Or provide wasm-compatible alternatives for async runtime
+#
+# See context-engine/crates/*/Cargo.toml for the changes needed.
+
+on:
+  # Disabled until dependencies are wasm-compatible
+  # push:
+  #   branches: [main, master]
+  workflow_dispatch:
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: graph_app
+
+      - name: Install Trunk
+        uses: cargo-bins/cargo-binstall@main
+      - run: cargo binstall trunk -y
+
+      - name: Build
+        run: |
+          cd graph_app
+          trunk build --release --public-url /${{ github.event.repository.name }}/
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: graph_app/dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
