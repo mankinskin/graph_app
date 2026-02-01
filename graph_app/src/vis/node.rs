@@ -1,4 +1,7 @@
-use std::ops::Range;
+use std::{
+    collections::HashMap,
+    ops::Range,
+};
 
 use context_trace::{
     graph::vertex::{
@@ -60,6 +63,8 @@ pub struct NodeVis {
     generation: usize,
     /// Cached size from last render
     pub cached_size: Vec2,
+    /// Map from child vertex index to its screen rects (updated during render)
+    pub child_rects: HashMap<usize, Vec<Rect>>,
 }
 
 impl std::ops::Deref for NodeVis {
@@ -121,6 +126,7 @@ impl NodeVis {
             selected_range,
             generation,
             cached_size: Vec2::new(150.0, 80.0), // Default size
+            child_rects: HashMap::new(),
         }
     }
 
@@ -147,8 +153,8 @@ impl NodeVis {
             ("patterns", format!("{}", self.data.child_patterns().len())),
         ];
 
-        // Get child patterns for display
-        let patterns = self.child_patterns.patterns_as_children();
+        // Get child patterns with indices for display and edge connections
+        let patterns = self.child_patterns.patterns_with_indices();
 
         // Calculate node size based on content - two column layout
         let padding = 6.0 * zoom;
@@ -174,12 +180,12 @@ impl NodeVis {
         let props_column_width =
             max_key_width + key_value_gap + max_value_width;
 
-        // Calculate patterns column width
+        // Calculate patterns column width (using name length from tuple)
         let max_pattern_width = patterns
             .iter()
             .map(|pat| {
                 pat.iter()
-                    .map(|name| {
+                    .map(|(name, _idx)| {
                         name.len() as f32 * char_width
                             + child_frame_padding * 2.0
                     })
@@ -348,20 +354,28 @@ impl NodeVis {
             prop_y += row_height;
         }
 
-        // Right column: child patterns
+        // Right column: child patterns - collect child rects for edge connections
+        self.child_rects.clear();
+
         if !patterns.is_empty() {
             let mut pattern_y = content_y;
 
             for pattern in patterns.iter() {
                 let mut child_x = patterns_x;
 
-                for (i, child_name) in pattern.iter().enumerate() {
+                for (i, (child_name, child_idx)) in pattern.iter().enumerate() {
                     let child_width = child_name.len() as f32 * char_width
                         + child_frame_padding * 2.0;
                     let child_rect = Rect::from_min_size(
                         Pos2::new(child_x, pattern_y),
                         Vec2::new(child_width, child_frame_height),
                     );
+
+                    // Store child rect for edge connections (same child can appear multiple times)
+                    self.child_rects
+                        .entry(*child_idx)
+                        .or_default()
+                        .push(child_rect);
 
                     // Child frame background - alternate colors
                     let frame_color = if i % 2 == 0 {

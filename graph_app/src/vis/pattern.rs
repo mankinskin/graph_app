@@ -174,6 +174,19 @@ impl ChildPatternsVis {
             })
             .collect()
     }
+
+    /// Returns patterns with (name, vertex_index) pairs for edge connections
+    pub fn patterns_with_indices(&self) -> Vec<Vec<(String, usize)>> {
+        self.patterns
+            .iter()
+            .map(|(_pid, pat)| {
+                pat.pattern
+                    .iter()
+                    .map(|c| (c.name.clone(), *c.child.vertex_index()))
+                    .collect()
+            })
+            .collect()
+    }
     
     fn find_selected_range(
         &self,

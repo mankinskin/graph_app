@@ -254,59 +254,91 @@ impl GraphVis {
         let pan = self.pan;
         let viewport_min = viewport_rect.min;
 
-        // First pass: calculate node screen positions without rendering
+        // First pass: render nodes and collect their screen rects
         let mut node_screen_rects: HashMap<NodeIndex, Rect> =
             HashMap::default();
-
-        for (idx, node) in self.graph.nodes() {
-            let screen_pos =
-                viewport_min + (node.world_pos.to_vec2() * zoom) + pan;
-
-            // Calculate the rect that would be used for this node
-            let node_size = node.cached_size * zoom;
-            let node_rect = Rect::from_min_size(screen_pos, node_size);
-
-            if viewport_rect.intersects(node_rect) {
-                node_screen_rects.insert(idx, node_rect);
-            }
-        }
-
-        // Draw edges FIRST (so they appear behind nodes)
-        let clipped_painter = ui.painter().with_clip_rect(viewport_rect);
-
-        for edge in self.graph.edge_references() {
-            if let Some((rect_a, rect_b)) = node_screen_rects
-                .get(&edge.source())
-                .zip(node_screen_rects.get(&edge.target()))
-            {
-                let a_center = rect_a.center();
-                let b_center = rect_b.center();
-
-                // Find intersection points with node borders
-                let start = Self::border_intersection_point(rect_a, &b_center);
-                let end = Self::border_intersection_point(rect_b, &a_center);
-
-                Self::edge_clipped(&clipped_painter, &start, &end, zoom);
-            }
-        }
-
-        // Second pass: render nodes ON TOP of edges
         let mut dragged_node: Option<NodeIndex> = None;
 
         for (idx, node) in self.graph.nodes_mut() {
-            // Convert world to screen inline
             let screen_pos =
                 viewport_min + (node.world_pos.to_vec2() * zoom) + pan;
 
             if let Some(response) =
                 node.show(ui, screen_pos, zoom, viewport_rect)
             {
-                // Update the rect with the actual rendered rect
                 node_screen_rects.insert(idx, response.rect);
 
-                // Check if this node is being dragged
                 if response.response.dragged_by(egui::PointerButton::Primary) {
                     dragged_node = Some(idx);
+                }
+            }
+        }
+
+        // Second pass: draw edges ON TOP of source nodes
+        // Source = parent node (has child patterns)
+        // Target = child node (pointed to by arrow)
+        // Edge starts FROM the child's frame in the source/parent node's patterns
+        // Edge ends AT the target/child node
+        let clipped_painter = ui.painter().with_clip_rect(viewport_rect);
+
+        for edge in self.graph.edge_references() {
+            let source_idx = edge.source(); // Parent node
+            let target_idx = edge.target(); // Child node
+
+            if let Some((source_rect, target_rect)) = node_screen_rects
+                .get(&source_idx)
+                .zip(node_screen_rects.get(&target_idx))
+            {
+                // Get the target/child node's vertex index to find it in source's child patterns
+                let target_vertex_idx = self
+                    .graph
+                    .node_weight(target_idx)
+                    .map(|n| *n.data.to_child().index);
+
+                // Get all child rects for this target from source node (same child can appear multiple times)
+                let child_rects: Vec<Rect> =
+                    if let Some(tgt_v_idx) = target_vertex_idx {
+                        self.graph
+                            .node_weight(source_idx)
+                            .and_then(|node| node.child_rects.get(&tgt_v_idx))
+                            .map(|rects| rects.clone())
+                            .unwrap_or_default()
+                    } else {
+                        vec![]
+                    };
+
+                // End point: at target/child node
+                let target_center = target_rect.center();
+
+                if child_rects.is_empty() {
+                    // Fallback: draw edge from source center to target
+                    let start = Self::border_intersection_point(
+                        source_rect,
+                        &target_center,
+                    );
+                    let end = Self::border_intersection_point(
+                        target_rect,
+                        &source_rect.center(),
+                    );
+                    Self::edge_clipped(&clipped_painter, &start, &end, zoom);
+                } else {
+                    // Draw an edge from each occurrence of the child in source's patterns
+                    for child_rect in &child_rects {
+                        let start = Self::border_intersection_point(
+                            child_rect,
+                            &target_center,
+                        );
+                        let end = Self::border_intersection_point(
+                            target_rect,
+                            &child_rect.center(),
+                        );
+                        Self::edge_clipped(
+                            &clipped_painter,
+                            &start,
+                            &end,
+                            zoom,
+                        );
+                    }
                 }
             }
         }
