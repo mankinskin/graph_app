@@ -37,6 +37,15 @@ impl App {
             if ui.button("Cancel").clicked() {
                 self.abort();
             }
+            #[cfg(target_arch = "wasm32")]
+            if ui.button("Go").clicked() && !self.is_running {
+                self.start_read();
+                ui.close();
+            }
+            #[cfg(target_arch = "wasm32")]
+            if self.is_running && ui.button("Cancel").clicked() {
+                self.abort();
+            }
         });
 
         if ui.button("Toggle Inserter").clicked() {

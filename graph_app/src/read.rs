@@ -12,16 +12,23 @@ use crate::algorithm::Algorithm;
 #[allow(unused)]
 use crate::graph::*;
 
-#[cfg(not(target_arch = "wasm32"))]
-use context_trace::graph::HypergraphRef;
-#[cfg(not(target_arch = "wasm32"))]
-use context_trace::Token;
+use context_trace::{
+    graph::HypergraphRef,
+    Token,
+};
 #[cfg(not(target_arch = "wasm32"))]
 use std::hash::{
     DefaultHasher,
     Hash,
     Hasher,
 };
+#[cfg(target_arch = "wasm32")]
+use std::sync::atomic::{
+    AtomicBool,
+    Ordering,
+};
+#[cfg(target_arch = "wasm32")]
+use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use tokio_util::sync::CancellationToken;
 
@@ -48,6 +55,124 @@ impl ReadCtx {
     }
     pub fn graph_mut(&mut self) -> &mut Graph {
         &mut self.graph
+    }
+}
+
+// Wasm-compatible synchronous algorithm execution
+#[cfg(target_arch = "wasm32")]
+impl ReadCtx {
+    /// Execute the selected algorithm synchronously (for wasm)
+    pub fn run_algorithm_sync(
+        &mut self,
+        algorithm: Algorithm,
+        cancelled: &Arc<AtomicBool>,
+    ) {
+        web_sys::console::log_1(
+            &format!("Running algorithm: {:?}", algorithm).into(),
+        );
+
+        match algorithm {
+            Algorithm::NgramsParseCorpus => {
+                self.run_context_insert_sync(cancelled);
+            },
+            Algorithm::ContextRead => {
+                self.run_context_read_sync(cancelled);
+            },
+            Algorithm::ContextInsert => {
+                self.run_context_insert_sync(cancelled);
+            },
+        }
+
+        web_sys::console::log_1(&"Task done.".into());
+    }
+
+    /// Run context-read algorithm synchronously
+    fn run_context_read_sync(
+        &mut self,
+        cancelled: &Arc<AtomicBool>,
+    ) {
+        let graph_ref: HypergraphRef = self.graph.read().clone();
+        let insert_texts = self.graph.insert_texts.clone();
+
+        let combined_text: String = insert_texts.join("");
+
+        if combined_text.is_empty() {
+            web_sys::console::log_1(&"No text to read".into());
+            return;
+        }
+
+        let mut read_ctx = context_read::context::ReadCtx::new(
+            graph_ref.clone(),
+            combined_text.chars(),
+        );
+
+        // Process the sequence
+        while !cancelled.load(Ordering::SeqCst) {
+            if read_ctx.next().is_none() {
+                break;
+            }
+        }
+
+        if cancelled.load(Ordering::SeqCst) {
+            web_sys::console::log_1(
+                &"Context read operation was cancelled".into(),
+            );
+        } else {
+            *self.graph.write() = graph_ref;
+            self.graph.insert_texts.clear();
+            web_sys::console::log_1(
+                &"Context read completed successfully".into(),
+            );
+        }
+    }
+
+    /// Run context-insert algorithm synchronously
+    fn run_context_insert_sync(
+        &mut self,
+        cancelled: &Arc<AtomicBool>,
+    ) {
+        let graph_ref: HypergraphRef = self.graph.read().clone();
+        let insert_texts = self.graph.insert_texts.clone();
+
+        let mut insert_ctx =
+            context_insert::InsertCtx::<Token>::from(graph_ref.clone());
+
+        for text in &insert_texts {
+            if cancelled.load(Ordering::SeqCst) {
+                web_sys::console::log_1(
+                    &"Context insert operation was cancelled".into(),
+                );
+                return;
+            }
+
+            if text.is_empty() {
+                continue;
+            }
+
+            let tokens = graph_ref.expect_atom_children(text.chars());
+
+            match insert_ctx.insert(tokens) {
+                Ok(_result) => {
+                    web_sys::console::log_1(
+                        &format!("Inserted text: {}", text).into(),
+                    );
+                },
+                Err(err) => {
+                    web_sys::console::log_1(
+                        &format!("Failed to insert text '{}': {:?}", text, err)
+                            .into(),
+                    );
+                },
+            }
+        }
+
+        if !cancelled.load(Ordering::SeqCst) {
+            *self.graph.write() = graph_ref;
+            self.graph.insert_texts.clear();
+            web_sys::console::log_1(
+                &"Context insert completed successfully".into(),
+            );
+        }
     }
 }
 

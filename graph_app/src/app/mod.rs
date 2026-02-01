@@ -5,6 +5,8 @@ mod menus;
 mod panels;
 #[cfg(not(target_arch = "wasm32"))]
 mod tasks;
+#[cfg(target_arch = "wasm32")]
+mod tasks_wasm;
 
 use eframe::egui;
 #[cfg(feature = "persistence")]
@@ -22,9 +24,11 @@ use crate::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 use async_std::sync::RwLock as AsyncRwLock;
-use std::sync::Arc;
 use context_trace::graph::vertex::key::VertexKey;
+#[cfg(target_arch = "wasm32")]
+use std::sync::atomic::AtomicBool;
 use std::sync::{
+    Arc,
     RwLock as SyncRwLock,
     RwLockReadGuard as SyncRwLockReadGuard,
     RwLockWriteGuard as SyncRwLockWriteGuard,
@@ -85,7 +89,9 @@ impl GraphTab {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn ctx_mut(&self) -> Option<async_std::sync::RwLockWriteGuard<'_, ReadCtx>> {
+    pub fn ctx_mut(
+        &self
+    ) -> Option<async_std::sync::RwLockWriteGuard<'_, ReadCtx>> {
         self.read_ctx.try_write()
     }
 
@@ -154,6 +160,21 @@ pub struct App {
     #[cfg_attr(feature = "persistence", serde(skip))]
     pub(crate) cancellation_token: Option<CancellationToken>,
 
+    /// Wasm: Whether an algorithm is currently running
+    #[cfg(target_arch = "wasm32")]
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    pub(crate) is_running: bool,
+
+    /// Wasm: Cancellation flag for the current operation
+    #[cfg(target_arch = "wasm32")]
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    pub(crate) cancelled: Option<Arc<AtomicBool>>,
+
+    /// Wasm: Flag to track if async task is still running
+    #[cfg(target_arch = "wasm32")]
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    pub(crate) running_flag: Arc<AtomicBool>,
+
     /// Output buffer for the bottom panel
     #[cfg_attr(feature = "persistence", serde(skip))]
     pub(crate) output: OutputBuffer,
@@ -187,6 +208,12 @@ impl App {
             read_task: None,
             #[cfg(not(target_arch = "wasm32"))]
             cancellation_token: None,
+            #[cfg(target_arch = "wasm32")]
+            is_running: false,
+            #[cfg(target_arch = "wasm32")]
+            cancelled: None,
+            #[cfg(target_arch = "wasm32")]
+            running_flag: Arc::new(AtomicBool::new(false)),
             output: OutputBuffer::new(),
         }
     }
@@ -215,7 +242,9 @@ impl App {
 
     #[cfg(not(target_arch = "wasm32"))]
     #[allow(unused)]
-    pub fn ctx_mut(&self) -> Option<async_std::sync::RwLockWriteGuard<'_, ReadCtx>> {
+    pub fn ctx_mut(
+        &self
+    ) -> Option<async_std::sync::RwLockWriteGuard<'_, ReadCtx>> {
         self.current_tab()?.ctx_mut()
     }
 
@@ -322,6 +351,10 @@ impl eframe::App for App {
         // Handle finished tasks (native only)
         #[cfg(not(target_arch = "wasm32"))]
         self.poll_finished_tasks();
+
+        // Handle finished tasks (wasm)
+        #[cfg(target_arch = "wasm32")]
+        self.poll_finished_tasks();
     }
 
     fn on_exit(
@@ -329,6 +362,8 @@ impl eframe::App for App {
         _ctx: Option<&eframe::glow::Context>,
     ) {
         #[cfg(not(target_arch = "wasm32"))]
+        self.abort();
+        #[cfg(target_arch = "wasm32")]
         self.abort();
     }
 }

@@ -332,5 +332,23 @@ impl App {
                 ui.label("Processing...");
             }
         });
+
+        #[cfg(target_arch = "wasm32")]
+        ui.horizontal(|ui| {
+            if ui
+                .add_enabled(!self.is_running, egui::Button::new("▶ Run"))
+                .clicked()
+            {
+                self.start_read();
+            }
+
+            if self.is_running {
+                if ui.button("⏹ Cancel").clicked() {
+                    self.abort();
+                }
+                ui.spinner();
+                ui.label("Processing...");
+            }
+        });
     }
 }

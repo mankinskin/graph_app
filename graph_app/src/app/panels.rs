@@ -138,6 +138,18 @@ impl App {
                         self.abort();
                     }
                 });
+                #[cfg(target_arch = "wasm32")]
+                ui.horizontal(|ui| {
+                    if ui.button("▶ Run").clicked() && !self.is_running
+                    {
+                        self.start_read();
+                    }
+                    if self.is_running
+                        && ui.button("⏹ Cancel").clicked()
+                    {
+                        self.abort();
+                    }
+                });
             });
     }
 
@@ -588,7 +600,12 @@ impl App {
                     }
 
                     #[cfg(target_arch = "wasm32")]
-                    ui.label("Ready");
+                    if self.is_running {
+                        ui.spinner();
+                        ui.label("Processing...");
+                    } else {
+                        ui.label("Ready");
+                    }
 
                     // Debug build warning on the right
                     ui.with_layout(
