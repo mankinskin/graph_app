@@ -14,6 +14,7 @@ use crate::graph::*;
 use crate::{
     algorithm::Algorithm,
     graph::Graph,
+    output::OutputBuffer,
     read::ReadCtx,
     vis::graph::GraphVis,
     widgets::EditableLabelState,
@@ -116,6 +117,15 @@ pub struct App {
     /// Whether the bottom panel is open
     pub(crate) bottom_panel_open: bool,
 
+    /// Whether the bottom panel overlaps the left sidebar
+    pub(crate) bottom_panel_overlaps_left: bool,
+
+    /// Whether the bottom panel overlaps the right sidebar
+    pub(crate) bottom_panel_overlaps_right: bool,
+
+    /// Whether the status bar is visible
+    pub(crate) status_bar_open: bool,
+
     /// Currently selected algorithm
     pub(crate) selected_algorithm: Algorithm,
 
@@ -123,6 +133,10 @@ pub struct App {
 
     #[cfg_attr(feature = "persistence", serde(skip))]
     pub(crate) cancellation_token: Option<CancellationToken>,
+
+    /// Output buffer for the bottom panel
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    pub(crate) output: OutputBuffer,
 }
 
 impl Default for App {
@@ -145,9 +159,13 @@ impl App {
             left_panel_open: true,
             right_panel_open: false,
             bottom_panel_open: true,
+            bottom_panel_overlaps_left: false,
+            bottom_panel_overlaps_right: false,
+            status_bar_open: true,
             selected_algorithm: Algorithm::default(),
             read_task: None,
             cancellation_token: None,
+            output: OutputBuffer::new(),
         }
     }
 
@@ -222,15 +240,42 @@ impl eframe::App for App {
         frame: &mut eframe::Frame,
     ) {
         // Panels must be added in this order: top/bottom first, then sides, then central
+        // The order determines which panels "own" the space - earlier panels get priority
         self.top_panel(ctx, frame);
 
-        if self.bottom_panel_open {
-            self.bottom_panel(ctx);
+        // Status bar (always at very bottom)
+        if self.status_bar_open {
+            self.status_bar(ctx);
         }
 
-        // Side panels use show_animated which handles open/closed state internally
-        self.left_panel(ctx);
-        self.right_panel(ctx);
+        // Determine panel rendering order based on overlap settings
+        // If bottom panel should NOT overlap a side panel, render that side panel first
+        let both_overlap =
+            self.bottom_panel_overlaps_left && self.bottom_panel_overlaps_right;
+        let neither_overlap = !self.bottom_panel_overlaps_left
+            && !self.bottom_panel_overlaps_right;
+
+        if both_overlap {
+            // Bottom panel first, then both side panels
+            self.bottom_panel(ctx);
+            self.left_panel(ctx);
+            self.right_panel(ctx);
+        } else if neither_overlap {
+            // Both side panels first, then bottom panel
+            self.left_panel(ctx);
+            self.right_panel(ctx);
+            self.bottom_panel(ctx);
+        } else if !self.bottom_panel_overlaps_left {
+            // Left first, then bottom, then right
+            self.left_panel(ctx);
+            self.bottom_panel(ctx);
+            self.right_panel(ctx);
+        } else {
+            // Right first, then bottom, then left
+            self.right_panel(ctx);
+            self.bottom_panel(ctx);
+            self.left_panel(ctx);
+        }
 
         self.central_panel(ctx);
 

@@ -26,11 +26,6 @@ impl App {
                     }
                 });
 
-                // Edit menu
-                ui.menu_button("Edit", |ui| {
-                    ui.label("(No edit actions)");
-                });
-
                 // View menu
                 ui.menu_button("View", |ui| {
                     if ui
@@ -47,6 +42,12 @@ impl App {
                     }
                     if ui
                         .checkbox(&mut self.bottom_panel_open, "Bottom Panel")
+                        .clicked()
+                    {
+                        ui.close();
+                    }
+                    if ui
+                        .checkbox(&mut self.status_bar_open, "Status Bar")
                         .clicked()
                     {
                         ui.close();
@@ -178,6 +179,52 @@ impl App {
         ctx: &egui::Context,
     ) {
         egui::TopBottomPanel::bottom("bottom_panel")
+            .resizable(true)
+            .default_height(150.0)
+            .height_range(50.0..=400.0)
+            .show_animated(ctx, self.bottom_panel_open, |ui| {
+                ui.horizontal(|ui| {
+                    ui.heading("Output");
+                    ui.with_layout(
+                        egui::Layout::right_to_left(egui::Align::Center),
+                        |ui| {
+                            if ui.small_button("Clear").clicked() {
+                                self.output.clear();
+                            }
+                        },
+                    );
+                });
+                ui.separator();
+                egui::ScrollArea::vertical()
+                    .auto_shrink([false, false])
+                    .stick_to_bottom(true)
+                    .show(ui, |ui| {
+                        let lines = self.output.lines();
+                        if lines.is_empty() {
+                            ui.colored_label(
+                                egui::Color32::DARK_GRAY,
+                                "(No output yet)",
+                            );
+                        } else {
+                            for line in lines {
+                                ui.horizontal(|ui| {
+                                    ui.colored_label(
+                                        line.level.color(),
+                                        line.level.prefix(),
+                                    );
+                                    ui.label(&line.text);
+                                });
+                            }
+                        }
+                    });
+            });
+    }
+
+    pub(crate) fn status_bar(
+        &mut self,
+        ctx: &egui::Context,
+    ) {
+        egui::TopBottomPanel::bottom("status_bar")
             .resizable(false)
             .exact_height(28.0)
             .show(ctx, |ui| {

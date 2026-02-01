@@ -108,6 +108,22 @@ impl App {
                 // Show algorithm description
                 ui.label("Description:");
                 ui.label(self.selected_algorithm.description());
+
+                ui.add_space(15.0);
+                ui.separator();
+                ui.add_space(5.0);
+
+                ui.heading("Panel Layout");
+                ui.add_space(10.0);
+
+                ui.checkbox(
+                    &mut self.bottom_panel_overlaps_left,
+                    "Bottom panel overlaps left sidebar",
+                );
+                ui.checkbox(
+                    &mut self.bottom_panel_overlaps_right,
+                    "Bottom panel overlaps right sidebar",
+                );
             });
     }
 }

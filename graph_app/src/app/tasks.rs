@@ -1,6 +1,7 @@
 //! Task management (start_read, abort, polling).
 
 use super::App;
+use crate::output::OutputBuffer;
 use crate::read::ReadCtx;
 use tokio_util::sync::CancellationToken;
 
@@ -17,30 +18,37 @@ impl App {
         self.cancellation_token = Some(cancellation_token.clone());
 
         let algorithm = self.selected_algorithm;
+        let output = self.output.clone();
+        
+        output.info(format!("Starting {} algorithm...", algorithm));
+        
         let task = tokio::spawn(async move {
             let mut ctx: async_std::sync::RwLockWriteGuard<'_, ReadCtx> = ctx.write().await;
             ctx.run_algorithm(algorithm, cancellation_token).await;
+            output.success(format!("{} algorithm completed.", algorithm));
         });
         self.read_task = Some(task);
     }
 
     pub(crate) fn abort(&mut self) {
-        println!("Aborting read operation...");
+        self.output.warn("Aborting read operation...");
 
         // Cancel via the cancellation token first
         if let Some(token) = &self.cancellation_token {
-            println!("Cancelling via token...");
+            self.output.info("Cancelling via token...");
             token.cancel();
         }
 
         // Immediately abort the task - don't wait
         if let Some(handle) = self.read_task.take() {
-            println!("Aborting task via handle...");
+            self.output.info("Aborting task via handle...");
             handle.abort();
         }
 
         // Clear the cancellation token
         self.cancellation_token = None;
+        
+        self.output.warn("Read operation aborted.");
     }
 
     pub(crate) fn poll_finished_tasks(&mut self) {

@@ -7,9 +7,12 @@ pub use algorithm::Algorithm;
 pub use app::App;
 mod examples;
 mod graph;
+mod output;
 mod read;
 mod vis;
 pub(crate) mod widgets;
+
+pub use output::OutputBuffer;
 // ----------------------------------------------------------------------------
 // When compiling for web:
 

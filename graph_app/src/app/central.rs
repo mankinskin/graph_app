@@ -123,8 +123,8 @@ impl App {
         ui: &mut Ui,
     ) {
         egui::menu::bar(ui, |ui| {
-            // Graph menu
-            ui.menu_button("Graph", |ui| {
+            // Edit menu
+            ui.menu_button("Edit", |ui| {
                 // Presets submenu
                 ui.menu_button("Load Preset", |ui| {
                     if let Some(ctx) = self.ctx() {
