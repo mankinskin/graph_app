@@ -6,7 +6,11 @@ use strum::IntoEnumIterator;
 use super::App;
 use crate::{
     algorithm::Algorithm,
-    examples::{build_graph1, build_graph2, build_graph3},
+    examples::{
+        build_graph1,
+        build_graph2,
+        build_graph3,
+    },
 };
 
 impl App {
@@ -101,7 +105,8 @@ impl App {
                 ui.with_layout(
                     egui::Layout::right_to_left(egui::Align::Center),
                     |ui| {
-                        if ui.button("⚙").on_hover_text("Settings").clicked() {
+                        if ui.button("⚙").on_hover_text("Settings").clicked()
+                        {
                             self.settings_open = !self.settings_open;
                         }
                     },
@@ -155,10 +160,13 @@ impl App {
 
                 ui.add_space(10.0);
                 ui.horizontal(|ui| {
-                    if ui.button("▶ Run").clicked() && self.read_task.is_none() {
+                    if ui.button("▶ Run").clicked() && self.read_task.is_none()
+                    {
                         self.start_read();
                     }
-                    if self.read_task.is_some() && ui.button("⏹ Cancel").clicked() {
+                    if self.read_task.is_some()
+                        && ui.button("⏹ Cancel").clicked()
+                    {
                         self.abort();
                     }
                 });
@@ -181,7 +189,10 @@ impl App {
                 if let Some(read_ctx) = self.ctx() {
                     let graph = read_ctx.graph();
                     if let Some(graph_ref) = graph.try_read() {
-                        ui.label(format!("Vertices: {}", graph_ref.vertex_count()));
+                        ui.label(format!(
+                            "Vertices: {}",
+                            graph_ref.vertex_count()
+                        ));
                     }
                 }
 
@@ -212,8 +223,8 @@ impl App {
                                 let status = status.read().unwrap();
                                 ui.separator();
                                 ui.label(format!("Pass: {:?}", status.pass()));
-                                let progress =
-                                    *status.steps() as f32 / *status.steps_total() as f32;
+                                let progress = *status.steps() as f32
+                                    / *status.steps_total() as f32;
                                 ui.add(
                                     egui::ProgressBar::new(progress)
                                         .desired_width(150.0)
@@ -224,6 +235,14 @@ impl App {
                     } else {
                         ui.label("Ready");
                     }
+
+                    // Debug build warning on the right
+                    ui.with_layout(
+                        egui::Layout::right_to_left(egui::Align::Center),
+                        |ui| {
+                            egui::warn_if_debug_build(ui);
+                        },
+                    );
                 });
             });
     }

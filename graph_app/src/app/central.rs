@@ -27,8 +27,6 @@ impl App {
 
                 // Show inserter as a floating window within the central panel
                 self.show_inserter_window(ctx, viewport_rect);
-
-                egui::warn_if_debug_build(ui);
             })
             .response
             .context_menu(|ui| self.context_menu(ui));

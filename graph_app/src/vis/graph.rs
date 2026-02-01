@@ -14,13 +14,13 @@ use context_trace::{
 use eframe::egui::{
     self,
     vec2,
+    Color32,
     Pos2,
     Rect,
     Shape,
     Stroke,
     Ui,
     Vec2,
-    Window,
 };
 #[allow(unused)]
 use petgraph::{
@@ -42,13 +42,33 @@ use crate::{
     },
 };
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct GraphVis {
     graph: DiGraph<NodeVis, ()>,
     handle: Option<Graph>,
     layout: GraphLayout,
     /// Flag to indicate the graph needs to be rebuilt
     dirty: bool,
+    /// Generation counter - increments on each rebuild to reset window positions
+    generation: usize,
+    /// Zoom level (1.0 = 100%)
+    zoom: f32,
+    /// Pan offset
+    pan: Vec2,
+}
+
+impl Default for GraphVis {
+    fn default() -> Self {
+        Self {
+            graph: DiGraph::new(),
+            handle: None,
+            layout: GraphLayout::default(),
+            dirty: false,
+            generation: 0,
+            zoom: 1.0,
+            pan: Vec2::ZERO,
+        }
+    }
 }
 #[derive(Debug)]
 #[allow(unused)]
@@ -87,6 +107,9 @@ impl GraphVis {
             |_idx, e| (e.token.width() > 1).then_some(()),
         );
 
+        // Increment generation to reset window positions
+        self.generation += 1;
+
         // Regenerate layout
         self.layout = GraphLayout::generate(&cg, pg);
         // Clear the old graph to force rebuild in update_egui
@@ -101,43 +124,66 @@ impl GraphVis {
         &mut self,
         handle: &Graph,
     ) {
+        let generation = self.generation;
         if !self.initialized() {
             self.graph = self.layout.graph.clone().map_owned(
                 |i, (k, n)| {
+                    let pos = self
+                        .layout
+                        .positions
+                        .get(&i)
+                        .copied()
+                        .unwrap_or_default();
                     let vis = NodeVis::new(
                         handle.clone(),
                         i,
                         &k,
                         &n.data,
-                        *self
-                            .layout
-                            .nodes
-                            .iter_mut()
-                            .zip(self.layout.positions.iter())
-                            .find(|((_key, (id, _n)), _pos)| *id == i)
-                            .unwrap()
-                            .1,
+                        pos,
+                        generation,
                     );
                     vis
                 },
                 |_, e| e,
             );
         }
-        for ((key, (i, node)), pos) in self
-            .layout
-            .nodes
-            .iter_mut()
-            .zip(self.layout.positions.iter())
-        {
+        for (_key, (i, node)) in self.layout.nodes.iter_mut() {
+            let pos = self.layout.positions.get(i).copied().unwrap_or_default();
             if let Some(old) = self.graph.node_weight_mut(*i) {
                 *old = NodeVis::from_old(old, *i, &node.data);
             } else {
-                let vis =
-                    NodeVis::new(handle.clone(), *i, key, &node.data, *pos);
+                let vis = NodeVis::new(
+                    handle.clone(),
+                    *i,
+                    _key,
+                    &node.data,
+                    pos,
+                    generation,
+                );
                 *i = self.graph.add_node(vis);
             };
         }
     }
+
+    /// Convert world coordinates to screen coordinates
+    fn world_to_screen(
+        &self,
+        world_pos: Pos2,
+        viewport_min: Pos2,
+    ) -> Pos2 {
+        viewport_min + (world_pos.to_vec2() * self.zoom) + self.pan
+    }
+
+    /// Convert screen coordinates to world coordinates
+    #[allow(unused)]
+    fn screen_to_world(
+        &self,
+        screen_pos: Pos2,
+        viewport_min: Pos2,
+    ) -> Pos2 {
+        ((screen_pos - viewport_min - self.pan) / self.zoom).to_pos2()
+    }
+
     pub fn show(
         &mut self,
         ui: &mut Ui,
@@ -151,66 +197,174 @@ impl GraphVis {
         }
         let _events = self.poll_events();
 
-        // Get the available rect for constraining node windows
+        // Get the available rect for the graph viewport
         let viewport_rect = ui.available_rect_before_wrap();
 
-        //println!("{}", self.graph.vertex_count());
-        let node_responses: HashMap<_, _> = self
-            .graph
-            .nodes()
-            .filter_map(|(idx, node)| {
-                node.show(ui, viewport_rect).map(|response| (idx, response))
-            })
-            .collect();
+        // Allocate the entire viewport area for our canvas
+        let canvas_response =
+            ui.allocate_rect(viewport_rect, egui::Sense::click_and_drag());
 
-        // Use a clipped painter for edges so they don't render over the panels
+        // Draw background
+        let painter = ui.painter().with_clip_rect(viewport_rect);
+        painter.rect_filled(viewport_rect, 0.0, Color32::from_rgb(25, 28, 32));
+
+        // Draw subtle grid
+        self.draw_grid(&painter, viewport_rect);
+
+        // Handle zoom with scroll wheel
+        let hover_pos = ui.input(|i| i.pointer.hover_pos());
+        let hovering_graph = hover_pos
+            .map(|p| viewport_rect.contains(p))
+            .unwrap_or(false);
+
+        if hovering_graph {
+            let scroll_delta = ui.input(|i| i.raw_scroll_delta.y);
+            if scroll_delta != 0.0 {
+                let zoom_factor = 1.0 + scroll_delta * 0.001;
+                let new_zoom = (self.zoom * zoom_factor).clamp(0.1, 5.0);
+
+                // Zoom towards mouse position
+                if let Some(mouse_pos) = hover_pos {
+                    let mouse_rel = mouse_pos - viewport_rect.min - self.pan;
+                    let zoom_change = new_zoom / self.zoom;
+                    self.pan -= mouse_rel * (zoom_change - 1.0);
+                }
+
+                self.zoom = new_zoom;
+            }
+        }
+
+        // Handle pan with middle mouse button drag
+        if canvas_response.dragged_by(egui::PointerButton::Middle) {
+            let delta = ui.input(|i| i.pointer.delta());
+            self.pan += delta;
+        }
+
+        // Show zoom level and pan info
+        painter.text(
+            viewport_rect.right_top() + vec2(-10.0, 10.0),
+            egui::Align2::RIGHT_TOP,
+            format!("{:.0}%", self.zoom * 100.0),
+            egui::FontId::proportional(12.0),
+            Color32::from_rgb(150, 150, 150),
+        );
+
+        // Cache zoom and pan for use in loops
+        let zoom = self.zoom;
+        let pan = self.pan;
+        let viewport_min = viewport_rect.min;
+
+        // First pass: calculate node screen positions without rendering
+        let mut node_screen_rects: HashMap<NodeIndex, Rect> =
+            HashMap::default();
+
+        for (idx, node) in self.graph.nodes() {
+            let screen_pos =
+                viewport_min + (node.world_pos.to_vec2() * zoom) + pan;
+
+            // Calculate the rect that would be used for this node
+            let node_size = node.cached_size * zoom;
+            let node_rect = Rect::from_min_size(screen_pos, node_size);
+
+            if viewport_rect.intersects(node_rect) {
+                node_screen_rects.insert(idx, node_rect);
+            }
+        }
+
+        // Draw edges FIRST (so they appear behind nodes)
         let clipped_painter = ui.painter().with_clip_rect(viewport_rect);
 
-        self.graph.edge_references().for_each(|edge| {
-            if let Some((ra, rb)) = node_responses
+        for edge in self.graph.edge_references() {
+            if let Some((rect_a, rect_b)) = node_screen_rects
                 .get(&edge.source())
-                .zip(node_responses.get(&edge.target()))
+                .zip(node_screen_rects.get(&edge.target()))
             {
-                let a_pos = ra.response.rect.center();
-                let b = rb.response.rect;
-                let p = Self::border_intersection_point(&b, &a_pos);
-                Self::edge_clipped(&clipped_painter, &a_pos, &p);
+                let a_center = rect_a.center();
+                let b_center = rect_b.center();
+
+                // Find intersection points with node borders
+                let start = Self::border_intersection_point(rect_a, &b_center);
+                let end = Self::border_intersection_point(rect_b, &a_center);
+
+                Self::edge_clipped(&clipped_painter, &start, &end, zoom);
             }
-        });
-        for (idx, response) in node_responses.into_iter() {
-            let node = self
-                .graph
-                .node_weight_mut(idx)
-                .expect("Invalid NodeIndex in node_responses!");
-            node.selected_range = response
-                .ranges
-                .into_iter()
-                .find_map(|(pid, r)| {
-                    if let Some(state) = node.selected_range.as_mut() {
-                        (state.pattern_id == pid).then_some((pid, r))
-                    } else {
-                        Some((pid, r))
-                    }
-                })
-                .map(|(pid, range)| SelectionState {
-                    pattern_id: pid,
-                    trace: IndexRangePath::new(
-                        IndexRoot::from(PatternLocation {
-                            parent: node.data.to_child(),
-                            pattern_id: pid,
-                        }),
-                        RolePath::<Start>::new_empty(range.start),
-                        RolePath::<End>::new_empty(range.end),
-                    ),
-                    range,
-                });
-            if let Some(state) = node.selected_range.as_ref() {
-                Window::new("Range").show(ui.ctx(), |ui| {
-                    ui.label(format!("{:#?}", state));
-                });
+        }
+
+        // Second pass: render nodes ON TOP of edges
+        let mut dragged_node: Option<NodeIndex> = None;
+
+        for (idx, node) in self.graph.nodes_mut() {
+            // Convert world to screen inline
+            let screen_pos =
+                viewport_min + (node.world_pos.to_vec2() * zoom) + pan;
+
+            if let Some(response) =
+                node.show(ui, screen_pos, zoom, viewport_rect)
+            {
+                // Update the rect with the actual rendered rect
+                node_screen_rects.insert(idx, response.rect);
+
+                // Check if this node is being dragged
+                if response.response.dragged_by(egui::PointerButton::Primary) {
+                    dragged_node = Some(idx);
+                }
+            }
+        }
+
+        // Handle node dragging - update world position
+        if let Some(idx) = dragged_node {
+            let delta = ui.input(|i| i.pointer.delta());
+            if let Some(node) = self.graph.node_weight_mut(idx) {
+                // Convert screen delta to world delta
+                let world_delta = delta / zoom;
+                node.world_pos += world_delta;
             }
         }
     }
+
+    fn draw_grid(
+        &self,
+        painter: &egui::Painter,
+        viewport_rect: Rect,
+    ) {
+        let grid_spacing = 50.0 * self.zoom;
+        if grid_spacing < 10.0 {
+            return; // Don't draw grid when too zoomed out
+        }
+
+        let grid_color = Color32::from_rgba_unmultiplied(255, 255, 255, 8);
+
+        // Calculate grid offset based on pan
+        let offset_x = self.pan.x % grid_spacing;
+        let offset_y = self.pan.y % grid_spacing;
+
+        // Vertical lines
+        let mut x = viewport_rect.min.x + offset_x;
+        while x < viewport_rect.max.x {
+            painter.line_segment(
+                [
+                    Pos2::new(x, viewport_rect.min.y),
+                    Pos2::new(x, viewport_rect.max.y),
+                ],
+                Stroke::new(1.0, grid_color),
+            );
+            x += grid_spacing;
+        }
+
+        // Horizontal lines
+        let mut y = viewport_rect.min.y + offset_y;
+        while y < viewport_rect.max.y {
+            painter.line_segment(
+                [
+                    Pos2::new(viewport_rect.min.x, y),
+                    Pos2::new(viewport_rect.max.x, y),
+                ],
+                Stroke::new(1.0, grid_color),
+            );
+            y += grid_spacing;
+        }
+    }
+
     fn initialized(&self) -> bool {
         self.graph.node_count() > 0 && self.handle.is_some()
     }
@@ -226,6 +380,9 @@ impl GraphVis {
             handle: Some(graph),
             layout: GraphLayout::default(),
             dirty: false,
+            generation: 0,
+            zoom: 1.0,
+            pan: Vec2::ZERO,
         }
     }
     fn graph(&self) -> Option<Graph> {
@@ -256,6 +413,7 @@ impl GraphVis {
         source: &Pos2,
         target: &Pos2,
         size: f32,
+        zoom: f32,
     ) {
         let angle = (*target - *source).angle();
         let points = IntoIterator::into_iter([
@@ -268,7 +426,7 @@ impl GraphVis {
         painter.add(Shape::convex_polygon(
             points,
             egui::Color32::WHITE,
-            Stroke::new(1.0, egui::Color32::WHITE),
+            Stroke::new(1.0 * zoom, egui::Color32::WHITE),
         ));
     }
     #[allow(unused)]
@@ -287,12 +445,13 @@ impl GraphVis {
         painter: &egui::Painter,
         source: &Pos2,
         target: &Pos2,
+        zoom: f32,
     ) {
         painter.add(Shape::line_segment(
             [*source, *target],
-            Stroke::new(1.0, egui::Color32::WHITE),
+            Stroke::new(1.0 * zoom, egui::Color32::WHITE),
         ));
-        Self::edge_tip_clipped(painter, source, target, 10.0);
+        Self::edge_tip_clipped(painter, source, target, 10.0 * zoom, zoom);
     }
     #[allow(clippy::many_single_char_names)]
     fn border_intersection_point(

@@ -142,6 +142,39 @@ impl ChildPatternsVis {
                 .collect(),
         }
     }
+    
+    /// Returns the number of patterns in this node
+    pub fn pattern_count(&self) -> usize {
+        self.patterns.len()
+    }
+    
+    /// Returns the pattern strings for display
+    pub fn pattern_strings(&self) -> Vec<String> {
+        self.patterns
+            .iter()
+            .map(|(_pid, pat)| {
+                pat.pattern
+                    .iter()
+                    .map(|c| c.name.clone())
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            })
+            .collect()
+    }
+    
+    /// Returns patterns as vectors of child names for framed display
+    pub fn patterns_as_children(&self) -> Vec<Vec<String>> {
+        self.patterns
+            .iter()
+            .map(|(_pid, pat)| {
+                pat.pattern
+                    .iter()
+                    .map(|c| c.name.clone())
+                    .collect()
+            })
+            .collect()
+    }
+    
     fn find_selected_range(
         &self,
         pattern: &[ChildVis],
