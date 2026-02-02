@@ -9,5 +9,4 @@ cargo run
 cd context-engine/
 cargo test
 ```
-
-<img width="1853" height="906" alt="492511752-9e81cf71-b5ba-49a5-a872-073372b8711d" src="https://github.com/user-attachments/assets/5b078472-d9b6-4895-8886-ac72d320887e" />
+<img width="1920" height="1080" alt="mankinskin github io_graph_app_(Datamodul Big)" src="https://github.com/user-attachments/assets/a6cf3d91-f220-4082-ac37-7e33a4462dd5" />
