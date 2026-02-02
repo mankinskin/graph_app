@@ -15,6 +15,10 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -33,10 +37,22 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: graph_app
+          cache-targets: true
+          cache-all-crates: true
+
+      - name: Cache Trunk
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/trunk
+          key: trunk-${{ runner.os }}-v0.21
 
       - name: Install Trunk
         run: |
-          cargo install trunk --locked
+          if ! command -v trunk &> /dev/null; then
+            # Use binstall for pre-built binary (much faster than cargo install)
+            curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+            cargo binstall trunk --no-confirm
+          fi
 
       - name: Build
         run: |
