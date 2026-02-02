@@ -126,24 +126,12 @@ impl App {
                 }
 
                 ui.add_space(10.0);
-                #[cfg(not(target_arch = "wasm32"))]
                 ui.horizontal(|ui| {
-                    if ui.button("▶ Run").clicked() && self.read_task.is_none()
-                    {
+                    let is_running = self.is_task_running();
+                    if ui.button("▶ Run").clicked() && !is_running {
                         self.start_read();
                     }
-                    if self.read_task.is_some()
-                        && ui.button("⏹ Cancel").clicked()
-                    {
-                        self.abort();
-                    }
-                });
-                #[cfg(target_arch = "wasm32")]
-                ui.horizontal(|ui| {
-                    if ui.button("▶ Run").clicked() && !self.is_running {
-                        self.start_read();
-                    }
-                    if self.is_running && ui.button("⏹ Cancel").clicked() {
+                    if is_running && ui.button("⏹ Cancel").clicked() {
                         self.abort();
                     }
                 });
@@ -571,9 +559,8 @@ impl App {
             .exact_height(28.0)
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
-                    // Show task status
-                    #[cfg(not(target_arch = "wasm32"))]
-                    if self.read_task.is_some() {
+                    // Show task status (unified for native and wasm)
+                    if self.is_task_running() {
                         ui.spinner();
                         ui.label("Processing...");
 
@@ -592,14 +579,6 @@ impl App {
                                 );
                             }
                         }
-                    } else {
-                        ui.label("Ready");
-                    }
-
-                    #[cfg(target_arch = "wasm32")]
-                    if self.is_running {
-                        ui.spinner();
-                        ui.label("Processing...");
                     } else {
                         ui.label("Ready");
                     }

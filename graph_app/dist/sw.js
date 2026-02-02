@@ -1,5 +1,5 @@
 // Service Worker for Graph App PWA
-const CACHE_NAME = 'graph-app-v3';
+const CACHE_NAME = 'graph-app';
 
 // Files to cache for offline use
 const urlsToCache = [
@@ -44,34 +44,28 @@ self.addEventListener('activate', event => {
     self.clients.claim();
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - network first, fallback to cache (always get latest)
 self.addEventListener('fetch', event => {
     event.respondWith(
-        caches.match(event.request)
+        fetch(event.request)
             .then(response => {
-                if (response) {
+                // Don't cache non-successful responses or non-GET requests
+                if (!response || response.status !== 200 || response.type !== 'basic' || event.request.method !== 'GET') {
                     return response;
                 }
-                return fetch(event.request).then(response => {
-                    // Don't cache non-successful responses or non-GET requests
-                    if (!response || response.status !== 200 || response.type !== 'basic' || event.request.method !== 'GET') {
-                        return response;
-                    }
-                    
-                    // Clone the response
-                    const responseToCache = response.clone();
-                    
-                    caches.open(CACHE_NAME)
-                        .then(cache => {
-                            cache.put(event.request, responseToCache);
-                        });
-                    
-                    return response;
-                });
+                
+                // Clone and cache the fresh response
+                const responseToCache = response.clone();
+                caches.open(CACHE_NAME)
+                    .then(cache => {
+                        cache.put(event.request, responseToCache);
+                    });
+                
+                return response;
             })
             .catch(() => {
-                // Offline fallback could go here
-                console.log('Fetch failed, possibly offline');
+                // Network failed, try cache (offline mode)
+                return caches.match(event.request);
             })
     );
 });

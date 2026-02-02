@@ -313,9 +313,9 @@ impl App {
         ui.separator();
         ui.add_space(5.0);
 
-        #[cfg(not(target_arch = "wasm32"))]
+        // Unified run/cancel button (works on both native and wasm)
         ui.horizontal(|ui| {
-            let is_running = self.read_task.is_some();
+            let is_running = self.is_task_running();
 
             if ui
                 .add_enabled(!is_running, egui::Button::new("▶ Run"))
@@ -324,25 +324,18 @@ impl App {
                 self.start_read();
             }
 
-            if is_running {
-                if ui.button("⏹ Cancel").clicked() {
-                    self.abort();
-                }
-                ui.spinner();
-                ui.label("Processing...");
-            }
-        });
-
-        #[cfg(target_arch = "wasm32")]
-        ui.horizontal(|ui| {
+            #[cfg(target_arch = "wasm32")]
             if ui
-                .add_enabled(!self.is_running, egui::Button::new("▶ Run"))
+                .add_enabled(!is_running, egui::Button::new("🧪 Test 10s"))
+                .on_hover_text(
+                    "Run a 10-second async test to verify tasks work",
+                )
                 .clicked()
             {
-                self.start_read();
+                self.start_test_async_task();
             }
 
-            if self.is_running {
+            if is_running {
                 if ui.button("⏹ Cancel").clicked() {
                     self.abort();
                 }

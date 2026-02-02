@@ -33,20 +33,17 @@ impl App {
                 self.start_read();
                 ui.close();
             }
-            #[cfg(not(target_arch = "wasm32"))]
+            // Unified cancel button
             if ui.button("Cancel").clicked() {
                 self.abort();
             }
-            #[cfg(target_arch = "wasm32")]
-            if ui.button("Go").clicked() && !self.is_running {
-                self.start_read();
-                ui.close();
-            }
-            #[cfg(target_arch = "wasm32")]
-            if self.is_running && ui.button("Cancel").clicked() {
-                self.abort();
-            }
         });
+
+        // Unified Go button
+        if ui.button("Go").clicked() && !self.is_task_running() {
+            self.start_read();
+            ui.close();
+        }
 
         if ui.button("Toggle Inserter").clicked() {
             self.inserter_open = !self.inserter_open;

@@ -3,10 +3,7 @@
 mod central;
 mod menus;
 mod panels;
-#[cfg(not(target_arch = "wasm32"))]
-mod tasks;
-#[cfg(target_arch = "wasm32")]
-mod tasks_wasm;
+mod tasks_unified;
 
 use eframe::egui;
 #[cfg(feature = "persistence")]
@@ -19,22 +16,19 @@ use crate::{
     graph::Graph,
     output::OutputBuffer,
     read::ReadCtx,
+    task::TaskHandle,
     vis::graph::GraphVis,
     widgets::EditableLabelState,
 };
 #[cfg(not(target_arch = "wasm32"))]
 use async_std::sync::RwLock as AsyncRwLock;
 use context_trace::graph::vertex::key::VertexKey;
-#[cfg(target_arch = "wasm32")]
-use std::sync::atomic::AtomicBool;
 use std::sync::{
     Arc,
     RwLock as SyncRwLock,
     RwLockReadGuard as SyncRwLockReadGuard,
     RwLockWriteGuard as SyncRwLockWriteGuard,
 };
-#[cfg(not(target_arch = "wasm32"))]
-use tokio_util::sync::CancellationToken;
 
 /// A single graph tab with its own graph state
 #[derive(Debug)]
@@ -153,27 +147,9 @@ pub struct App {
     /// Currently selected algorithm
     pub(crate) selected_algorithm: Algorithm,
 
-    #[cfg(not(target_arch = "wasm32"))]
-    pub(crate) read_task: Option<tokio::task::JoinHandle<()>>,
-
-    #[cfg(not(target_arch = "wasm32"))]
+    /// Current running task (unified across platforms)
     #[cfg_attr(feature = "persistence", serde(skip))]
-    pub(crate) cancellation_token: Option<CancellationToken>,
-
-    /// Wasm: Whether an algorithm is currently running
-    #[cfg(target_arch = "wasm32")]
-    #[cfg_attr(feature = "persistence", serde(skip))]
-    pub(crate) is_running: bool,
-
-    /// Wasm: Cancellation flag for the current operation
-    #[cfg(target_arch = "wasm32")]
-    #[cfg_attr(feature = "persistence", serde(skip))]
-    pub(crate) cancelled: Option<Arc<AtomicBool>>,
-
-    /// Wasm: Flag to track if async task is still running
-    #[cfg(target_arch = "wasm32")]
-    #[cfg_attr(feature = "persistence", serde(skip))]
-    pub(crate) running_flag: Arc<AtomicBool>,
+    pub(crate) current_task: Option<TaskHandle>,
 
     /// Output buffer for the bottom panel
     #[cfg_attr(feature = "persistence", serde(skip))]
@@ -204,16 +180,7 @@ impl App {
             bottom_panel_overlaps_right: false,
             status_bar_open: true,
             selected_algorithm: Algorithm::default(),
-            #[cfg(not(target_arch = "wasm32"))]
-            read_task: None,
-            #[cfg(not(target_arch = "wasm32"))]
-            cancellation_token: None,
-            #[cfg(target_arch = "wasm32")]
-            is_running: false,
-            #[cfg(target_arch = "wasm32")]
-            cancelled: None,
-            #[cfg(target_arch = "wasm32")]
-            running_flag: Arc::new(AtomicBool::new(false)),
+            current_task: None,
             output: OutputBuffer::new(),
         }
     }

@@ -9,6 +9,7 @@ mod examples;
 mod graph;
 mod output;
 mod read;
+pub mod task;
 mod vis;
 pub(crate) mod widgets;
 

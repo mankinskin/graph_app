@@ -46,6 +46,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn main() {
     use eframe::wasm_bindgen::JsCast as _;
 
+    // Set up panic hook for better error messages in the console
+    // This must be done BEFORE any panics can occur
+    console_error_panic_hook::set_once();
+
     // Redirect tracing to console.log
     eframe::WebLogger::init(log::LevelFilter::Debug).ok();
 

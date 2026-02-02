@@ -70,7 +70,9 @@ persistence = [
 
 # WebAssembly dependencies
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-web-sys = { version = "0.3", features = ["console"] }
+web-sys = { version = "0.3", features = ["console", "Window"] }
+js-sys = "0.3"
+gloo-timers = { version = "0.3", features = ["futures"] }
 tracing-wasm = "0.2"
 console_error_panic_hook = "0.1"
 getrandom = { version = "0.3", features = ["wasm_js"] }

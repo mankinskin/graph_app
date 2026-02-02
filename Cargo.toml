@@ -11,5 +11,10 @@ exclude = [
 ]
 members = ["graph_app", "ngrams"]
 
+# Enable unwinding panics so catch_unwind works in wasm
 [profile.release]
-opt-level = 2 # fast and small wasm
+opt-level = 2    # fast and small wasm
+panic = "unwind"
+
+[profile.dev]
+panic = "unwind"
