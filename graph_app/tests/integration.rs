@@ -14,30 +14,30 @@ use context_trace::{
     init_test_tracing,
     Atom,
 };
-use ngrams::graph::{
-    parse_corpus,
-    Corpus,
-    Status,
-    StatusHandle,
+use ngrams::{
+    cancellation::Cancellation,
+    graph::{
+        parse_corpus,
+        Corpus,
+        Status,
+        StatusHandle,
+    },
 };
-use tokio_util::sync::CancellationToken;
 
 /// Test creating a graph with ngrams and then inserting a new sequence
-#[tokio::test]
-async fn test_ngrams_then_insert() {
+#[test]
+fn test_ngrams_then_insert() {
     // Step 1: Create a startup graph using ngrams::parse_corpus
     let initial_texts = vec!["aabb".to_string(), "bbaa".to_string()];
     let corpus_name = "test_ngrams_then_insert".to_owned();
 
     let status = StatusHandle::from(Status::new(initial_texts.clone()));
-    let cancellation_token = CancellationToken::new();
 
     let parse_result = parse_corpus(
         Corpus::new(corpus_name, initial_texts),
         status,
-        cancellation_token.clone(),
+        Cancellation::None,
     )
-    .await
     .expect("parse_corpus should succeed");
 
     // Verify the graph was created successfully
@@ -79,21 +79,19 @@ async fn test_ngrams_then_insert() {
 }
 
 /// Test inserting multiple sequences after ngrams parsing
-#[tokio::test]
-async fn test_ngrams_then_multiple_inserts() {
+#[test]
+fn test_ngrams_then_multiple_inserts() {
     // Step 1: Create a startup graph using ngrams::parse_corpus
     let initial_texts = vec!["hello".to_string(), "world".to_string()];
     let corpus_name = "test_ngrams_multiple_inserts".to_owned();
 
     let status = StatusHandle::from(Status::new(initial_texts.clone()));
-    let cancellation_token = CancellationToken::new();
 
     let parse_result = parse_corpus(
         Corpus::new(corpus_name, initial_texts),
         status,
-        cancellation_token.clone(),
+        Cancellation::None,
     )
-    .await
     .expect("parse_corpus should succeed");
 
     let graph_ref = HypergraphRef::from(parse_result.graph);
@@ -130,9 +128,9 @@ async fn test_ngrams_then_multiple_inserts() {
 /// NOTE: This test is currently ignored because inserting into a graph with only
 /// atoms (no patterns) triggers unreachable code in the split/vertex module.
 /// This is a known limitation - the insert algorithm expects existing structure.
-#[tokio::test]
+#[test]
 #[ignore = "Insert into empty graph (atoms only) triggers unreachable code - known limitation"]
-async fn test_empty_graph_then_insert() {
+fn test_empty_graph_then_insert() {
     // Start with an empty graph
     let graph = Hypergraph::default();
     let graph_ref = HypergraphRef::from(graph);

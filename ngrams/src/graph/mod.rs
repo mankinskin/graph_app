@@ -1,17 +1,16 @@
-use std::{
-    path::{
-        absolute,
-        Path,
-        PathBuf,
-    },
-    sync::{
-        Arc,
-        MappedRwLockReadGuard,
-        MappedRwLockWriteGuard,
-        RwLock,
-        RwLockReadGuard,
-        RwLockWriteGuard,
-    },
+use std::sync::{
+    Arc,
+    MappedRwLockReadGuard,
+    MappedRwLockWriteGuard,
+    RwLock,
+    RwLockReadGuard,
+    RwLockWriteGuard,
+};
+
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::{
+    absolute,
+    PathBuf,
 };
 
 use derive_getters::Getters;
@@ -36,9 +35,9 @@ use serde::{
     Deserialize,
     Serialize,
 };
-use tokio_util::sync::CancellationToken;
 
 use crate::{
+    cancellation::Cancellation,
     graph::{
         labelling::{
             LabellingCtx,
@@ -61,6 +60,7 @@ pub mod traversal;
 pub mod utils;
 pub mod vocabulary;
 
+#[cfg(not(target_arch = "wasm32"))]
 lazy_static::lazy_static! {
     pub static ref CORPUS_DIR: PathBuf = absolute(PathBuf::from_iter([".", "test", "cache"])).unwrap();
 }
@@ -172,8 +172,10 @@ impl Corpus {
             texts: texts.into_iter().map(|s| s.to_string()).collect(),
         }
     }
-    pub fn target_file_path(&self) -> impl AsRef<Path> {
-        CORPUS_DIR.join(&self.name)
+    
+    /// Get the storage key for this corpus
+    pub fn storage_key(&self) -> &str {
+        &self.name
     }
 }
 pub type AbortSender = std::sync::mpsc::Sender<()>;
@@ -183,20 +185,20 @@ pub struct ParseResult {
     pub containment: Hypergraph,
     pub labels: HashSet<VertexKey>,
 }
-pub async fn parse_corpus(
+pub fn parse_corpus(
     corpus: Corpus,
     mut status: StatusHandle,
-    cancellation_token: CancellationToken,
+    cancellation: impl Into<Cancellation>,
 ) -> RunResult<ParseResult> {
-    let image = LabellingImage::from_corpus(&corpus, &mut status).await;
+    let image = LabellingImage::from_corpus(&corpus, &mut status);
     let test_corpus = TestCorpus::new(image, corpus);
-    let mut ctx = LabellingCtx::new(test_corpus, status, cancellation_token);
+    let mut ctx = LabellingCtx::new(test_corpus, status, cancellation.into());
 
-    ctx.label_freq().await?;
+    ctx.label_freq()?;
 
-    ctx.label_wrap().await?;
+    ctx.label_wrap()?;
 
-    let graph = ctx.label_part().await?;
+    let graph = ctx.label_part()?;
 
     let LabellingImage { vocab, labels } = ctx.corpus.image;
     Ok(ParseResult {

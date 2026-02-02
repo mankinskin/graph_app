@@ -28,7 +28,7 @@ use derive_new::new;
 use itertools::Itertools;
 use ngram::NGram;
 use pretty_assertions::assert_eq;
-use tokio_util::sync::CancellationToken;
+use crate::cancellation::Cancellation;
 
 pub const OTTOS_MOPS_CORPUS: [&str; 4] = [
     "ottos mops trotzt",
@@ -168,10 +168,10 @@ pub struct TestCase {
     labels: LabelTest,
 }
 impl TestCase {
-    pub async fn execute(&mut self) {
+    pub fn execute(&mut self) {
         // graph of all containment edges between n and n+1
         self.corpus.test_containment();
-        self.label_freq().await;
+        self.label_freq().unwrap();
 
         if *self.status.pass() == ProcessStatus::Frequency {
             let ctx = LabelTestCtx::new(self.labels(), self);
@@ -181,14 +181,14 @@ impl TestCase {
             ctx.test_freq();
         }
 
-        self.label_wrap().await;
+        self.label_wrap().unwrap();
 
         if *self.status.pass() == ProcessStatus::Wrappers {
             let ctx = LabelTestCtx::new(self.labels(), self);
             ctx.test_wrap();
         }
 
-        self.label_part().await;
+        self.label_part().unwrap();
 
         if *self.status.pass() == ProcessStatus::Partitions {
             let ctx = LabelTestCtx::new(self.labels(), self);
@@ -288,16 +288,15 @@ impl<'a> LabelTestCtx<'a> {
     }
 }
 
-#[tokio::test]
-pub async fn test_graph1() {
+#[test]
+pub fn test_graph1() {
     let corpus = ["abab", "abcabc", "babc"];
     let texts = corpus.into_iter().map(ToString::to_string).collect_vec();
     TestCase {
         ctx: LabellingCtx::from_corpus(
             Corpus::new("abab_corpus".to_owned(), texts),
-            CancellationToken::new(),
-        )
-        .await,
+            Cancellation::None,
+        ),
         labels: test_labels! {
             [
                 "ab",
@@ -308,22 +307,20 @@ pub async fn test_graph1() {
             [] as [&str; 0],
         },
     }
-    .execute()
-    .await;
+    .execute();
 }
 
 // too slow!
 #[allow(unused)]
-pub async fn test_graph2() {
+pub fn test_graph2() {
     let corpus = OTTOS_MOPS_CORPUS;
     let texts = corpus.into_iter().map(ToString::to_string).collect_vec();
 
     TestCase {
         ctx: LabellingCtx::from_corpus(
             Corpus::new("ottos_mops".to_owned(), texts),
-            CancellationToken::new(),
-        )
-        .await,
+            Cancellation::None,
+        ),
         labels: test_labels! {
             [
                 "ot",
@@ -366,12 +363,11 @@ pub async fn test_graph2() {
             [] as [&str; 0],
         },
     }
-    .execute()
-    .await;
+    .execute();
 }
 
-#[tokio::test]
-pub async fn test_parse_corpus() {
+#[test]
+pub fn test_parse_corpus() {
     use crate::graph::{
         parse_corpus,
         Status,
@@ -382,14 +378,12 @@ pub async fn test_parse_corpus() {
     let corpus_name = "test_parse_corpus".to_owned();
 
     let status = StatusHandle::from(Status::new(texts.clone()));
-    let cancellation_token = CancellationToken::new();
 
     let result = parse_corpus(
         Corpus::new(corpus_name, texts),
         status,
-        cancellation_token,
-    )
-    .await;
+        Cancellation::None,
+    );
 
     assert!(result.is_ok(), "parse_corpus should succeed");
 
@@ -433,8 +427,8 @@ pub async fn test_parse_corpus() {
     }
 }
 
-#[tokio::test]
-pub async fn test_parse_corpus_aabbaabbaa() {
+#[test]
+pub fn test_parse_corpus_aabbaabbaa() {
     use crate::graph::{
         parse_corpus,
         Status,
@@ -444,14 +438,12 @@ pub async fn test_parse_corpus_aabbaabbaa() {
     let corpus_name = "test_aabbaabbaa".to_owned();
 
     let status = StatusHandle::from(Status::new(texts.clone()));
-    let cancellation_token = CancellationToken::new();
 
     let result = parse_corpus(
         Corpus::new(corpus_name, texts),
         status,
-        cancellation_token,
-    )
-    .await;
+        Cancellation::None,
+    );
 
     assert!(result.is_ok(), "parse_corpus should succeed for aabbaabbaa");
 
@@ -494,8 +486,8 @@ pub async fn test_parse_corpus_aabbaabbaa() {
     }
 }
 
-#[tokio::test]
-pub async fn test_parse_corpus_single_char() {
+#[test]
+pub fn test_parse_corpus_single_char() {
     use crate::graph::{
         parse_corpus,
         Status,
@@ -505,14 +497,12 @@ pub async fn test_parse_corpus_single_char() {
     let corpus_name = "test_single_char".to_owned();
 
     let status = StatusHandle::from(Status::new(texts.clone()));
-    let cancellation_token = CancellationToken::new();
 
     let result = parse_corpus(
         Corpus::new(corpus_name, texts),
         status,
-        cancellation_token,
-    )
-    .await;
+        Cancellation::None,
+    );
 
     assert!(result.is_ok(), "parse_corpus should succeed for aaaa");
 
@@ -548,8 +538,8 @@ pub async fn test_parse_corpus_single_char() {
     }
 }
 
-#[tokio::test]
-pub async fn test_parse_corpus_two_texts() {
+#[test]
+pub fn test_parse_corpus_two_texts() {
     use crate::graph::{
         parse_corpus,
         Status,
@@ -559,14 +549,12 @@ pub async fn test_parse_corpus_two_texts() {
     let corpus_name = "test_two_texts".to_owned();
 
     let status = StatusHandle::from(Status::new(texts.clone()));
-    let cancellation_token = CancellationToken::new();
 
     let result = parse_corpus(
         Corpus::new(corpus_name, texts),
         status,
-        cancellation_token,
-    )
-    .await;
+        Cancellation::None,
+    );
 
     assert!(result.is_ok(), "parse_corpus should succeed for two texts");
 
@@ -602,8 +590,8 @@ pub async fn test_parse_corpus_two_texts() {
     }
 }
 
-#[tokio::test]
-pub async fn test_parse_corpus_empty_result() {
+#[test]
+pub fn test_parse_corpus_empty_result() {
     use crate::graph::{
         parse_corpus,
         Status,
@@ -614,14 +602,12 @@ pub async fn test_parse_corpus_empty_result() {
     let corpus_name = "test_no_repeats".to_owned();
 
     let status = StatusHandle::from(Status::new(texts.clone()));
-    let cancellation_token = CancellationToken::new();
 
     let result = parse_corpus(
         Corpus::new(corpus_name, texts),
         status,
-        cancellation_token,
-    )
-    .await;
+        Cancellation::None,
+    );
 
     assert!(
         result.is_ok(),

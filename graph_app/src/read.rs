@@ -1,3 +1,5 @@
+#[cfg(target_arch = "wasm32")]
+use ngrams::graph::StatusHandle;
 #[cfg(not(target_arch = "wasm32"))]
 use ngrams::graph::{
     traversal::pass::CancelReason,
@@ -37,18 +39,15 @@ use tokio_util::sync::CancellationToken;
 #[derive(Debug)]
 pub struct ReadCtx {
     graph: Graph,
-    #[cfg(not(target_arch = "wasm32"))]
     status: Option<ngrams::graph::StatusHandle>,
 }
 impl ReadCtx {
     pub fn new(graph: Graph) -> Self {
         Self {
             graph,
-            #[cfg(not(target_arch = "wasm32"))]
             status: None,
         }
     }
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn status(&self) -> Option<&StatusHandle> {
         self.status.as_ref()
     }
@@ -75,21 +74,108 @@ impl ReadCtx {
 
         match algorithm {
             Algorithm::NgramsParseCorpus => {
-                // NgramsParseCorpus is not available in wasm - should not be selectable
-                web_sys::console::error_1(
-                    &"NgramsParseCorpus is not available in browser. Please select a different algorithm.".into(),
+                web_sys::console::log_1(
+                    &"Dispatching to run_ngrams_parse_corpus_sync".into(),
                 );
-                return;
+                self.run_ngrams_parse_corpus_sync(cancelled);
             },
             Algorithm::ContextRead => {
+                web_sys::console::log_1(
+                    &"Dispatching to run_context_read_sync".into(),
+                );
                 self.run_context_read_sync(cancelled);
             },
             Algorithm::ContextInsert => {
+                web_sys::console::log_1(
+                    &"Dispatching to run_context_insert_sync".into(),
+                );
                 self.run_context_insert_sync(cancelled);
             },
         }
 
         web_sys::console::log_1(&"Task done.".into());
+    }
+
+    /// Run ngrams::parse_corpus algorithm synchronously
+    fn run_ngrams_parse_corpus_sync(
+        &mut self,
+        cancelled: &Arc<AtomicBool>,
+    ) {
+        web_sys::console::log_1(
+            &"Starting run_ngrams_parse_corpus_sync...".into(),
+        );
+
+        use ngrams::{
+            cancellation::Cancellation,
+            graph::{
+                parse_corpus,
+                traversal::pass::CancelReason,
+                Corpus,
+                ParseResult,
+                Status,
+                StatusHandle,
+            },
+        };
+        use std::{
+            collections::hash_map::DefaultHasher,
+            hash::{
+                Hash,
+                Hasher,
+            },
+        };
+
+        let graph = self.graph.graph.clone();
+        let labels = self.graph.labels.clone();
+        let insert_texts = self.graph.insert_texts.clone();
+
+        web_sys::console::log_1(
+            &format!("Insert texts: {:?}", insert_texts).into(),
+        );
+
+        let status = StatusHandle::from(Status::new(insert_texts.clone()));
+        self.status = Some(status.clone());
+
+        let corpus_name = {
+            let mut hasher = DefaultHasher::new();
+            insert_texts.hash(&mut hasher);
+            format!("{:?}", hasher.finish())
+        };
+        let corpus = Corpus::new(corpus_name.clone(), insert_texts);
+
+        web_sys::console::log_1(
+            &format!("Created corpus: {}", corpus_name).into(),
+        );
+
+        // Create a wasm-compatible cancellation using the Arc<AtomicBool>
+        let cancellation = Cancellation::from(cancelled.clone());
+
+        web_sys::console::log_1(&"Calling parse_corpus...".into());
+
+        // Run the sync parse_corpus
+        let result = parse_corpus(corpus, status, cancellation);
+
+        web_sys::console::log_1(&"parse_corpus returned".into());
+
+        match result {
+            Ok(res) => {
+                self.graph.insert_texts.clear();
+                *graph.write().unwrap() = res.graph.into();
+                *labels.write().unwrap() = res.labels;
+                web_sys::console::log_1(
+                    &"Ngrams parse corpus completed successfully".into(),
+                );
+            },
+            Err(CancelReason::Cancelled) => {
+                web_sys::console::log_1(
+                    &"Parse operation was cancelled via token".into(),
+                );
+            },
+            Err(CancelReason::Error) => {
+                web_sys::console::error_1(
+                    &"Parse operation encountered an error".into(),
+                );
+            },
+        }
     }
 
     /// Run context-read algorithm synchronously
@@ -232,30 +318,32 @@ impl ReadCtx {
         };
         let corpus = ngrams::graph::Corpus::new(corpus_name, insert_texts);
 
-        tokio::select! {
-            res = ngrams::graph::parse_corpus(
-                corpus,
-                status,
-                cancellation_token.clone(),
-            ) => {
-                match res {
-                    Ok(res) => {
-                        self.graph.insert_texts.clear();
-                        *graph.write().unwrap() = res.graph.into();
-                        *labels.write().unwrap() = res.labels;
-                    },
-                    Err(CancelReason::Cancelled) => {
-                        println!("Parse operation was cancelled via token");
-                    },
-                    Err(CancelReason::Error) => {
-                        println!("Parse operation panicked");
-                    },
-                }
+        // Convert the cancellation token to the ngrams Cancellation type
+        let cancellation =
+            ngrams::cancellation::Cancellation::from(cancellation_token);
+
+        // Run the sync parse_corpus in a blocking task
+        let res = tokio::task::spawn_blocking(move || {
+            ngrams::graph::parse_corpus(corpus, status, cancellation)
+        })
+        .await;
+
+        match res {
+            Ok(Ok(res)) => {
+                self.graph.insert_texts.clear();
+                *graph.write().unwrap() = res.graph.into();
+                *labels.write().unwrap() = res.labels;
             },
-            _ = cancellation_token.cancelled() => {
-                println!("Parse operation was cancelled via token during execution");
-            }
-        };
+            Ok(Err(CancelReason::Cancelled)) => {
+                println!("Parse operation was cancelled via token");
+            },
+            Ok(Err(CancelReason::Error)) => {
+                println!("Parse operation panicked");
+            },
+            Err(join_error) => {
+                println!("Parse task panicked: {:?}", join_error);
+            },
+        }
     }
 
     /// Run context-read::read algorithm

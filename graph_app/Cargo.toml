@@ -75,3 +75,10 @@ tracing-wasm = "0.2"
 console_error_panic_hook = "0.1"
 getrandom = { version = "0.3", features = ["wasm_js"] }
 log = "0.4"
+
+# Enable unwinding panics in wasm so catch_unwind works
+[profile.release]
+panic = "unwind"
+
+[profile.dev]
+panic = "unwind"

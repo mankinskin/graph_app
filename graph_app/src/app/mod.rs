@@ -203,10 +203,7 @@ impl App {
             bottom_panel_overlaps_left: false,
             bottom_panel_overlaps_right: false,
             status_bar_open: true,
-            #[cfg(not(target_arch = "wasm32"))]
             selected_algorithm: Algorithm::default(),
-            #[cfg(target_arch = "wasm32")]
-            selected_algorithm: Algorithm::ContextInsert,
             #[cfg(not(target_arch = "wasm32"))]
             read_task: None,
             #[cfg(not(target_arch = "wasm32"))]

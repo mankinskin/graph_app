@@ -43,15 +43,18 @@ features = ["rt-multi-thread"]
 [dependencies.tokio-util]
 version = "^0.7"
 
-[dependencies.context-read]
-path = "../context-engine/crates/context-read"
+# Web-sys for wasm localStorage support
+[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
+version = "0.3"
+features = ["Window", "Storage", "console"]
+
+# getrandom needs wasm_js feature for wasm builds
+[target.'cfg(target_arch = "wasm32")'.dependencies.getrandom]
+version = "0.3"
+features = ["wasm_js"]
 
 [dependencies.context-trace]
 path = "../context-engine/crates/context-trace"
-
-[dev-dependencies.context-read]
-path = "../context-engine/crates/context-read"
-features = ["test-hashing"]
 
 #[dev-dependencies.ngrams]
 #path = "."

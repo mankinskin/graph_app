@@ -265,11 +265,6 @@ impl App {
                 .selected_text(self.selected_algorithm.to_string())
                 .show_ui(ui, |ui| {
                     for algorithm in Algorithm::iter() {
-                        // Skip NgramsParseCorpus in wasm - not supported
-                        #[cfg(target_arch = "wasm32")]
-                        if algorithm == Algorithm::NgramsParseCorpus {
-                            continue;
-                        }
                         ui.selectable_value(
                             &mut self.selected_algorithm,
                             algorithm,
