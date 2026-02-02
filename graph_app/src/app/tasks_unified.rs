@@ -16,61 +16,41 @@ impl App {
 
         let algorithm = self.selected_algorithm;
         let output = self.output.clone();
-        let _vis = self.current_tab().map(|t| t.vis.clone());
 
         output.info(format!("Starting {} algorithm...", algorithm));
 
-        // Native: use spawn with blocking
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            use crate::task::spawn;
-            
-            let task = spawn(move |cancellation| {
-                println!("Task starting: algorithm = {:?}", algorithm);
-
-                let rt = tokio::runtime::Handle::current();
-                rt.block_on(async {
-                    let mut ctx_guard = ctx.write().await;
-                    ctx_guard
-                        .run_algorithm(algorithm, cancellation.token())
-                        .await;
-                });
-            });
-
-            self.current_task = Some(task);
-        }
-
-        // Wasm: use spawn_async with truly async execution
-        #[cfg(target_arch = "wasm32")]
-        {
-            use crate::task::spawn_async;
-            
-            let task = spawn_async(move |cancellation| async move {
+        // Use unified spawn for both platforms
+        let task = TaskHandle::spawn(move |cancellation| async move {
+            #[cfg(target_arch = "wasm32")]
+            {
                 web_sys::console::log_1(
                     &format!("Task starting: algorithm = {:?}", algorithm).into(),
                 );
-
-                // Run the async algorithm
                 let mut ctx_guard = ctx.write().unwrap();
                 ctx_guard.run_algorithm_async(algorithm, cancellation).await;
-                
                 web_sys::console::log_1(&"Task completed".into());
-            });
+            }
+            
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                println!("Task starting: algorithm = {:?}", algorithm);
+                let mut ctx_guard = ctx.write().await;
+                ctx_guard.run_algorithm(algorithm, cancellation.token()).await;
+                println!("Task completed");
+            }
+        });
 
-            self.current_task = Some(task);
-        }
+        self.current_task = Some(task);
     }
 
     /// Start a test task that waits for 10 seconds asynchronously
     /// This is used to verify that async tasks work correctly on wasm
     #[cfg(target_arch = "wasm32")]
     pub(crate) fn start_test_async_task(&mut self) {
-        use crate::task::spawn_async;
-        
         let output = self.output.clone();
         output.info("Starting 10-second async test task...");
 
-        let task = spawn_async(move |cancellation| async move {
+        let task = TaskHandle::spawn(move |cancellation| async move {
             for i in 0..10 {
                 if cancellation.is_cancelled() {
                     web_sys::console::log_1(&"Test task cancelled".into());
@@ -134,20 +114,17 @@ impl App {
 
     /// Handle the result of a completed task
     #[allow(unused)]
-    fn handle_task_result(
-        &mut self,
-        result: TaskResult,
-    ) {
+    fn handle_task_result(&mut self, result: TaskResult) {
         match result {
             TaskResult::Success => {
                 self.output.success("Algorithm completed successfully.");
-            },
+            }
             TaskResult::Cancelled => {
                 self.output.warn("Algorithm was cancelled.");
-            },
+            }
             TaskResult::Panicked(msg) => {
                 self.output.error(format!("Algorithm panicked: {}", msg));
-            },
+            }
         }
     }
 }

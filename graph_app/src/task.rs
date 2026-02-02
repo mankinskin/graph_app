@@ -1,7 +1,17 @@
 //! Unified task abstraction for cross-platform async task management.
 //!
-//! This module provides a common interface for spawning, cancelling, and polling
-//! tasks that works on both native (tokio) and wasm (wasm-bindgen-futures).
+//! This module provides a common interface for spawning and cancelling tasks
+//! that works on both native (tokio) and wasm (wasm-bindgen-futures).
+//!
+//! # Architecture
+//!
+//! Both platforms use async execution with a unified interface:
+//! - **Native**: Uses tokio with spawn_blocking for CPU-bound sync work
+//! - **Wasm**: Uses wasm-bindgen-futures with async algorithms that yield periodically
+//!
+//! The key insight is that wasm runs on the main thread, so sync code will block
+//! the UI. To keep the UI responsive, algorithms must be written as async code
+//! that yields control via `gloo_timers::future::TimeoutFuture::new(0).await`.
 
 use std::sync::{
     atomic::{
@@ -13,17 +23,6 @@ use std::sync::{
 
 #[cfg(not(target_arch = "wasm32"))]
 use tokio_util::sync::CancellationToken;
-
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen_futures::wasm_bindgen::{
-    self,
-    prelude::*,
-    JsCast,
-    JsValue,
-};
-
-#[cfg(target_arch = "wasm32")]
-use js_sys;
 
 /// A handle to cancel a running task
 #[derive(Clone)]
@@ -80,21 +79,6 @@ impl Default for CancellationHandle {
     }
 }
 
-/// Status of a spawned task
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TaskStatus {
-    /// Task is currently running
-    Running,
-    /// Task completed successfully
-    Completed,
-    /// Task was cancelled
-    Cancelled,
-    /// Task panicked with an error
-    Panicked,
-    /// No task is active
-    Idle,
-}
-
 /// Result of a task execution
 #[derive(Debug, Clone)]
 pub enum TaskResult {
@@ -115,8 +99,6 @@ pub struct TaskHandle {
     #[cfg(target_arch = "wasm32")]
     result: Arc<std::sync::RwLock<Option<TaskResult>>>,
     cancellation: CancellationHandle,
-    #[allow(dead_code)]
-    status: Arc<AtomicTaskStatus>,
 }
 
 impl std::fmt::Debug for TaskHandle {
@@ -127,32 +109,6 @@ impl std::fmt::Debug for TaskHandle {
         f.debug_struct("TaskHandle")
             .field("is_running", &self.is_running())
             .finish()
-    }
-}
-
-/// Atomic wrapper for TaskStatus
-struct AtomicTaskStatus(AtomicBool, AtomicBool); // (is_running, has_error)
-
-impl AtomicTaskStatus {
-    fn new() -> Self {
-        Self(AtomicBool::new(true), AtomicBool::new(false))
-    }
-
-    fn set_completed(&self) {
-        self.0.store(false, Ordering::SeqCst);
-    }
-
-    fn set_error(&self) {
-        self.1.store(true, Ordering::SeqCst);
-        self.0.store(false, Ordering::SeqCst);
-    }
-
-    fn is_running(&self) -> bool {
-        self.0.load(Ordering::SeqCst)
-    }
-
-    fn has_error(&self) -> bool {
-        self.1.load(Ordering::SeqCst)
     }
 }
 
@@ -196,7 +152,7 @@ impl TaskHandle {
         &self.cancellation
     }
 
-    /// Try to get the result if the task has finished
+    /// Try to get the result if the task has finished (wasm only)
     #[cfg(target_arch = "wasm32")]
     pub fn try_get_result(&self) -> Option<TaskResult> {
         if self.is_finished() {
@@ -205,24 +161,86 @@ impl TaskHandle {
             None
         }
     }
+
+    /// Spawn an async task (unified interface for both platforms)
+    ///
+    /// The task receives a CancellationHandle and should check it periodically.
+    /// On wasm, yield periodically using `gloo_timers::future::TimeoutFuture::new(0).await`
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn spawn<F, Fut>(f: F) -> Self
+    where
+        F: FnOnce(CancellationHandle) -> Fut + Send + 'static,
+        Fut: std::future::Future<Output = ()> + Send + 'static,
+    {
+        Self::spawn_native(f)
+    }
+
+    /// Spawn an async task (unified interface for both platforms)
+    ///
+    /// The task receives a CancellationHandle and should check it periodically.
+    /// On wasm, yield periodically using `gloo_timers::future::TimeoutFuture::new(0).await`
+    #[cfg(target_arch = "wasm32")]
+    pub fn spawn<F, Fut>(f: F) -> Self
+    where
+        F: FnOnce(CancellationHandle) -> Fut + 'static,
+        Fut: std::future::Future<Output = ()> + 'static,
+    {
+        Self::spawn_wasm(f)
+    }
 }
 
-/// Spawn a task that runs the given closure
-///
-/// On native: Uses tokio::spawn with spawn_blocking for sync work
-/// On wasm: Uses wasm_bindgen_futures::spawn_local with catch_unwind
-pub fn spawn<F>(f: F) -> TaskHandle
-where
-    F: FnOnce(&CancellationHandle) + Send + 'static,
-{
-    let cancellation = CancellationHandle::new();
-    let status = Arc::new(AtomicTaskStatus::new());
+// ============================================================================
+// Native implementation
+// ============================================================================
 
-    #[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_arch = "wasm32"))]
+impl TaskHandle {
+    fn spawn_native<F, Fut>(f: F) -> Self
+    where
+        F: FnOnce(CancellationHandle) -> Fut + Send + 'static,
+        Fut: std::future::Future<Output = ()> + Send + 'static,
     {
+        use futures::FutureExt;
+
+        let cancellation = CancellationHandle::new();
         let cancel_clone = cancellation.clone();
         let cancel_for_check = cancellation.clone();
-        let status_clone = status.clone();
+
+        let join_handle = tokio::spawn(async move {
+            // Catch panics
+            let result = std::panic::AssertUnwindSafe(f(cancel_clone))
+                .catch_unwind()
+                .await;
+
+            match result {
+                Ok(()) =>
+                    if cancel_for_check.is_cancelled() {
+                        TaskResult::Cancelled
+                    } else {
+                        TaskResult::Success
+                    },
+                Err(panic_info) => {
+                    let msg = extract_panic_message(panic_info);
+                    TaskResult::Panicked(msg)
+                },
+            }
+        });
+
+        TaskHandle {
+            join_handle: Some(join_handle),
+            cancellation,
+        }
+    }
+
+    /// Spawn a blocking task (native only)
+    /// Use this for CPU-bound sync work that would block the async runtime
+    pub fn spawn_blocking<F>(f: F) -> Self
+    where
+        F: FnOnce(&CancellationHandle) + Send + 'static,
+    {
+        let cancellation = CancellationHandle::new();
+        let cancel_clone = cancellation.clone();
+        let cancel_for_check = cancellation.clone();
 
         let join_handle = tokio::spawn(async move {
             let result = tokio::task::spawn_blocking(move || {
@@ -233,21 +251,17 @@ where
             .await;
 
             match result {
-                Ok(Ok(())) => {
-                    status_clone.set_completed();
+                Ok(Ok(())) =>
                     if cancel_for_check.is_cancelled() {
                         TaskResult::Cancelled
                     } else {
                         TaskResult::Success
-                    }
-                },
+                    },
                 Ok(Err(panic_info)) => {
-                    status_clone.set_error();
                     let msg = extract_panic_message(panic_info);
                     TaskResult::Panicked(msg)
                 },
-                Err(join_error) => {
-                    status_clone.set_error();
+                Err(join_error) =>
                     if join_error.is_cancelled() {
                         TaskResult::Cancelled
                     } else {
@@ -255,53 +269,59 @@ where
                             "Task join error: {:?}",
                             join_error
                         ))
-                    }
-                },
+                    },
             }
         });
 
         TaskHandle {
             join_handle: Some(join_handle),
             cancellation,
-            status,
         }
     }
+}
 
-    #[cfg(target_arch = "wasm32")]
+#[cfg(not(target_arch = "wasm32"))]
+fn extract_panic_message(panic_info: Box<dyn std::any::Any + Send>) -> String {
+    if let Some(s) = panic_info.downcast_ref::<&str>() {
+        s.to_string()
+    } else if let Some(s) = panic_info.downcast_ref::<String>() {
+        s.clone()
+    } else {
+        "Unknown panic".to_string()
+    }
+}
+
+// ============================================================================
+// Wasm implementation
+// ============================================================================
+
+#[cfg(target_arch = "wasm32")]
+impl TaskHandle {
+    fn spawn_wasm<F, Fut>(f: F) -> Self
+    where
+        F: FnOnce(CancellationHandle) -> Fut + 'static,
+        Fut: std::future::Future<Output = ()> + 'static,
     {
+        let cancellation = CancellationHandle::new();
         let cancel_clone = cancellation.clone();
         let cancel_for_check = cancellation.clone();
         let running_flag = Arc::new(AtomicBool::new(true));
         let running_flag_clone = running_flag.clone();
         let result = Arc::new(std::sync::RwLock::new(None));
         let result_clone = result.clone();
-        let status_clone = status.clone();
 
         wasm_bindgen_futures::spawn_local(async move {
-            // Yield to allow the UI to update before starting heavy work
+            // Yield once to let the UI update before starting
             yield_now().await;
 
-            // Run the task with JavaScript-level error catching
-            let task_result = run_task_with_js_catch(move || {
-                f(&cancel_clone);
-            });
+            // Run the async task
+            f(cancel_clone).await;
 
-            let final_result = match task_result {
-                Ok(()) => {
-                    status_clone.set_completed();
-                    if cancel_for_check.is_cancelled() {
-                        TaskResult::Cancelled
-                    } else {
-                        TaskResult::Success
-                    }
-                },
-                Err(msg) => {
-                    status_clone.set_error();
-                    web_sys::console::error_1(
-                        &format!("Task panicked: {}", msg).into(),
-                    );
-                    TaskResult::Panicked(msg)
-                },
+            // Determine result
+            let final_result = if cancel_for_check.is_cancelled() {
+                TaskResult::Cancelled
+            } else {
+                TaskResult::Success
             };
 
             if let Ok(mut r) = result_clone.write() {
@@ -314,25 +334,12 @@ where
             running_flag,
             result,
             cancellation,
-            status,
         }
     }
 }
 
-/// Extract a message from a panic payload
-#[cfg(not(target_arch = "wasm32"))]
-fn extract_panic_message(panic_info: Box<dyn std::any::Any + Send>) -> String {
-    if let Some(s) = panic_info.downcast_ref::<&str>() {
-        s.to_string()
-    } else if let Some(s) = panic_info.downcast_ref::<String>() {
-        s.clone()
-    } else {
-        "Unknown panic".to_string()
-    }
-}
-
-/// Yield control back to the JavaScript event loop
-/// This allows the UI to remain responsive during long-running tasks
+/// Yield control back to the JavaScript event loop.
+/// This allows the UI to remain responsive during long-running async tasks.
 #[cfg(target_arch = "wasm32")]
 async fn yield_now() {
     use std::{
@@ -364,171 +371,6 @@ async fn yield_now() {
     }
 
     YieldNow(false).await
-}
-
-/// Sleep for a given number of milliseconds using JavaScript's setTimeout
-#[cfg(target_arch = "wasm32")]
-pub async fn sleep_ms(ms: u32) {
-    use wasm_bindgen_futures::JsFuture;
-    
-    let promise = js_sys::Promise::new(&mut |resolve, _reject| {
-        let window = web_sys::window().expect("no window");
-        window.set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, ms as i32)
-            .expect("setTimeout failed");
-    });
-    
-    JsFuture::from(promise).await.ok();
-}
-
-/// Spawn an async task for wasm
-/// This is different from `spawn` - it takes an async closure that can yield to the event loop
-#[cfg(target_arch = "wasm32")]
-pub fn spawn_async<F, Fut>(f: F) -> TaskHandle
-where
-    F: FnOnce(CancellationHandle) -> Fut + 'static,
-    Fut: std::future::Future<Output = ()> + 'static,
-{
-    let cancellation = CancellationHandle::new();
-    let status = Arc::new(AtomicTaskStatus::new());
-    
-    let cancel_clone = cancellation.clone();
-    let cancel_for_check = cancellation.clone();
-    let running_flag = Arc::new(AtomicBool::new(true));
-    let running_flag_clone = running_flag.clone();
-    let result = Arc::new(std::sync::RwLock::new(None));
-    let result_clone = result.clone();
-    let status_clone = status.clone();
-
-    wasm_bindgen_futures::spawn_local(async move {
-        // Yield once to let the UI update
-        yield_now().await;
-        
-        // Run the async task
-        let task_future = f(cancel_clone);
-        task_future.await;
-        
-        // Mark as completed
-        status_clone.set_completed();
-        let final_result = if cancel_for_check.is_cancelled() {
-            TaskResult::Cancelled
-        } else {
-            TaskResult::Success
-        };
-
-        if let Ok(mut r) = result_clone.write() {
-            *r = Some(final_result);
-        }
-        running_flag_clone.store(false, Ordering::SeqCst);
-    });
-
-    TaskHandle {
-        running_flag,
-        result,
-        cancellation,
-        status,
-    }
-}
-
-/// Thread-local storage for panic messages before they abort
-#[cfg(target_arch = "wasm32")]
-thread_local! {
-    static PANIC_MESSAGE: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
-}
-
-/// Run a task with JavaScript-level error catching.
-///
-/// This works by:
-/// 1. Setting a custom panic hook that stores the panic message and throws a JS exception
-/// 2. Calling the task via JavaScript which can catch the exception
-/// 3. Returning the error message if a panic occurred
-#[cfg(target_arch = "wasm32")]
-fn run_task_with_js_catch<F>(f: F) -> Result<(), String>
-where
-    F: FnOnce() + 'static,
-{
-    use std::panic;
-
-    // Clear any previous panic message
-    PANIC_MESSAGE.with(|pm| *pm.borrow_mut() = None);
-
-    // Save the original panic hook
-    let original_hook = panic::take_hook();
-
-    // Set a custom panic hook that stores the message and throws a JS exception
-    panic::set_hook(Box::new(|info| {
-        let msg = if let Some(s) = info.payload().downcast_ref::<&str>() {
-            s.to_string()
-        } else if let Some(s) = info.payload().downcast_ref::<String>() {
-            s.clone()
-        } else {
-            "Unknown panic".to_string()
-        };
-
-        let location = info
-            .location()
-            .map(|loc| {
-                format!(" at {}:{}:{}", loc.file(), loc.line(), loc.column())
-            })
-            .unwrap_or_default();
-
-        let full_msg = format!("{}{}", msg, location);
-
-        // Store the message for later retrieval
-        PANIC_MESSAGE.with(|pm| *pm.borrow_mut() = Some(full_msg.clone()));
-
-        // Log to console
-        web_sys::console::error_1(&format!("Panic: {}", full_msg).into());
-
-        // Throw a JavaScript exception to prevent the Rust abort
-        // This will unwind the JS call stack instead of aborting
-        wasm_bindgen::throw_str(&full_msg);
-    }));
-
-    // Call the task through JavaScript so we can catch the exception
-    let result = call_with_js_catch(Box::new(f));
-
-    // Restore the original panic hook
-    panic::set_hook(original_hook);
-
-    result
-}
-
-/// Helper to call a closure through JavaScript with exception catching
-#[cfg(target_arch = "wasm32")]
-fn call_with_js_catch(f: Box<dyn FnOnce()>) -> Result<(), String> {
-    use std::cell::RefCell;
-
-    // We'll use a simpler approach - just run the closure and if the panic hook
-    // throws a JS exception, the wasm execution will stop but won't abort the runtime
-    let f = RefCell::new(Some(f));
-    let closure = Closure::once(move || {
-        if let Some(func) = f.borrow_mut().take() {
-            func();
-        }
-    });
-
-    // Call the closure and catch any JS exception
-    let result = catch_js_exception(&closure);
-
-    match result {
-        Ok(()) => Ok(()),
-        Err(js_val) => {
-            let msg = js_val
-                .as_string()
-                .unwrap_or_else(|| format!("{:?}", js_val));
-            Err(msg)
-        },
-    }
-}
-
-/// Call a closure and catch any JavaScript exception
-#[cfg(target_arch = "wasm32")]
-fn catch_js_exception(closure: &Closure<dyn FnMut()>) -> Result<(), JsValue> {
-    let func: &js_sys::Function = closure.as_ref().unchecked_ref();
-
-    // Use Reflect.apply with try/catch semantics via js_sys
-    // We'll call the function and if it throws, it becomes a Result::Err
-    func.call0(&JsValue::NULL).map(|_| ())
 }
 
 #[cfg(test)]
