@@ -40,24 +40,14 @@ jobs:
           cache-targets: true
           cache-all-crates: true
 
-      - name: Cache Trunk
-        id: cache-trunk
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin/trunk
-          key: trunk-${{ runner.os }}-0.21.14
-
       - name: Install Trunk
-        if: steps.cache-trunk.outputs.cache-hit != 'true'
         uses: cargo-bins/cargo-binstall@main
-      - name: Install Trunk Binary
-        if: steps.cache-trunk.outputs.cache-hit != 'true'
-        run: cargo binstall trunk -y
+      - run: cargo binstall trunk -y
 
       - name: Build
         run: |
           cd graph_app
-          ~/.cargo/bin/trunk build --release --public-url /${{ github.event.repository.name }}/
+          trunk build --release --public-url /${{ github.event.repository.name }}/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
