@@ -63,6 +63,7 @@ jobs:
 
       - name: Build
         run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
           cd graph_app
           trunk build --release --public-url /${{ github.event.repository.name }}/
 
