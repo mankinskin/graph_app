@@ -41,31 +41,23 @@ jobs:
           cache-all-crates: true
 
       - name: Cache Trunk
+        id: cache-trunk
         uses: actions/cache@v4
         with:
           path: ~/.cargo/bin/trunk
-          key: trunk-${{ runner.os }}-v0.21
+          key: trunk-${{ runner.os }}-0.21.14
 
       - name: Install Trunk
-        run: |
-          # Add cargo bin to PATH for this and subsequent steps
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-          export PATH="$HOME/.cargo/bin:$PATH"
-          
-          if ! command -v trunk &> /dev/null; then
-            # Use binstall for pre-built binary (much faster than cargo install)
-            curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-            cargo binstall trunk --no-confirm
-          fi
-          
-          # Verify trunk is available
-          trunk --version
+        if: steps.cache-trunk.outputs.cache-hit != 'true'
+        uses: cargo-bins/cargo-binstall@main
+      - name: Install Trunk Binary
+        if: steps.cache-trunk.outputs.cache-hit != 'true'
+        run: cargo binstall trunk -y
 
       - name: Build
         run: |
-          export PATH="$HOME/.cargo/bin:$PATH"
           cd graph_app
-          trunk build --release --public-url /${{ github.event.repository.name }}/
+          ~/.cargo/bin/trunk build --release --public-url /${{ github.event.repository.name }}/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
