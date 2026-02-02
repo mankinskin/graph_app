@@ -1,17 +1,8 @@
 name: Deploy to GitHub Pages
 
-# NOTE: This workflow is currently disabled because the project has dependencies
-# (context-read, ngrams, context-trace) that use tokio and other non-wasm-compatible
-# crates unconditionally. To enable wasm builds, these crates need to be updated to:
-# 1. Make tokio and mio dependencies conditional with cfg(not(target_arch = "wasm32"))
-# 2. Or provide wasm-compatible alternatives for async runtime
-#
-# See context-engine/crates/*/Cargo.toml for the changes needed.
-
 on:
-  # Disabled until dependencies are wasm-compatible
-  # push:
-  #   branches: [main, master]
+  push:
+    branches: [main, master]
   workflow_dispatch:
 
 # Allow only one concurrent deployment
@@ -44,8 +35,8 @@ jobs:
           workspaces: graph_app
 
       - name: Install Trunk
-        uses: cargo-bins/cargo-binstall@main
-      - run: cargo binstall trunk -y
+        run: |
+          cargo install trunk --locked
 
       - name: Build
         run: |
