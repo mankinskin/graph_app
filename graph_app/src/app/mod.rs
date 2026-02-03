@@ -3,7 +3,7 @@
 mod central;
 mod menus;
 mod panels;
-mod tasks_unified;
+mod tasks;
 
 use eframe::egui;
 #[cfg(feature = "persistence")]
