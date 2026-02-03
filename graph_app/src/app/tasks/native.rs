@@ -18,8 +18,6 @@ pub(crate) async fn run_algorithm_task(
 ) {
     println!("Task starting: algorithm = {:?}", algorithm);
     let mut ctx_guard = ctx.write().await;
-    ctx_guard
-        .run_algorithm(algorithm, cancellation.token())
-        .await;
+    ctx_guard.run_algorithm(algorithm, cancellation).await;
     println!("Task completed");
 }

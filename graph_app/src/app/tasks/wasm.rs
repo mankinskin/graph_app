@@ -1,6 +1,9 @@
 //! Wasm-specific task implementations.
 
-use std::sync::{Arc, RwLock};
+use std::sync::{
+    Arc,
+    RwLock,
+};
 
 use crate::{
     algorithm::Algorithm,
@@ -14,11 +17,13 @@ pub(crate) async fn run_algorithm_task(
     algorithm: Algorithm,
     cancellation: CancellationHandle,
 ) {
-    web_sys::console::log_1(&format!("Task starting: algorithm = {:?}", algorithm).into());
+    web_sys::console::log_1(
+        &format!("Task starting: algorithm = {:?}", algorithm).into(),
+    );
 
     {
         let mut ctx_guard = ctx.write().unwrap();
-        ctx_guard.run_algorithm_async(algorithm, cancellation).await;
+        ctx_guard.run_algorithm(algorithm, cancellation).await;
     }
 
     web_sys::console::log_1(&"Task completed".into());

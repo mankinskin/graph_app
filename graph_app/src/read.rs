@@ -1,187 +1,163 @@
-#[cfg(target_arch = "wasm32")]
+//! Reading context for algorithm execution.
+//!
+//! This module provides the `ReadCtx` which manages the graph state and
+//! executes algorithms with proper cancellation support.
+
 use ngrams::graph::StatusHandle;
-#[cfg(not(target_arch = "wasm32"))]
-use ngrams::graph::{
-    traversal::pass::CancelReason,
-    Status,
-    StatusHandle,
-};
 #[cfg(feature = "persistence")]
 use serde::*;
 
-#[allow(unused)]
-use crate::algorithm::Algorithm;
-#[allow(unused)]
-use crate::graph::*;
+use crate::{
+    algorithm::Algorithm,
+    graph::*,
+    task::CancellationHandle,
+};
 
-#[cfg(target_arch = "wasm32")]
-use context_trace::graph::vertex::has_vertex_index::HasVertexIndex;
 use context_trace::{
     graph::HypergraphRef,
     Token,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use std::hash::{
     DefaultHasher,
     Hash,
     Hasher,
 };
-#[cfg(target_arch = "wasm32")]
-use std::sync::atomic::{
-    AtomicBool,
-    Ordering,
-};
-#[cfg(target_arch = "wasm32")]
-use std::sync::Arc;
-#[cfg(not(target_arch = "wasm32"))]
-use tokio_util::sync::CancellationToken;
 
+// ============================================================================
+// ReadCtx - Core struct
+// ============================================================================
+
+/// Context for reading and processing graph data.
 #[derive(Debug)]
 pub struct ReadCtx {
     graph: Graph,
-    status: Option<ngrams::graph::StatusHandle>,
+    status: Option<StatusHandle>,
 }
+
 impl ReadCtx {
+    /// Create a new read context with the given graph.
     pub fn new(graph: Graph) -> Self {
         Self {
             graph,
             status: None,
         }
     }
+
+    /// Get the current status handle, if any.
     pub fn status(&self) -> Option<&StatusHandle> {
         self.status.as_ref()
     }
+
+    /// Get a reference to the graph.
     pub fn graph(&self) -> &Graph {
         &self.graph
     }
+
+    /// Get a mutable reference to the graph.
     pub fn graph_mut(&mut self) -> &mut Graph {
         &mut self.graph
     }
 }
 
-// Wasm-compatible synchronous algorithm execution
-#[cfg(target_arch = "wasm32")]
+// ============================================================================
+// Algorithm execution - unified interface
+// ============================================================================
+
 impl ReadCtx {
-    /// Execute the selected algorithm synchronously (for wasm)
-    pub fn run_algorithm_sync(
+    /// Execute the selected algorithm on the input texts.
+    ///
+    /// This is the unified entry point for algorithm execution on both platforms.
+    pub async fn run_algorithm(
         &mut self,
         algorithm: Algorithm,
-        cancelled: &Arc<AtomicBool>,
+        cancellation: CancellationHandle,
     ) {
-        web_sys::console::log_1(
-            &format!("Running algorithm: {:?}", algorithm).into(),
-        );
+        log_info(&format!("Running algorithm: {:?}", algorithm));
 
         match algorithm {
             Algorithm::NgramsParseCorpus => {
-                web_sys::console::log_1(
-                    &"Dispatching to run_ngrams_parse_corpus_sync".into(),
-                );
-                self.run_ngrams_parse_corpus_sync(cancelled);
+                self.run_ngrams_parse_corpus(&cancellation).await;
             },
             Algorithm::ContextRead => {
-                web_sys::console::log_1(
-                    &"Dispatching to run_context_read_sync".into(),
-                );
-                self.run_context_read_sync(cancelled);
+                self.run_context_read(&cancellation).await;
             },
             Algorithm::ContextInsert => {
-                web_sys::console::log_1(
-                    &"Dispatching to run_context_insert_sync".into(),
-                );
-                self.run_context_insert_sync(cancelled);
+                self.run_context_insert(&cancellation).await;
             },
         }
 
-        web_sys::console::log_1(&"Task done.".into());
+        log_info("Task done.");
     }
 
-    /// Run ngrams::parse_corpus algorithm synchronously
-    fn run_ngrams_parse_corpus_sync(
+    /// Run ngrams::parse_corpus algorithm.
+    async fn run_ngrams_parse_corpus(
         &mut self,
-        cancelled: &Arc<AtomicBool>,
+        cancellation: &CancellationHandle,
     ) {
-        web_sys::console::log_1(
-            &"Starting run_ngrams_parse_corpus_sync...".into(),
-        );
+        use ngrams::graph::{
+            traversal::pass::CancelReason,
+            Corpus,
+            Status,
+            StatusHandle,
+        };
 
-        use ngrams::{
-            cancellation::Cancellation,
-            graph::{
-                parse_corpus,
-                traversal::pass::CancelReason,
-                Corpus,
-                ParseResult,
-                Status,
-                StatusHandle,
-            },
-        };
-        use std::{
-            collections::hash_map::DefaultHasher,
-            hash::{
-                Hash,
-                Hasher,
-            },
-        };
+        log_info("Starting ngrams parse corpus...");
 
         let graph = self.graph.graph.clone();
         let labels = self.graph.labels.clone();
         let insert_texts = self.graph.insert_texts.clone();
 
-        web_sys::console::log_1(
-            &format!("Insert texts: {:?}", insert_texts).into(),
-        );
+        // Guard against empty corpus
+        let non_empty_texts: Vec<_> = insert_texts
+            .iter()
+            .filter(|t| !t.is_empty())
+            .cloned()
+            .collect();
 
-        let status = StatusHandle::from(Status::new(insert_texts.clone()));
+        if non_empty_texts.is_empty() {
+            log_info("No text to parse (insert_texts is empty)");
+            return;
+        }
+
+        log_info(&format!("Insert texts: {:?}", non_empty_texts));
+
+        let status = StatusHandle::from(Status::new(non_empty_texts.clone()));
         self.status = Some(status.clone());
 
         let corpus_name = {
             let mut hasher = DefaultHasher::new();
-            insert_texts.hash(&mut hasher);
+            non_empty_texts.hash(&mut hasher);
             format!("{:?}", hasher.finish())
         };
-        let corpus = Corpus::new(corpus_name.clone(), insert_texts);
+        let corpus = Corpus::new(corpus_name.clone(), non_empty_texts);
 
-        web_sys::console::log_1(
-            &format!("Created corpus: {}", corpus_name).into(),
-        );
+        log_info(&format!("Created corpus: {}", corpus_name));
 
-        // Create a wasm-compatible cancellation using the Arc<AtomicBool>
-        let cancellation = Cancellation::from(cancelled.clone());
-
-        web_sys::console::log_1(&"Calling parse_corpus...".into());
-
-        // Run the sync parse_corpus
-        let result = parse_corpus(corpus, status, cancellation);
-
-        web_sys::console::log_1(&"parse_corpus returned".into());
+        // Execute the parse - platform-specific
+        let result = self
+            .execute_parse_corpus(corpus, status, cancellation)
+            .await;
 
         match result {
             Ok(res) => {
                 self.graph.insert_texts.clear();
                 *graph.write().unwrap() = res.graph.into();
                 *labels.write().unwrap() = res.labels;
-                web_sys::console::log_1(
-                    &"Ngrams parse corpus completed successfully".into(),
-                );
+                log_info("Ngrams parse corpus completed successfully");
             },
             Err(CancelReason::Cancelled) => {
-                web_sys::console::log_1(
-                    &"Parse operation was cancelled via token".into(),
-                );
+                log_info("Parse operation was cancelled");
             },
             Err(CancelReason::Error) => {
-                web_sys::console::error_1(
-                    &"Parse operation encountered an error".into(),
-                );
+                log_error("Parse operation encountered an error");
             },
         }
     }
 
-    /// Run context-read algorithm synchronously
-    fn run_context_read_sync(
+    /// Run context-read algorithm.
+    async fn run_context_read(
         &mut self,
-        cancelled: &Arc<AtomicBool>,
+        cancellation: &CancellationHandle,
     ) {
         let graph_ref: HypergraphRef = self.graph.read().clone();
         let insert_texts = self.graph.insert_texts.clone();
@@ -189,7 +165,7 @@ impl ReadCtx {
         let combined_text: String = insert_texts.join("");
 
         if combined_text.is_empty() {
-            web_sys::console::log_1(&"No text to read".into());
+            log_info("No text to read");
             return;
         }
 
@@ -198,209 +174,8 @@ impl ReadCtx {
             combined_text.chars(),
         );
 
-        // Process the sequence
-        while !cancelled.load(Ordering::SeqCst) {
-            if read_ctx.next().is_none() {
-                break;
-            }
-        }
-
-        if cancelled.load(Ordering::SeqCst) {
-            web_sys::console::log_1(
-                &"Context read operation was cancelled".into(),
-            );
-        } else {
-            *self.graph.write() = graph_ref;
-            self.graph.insert_texts.clear();
-            web_sys::console::log_1(
-                &"Context read completed successfully".into(),
-            );
-        }
-    }
-
-    /// Run context-insert algorithm synchronously
-    fn run_context_insert_sync(
-        &mut self,
-        cancelled: &Arc<AtomicBool>,
-    ) {
-        let graph_ref: HypergraphRef = self.graph.read().clone();
-        let insert_texts = self.graph.insert_texts.clone();
-
-        let mut insert_ctx =
-            context_insert::InsertCtx::<Token>::from(graph_ref.clone());
-
-        for text in &insert_texts {
-            if cancelled.load(Ordering::SeqCst) {
-                web_sys::console::log_1(
-                    &"Context insert operation was cancelled".into(),
-                );
-                return;
-            }
-
-            if text.is_empty() {
-                continue;
-            }
-
-            // Use new_atom_indices to insert atoms that don't exist yet
-            let atom_indices = graph_ref.new_atom_indices(text.chars());
-            let tokens: Vec<Token> = atom_indices
-                .into_iter()
-                .map(|idx| Token::new(idx.vertex_index(), 1))
-                .collect();
-
-            match insert_ctx.insert(tokens) {
-                Ok(_result) => {
-                    web_sys::console::log_1(
-                        &format!("Inserted text: {}", text).into(),
-                    );
-                },
-                Err(err) => {
-                    web_sys::console::log_1(
-                        &format!("Failed to insert text '{}': {:?}", text, err)
-                            .into(),
-                    );
-                },
-            }
-        }
-
-        if !cancelled.load(Ordering::SeqCst) {
-            *self.graph.write() = graph_ref;
-            self.graph.insert_texts.clear();
-            web_sys::console::log_1(
-                &"Context insert completed successfully".into(),
-            );
-        }
-    }
-}
-
-// Wasm-compatible async algorithm execution
-#[cfg(target_arch = "wasm32")]
-impl ReadCtx {
-    /// Execute the selected algorithm asynchronously (for wasm)
-    /// This version uses async/await and yields to the event loop
-    pub async fn run_algorithm_async(
-        &mut self,
-        algorithm: Algorithm,
-        cancellation: crate::task::CancellationHandle,
-    ) {
-        use gloo_timers::future::TimeoutFuture;
-
-        web_sys::console::log_1(
-            &format!("Running async algorithm: {:?}", algorithm).into(),
-        );
-
-        match algorithm {
-            Algorithm::NgramsParseCorpus => {
-                self.run_ngrams_parse_corpus_async(&cancellation).await;
-            },
-            Algorithm::ContextRead => {
-                self.run_context_read_async(&cancellation).await;
-            },
-            Algorithm::ContextInsert => {
-                self.run_context_insert_async(&cancellation).await;
-            },
-        }
-
-        web_sys::console::log_1(&"Async task done.".into());
-    }
-
-    /// Run ngrams::parse_corpus algorithm asynchronously
-    async fn run_ngrams_parse_corpus_async(
-        &mut self,
-        cancellation: &crate::task::CancellationHandle,
-    ) {
-        use gloo_timers::future::TimeoutFuture;
-        use ngrams::{
-            cancellation::Cancellation,
-            graph::{
-                parse_corpus,
-                traversal::pass::CancelReason,
-                Corpus,
-                Status,
-                StatusHandle,
-            },
-        };
-        use std::{
-            collections::hash_map::DefaultHasher,
-            hash::{
-                Hash,
-                Hasher,
-            },
-        };
-
-        web_sys::console::log_1(
-            &"Starting async ngrams parse corpus...".into(),
-        );
-
-        let graph = self.graph.graph.clone();
-        let labels = self.graph.labels.clone();
-        let insert_texts = self.graph.insert_texts.clone();
-
-        let status = StatusHandle::from(Status::new(insert_texts.clone()));
-        self.status = Some(status.clone());
-
-        let corpus_name = {
-            let mut hasher = DefaultHasher::new();
-            insert_texts.hash(&mut hasher);
-            format!("{:?}", hasher.finish())
-        };
-        let corpus = Corpus::new(corpus_name.clone(), insert_texts);
-
-        // Create a wasm-compatible cancellation
-        let ngrams_cancellation = Cancellation::from(cancellation.flag());
-
-        // Yield to allow UI to update
-        TimeoutFuture::new(0).await;
-
-        // Run the parse_corpus (this is still sync internally, but we yield before/after)
-        let result =
-            ngrams::graph::parse_corpus(corpus, status, ngrams_cancellation);
-
-        match result {
-            Ok(res) => {
-                self.graph.insert_texts.clear();
-                *graph.write().unwrap() = res.graph.into();
-                *labels.write().unwrap() = res.labels;
-                web_sys::console::log_1(
-                    &"Ngrams parse corpus completed successfully".into(),
-                );
-            },
-            Err(CancelReason::Cancelled) => {
-                web_sys::console::log_1(
-                    &"Parse operation was cancelled".into(),
-                );
-            },
-            Err(CancelReason::Error) => {
-                web_sys::console::error_1(
-                    &"Parse operation encountered an error".into(),
-                );
-            },
-        }
-    }
-
-    /// Run context-read algorithm asynchronously
-    async fn run_context_read_async(
-        &mut self,
-        cancellation: &crate::task::CancellationHandle,
-    ) {
-        use gloo_timers::future::TimeoutFuture;
-
-        let graph_ref: HypergraphRef = self.graph.read().clone();
-        let insert_texts = self.graph.insert_texts.clone();
-        let combined_text: String = insert_texts.join("");
-
-        if combined_text.is_empty() {
-            web_sys::console::log_1(&"No text to read".into());
-            return;
-        }
-
-        let mut read_ctx = context_read::context::ReadCtx::new(
-            graph_ref.clone(),
-            combined_text.chars(),
-        );
-
-        // Yield before starting
-        TimeoutFuture::new(0).await;
+        // Yield before starting (wasm only)
+        yield_if_wasm().await;
 
         // Process in chunks to allow UI to remain responsive
         let mut iteration = 0;
@@ -410,40 +185,38 @@ impl ReadCtx {
             }
 
             iteration += 1;
-            // Yield every 100 iterations to keep UI responsive
+            // Yield periodically on wasm to keep UI responsive
             if iteration % 100 == 0 {
-                TimeoutFuture::new(0).await;
+                yield_if_wasm().await;
             }
         }
 
-        if !cancellation.is_cancelled() {
+        if cancellation.is_cancelled() {
+            log_info("Context read operation was cancelled");
+        } else {
             *self.graph.write() = graph_ref;
             self.graph.insert_texts.clear();
-            web_sys::console::log_1(
-                &"Context read completed successfully".into(),
-            );
+            log_info("Context read completed successfully");
         }
     }
 
-    /// Run context-insert algorithm asynchronously
-    async fn run_context_insert_async(
+    /// Run context-insert algorithm.
+    async fn run_context_insert(
         &mut self,
-        cancellation: &crate::task::CancellationHandle,
+        cancellation: &CancellationHandle,
     ) {
-        use gloo_timers::future::TimeoutFuture;
-
         let graph_ref: HypergraphRef = self.graph.read().clone();
         let insert_texts = self.graph.insert_texts.clone();
 
         let mut insert_ctx =
             context_insert::InsertCtx::<Token>::from(graph_ref.clone());
 
-        // Yield before starting
-        TimeoutFuture::new(0).await;
+        // Yield before starting (wasm only)
+        yield_if_wasm().await;
 
         for (i, text) in insert_texts.iter().enumerate() {
             if cancellation.is_cancelled() {
-                web_sys::console::log_1(&"Context insert cancelled".into());
+                log_info("Context insert operation was cancelled");
                 return;
             }
 
@@ -451,199 +224,155 @@ impl ReadCtx {
                 continue;
             }
 
-            web_sys::console::log_1(
-                &format!("Inserting text {}: {}", i + 1, text).into(),
-            );
+            log_info(&format!("Inserting text {}: {}", i + 1, text));
 
-            // Use new_atom_indices to insert atoms that don't exist yet
-            let atom_indices = graph_ref.new_atom_indices(text.chars());
-            let tokens: Vec<Token> = atom_indices
-                .into_iter()
-                .map(|idx| Token::new(idx.vertex_index(), 1))
-                .collect();
+            // Get tokens for insertion
+            let tokens = self.get_tokens_for_text(&graph_ref, text);
 
             match insert_ctx.insert(tokens) {
                 Ok(_result) => {
-                    web_sys::console::log_1(
-                        &format!("Inserted: {}", text).into(),
-                    );
+                    log_info(&format!("Inserted: {}", text));
                 },
                 Err(err) => {
-                    web_sys::console::error_1(
-                        &format!("Error inserting '{}': {:?}", text, err)
-                            .into(),
-                    );
+                    log_error(&format!(
+                        "Error inserting '{}': {:?}",
+                        text, err
+                    ));
                 },
             }
 
-            // Yield after each insert to keep UI responsive
-            TimeoutFuture::new(0).await;
+            // Yield after each insert (wasm only)
+            yield_if_wasm().await;
         }
 
         if !cancellation.is_cancelled() {
             *self.graph.write() = graph_ref;
             self.graph.insert_texts.clear();
-            web_sys::console::log_1(
-                &"Context insert completed successfully".into(),
-            );
+            log_info("Context insert completed successfully");
         }
     }
 }
 
+// ============================================================================
+// Platform-specific implementations
+// ============================================================================
+
 #[cfg(not(target_arch = "wasm32"))]
 impl ReadCtx {
-    /// Execute the selected algorithm on the input texts
-    pub async fn run_algorithm(
-        &mut self,
-        algorithm: Algorithm,
-        cancellation_token: CancellationToken,
-    ) {
-        println!("Task running on thread {:?}", std::thread::current().id());
-        println!("Running algorithm: {:?}", algorithm);
+    /// Execute parse_corpus using tokio spawn_blocking.
+    async fn execute_parse_corpus(
+        &self,
+        corpus: ngrams::graph::Corpus,
+        status: StatusHandle,
+        cancellation: &CancellationHandle,
+    ) -> Result<
+        ngrams::graph::ParseResult,
+        ngrams::graph::traversal::pass::CancelReason,
+    > {
+        use ngrams::cancellation::Cancellation;
 
-        match algorithm {
-            Algorithm::NgramsParseCorpus => {
-                self.run_ngrams_parse_corpus(cancellation_token).await;
-            },
-            Algorithm::ContextRead => {
-                self.run_context_read(cancellation_token).await;
-            },
-            Algorithm::ContextInsert => {
-                self.run_context_insert(cancellation_token).await;
-            },
-        }
+        let ngrams_cancellation = Cancellation::from(cancellation.token());
 
-        println!("Task done.");
-    }
-
-    /// Run ngrams::parse_corpus algorithm
-    async fn run_ngrams_parse_corpus(
-        &mut self,
-        cancellation_token: CancellationToken,
-    ) {
-        let graph = self.graph.graph.clone();
-        let labels = self.graph.labels.clone();
-        let insert_texts = self.graph.insert_texts.clone();
-
-        let status = StatusHandle::from(Status::new(insert_texts.clone()));
-        self.status = Some(status.clone());
-
-        let corpus_name = {
-            let mut hasher = DefaultHasher::new();
-            insert_texts.hash(&mut hasher);
-            format!("{:?}", hasher.finish())
-        };
-        let corpus = ngrams::graph::Corpus::new(corpus_name, insert_texts);
-
-        // Convert the cancellation token to the ngrams Cancellation type
-        let cancellation =
-            ngrams::cancellation::Cancellation::from(cancellation_token);
-
-        // Run the sync parse_corpus in a blocking task
-        let res = tokio::task::spawn_blocking(move || {
-            ngrams::graph::parse_corpus(corpus, status, cancellation)
+        // Run in blocking task pool
+        let result = tokio::task::spawn_blocking(move || {
+            ngrams::graph::parse_corpus(corpus, status, ngrams_cancellation)
         })
         .await;
 
-        match res {
-            Ok(Ok(res)) => {
-                self.graph.insert_texts.clear();
-                *graph.write().unwrap() = res.graph.into();
-                *labels.write().unwrap() = res.labels;
-            },
-            Ok(Err(CancelReason::Cancelled)) => {
-                println!("Parse operation was cancelled via token");
-            },
-            Ok(Err(CancelReason::Error)) => {
-                println!("Parse operation panicked");
-            },
+        match result {
+            Ok(res) => res,
             Err(join_error) => {
-                println!("Parse task panicked: {:?}", join_error);
+                log_error(&format!("Parse task panicked: {:?}", join_error));
+                Err(ngrams::graph::traversal::pass::CancelReason::Error)
             },
         }
     }
 
-    /// Run context-read::read algorithm
-    async fn run_context_read(
-        &mut self,
-        cancellation_token: CancellationToken,
-    ) {
-        let graph_ref: HypergraphRef = self.graph.read().clone();
-        let insert_texts = self.graph.insert_texts.clone();
+    /// Get tokens for text insertion.
+    fn get_tokens_for_text(
+        &self,
+        graph_ref: &HypergraphRef,
+        text: &str,
+    ) -> Vec<Token> {
+        graph_ref.expect_atom_children(text.chars()).to_vec()
+    }
+}
 
-        // Create a combined sequence from all insert texts
-        let combined_text: String = insert_texts.join("");
+#[cfg(target_arch = "wasm32")]
+impl ReadCtx {
+    /// Execute parse_corpus synchronously (wasm runs on main thread).
+    async fn execute_parse_corpus(
+        &self,
+        corpus: ngrams::graph::Corpus,
+        status: StatusHandle,
+        cancellation: &CancellationHandle,
+    ) -> Result<
+        ngrams::graph::ParseResult,
+        ngrams::graph::traversal::pass::CancelReason,
+    > {
+        use ngrams::cancellation::Cancellation;
 
-        if combined_text.is_empty() {
-            println!("No text to read");
-            return;
-        }
+        let ngrams_cancellation = Cancellation::from(cancellation.flag());
 
-        // Create a ReadCtx from context_read and run it
-        // The ReadCtx::new takes a HypergraphRef and something implementing ToNewAtomIndices (like Chars)
-        let mut read_ctx = context_read::context::ReadCtx::new(
-            graph_ref.clone(),
-            combined_text.chars(),
-        );
+        // Yield to allow UI to update before starting heavy work
+        yield_if_wasm().await;
 
-        // Process the sequence - iterate through blocks with cancellation check
-        while !cancellation_token.is_cancelled() {
-            if read_ctx.next().is_none() {
-                break;
-            }
-        }
-
-        if cancellation_token.is_cancelled() {
-            println!("Context read operation was cancelled");
-        } else {
-            // Update the graph with the result
-            *self.graph.write() = graph_ref;
-            self.graph.insert_texts.clear();
-            println!("Context read completed successfully");
-        }
+        // Run synchronously (wasm is single-threaded)
+        ngrams::graph::parse_corpus(corpus, status, ngrams_cancellation)
     }
 
-    /// Run context-insert::insert algorithm
-    async fn run_context_insert(
-        &mut self,
-        cancellation_token: CancellationToken,
-    ) {
-        let graph_ref: HypergraphRef = self.graph.read().clone();
-        let insert_texts = self.graph.insert_texts.clone();
+    /// Get tokens for text insertion.
+    fn get_tokens_for_text(
+        &self,
+        graph_ref: &HypergraphRef,
+        text: &str,
+    ) -> Vec<Token> {
+        use context_trace::graph::vertex::has_vertex_index::HasVertexIndex;
 
-        // Create an InsertCtx and insert each text
-        let mut insert_ctx =
-            context_insert::InsertCtx::<Token>::from(graph_ref.clone());
-
-        for text in &insert_texts {
-            if cancellation_token.is_cancelled() {
-                println!("Context insert operation was cancelled");
-                return;
-            }
-
-            if text.is_empty() {
-                continue;
-            }
-
-            // Convert text characters to tokens using the graph
-            // First, get atom children for the characters
-            let tokens = graph_ref.expect_atom_children(text.chars());
-
-            match insert_ctx.insert(tokens) {
-                Ok(_result) => {
-                    println!("Inserted text: {}", text);
-                },
-                Err(err) => {
-                    println!("Failed to insert text '{}': {:?}", text, err);
-                },
-            }
-        }
-
-        if !cancellation_token.is_cancelled() {
-            // Update the graph with the result
-            *self.graph.write() = graph_ref;
-            self.graph.insert_texts.clear();
-            println!("Context insert completed successfully");
-        }
+        let atom_indices = graph_ref.new_atom_indices(text.chars());
+        atom_indices
+            .into_iter()
+            .map(|idx| Token::new(idx.vertex_index(), 1))
+            .collect()
     }
+}
+
+// ============================================================================
+// Cross-platform utilities
+// ============================================================================
+
+/// Log an info message.
+#[cfg(not(target_arch = "wasm32"))]
+fn log_info(msg: &str) {
+    println!("{}", msg);
+}
+
+/// Log an info message.
+#[cfg(target_arch = "wasm32")]
+fn log_info(msg: &str) {
+    web_sys::console::log_1(&msg.into());
+}
+
+/// Log an error message.
+#[cfg(not(target_arch = "wasm32"))]
+fn log_error(msg: &str) {
+    eprintln!("{}", msg);
+}
+
+/// Log an error message.
+#[cfg(target_arch = "wasm32")]
+fn log_error(msg: &str) {
+    web_sys::console::error_1(&msg.into());
+}
+
+/// Yield to the event loop on wasm, no-op on native.
+#[cfg(not(target_arch = "wasm32"))]
+async fn yield_if_wasm() {
+    // No-op on native
+}
+
+/// Yield to the event loop on wasm.
+#[cfg(target_arch = "wasm32")]
+async fn yield_if_wasm() {
+    gloo_timers::future::TimeoutFuture::new(0).await;
 }
