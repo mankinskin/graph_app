@@ -96,19 +96,19 @@ impl LabellingImage {
     pub fn from_corpus(
         corpus: &Corpus,
         status: &mut StatusHandle,
-    ) -> Self {
+    ) -> RunResult<Self> {
         // On native, try to read from storage cache first
         #[cfg(not(target_arch = "wasm32"))]
         {
             let key = corpus.name.clone();
             if let Ok(image) = Self::read_from_storage(&key) {
                 println!("Containment Pass already processed.");
-                return image;
+                return Ok(image);
             }
         }
 
         // Create fresh from corpus
-        Self::from(Vocabulary::from_corpus(corpus, status))
+        Ok(Self::from(Vocabulary::from_corpus(corpus, status)?))
     }
 
     /// Write to the target storage location for this image
@@ -128,16 +128,16 @@ impl LabellingCtx {
     pub fn from_corpus(
         corpus: Corpus,
         cancellation: impl Into<Cancellation>,
-    ) -> Self {
+    ) -> RunResult<Self> {
         let mut status = StatusHandle::default();
-        Self {
+        Ok(Self {
             corpus: TestCorpus::new(
-                LabellingImage::from_corpus(&corpus, &mut status),
+                LabellingImage::from_corpus(&corpus, &mut status)?,
                 corpus,
             ),
             status,
             cancellation: cancellation.into(),
-        }
+        })
     }
     pub fn check_cancelled(&self) -> RunResult<()> {
         if self.cancellation.is_cancelled() {

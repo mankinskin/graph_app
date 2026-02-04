@@ -151,18 +151,21 @@ impl Vocabulary {
     pub fn from_corpus(
         corpus: &Corpus,
         status: &mut StatusHandle,
-    ) -> Self {
+    ) -> Result<Self, super::traversal::pass::CancelReason> {
         let mut vocab: Vocabulary = Default::default();
         vocab.name.clone_from(&corpus.name);
-        vocab.containment_pass(&CorpusCtx { corpus, status });
-        vocab
+        vocab.containment_pass(&CorpusCtx { corpus, status })?;
+        Ok(vocab)
     }
 
     pub fn containment_pass(
         &mut self,
         ctx: &CorpusCtx<'_>,
-    ) {
-        let N: usize = ctx.corpus.iter().map(|t| t.len()).max().unwrap();
+    ) -> Result<(), super::traversal::pass::CancelReason> {
+        let N: usize = ctx.corpus.iter().map(|t| t.len()).max().ok_or(super::traversal::pass::CancelReason::EmptyVocabulary)?;
+        if N == 0 {
+            return Err(super::traversal::pass::CancelReason::EmptyVocabulary);
+        }
         ctx.status.next_pass(
             super::vocabulary::ProcessStatus::Containment,
             0,
@@ -177,7 +180,8 @@ impl Vocabulary {
                     n,
                 }
                 .on_nlevel(self)
-            })
+            });
+        Ok(())
     }
     //pub fn clean(&mut self) -> HashSet<NGramId> {
     //    let drained: HashSet<_> = self.entries
