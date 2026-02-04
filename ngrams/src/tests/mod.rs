@@ -653,7 +653,7 @@ pub fn test_parse_corpus_empty_texts() {
     let texts: Vec<String> = vec![];
     let corpus_name = "test_empty_corpus".to_owned();
 
-    let status = StatusHandle::from(Status::new(texts.clone()));
+    let status = StatusHandle::from(Status::new(Vec::<String>::new()));
 
     let result = parse_corpus(
         Corpus::new(corpus_name, texts),
@@ -679,13 +679,12 @@ pub fn test_parse_corpus_only_empty_strings() {
     };
 
     // Corpus with only empty strings
-    let texts = vec!["".to_string(), "".to_string()];
     let corpus_name = "test_empty_strings".to_owned();
 
-    let status = StatusHandle::from(Status::new(texts.clone()));
+    let status = StatusHandle::from(Status::new(Vec::<String>::new()));
 
     let result = parse_corpus(
-        Corpus::new(corpus_name, texts),
+        Corpus::new(corpus_name, vec!["".to_string(), "".to_string()]),
         status,
         Cancellation::None,
     );
