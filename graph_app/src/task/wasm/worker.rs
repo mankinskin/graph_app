@@ -21,14 +21,19 @@
 //! implement a custom worker pool.
 
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, RwLock,
+    atomic::{
+        AtomicBool,
+        Ordering,
+    },
+    Arc,
+    RwLock,
 };
 
-use wasm_bindgen::prelude::*;
-
 use crate::task::{
-    traits::BlockingTask, CancellationHandle, TaskHandle, TaskResult,
+    traits::BlockingTask,
+    CancellationHandle,
+    TaskHandle,
+    TaskResult,
 };
 
 /// Spawn a blocking task in a Web Worker.
@@ -56,7 +61,7 @@ pub fn spawn_in_worker<T: BlockingTask>(task: T) -> TaskHandle {
     let result_clone = result.clone();
 
     // Try to spawn in a real Web Worker first
-    if let Some(handle) = try_spawn_worker(task, cancellation.clone()) {
+    if let Some(handle) = try_spawn_worker(cancellation.clone()) {
         return handle;
     }
 
@@ -64,7 +69,8 @@ pub fn spawn_in_worker<T: BlockingTask>(task: T) -> TaskHandle {
     // This simulates blocking behavior while keeping UI responsive
     wasm_bindgen_futures::spawn_local(async move {
         web_sys::console::warn_1(
-            &"Web Worker not available, running blocking task on main thread".into(),
+            &"Web Worker not available, running blocking task on main thread"
+                .into(),
         );
 
         // Yield to let UI update
@@ -72,18 +78,18 @@ pub fn spawn_in_worker<T: BlockingTask>(task: T) -> TaskHandle {
 
         // Run the task
         // Note: This will block the main thread, but we yield before and after
-        let panic_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            task.run(cancel_clone);
-        }));
+        let panic_result =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                task.run(cancel_clone);
+            }));
 
         let final_result = match panic_result {
-            Ok(()) => {
+            Ok(()) =>
                 if cancel_for_check.is_cancelled() {
                     TaskResult::Cancelled
                 } else {
                     TaskResult::Success
-                }
-            }
+                },
             Err(panic_info) => {
                 let msg = if let Some(s) = panic_info.downcast_ref::<&str>() {
                     s.to_string()
@@ -93,7 +99,7 @@ pub fn spawn_in_worker<T: BlockingTask>(task: T) -> TaskHandle {
                     "Unknown panic".to_string()
                 };
                 TaskResult::Panicked(msg)
-            }
+            },
         };
 
         if let Ok(mut r) = result_clone.write() {
@@ -112,13 +118,15 @@ pub fn spawn_in_worker<T: BlockingTask>(task: T) -> TaskHandle {
 /// Attempt to spawn a task in a real Web Worker.
 ///
 /// Returns `None` if Web Workers are not available or setup fails.
-fn try_spawn_worker<T: BlockingTask>(_task: T, _cancellation: CancellationHandle) -> Option<TaskHandle> {
+fn try_spawn_worker(_cancellation: CancellationHandle) -> Option<TaskHandle> {
     // Check if Web Workers are available
-    let window = web_sys::window()?;
-    
+    let _window = web_sys::window()?;
+
     // Check if we have the Worker constructor
     if !has_worker_support() {
-        web_sys::console::log_1(&"Web Workers not supported in this environment".into());
+        web_sys::console::log_1(
+            &"Web Workers not supported in this environment".into(),
+        );
         return None;
     }
 
@@ -135,11 +143,12 @@ fn try_spawn_worker<T: BlockingTask>(_task: T, _cancellation: CancellationHandle
     // - A worker script that can load the wasm module
     //
     // For now, we return None to use the fallback
-    
+
     web_sys::console::log_1(
-        &"Full Web Worker support requires additional setup. Using fallback.".into(),
+        &"Full Web Worker support requires additional setup. Using fallback."
+            .into(),
     );
-    
+
     None
 }
 
@@ -148,14 +157,6 @@ fn has_worker_support() -> bool {
     js_sys::Reflect::get(&js_sys::global(), &"Worker".into())
         .map(|v| !v.is_undefined())
         .unwrap_or(false)
-}
-
-/// JavaScript glue for Web Worker communication.
-#[wasm_bindgen]
-extern "C" {
-    /// Console logging for debugging
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
 }
 
 // ============================================================================
@@ -189,8 +190,7 @@ impl WorkerPool {
     pub fn ideal_worker_count() -> usize {
         // Try to get navigator.hardwareConcurrency
         web_sys::window()
-            .and_then(|w| w.navigator().hardware_concurrency().ok())
-            .map(|c| c as usize)
+            .map(|w| w.navigator().hardware_concurrency() as usize)
             .unwrap_or(4)
             .max(1)
     }

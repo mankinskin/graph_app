@@ -151,6 +151,9 @@ impl ReadCtx {
             Err(CancelReason::Error) => {
                 log_error("Parse operation encountered an error");
             },
+            Err(CancelReason::EmptyVocabulary) => {
+                log_info("Parse operation cancelled: empty vocabulary");
+            },
         }
     }
 
