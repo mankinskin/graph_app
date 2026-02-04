@@ -180,6 +180,7 @@ impl Corpus {
 }
 pub type AbortSender = std::sync::mpsc::Sender<()>;
 pub type AbortReceiver = std::sync::mpsc::Receiver<()>;
+#[derive(Debug)]
 pub struct ParseResult {
     pub graph: Hypergraph,
     pub containment: Hypergraph,
