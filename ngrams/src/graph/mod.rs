@@ -190,7 +190,7 @@ pub fn parse_corpus(
     mut status: StatusHandle,
     cancellation: impl Into<Cancellation>,
 ) -> RunResult<ParseResult> {
-    let image = LabellingImage::from_corpus(&corpus, &mut status);
+    let image = LabellingImage::from_corpus(&corpus, &mut status)?;
     let test_corpus = TestCorpus::new(image, corpus);
     let mut ctx = LabellingCtx::new(test_corpus, status, cancellation.into());
 

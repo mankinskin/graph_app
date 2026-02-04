@@ -34,6 +34,7 @@ impl<N: Eq + PartialEq + Debug + Clone + Hash> PassNode for N {}
 pub enum CancelReason {
     Cancelled,
     Error,
+    EmptyVocabulary,
 }
 #[must_use]
 pub type RunResult<T> = Result<T, CancelReason>;

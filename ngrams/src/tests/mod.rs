@@ -296,7 +296,7 @@ pub fn test_graph1() {
         ctx: LabellingCtx::from_corpus(
             Corpus::new("abab_corpus".to_owned(), texts),
             Cancellation::None,
-        ),
+        ).unwrap(),
         labels: test_labels! {
             [
                 "ab",
@@ -320,7 +320,7 @@ pub fn test_graph2() {
         ctx: LabellingCtx::from_corpus(
             Corpus::new("ottos_mops".to_owned(), texts),
             Cancellation::None,
-        ),
+        ).unwrap(),
         labels: test_labels! {
             [
                 "ot",
@@ -638,5 +638,63 @@ pub fn test_parse_corpus_empty_result() {
     for key in &containment_keys {
         let s = parse_result.containment.vertex_key_string(key);
         assert!(!s.is_empty(), "Containment vertex {:?} should have non-empty string representation", key);
+    }
+}
+
+#[test]
+pub fn test_parse_corpus_empty_texts() {
+    use crate::graph::{
+        parse_corpus,
+        Status,
+        traversal::pass::CancelReason,
+    };
+
+    // Empty corpus (no texts)
+    let texts: Vec<String> = vec![];
+    let corpus_name = "test_empty_corpus".to_owned();
+
+    let status = StatusHandle::from(Status::new(texts.clone()));
+
+    let result = parse_corpus(
+        Corpus::new(corpus_name, texts),
+        status,
+        Cancellation::None,
+    );
+
+    assert!(result.is_err(), "parse_corpus should fail for empty corpus");
+    
+    if let Err(CancelReason::EmptyVocabulary) = result {
+        // Expected error
+    } else {
+        panic!("Expected EmptyVocabulary error, got: {:?}", result);
+    }
+}
+
+#[test]
+pub fn test_parse_corpus_only_empty_strings() {
+    use crate::graph::{
+        parse_corpus,
+        Status,
+        traversal::pass::CancelReason,
+    };
+
+    // Corpus with only empty strings
+    let texts = vec!["".to_string(), "".to_string()];
+    let corpus_name = "test_empty_strings".to_owned();
+
+    let status = StatusHandle::from(Status::new(texts.clone()));
+
+    let result = parse_corpus(
+        Corpus::new(corpus_name, texts),
+        status,
+        Cancellation::None,
+    );
+
+    assert!(result.is_err(), "parse_corpus should fail for corpus with only empty strings");
+    
+    if let Err(CancelReason::EmptyVocabulary) = result {
+        // Expected error
+    } else {
+        panic!("Expected EmptyVocabulary error, got: {:?}", result);
     }
 }
