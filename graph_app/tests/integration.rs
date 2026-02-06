@@ -129,7 +129,6 @@ fn test_ngrams_then_multiple_inserts() {
 /// atoms (no patterns) triggers unreachable code in the split/vertex module.
 /// This is a known limitation - the insert algorithm expects existing structure.
 #[test]
-#[ignore = "Insert into empty graph (atoms only) triggers unreachable code - known limitation"]
 fn test_empty_graph_then_insert() {
     // Start with an empty graph
     let graph = Hypergraph::default();
