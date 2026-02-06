@@ -4,6 +4,11 @@
 
 This is a multi-crate Rust workspace. Each major module has its own documentation.
 
+## Environment Guidelines
+
+- **Prefer bash commands** over PowerShell or cmd when running terminal commands
+- **Always use Unix-style paths** (forward slashes `/`) in commands, documentation, and code comments
+
 ## Workspace Structure
 
 ```
