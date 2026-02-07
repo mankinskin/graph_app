@@ -25,10 +25,6 @@ graph_app/                 # Root workspace
 
 ## Module Overview
 
-### context-engine/ ⭐ Primary Development
-
-**Core graph-based context analysis engine** - the main focus of development.
-
 📖 **See [`context-engine/AGENTS.md`](context-engine/AGENTS.md) for detailed development rules, documentation, and workflows.**
 
 Contains crates for graph analysis:
@@ -60,9 +56,6 @@ Architecture: trace → search → insert → read (each layer builds on previou
 ## Quick Commands
 
 ```bash
-# Run the GUI app
-cd graph_app/ && cargo run
-
 # Run context-engine tests
 cd context-engine/ && cargo test
 
