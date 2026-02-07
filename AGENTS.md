@@ -25,6 +25,8 @@ graph_app/                 # Root workspace
 
 ## Module Overview
 
+> **⚠️ IMPORTANT:** When working on any `context-*` crate (context-trace, context-search, context-insert, context-read), you **MUST read [`context-engine/AGENTS.md`](context-engine/AGENTS.md) first**. It contains essential development rules, documentation structure, and debugging workflows.
+
 📖 **See [`context-engine/AGENTS.md`](context-engine/AGENTS.md) for detailed development rules, documentation, and workflows.**
 
 Contains crates for graph analysis:
@@ -64,6 +66,82 @@ cargo test -p context-trace
 cargo test -p context-search
 cargo test -p context-insert
 ```
+
+## Test Tracing Guide
+
+The context-engine crates use a custom test tracing system that writes logs to files and optionally to stdout. This is essential for debugging test failures.
+
+### Basic Usage
+
+```rust
+use context_trace::init_test_tracing;
+
+#[test]
+fn my_test() {
+    let _tracing = init_test_tracing!();  // Basic - logs go to target/test-logs/<test_name>.log
+    // test code...
+}
+```
+
+### With Graph (RECOMMENDED for readable output)
+
+Pass the graph to get human-readable token labels instead of `T0w1`:
+
+```rust
+use context_trace::{init_test_tracing, HypergraphRef, BaseGraphKind};
+
+#[test]
+fn my_test() {
+    let graph = HypergraphRef::<BaseGraphKind>::default();
+    // ... build graph first ...
+    let _tracing = init_test_tracing!(&graph);  // Tokens show as "abc"(T3) instead of T3w3
+    // test code...
+}
+```
+
+### Environment Variables
+
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `LOG_STDOUT` | Enable console output | `LOG_STDOUT=1` |
+| `LOG_FILTER` | Set log level/filter | `LOG_FILTER=debug` or `LOG_FILTER=context_search=trace` |
+| `RUST_LOG` | Fallback log filter | `RUST_LOG=trace` |
+
+### Debug Commands
+
+```bash
+# Run single test with full trace output
+LOG_STDOUT=1 LOG_FILTER=trace cargo test -p context-read my_test -- --nocapture
+
+# Run test and check log file (logs preserved on failure)
+cargo test -p context-read my_test
+cat target/test-logs/my_test.log
+
+# Filter logs for specific modules
+LOG_STDOUT=1 LOG_FILTER=context_search::search=trace cargo test -p context-search -- --nocapture
+```
+
+### Log File Behavior
+
+- **Location:** `<workspace>/context-engine/target/test-logs/<test_name>.log`
+- **On success:** Log file is automatically deleted
+- **On failure:** Log file is preserved with message: `❌ Test failed! Log file preserved at: ...`
+
+### Common Patterns
+
+```rust
+// 1. Initialize tracing AFTER building the graph
+let graph = HypergraphRef::<BaseGraphKind>::default();
+let _result = ReadRequest::from_text("hello").execute(&mut graph);
+let _tracing = init_test_tracing!(&graph);  // Now tokens are labeled
+
+// 2. With custom config
+use context_trace::logging::tracing_utils::TracingConfig;
+let config = TracingConfig::default().with_stdout_level("debug");
+let _tracing = init_test_tracing!(&graph, config);
+```
+
+📖 **See [`context-engine/agents/guides/20251203_TOKEN_TEST_LABELING_GUIDE.md`](context-engine/agents/guides/20251203_TOKEN_TEST_LABELING_GUIDE.md) for detailed token labeling troubleshooting.**
 
 ## Development Guidelines
 
