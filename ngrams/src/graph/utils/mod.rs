@@ -1,2 +1,2 @@
-pub mod cover;
-pub mod dedup;
+pub(crate) mod cover;
+pub(crate) mod dedup;

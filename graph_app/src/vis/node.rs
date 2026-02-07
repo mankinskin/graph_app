@@ -35,38 +35,38 @@ use crate::{
     vis::pattern::ChildPatternsVis,
 };
 
-pub struct NodeResponse {
-    pub response: Response,
-    pub rect: Rect,
-    pub ranges: IndexMap<PatternId, Range<usize>>,
+pub(crate) struct NodeResponse {
+    pub(crate) response: Response,
+    pub(crate) rect: Rect,
+    pub(crate) ranges: IndexMap<PatternId, Range<usize>>,
 }
 #[allow(unused)]
 #[derive(Clone, Debug)]
-pub struct SelectionState {
-    pub pattern_id: PatternId,
-    pub range: Range<usize>,
-    pub trace: IndexRangePath,
+pub(crate) struct SelectionState {
+    pub(crate) pattern_id: PatternId,
+    pub(crate) range: Range<usize>,
+    pub(crate) trace: IndexRangePath,
 }
 #[allow(unused)]
 #[derive(Clone, Debug)]
-pub struct NodeVis {
-    pub key: VertexKey,
+pub(crate) struct NodeVis {
+    pub(crate) key: VertexKey,
     idx: NodeIndex,
-    pub name: String,
-    pub data: VertexData,
+    pub(crate) name: String,
+    pub(crate) data: VertexData,
     /// Position in world coordinates
-    pub world_pos: Pos2,
+    pub(crate) world_pos: Pos2,
     /// Whether this node was manually moved by the user
-    pub manually_moved: bool,
+    pub(crate) manually_moved: bool,
     pub(crate) child_patterns: ChildPatternsVis,
     graph: Graph,
-    pub selected_range: Option<SelectionState>,
+    pub(crate) selected_range: Option<SelectionState>,
     /// Generation counter for unique IDs
     generation: usize,
     /// Cached size from last render
-    pub cached_size: Vec2,
+    pub(crate) cached_size: Vec2,
     /// Map from child vertex index to its screen rects (updated during render)
-    pub child_rects: HashMap<usize, Vec<Rect>>,
+    pub(crate) child_rects: HashMap<usize, Vec<Rect>>,
 }
 
 impl std::ops::Deref for NodeVis {
@@ -77,7 +77,7 @@ impl std::ops::Deref for NodeVis {
 }
 
 impl NodeVis {
-    pub fn new(
+    pub(crate) fn new(
         graph: Graph,
         idx: NodeIndex,
         key: &VertexKey,
@@ -87,7 +87,7 @@ impl NodeVis {
     ) -> Self {
         Self::new_impl(graph, idx, key, data, world_pos, None, generation)
     }
-    pub fn from_old(
+    pub(crate) fn from_old(
         old: &Self,
         idx: NodeIndex,
         data: &VertexData,
@@ -104,7 +104,7 @@ impl NodeVis {
         new.manually_moved = old.manually_moved;
         new
     }
-    pub fn new_impl(
+    pub(crate) fn new_impl(
         graph: Graph,
         idx: NodeIndex,
         key: &VertexKey,
@@ -137,7 +137,7 @@ impl NodeVis {
 
     /// Draw the node as a styled frame at the given screen position
     /// Returns the response and the screen-space rect
-    pub fn show(
+    pub(crate) fn show(
         &mut self,
         ui: &mut Ui,
         screen_pos: Pos2,
@@ -153,7 +153,7 @@ impl NodeVis {
         // Build properties dictionary
         let properties: Vec<(&str, String)> = vec![
             ("idx", format!("{}", self.idx.index())),
-            ("width", format!("{}", self.data.to_child().width.0)),
+            ("width", format!("{}", self.data.to_token().width.0)),
             ("parents", format!("{}", self.data.parents().len())),
             ("patterns", format!("{}", self.data.child_patterns().len())),
         ];

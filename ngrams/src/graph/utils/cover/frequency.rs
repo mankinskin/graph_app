@@ -46,12 +46,12 @@ use context_trace::{
 };
 
 #[derive(Debug, Default, Clone, Deref)]
-pub struct FrequencyCover {
+pub(crate) struct FrequencyCover {
     #[deref]
     cover: HashSet<NGramId>,
 }
 impl FrequencyCover {
-    pub fn from_entry(
+    pub(crate) fn from_entry(
         ctx: &LabellingCtx,
         entry: &VertexCtx,
     ) -> RunResult<Self> {
@@ -100,7 +100,7 @@ impl FrequencyCover {
             })
             .collect_vec()
     }
-    pub fn new_occurrences(
+    pub(crate) fn new_occurrences(
         ctx: &LabellingCtx,
         offset: usize,
         parent_entry: &VertexCtx,

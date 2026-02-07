@@ -32,21 +32,21 @@ use std::sync::{
 
 /// A single graph tab with its own graph state
 #[derive(Debug)]
-pub struct GraphTab {
-    pub id: usize,
-    pub name: String,
-    pub label_state: EditableLabelState,
-    pub vis: Arc<SyncRwLock<GraphVis>>,
+pub(crate) struct GraphTab {
+    pub(crate) id: usize,
+    pub(crate) name: String,
+    pub(crate) label_state: EditableLabelState,
+    pub(crate) vis: Arc<SyncRwLock<GraphVis>>,
     #[cfg(not(target_arch = "wasm32"))]
-    pub read_ctx: Arc<AsyncRwLock<ReadCtx>>,
+    pub(crate) read_ctx: Arc<AsyncRwLock<ReadCtx>>,
     #[cfg(target_arch = "wasm32")]
-    pub read_ctx: Arc<SyncRwLock<ReadCtx>>,
+    pub(crate) read_ctx: Arc<SyncRwLock<ReadCtx>>,
     /// Currently selected node in the graph
-    pub selected_node: Option<VertexKey>,
+    pub(crate) selected_node: Option<VertexKey>,
 }
 
 impl GraphTab {
-    pub fn new(
+    pub(crate) fn new(
         id: usize,
         name: impl Into<String>,
     ) -> Self {
@@ -64,33 +64,33 @@ impl GraphTab {
         }
     }
 
-    pub fn vis(&self) -> Option<SyncRwLockReadGuard<'_, GraphVis>> {
+    pub(crate) fn vis(&self) -> Option<SyncRwLockReadGuard<'_, GraphVis>> {
         self.vis.read().ok()
     }
 
-    pub fn vis_mut(&self) -> Option<SyncRwLockWriteGuard<'_, GraphVis>> {
+    pub(crate) fn vis_mut(&self) -> Option<SyncRwLockWriteGuard<'_, GraphVis>> {
         self.vis.write().ok()
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn ctx(&self) -> Option<async_std::sync::RwLockReadGuard<'_, ReadCtx>> {
+    pub(crate) fn ctx(&self) -> Option<async_std::sync::RwLockReadGuard<'_, ReadCtx>> {
         self.read_ctx.try_read()
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub fn ctx(&self) -> Option<SyncRwLockReadGuard<'_, ReadCtx>> {
+    pub(crate) fn ctx(&self) -> Option<SyncRwLockReadGuard<'_, ReadCtx>> {
         self.read_ctx.read().ok()
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn ctx_mut(
+    pub(crate) fn ctx_mut(
         &self
     ) -> Option<async_std::sync::RwLockWriteGuard<'_, ReadCtx>> {
         self.read_ctx.try_write()
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub fn ctx_mut(&self) -> Option<SyncRwLockWriteGuard<'_, ReadCtx>> {
+    pub(crate) fn ctx_mut(&self) -> Option<SyncRwLockWriteGuard<'_, ReadCtx>> {
         self.read_ctx.write().ok()
     }
 }
@@ -186,30 +186,30 @@ impl App {
     }
 
     /// Get the currently selected tab
-    pub fn current_tab(&self) -> Option<&GraphTab> {
+    pub(crate) fn current_tab(&self) -> Option<&GraphTab> {
         self.tabs.iter().find(|t| t.id == self.selected_tab_id)
     }
 
     /// Get mutable reference to the currently selected tab
-    pub fn current_tab_mut(&mut self) -> Option<&mut GraphTab> {
+    pub(crate) fn current_tab_mut(&mut self) -> Option<&mut GraphTab> {
         self.tabs.iter_mut().find(|t| t.id == self.selected_tab_id)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     #[allow(unused)]
-    pub fn ctx(&self) -> Option<async_std::sync::RwLockReadGuard<'_, ReadCtx>> {
+    pub(crate) fn ctx(&self) -> Option<async_std::sync::RwLockReadGuard<'_, ReadCtx>> {
         self.current_tab()?.ctx()
     }
 
     #[cfg(target_arch = "wasm32")]
     #[allow(unused)]
-    pub fn ctx(&self) -> Option<SyncRwLockReadGuard<'_, ReadCtx>> {
+    pub(crate) fn ctx(&self) -> Option<SyncRwLockReadGuard<'_, ReadCtx>> {
         self.current_tab()?.ctx()
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     #[allow(unused)]
-    pub fn ctx_mut(
+    pub(crate) fn ctx_mut(
         &self
     ) -> Option<async_std::sync::RwLockWriteGuard<'_, ReadCtx>> {
         self.current_tab()?.ctx_mut()
@@ -217,16 +217,16 @@ impl App {
 
     #[cfg(target_arch = "wasm32")]
     #[allow(unused)]
-    pub fn ctx_mut(&self) -> Option<SyncRwLockWriteGuard<'_, ReadCtx>> {
+    pub(crate) fn ctx_mut(&self) -> Option<SyncRwLockWriteGuard<'_, ReadCtx>> {
         self.current_tab()?.ctx_mut()
     }
 
     #[allow(unused)]
-    pub fn vis(&self) -> Option<SyncRwLockReadGuard<'_, GraphVis>> {
+    pub(crate) fn vis(&self) -> Option<SyncRwLockReadGuard<'_, GraphVis>> {
         self.current_tab()?.vis()
     }
 
-    pub fn vis_mut(&self) -> Option<SyncRwLockWriteGuard<'_, GraphVis>> {
+    pub(crate) fn vis_mut(&self) -> Option<SyncRwLockWriteGuard<'_, GraphVis>> {
         self.current_tab()?.vis_mut()
     }
 

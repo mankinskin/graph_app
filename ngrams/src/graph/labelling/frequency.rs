@@ -52,10 +52,10 @@ use context_trace::{
 };
 
 #[derive(Debug, Deref, new, DerefMut)]
-pub struct FrequencyCtx<'b> {
+pub(crate) struct FrequencyCtx<'b> {
     #[deref]
     #[deref_mut]
-    pub ctx: &'b mut LabellingCtx,
+    pub(crate) ctx: &'b mut LabellingCtx,
 }
 
 impl TraversalPass for FrequencyCtx<'_> {
@@ -112,7 +112,7 @@ impl TraversalPass for FrequencyCtx<'_> {
     }
 }
 impl FrequencyCtx<'_> {
-    pub fn entry_next(
+    pub(crate) fn entry_next(
         &self,
         entry: &VertexCtx,
     ) -> Vec<NGramId> {
@@ -121,7 +121,7 @@ impl FrequencyCtx<'_> {
             .map(|(_, c)| c)
             .collect()
     }
-    pub fn entry_is_frequent(
+    pub(crate) fn entry_is_frequent(
         &self,
         entry: &VertexCtx,
     ) -> RunResult<bool> {

@@ -73,12 +73,12 @@ use crate::graph::{
 };
 
 #[derive(Debug, Copy, Clone)]
-pub enum PartitionCell {
+pub(crate) enum PartitionCell {
     ChildIndex(Token),
     GapSize(NonZeroUsize),
 }
 impl PartitionCell {
-    pub fn width(&self) -> usize {
+    pub(crate) fn width(&self) -> usize {
         match self {
             Self::ChildIndex(c) => c.width().0,
             Self::GapSize(o) => o.get(),
@@ -86,11 +86,11 @@ impl PartitionCell {
     }
 }
 #[derive(Debug, IntoIterator, Deref)]
-pub struct PartitionContainer {
+pub(crate) struct PartitionContainer {
     wall: Vec<Vec<Token>>,
 }
 impl PartitionContainer {
-    pub fn from_ngram(
+    pub(crate) fn from_ngram(
         ctx: &PartitionsCtx<'_>,
         ngram: NGramId,
     ) -> Self {
@@ -107,7 +107,7 @@ impl PartitionContainer {
         let ctx = NodePartitionCtx::new(ngram, ctx);
         Self::from_child_list(&ctx, tree)
     }
-    pub fn from_child_list(
+    pub(crate) fn from_child_list(
         ctx: &NodePartitionCtx,
         list: impl IntoIterator<Item = (usize, NGramId)>,
     ) -> Self {

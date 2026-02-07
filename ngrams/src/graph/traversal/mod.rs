@@ -1,4 +1,4 @@
-pub mod direction;
+pub(crate) mod direction;
 pub mod pass;
-pub mod queue;
-pub mod visited;
+pub(crate) mod queue;
+pub(crate) mod visited;

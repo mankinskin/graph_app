@@ -48,35 +48,35 @@ mod native;
 mod wasm;
 
 // Re-export core types
-pub use cancellation::CancellationHandle;
-pub use handle::TaskHandle;
-pub use result::TaskResult;
-pub use traits::{
+pub(crate) use cancellation::CancellationHandle;
+pub(crate) use handle::TaskHandle;
+pub(crate) use result::TaskResult;
+pub(crate) use traits::{
     BlockingTask,
     TaskExecutor,
 };
-pub use utils::{
+pub(crate) use utils::{
     sleep,
     sleep_ms,
 };
 
 #[cfg(target_arch = "wasm32")]
-pub use utils::yield_now;
+pub(crate) use utils::yield_now;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub use native::NativeExecutor;
+pub(crate) use native::NativeExecutor;
 #[cfg(target_arch = "wasm32")]
-pub use wasm::WasmExecutor;
+pub(crate) use wasm::WasmExecutor;
 
 /// Get the default executor for the current platform
 #[cfg(not(target_arch = "wasm32"))]
-pub fn default_executor() -> NativeExecutor {
+pub(crate) fn default_executor() -> NativeExecutor {
     NativeExecutor::new()
 }
 
 /// Get the default executor for the current platform
 #[cfg(target_arch = "wasm32")]
-pub fn default_executor() -> WasmExecutor {
+pub(crate) fn default_executor() -> WasmExecutor {
     WasmExecutor::new()
 }
 

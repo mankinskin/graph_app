@@ -28,7 +28,7 @@ use super::{
         VisitorCollection,
     },
 };
-pub trait PassNode: Eq + PartialEq + Debug + Clone + Hash {}
+pub(crate) trait PassNode: Eq + PartialEq + Debug + Clone + Hash {}
 impl<N: Eq + PartialEq + Debug + Clone + Hash> PassNode for N {}
 #[derive(Debug)]
 pub enum CancelReason {
@@ -37,8 +37,8 @@ pub enum CancelReason {
     EmptyVocabulary,
 }
 #[must_use]
-pub type RunResult<T> = Result<T, CancelReason>;
-pub trait TraversalPass: Sized {
+pub(crate) type RunResult<T> = Result<T, CancelReason>;
+pub(crate) trait TraversalPass: Sized {
     type Node: PassNode + Copy;
     type NextNode: PassNode + Into<Self::Node>;
     type Queue: Queue<Self>;

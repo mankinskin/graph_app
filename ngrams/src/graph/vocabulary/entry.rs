@@ -37,30 +37,30 @@ use std::{
 };
 
 #[derive(Debug, Deref, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct VocabEntry {
-    //pub id: NGramId,
-    pub occurrences: HashSet<TextLocation>,
+pub(crate) struct VocabEntry {
+    //pub(crate) id: NGramId,
+    pub(crate) occurrences: HashSet<TextLocation>,
     // positions of largest smaller ngrams
-    //pub children: NodeChildren,
+    //pub(crate) children: NodeChildren,
     #[deref]
-    pub ngram: String,
+    pub(crate) ngram: String,
 }
 
 impl VocabEntry {
-    pub fn count(&self) -> usize {
+    pub(crate) fn count(&self) -> usize {
         self.occurrences.len()
     }
-    //pub fn needs_node(&self) -> bool {
+    //pub(crate) fn needs_node(&self) -> bool {
     //    self.len() == 1
     //        || self.children.has_overlaps()
     //}
 }
 #[derive(Debug, Deref, Clone)]
-pub struct VertexCtx<'a> {
-    pub data: VertexData,
+pub(crate) struct VertexCtx<'a> {
+    pub(crate) data: VertexData,
     #[deref]
-    pub entry: &'a VocabEntry,
-    pub vocab: &'a Vocabulary,
+    pub(crate) entry: &'a VocabEntry,
+    pub(crate) vocab: &'a Vocabulary,
 }
 impl Wide for VertexCtx<'_> {
     fn width(&self) -> TokenWidth {
@@ -73,14 +73,14 @@ impl HasVertexKey for VertexCtx<'_> {
     }
 }
 #[derive(Debug, Deref)]
-pub struct VertexCtxMut<'a> {
-    pub data: VertexData,
+pub(crate) struct VertexCtxMut<'a> {
+    pub(crate) data: VertexData,
     #[deref]
-    pub entry: &'a mut VocabEntry,
+    pub(crate) entry: &'a mut VocabEntry,
 }
 // define how to access a graph
 // useful if you store extra labels for nodes by which to query
-pub trait HasVertexEntries<K: ?Sized + Debug> {
+pub(crate) trait HasVertexEntries<K: ?Sized + Debug> {
     fn entry(
         &mut self,
         key: K,
@@ -108,7 +108,7 @@ pub trait HasVertexEntries<K: ?Sized + Debug> {
             .unwrap_or_else(|| panic!("No VertexKey: {:?}", key))
     }
 }
-pub trait VocabIndex: HasVertexIndex {}
+pub(crate) trait VocabIndex: HasVertexIndex {}
 //impl VocabIndex for VertexIndex {}
 //impl VocabIndex for NGramId {}
 macro_rules! impl_index_vocab {

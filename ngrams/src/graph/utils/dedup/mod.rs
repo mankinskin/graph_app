@@ -93,18 +93,18 @@ use super::cover::ChildCover;
 // - do not expand labelled or covered nodes (use child cover)
 // - detect nodes that have been visited in other roots
 #[derive(Debug, Default)]
-pub struct DedupRoot {
-    pub cover: ChildCover,
-    pub visited: HashSet<VertexKey>,
+pub(crate) struct DedupRoot {
+    pub(crate) cover: ChildCover,
+    pub(crate) visited: HashSet<VertexKey>,
 }
 #[derive(Debug)]
-pub struct ChildDedupPass<'a> {
-    pub ctx: &'a mut LabellingCtx,
-    pub roots: HashMap<VertexKey, DedupRoot>,
+pub(crate) struct ChildDedupPass<'a> {
+    pub(crate) ctx: &'a mut LabellingCtx,
+    pub(crate) roots: HashMap<VertexKey, DedupRoot>,
 }
 
 impl<'a> ChildDedupPass<'a> {
-    pub fn new(
+    pub(crate) fn new(
         ctx: &'a mut LabellingCtx,
         roots: impl IntoIterator<Item = VertexKey>,
     ) -> Self {

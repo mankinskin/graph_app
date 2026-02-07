@@ -45,15 +45,15 @@ use crate::{
 
 /// Response from showing the graph
 #[derive(Debug, Default)]
-pub struct GraphResponse {
+pub(crate) struct GraphResponse {
     /// The node that was clicked, if any
-    pub clicked_node: Option<VertexKey>,
+    pub(crate) clicked_node: Option<VertexKey>,
     /// Whether the background was clicked (no node clicked)
-    pub background_clicked: bool,
+    pub(crate) background_clicked: bool,
 }
 
 #[derive(Debug)]
-pub struct GraphVis {
+pub(crate) struct GraphVis {
     graph: DiGraph<NodeVis, ()>,
     handle: Option<Graph>,
     layout: GraphLayout,
@@ -82,7 +82,7 @@ impl Default for GraphVis {
 }
 #[derive(Debug)]
 #[allow(unused)]
-pub enum UpdateError {
+pub(crate) enum UpdateError {
     NoRecordingStream,
     #[cfg(not(target_arch = "wasm32"))]
     Stream(rerun::RecordingStreamError),
@@ -104,7 +104,7 @@ impl GraphVis {
         Ok(())
     }
 
-    pub fn update(&mut self) -> Result<(), UpdateError> {
+    pub(crate) fn update(&mut self) -> Result<(), UpdateError> {
         let handle = self.graph().ok_or(NotInitialized)?;
         let cg = handle.read();
 
@@ -224,7 +224,7 @@ impl GraphVis {
         ((screen_pos - viewport_min - self.pan) / self.zoom).to_pos2()
     }
 
-    pub fn show(
+    pub(crate) fn show(
         &mut self,
         ui: &mut Ui,
     ) -> GraphResponse {
@@ -344,7 +344,7 @@ impl GraphVis {
                 let target_vertex_idx = self
                     .graph
                     .node_weight(target_idx)
-                    .map(|n| *n.data.to_child().index);
+                    .map(|n| *n.data.to_token().index);
 
                 // Get all child rects for this target from source node (same child can appear multiple times)
                 let child_rects: Vec<Rect> =
@@ -465,11 +465,11 @@ impl GraphVis {
     }
 
     /// Mark the graph visualization as needing a rebuild
-    pub fn mark_dirty(&mut self) {
+    pub(crate) fn mark_dirty(&mut self) {
         self.dirty = true;
     }
 
-    pub fn new(graph: Graph) -> Self {
+    pub(crate) fn new(graph: Graph) -> Self {
         Self {
             graph: DiGraph::new(),
             handle: Some(graph),
@@ -483,7 +483,7 @@ impl GraphVis {
     fn graph(&self) -> Option<Graph> {
         self.handle.clone()
     }
-    pub fn edge_tip(
+    pub(crate) fn edge_tip(
         ui: &mut Ui,
         source: &Pos2,
         target: &Pos2,
@@ -525,7 +525,7 @@ impl GraphVis {
         ));
     }
     #[allow(unused)]
-    pub fn edge(
+    pub(crate) fn edge(
         ui: &mut Ui,
         source: &Pos2,
         target: &Pos2,
@@ -579,7 +579,7 @@ impl GraphVis {
             }
         }
     }
-    pub fn poll_events(&self) -> Vec<tracing_egui::LogEvent> {
+    pub(crate) fn poll_events(&self) -> Vec<tracing_egui::LogEvent> {
         //println!("polling..");
         tracing_egui::poll_events().drain(..).collect()
     }

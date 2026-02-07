@@ -51,11 +51,11 @@ use super::{
 /// });
 /// ```
 #[derive(Debug, Clone, Default)]
-pub struct WasmExecutor;
+pub(crate) struct WasmExecutor;
 
 impl WasmExecutor {
     /// Create a new wasm executor.
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self
     }
 

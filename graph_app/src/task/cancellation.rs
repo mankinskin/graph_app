@@ -29,7 +29,7 @@ use tokio_util::sync::CancellationToken;
 /// handle.cancel();
 /// ```
 #[derive(Clone)]
-pub struct CancellationHandle {
+pub(crate) struct CancellationHandle {
     #[cfg(not(target_arch = "wasm32"))]
     token: CancellationToken,
     #[cfg(target_arch = "wasm32")]
@@ -38,7 +38,7 @@ pub struct CancellationHandle {
 
 impl CancellationHandle {
     /// Create a new cancellation handle.
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             #[cfg(not(target_arch = "wasm32"))]
             token: CancellationToken::new(),
@@ -51,7 +51,7 @@ impl CancellationHandle {
     ///
     /// This is a cooperative cancellation - the task must check
     /// `is_cancelled()` and exit gracefully.
-    pub fn cancel(&self) {
+    pub(crate) fn cancel(&self) {
         #[cfg(not(target_arch = "wasm32"))]
         self.token.cancel();
         #[cfg(target_arch = "wasm32")]
@@ -59,7 +59,7 @@ impl CancellationHandle {
     }
 
     /// Check if cancellation has been requested.
-    pub fn is_cancelled(&self) -> bool {
+    pub(crate) fn is_cancelled(&self) -> bool {
         #[cfg(not(target_arch = "wasm32"))]
         return self.token.is_cancelled();
         #[cfg(target_arch = "wasm32")]
@@ -70,7 +70,7 @@ impl CancellationHandle {
     ///
     /// This is useful for integrating with tokio's cancellation utilities.
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn token(&self) -> CancellationToken {
+    pub(crate) fn token(&self) -> CancellationToken {
         self.token.clone()
     }
 
@@ -78,13 +78,13 @@ impl CancellationHandle {
     ///
     /// This can be shared with Web Workers for cancellation.
     #[cfg(target_arch = "wasm32")]
-    pub fn flag(&self) -> Arc<AtomicBool> {
+    pub(crate) fn flag(&self) -> Arc<AtomicBool> {
         self.flag.clone()
     }
 
     /// Create a child handle that will be cancelled when this handle is cancelled.
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn child(&self) -> Self {
+    pub(crate) fn child(&self) -> Self {
         Self {
             token: self.token.child_token(),
         }
@@ -92,7 +92,7 @@ impl CancellationHandle {
 
     /// Create a child handle (wasm version - just clones the flag).
     #[cfg(target_arch = "wasm32")]
-    pub fn child(&self) -> Self {
+    pub(crate) fn child(&self) -> Self {
         self.clone()
     }
 }

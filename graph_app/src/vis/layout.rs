@@ -31,7 +31,7 @@ type GraphData = petgraph::Graph<
     (),
 >;
 #[derive(Default, Debug)]
-pub struct GraphLayout {
+pub(crate) struct GraphLayout {
     pub(crate) labels: Vec<String>,
     pub(crate) indices: Vec<String>,
     pub(crate) nodes:
@@ -43,7 +43,7 @@ pub struct GraphLayout {
 }
 
 impl GraphLayout {
-    pub fn generate(
+    pub(crate) fn generate(
         cg: &Hypergraph,
         pg: GraphData,
     ) -> Self {
@@ -159,7 +159,7 @@ impl GraphLayout {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn re_nodes(&self) -> GraphNodes {
+    pub(crate) fn re_nodes(&self) -> GraphNodes {
         // Get positions in the same order as indices
         let positions_vec: Vec<_> = self.indices.iter()
             .filter_map(|idx_str| {
@@ -178,7 +178,7 @@ impl GraphLayout {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn re_edges(&self) -> GraphEdges {
+    pub(crate) fn re_edges(&self) -> GraphEdges {
         GraphEdges::new(self.edges.clone()).with_directed_edges()
     }
 }

@@ -8,7 +8,7 @@ use graph_app::App;
 #[derive(Debug, clap::Parser)]
 #[clap(author, version, about)]
 #[cfg(not(target_arch = "wasm32"))]
-pub struct Args {
+pub(crate) struct Args {
     #[command(flatten)]
     rerun: rerun::clap::RerunArgs,
 }

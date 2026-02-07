@@ -61,27 +61,27 @@ use super::{
     Serialize,
     Deserialize,
 )]
-pub struct TextLocation {
-    pub texti: usize,
-    pub x: usize,
+pub(crate) struct TextLocation {
+    pub(crate) texti: usize,
+    pub(crate) x: usize,
 }
 
 #[derive(Debug, From)]
-pub struct CorpusCtx<'a> {
-    pub corpus: &'a Corpus,
-    pub status: &'a mut StatusHandle,
+pub(crate) struct CorpusCtx<'a> {
+    pub(crate) corpus: &'a Corpus,
+    pub(crate) status: &'a mut StatusHandle,
 }
 #[derive(Debug, Clone, Copy, From, Deref)]
-pub struct TextLevelCtx<'a> {
+pub(crate) struct TextLevelCtx<'a> {
     #[deref]
-    pub corpus_ctx: &'a CorpusCtx<'a>,
-    pub texti: usize,
-    pub text: &'a String,
-    pub n: usize,
+    pub(crate) corpus_ctx: &'a CorpusCtx<'a>,
+    pub(crate) texti: usize,
+    pub(crate) text: &'a String,
+    pub(crate) n: usize,
 }
 
 impl TextLevelCtx<'_> {
-    pub fn on_nlevel(
+    pub(crate) fn on_nlevel(
         &self,
         vocab: &mut Vocabulary,
     ) {
@@ -102,15 +102,15 @@ impl TextLevelCtx<'_> {
 }
 
 #[derive(Debug, Clone, Copy, From, Deref)]
-pub struct NGramFrequencyCtx<'a> {
+pub(crate) struct NGramFrequencyCtx<'a> {
     #[deref]
-    pub level_ctx: TextLevelCtx<'a>,
-    pub ngram: &'a String,
-    pub occurrence: TextLocation,
+    pub(crate) level_ctx: TextLevelCtx<'a>,
+    pub(crate) ngram: &'a String,
+    pub(crate) occurrence: TextLocation,
 }
 
 impl NGramFrequencyCtx<'_> {
-    pub fn on_ngram(
+    pub(crate) fn on_ngram(
         &self,
         vocab: &mut Vocabulary,
     ) {
@@ -121,7 +121,7 @@ impl NGramFrequencyCtx<'_> {
             self.on_first_ngram(vocab)
         }
     }
-    pub fn on_first_ngram(
+    pub(crate) fn on_first_ngram(
         &self,
         vocab: &mut Vocabulary,
     ) {
@@ -164,7 +164,7 @@ impl NGramFrequencyCtx<'_> {
                 .add_parents_to_pattern_nodes(pat_vec, child, pid);
         }
     }
-    pub fn find_children(
+    pub(crate) fn find_children(
         &self,
         vocab: &mut Vocabulary,
     ) -> ChildPatterns {

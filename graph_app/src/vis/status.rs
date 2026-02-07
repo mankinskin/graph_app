@@ -10,10 +10,10 @@ use ngrams::graph::vocabulary::ProcessStatus;
 use strum::IntoEnumIterator;
 
 #[derive(Deref, DerefMut, Debug)]
-pub struct ShowStatus<'a>(pub &'a ngrams::graph::Status);
+pub(crate) struct ShowStatus<'a>(pub(crate) &'a ngrams::graph::Status);
 
 impl ShowStatus<'_> {
-    pub fn show(
+    pub(crate) fn show(
         &self,
         ctx: &egui::Context,
     ) {

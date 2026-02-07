@@ -158,7 +158,7 @@ impl App {
             let data = graph_ref.get_vertex_data(key).ok()?;
 
             let name = graph_ref.vertex_data_string(data.clone());
-            let width = data.to_child().width.0;
+            let width = data.to_token().width.0;
 
             // Collect parents
             let parents = data.parents();

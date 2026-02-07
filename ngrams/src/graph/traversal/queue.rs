@@ -22,7 +22,7 @@ use derive_more::{
     DerefMut,
 };
 
-pub trait Queue<P: TraversalPass>: FromIterator<P::NextNode> {
+pub(crate) trait Queue<P: TraversalPass>: FromIterator<P::NextNode> {
     fn extend_layer(&mut self, iter: impl IntoIterator<Item = <P as TraversalPass>::NextNode>);
     fn finish_layer(&mut self);
     fn pop_front(&mut self) -> Option<P::NextNode>;
@@ -30,7 +30,7 @@ pub trait Queue<P: TraversalPass>: FromIterator<P::NextNode> {
 }
 type NodeQueue<P> = VecDeque<<P as TraversalPass>::NextNode>;
 #[derive(Debug, Deref, Default)]
-pub struct LayeredQueue<P: TraversalPass> {
+pub(crate) struct LayeredQueue<P: TraversalPass> {
     #[deref]
     queue: NodeQueue<P>,
     layer: NodeQueue<P>,
@@ -61,7 +61,7 @@ impl<P: TraversalPass> Queue<P> for LayeredQueue<P> {
 }
 
 #[derive(Debug, Deref, Default)]
-pub struct LinearQueue<P: TraversalPass> {
+pub(crate) struct LinearQueue<P: TraversalPass> {
     queue: NodeQueue<P>,
 }
 impl<P: TraversalPass> FromIterator<P::NextNode> for LinearQueue<P> {
@@ -86,8 +86,8 @@ impl<P: TraversalPass> Queue<P> for LinearQueue<P> {
 }
 
 #[derive(Debug, Deref, Default)]
-pub struct SortedQueue {
-    pub queue: VecDeque<NGramId>,
+pub(crate) struct SortedQueue {
+    pub(crate) queue: VecDeque<NGramId>,
 }
 impl FromIterator<NGramId> for SortedQueue {
     fn from_iter<T: IntoIterator<Item = NGramId>>(iter: T) -> Self {

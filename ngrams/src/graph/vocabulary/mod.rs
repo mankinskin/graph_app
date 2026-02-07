@@ -68,7 +68,7 @@ use super::{
     StatusHandle,
 };
 
-pub mod entry;
+pub(crate) mod entry;
 
 #[derive(
     Debug,
@@ -84,10 +84,10 @@ pub mod entry;
     Serialize,
     Deserialize,
 )]
-pub struct NGramId {
+pub(crate) struct NGramId {
     #[deref]
-    pub key: VertexKey,
-    pub width: usize,
+    pub(crate) key: VertexKey,
+    pub(crate) width: usize,
 }
 impl From<NGramId> for VertexKey {
     fn from(ngram_id: NGramId) -> Self {
@@ -136,19 +136,19 @@ impl Ord for ProcessStatus {
 #[derive(
     Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq, Deref,
 )]
-pub struct Vocabulary {
+pub(crate) struct Vocabulary {
     //#[deref]
-    pub containment: Hypergraph,
-    pub name: String,
+    pub(crate) containment: Hypergraph,
+    pub(crate) name: String,
     #[deref]
-    pub ids: HashMap<String, NGramId>,
-    pub leaves: HashSet<NGramId>,
-    pub roots: HashSet<NGramId>,
-    pub entries: HashMap<VertexKey, VocabEntry>,
+    pub(crate) ids: HashMap<String, NGramId>,
+    pub(crate) leaves: HashSet<NGramId>,
+    pub(crate) roots: HashSet<NGramId>,
+    pub(crate) entries: HashMap<VertexKey, VocabEntry>,
 }
 
 impl Vocabulary {
-    pub fn from_corpus(
+    pub(crate) fn from_corpus(
         corpus: &Corpus,
         status: &mut StatusHandle,
     ) -> Result<Self, super::traversal::pass::CancelReason> {
@@ -158,7 +158,7 @@ impl Vocabulary {
         Ok(vocab)
     }
 
-    pub fn containment_pass(
+    pub(crate) fn containment_pass(
         &mut self,
         ctx: &CorpusCtx<'_>,
     ) -> Result<(), super::traversal::pass::CancelReason> {
@@ -183,7 +183,7 @@ impl Vocabulary {
             });
         Ok(())
     }
-    //pub fn clean(&mut self) -> HashSet<NGramId> {
+    //pub(crate) fn clean(&mut self) -> HashSet<NGramId> {
     //    let drained: HashSet<_> = self.entries
     //        .extract_if(|_, e| !e.needs_node())
     //        .map(|(i, _)| i)

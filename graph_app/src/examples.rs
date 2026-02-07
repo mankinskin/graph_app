@@ -7,7 +7,7 @@ use context_trace::{
     insert_patterns,
 };
 
-pub fn build_graph1() -> Hypergraph {
+pub(crate) fn build_graph1() -> Hypergraph {
     let graph = Hypergraph::default();
     insert_atoms!(graph, {a, b, w, x, y, z});
     // Single patterns
@@ -29,7 +29,7 @@ pub fn build_graph1() -> Hypergraph {
     );
     graph
 }
-pub fn build_graph2() -> Hypergraph {
+pub(crate) fn build_graph2() -> Hypergraph {
     let graph = Hypergraph::default();
     insert_atoms!(graph, {a, b, c, d, e, f, g, h, i});
     // Single patterns (2 elements)
@@ -72,7 +72,7 @@ pub fn build_graph2() -> Hypergraph {
     );
     graph
 }
-pub fn build_graph3() -> Hypergraph {
+pub(crate) fn build_graph3() -> Hypergraph {
     let graph = Hypergraph::default();
     // Insert atoms manually to avoid tuple size limits (max 12 elements)
     // Note: 'space' must be inserted manually as it's not a single-character identifier

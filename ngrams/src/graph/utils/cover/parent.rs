@@ -83,13 +83,13 @@ use crate::graph::{
 use super::ChildCover;
 
 #[derive(Debug)]
-pub struct ParentCoverPass<'a> {
-    pub ctx: &'a LabellingCtx,
-    pub root: VertexKey,
-    pub cover: ChildCover,
+pub(crate) struct ParentCoverPass<'a> {
+    pub(crate) ctx: &'a LabellingCtx,
+    pub(crate) root: VertexKey,
+    pub(crate) cover: ChildCover,
 }
 impl<'a> ParentCoverPass<'a> {
-    pub fn new(
+    pub(crate) fn new(
         ctx: &'a LabellingCtx,
         root: VertexKey,
     ) -> Self {

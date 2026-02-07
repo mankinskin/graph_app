@@ -69,11 +69,11 @@ use crate::graph::{
 };
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct AccumulateCtx<'b> {
+pub(crate) struct AccumulateCtx<'b> {
     #[deref]
     #[deref_mut]
-    pub ctx: &'b mut LabellingCtx,
-    pub result: Hypergraph,
+    pub(crate) ctx: &'b mut LabellingCtx,
+    pub(crate) result: Hypergraph,
     visited: <Self as VisitTracking>::Collection,
 }
 

@@ -5,7 +5,7 @@ use strum::{
 
 /// Available algorithms for processing text
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, EnumIter)]
-pub enum Algorithm {
+pub(crate) enum Algorithm {
     /// ngrams::parse_corpus - Parse corpus using n-gram frequency analysis
     #[default]
     #[strum(serialize = "N-grams Parse Corpus")]
@@ -22,7 +22,7 @@ pub enum Algorithm {
 
 impl Algorithm {
     /// Returns a description of what the algorithm does
-    pub fn description(&self) -> &'static str {
+    pub(crate) fn description(&self) -> &'static str {
         match self {
             Algorithm::NgramsParseCorpus => {
                 "Parse corpus using n-gram frequency analysis and build a hypergraph"

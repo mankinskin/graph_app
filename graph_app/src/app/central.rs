@@ -137,7 +137,7 @@ impl App {
         &mut self,
         ui: &mut Ui,
     ) {
-        egui::menu::bar(ui, |ui| {
+        egui::MenuBar::new().ui(ui, |ui| {
             // Edit menu
             ui.menu_button("Edit", |ui| {
                 // Presets submenu

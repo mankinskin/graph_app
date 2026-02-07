@@ -4,7 +4,7 @@ use tap::Tap;
 
 use context_trace::HashMap;
 
-pub fn ngram_set(s: String) -> Vec<HashMap<String, usize>>
+pub(crate) fn ngram_set(s: String) -> Vec<HashMap<String, usize>>
 {
     let slen: usize = s.len();
     let N_MAX: usize = 10;
@@ -28,7 +28,7 @@ pub fn ngram_set(s: String) -> Vec<HashMap<String, usize>>
 }
 
 #[test]
-pub fn test_ngrams()
+pub(crate) fn test_ngrams()
 {
     //let file_path = "./corpus/eng_news_2020_100K/eng_news_2020_100K-sentences.txt";
     //let corpus: String = read_corpus(file_path);

@@ -7,7 +7,7 @@ use std::time::Duration;
 /// - **Native**: Uses `tokio::time::sleep`
 /// - **Wasm**: Uses `gloo_timers::future::TimeoutFuture`
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn sleep(duration: Duration) {
+pub(crate) async fn sleep(duration: Duration) {
     tokio::time::sleep(duration).await;
 }
 
@@ -16,19 +16,19 @@ pub async fn sleep(duration: Duration) {
 /// - **Native**: Uses `tokio::time::sleep`
 /// - **Wasm**: Uses `gloo_timers::future::TimeoutFuture`
 #[cfg(target_arch = "wasm32")]
-pub async fn sleep(duration: Duration) {
+pub(crate) async fn sleep(duration: Duration) {
     gloo_timers::future::TimeoutFuture::new(duration.as_millis() as u32).await;
 }
 
 /// Convenience function for sleeping a number of milliseconds.
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn sleep_ms(millis: u64) {
+pub(crate) async fn sleep_ms(millis: u64) {
     tokio::time::sleep(Duration::from_millis(millis)).await;
 }
 
 /// Convenience function for sleeping a number of milliseconds.
 #[cfg(target_arch = "wasm32")]
-pub async fn sleep_ms(millis: u32) {
+pub(crate) async fn sleep_ms(millis: u32) {
     gloo_timers::future::TimeoutFuture::new(millis).await;
 }
 
@@ -46,7 +46,7 @@ pub async fn sleep_ms(millis: u32) {
 /// }
 /// ```
 #[cfg(target_arch = "wasm32")]
-pub async fn yield_now() {
+pub(crate) async fn yield_now() {
     use std::{
         future::Future,
         pin::Pin,

@@ -15,7 +15,7 @@ use super::{CancellationHandle, TaskResult};
 /// - Check if a task is running or finished
 /// - Request cancellation
 /// - Abort the task (native only - on wasm this just cancels)
-pub struct TaskHandle {
+pub(crate) struct TaskHandle {
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) join_handle: Option<tokio::task::JoinHandle<TaskResult>>,
     #[cfg(target_arch = "wasm32")]
@@ -38,7 +38,7 @@ impl std::fmt::Debug for TaskHandle {
 
 impl TaskHandle {
     /// Check if the task is still running.
-    pub fn is_running(&self) -> bool {
+    pub(crate) fn is_running(&self) -> bool {
         #[cfg(not(target_arch = "wasm32"))]
         {
             self.join_handle
@@ -53,7 +53,7 @@ impl TaskHandle {
     }
 
     /// Check if the task has finished.
-    pub fn is_finished(&self) -> bool {
+    pub(crate) fn is_finished(&self) -> bool {
         !self.is_running()
     }
 
@@ -61,7 +61,7 @@ impl TaskHandle {
     ///
     /// This is a cooperative cancellation - the task must check
     /// `CancellationHandle::is_cancelled()` and exit gracefully.
-    pub fn cancel(&self) {
+    pub(crate) fn cancel(&self) {
         self.cancellation.cancel();
     }
 
@@ -69,7 +69,7 @@ impl TaskHandle {
     ///
     /// - **Native**: Aborts the tokio task
     /// - **Wasm**: Just sets the cancellation flag (cooperative only)
-    pub fn abort(&self) {
+    pub(crate) fn abort(&self) {
         self.cancel();
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(handle) = &self.join_handle {
@@ -78,13 +78,13 @@ impl TaskHandle {
     }
 
     /// Get the cancellation handle.
-    pub fn cancellation(&self) -> &CancellationHandle {
+    pub(crate) fn cancellation(&self) -> &CancellationHandle {
         &self.cancellation
     }
 
     /// Try to get the result if the task has finished.
     #[cfg(target_arch = "wasm32")]
-    pub fn try_get_result(&self) -> Option<TaskResult> {
+    pub(crate) fn try_get_result(&self) -> Option<TaskResult> {
         if self.is_finished() {
             self.result.read().ok().and_then(|r| r.clone())
         } else {
@@ -101,7 +101,7 @@ impl TaskHandle {
     /// The task receives a `CancellationHandle` and should check it periodically.
     /// On wasm, yield periodically using `task::yield_now().await`.
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn spawn<F, Fut>(f: F) -> Self
+    pub(crate) fn spawn<F, Fut>(f: F) -> Self
     where
         F: FnOnce(CancellationHandle) -> Fut + Send + 'static,
         Fut: std::future::Future<Output = ()> + Send + 'static,
@@ -115,7 +115,7 @@ impl TaskHandle {
     /// The task receives a `CancellationHandle` and should check it periodically.
     /// On wasm, yield periodically using `task::yield_now().await`.
     #[cfg(target_arch = "wasm32")]
-    pub fn spawn<F, Fut>(f: F) -> Self
+    pub(crate) fn spawn<F, Fut>(f: F) -> Self
     where
         F: FnOnce(CancellationHandle) -> Fut + 'static,
         Fut: std::future::Future<Output = ()> + 'static,
@@ -129,7 +129,7 @@ impl TaskHandle {
     /// - **Native**: Uses `tokio::task::spawn_blocking`
     /// - **Wasm**: Uses a Web Worker
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn spawn_blocking<F>(f: F) -> Self
+    pub(crate) fn spawn_blocking<F>(f: F) -> Self
     where
         F: FnOnce(CancellationHandle) + Send + 'static,
     {
@@ -142,7 +142,7 @@ impl TaskHandle {
     /// - **Native**: Uses `tokio::task::spawn_blocking`
     /// - **Wasm**: Uses a Web Worker
     #[cfg(target_arch = "wasm32")]
-    pub fn spawn_blocking<F>(f: F) -> Self
+    pub(crate) fn spawn_blocking<F>(f: F) -> Self
     where
         F: FnOnce(CancellationHandle) + Send + 'static,
     {

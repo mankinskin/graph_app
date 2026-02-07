@@ -8,24 +8,24 @@ use eframe::egui::{
 };
 
 /// Response from an editable label interaction.
-pub struct EditableLabelResponse {
+pub(crate) struct EditableLabelResponse {
     /// The label was clicked (single click).
-    pub clicked: bool,
+    pub(crate) clicked: bool,
     /// The label was renamed (new name returned).
-    pub renamed: Option<String>,
+    pub(crate) renamed: Option<String>,
 }
 
 /// State for an editable label, stored externally.
 #[derive(Debug, Default, Clone)]
-pub struct EditableLabelState {
-    pub editing: bool,
-    pub buffer: String,
+pub(crate) struct EditableLabelState {
+    pub(crate) editing: bool,
+    pub(crate) buffer: String,
     /// True on the first frame of editing, used to request focus once.
     first_frame: bool,
 }
 
 impl EditableLabelState {
-    pub fn start_editing(
+    pub(crate) fn start_editing(
         &mut self,
         current_text: &str,
     ) {
@@ -34,13 +34,13 @@ impl EditableLabelState {
         self.buffer = current_text.to_string();
     }
 
-    pub fn cancel(&mut self) {
+    pub(crate) fn cancel(&mut self) {
         self.editing = false;
         self.first_frame = false;
         self.buffer.clear();
     }
 
-    pub fn finish(&mut self) -> Option<String> {
+    pub(crate) fn finish(&mut self) -> Option<String> {
         if self.editing {
             self.editing = false;
             self.first_frame = false;
@@ -58,7 +58,7 @@ impl EditableLabelState {
 }
 
 /// A label widget that shows a text edit when double-clicked.
-pub struct EditableLabel<'a> {
+pub(crate) struct EditableLabel<'a> {
     text: &'a str,
     state: &'a mut EditableLabelState,
     selected: bool,
@@ -66,7 +66,7 @@ pub struct EditableLabel<'a> {
 }
 
 impl<'a> EditableLabel<'a> {
-    pub fn new(
+    pub(crate) fn new(
         text: &'a str,
         state: &'a mut EditableLabelState,
     ) -> Self {
@@ -79,7 +79,7 @@ impl<'a> EditableLabel<'a> {
     }
 
     /// Mark this label as selected (highlighted).
-    pub fn selected(
+    pub(crate) fn selected(
         mut self,
         selected: bool,
     ) -> Self {
@@ -88,7 +88,7 @@ impl<'a> EditableLabel<'a> {
     }
 
     /// Add a prefix (e.g., an icon) before the text.
-    pub fn prefix(
+    pub(crate) fn prefix(
         mut self,
         prefix: &'a str,
     ) -> Self {
@@ -96,7 +96,7 @@ impl<'a> EditableLabel<'a> {
         self
     }
 
-    pub fn show(
+    pub(crate) fn show(
         self,
         ui: &mut Ui,
     ) -> EditableLabelResponse {

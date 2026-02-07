@@ -53,16 +53,16 @@ use crate::{
     tests::TestCorpus,
 };
 
-pub mod containment;
-pub mod labelling;
-pub mod partitions;
+pub(crate) mod containment;
+pub(crate) mod labelling;
+pub(crate) mod partitions;
 pub mod traversal;
-pub mod utils;
+pub(crate) mod utils;
 pub mod vocabulary;
 
 #[cfg(not(target_arch = "wasm32"))]
 lazy_static::lazy_static! {
-    pub static ref CORPUS_DIR: PathBuf = absolute(PathBuf::from_iter([".", "test", "cache"])).unwrap();
+    pub(crate) static ref CORPUS_DIR: PathBuf = absolute(PathBuf::from_iter([".", "test", "cache"])).unwrap();
 }
 
 #[derive(Debug, Clone, Default, Deref, DerefMut)]
@@ -77,7 +77,7 @@ impl From<Status> for StatusHandle {
     }
 }
 impl StatusHandle {
-    pub fn next_pass(
+    pub(crate) fn next_pass(
         &self,
         pass: ProcessStatus,
         steps: usize,
@@ -88,27 +88,27 @@ impl StatusHandle {
             .unwrap()
             .next_pass(pass, steps, steps_total);
     }
-    pub fn pass(&self) -> MappedRwLockReadGuard<'_, ProcessStatus> {
+    pub(crate) fn pass(&self) -> MappedRwLockReadGuard<'_, ProcessStatus> {
         RwLockReadGuard::<'_, Status>::map(self.data.read().unwrap(), |s| {
             &s.pass
         })
     }
-    pub fn pass_mut(&self) -> MappedRwLockWriteGuard<'_, ProcessStatus> {
+    pub(crate) fn pass_mut(&self) -> MappedRwLockWriteGuard<'_, ProcessStatus> {
         RwLockWriteGuard::<'_, Status>::map(self.data.write().unwrap(), |s| {
             &mut s.pass
         })
     }
-    pub fn steps(&self) -> MappedRwLockReadGuard<'_, usize> {
+    pub(crate) fn steps(&self) -> MappedRwLockReadGuard<'_, usize> {
         RwLockReadGuard::<'_, Status>::map(self.data.read().unwrap(), |s| {
             &s.steps
         })
     }
-    pub fn steps_mut(&self) -> MappedRwLockWriteGuard<'_, usize> {
+    pub(crate) fn steps_mut(&self) -> MappedRwLockWriteGuard<'_, usize> {
         RwLockWriteGuard::<'_, Status>::map(self.data.write().unwrap(), |s| {
             &mut s.steps
         })
     }
-    pub fn steps_total(&self) -> MappedRwLockReadGuard<'_, usize> {
+    pub(crate) fn steps_total(&self) -> MappedRwLockReadGuard<'_, usize> {
         RwLockReadGuard::<'_, Status>::map(self.data.read().unwrap(), |s| {
             &s.steps_total
         })
@@ -142,7 +142,7 @@ impl Status {
             ..Default::default()
         }
     }
-    pub fn next_pass(
+    pub(crate) fn next_pass(
         &mut self,
         pass: ProcessStatus,
         steps: usize,
@@ -156,9 +156,9 @@ impl Status {
 }
 #[derive(Debug, Default, Deref, Serialize, Deserialize)]
 pub struct Corpus {
-    pub name: String,
+    pub(crate) name: String,
     #[deref]
-    pub texts: Vec<String>,
+    pub(crate) texts: Vec<String>,
 }
 impl Corpus {
     pub fn new(
@@ -174,12 +174,12 @@ impl Corpus {
     }
     
     /// Get the storage key for this corpus
-    pub fn storage_key(&self) -> &str {
+    pub(crate) fn storage_key(&self) -> &str {
         &self.name
     }
 }
-pub type AbortSender = std::sync::mpsc::Sender<()>;
-pub type AbortReceiver = std::sync::mpsc::Receiver<()>;
+pub(crate) type AbortSender = std::sync::mpsc::Sender<()>;
+pub(crate) type AbortReceiver = std::sync::mpsc::Receiver<()>;
 #[derive(Debug)]
 pub struct ParseResult {
     pub graph: Hypergraph,

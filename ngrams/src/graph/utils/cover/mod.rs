@@ -1,6 +1,6 @@
-pub mod child;
-pub mod parent;
-pub mod frequency;
+pub(crate) mod child;
+pub(crate) mod parent;
+pub(crate) mod frequency;
 
 use child::ChildCoverPass;
 use itertools::Itertools;
@@ -74,7 +74,7 @@ use crate::graph::{
 };
 
 #[derive(Debug, Deref, DerefMut, Default, IntoIterator, new)]
-pub struct ChildCover
+pub(crate) struct ChildCover
 {
     #[into_iterator(owned, ref)]
     #[deref]
@@ -84,7 +84,7 @@ pub struct ChildCover
 impl ChildCover
 {
     // find largest labelled children
-    pub fn from_key(
+    pub(crate) fn from_key(
         ctx: &LabellingCtx,
         key: VertexKey,
     ) -> Self
@@ -93,14 +93,14 @@ impl ChildCover
         ctx.run();
         ctx.cover
     }
-    pub fn as_ranges(&self) -> HashSet<Range<usize>>
+    pub(crate) fn as_ranges(&self) -> HashSet<Range<usize>>
     {
         self.entries
             .iter()
             .map(|(off, id)| *off..(off + id.width().0))
             .collect()
     }
-    pub fn any_intersect(&self) -> bool
+    pub(crate) fn any_intersect(&self) -> bool
     {
         let ranges = self.as_ranges();
         ranges
@@ -108,7 +108,7 @@ impl ChildCover
             .cartesian_product(&ranges)
             .any(|(l, r)| l != r && l.does_intersect(r))
     }
-    pub fn any_covers(
+    pub(crate) fn any_covers(
         &self,
         off: usize,
         node: impl Wide,

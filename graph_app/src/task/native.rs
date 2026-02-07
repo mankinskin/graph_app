@@ -36,11 +36,11 @@ use super::{
 /// });
 /// ```
 #[derive(Debug, Clone, Default)]
-pub struct NativeExecutor;
+pub(crate) struct NativeExecutor;
 
 impl NativeExecutor {
     /// Create a new native executor.
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self
     }
 }

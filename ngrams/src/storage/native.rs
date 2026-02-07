@@ -10,12 +10,12 @@ use std::{
 
 lazy_static::lazy_static! {
     /// Base directory for storage on native platforms
-    pub static ref STORAGE_DIR: PathBuf = absolute(PathBuf::from_iter([".", "test", "cache"])).unwrap();
+    pub(crate) static ref STORAGE_DIR: PathBuf = absolute(PathBuf::from_iter([".", "test", "cache"])).unwrap();
 }
 
 /// Native filesystem-based storage
 #[derive(Debug, Clone)]
-pub struct NativeStorage {
+pub(crate) struct NativeStorage {
     base_dir: PathBuf,
 }
 
@@ -27,14 +27,14 @@ impl Default for NativeStorage {
 
 impl NativeStorage {
     /// Create a new native storage with the default base directory
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             base_dir: STORAGE_DIR.clone(),
         }
     }
 
     /// Create a new native storage with a custom base directory
-    pub fn with_base_dir(base_dir: PathBuf) -> Self {
+    pub(crate) fn with_base_dir(base_dir: PathBuf) -> Self {
         Self { base_dir }
     }
 

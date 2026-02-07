@@ -8,20 +8,20 @@ const STORAGE_PREFIX: &str = "ngrams_storage_";
 
 /// WebAssembly localStorage-based storage
 #[derive(Debug, Clone, Default)]
-pub struct WasmStorage {
+pub(crate) struct WasmStorage {
     prefix: String,
 }
 
 impl WasmStorage {
     /// Create a new wasm storage with the default prefix
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             prefix: STORAGE_PREFIX.to_string(),
         }
     }
 
     /// Create a new wasm storage with a custom prefix
-    pub fn with_prefix(prefix: impl Into<String>) -> Self {
+    pub(crate) fn with_prefix(prefix: impl Into<String>) -> Self {
         Self {
             prefix: prefix.into(),
         }

@@ -29,14 +29,14 @@ use std::hash::{
 
 /// Context for reading and processing graph data.
 #[derive(Debug)]
-pub struct ReadCtx {
+pub(crate) struct ReadCtx {
     graph: Graph,
     status: Option<StatusHandle>,
 }
 
 impl ReadCtx {
     /// Create a new read context with the given graph.
-    pub fn new(graph: Graph) -> Self {
+    pub(crate) fn new(graph: Graph) -> Self {
         Self {
             graph,
             status: None,
@@ -44,17 +44,17 @@ impl ReadCtx {
     }
 
     /// Get the current status handle, if any.
-    pub fn status(&self) -> Option<&StatusHandle> {
+    pub(crate) fn status(&self) -> Option<&StatusHandle> {
         self.status.as_ref()
     }
 
     /// Get a reference to the graph.
-    pub fn graph(&self) -> &Graph {
+    pub(crate) fn graph(&self) -> &Graph {
         &self.graph
     }
 
     /// Get a mutable reference to the graph.
-    pub fn graph_mut(&mut self) -> &mut Graph {
+    pub(crate) fn graph_mut(&mut self) -> &mut Graph {
         &mut self.graph
     }
 }
@@ -67,7 +67,7 @@ impl ReadCtx {
     /// Execute the selected algorithm on the input texts.
     ///
     /// This is the unified entry point for algorithm execution on both platforms.
-    pub async fn run_algorithm(
+    pub(crate) async fn run_algorithm(
         &mut self,
         algorithm: Algorithm,
         cancellation: CancellationHandle,
@@ -272,7 +272,7 @@ impl ReadCtx {
         ngrams::graph::ParseResult,
         ngrams::graph::traversal::pass::CancelReason,
     > {
-        use ngrams::cancellation::Cancellation;
+        use ngrams::Cancellation;
 
         let ngrams_cancellation = Cancellation::from(cancellation.token());
 

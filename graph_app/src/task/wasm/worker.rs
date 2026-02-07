@@ -51,7 +51,7 @@ use crate::task::{
 /// The current implementation simulates blocking behavior using chunked
 /// async execution on the main thread. For true parallelism, consider
 /// using `wasm-bindgen-rayon`.
-pub fn spawn_in_worker<T: BlockingTask>(task: T) -> TaskHandle {
+pub(crate) fn spawn_in_worker<T: BlockingTask>(task: T) -> TaskHandle {
     let cancellation = CancellationHandle::new();
     let cancel_clone = cancellation.clone();
     let cancel_for_check = cancellation.clone();
@@ -172,7 +172,7 @@ fn has_worker_support() -> bool {
 /// - Handle worker lifecycle and error recovery
 #[derive(Debug)]
 #[allow(dead_code)]
-pub struct WorkerPool {
+pub(crate) struct WorkerPool {
     max_workers: usize,
     // workers: Vec<Worker>,
     // task_queue: VecDeque<QueuedTask>,
@@ -181,13 +181,13 @@ pub struct WorkerPool {
 impl WorkerPool {
     /// Create a new worker pool with the specified maximum number of workers.
     #[allow(dead_code)]
-    pub fn new(max_workers: usize) -> Self {
+    pub(crate) fn new(max_workers: usize) -> Self {
         Self { max_workers }
     }
 
     /// Get the ideal number of workers based on hardware concurrency.
     #[allow(dead_code)]
-    pub fn ideal_worker_count() -> usize {
+    pub(crate) fn ideal_worker_count() -> usize {
         // Try to get navigator.hardwareConcurrency
         web_sys::window()
             .map(|w| w.navigator().hardware_concurrency() as usize)

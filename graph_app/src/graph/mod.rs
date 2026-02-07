@@ -23,13 +23,13 @@ use petgraph::{
 };
 
 #[derive(Clone, Debug)]
-pub struct Graph {
+pub(crate) struct Graph {
     /// Wrapped in RwLock to allow replacing the entire graph
-    pub graph: Arc<RwLock<HypergraphRef>>,
+    pub(crate) graph: Arc<RwLock<HypergraphRef>>,
     #[cfg(not(target_arch = "wasm32"))]
-    pub rec: Option<rerun::RecordingStream>,
-    pub insert_texts: Vec<String>,
-    pub labels: Arc<RwLock<HashSet<VertexKey>>>,
+    pub(crate) rec: Option<rerun::RecordingStream>,
+    pub(crate) insert_texts: Vec<String>,
+    pub(crate) labels: Arc<RwLock<HashSet<VertexKey>>>,
 }
 impl Default for Graph {
     fn default() -> Self {
@@ -67,26 +67,26 @@ impl From<rerun::RecordingStream> for Graph {
     }
 }
 impl Graph {
-    pub fn try_read(&self) -> Option<RwLockReadGuard<'_, HypergraphRef>> {
+    pub(crate) fn try_read(&self) -> Option<RwLockReadGuard<'_, HypergraphRef>> {
         self.graph.read().ok()
     }
-    pub fn read(&self) -> RwLockReadGuard<'_, HypergraphRef> {
+    pub(crate) fn read(&self) -> RwLockReadGuard<'_, HypergraphRef> {
         self.try_read().unwrap()
     }
-    pub fn write(&self) -> RwLockWriteGuard<'_, HypergraphRef> {
+    pub(crate) fn write(&self) -> RwLockWriteGuard<'_, HypergraphRef> {
         self.graph.write().unwrap()
     }
-    pub fn set_graph(
+    pub(crate) fn set_graph(
         &self,
         graph: Hypergraph,
     ) {
         *self.write() = HypergraphRef::from(graph);
     }
-    pub fn clear(&self) {
+    pub(crate) fn clear(&self) {
         // Replace the underlying graph with a new empty one, keeping the same Arc
         *self.write() = HypergraphRef::from(Hypergraph::default());
     }
-    //pub fn read_text(
+    //pub(crate) fn read_text(
     //    &mut self,
     //    text: impl ToString,
     //    ctx: &egui::Context,

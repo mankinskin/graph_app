@@ -1,5 +1,5 @@
 #[cfg(not(any(test, feature = "test-hashing")))]
-pub use std::collections::{
+pub(crate) use std::collections::{
     HashMap,
     HashSet,
 };
@@ -9,7 +9,7 @@ use std::hash::{
     DefaultHasher,
 };
 
-pub use {
+pub(crate) use {
     itertools::*,
     ngram::*,
     range_ext::intersect::Intersect,
@@ -23,9 +23,9 @@ pub use {
 };
 
 #[cfg(any(test, feature = "test-hashing"))]
-pub type HashSet<T> =
+pub(crate) type HashSet<T> =
     std::collections::HashSet<T, BuildHasherDefault<DefaultHasher>>;
 
 #[cfg(any(test, feature = "test-hashing"))]
-pub type HashMap<K, V> =
+pub(crate) type HashMap<K, V> =
     std::collections::HashMap<K, V, BuildHasherDefault<DefaultHasher>>;

@@ -13,7 +13,7 @@ use std::sync::{
 use tokio_util::sync::CancellationToken;
 
 /// A cancellation handle that can be checked for cancellation
-pub trait Cancellable {
+pub(crate) trait Cancellable {
     /// Check if cancellation has been requested
     fn is_cancelled(&self) -> bool;
 }
@@ -21,17 +21,17 @@ pub trait Cancellable {
 /// Native cancellation using tokio's CancellationToken
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, Clone)]
-pub struct NativeCancellation {
+pub(crate) struct NativeCancellation {
     token: CancellationToken,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 impl NativeCancellation {
-    pub fn new(token: CancellationToken) -> Self {
+    pub(crate) fn new(token: CancellationToken) -> Self {
         Self { token }
     }
     
-    pub fn token(&self) -> &CancellationToken {
+    pub(crate) fn token(&self) -> &CancellationToken {
         &self.token
     }
 }
@@ -52,16 +52,16 @@ impl From<CancellationToken> for NativeCancellation {
 
 /// Wasm cancellation using Arc<AtomicBool>
 #[derive(Debug, Clone)]
-pub struct WasmCancellation {
+pub(crate) struct WasmCancellation {
     cancelled: Arc<AtomicBool>,
 }
 
 impl WasmCancellation {
-    pub fn new(cancelled: Arc<AtomicBool>) -> Self {
+    pub(crate) fn new(cancelled: Arc<AtomicBool>) -> Self {
         Self { cancelled }
     }
     
-    pub fn flag(&self) -> &Arc<AtomicBool> {
+    pub(crate) fn flag(&self) -> &Arc<AtomicBool> {
         &self.cancelled
     }
 }
@@ -80,10 +80,10 @@ impl From<Arc<AtomicBool>> for WasmCancellation {
 
 /// Platform-appropriate cancellation type
 #[cfg(not(target_arch = "wasm32"))]
-pub type PlatformCancellation = NativeCancellation;
+pub(crate) type PlatformCancellation = NativeCancellation;
 
 #[cfg(target_arch = "wasm32")]
-pub type PlatformCancellation = WasmCancellation;
+pub(crate) type PlatformCancellation = WasmCancellation;
 
 /// Unified cancellation enum that can hold either type
 #[derive(Debug, Clone)]
@@ -97,15 +97,15 @@ pub enum Cancellation {
 
 impl Cancellation {
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn native(token: CancellationToken) -> Self {
+    pub(crate) fn native(token: CancellationToken) -> Self {
         Self::Native(NativeCancellation::new(token))
     }
     
-    pub fn wasm(cancelled: Arc<AtomicBool>) -> Self {
+    pub(crate) fn wasm(cancelled: Arc<AtomicBool>) -> Self {
         Self::Wasm(WasmCancellation::new(cancelled))
     }
     
-    pub fn none() -> Self {
+    pub(crate) fn none() -> Self {
         Self::None
     }
 }

@@ -32,10 +32,10 @@ impl std::ops::Deref for ChildVis {
         &self.child
     }
 }
-pub struct ChildResponse {
+pub(crate) struct ChildResponse {
     #[allow(unused)]
-    pub response: Response,
-    pub range: Option<Range<usize>>,
+    pub(crate) response: Response,
+    pub(crate) range: Option<Range<usize>>,
 }
 
 impl ChildVis {
@@ -68,9 +68,9 @@ impl ChildVis {
 struct PatternVis {
     pattern: Vec<ChildVis>,
 }
-pub struct PatternResponse {
-    pub response: Response,
-    pub ranges: Vec<Option<Range<usize>>>,
+pub(crate) struct PatternResponse {
+    pub(crate) response: Response,
+    pub(crate) ranges: Vec<Option<Range<usize>>>,
 }
 impl PatternVis {
     fn new(pattern: Vec<ChildVis>) -> Self {
@@ -110,18 +110,18 @@ impl PatternVis {
 }
 
 #[derive(Clone, Debug)]
-pub struct ChildPatternsVis {
+pub(crate) struct ChildPatternsVis {
     patterns: Vec<(PatternId, PatternVis)>,
 }
 #[allow(unused)]
 #[derive(Clone, Debug)]
-pub struct ChildPatternsResponse {
-    pub response: Response,
-    pub ranges: IndexMap<PatternId, Range<usize>>,
+pub(crate) struct ChildPatternsResponse {
+    pub(crate) response: Response,
+    pub(crate) ranges: IndexMap<PatternId, Range<usize>>,
 }
 
 impl ChildPatternsVis {
-    pub fn new(
+    pub(crate) fn new(
         graph: &Hypergraph,
         data: &VertexData,
     ) -> Self {
@@ -144,12 +144,12 @@ impl ChildPatternsVis {
     }
     
     /// Returns the number of patterns in this node
-    pub fn pattern_count(&self) -> usize {
+    pub(crate) fn pattern_count(&self) -> usize {
         self.patterns.len()
     }
     
     /// Returns the pattern strings for display
-    pub fn pattern_strings(&self) -> Vec<String> {
+    pub(crate) fn pattern_strings(&self) -> Vec<String> {
         self.patterns
             .iter()
             .map(|(_pid, pat)| {
@@ -163,7 +163,7 @@ impl ChildPatternsVis {
     }
     
     /// Returns patterns as vectors of child names for framed display
-    pub fn patterns_as_children(&self) -> Vec<Vec<String>> {
+    pub(crate) fn patterns_as_children(&self) -> Vec<Vec<String>> {
         self.patterns
             .iter()
             .map(|(_pid, pat)| {
@@ -176,7 +176,7 @@ impl ChildPatternsVis {
     }
 
     /// Returns patterns with (name, vertex_index) pairs for edge connections
-    pub fn patterns_with_indices(&self) -> Vec<Vec<(String, usize)>> {
+    pub(crate) fn patterns_with_indices(&self) -> Vec<Vec<(String, usize)>> {
         self.patterns
             .iter()
             .map(|(_pid, pat)| {
@@ -210,7 +210,7 @@ impl ChildPatternsVis {
                     .or(o)
             })
     }
-    pub fn show(
+    pub(crate) fn show(
         &self,
         ui: &mut Ui,
     ) -> ChildPatternsResponse {

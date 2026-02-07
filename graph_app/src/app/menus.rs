@@ -17,7 +17,7 @@ use crate::{
 };
 
 impl App {
-    pub fn context_menu(
+    pub(crate) fn context_menu(
         &mut self,
         ui: &mut Ui,
     ) {

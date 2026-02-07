@@ -51,10 +51,10 @@ use context_trace::{
     HashSet,
 };
 
-pub mod frequency;
+pub(crate) mod frequency;
 use frequency::FrequencyCtx;
 
-pub mod wrapper;
+pub(crate) mod wrapper;
 use wrapper::WrapperCtx;
 
 use super::StatusHandle;
@@ -68,32 +68,32 @@ impl From<Vocabulary> for LabellingImage {
     }
 }
 #[derive(Debug, Serialize, Deserialize)]
-pub struct LabellingImage {
-    pub vocab: Vocabulary,
-    pub labels: HashSet<VertexKey>,
+pub(crate) struct LabellingImage {
+    pub(crate) vocab: Vocabulary,
+    pub(crate) labels: HashSet<VertexKey>,
 }
 impl LabellingImage {
     /// Get the storage key for this labelling image
-    pub fn storage_key(&self) -> String {
+    pub(crate) fn storage_key(&self) -> String {
         self.vocab.name.clone()
     }
 
     /// Write to storage using the platform-appropriate storage backend
-    pub fn write_to_storage(&self) -> Result<(), StorageError> {
+    pub(crate) fn write_to_storage(&self) -> Result<(), StorageError> {
         storage::store(&self.storage_key(), self)
     }
 
     /// Read from storage using the platform-appropriate storage backend
-    pub fn read_from_storage(key: &str) -> Result<Self, StorageError> {
+    pub(crate) fn read_from_storage(key: &str) -> Result<Self, StorageError> {
         storage::load(key)
     }
 
     /// Check if this labelling image exists in storage
-    pub fn exists_in_storage(key: &str) -> bool {
+    pub(crate) fn exists_in_storage(key: &str) -> bool {
         storage::exists(key)
     }
 
-    pub fn from_corpus(
+    pub(crate) fn from_corpus(
         corpus: &Corpus,
         status: &mut StatusHandle,
     ) -> RunResult<Self> {
@@ -112,20 +112,20 @@ impl LabellingImage {
     }
 
     /// Write to the target storage location for this image
-    pub fn write_to_target_file(&self) -> Result<(), StorageError> {
+    pub(crate) fn write_to_target_file(&self) -> Result<(), StorageError> {
         self.write_to_storage()
     }
 }
 #[derive(Debug, Deref, DerefMut, new)]
-pub struct LabellingCtx {
+pub(crate) struct LabellingCtx {
     #[deref]
     #[deref_mut]
-    pub corpus: TestCorpus,
-    pub status: StatusHandle,
-    pub cancellation: Cancellation,
+    pub(crate) corpus: TestCorpus,
+    pub(crate) status: StatusHandle,
+    pub(crate) cancellation: Cancellation,
 }
 impl LabellingCtx {
-    pub fn from_corpus(
+    pub(crate) fn from_corpus(
         corpus: Corpus,
         cancellation: impl Into<Cancellation>,
     ) -> RunResult<Self> {
@@ -139,23 +139,23 @@ impl LabellingCtx {
             cancellation: cancellation.into(),
         })
     }
-    pub fn check_cancelled(&self) -> RunResult<()> {
+    pub(crate) fn check_cancelled(&self) -> RunResult<()> {
         if self.cancellation.is_cancelled() {
             Err(CancelReason::Cancelled)
         } else {
             Ok(())
         }
     }
-    pub fn vocab(&self) -> &'_ Vocabulary {
+    pub(crate) fn vocab(&self) -> &'_ Vocabulary {
         &self.corpus.image.vocab
     }
-    pub fn labels(&self) -> &'_ HashSet<VertexKey> {
+    pub(crate) fn labels(&self) -> &'_ HashSet<VertexKey> {
         &self.corpus.image.labels
     }
-    pub fn labels_mut(&mut self) -> &'_ mut HashSet<VertexKey> {
+    pub(crate) fn labels_mut(&mut self) -> &'_ mut HashSet<VertexKey> {
         &mut self.corpus.image.labels
     }
-    pub fn label_freq(&mut self) -> RunResult<()> {
+    pub(crate) fn label_freq(&mut self) -> RunResult<()> {
         if *self.status.pass() < ProcessStatus::Frequency {
             FrequencyCtx::new(&mut *self).run()?;
             let _ = self.image.write_to_target_file();
@@ -164,7 +164,7 @@ impl LabellingCtx {
         }
         Ok(())
     }
-    pub fn label_wrap(&mut self) -> RunResult<()> {
+    pub(crate) fn label_wrap(&mut self) -> RunResult<()> {
         if *self.status.pass() < ProcessStatus::Wrappers {
             WrapperCtx::new(&mut *self).run()?;
             let _ = self.image.write_to_target_file();
@@ -173,7 +173,7 @@ impl LabellingCtx {
         }
         Ok(())
     }
-    pub fn label_part(&mut self) -> RunResult<Hypergraph> {
+    pub(crate) fn label_part(&mut self) -> RunResult<Hypergraph> {
         let mut ctx = PartitionsCtx::from(&mut *self);
         ctx.run()?;
         Ok(ctx.graph)

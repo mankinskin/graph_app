@@ -21,11 +21,11 @@ use context_trace::{
 
 use super::pass::PassNode;
 
-pub trait VisitTracking: TraversalPass {
+pub(crate) trait VisitTracking: TraversalPass {
     type Collection: VisitorCollection<Self::Node>;
     fn visited_mut(&mut self) -> &mut Self::Collection;
 }
-pub trait VisitorCollection<N: PassNode> {
+pub(crate) trait VisitorCollection<N: PassNode> {
     type Ref<'t>: VisitorCollection<N> where N: 't;
     fn insert(&mut self, node: N) -> bool;
 }

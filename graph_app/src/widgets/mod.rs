@@ -2,4 +2,4 @@
 
 mod editable_label;
 
-pub use editable_label::{EditableLabel, EditableLabelResponse, EditableLabelState};
+pub(crate) use editable_label::{EditableLabel, EditableLabelState};

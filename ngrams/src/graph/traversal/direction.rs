@@ -14,10 +14,10 @@ use context_trace::graph::vertex::{
 };
 
 
-pub struct BottomUp;
-pub struct TopDown;
+pub(crate) struct BottomUp;
+pub(crate) struct TopDown;
 
-pub trait TraversalDirection
+pub(crate) trait TraversalDirection
 {
     type Next;
     fn starting_nodes(vocab: &Vocabulary) -> VecDeque<NGramId>;

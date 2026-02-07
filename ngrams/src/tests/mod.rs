@@ -1,4 +1,4 @@
-pub mod count;
+pub(crate) mod count;
 
 use std::path::Path;
 
@@ -30,7 +30,7 @@ use ngram::NGram;
 use pretty_assertions::assert_eq;
 use crate::cancellation::Cancellation;
 
-pub const OTTOS_MOPS_CORPUS: [&str; 4] = [
+pub(crate) const OTTOS_MOPS_CORPUS: [&str; 4] = [
     "ottos mops trotzt",
     "otto: fort mops fort",
     "ottos mops hopst fort",
@@ -46,14 +46,14 @@ fn read_corpus(file_path: impl AsRef<Path>) -> String {
 }
 
 #[derive(Debug)]
-pub struct TestCorpus {
-    pub image: LabellingImage,
-    pub corpus: Corpus,
-    pub roots_test: HashSet<String>,
-    pub leaves_test: HashSet<String>,
+pub(crate) struct TestCorpus {
+    pub(crate) image: LabellingImage,
+    pub(crate) corpus: Corpus,
+    pub(crate) roots_test: HashSet<String>,
+    pub(crate) leaves_test: HashSet<String>,
 }
 impl TestCorpus {
-    pub fn new(
+    pub(crate) fn new(
         image: LabellingImage,
         corpus: Corpus,
     ) -> Self {
@@ -73,10 +73,10 @@ impl TestCorpus {
             leaves_test,
         }
     }
-    pub fn get_roots_test(&self) -> Vec<String> {
+    pub(crate) fn get_roots_test(&self) -> Vec<String> {
         self.roots_test.iter().cloned().sorted().collect()
     }
-    pub fn get_leaves_test(&self) -> Vec<String> {
+    pub(crate) fn get_leaves_test(&self) -> Vec<String> {
         self.leaves_test.iter().cloned().sorted().collect()
     }
     pub(crate) fn test_containment(&self) {
@@ -124,13 +124,13 @@ impl TestCorpus {
     }
 }
 #[derive(Debug, new)]
-pub struct LabelTest {
+pub(crate) struct LabelTest {
     frequency: HashSet<String>,
     wrapper: HashSet<String>,
     partition: HashSet<String>,
 }
 impl LabelTest {
-    pub fn validate(&self) {
+    pub(crate) fn validate(&self) {
         for (a, b) in [&self.frequency, &self.wrapper, &self.partition]
             .into_iter()
             .combinations(2)
@@ -161,14 +161,14 @@ macro_rules! test_labels {
 }
 
 #[derive(Debug, new, Deref, DerefMut)]
-pub struct TestCase {
+pub(crate) struct TestCase {
     #[deref]
     #[deref_mut]
     ctx: LabellingCtx,
     labels: LabelTest,
 }
 impl TestCase {
-    pub fn execute(&mut self) {
+    pub(crate) fn execute(&mut self) {
         // graph of all containment edges between n and n+1
         self.corpus.test_containment();
         self.label_freq().unwrap();
@@ -197,12 +197,12 @@ impl TestCase {
     }
 }
 #[derive(Debug, new)]
-pub struct LabelTestCtx<'a> {
+pub(crate) struct LabelTestCtx<'a> {
     labels: &'a HashSet<VertexKey>,
     test: &'a TestCase,
 }
 impl<'a> LabelTestCtx<'a> {
-    pub fn test_roots(&self) {
+    pub(crate) fn test_roots(&self) {
         let label_strings = self.label_strings_set();
         let roots_test = self.test.corpus.get_roots_test();
         assert_eq!(
@@ -214,7 +214,7 @@ impl<'a> LabelTestCtx<'a> {
             roots_test,
         );
     }
-    pub fn test_leaves(&self) {
+    pub(crate) fn test_leaves(&self) {
         let label_strings = self.label_strings_set();
         let leaves_test = self.test.corpus.get_leaves_test();
         assert_eq!(
@@ -226,7 +226,7 @@ impl<'a> LabelTestCtx<'a> {
             leaves_test,
         );
     }
-    pub fn get_frequency_test(&self) -> Vec<String> {
+    pub(crate) fn get_frequency_test(&self) -> Vec<String> {
         self.test
             .corpus
             .get_leaves_test()
@@ -237,7 +237,7 @@ impl<'a> LabelTestCtx<'a> {
             .cloned()
             .collect()
     }
-    pub fn get_wrapper_test(&self) -> Vec<String> {
+    pub(crate) fn get_wrapper_test(&self) -> Vec<String> {
         self.get_frequency_test()
             .iter()
             .chain(self.test.labels.wrapper.iter())
@@ -245,7 +245,7 @@ impl<'a> LabelTestCtx<'a> {
             .cloned()
             .collect()
     }
-    pub fn get_partition_test(&self) -> Vec<String> {
+    pub(crate) fn get_partition_test(&self) -> Vec<String> {
         self.get_wrapper_test()
             .iter()
             .chain(self.test.labels.partition.iter())
@@ -253,13 +253,13 @@ impl<'a> LabelTestCtx<'a> {
             .cloned()
             .collect()
     }
-    pub fn label_strings_set(&self) -> HashSet<String> {
+    pub(crate) fn label_strings_set(&self) -> HashSet<String> {
         self.labels
             .iter()
             .map(|vi| self.test.vocab().get_vertex(vi).unwrap().ngram.clone())
             .collect()
     }
-    pub fn test_freq(&self) {
+    pub(crate) fn test_freq(&self) {
         let label_strings = self.label_strings_set();
         let frequency_test = self.get_frequency_test();
 
@@ -268,7 +268,7 @@ impl<'a> LabelTestCtx<'a> {
             frequency_test,
         );
     }
-    pub fn test_wrap(&self) {
+    pub(crate) fn test_wrap(&self) {
         let label_strings = self.label_strings_set();
         let wrapper_test = self.get_wrapper_test();
 
@@ -277,7 +277,7 @@ impl<'a> LabelTestCtx<'a> {
             wrapper_test,
         );
     }
-    pub fn test_part(&self) {
+    pub(crate) fn test_part(&self) {
         let label_strings = self.label_strings_set();
         let partition_test = self.get_partition_test();
 
@@ -289,7 +289,7 @@ impl<'a> LabelTestCtx<'a> {
 }
 
 #[test]
-pub fn test_graph1() {
+pub(crate) fn test_graph1() {
     let corpus = ["abab", "abcabc", "babc"];
     let texts = corpus.into_iter().map(ToString::to_string).collect_vec();
     TestCase {
@@ -312,7 +312,7 @@ pub fn test_graph1() {
 
 // too slow!
 #[allow(unused)]
-pub fn test_graph2() {
+pub(crate) fn test_graph2() {
     let corpus = OTTOS_MOPS_CORPUS;
     let texts = corpus.into_iter().map(ToString::to_string).collect_vec();
 
@@ -367,7 +367,7 @@ pub fn test_graph2() {
 }
 
 #[test]
-pub fn test_parse_corpus() {
+pub(crate) fn test_parse_corpus() {
     use crate::graph::{
         parse_corpus,
         Status,
@@ -428,7 +428,7 @@ pub fn test_parse_corpus() {
 }
 
 #[test]
-pub fn test_parse_corpus_aabbaabbaa() {
+pub(crate) fn test_parse_corpus_aabbaabbaa() {
     use crate::graph::{
         parse_corpus,
         Status,
@@ -487,7 +487,7 @@ pub fn test_parse_corpus_aabbaabbaa() {
 }
 
 #[test]
-pub fn test_parse_corpus_single_char() {
+pub(crate) fn test_parse_corpus_single_char() {
     use crate::graph::{
         parse_corpus,
         Status,
@@ -539,7 +539,7 @@ pub fn test_parse_corpus_single_char() {
 }
 
 #[test]
-pub fn test_parse_corpus_two_texts() {
+pub(crate) fn test_parse_corpus_two_texts() {
     use crate::graph::{
         parse_corpus,
         Status,
@@ -591,7 +591,7 @@ pub fn test_parse_corpus_two_texts() {
 }
 
 #[test]
-pub fn test_parse_corpus_empty_result() {
+pub(crate) fn test_parse_corpus_empty_result() {
     use crate::graph::{
         parse_corpus,
         Status,
@@ -642,7 +642,7 @@ pub fn test_parse_corpus_empty_result() {
 }
 
 #[test]
-pub fn test_parse_corpus_empty_texts() {
+pub(crate) fn test_parse_corpus_empty_texts() {
     use crate::graph::{
         parse_corpus,
         Status,
@@ -671,7 +671,7 @@ pub fn test_parse_corpus_empty_texts() {
 }
 
 #[test]
-pub fn test_parse_corpus_only_empty_strings() {
+pub(crate) fn test_parse_corpus_only_empty_strings() {
     use crate::graph::{
         parse_corpus,
         Status,

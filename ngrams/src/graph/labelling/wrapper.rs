@@ -50,7 +50,7 @@ use context_trace::{
     },
     HashSet,
 };#[derive(Debug, Deref, new, DerefMut)]
-pub struct WrapperCtx<'b> {
+pub(crate) struct WrapperCtx<'b> {
     #[deref]
     #[deref_mut]
     ctx: &'b mut LabellingCtx,

@@ -17,13 +17,13 @@ mod native;
 mod wasm;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub use native::NativeStorage as PlatformStorage;
+pub(crate) use native::NativeStorage as PlatformStorage;
 #[cfg(target_arch = "wasm32")]
-pub use wasm::WasmStorage as PlatformStorage;
+pub(crate) use wasm::WasmStorage as PlatformStorage;
 
 /// Error type for storage operations
 #[derive(Debug)]
-pub enum StorageError {
+pub(crate) enum StorageError {
     /// IO error (native only)
     Io(io::Error),
     /// Serialization error
@@ -69,7 +69,7 @@ impl<T: std::fmt::Debug> From<DeError<T>> for StorageError {
 }
 
 /// Trait for storage operations
-pub trait Storage {
+pub(crate) trait Storage {
     /// Store serializable data at the given key
     fn store<T: Serialize>(&self, key: &str, data: &T) -> Result<(), StorageError>;
 
@@ -84,26 +84,26 @@ pub trait Storage {
 }
 
 /// Get the default storage implementation for the current platform
-pub fn get_storage() -> PlatformStorage {
+pub(crate) fn get_storage() -> PlatformStorage {
     PlatformStorage::new()
 }
 
 /// Convenience function to store data
-pub fn store<T: Serialize>(key: &str, data: &T) -> Result<(), StorageError> {
+pub(crate) fn store<T: Serialize>(key: &str, data: &T) -> Result<(), StorageError> {
     get_storage().store(key, data)
 }
 
 /// Convenience function to load data
-pub fn load<T: DeserializeOwned>(key: &str) -> Result<T, StorageError> {
+pub(crate) fn load<T: DeserializeOwned>(key: &str) -> Result<T, StorageError> {
     get_storage().load(key)
 }
 
 /// Convenience function to check if key exists
-pub fn exists(key: &str) -> bool {
+pub(crate) fn exists(key: &str) -> bool {
     get_storage().exists(key)
 }
 
 /// Convenience function to remove data
-pub fn remove(key: &str) -> Result<(), StorageError> {
+pub(crate) fn remove(key: &str) -> Result<(), StorageError> {
     get_storage().remove(key)
 }

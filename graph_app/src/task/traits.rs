@@ -15,7 +15,7 @@ use super::{
 /// On wasm, this runs in a Web Worker.
 ///
 /// The task receives a `CancellationHandle` to check for cancellation requests.
-pub trait BlockingTask: Send + 'static {
+pub(crate) trait BlockingTask: Send + 'static {
     /// Execute the blocking task
     fn run(
         self,
@@ -43,7 +43,7 @@ where
 ///
 /// - **Native**: Uses tokio runtime
 /// - **Wasm**: Uses wasm-bindgen-futures and Web Workers
-pub trait TaskExecutor {
+pub(crate) trait TaskExecutor {
     /// Spawn an async task.
     ///
     /// The task receives a `CancellationHandle` that it should check periodically.
@@ -89,7 +89,7 @@ pub trait TaskExecutor {
 
 /// Wasm-specific executor trait with relaxed bounds (no Send required).
 #[cfg(target_arch = "wasm32")]
-pub trait WasmTaskExecutor {
+pub(crate) trait WasmTaskExecutor {
     /// Spawn an async task without Send requirement.
     fn spawn_local<F, Fut>(
         &self,

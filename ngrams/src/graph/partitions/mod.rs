@@ -1,5 +1,5 @@
-pub mod collect;
-pub mod container;
+pub(crate) mod collect;
+pub(crate) mod container;
 
 use derive_more::{
     Deref,
@@ -84,19 +84,19 @@ use super::{
 //  - find all nodes describing the gaps (by querying a larger node)
 //  - label all gaps
 #[derive(Debug, Deref, new)]
-pub struct NodePartitionCtx<'a, 'b> {
+pub(crate) struct NodePartitionCtx<'a, 'b> {
     root: NGramId,
     #[deref]
     ctx: &'a PartitionsCtx<'b>,
 }
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct PartitionsCtx<'b> {
+pub(crate) struct PartitionsCtx<'b> {
     #[deref]
     #[deref_mut]
-    pub ctx: &'b mut LabellingCtx,
+    pub(crate) ctx: &'b mut LabellingCtx,
     visited: <Self as VisitTracking>::Collection,
-    pub graph: Hypergraph,
+    pub(crate) graph: Hypergraph,
 }
 
 impl<'b> From<&'b mut LabellingCtx> for PartitionsCtx<'b> {
