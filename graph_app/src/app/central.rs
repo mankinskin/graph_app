@@ -17,7 +17,7 @@ use crate::{
         build_graph2,
         build_graph3,
     },
-    widgets::EditableLabel,
+    widgets::{EditableLabel, Inserter},
 };
 
 impl App {
@@ -258,90 +258,48 @@ impl App {
         &mut self,
         ui: &mut Ui,
     ) {
-        // Show currently selected algorithm
-        ui.horizontal(|ui| {
-            ui.label("Algorithm:");
-            egui::ComboBox::from_id_salt("inserter_algorithm")
-                .selected_text(self.selected_algorithm.to_string())
-                .show_ui(ui, |ui| {
-                    for algorithm in Algorithm::iter() {
-                        ui.selectable_value(
-                            &mut self.selected_algorithm,
-                            algorithm,
-                            algorithm.to_string(),
-                        );
-                    }
-                });
-        });
+        let is_running = self.is_task_running();
 
-        ui.add_space(5.0);
-        ui.label(self.selected_algorithm.description());
+        // Get texts from the read context
+        let mut texts = if let Some(mut read_ctx) = self.ctx_mut() {
+            std::mem::take(&mut read_ctx.graph_mut().insert_texts)
+        } else {
+            return;
+        };
 
-        ui.add_space(10.0);
-        ui.separator();
-        ui.add_space(5.0);
+        let response = Inserter::new(
+            &mut self.selected_algorithm,
+            &mut texts,
+            is_running,
+        )
+        .show(ui);
 
-        ui.label("Input texts:");
-        ui.add_space(5.0);
-
+        // Put texts back
         if let Some(mut read_ctx) = self.ctx_mut() {
-            let texts = &mut read_ctx.graph_mut().insert_texts;
-            let mut to_remove = None;
+            read_ctx.graph_mut().insert_texts = texts;
+        }
 
-            for (i, text) in texts.iter_mut().enumerate() {
-                ui.horizontal(|ui| {
-                    ui.add(
-                        egui::TextEdit::singleline(text).desired_width(280.0),
-                    );
-                    if ui.button("✖").on_hover_text("Remove").clicked() {
-                        to_remove = Some(i);
-                    }
-                });
+        // Handle response
+        if response.run_clicked {
+            self.start_read();
+        }
+
+        if response.cancel_clicked {
+            self.abort();
+        }
+
+        if response.clear_clicked {
+            if let Some(mut ctx) = self.ctx_mut() {
+                ctx.graph_mut().clear();
             }
-
-            if let Some(idx) = to_remove {
-                texts.remove(idx);
-            }
-
-            ui.add_space(5.0);
-            if ui.button("+ Add Text").clicked() {
-                texts.push(String::new());
+            if let Some(mut vis) = self.vis_mut() {
+                vis.mark_dirty();
             }
         }
 
-        ui.add_space(10.0);
-        ui.separator();
-        ui.add_space(5.0);
-
-        // Unified run/cancel button (works on both native and wasm)
-        ui.horizontal(|ui| {
-            let is_running = self.is_task_running();
-
-            if ui
-                .add_enabled(!is_running, egui::Button::new("▶ Run"))
-                .clicked()
-            {
-                self.start_read();
-            }
-
-            #[cfg(target_arch = "wasm32")]
-            if ui
-                .add_enabled(!is_running, egui::Button::new("🧪 Test 10s"))
-                .on_hover_text(
-                    "Run a 10-second async test to verify tasks work",
-                )
-                .clicked()
-            {
-                self.start_test_async_task();
-            }
-
-            if is_running {
-                if ui.button("⏹ Cancel").clicked() {
-                    self.abort();
-                }
-                ui.spinner();
-                ui.label("Processing...");
-            }
-        });
+        #[cfg(target_arch = "wasm32")]
+        if response.test_async_clicked {
+            self.start_test_async_task();
+        }
     }
 }
