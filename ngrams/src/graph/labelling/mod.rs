@@ -19,6 +19,7 @@ use crate::{
         Cancellable,
         Cancellation,
     },
+    config::CacheConfig,
     graph::{
         partitions::PartitionsCtx,
         traversal::pass::{
@@ -97,9 +98,9 @@ impl LabellingImage {
         corpus: &Corpus,
         status: &mut StatusHandle,
     ) -> RunResult<Self> {
-        // On native, try to read from storage cache first
+        // On native, try to read from storage cache first (only if cache is enabled)
         #[cfg(not(target_arch = "wasm32"))]
-        {
+        if CacheConfig::is_enabled() {
             let key = corpus.name.clone();
             if let Ok(image) = Self::read_from_storage(&key) {
                 println!("Containment Pass already processed.");
@@ -111,9 +112,13 @@ impl LabellingImage {
         Ok(Self::from(Vocabulary::from_corpus(corpus, status)?))
     }
 
-    /// Write to the target storage location for this image
+    /// Write to the target storage location for this image (only if cache is enabled)
     pub(crate) fn write_to_target_file(&self) -> Result<(), StorageError> {
-        self.write_to_storage()
+        if CacheConfig::is_enabled() {
+            self.write_to_storage()
+        } else {
+            Ok(())
+        }
     }
 }
 #[derive(Debug, Deref, DerefMut, new)]

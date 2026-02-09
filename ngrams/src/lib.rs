@@ -12,6 +12,7 @@ pub(crate) use {
 };
 
 pub mod cancellation;
+pub mod config;
 pub mod graph;
 #[cfg(not(debug_assertions))]
 mod shared;
@@ -20,6 +21,7 @@ pub(crate) mod tests;
 
 pub use crate::{
     cancellation::Cancellation,
+    config::CacheConfig,
     graph::{
         Status,
         vocabulary::ProcessStatus,
