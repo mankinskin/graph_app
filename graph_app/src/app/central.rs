@@ -4,14 +4,12 @@ use eframe::egui::{
     self,
     Ui,
 };
-use strum::IntoEnumIterator;
 
 use super::{
     App,
     GraphTab,
 };
 use crate::{
-    algorithm::Algorithm,
     examples::{
         build_graph1,
         build_graph2,

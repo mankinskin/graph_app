@@ -2,6 +2,8 @@
 
 > **⚠️ READ THIS FILE FIRST** before any code changes in this workspace.
 
+> **📖 IMPORTANT:** Always read [`context-engine/AGENTS.md`](context-engine/AGENTS.md) for detailed development rules, documentation structure, and debugging workflows specific to the core engine.
+
 This is a multi-crate Rust workspace. Each major module has its own documentation.
 
 ## Environment Guidelines
