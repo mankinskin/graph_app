@@ -8,7 +8,7 @@ From this directory, run:
 ./install-dependencies.sh
 ```
 
-The script installs a full TeX distribution with LuaLaTeX and Biber. On Windows, run it from Git Bash or another Bash-compatible shell, then open a new shell if the installation updates `PATH`.
+The script installs a full TeX distribution with LuaLaTeX, Biber, and Libertinus Serif. On Windows, run it from Git Bash or another Bash-compatible shell, then open a new shell if the installation updates `PATH`.
 
 ## Build the document
 
@@ -16,4 +16,4 @@ The script installs a full TeX distribution with LuaLaTeX and Biber. On Windows,
 ./build.sh
 ```
 
-The generated PDF is `out/main.pdf`.
+The generated PDF is `out/thesis.pdf`.

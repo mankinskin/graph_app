@@ -13,9 +13,9 @@ done
 
 mkdir -p out
 
-lualatex -interaction=nonstopmode -halt-on-error -output-directory=out main.tex
-biber --input-directory out --output-directory out main
-lualatex -interaction=nonstopmode -halt-on-error -output-directory=out main.tex
-lualatex -interaction=nonstopmode -halt-on-error -output-directory=out main.tex
+lualatex -interaction=nonstopmode -halt-on-error -jobname=thesis -output-directory=out main.tex
+biber --input-directory out --output-directory out thesis
+lualatex -interaction=nonstopmode -halt-on-error -jobname=thesis -output-directory=out main.tex
+lualatex -interaction=nonstopmode -halt-on-error -jobname=thesis -output-directory=out main.tex
 
-echo "Built out/main.pdf"
+echo "Built out/thesis.pdf"

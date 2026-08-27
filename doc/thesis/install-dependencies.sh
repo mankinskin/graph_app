@@ -3,6 +3,12 @@
 set -euo pipefail
 
 if command -v lualatex >/dev/null 2>&1 && command -v biber >/dev/null 2>&1; then
+    case "$(uname -s)" in
+        MINGW*|MSYS*|CYGWIN*)
+            MIKTEX_BIN="$(dirname "$(command -v lualatex)")"
+            "$MIKTEX_BIN/mpm.exe" --install=libertinus-fonts
+            ;;
+    esac
     echo "LuaLaTeX and Biber are already installed."
     exit 0
 fi
@@ -34,7 +40,9 @@ case "$(uname -s)" in
             echo "winget is required. Install MiKTeX manually, then ensure lualatex and biber are on PATH." >&2
             exit 1
         fi
-        winget install --exact --id MiKTeX.MiKTeX --accept-package-agreements --accept-source-agreements
+        winget install --exact --id MiKTeX.MiKTeX --source winget --accept-package-agreements --accept-source-agreements
+        MIKTEX_BIN="$(cygpath "$LOCALAPPDATA")/Programs/MiKTeX/miktex/bin/x64"
+        "$MIKTEX_BIN/mpm.exe" --install=libertinus-fonts
         ;;
     *)
         echo "Unsupported operating system. Install a full TeX Live or MiKTeX distribution and Biber." >&2
